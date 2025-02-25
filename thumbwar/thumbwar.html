@@ -36,6 +36,11 @@
             text-shadow: 0 0 10px rgba(0, 255, 170, 0.8);
             z-index: 10;
             pointer-events: none;
+            transition: color 0.3s;
+        }
+        #score.negative {
+            color: #ff3366;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
         }
         #targets {
             position: absolute;
@@ -50,17 +55,30 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            border: 3px solid rgba(0, 255, 170, 0.8);
-            box-shadow: 0 0 15px rgba(0, 255, 170, 0.7);
             transform: translate(-50%, -50%);
             pointer-events: none;
-            animation: pulse 1.5s infinite alternate;
+        }
+        .target.good {
+            border: 3px solid rgba(0, 255, 170, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.7);
+            animation: pulseGood 1.5s infinite alternate;
+        }
+        .target.bad {
+            border: 3px solid rgba(255, 51, 102, 0.8);
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.7);
+            animation: pulseBad 1.5s infinite alternate;
         }
         
-        @keyframes pulse {
+        @keyframes pulseGood {
             0% { box-shadow: 0 0 10px rgba(0, 255, 170, 0.7); }
             100% { box-shadow: 0 0 20px rgba(0, 255, 170, 0.9); }
         }
+        
+        @keyframes pulseBad {
+            0% { box-shadow: 0 0 10px rgba(255, 51, 102, 0.7); }
+            100% { box-shadow: 0 0 20px rgba(255, 51, 102, 0.9); }
+        }
+        
         #instructions {
             position: absolute;
             bottom: 20px;
@@ -75,20 +93,117 @@
             pointer-events: none;
             padding: 0 20px;
         }
+        
+        #audio-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ffaa;
+            color: #00ffaa;
+            font-family: Arial, sans-serif;
+            padding: 5px 10px;
+            border-radius: 20px;
+            z-index: 20;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="targets"></div>
-    <div id="instructions">Use both thumbs to bend the fluid streams and catch the targets!</div>
+    <div id="instructions">Use both thumbs to bend the fluid streams.<br>Catch green targets, but avoid red ones!</div>
+    <button id="audio-toggle">🔊 On</button>
     <canvas id="canvas"></canvas>
 
     <script>
         // Game variables
         let score = 0;
-        const MAX_TARGETS = 3;
+        const MAX_TARGETS = 4; // Increased to accommodate both good and bad targets
         const targetLifespan = 5000; // milliseconds
         let targets = [];
+        let audioEnabled = true;
+        let lastScoreChange = 0; // Track when score last changed (for animation)
+        let scoreDirection = 1; // 1 for positive, -1 for negative
+        
+        // Audio setup
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Audio toggle
+        const audioToggle = document.getElementById('audio-toggle');
+        audioToggle.addEventListener('click', function() {
+            audioEnabled = !audioEnabled;
+            this.textContent = audioEnabled ? '🔊 On' : '🔇 Off';
+            
+            // Resume audio context if it was suspended (browser policy)
+            if (audioEnabled && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        });
+        
+        // Sound effects
+        function createCollectSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            // Good sound: Major arpeggio
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+            oscillator.frequency.setValueAtTime(554.37, audioContext.currentTime + 0.1); // C#5
+            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.2); // E5
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+        
+        function createBadSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const distortion = audioContext.createWaveShaper();
+            
+            // Bad sound: Distorted descending frequencies
+            function makeDistortionCurve(amount) {
+                const k = typeof amount === 'number' ? amount : 50;
+                const n_samples = 44100;
+                const curve = new Float32Array(n_samples);
+                for (let i = 0; i < n_samples; ++i) {
+                    const x = i * 2 / n_samples - 1;
+                    curve[i] = (3 + k) * x * 20 * (Math.PI / 180) / (Math.PI + k * Math.abs(x));
+                }
+                return curve;
+            }
+            
+            distortion.curve = makeDistortionCurve(400);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
+            
+            oscillator.connect(distortion);
+            distortion.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.4);
+        }
+        
+        // Haptic feedback (vibration)
+        function vibrate(pattern) {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern);
+            }
+        }
         
         // Canvas and WebGL setup
         const canvas = document.getElementById('canvas');
@@ -130,6 +245,7 @@
             uniform vec2 u_touch2;
             uniform vec2 u_targets[${MAX_TARGETS}];
             uniform float u_target_active[${MAX_TARGETS}];
+            uniform float u_target_type[${MAX_TARGETS}];  // 0 = good, 1 = bad
             
             vec4 fluidEffect(vec2 uv, float time, vec2 touch1, vec2 touch2) {
                 vec4 o = vec4(0.01);
@@ -332,7 +448,7 @@
                 
                 vec4 color = fluidEffect(gl_FragCoord.xy / u_resolution, u_time, touch1, touch2);
                 
-                // Highlight targets
+                // Highlight targets (with different colors based on type)
                 for (int i = 0; i < ${MAX_TARGETS}; i++) {
                     if (u_target_active[i] > 0.5) {
                         vec2 targetPos = u_targets[i] * 2.0 - 1.0;
@@ -341,7 +457,14 @@
                         
                         if (dist < 0.1) {
                             float glow = (0.1 - dist) / 0.1;
-                            color = mix(color, vec4(0.0, 1.0, 0.5, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                            // Good target: green glow
+                            if (u_target_type[i] < 0.5) {
+                                color = mix(color, vec4(0.0, 1.0, 0.5, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                            } 
+                            // Bad target: red glow
+                            else {
+                                color = mix(color, vec4(1.0, 0.2, 0.3, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                            }
                         }
                     }
                 }
@@ -404,9 +527,11 @@
         // Get target uniform locations
         const targetLocations = [];
         const targetActiveLocations = [];
+        const targetTypeLocations = [];
         for (let i = 0; i < MAX_TARGETS; i++) {
             targetLocations.push(gl.getUniformLocation(program, `u_targets[${i}]`));
             targetActiveLocations.push(gl.getUniformLocation(program, `u_target_active[${i}]`));
+            targetTypeLocations.push(gl.getUniformLocation(program, `u_target_type[${i}]`));
         }
         
         // Touch handling
@@ -433,19 +558,60 @@
         canvas.addEventListener('touchstart', handleTouches);
         canvas.addEventListener('touchmove', handleTouches);
         
+        // Score update with animation and sound
+        function updateScore(points) {
+            score += points;
+            document.getElementById('score').textContent = `Score: ${score}`;
+            
+            // Visual feedback
+            const scoreElement = document.getElementById('score');
+            scoreElement.classList.remove('negative');
+            
+            if (points > 0) {
+                scoreDirection = 1;
+                // Play good sound
+                if (audioEnabled) {
+                    createCollectSound();
+                }
+                // Short vibration for good targets
+                vibrate(50);
+            } else {
+                scoreDirection = -1;
+                scoreElement.classList.add('negative');
+                // Play bad sound
+                if (audioEnabled) {
+                    createBadSound();
+                }
+                // More intense vibration for bad targets
+                vibrate([50, 50, 100]);
+            }
+            
+            lastScoreChange = Date.now();
+            
+            // Reset visual feedback after a delay
+            setTimeout(() => {
+                scoreElement.classList.remove('negative');
+            }, 500);
+        }
+        
         // Target generation
         function createTarget() {
             if (targets.length >= MAX_TARGETS) return;
+            
+            // Decide if this is a good or bad target
+            const isBad = Math.random() < 0.3; // 30% chance for bad targets
             
             const target = {
                 x: Math.random() * 0.8 + 0.1,
                 y: Math.random() * 0.8 + 0.1,
                 createdAt: Date.now(),
                 collected: false,
+                isBad: isBad,
                 element: document.createElement('div')
             };
             
-            target.element.className = 'target';
+            // Set appropriate CSS class
+            target.element.className = isBad ? 'target bad' : 'target good';
             target.element.style.left = `${target.x * 100}%`;
             target.element.style.top = `${target.y * 100}%`;
             document.getElementById('targets').appendChild(target.element);
@@ -490,24 +656,31 @@
                 
                 if (distToTouch1 < 0.08 || distToTouch2 < 0.08) {
                     target.collected = true;
-                    target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
-                    target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
+                    
+                    if (target.isBad) {
+                        // Bad target visuals
+                        target.element.style.border = '4px solid rgba(255, 51, 102, 1.0)';
+                        target.element.style.boxShadow = '0 0 25px rgba(255, 51, 102, 1.0)';
+                        updateScore(-15); // Lose 15 points
+                    } else {
+                        // Good target visuals
+                        target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
+                        target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
+                        updateScore(10); // Gain 10 points
+                    }
+                    
                     target.element.style.animation = 'none';
                     target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
                     
                     setTimeout(() => {
                         removeTarget(target);
                     }, 500);
-                    
-                    score += 10;
-                    document.getElementById('score').textContent = `Score: ${score}`;
                 }
             });
         }
         
         // Animation loop
         let startTime = Date.now();
-        let darkBackground = true;
         
         function render() {
             resize();
@@ -532,9 +705,11 @@
                 if (i < targets.length && !targets[i].collected) {
                     gl.uniform2f(targetLocations[i], targets[i].x, targets[i].y);
                     gl.uniform1f(targetActiveLocations[i], 1.0);
+                    gl.uniform1f(targetTypeLocations[i], targets[i].isBad ? 1.0 : 0.0);
                 } else {
                     gl.uniform2f(targetLocations[i], 0, 0);
                     gl.uniform1f(targetActiveLocations[i], 0.0);
+                    gl.uniform1f(targetTypeLocations[i], 0.0);
                 }
             }
             
@@ -550,7 +725,21 @@
             requestAnimationFrame(render);
         }
         
-        // Start the game
+        // Start the game with a test sound to ensure audio context is active
+        audioContext.resume().then(() => {
+            if (audioEnabled) {
+                // Minimal silent sound to activate audio
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                gain.gain.value = 0.001;
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start();
+                osc.stop(audioContext.currentTime + 0.1);
+            }
+        });
+        
+        // Initial target creation and start render loop
         createTarget();
         render();
     </script>
