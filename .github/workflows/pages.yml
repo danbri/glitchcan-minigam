@@ -11,20 +11,75 @@ permissions:
   id-token: write
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for proper versioning
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      
+      - name: Create version info
+        run: |
+          # Get repo info
+          REPO_URL="https://github.com/danbri/glitchcan-minigam"
+          LAST_COMMIT_DATE=$(git log -1 --format="%ci")
+          LAST_COMMIT_ID=$(git rev-parse --short HEAD)
+          LAST_COMMIT_URL="$REPO_URL/commit/$LAST_COMMIT_ID"
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          # Get thumbwar.html info
+          THUMBWAR_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- thumbwar/thumbwar.html)
+          THUMBWAR_LAST_COMMIT_ID=$(git log -1 --format="%h" -- thumbwar/thumbwar.html)
+          THUMBWAR_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- thumbwar/thumbwar.html)"
+          
+          # Create a version info JavaScript file
+          cat > version-info.js << EOL
+          document.addEventListener('DOMContentLoaded', function() {
+            // Update repository info
+            document.getElementById('last-commit-date').textContent = '$LAST_COMMIT_DATE';
+            document.getElementById('latest-commit-id').textContent = '$LAST_COMMIT_ID';
+            document.getElementById('latest-commit-link').href = '$LAST_COMMIT_URL';
+            document.getElementById('latest-commit-message').textContent = \`$LAST_COMMIT_MSG\`;
+            
+            // Update thumbwar info
+            document.getElementById('thumbwar-meta').innerHTML = \`
+              <p>
+                Last modified: $THUMBWAR_LAST_COMMIT_DATE<br>
+                Version: <span class="version-badge">$THUMBWAR_LAST_COMMIT_ID</span><br>
+                <a href="$THUMBWAR_COMMIT_URL" target="_blank">View changes</a> | 
+                <a href="$REPO_URL/blob/master/thumbwar/thumbwar.html" target="_blank">View source</a> | 
+                <a href="$REPO_URL/commits/master/thumbwar/thumbwar.html" target="_blank">History</a>
+              </p>
+            \`;
+          });
+          EOL
+
+      - name: Update HTML to use static version info
+        run: |
+          # Create simpler index.html that uses the static version info
+          sed -i 's|<script>.*</script>|<script src="version-info.js"></script>|s' index.html
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: '.'
+          
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
