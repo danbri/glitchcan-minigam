@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fluid Dynamics Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        body {
+            overflow: hidden;
+            background-color: #000;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #00ffaa;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.8);
+            z-index: 10;
+            pointer-events: none;
+        }
+        #targets {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 255, 170, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.7);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px rgba(0, 255, 170, 0.7); }
+            100% { box-shadow: 0 0 20px rgba(0, 255, 170, 0.9); }
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #00ffaa;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            text-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
+            z-index: 10;
+            pointer-events: none;
+            padding: 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="targets"></div>
+    <div id="instructions">Use both thumbs to bend the fluid streams and catch the targets!</div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // Game variables
+        let score = 0;
+        const MAX_TARGETS = 3;
+        const targetLifespan = 5000; // milliseconds
+        let targets = [];
+        
+        // Canvas and WebGL setup
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        
+        if (!gl) {
+            alert('WebGL not supported');
+        }
+        
+        // Resize canvas
+        function resize() {
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+            
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        
+        // Shader sources
+        const vertexShaderSource = `
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = vec4(a_position, 0, 1);
+            }
+        `;
+        
+        const fragmentShaderSource = `
+            precision highp float;
+            
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform vec2 u_touch1;
+            uniform vec2 u_touch2;
+            uniform vec2 u_targets[${MAX_TARGETS}];
+            uniform float u_target_active[${MAX_TARGETS}];
+            
+            vec4 fluidEffect(vec2 uv, float time, vec2 touch1, vec2 touch2) {
+                vec4 o = vec4(0.01);
+                vec2 r = u_resolution;
+                vec2 p = (gl_FragCoord.xy * 2.0 - r) / r.y;
+                
+                // Make background truly dark
+                vec4 backgroundColor = vec4(0.0, 0.0, 0.0, 1.0);
+                
+                // Touch influence - trail effect
+                float t1 = length(p - touch1) * 1.1;
+                float t2 = length(p - touch2) * 1.1;
+                
+                // More chaotic time-based flow vectors for extreme swirling
+                vec2 flowVec1 = vec2(
+                    sin(time * 0.7) * 0.4 + sin(time * 1.5) * 0.3,
+                    cos(time * 0.5) * 0.4 + cos(time * 1.7) * 0.3
+                );
+                vec2 flowVec2 = vec2(
+                    sin(time * 0.5 + 2.0) * 0.4 + sin(time * 1.3) * 0.3,
+                    cos(time * 0.6 + 1.0) * 0.4 + cos(time * 1.9) * 0.3
+                );
+                
+                // Create multiple trailing points for each touch (more points = more complex streams)
+                vec2 trailPos1 = touch1 + flowVec1;
+                vec2 trailPos2 = touch2 + flowVec2;
+                
+                // Create more trail points with different offsets
+                float t1a = length(p - (touch1 + flowVec1 * 0.3)) * 1.3;
+                float t1b = length(p - (touch1 + flowVec1 * 0.6)) * 1.4;
+                float t1c = length(p - (touch1 + flowVec1 * 0.9)) * 1.5;
+                float t1d = length(p - (touch1 + flowVec1 * 1.2)) * 1.6;
+                float t1e = length(p - (touch1 + flowVec1 * 1.5)) * 1.7;
+                float t1f = length(p - (touch1 + vec2(sin(time*2.3), cos(time*2.1)) * 0.7)) * 1.5; // Additional chaotic trail
+                
+                float t2a = length(p - (touch2 + flowVec2 * 0.3)) * 1.3;
+                float t2b = length(p - (touch2 + flowVec2 * 0.6)) * 1.4;
+                float t2c = length(p - (touch2 + flowVec2 * 0.9)) * 1.5;
+                float t2d = length(p - (touch2 + flowVec2 * 1.2)) * 1.6;
+                float t2e = length(p - (touch2 + flowVec2 * 1.5)) * 1.7;
+                float t2f = length(p - (touch2 + vec2(cos(time*2.5), sin(time*1.9)) * 0.7)) * 1.5; // Additional chaotic trail
+                
+                // Combined touch effect with all trail points
+                float touchEffect = min(
+                    min(min(min(t1, t1a), min(t1b, t1c)), min(min(t1d, t1e), t1f)),
+                    min(min(min(t2, t2a), min(t2b, t2c)), min(min(t2d, t2e), t2f))
+                );
+                touchEffect = clamp(touchEffect, 0.06, 1.0); // Lower clamp value for more intense effect
+                
+                // Extreme fluid dynamics with added vorticity
+                vec2 l, v = p * (1.0 - (l += abs(0.7 - dot(p, p)))) / (0.05 + touchEffect * 0.1);
+                
+                // Enhanced vector field for extreme swirling effect
+                vec2 curl = vec2(
+                    sin(p.y * 5.0 + time) * cos(p.x * 4.0 - time * 0.7) + sin(p.y * 8.0 - time * 1.3) * 0.3,
+                    cos(p.x * 5.0 - time) * sin(p.y * 4.0 + time * 0.7) + cos(p.x * 8.0 + time * 1.3) * 0.3
+                ) * 0.25; // Increased strength
+                
+                v += curl; // Add curl to create intense swirling
+                
+                // Fractalize the flow with turbulent noise-like patterns
+                v.x += 0.2 * sin(v.y * 4.0 + time * 0.9) * cos(v.x * 3.0);
+                v.y += 0.2 * cos(v.x * 4.0 - time * 0.8) * sin(v.y * 3.0);
+                
+                // Flow iterations - create extreme snaking patterns with turbulence
+                for(float i = 0.0; i < 15.0; i++) { // More iterations for more detail
+                    float ii = i + 1.0;
+                    
+                    // Create more complex flow patterns with wilder warping
+                    vec2 offset = vec2(
+                        sin(time * 0.4 + ii * 0.2 + sin(time)) * 0.6,
+                        cos(time * 0.3 + ii * 0.2 + cos(time)) * 0.6
+                    );
+                    
+                    // Use complex sinusoidal waves to create fire-like movement
+                    vec2 warp = vec2(
+                        sin(v.x * 2.0 + time * 0.6) * 0.3 + sin(v.x * 5.0 - time * 0.3) * 0.1,
+                        cos(v.y * 2.0 + time * 0.5) * 0.3 + cos(v.y * 5.0 - time * 0.2) * 0.1
+                    );
+                    
+                    // Create turbulent snake-like patterns with complex oscillation
+                    v += cos(v.yx * ii * 0.7 + offset + time * 0.8) / (ii * 0.4) + warp + 0.6;
+                    
+                    // Add fluctuating intensity with multiple frequencies for flame-like effect
+                    float flicker = 0.8 + sin(time * 5.0 + ii) * 0.2 + sin(time * 9.0 + ii * 0.7) * 0.1;
+                    o += (sin(v.xyyx * 1.8 + time * 0.4) + 1.0) * abs(v.x - v.y) * 0.3 * flicker;
+                }
+                
+                // Northern lights style color mapping with more dramatic gradients
+                float intensity = clamp(o.x + o.y + o.z + o.w, 0.1, 4.0);
+                float factor = exp(-1.8 * l.x) / intensity * 2.0;
+                
+                // Core texture noise for touch points - adds detailed texture at heart of blobs
+                float noise1 = sin(p.x * 30.0 + time) * sin(p.y * 30.0 + time * 1.2) * 0.5 + 0.5;
+                float noise2 = sin(p.x * 20.0 - time * 1.3) * sin(p.y * 20.0 + time) * 0.5 + 0.5;
+                
+                // Create fire/magic-like colors with more variation and core texturing
+                vec4 auroraColor = vec4(
+                    0.4 * (1.0 + sin(v.x * 3.0 + time * 0.4 + noise1)),  // Red - more variation
+                    0.7 * (1.0 + sin(v.y * 2.0 + time * 0.5 + noise2)),  // Green - stronger
+                    0.6 * (1.0 + sin(v.x * v.y + time * 0.6 + noise1 * noise2)),  // Blue - more complex pattern
+                    1.0
+                );
+                
+                // Core colors of touch points - make more vibrant and varied
+                vec4 core1Color = vec4(
+                    0.1 + 0.3 * sin(time * 2.0),           // Pulsing red
+                    0.9 + 0.3 * sin(time * 2.5 + 2.0),     // Strong green with variation
+                    0.5 + 0.3 * sin(time * 3.0 + 4.0),     // Pulsing blue
+                    1.0
+                );
+                
+                vec4 core2Color = vec4(
+                    0.2 + 0.3 * sin(time * 2.2 + 1.0),     // Slight red
+                    0.3 + 0.2 * sin(time * 2.7 + 3.0),     // Slight green
+                    0.9 + 0.3 * sin(time * 3.2 + 5.0),     // Strong blue with variation
+                    1.0
+                );
+                
+                // More intense touch colors with trail falloff and core texturing
+                float coreFactor1 = 4.0 * pow(1.0 - min(1.0, t1 * 0.8), 5.0);
+                float coreFactor2 = 4.0 * pow(1.0 - min(1.0, t2 * 0.8), 5.0);
+                
+                float trailFactor1 = 3.0 * pow(1.0 - min(1.0, t1 * 0.9), 4.0);
+                float trailFactor1a = 2.5 * pow(1.0 - min(1.0, t1a * 0.9), 4.0) * 0.7;
+                float trailFactor1b = 2.0 * pow(1.0 - min(1.0, t1b * 0.9), 4.0) * 0.5;
+                float trailFactor1c = 1.5 * pow(1.0 - min(1.0, t1c * 0.9), 4.0) * 0.4;
+                float trailFactor1d = 1.2 * pow(1.0 - min(1.0, t1d * 0.9), 4.0) * 0.3;
+                float trailFactor1e = 1.0 * pow(1.0 - min(1.0, t1e * 0.9), 4.0) * 0.2;
+                float trailFactor1f = 2.0 * pow(1.0 - min(1.0, t1f * 0.9), 4.0) * 0.6;
+                
+                float trailFactor2 = 3.0 * pow(1.0 - min(1.0, t2 * 0.9), 4.0);
+                float trailFactor2a = 2.5 * pow(1.0 - min(1.0, t2a * 0.9), 4.0) * 0.7;
+                float trailFactor2b = 2.0 * pow(1.0 - min(1.0, t2b * 0.9), 4.0) * 0.5;
+                float trailFactor2c = 1.5 * pow(1.0 - min(1.0, t2c * 0.9), 4.0) * 0.4;
+                float trailFactor2d = 1.2 * pow(1.0 - min(1.0, t2d * 0.9), 4.0) * 0.3;
+                float trailFactor2e = 1.0 * pow(1.0 - min(1.0, t2e * 0.9), 4.0) * 0.2;
+                float trailFactor2f = 2.0 * pow(1.0 - min(1.0, t2f * 0.9), 4.0) * 0.6;
+                
+                // Core of touch points with texture noise
+                vec4 coreTouch1 = mix(
+                    vec4(0.0, 0.9, 0.5, 1.0), 
+                    core1Color, 
+                    noise1
+                ) * coreFactor1;
+                
+                vec4 coreTouch2 = mix(
+                    vec4(0.1, 0.3, 0.9, 1.0), 
+                    core2Color, 
+                    noise2
+                ) * coreFactor2;
+                
+                // Green magic touch with trail
+                vec4 touch1Color = vec4(0.0, 0.9, 0.5, 1.0) * trailFactor1;
+                vec4 touch1ColorA = vec4(0.0, 0.85, 0.45, 1.0) * trailFactor1a;
+                vec4 touch1ColorB = vec4(0.0, 0.8, 0.4, 1.0) * trailFactor1b;
+                vec4 touch1ColorC = vec4(0.0, 0.75, 0.35, 1.0) * trailFactor1c;
+                vec4 touch1ColorD = vec4(0.0, 0.7, 0.3, 1.0) * trailFactor1d;
+                vec4 touch1ColorE = vec4(0.0, 0.65, 0.25, 1.0) * trailFactor1e;
+                vec4 touch1ColorF = mix(vec4(0.3, 0.9, 0.5, 1.0), vec4(0.1, 0.7, 0.3, 1.0), noise1) * trailFactor1f;
+                
+                // Blue magic touch with trail
+                vec4 touch2Color = vec4(0.1, 0.3, 0.9, 1.0) * trailFactor2;
+                vec4 touch2ColorA = vec4(0.1, 0.28, 0.85, 1.0) * trailFactor2a;
+                vec4 touch2ColorB = vec4(0.1, 0.26, 0.8, 1.0) * trailFactor2b;
+                vec4 touch2ColorC = vec4(0.1, 0.24, 0.75, 1.0) * trailFactor2c;
+                vec4 touch2ColorD = vec4(0.1, 0.22, 0.7, 1.0) * trailFactor2d;
+                vec4 touch2ColorE = vec4(0.1, 0.2, 0.65, 1.0) * trailFactor2e;
+                vec4 touch2ColorF = mix(vec4(0.2, 0.4, 0.9, 1.0), vec4(0.0, 0.2, 0.7, 1.0), noise2) * trailFactor2f;
+                
+                // Combine all trail colors for smoky effect with core highlights
+                vec4 combinedTrailColor = coreTouch1 + touch1Color + touch1ColorA + touch1ColorB + touch1ColorC + 
+                                        touch1ColorD + touch1ColorE + touch1ColorF +
+                                        coreTouch2 + touch2Color + touch2ColorA + touch2ColorB + touch2ColorC + 
+                                        touch2ColorD + touch2ColorE + touch2ColorF;
+                
+                // Apply fluid effect only where there's activity
+                float activity = clamp(length(combinedTrailColor), 0.0, 1.0);
+                
+                // Create final magical effect
+                vec4 fluidColor = mix(backgroundColor, auroraColor * factor * 3.0, clamp(intensity * 0.5, 0.0, 1.0));
+                fluidColor = mix(fluidColor, combinedTrailColor, 0.9);
+                
+                // Add faint background energy field
+                float backgroundEnergy = 0.08 * (0.5 + 0.5 * sin(p.x * 6.0 + time) * sin(p.y * 6.0 + time * 0.7));
+                
+                // Final composition with background energy field for subtle ambient glow
+                return mix(
+                    mix(backgroundColor, auroraColor * 0.3, backgroundEnergy), 
+                    fluidColor, 
+                    clamp(activity * 4.0, 0.0, 1.0)
+                );
+            }
+            
+            void main() {
+                vec2 touch1 = u_touch1 * 2.0 - 1.0; // Convert to -1 to 1 range
+                vec2 touch2 = u_touch2 * 2.0 - 1.0;
+                touch1.y *= -1.0; // Flip Y
+                touch2.y *= -1.0;
+                
+                vec4 color = fluidEffect(gl_FragCoord.xy / u_resolution, u_time, touch1, touch2);
+                
+                // Highlight targets
+                for (int i = 0; i < ${MAX_TARGETS}; i++) {
+                    if (u_target_active[i] > 0.5) {
+                        vec2 targetPos = u_targets[i] * 2.0 - 1.0;
+                        targetPos.y *= -1.0;
+                        float dist = length(gl_FragCoord.xy / u_resolution * 2.0 - 1.0 - targetPos);
+                        
+                        if (dist < 0.1) {
+                            float glow = (0.1 - dist) / 0.1;
+                            color = mix(color, vec4(0.0, 1.0, 0.5, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                        }
+                    }
+                }
+                
+                gl_FragColor = color;
+            }
+        `;
+        
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+        
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program linking error:', gl.getProgramInfoLog(program));
+                return null;
+            }
+            
+            return program;
+        }
+        
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const program = createProgram(gl, vertexShader, fragmentShader);
+        
+        // Set up position buffer
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1,
+            1, -1,
+            -1, 1,
+            -1, 1,
+            1, -1,
+            1, 1
+        ]), gl.STATIC_DRAW);
+        
+        // Get uniform locations
+        const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
+        const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
+        const touch1UniformLocation = gl.getUniformLocation(program, 'u_touch1');
+        const touch2UniformLocation = gl.getUniformLocation(program, 'u_touch2');
+        
+        // Get target uniform locations
+        const targetLocations = [];
+        const targetActiveLocations = [];
+        for (let i = 0; i < MAX_TARGETS; i++) {
+            targetLocations.push(gl.getUniformLocation(program, `u_targets[${i}]`));
+            targetActiveLocations.push(gl.getUniformLocation(program, `u_target_active[${i}]`));
+        }
+        
+        // Touch handling
+        let touch1 = { x: 0.25, y: 0.5 };
+        let touch2 = { x: 0.75, y: 0.5 };
+        
+        function handleTouches(e) {
+            e.preventDefault();
+            
+            if (e.touches.length >= 1) {
+                touch1.x = e.touches[0].clientX / canvas.width;
+                touch1.y = e.touches[0].clientY / canvas.height;
+            }
+            
+            if (e.touches.length >= 2) {
+                touch2.x = e.touches[1].clientX / canvas.width;
+                touch2.y = e.touches[1].clientY / canvas.height;
+            }
+            
+            // Check for target collection
+            checkTargets();
+        }
+        
+        canvas.addEventListener('touchstart', handleTouches);
+        canvas.addEventListener('touchmove', handleTouches);
+        
+        // Target generation
+        function createTarget() {
+            if (targets.length >= MAX_TARGETS) return;
+            
+            const target = {
+                x: Math.random() * 0.8 + 0.1,
+                y: Math.random() * 0.8 + 0.1,
+                createdAt: Date.now(),
+                collected: false,
+                element: document.createElement('div')
+            };
+            
+            target.element.className = 'target';
+            target.element.style.left = `${target.x * 100}%`;
+            target.element.style.top = `${target.y * 100}%`;
+            document.getElementById('targets').appendChild(target.element);
+            
+            targets.push(target);
+        }
+        
+        function removeTarget(target) {
+            target.element.remove();
+            targets = targets.filter(t => t !== target);
+        }
+        
+        function updateTargets() {
+            const now = Date.now();
+            
+            // Remove expired targets
+            targets.forEach(target => {
+                if (now - target.createdAt > targetLifespan && !target.collected) {
+                    removeTarget(target);
+                }
+            });
+            
+            // Create new targets if needed
+            if (targets.length < MAX_TARGETS && Math.random() < 0.01) {
+                createTarget();
+            }
+        }
+        
+        function checkTargets() {
+            targets.forEach(target => {
+                if (target.collected) return;
+                
+                const distToTouch1 = Math.hypot(
+                    target.x - touch1.x,
+                    target.y - touch1.y
+                );
+                
+                const distToTouch2 = Math.hypot(
+                    target.x - touch2.x,
+                    target.y - touch2.y
+                );
+                
+                if (distToTouch1 < 0.08 || distToTouch2 < 0.08) {
+                    target.collected = true;
+                    target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
+                    target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
+                    target.element.style.animation = 'none';
+                    target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                    
+                    setTimeout(() => {
+                        removeTarget(target);
+                    }, 500);
+                    
+                    score += 10;
+                    document.getElementById('score').textContent = `Score: ${score}`;
+                }
+            });
+        }
+        
+        // Animation loop
+        let startTime = Date.now();
+        let darkBackground = true;
+        
+        function render() {
+            resize();
+            updateTargets();
+            
+            const currentTime = (Date.now() - startTime) / 1000;
+            
+            // True black background
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            gl.useProgram(program);
+            
+            // Set uniforms
+            gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
+            gl.uniform1f(timeUniformLocation, currentTime);
+            gl.uniform2f(touch1UniformLocation, touch1.x, touch1.y);
+            gl.uniform2f(touch2UniformLocation, touch2.x, touch2.y);
+            
+            // Set target uniforms
+            for (let i = 0; i < MAX_TARGETS; i++) {
+                if (i < targets.length && !targets[i].collected) {
+                    gl.uniform2f(targetLocations[i], targets[i].x, targets[i].y);
+                    gl.uniform1f(targetActiveLocations[i], 1.0);
+                } else {
+                    gl.uniform2f(targetLocations[i], 0, 0);
+                    gl.uniform1f(targetActiveLocations[i], 0.0);
+                }
+            }
+            
+            // Set position attribute
+            const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+            gl.enableVertexAttribArray(positionAttributeLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+            
+            // Draw
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            
+            requestAnimationFrame(render);
+        }
+        
+        // Start the game
+        createTarget();
+        render();
+    </script>
+</body>
+</html>
