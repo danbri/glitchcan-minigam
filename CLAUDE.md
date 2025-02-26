@@ -20,3 +20,11 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 ## Project Structure
 - Each minigame in its own subdirectory with self-contained assets
 - Common assets/styles shared between games go in root directory
+
+## GitHub Workflow Requirements
+- GitHub Actions workflow requires modern action versions
+- Checkout action: v4 (not v3)
+- Setup-node action: v4 with Node 20+ (not v3/Node 16)
+- Configure-pages action: v4 (not v3)
+- Upload-pages-artifact action: v3 (deprecated v1)
+- Deploy-pages action: v4 (not v1)
