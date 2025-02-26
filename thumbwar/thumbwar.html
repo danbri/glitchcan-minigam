@@ -107,24 +107,397 @@
             z-index: 20;
             cursor: pointer;
         }
+        
+        /* Control Panel Styles */
+        #control-panel-toggle {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ffaa;
+            color: #00ffaa;
+            font-family: Arial, sans-serif;
+            padding: 5px 10px;
+            border-radius: 20px;
+            z-index: 21;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        #control-panel {
+            position: absolute;
+            top: 110px;
+            right: 20px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #00ffaa;
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 20;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+            transform-origin: top right;
+            transition: transform 0.3s, opacity 0.3s;
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        
+        #control-panel.visible {
+            display: block;
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .control-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 170, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .control-section h3 {
+            color: #00ffaa;
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 6px 0;
+        }
+        
+        .control-label {
+            flex: 1;
+        }
+        
+        .control-input {
+            flex: 1;
+        }
+        
+        /* Sliders and inputs */
+        .control-panel input[type="range"] {
+            width: 100%;
+            background: #333;
+            height: 6px;
+            -webkit-appearance: none;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .control-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #00ffaa;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .control-panel input[type="checkbox"] {
+            -webkit-appearance: none;
+            width: 30px;
+            height: 16px;
+            background: #333;
+            border-radius: 10px;
+            position: relative;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .control-panel input[type="checkbox"]:checked {
+            background: #00ffaa;
+        }
+        
+        .control-panel input[type="checkbox"]:before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #ddd;
+            border-radius: 50%;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        
+        .control-panel input[type="checkbox"]:checked:before {
+            left: 15px;
+        }
+        
+        .parameter-value {
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            font-size: 11px;
+            color: #ccc;
+            margin-left: 8px;
+        }
+        
+        /* Only show control panel on desktop */
+        @media (max-width: 768px) {
+            #control-panel-toggle {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="targets"></div>
-    <div id="instructions">Use both thumbs to bend the fluid streams.<br>Catch green targets, but avoid red ones!</div>
+    <div id="instructions">
+        On mobile: Use both thumbs to bend the fluid streams.<br>
+        On desktop: Click and drag with your mouse or click directly on targets.<br>
+        Catch green targets, but avoid red ones!
+    </div>
     <button id="audio-toggle">🔊 Click to Enable Audio</button>
+    <button id="control-panel-toggle">⚙️ Controls</button>
+    <div id="control-panel" class="control-panel">
+        <div class="control-section">
+            <h3>Tendril Effects</h3>
+            <div class="control-row">
+                <label class="control-label">Enable Tendrils</label>
+                <div class="control-input">
+                    <input type="checkbox" id="enable-tendrils" checked>
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Thickness <span id="tendril-thickness-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="tendril-thickness" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Turbulence <span id="tendril-turbulence-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="tendril-turbulence" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Glow Intensity <span id="tendril-glow-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="tendril-glow" min="0" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Fluid Dynamics</h3>
+            <div class="control-row">
+                <label class="control-label">Intensity <span id="fluid-intensity-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="fluid-intensity" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Background Effects</label>
+                <div class="control-input">
+                    <input type="checkbox" id="enable-background" checked>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Shockwave Effects</h3>
+            <div class="control-row">
+                <label class="control-label">Enable Shockwaves</label>
+                <div class="control-input">
+                    <input type="checkbox" id="enable-shockwaves" checked>
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Intensity <span id="shockwave-intensity-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="shockwave-intensity" min="0" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Gameplay</h3>
+            <div class="control-row">
+                <label class="control-label">Target Generation Rate <span id="target-rate-value" class="parameter-value">1.0</span></label>
+                <div class="control-input">
+                    <input type="range" id="target-rate" min="0.2" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Target Lifespan <span id="target-lifespan-value" class="parameter-value">5s</span></label>
+                <div class="control-input">
+                    <input type="range" id="target-lifespan" min="2" max="10" step="0.5" value="5">
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Performance</h3>
+            <div class="control-row">
+                <label class="control-label">Quality Preset</label>
+                <div class="control-input">
+                    <select id="quality-preset">
+                        <option value="high">High</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+            </div>
+            <div class="control-row">
+                <label class="control-label">Fluid Iterations <span id="fluid-iterations-value" class="parameter-value">12</span></label>
+                <div class="control-input">
+                    <input type="range" id="fluid-iterations" min="4" max="16" step="1" value="12">
+                </div>
+            </div>
+        </div>
+    </div>
     <canvas id="canvas"></canvas>
 
     <script>
         // Game variables
         let score = 0;
         const MAX_TARGETS = 4; // Increased to accommodate both good and bad targets
-        const targetLifespan = 5000; // milliseconds
+        let targetLifespan = 5000; // milliseconds (can be modified by controls)
         let targets = [];
+        let shockwaves = []; // Array to store active shockwaves
         let audioEnabled = true;
         let lastScoreChange = 0; // Track when score last changed (for animation)
         let scoreDirection = 1; // 1 for positive, -1 for negative
+        
+        // Game rule variables
+        let bothThumbsActive = false; // Track if both thumbs are currently active
+        let thumbsClosePenaltyActive = false; // Prevent constant penalties
+        let lastActiveScoreTime = 0; // For passive score increase when both thumbs active
+        let THUMBS_TOO_CLOSE_THRESHOLD = 0.2; // Distance threshold for "too close" penalty
+        let BOTH_THUMBS_ACTIVE_SCORE_INTERVAL = 1000; // ms between score points for active play
+        
+        // Effect control variables (used by control panel)
+        let gameSettings = {
+            // Tendril controls
+            enableTendrils: true,
+            tendrilThickness: 1.0,
+            tendrilTurbulence: 1.0, 
+            tendrilGlow: 1.0,
+            
+            // Fluid dynamics
+            fluidIntensity: 1.0,
+            enableBackground: true,
+            
+            // Shockwave effects
+            enableShockwaves: true,
+            shockwaveIntensity: 1.0,
+            
+            // Gameplay
+            targetGenerationRate: 1.0,
+            targetLifespan: 5.0, // seconds
+            
+            // Performance
+            qualityPreset: 'medium',
+            fluidIterations: 12
+        };
+        
+        // Control Panel Logic
+        const controlPanelToggle = document.getElementById('control-panel-toggle');
+        const controlPanel = document.getElementById('control-panel');
+        
+        // Toggle control panel visibility
+        controlPanelToggle.addEventListener('click', () => {
+            controlPanel.classList.toggle('visible');
+        });
+        
+        // Setup control panel listeners
+        function setupControlPanel() {
+            // Tendril controls
+            document.getElementById('enable-tendrils').addEventListener('change', e => {
+                gameSettings.enableTendrils = e.target.checked;
+            });
+            
+            document.getElementById('tendril-thickness').addEventListener('input', e => {
+                gameSettings.tendrilThickness = parseFloat(e.target.value);
+                document.getElementById('tendril-thickness-value').textContent = e.target.value;
+            });
+            
+            document.getElementById('tendril-turbulence').addEventListener('input', e => {
+                gameSettings.tendrilTurbulence = parseFloat(e.target.value);
+                document.getElementById('tendril-turbulence-value').textContent = e.target.value;
+            });
+            
+            document.getElementById('tendril-glow').addEventListener('input', e => {
+                gameSettings.tendrilGlow = parseFloat(e.target.value);
+                document.getElementById('tendril-glow-value').textContent = e.target.value;
+            });
+            
+            // Fluid dynamics
+            document.getElementById('fluid-intensity').addEventListener('input', e => {
+                gameSettings.fluidIntensity = parseFloat(e.target.value);
+                document.getElementById('fluid-intensity-value').textContent = e.target.value;
+            });
+            
+            document.getElementById('enable-background').addEventListener('change', e => {
+                gameSettings.enableBackground = e.target.checked;
+            });
+            
+            // Shockwaves
+            document.getElementById('enable-shockwaves').addEventListener('change', e => {
+                gameSettings.enableShockwaves = e.target.checked;
+            });
+            
+            document.getElementById('shockwave-intensity').addEventListener('input', e => {
+                gameSettings.shockwaveIntensity = parseFloat(e.target.value);
+                document.getElementById('shockwave-intensity-value').textContent = e.target.value;
+            });
+            
+            // Gameplay
+            document.getElementById('target-rate').addEventListener('input', e => {
+                gameSettings.targetGenerationRate = parseFloat(e.target.value);
+                document.getElementById('target-rate-value').textContent = e.target.value;
+            });
+            
+            document.getElementById('target-lifespan').addEventListener('input', e => {
+                gameSettings.targetLifespan = parseFloat(e.target.value);
+                targetLifespan = gameSettings.targetLifespan * 1000; // convert to ms
+                document.getElementById('target-lifespan-value').textContent = e.target.value + 's';
+            });
+            
+            // Performance
+            document.getElementById('quality-preset').addEventListener('change', e => {
+                gameSettings.qualityPreset = e.target.value;
+                applyQualityPreset(e.target.value);
+            });
+            
+            document.getElementById('fluid-iterations').addEventListener('input', e => {
+                gameSettings.fluidIterations = parseInt(e.target.value);
+                document.getElementById('fluid-iterations-value').textContent = e.target.value;
+            });
+        }
+        
+        // Apply performance presets
+        function applyQualityPreset(preset) {
+            const iterationsSlider = document.getElementById('fluid-iterations');
+            
+            switch(preset) {
+                case 'high':
+                    gameSettings.fluidIterations = 15;
+                    iterationsSlider.value = 15;
+                    document.getElementById('fluid-iterations-value').textContent = '15';
+                    break;
+                case 'medium':
+                    gameSettings.fluidIterations = 12;
+                    iterationsSlider.value = 12;
+                    document.getElementById('fluid-iterations-value').textContent = '12';
+                    break;
+                case 'low':
+                    gameSettings.fluidIterations = 8;
+                    iterationsSlider.value = 8;
+                    document.getElementById('fluid-iterations-value').textContent = '8';
+                    break;
+            }
+        }
+        
+        // Initialize control panel
+        setupControlPanel();
         
         // Audio setup
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -292,6 +665,90 @@
             uniform float u_target_active[${MAX_TARGETS}];
             uniform float u_target_type[${MAX_TARGETS}];  // 0 = good, 1 = bad
             
+            // Added shockwave effect variables
+            uniform float u_shockwave_active[${MAX_TARGETS}];
+            uniform vec2 u_shockwave_pos[${MAX_TARGETS}];
+            uniform float u_shockwave_start[${MAX_TARGETS}];
+            uniform float u_shockwave_type[${MAX_TARGETS}]; // 0 = good, 1 = bad
+            
+            // Control panel uniforms
+            uniform float u_fluid_intensity;
+            uniform float u_enable_background;
+            uniform float u_enable_tendrils;
+            uniform float u_tendril_thickness;
+            uniform float u_tendril_turbulence;
+            uniform float u_tendril_glow;
+            uniform float u_enable_shockwaves;
+            uniform float u_shockwave_intensity;
+            
+            // Function to create an organic, swirling tendril effect between points
+            float swirlTendril(vec2 p, vec2 start, vec2 end, float time, float thickness, float turbulence) {
+                // Vector from start to end
+                vec2 direction = end - start;
+                float distance = length(direction);
+                direction = normalize(direction);
+                
+                // Perpendicular vector for swirls
+                vec2 perpendicular = vec2(-direction.y, direction.x);
+                
+                // Project point onto line
+                float t = clamp(dot(p - start, direction) / distance, 0.0, 1.0);
+                vec2 projection = start + direction * t * distance;
+                
+                // Base parameters for a more organic, flowing tendril
+                float swirl = 0.0;
+                
+                // Layered sine waves with different frequencies and amplitudes for organic flow
+                // Layer 1: Large, slow undulations (base flow)
+                float baseFlow = sin(t * 3.14159 * 2.0 + time * 0.7) * 0.04 * turbulence;
+                
+                // Layer 2: Medium ripples
+                float mediumRipples = sin(t * 3.14159 * 5.0 + time * 1.2) * 0.025 * turbulence;
+                
+                // Layer 3: Small, rapid oscillations (micro-movement)
+                float microMovement = sin(t * 3.14159 * 12.0 + time * 2.5) * 0.01 * turbulence;
+                
+                // Layer 4: Tiny, very rapid oscillations for detail
+                float detailNoise = sin(t * 3.14159 * 25.0 + time * 4.0) * 0.005 * turbulence;
+                
+                // Additional spiral effect
+                float spiral = sin(t * 3.14159 * 3.0 + time * 0.5) * cos(t * 3.14159 * 2.0 + time * 0.3) * 0.02 * turbulence;
+                
+                // Temporal variation to make the flow appear to change direction/shape over time
+                float timeWave1 = sin(time * 0.3) * 0.01;
+                float timeWave2 = cos(time * 0.5 + t) * 0.01;
+                
+                // Flow distortion near the endpoints for a more natural connection
+                float endpointEffect = (1.0 - pow(abs(2.0 * t - 1.0), 0.5)) * 0.01;
+                
+                // Combine all effects with different weights to create organic flow
+                swirl = baseFlow + mediumRipples + microMovement + detailNoise + spiral + timeWave1 + timeWave2 + endpointEffect;
+                
+                // Temporal scaling - makes the whole tendril pulse slightly
+                float tendrilPulse = 0.9 + 0.1 * sin(time * 0.8 + t * 2.0);
+                swirl *= tendrilPulse;
+                
+                // Dynamic thickness variation along the tendril
+                float thicknessVariation = 0.8 + 0.2 * sin(t * 8.0 + time * 1.5);
+                float effectiveThickness = thickness * thicknessVariation;
+                
+                // Make tendril thinner near the midpoint for a stretched appearance
+                effectiveThickness *= 0.7 + 0.3 * sin(t * 3.14159);
+                
+                // Apply swirl to create the curved, organic path
+                vec2 offset = perpendicular * swirl;
+                
+                // For more interesting paths, add a secondary perpendicular component
+                vec2 secondary = vec2(direction.x, direction.y); // Orthogonal to perpendicular
+                offset += secondary * sin(t * 3.14159 * 4.0 + time * 0.9) * 0.01;
+                
+                // Calculate distance to the swirling path
+                float distortedDistance = length(p - (projection + offset));
+                
+                // Create smooth falloff for the tendril glow
+                return smoothstep(effectiveThickness, effectiveThickness * 0.2, distortedDistance);
+            }
+            
             vec4 fluidEffect(vec2 uv, float time, vec2 touch1, vec2 touch2) {
                 vec4 o = vec4(0.01);
                 vec2 r = u_resolution;
@@ -341,7 +798,9 @@
                 touchEffect = clamp(touchEffect, 0.06, 1.0); // Lower clamp value for more intense effect
                 
                 // Extreme fluid dynamics with added vorticity
-                vec2 l, v = p * (1.0 - (l += abs(0.7 - dot(p, p)))) / (0.05 + touchEffect * 0.1);
+                // Fix uninitialized variable issue
+                vec2 l = vec2(0.0);
+                vec2 v = p * (1.0 - (l += abs(0.7 - dot(p, p)))) / (max(0.05, touchEffect * 0.1));
                 
                 // Enhanced vector field for extreme swirling effect
                 vec2 curl = vec2(
@@ -356,7 +815,8 @@
                 v.y += 0.2 * cos(v.x * 4.0 - time * 0.8) * sin(v.y * 3.0);
                 
                 // Flow iterations - create extreme snaking patterns with turbulence
-                for(float i = 0.0; i < 15.0; i++) { // More iterations for more detail
+                // WebGL 1.0 requires constant loop bounds
+                for(float i = 0.0; i < 12.0; i++) { // Fixed number of iterations
                     float ii = i + 1.0;
                     
                     // Create more complex flow patterns with wilder warping
@@ -387,25 +847,26 @@
                 float noise1 = sin(p.x * 30.0 + time) * sin(p.y * 30.0 + time * 1.2) * 0.5 + 0.5;
                 float noise2 = sin(p.x * 20.0 - time * 1.3) * sin(p.y * 20.0 + time) * 0.5 + 0.5;
                 
-                // Create fire/magic-like colors with more variation and core texturing
+                // Create fire/magic-like colors with more dramatic variation and core texturing
+                // Enhanced color transitions for more vibrant visuals
                 vec4 auroraColor = vec4(
-                    0.4 * (1.0 + sin(v.x * 3.0 + time * 0.4 + noise1)),  // Red - more variation
-                    0.7 * (1.0 + sin(v.y * 2.0 + time * 0.5 + noise2)),  // Green - stronger
-                    0.6 * (1.0 + sin(v.x * v.y + time * 0.6 + noise1 * noise2)),  // Blue - more complex pattern
+                    0.5 * (1.0 + sin(v.x * 3.0 + time * 0.4 + noise1 * 0.5)),  // More intense red
+                    0.8 * (1.0 + sin(v.y * 2.0 + time * 0.5 + noise2 * 0.7)),  // Stronger green
+                    0.7 * (1.0 + sin(v.x * v.y + time * 0.6 + noise1 * noise2)),  // More vibrant blue
                     1.0
                 );
                 
                 // Core colors of touch points - make more vibrant and varied
                 vec4 core1Color = vec4(
-                    0.1 + 0.3 * sin(time * 2.0),           // Pulsing red
+                    0.1 + 0.4 * sin(time * 2.0),           // More dramatic pulsing red
                     0.9 + 0.3 * sin(time * 2.5 + 2.0),     // Strong green with variation
-                    0.5 + 0.3 * sin(time * 3.0 + 4.0),     // Pulsing blue
+                    0.6 + 0.4 * sin(time * 3.0 + 4.0),     // More intense pulsing blue
                     1.0
                 );
                 
                 vec4 core2Color = vec4(
-                    0.2 + 0.3 * sin(time * 2.2 + 1.0),     // Slight red
-                    0.3 + 0.2 * sin(time * 2.7 + 3.0),     // Slight green
+                    0.2 + 0.4 * sin(time * 2.2 + 1.0),     // More dramatic red pulse
+                    0.3 + 0.3 * sin(time * 2.7 + 3.0),     // Enhanced green
                     0.9 + 0.3 * sin(time * 3.2 + 5.0),     // Strong blue with variation
                     1.0
                 );
@@ -443,23 +904,23 @@
                     noise2
                 ) * coreFactor2;
                 
-                // Green magic touch with trail
-                vec4 touch1Color = vec4(0.0, 0.9, 0.5, 1.0) * trailFactor1;
-                vec4 touch1ColorA = vec4(0.0, 0.85, 0.45, 1.0) * trailFactor1a;
-                vec4 touch1ColorB = vec4(0.0, 0.8, 0.4, 1.0) * trailFactor1b;
-                vec4 touch1ColorC = vec4(0.0, 0.75, 0.35, 1.0) * trailFactor1c;
-                vec4 touch1ColorD = vec4(0.0, 0.7, 0.3, 1.0) * trailFactor1d;
-                vec4 touch1ColorE = vec4(0.0, 0.65, 0.25, 1.0) * trailFactor1e;
-                vec4 touch1ColorF = mix(vec4(0.3, 0.9, 0.5, 1.0), vec4(0.1, 0.7, 0.3, 1.0), noise1) * trailFactor1f;
+                // Green magic touch with trail - more vibrant greens
+                vec4 touch1Color = vec4(0.0, 1.0, 0.6, 1.0) * trailFactor1;
+                vec4 touch1ColorA = vec4(0.0, 0.95, 0.55, 1.0) * trailFactor1a;
+                vec4 touch1ColorB = vec4(0.0, 0.9, 0.5, 1.0) * trailFactor1b;
+                vec4 touch1ColorC = vec4(0.0, 0.85, 0.45, 1.0) * trailFactor1c;
+                vec4 touch1ColorD = vec4(0.0, 0.8, 0.4, 1.0) * trailFactor1d;
+                vec4 touch1ColorE = vec4(0.0, 0.75, 0.35, 1.0) * trailFactor1e;
+                vec4 touch1ColorF = mix(vec4(0.3, 1.0, 0.6, 1.0), vec4(0.1, 0.8, 0.4, 1.0), noise1) * trailFactor1f;
                 
-                // Blue magic touch with trail
-                vec4 touch2Color = vec4(0.1, 0.3, 0.9, 1.0) * trailFactor2;
-                vec4 touch2ColorA = vec4(0.1, 0.28, 0.85, 1.0) * trailFactor2a;
-                vec4 touch2ColorB = vec4(0.1, 0.26, 0.8, 1.0) * trailFactor2b;
-                vec4 touch2ColorC = vec4(0.1, 0.24, 0.75, 1.0) * trailFactor2c;
-                vec4 touch2ColorD = vec4(0.1, 0.22, 0.7, 1.0) * trailFactor2d;
-                vec4 touch2ColorE = vec4(0.1, 0.2, 0.65, 1.0) * trailFactor2e;
-                vec4 touch2ColorF = mix(vec4(0.2, 0.4, 0.9, 1.0), vec4(0.0, 0.2, 0.7, 1.0), noise2) * trailFactor2f;
+                // Blue magic touch with trail - more intense blues
+                vec4 touch2Color = vec4(0.1, 0.4, 1.0, 1.0) * trailFactor2;
+                vec4 touch2ColorA = vec4(0.1, 0.38, 0.95, 1.0) * trailFactor2a;
+                vec4 touch2ColorB = vec4(0.1, 0.36, 0.9, 1.0) * trailFactor2b;
+                vec4 touch2ColorC = vec4(0.1, 0.34, 0.85, 1.0) * trailFactor2c;
+                vec4 touch2ColorD = vec4(0.1, 0.32, 0.8, 1.0) * trailFactor2d;
+                vec4 touch2ColorE = vec4(0.1, 0.3, 0.75, 1.0) * trailFactor2e;
+                vec4 touch2ColorF = mix(vec4(0.2, 0.5, 1.0, 1.0), vec4(0.0, 0.3, 0.8, 1.0), noise2) * trailFactor2f;
                 
                 // Combine all trail colors for smoky effect with core highlights
                 vec4 combinedTrailColor = coreTouch1 + touch1Color + touch1ColorA + touch1ColorB + touch1ColorC + 
@@ -474,15 +935,79 @@
                 vec4 fluidColor = mix(backgroundColor, auroraColor * factor * 3.0, clamp(intensity * 0.5, 0.0, 1.0));
                 fluidColor = mix(fluidColor, combinedTrailColor, 0.9);
                 
-                // Add faint background energy field
-                float backgroundEnergy = 0.08 * (0.5 + 0.5 * sin(p.x * 6.0 + time) * sin(p.y * 6.0 + time * 0.7));
+                // Add faint background energy field - enhanced with more dynamic patterns
+                float backgroundEnergy = 0.0;
+                if (u_enable_background > 0.5) {
+                    backgroundEnergy = 0.12 * (0.5 + 0.5 * sin(p.x * 8.0 + time) * sin(p.y * 8.0 + time * 0.7));
+                    backgroundEnergy += 0.08 * sin(p.x * p.y * 5.0 + time * 0.5);
+                }
                 
-                // Final composition with background energy field for subtle ambient glow
-                return mix(
-                    mix(backgroundColor, auroraColor * 0.3, backgroundEnergy), 
+                // Create lightning/tendril effect between the two touch points
+                // Only render if touch points are far enough apart and tendrils are enabled
+                float touchDistance = length(touch1 - touch2);
+                vec4 lightningColor = vec4(0.0);
+                
+                if (touchDistance > 0.15 && u_enable_tendrils > 0.5) {
+                    // Apply control panel thickness and turbulence settings
+                    float baseThickness = 0.01 * u_tendril_thickness; 
+                    float baseTurbulence = 1.0 * u_tendril_turbulence;
+                    
+                    // Create multiple layers of tendrils with different properties
+                    
+                    // Primary tendril - thin, fast-moving
+                    float tendrilIntensity1 = swirlTendril(p, touch1, touch2, time, baseThickness, baseTurbulence);
+                    
+                    // Secondary tendril - offset in time for different pattern
+                    float tendrilIntensity2 = swirlTendril(p, touch1, touch2, time + 4.27, baseThickness * 0.8, baseTurbulence * 0.8);
+                    
+                    // Tertiary tendril - slower movement, thinner
+                    float tendrilIntensity3 = swirlTendril(p, touch1, touch2, time * 0.7, baseThickness * 0.5, baseTurbulence * 1.2);
+                    
+                    // Create a more organic connection by adding a few more very thin tendrils
+                    float microTendril1 = swirlTendril(p, touch1, touch2, time * 1.3 + 2.8, baseThickness * 0.3, baseTurbulence * 1.5);
+                    float microTendril2 = swirlTendril(p, touch1, touch2, time * 0.9 - 3.6, baseThickness * 0.25, baseTurbulence * 1.7);
+                    
+                    // Color the tendrils with fiery, organic colors
+                    // Main tendril - orange-red, fiery
+                    vec4 primaryTendril = vec4(0.9, 0.3, 0.05, 1.0) * tendrilIntensity1;
+                    
+                    // Secondary tendril - yellow-orange, like a flame's edge
+                    vec4 secondaryTendril = vec4(1.0, 0.5, 0.05, 1.0) * tendrilIntensity2;
+                    
+                    // Tertiary tendril - deeper red for depth
+                    vec4 tertiaryTendril = vec4(0.7, 0.1, 0.05, 1.0) * tendrilIntensity3;
+                    
+                    // Micro-tendrils with subtle purple/blue tint for contrast
+                    vec4 microTendrilColor1 = vec4(0.3, 0.1, 0.5, 1.0) * microTendril1 * 0.5;
+                    vec4 microTendrilColor2 = vec4(0.1, 0.05, 0.3, 1.0) * microTendril2 * 0.4;
+                    
+                    // Create time-varying color shift with subtle variations
+                    float colorShift = sin(time * 1.5) * 0.3 + 0.7;
+                    float intensityPulse = 0.7 + 0.3 * pow(sin(time * 2.3) * 0.5 + 0.5, 2.0);
+                    
+                    // Combine all tendril effects with appropriate blending
+                    lightningColor = primaryTendril * intensityPulse + 
+                                    secondaryTendril * colorShift +
+                                    tertiaryTendril * (0.6 + 0.4 * sin(time * 1.1)) +
+                                    microTendrilColor1 + microTendrilColor2;
+                    
+                    // Add soft glow around the tendrils with control panel glow setting
+                    float glowThickness = 0.05 * u_tendril_glow;
+                    float glowIntensity = swirlTendril(p, touch1, touch2, time * 0.8, glowThickness, baseTurbulence * 0.5) * 0.3;
+                    lightningColor += vec4(0.5, 0.1, 0.05, 0.7) * glowIntensity * u_tendril_glow;
+                }
+                
+                // Final composition with background energy field and lightning
+                vec4 finalColor = mix(
+                    mix(backgroundColor, auroraColor * 0.4, backgroundEnergy), 
                     fluidColor, 
                     clamp(activity * 4.0, 0.0, 1.0)
                 );
+                
+                // Add the lightning effect on top
+                finalColor += lightningColor;
+                
+                return finalColor;
             }
             
             void main() {
@@ -493,22 +1018,75 @@
                 
                 vec4 color = fluidEffect(gl_FragCoord.xy / u_resolution, u_time, touch1, touch2);
                 
-                // Highlight targets (with different colors based on type)
+                // Pre-calculate normalized position for targets
+                vec2 normalizedPos = gl_FragCoord.xy / u_resolution * 2.0 - 1.0;
+                
+                // Highlight targets with dynamic pulsing effects
                 for (int i = 0; i < ${MAX_TARGETS}; i++) {
                     if (u_target_active[i] > 0.5) {
                         vec2 targetPos = u_targets[i] * 2.0 - 1.0;
                         targetPos.y *= -1.0;
-                        float dist = length(gl_FragCoord.xy / u_resolution * 2.0 - 1.0 - targetPos);
+                        float dist = length(normalizedPos - targetPos);
                         
                         if (dist < 0.1) {
-                            float glow = (0.1 - dist) / 0.1;
-                            // Good target: green glow
+                            // Dynamic pulsing effect
+                            float pulse = sin(u_time * 8.0) * 0.2 + 0.8;
+                            float glow = (0.1 - dist) / 0.1 * pulse;
+                            
+                            // Good target: enhanced green glow with pulse
                             if (u_target_type[i] < 0.5) {
-                                color = mix(color, vec4(0.0, 1.0, 0.5, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                                vec4 glowColor = vec4(0.0, 1.0, 0.5, 1.0);
+                                // Add sparkle effect
+                                glowColor += vec4(0.2) * pow(sin(u_time * 10.0 + dist * 50.0), 10.0);
+                                color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
                             } 
-                            // Bad target: red glow
+                            // Bad target: enhanced red glow with pulse
                             else {
-                                color = mix(color, vec4(1.0, 0.2, 0.3, 1.0), glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                                vec4 glowColor = vec4(1.0, 0.2, 0.3, 1.0);
+                                // Add warning pulse effect
+                                glowColor += vec4(0.3, 0.0, 0.0, 0.0) * pow(sin(u_time * 15.0), 4.0);
+                                color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
+                            }
+                        }
+                    }
+                }
+                
+                // Add shockwave effects when targets are collected (if enabled)
+                if (u_enable_shockwaves > 0.5) {
+                    for (int i = 0; i < ${MAX_TARGETS}; i++) {
+                        if (u_shockwave_active[i] > 0.5) {
+                            vec2 shockwavePos = u_shockwave_pos[i] * 2.0 - 1.0;
+                            shockwavePos.y *= -1.0;
+                            
+                            float timeSinceStart = u_time - u_shockwave_start[i];
+                            
+                            if (timeSinceStart < 1.0) {
+                                float waveRadius = timeSinceStart * 0.6; // Speed of expansion
+                                float dist = length(normalizedPos - shockwavePos);
+                                float thickness = 0.03 * (1.0 - timeSinceStart); // Wave gets thinner as it expands
+                                
+                                // Create ring effect
+                                float waveFront = smoothstep(0.0, thickness, abs(dist - waveRadius));
+                                waveFront = 1.0 - waveFront;
+                                
+                                // Apply shockwave color based on target type with intensity control
+                                if (waveFront > 0.05) {
+                                    if (u_shockwave_type[i] < 0.5) {
+                                        // Good target: green shockwave
+                                        vec4 waveColor = vec4(0.0, 1.0, 0.5, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
+                                        color += waveColor * waveFront;
+                                    } else {
+                                        // Bad target: red shockwave
+                                        vec4 waveColor = vec4(1.0, 0.2, 0.3, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
+                                        color += waveColor * waveFront;
+                                    }
+                                    
+                                    // Add distortion to the area inside the shockwave
+                                    if (dist < waveRadius) {
+                                        float distortionFactor = 0.05 * (1.0 - dist/waveRadius) * (1.0 - timeSinceStart) * u_shockwave_intensity;
+                                        color.rgb += sin(color.gbr * 10.0 + u_time * 5.0) * distortionFactor;
+                                    }
+                                }
                             }
                         }
                     }
@@ -579,12 +1157,28 @@
             targetTypeLocations.push(gl.getUniformLocation(program, `u_target_type[${i}]`));
         }
         
-        // Touch handling
+        // Get shockwave uniform locations
+        const shockwaveActiveLocations = [];
+        const shockwavePosLocations = [];
+        const shockwaveStartLocations = [];
+        const shockwaveTypeLocations = [];
+        for (let i = 0; i < MAX_TARGETS; i++) {
+            shockwaveActiveLocations.push(gl.getUniformLocation(program, `u_shockwave_active[${i}]`));
+            shockwavePosLocations.push(gl.getUniformLocation(program, `u_shockwave_pos[${i}]`));
+            shockwaveStartLocations.push(gl.getUniformLocation(program, `u_shockwave_start[${i}]`));
+            shockwaveTypeLocations.push(gl.getUniformLocation(program, `u_shockwave_type[${i}]`));
+        }
+        
+        // Touch and mouse handling
         let touch1 = { x: 0.25, y: 0.5 };
         let touch2 = { x: 0.75, y: 0.5 };
+        let isMouseDown = false;
         
         function handleTouches(e) {
             e.preventDefault();
+            
+            // Track if both thumbs are active
+            bothThumbsActive = (e.touches.length >= 2);
             
             if (e.touches.length >= 1) {
                 touch1.x = e.touches[0].clientX / canvas.width;
@@ -594,14 +1188,90 @@
             if (e.touches.length >= 2) {
                 touch2.x = e.touches[1].clientX / canvas.width;
                 touch2.y = e.touches[1].clientY / canvas.height;
+                
+                // If this is the first time both thumbs are active, initialize the lastActiveScoreTime
+                if (lastActiveScoreTime === 0) {
+                    lastActiveScoreTime = Date.now();
+                }
             }
             
             // Check for target collection
             checkTargets();
         }
         
+        // Mouse support for desktop users
+        function handleMouseMove(e) {
+            if (!isMouseDown) return;
+            
+            // Update the first touch point to follow the mouse
+            touch1.x = e.clientX / canvas.width;
+            touch1.y = e.clientY / canvas.height;
+            
+            // Create a secondary touch point that follows at an offset
+            // This simulates having two fingers but with just a mouse
+            touch2.x = 1 - touch1.x;
+            touch2.y = 1 - touch1.y;
+            
+            // Check for target collection
+            checkTargets();
+        }
+        
+        function handleMouseDown(e) {
+            isMouseDown = true;
+            
+            // When using mouse, both "thumbs" are considered active
+            bothThumbsActive = true;
+            if (lastActiveScoreTime === 0) {
+                lastActiveScoreTime = Date.now();
+            }
+            
+            // Update the first touch point to follow the mouse
+            touch1.x = e.clientX / canvas.width;
+            touch1.y = e.clientY / canvas.height;
+            
+            // Create a secondary touch point that follows at an offset
+            touch2.x = 1 - touch1.x;
+            touch2.y = 1 - touch1.y;
+            
+            // Check for target collection on initial click
+            checkTargets();
+        }
+        
+        function handleMouseUp() {
+            isMouseDown = false;
+            bothThumbsActive = false;
+        }
+        
+        // Also check for clicks directly on targets (for easier desktop play)
+        function handleClick(e) {
+            const mouseX = e.clientX / canvas.width;
+            const mouseY = e.clientY / canvas.height;
+            
+            // Check if the click was directly on a target
+            targets.forEach(target => {
+                if (target.collected) return;
+                
+                const dist = Math.hypot(
+                    target.x - mouseX,
+                    target.y - mouseY
+                );
+                
+                if (dist < 0.08) {  // Same collection radius as with touch
+                    collectTarget(target);
+                }
+            });
+        }
+        
+        // Touch events
         canvas.addEventListener('touchstart', handleTouches);
         canvas.addEventListener('touchmove', handleTouches);
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseUp);
+        canvas.addEventListener('click', handleClick);
         
         // Score update with animation and sound
         function updateScore(points) {
@@ -679,10 +1349,34 @@
                 }
             });
             
-            // Create new targets if needed
-            if (targets.length < MAX_TARGETS && Math.random() < 0.01) {
+            // Create new targets if needed, rate affected by control panel
+            if (targets.length < MAX_TARGETS && Math.random() < (0.01 * gameSettings.targetGenerationRate)) {
                 createTarget();
             }
+        }
+        
+        // Create a new shockwave effect
+        function createShockwave(x, y, isGood) {
+            // Find an available slot for a new shockwave
+            let index = -1;
+            for (let i = 0; i < MAX_TARGETS; i++) {
+                if (!shockwaves[i] || !shockwaves[i].active) {
+                    index = i;
+                    break;
+                }
+            }
+            
+            // If no slot is available, return
+            if (index === -1) return;
+            
+            // Create the shockwave
+            shockwaves[index] = {
+                active: true,
+                x: x,
+                y: y,
+                startTime: Date.now() / 1000, // Current time in seconds
+                isGood: isGood
+            };
         }
         
         function checkTargets() {
@@ -700,36 +1394,152 @@
                 );
                 
                 if (distToTouch1 < 0.08 || distToTouch2 < 0.08) {
-                    target.collected = true;
-                    
-                    if (target.isBad) {
-                        // Bad target visuals
-                        target.element.style.border = '4px solid rgba(255, 51, 102, 1.0)';
-                        target.element.style.boxShadow = '0 0 25px rgba(255, 51, 102, 1.0)';
-                        updateScore(-15); // Lose 15 points
-                    } else {
-                        // Good target visuals
-                        target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
-                        target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
-                        updateScore(10); // Gain 10 points
-                    }
-                    
-                    target.element.style.animation = 'none';
-                    target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
-                    
-                    setTimeout(() => {
-                        removeTarget(target);
-                    }, 500);
+                    collectTarget(target);
                 }
             });
+        }
+        
+        function collectTarget(target) {
+            if (target.collected) return;
+            
+            target.collected = true;
+            
+            // Create a shockwave effect at the target's position
+            createShockwave(target.x, target.y, !target.isBad);
+            
+            if (target.isBad) {
+                // Bad target visuals
+                target.element.style.border = '4px solid rgba(255, 51, 102, 1.0)';
+                target.element.style.boxShadow = '0 0 25px rgba(255, 51, 102, 1.0)';
+                updateScore(-15); // Lose 15 points
+            } else {
+                // Good target visuals
+                target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
+                target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
+                updateScore(10); // Gain 10 points
+            }
+            
+            target.element.style.animation = 'none';
+            target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
+            
+            setTimeout(() => {
+                removeTarget(target);
+            }, 500);
         }
         
         // Animation loop
         let startTime = Date.now();
         
+        // Check if tendril intersects with a target
+        function checkTendrilTargetIntersection() {
+            // Only check if tendrils are enabled
+            if (!gameSettings.enableTendrils) return;
+            
+            // Only check if the thumbs are far enough apart to create a tendril
+            let touchDistance = Math.hypot(
+                touch1.x - touch2.x,
+                touch1.y - touch2.y
+            );
+            
+            if (touchDistance < 0.15) return;
+            
+            // Create a simplified path between touch points to check for collisions
+            // We'll sample multiple points along the path to approximate the tendril
+            const numSamples = 10;
+            
+            targets.forEach(target => {
+                if (target.collected) return;
+                
+                let hit = false;
+                
+                // Check multiple points along the tendril path
+                for (let i = 0; i <= numSamples; i++) {
+                    const t = i / numSamples;
+                    
+                    // Simple linear interpolation between touch points
+                    // This is an approximation - the actual tendril has swirls and curves
+                    const x = touch1.x + (touch2.x - touch1.x) * t;
+                    const y = touch1.y + (touch2.y - touch1.y) * t;
+                    
+                    // Add some randomization to simulate the swirly nature
+                    // This is a simplification of the shader's complex patterns
+                    const time = Date.now() / 1000;
+                    const offset = 0.05 * gameSettings.tendrilTurbulence * Math.sin(t * 6 + time * 2);
+                    
+                    // Calculate distance to target
+                    const dist = Math.hypot(
+                        target.x - (x + offset),
+                        target.y - y
+                    );
+                    
+                    // Thickness depends on control panel settings
+                    const thickness = 0.05 * gameSettings.tendrilThickness;
+                    
+                    if (dist < thickness + 0.03) {  // 0.03 is approximate target hit radius
+                        hit = true;
+                        break;
+                    }
+                }
+                
+                if (hit) {
+                    // Tendril hit target!
+                    if (target.isBad) {
+                        // Penalize for hitting bad target with tendril
+                        updateScore(-5);
+                    } else {
+                        // Reward for hitting good target with tendril
+                        updateScore(5);
+                    }
+                    collectTarget(target);
+                }
+            });
+        }
+        
+        // Check if thumbs are too close and apply penalty
+        function checkThumbsDistance() {
+            if (!bothThumbsActive) return;
+            
+            const touchDistance = Math.hypot(
+                touch1.x - touch2.x,
+                touch1.y - touch2.y
+            );
+            
+            // If thumbs are too close, apply penalty (but only once)
+            if (touchDistance < THUMBS_TOO_CLOSE_THRESHOLD && !thumbsClosePenaltyActive) {
+                thumbsClosePenaltyActive = true;
+                updateScore(-3);
+                
+                // Visual and haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 50, 50]);  // More intense vibration for penalty
+                }
+                
+                // Add a small timeout to prevent constant penalties
+                setTimeout(() => {
+                    thumbsClosePenaltyActive = false;
+                }, 1000);
+            }
+        }
+        
+        // Check for bonus when both thumbs are active
+        function checkActiveThumbsBonus() {
+            const now = Date.now();
+            
+            // Only apply if both thumbs are currently active
+            if (bothThumbsActive && now - lastActiveScoreTime > BOTH_THUMBS_ACTIVE_SCORE_INTERVAL) {
+                updateScore(1);  // Small bonus for keeping both thumbs active
+                lastActiveScoreTime = now;
+            }
+        }
+        
         function render() {
             resize();
             updateTargets();
+            
+            // Game rule checks
+            checkTendrilTargetIntersection();
+            checkThumbsDistance();
+            checkActiveThumbsBonus();
             
             const currentTime = (Date.now() - startTime) / 1000;
             
@@ -745,6 +1555,16 @@
             gl.uniform2f(touch1UniformLocation, touch1.x, touch1.y);
             gl.uniform2f(touch2UniformLocation, touch2.x, touch2.y);
             
+            // Set control panel uniforms
+            gl.uniform1f(gl.getUniformLocation(program, 'u_fluid_intensity'), gameSettings.fluidIntensity);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_enable_background'), gameSettings.enableBackground ? 1.0 : 0.0);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_enable_tendrils'), gameSettings.enableTendrils ? 1.0 : 0.0);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_tendril_thickness'), gameSettings.tendrilThickness);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_tendril_turbulence'), gameSettings.tendrilTurbulence);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_tendril_glow'), gameSettings.tendrilGlow);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_enable_shockwaves'), gameSettings.enableShockwaves ? 1.0 : 0.0);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_shockwave_intensity'), gameSettings.shockwaveIntensity);
+            
             // Set target uniforms
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (i < targets.length && !targets[i].collected) {
@@ -755,6 +1575,26 @@
                     gl.uniform2f(targetLocations[i], 0, 0);
                     gl.uniform1f(targetActiveLocations[i], 0.0);
                     gl.uniform1f(targetTypeLocations[i], 0.0);
+                }
+            }
+            
+            // Set shockwave uniforms
+            for (let i = 0; i < MAX_TARGETS; i++) {
+                if (shockwaves[i] && shockwaves[i].active) {
+                    const timeSinceStart = currentTime - shockwaves[i].startTime;
+                    
+                    // Deactivate shockwaves after 1 second
+                    if (timeSinceStart > 1.0) {
+                        shockwaves[i].active = false;
+                        gl.uniform1f(shockwaveActiveLocations[i], 0.0);
+                    } else {
+                        gl.uniform1f(shockwaveActiveLocations[i], 1.0);
+                        gl.uniform2f(shockwavePosLocations[i], shockwaves[i].x, shockwaves[i].y);
+                        gl.uniform1f(shockwaveStartLocations[i], shockwaves[i].startTime);
+                        gl.uniform1f(shockwaveTypeLocations[i], shockwaves[i].isGood ? 0.0 : 1.0);
+                    }
+                } else {
+                    gl.uniform1f(shockwaveActiveLocations[i], 0.0);
                 }
             }
             
