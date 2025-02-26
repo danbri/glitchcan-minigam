@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Story</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --background: #f3f4f6;
+            --text: #1f2937;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #story {
+            margin-bottom: 1.5em;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        .scene {
+            font-size: 3em;
+            text-align: center;
+            margin: 0.5em 0;
+            animation: bounce 0.5s ease;
+        }
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 1.5em;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s ease;
+            text-align: left;
+            line-height: 1.4;
+        }
+        button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        p {
+            margin: 0 0 1em;
+        }
+        @keyframes bounce {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            .container {
+                padding: 16px;
+                border-radius: 12px;
+            }
+            .scene {
+                font-size: 2.5em;
+            }
+            button {
+                padding: 16px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="story"></div>
+        <div id="choices" class="choices"></div>
+    </div>
+
+    <script>
+        const storyNodes = {
+            start: {
+                text: "You're locked in Hut 14. Commander Harris arrives. \"Where is the missing component?\"",
+                scene: "🏚️ 👮 ❓",
+                choices: [
+                    { text: "\"I have no idea what you're talking about.\" 😇", next: "denial" },
+                    { text: "\"Yes, I took it. But not for the Germans.\" 😔", next: "admit" },
+                    { text: "\"Perhaps Hooper took it...\" 🤔", next: "hooper" }
+                ]
+            },
+            denial: {
+                text: "Harris scowls. \"Don't lie, we all suspect you.\" He sets down tea. \"You think we'll believe that?\"",
+                scene: "😠 ☕ 🧐",
+                choices: [
+                    { text: "Wait silently 🤐", next: "denial_silence" },
+                    { text: "\"I'm innocent, but I'll help.\" 🤝", next: "denial_help" }
+                ]
+            },
+            denial_silence: {
+                text: "Harris: \"We have no time for games.\" Soon, soldiers escort you away. The truth may come out later...",
+                scene: "⏰ 💂‍♂️ 🚶‍♂️",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            },
+            denial_help: {
+                text: "Harris studies you. \"Then prove it...\" Soon, soldiers escort you away. The truth may come out later...",
+                scene: "🔍 💭 🚶‍♂️",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            },
+            admit: {
+                text: "You confess: you were blackmailed. Harris fumes: \"Where did you hide it?\"",
+                scene: "📝 😤 💼",
+                choices: [
+                    { text: "Tell him the hiding place 🗣️", next: "admit_tell" },
+                    { text: "Refuse to say 🤐", next: "admit_refuse" }
+                ]
+            },
+            admit_tell: {
+                text: "You reveal it's behind Hut 2. Guards retrieve it. They arrest you. \"You'll be locked away, but we'll keep your brain working.\" The war goes on...",
+                scene: "🏚️ 🔍 🔒",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            },
+            admit_refuse: {
+                text: "You refuse. Harris threatens you with a rope. At dawn, they drag you out. \"Traitor,\" a guard murmurs. You suspect the end is near...",
+                scene: "🌅 ⚔️ 💀",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            },
+            hooper: {
+                text: "\"Prove Hooper did it,\" Harris says. \"Otherwise you'll hang.\"",
+                scene: "⚖️ 😰 🎯",
+                choices: [
+                    { text: "Insist Hooper is the traitor 👉", next: "hooper_insist" },
+                    { text: "Admit you're lying after all 😔", next: "hooper_admit" }
+                ]
+            },
+            hooper_insist: {
+                text: "You spin a story. Harris nods warily: \"We'll check.\" They corner Hooper, find the part hidden. Harris frees you. \"We still need your mind.\" You walk away, unscathed.",
+                scene: "📖 🔍 🎊",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            },
+            hooper_admit: {
+                text: "Harris slams his fist. \"We're done.\" At dawn, they drag you out. \"Traitor,\" a guard murmurs. You suspect the end is near...",
+                scene: "👊 🌅 ⚰️",
+                choices: [{ text: "Start Over 🔄", next: "start" }]
+            }
+        };
+
+        let currentNode = 'start';
+
+        function displayStory(nodeId) {
+            const node = storyNodes[nodeId];
+            const storyDiv = document.getElementById('story');
+            const choicesDiv = document.getElementById('choices');
+            
+            storyDiv.innerHTML = `
+                <div class="scene">${node.scene}</div>
+                <p>${node.text}</p>
+            `;
+            choicesDiv.innerHTML = '';
+            
+            node.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice.text;
+                button.onclick = () => {
+                    displayStory(choice.next);
+                    button.blur(); // Remove focus after click
+                };
+                choicesDiv.appendChild(button);
+            });
+        }
+
+        // Start the story
+        displayStory(currentNode);
+    </script>
+</body>
+</html>
