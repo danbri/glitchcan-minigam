@@ -14,6 +14,9 @@ echo "$HEADER" > index.html.new
 # Find all game directories
 GAMES=$(find . -maxdepth 1 -type d -not -path "./.*" -not -path "." | sort)
 
+# GitHub repository URL
+REPO_URL="https://github.com/danbri/glitchcan-minigam"
+
 for GAME_DIR in $GAMES; do
   GAME_NAME=$(basename "$GAME_DIR")
   
@@ -55,10 +58,11 @@ EOL
     echo "        <a href=\"$GAME_NAME/$BASENAME\" class=\"play-button\">$BUTTON_TEXT</a>" >> index.html.new
   done
   
-  # Add metadata div for GitHub Actions
+  # Add GitHub source link
+  MAIN_HTML_FILE=$(basename "$HTML_FILE")
   cat >> index.html.new << EOL
-        <div class="game-meta" id="${GAME_NAME}-meta">
-            <p>Loading file information...</p>
+        <div class="source-link">
+            <a href="${REPO_URL}/blob/master/${GAME_NAME}/${MAIN_HTML_FILE}" target="_blank">View Source on GitHub</a>
         </div>
     </div>
 
