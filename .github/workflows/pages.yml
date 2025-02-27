@@ -38,7 +38,12 @@ jobs:
           THUMBWAR_LAST_COMMIT_ID=$(git log -1 --format="%h" -- thumbwar/thumbwar.html)
           THUMBWAR_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- thumbwar/thumbwar.html)"
           
-          # Create a temporary HTML file for replacement
+          # Get inklet.html info
+          INKLET_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- inklet/inklet.html)
+          INKLET_LAST_COMMIT_ID=$(git log -1 --format="%h" -- inklet/inklet.html)
+          INKLET_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- inklet/inklet.html)"
+          
+          # Create a temporary HTML file for replacement - Thumbwar
           THUMBWAR_META_HTML="<!-- BEGIN: AUTO-GENERATED THUMBWAR METADATA -->
               <p>
                 Last modified: $THUMBWAR_LAST_COMMIT_DATE<br>
@@ -49,6 +54,17 @@ jobs:
               </p>
               <!-- END: AUTO-GENERATED THUMBWAR METADATA -->"
           
+          # Create a temporary HTML file for replacement - Inklet
+          INKLET_META_HTML="<!-- BEGIN: AUTO-GENERATED INKLET METADATA -->
+              <p>
+                Last modified: $INKLET_LAST_COMMIT_DATE<br>
+                Version: <span class=\"version-badge\">$INKLET_LAST_COMMIT_ID</span><br>
+                <a href=\"$INKLET_COMMIT_URL\" target=\"_blank\">View changes</a> | 
+                <a href=\"$REPO_URL/blob/master/inklet/inklet.html\" target=\"_blank\">View source</a> | 
+                <a href=\"$REPO_URL/commits/master/inklet/inklet.html\" target=\"_blank\">History</a>
+              </p>
+              <!-- END: AUTO-GENERATED INKLET METADATA -->"
+          
           # Update HTML directly using sed
           # Replace the loading placeholders with actual content
           sed -i "s|<span id=\"last-commit-date\">Loading...</span>|<span id=\"last-commit-date\"><!-- AUTO-GENERATED -->$LAST_COMMIT_DATE<!-- /AUTO-GENERATED --></span>|g" index.html
@@ -56,8 +72,9 @@ jobs:
           sed -i "s|<a id=\"latest-commit-link\" href=\"#\" target=\"_blank\">|<a id=\"latest-commit-link\" href=\"$LAST_COMMIT_URL\" target=\"_blank\">|g" index.html
           sed -i "s|<span id=\"latest-commit-message\">Loading...</span>|<span id=\"latest-commit-message\"><!-- AUTO-GENERATED -->$LAST_COMMIT_MSG<!-- /AUTO-GENERATED --></span>|g" index.html
           
-          # Replace the entire thumbwar-meta div content
+          # Replace the game-meta div content for each game
           sed -i "s|<div class=\"game-meta\" id=\"thumbwar-meta\">.*<\/div>|<div class=\"game-meta\" id=\"thumbwar-meta\">$THUMBWAR_META_HTML</div>|s" index.html
+          sed -i "s|<div class=\"game-meta\" id=\"inklet-meta\">.*<\/div>|<div class=\"game-meta\" id=\"inklet-meta\">$INKLET_META_HTML</div>|s" index.html
 
       - name: Remove version-info.js script tag
         run: |
