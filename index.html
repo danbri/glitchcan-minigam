@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glitch Canary Minigames</title>
+    <title>🐥 Minigames</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,6 +16,20 @@
         h1 {
             color: #2c3e50;
             text-align: center;
+        }
+        .heartbeat-emoji {
+            display: inline-block;
+            animation: heartbeat 1.2s ease-in-out infinite;
+            font-size: 1.5em;
+            margin-right: 5px;
+            transform-origin: center;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.15); }
+            40% { transform: scale(1); }
+            60% { transform: scale(1.15); }
+            100% { transform: scale(1); }
         }
         .game-container {
             background: white;
@@ -83,7 +97,7 @@
     </style>
 </head>
 <body>
-    <h1>Glitch Canary Minigames</h1>
+    <h1><span class="heartbeat-emoji">🐥</span>Minigames</h1>
     
     <div class="game-container">
         <h2 class="game-title">Thumbwar</h2>
@@ -126,7 +140,7 @@
     </div>
     
     <footer>
-        <p>🐥 [glitchcanary]</p>
+        <p><span class="heartbeat-emoji">🐥</span>[glitchcanary]</p>
     </footer>
 
     <!-- Version info is now directly inserted into the HTML during build by GitHub Actions -->
