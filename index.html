@@ -39,30 +39,43 @@
             position: relative;
             display: inline-block;
         }
-        .glitch-emoji {
-            animation: heartbeat 2.5s ease-in-out infinite, random-glitch 30s infinite;
+        .heartbeat-duck {
+            animation: heartbeat 2.5s ease-in-out infinite;
             display: inline-block;
         }
+        
+        .glitch-emoji {
+            animation: random-glitch 10s infinite;
+            display: inline-block;
+        }
+        
         @keyframes random-glitch {
             0%, 97%, 100% { 
+                opacity: 0.001;
                 filter: none; 
                 text-shadow: none;
                 transform: scale(1) skew(0deg, 0deg); 
             }
             97.3% { 
+                opacity: 1;
                 filter: hue-rotate(90deg) brightness(1.5); 
-                text-shadow: -3px 0 #ff00cc, 3px 0 #00ffcc;
-                transform: scale(1.5) skew(10deg, 5deg); 
+                text-shadow: -6px 0 #ff00cc, 6px 0 #00ffcc;
+                transform: scale(3.0) skew(10deg, 5deg); 
             }
             97.6% { 
+                opacity: 1;
                 filter: invert(0.8) brightness(2) contrast(2); 
-                text-shadow: 2px 2px #ff0000, -2px -2px #0000ff;
-                transform: scale(0.8) skew(-20deg, -10deg); 
+                text-shadow: 4px 4px #ff0000, -4px -4px #0000ff;
+                transform: scale(1.6) skew(-20deg, -10deg); 
             }
             97.9% { 
+                opacity: 1;
                 filter: blur(2px) brightness(0.8);
-                text-shadow: 0 0 8px #ffffff;
-                transform: scale(1.1) skew(5deg, -5deg); 
+                text-shadow: 0 0 16px #ffffff;
+                transform: scale(2.2) skew(5deg, -5deg); 
+            }
+            98.2% {
+                opacity: 0.001;
             }
         }
         .game-container {
@@ -172,7 +185,7 @@
     </style>
 </head>
 <body>
-    <h1><span class="heartbeat-emoji glitch-emoji">🐥</span>Minigames</h1>
+    <h1><span class="heartbeat-duck">🐥</span><span class="glitch-emoji" style="position:absolute; left: 20px; opacity: 0.001;">🐥</span>Minigames</h1>
     
     <div class="game-container">
         <h2 class="game-title">Thumbwar</h2>
@@ -256,8 +269,7 @@
     
     <div class="repo-info">
         <h3>About This Collection</h3>
-        <p>These aren't real games, just fragments and experiments.</p>
-        <p>Whatever they are, they're opensource at <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">GitHub</a>.</p>
+        <p>These aren't real games, just fragments and experiments. Whatever they are, they're opensource at <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">GitHub</a> (except any bits that aren't)..</p>
     </div>
     
     <footer>
@@ -267,7 +279,7 @@
                 <a href="https://github.com/danbri/glitchcan-minigam/issues" target="_blank">Report Issues</a>
                 <a href="https://github.com/danbri/glitchcan-minigam#readme" target="_blank">About</a>
             </div>
-            <p>&copy; 2025 <span class="heartbeat-emoji glitch-emoji">🐥</span></p>
+            <p>&copy; 2025 <span class="heartbeat-duck">🐥</span><span class="glitch-emoji" style="position:absolute; opacity: 0.001;">🐥</span></p>
         </div>
     </footer>
 </body>
