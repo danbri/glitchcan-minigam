@@ -51,6 +51,26 @@ jobs:
           INKLET_LAST_COMMIT_ID=$(git log -1 --format="%h" -- inklet/inklet.html)
           INKLET_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- inklet/inklet.html)"
           
+          # Get tokitokipona.html info
+          TOKITOKIPONA_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- tokitokipona/tokitokipona.html)
+          TOKITOKIPONA_LAST_COMMIT_ID=$(git log -1 --format="%h" -- tokitokipona/tokitokipona.html)
+          TOKITOKIPONA_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- tokitokipona/tokitokipona.html)"
+          
+          # Get schemoids.html info
+          SCHEMOIDS_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- schemoids/schemoids.html)
+          SCHEMOIDS_LAST_COMMIT_ID=$(git log -1 --format="%h" -- schemoids/schemoids.html)
+          SCHEMOIDS_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- schemoids/schemoids.html)"
+          
+          # Get lightshow info (using bookshelf-a.html as reference)
+          LIGHTSHOW_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- lightshow/bookshelf-a.html)
+          LIGHTSHOW_LAST_COMMIT_ID=$(git log -1 --format="%h" -- lightshow/bookshelf-a.html)
+          LIGHTSHOW_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- lightshow/bookshelf-a.html)"
+          
+          # Get sandpit.html info
+          SANDPIT_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- sandpit/sandpit.html)
+          SANDPIT_LAST_COMMIT_ID=$(git log -1 --format="%h" -- sandpit/sandpit.html)
+          SANDPIT_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- sandpit/sandpit.html)"
+          
           # Create a temporary HTML file for replacement - Thumbwar
           THUMBWAR_META_HTML="<!-- BEGIN: AUTO-GENERATED THUMBWAR METADATA -->
               <p>
@@ -72,6 +92,50 @@ jobs:
                 <a href=\"$REPO_URL/commits/master/inklet/inklet.html\" target=\"_blank\">History</a>
               </p>
               <!-- END: AUTO-GENERATED INKLET METADATA -->"
+              
+          # Create metadata HTML for tokitokipona
+          TOKITOKIPONA_META_HTML="<!-- BEGIN: AUTO-GENERATED TOKITOKIPONA METADATA -->
+              <p>
+                Last modified: $TOKITOKIPONA_LAST_COMMIT_DATE<br>
+                Version: <span class=\"version-badge\">$TOKITOKIPONA_LAST_COMMIT_ID</span><br>
+                <a href=\"$TOKITOKIPONA_COMMIT_URL\" target=\"_blank\">View changes</a> | 
+                <a href=\"$REPO_URL/blob/master/tokitokipona/tokitokipona.html\" target=\"_blank\">View source</a> | 
+                <a href=\"$REPO_URL/commits/master/tokitokipona/tokitokipona.html\" target=\"_blank\">History</a>
+              </p>
+              <!-- END: AUTO-GENERATED TOKITOKIPONA METADATA -->"
+              
+          # Create metadata HTML for schemoids
+          SCHEMOIDS_META_HTML="<!-- BEGIN: AUTO-GENERATED SCHEMOIDS METADATA -->
+              <p>
+                Last modified: $SCHEMOIDS_LAST_COMMIT_DATE<br>
+                Version: <span class=\"version-badge\">$SCHEMOIDS_LAST_COMMIT_ID</span><br>
+                <a href=\"$SCHEMOIDS_COMMIT_URL\" target=\"_blank\">View changes</a> | 
+                <a href=\"$REPO_URL/blob/master/schemoids/schemoids.html\" target=\"_blank\">View source</a> | 
+                <a href=\"$REPO_URL/commits/master/schemoids/schemoids.html\" target=\"_blank\">History</a>
+              </p>
+              <!-- END: AUTO-GENERATED SCHEMOIDS METADATA -->"
+              
+          # Create metadata HTML for lightshow
+          LIGHTSHOW_META_HTML="<!-- BEGIN: AUTO-GENERATED LIGHTSHOW METADATA -->
+              <p>
+                Last modified: $LIGHTSHOW_LAST_COMMIT_DATE<br>
+                Version: <span class=\"version-badge\">$LIGHTSHOW_LAST_COMMIT_ID</span><br>
+                <a href=\"$LIGHTSHOW_COMMIT_URL\" target=\"_blank\">View changes</a> | 
+                <a href=\"$REPO_URL/blob/master/lightshow/bookshelf-a.html\" target=\"_blank\">View source A</a> | 
+                <a href=\"$REPO_URL/blob/master/lightshow/bookshelf-b.html\" target=\"_blank\">View source B</a>
+              </p>
+              <!-- END: AUTO-GENERATED LIGHTSHOW METADATA -->"
+              
+          # Create metadata HTML for sandpit
+          SANDPIT_META_HTML="<!-- BEGIN: AUTO-GENERATED SANDPIT METADATA -->
+              <p>
+                Last modified: $SANDPIT_LAST_COMMIT_DATE<br>
+                Version: <span class=\"version-badge\">$SANDPIT_LAST_COMMIT_ID</span><br>
+                <a href=\"$SANDPIT_COMMIT_URL\" target=\"_blank\">View changes</a> | 
+                <a href=\"$REPO_URL/blob/master/sandpit/sandpit.html\" target=\"_blank\">View source</a> | 
+                <a href=\"$REPO_URL/commits/master/sandpit/sandpit.html\" target=\"_blank\">History</a>
+              </p>
+              <!-- END: AUTO-GENERATED SANDPIT METADATA -->"
           
           # Update HTML directly using sed
           # Replace the loading placeholders with actual content
@@ -87,6 +151,10 @@ jobs:
           # Save metadata to files first to avoid issues with special characters and multiline content
           echo "$THUMBWAR_META_HTML" > thumbwar_meta.html
           echo "$INKLET_META_HTML" > inklet_meta.html
+          echo "$TOKITOKIPONA_META_HTML" > tokitokipona_meta.html
+          echo "$SCHEMOIDS_META_HTML" > schemoids_meta.html
+          echo "$LIGHTSHOW_META_HTML" > lightshow_meta.html
+          echo "$SANDPIT_META_HTML" > sandpit_meta.html
           
           # Replace the game-meta div content using awk for more reliable multiline replacement
           awk '{
@@ -95,6 +163,18 @@ jobs:
               inDiv = 1;
             } else if (match($0, /<div class="game-meta" id="inklet-meta">/)) {
               system("cat inklet_meta.html");
+              inDiv = 1;
+            } else if (match($0, /<div class="game-meta" id="tokitokipona-meta">/)) {
+              system("cat tokitokipona_meta.html");
+              inDiv = 1;
+            } else if (match($0, /<div class="game-meta" id="schemoids-meta">/)) {
+              system("cat schemoids_meta.html");
+              inDiv = 1;
+            } else if (match($0, /<div class="game-meta" id="lightshow-meta">/)) {
+              system("cat lightshow_meta.html");
+              inDiv = 1;
+            } else if (match($0, /<div class="game-meta" id="sandpit-meta">/)) {
+              system("cat sandpit_meta.html");
               inDiv = 1;
             } else if (inDiv && match($0, /<\/div>/)) {
               print "</div>";

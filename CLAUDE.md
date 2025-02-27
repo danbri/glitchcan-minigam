@@ -1,4 +1,4 @@
-# CLAUDE.md - Guide for Glitch Canary Minigames
+# CLAUDE.md - Guide for 🐥 Minigames
 
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.

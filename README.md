@@ -1,4 +1,4 @@
-# Glitch Canary Minigames
+# 🐥 Minigames
 
 A [collection](https://danbri.github.io/glitchcan-minigam/) of very experimental browser-based minigames, sloppy by design. Investigating possibilities around player-generated sloppy AI minigames within a larger framework.
 
@@ -9,3 +9,15 @@ A fluid dynamics game where players use their thumbs to bend fluid streams and c
 
 ### Inklet
 An interactive story game with emoji-based scenes and branching narratives. Choose your actions carefully to explore different storylines.
+
+### Toki Toki Pona
+A language learning game for Toki Pona that shows words and emoji symbols. Select the correct English meaning for the Toki Pona word.
+
+### Schemoids
+An Asteroids-style game where you shoot Schema.org type hierarchies that split into subtypes when hit.
+
+### Bookshelf Lights
+LED light strip simulators for bookshelves with various patterns and animations. Select from preset lighting patterns or create custom effects.
+
+### Sandpit
+A code sandbox for running Python and JavaScript snippets with a helpful chat interface.
