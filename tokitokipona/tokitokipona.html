@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toki Pona Learner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 80%;
+            width: 400px;
+        }
+        #word {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        #emojiContainer {
+            height: 150px;
+            position: relative;
+            overflow: hidden;
+        }
+        #emoji {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(5);
+            font-size: 4rem;
+            opacity: 0;
+            filter: grayscale(100%);
+        }
+        @keyframes emojiReveal {
+            0% {
+                transform: translate(-50%, -50%) scale(5);
+                opacity: 0;
+                filter: grayscale(100%);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+                filter: grayscale(0%);
+            }
+        }
+        .emoji-animate {
+            animation: emojiReveal 2s ease-in-out forwards;
+        }
+        .choice {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 1rem;
+            font-weight: bold;
+            height: 1.5em;
+        }
+        #hardMode {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="word"></div>
+        <div id="emojiContainer">
+            <div id="emoji"></div>
+        </div>
+        <div id="choices"></div>
+        <div id="result"></div>
+        <div id="hardMode">
+            <label>
+                <input type="checkbox" id="hardModeCheckbox"> Hard Mode (Delayed Emoji)
+            </label>
+        </div>
+    </div>
+
+    <script>
+        const tokiPona = [
+            { word: "mi", meaning: "I, me, we, us", emoji: "👤" },
+            { word: "sina", meaning: "you", emoji: "👉" },
+            { word: "ona", meaning: "he, she, it, they", emoji: "👥" },
+            { word: "ilo", meaning: "tool, device, machine", emoji: "🔧" },
+            { word: "pona", meaning: "good, simple, positive", emoji: "👍" },
+            { word: "ala", meaning: "no, not, zero", emoji: "❌" },
+            { word: "ale", meaning: "all, everything, universe", emoji: "🌍" },
+            { word: "kili", meaning: "fruit, vegetable", emoji: "🍎" },
+            { word: "moku", meaning: "food, eat", emoji: "🍽️" },
+            { word: "telo", meaning: "water, liquid", emoji: "💧" }
+        ];
+
+        let currentWord;
+        let hardMode = false;
+
+        function getRandomWord() {
+            return tokiPona[Math.floor(Math.random() * tokiPona.length)];
+        }
+
+        function getChoices(correct) {
+            let choices = [correct];
+            while (choices.length < 3) {
+                let randomChoice = getRandomWord().meaning;
+                if (!choices.includes(randomChoice)) {
+                    choices.push(randomChoice);
+                }
+            }
+            return choices.sort(() => Math.random() - 0.5);
+        }
+
+        function displayWord() {
+            currentWord = getRandomWord();
+            document.getElementById('word').textContent = currentWord.word;
+            const emojiElement = document.getElementById('emoji');
+            
+            // Reset emoji state
+            emojiElement.className = '';
+            emojiElement.style.opacity = '0';
+            emojiElement.style.transform = 'translate(-50%, -50%) scale(5)';
+            emojiElement.style.filter = 'grayscale(100%)';
+            
+            // Set the emoji text
+            emojiElement.textContent = currentWord.emoji;
+
+            // Force a reflow
+            void emojiElement.offsetWidth;
+
+            // Start animation after a delay in hard mode
+            setTimeout(() => {
+                emojiElement.classList.add('emoji-animate');
+            }, hardMode ? 2000 : 50);
+
+            const choices = getChoices(currentWord.meaning);
+            let choicesHtml = '';
+            choices.forEach(choice => {
+                choicesHtml += `<button class="choice" onclick="checkAnswer('${choice}')">${choice}</button>`;
+            });
+            document.getElementById('choices').innerHTML = choicesHtml;
+            document.getElementById('result').textContent = '';
+        }
+
+        function checkAnswer(choice) {
+            if (choice === currentWord.meaning) {
+                document.getElementById('result').textContent = 'Correct!';
+                document.getElementById('result').style.color = 'green';
+            } else {
+                document.getElementById('result').textContent = 'Incorrect. Try again!';
+                document.getElementById('result').style.color = 'red';
+            }
+            setTimeout(displayWord, 1500);
+        }
+
+        document.getElementById('hardModeCheckbox').addEventListener('change', function() {
+            hardMode = this.checked;
+            displayWord();
+        });
+
+        // Initial word display
+        displayWord();
+    </script>
+</body>
+</html>
