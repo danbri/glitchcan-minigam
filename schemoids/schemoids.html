@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Asteroids Schema.org Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+        }
+        canvas {
+            border: 1px solid #0f0;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #activityLog {
+            width: 100%;
+            height: 20vh;
+            overflow-y: auto;
+            background-color: rgba(0, 50, 0, 0.5);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 255, 0, 0.2);
+            border: 1px solid #0f0;
+            color: #0f0;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="controls">
+            <div class="control-btn" id="leftBtn">←</div>
+            <div class="control-btn" id="thrustBtn">▲</div>
+            <div class="control-btn" id="rightBtn">→</div>
+            <div class="control-btn" id="fireBtn">•</div>
+        </div>
+    </div>
+    <div id="activityLog"></div>
+    <script>
+        // Game constants
+        let CANVAS_WIDTH, CANVAS_HEIGHT;
+        const ASTEROID_SPEED = 1;
+        const BULLET_SPEED = 5;
+        const ROTATION_SPEED = 0.1;
+        const THRUST = 0.1;
+        const FRICTION = 0.99;
+
+        // Game variables
+        let canvas, ctx;
+        let ship;
+        let asteroids = [];
+        let bullets = [];
+        let activityLog;
+
+        // Schema.org type hierarchy (simplified for this example)
+        const schemaTypes = {
+            "Thing": ["CreativeWork", "Event", "Organization", "Person", "Place", "Product"],
+            "CreativeWork": ["Article", "Book", "Movie", "MusicRecording"],
+            "Event": ["BusinessEvent", "Festival", "SportsEvent"],
+            "Organization": ["Corporation", "EducationalOrganization", "GovernmentOrganization"],
+            "Person": [],
+            "Place": ["LocalBusiness", "TouristAttraction"],
+            "Product": ["IndividualProduct", "ProductModel"]
+        };
+
+        // Ship class
+        class Ship {
+            constructor() {
+                this.x = CANVAS_WIDTH / 2;
+                this.y = CANVAS_HEIGHT / 2;
+                this.radius = 10;
+                this.angle = 0;
+                this.rotation = 0;
+                this.velocity = { x: 0, y: 0 };
+                this.thrusting = false;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.strokeStyle = "#0f0";
+                ctx.beginPath();
+                ctx.moveTo(this.radius, 0);
+                ctx.lineTo(-this.radius, -this.radius / 2);
+                ctx.lineTo(-this.radius, this.radius / 2);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            update() {
+                this.angle += this.rotation;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.velocity.x *= FRICTION;
+                this.velocity.y *= FRICTION;
+
+                if (this.thrusting) {
+                    this.velocity.x += Math.cos(this.angle) * THRUST;
+                    this.velocity.y += Math.sin(this.angle) * THRUST;
+                }
+
+                if (this.x < 0) this.x = CANVAS_WIDTH;
+                if (this.x > CANVAS_WIDTH) this.x = 0;
+                if (this.y < 0) this.y = CANVAS_HEIGHT;
+                if (this.y > CANVAS_HEIGHT) this.y = 0;
+            }
+        }
+
+        // Asteroid class
+        class Asteroid {
+            constructor(x, y, radius, type) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.type = type;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * ASTEROID_SPEED,
+                    y: (Math.random() - 0.5) * ASTEROID_SPEED
+                };
+                this.vertices = this.generateVertices();
+            }
+
+            generateVertices() {
+                const numVertices = Math.floor(Math.random() * 5) + 7;
+                const vertices = [];
+                for (let i = 0; i < numVertices; i++) {
+                    const angle = (i / numVertices) * Math.PI * 2;
+                    const distance = this.radius * (0.8 + Math.random() * 0.4);
+                    vertices.push({
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance
+                    });
+                }
+                return vertices;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.strokeStyle = "#0f0";
+                ctx.beginPath();
+                ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+                for (let i = 1; i < this.vertices.length; i++) {
+                    ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Draw type name
+                ctx.fillStyle = "#0f0";
+                ctx.textAlign = "center";
+                ctx.fillText(this.type, 0, 0);
+
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                if (this.x < 0) this.x = CANVAS_WIDTH;
+                if (this.x > CANVAS_WIDTH) this.x = 0;
+                if (this.y < 0) this.y = CANVAS_HEIGHT;
+                if (this.y > CANVAS_HEIGHT) this.y = 0;
+            }
+        }
+
+        // Bullet class
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: Math.cos(angle) * BULLET_SPEED,
+                    y: Math.sin(angle) * BULLET_SPEED
+                };
+                this.radius = 2;
+            }
+
+            draw() {
+                ctx.fillStyle = "#0f0";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+            }
+        }
+
+        // Game initialization
+        function init() {
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+            activityLog = document.getElementById("activityLog");
+
+            resizeCanvas();
+            window.addEventListener("resize", resizeCanvas);
+
+            ship = new Ship();
+            createInitialAsteroids();
+
+            setupTouchControls();
+            setupKeyboardControls();
+
+            gameLoop();
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById("gameContainer");
+            CANVAS_WIDTH = container.clientWidth;
+            CANVAS_HEIGHT = container.clientHeight;
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+
+            if (ship) {
+                ship.x = CANVAS_WIDTH / 2;
+                ship.y = CANVAS_HEIGHT / 2;
+            }
+        }
+
+        function createInitialAsteroids() {
+            for (let type of schemaTypes["Thing"]) {
+                const x = Math.random() * CANVAS_WIDTH;
+                const y = Math.random() * CANVAS_HEIGHT;
+                asteroids.push(new Asteroid(x, y, 40, type));
+                logActivity(`Encountered: ${type}`);
+            }
+        }
+
+        // Input handling
+        function setupKeyboardControls() {
+            document.addEventListener("keydown", handleKeyDown);
+            document.addEventListener("keyup", handleKeyUp);
+        }
+
+        function setupTouchControls() {
+            const leftBtn = document.getElementById("leftBtn");
+            const rightBtn = document.getElementById("rightBtn");
+            const thrustBtn = document.getElementById("thrustBtn");
+            const fireBtn = document.getElementById("fireBtn");
+
+            leftBtn.addEventListener("touchstart", () => { ship.rotation = -ROTATION_SPEED; });
+            leftBtn.addEventListener("touchend", () => { ship.rotation = 0; });
+            rightBtn.addEventListener("touchstart", () => { ship.rotation = ROTATION_SPEED; });
+            rightBtn.addEventListener("touchend", () => { ship.rotation = 0; });
+            thrustBtn.addEventListener("touchstart", () => { ship.thrusting = true; });
+            thrustBtn.addEventListener("touchend", () => { ship.thrusting = false; });
+            fireBtn.addEventListener("touchstart", fireBullet);
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === "ArrowLeft") ship.rotation = -ROTATION_SPEED;
+            if (e.key === "ArrowRight") ship.rotation = ROTATION_SPEED;
+            if (e.key === "ArrowUp") ship.thrusting = true;
+            if (e.key === " ") fireBullet();
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") ship.rotation = 0;
+            if (e.key === "ArrowUp") ship.thrusting = false;
+        }
+
+        function fireBullet() {
+            bullets.push(new Bullet(ship.x, ship.y, ship.angle));
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            ship.update();
+            updateAsteroids();
+            updateBullets();
+            checkCollisions();
+        }
+
+        function updateAsteroids() {
+            asteroids.forEach(asteroid => asteroid.update());
+        }
+
+        function updateBullets() {
+            bullets.forEach((bullet, index) => {
+                bullet.update();
+                if (bullet.x < 0 || bullet.x > CANVAS_WIDTH || bullet.y < 0 || bullet.y > CANVAS_HEIGHT) {
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bulletIndex) => {
+                asteroids.forEach((asteroid, asteroidIndex) => {
+                    if (distance(bullet, asteroid) < asteroid.radius) {
+                        bullets.splice(bulletIndex, 1);
+                        splitAsteroid(asteroid, asteroidIndex);
+                    }
+                });
+            });
+        }
+
+        function splitAsteroid(asteroid, index) {
+            const subTypes = schemaTypes[asteroid.type];
+            if (subTypes && subTypes.length > 0) {
+                for (let subType of subTypes) {
+                    const newRadius = asteroid.radius * 0.8;
+                    if (newRadius > 10) {
+                        asteroids.push(new Asteroid(asteroid.x, asteroid.y, newRadius, subType));
+                        logActivity(`Split: ${asteroid.type} into ${subType}`);
+                    }
+                }
+            }
+            asteroids.splice(index, 1);
+        }
+
+        function distance(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function draw() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            ship.draw();
+            asteroids.forEach(asteroid => asteroid.draw());
+            bullets.forEach(bullet => bullet.draw());
+        }
+
+        function logActivity(message) {
+            const logEntry = document.createElement("div");
+            logEntry.textContent = message;
+            activityLog.insertBefore(logEntry, activityLog.firstChild);
+            if (activityLog.childElementCount > 50) {
+                activityLog.removeChild(activityLog.lastChild);
+            }
+        }
+
+        // Start the game
+        window.onload = init;
+    </script>
+</body>
+</html>
