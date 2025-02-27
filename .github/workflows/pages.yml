@@ -23,6 +23,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          
+      - name: Print diagnostics
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
+          echo "Content of index.html:"
+          cat index.html
       
       - name: Update HTML with version info directly
         run: |
@@ -110,6 +118,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
+      - name: Print final HTML
+        run: |
+          echo "Final content of index.html:"
+          cat index.html
+          echo "Directory structure:"
+          find . -type f -name "*.html" | sort
+          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
