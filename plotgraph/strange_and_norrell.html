@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expanded Jonathan Strange & Mr Norrell Plot Graph</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-data/7.1.4/vis-data.min.js"></script>
+    <style>
+        #mynetwork {
+            width: 100%;
+            height: 800px;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Expanded Jonathan Strange & Mr Norrell Plot Graph</h1>
+    <div id="mynetwork"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const nodes = new vis.DataSet([
+                {id: 1, label: 'Mr Norrell', shape: 'circle', group: 'magician'},
+                {id: 2, label: 'Jonathan Strange', shape: 'circle', group: 'magician'},
+                {id: 3, label: 'Gentleman with\nThistle-Down Hair', shape: 'diamond', group: 'fairy'},
+                {id: 4, label: 'Lady Pole', shape: 'circle', group: 'human'},
+                {id: 5, label: 'Sir Walter Pole', shape: 'circle', group: 'human'},
+                {id: 6, label: 'Stephen Black', shape: 'circle', group: 'human'},
+                {id: 7, label: 'Arabella Strange', shape: 'circle', group: 'human'},
+                {id: 8, label: 'Duke of Wellington', shape: 'circle', group: 'human'},
+                {id: 9, label: 'John Segundus', shape: 'circle', group: 'magician'},
+                {id: 10, label: 'Mr Honeyfoot', shape: 'circle', group: 'magician'},
+                {id: 11, label: 'John Uskglass\n(Raven King)', shape: 'star', group: 'magician'},
+                {id: 12, label: 'Vinculus', shape: 'circle', group: 'human'},
+                {id: 13, label: 'Childermass', shape: 'circle', group: 'magician'},
+                {id: 14, label: 'Drawlight', shape: 'circle', group: 'human'},
+                {id: 15, label: 'Lascelles', shape: 'circle', group: 'human'},
+                {id: 16, label: 'Mrs Strange', shape: 'circle', group: 'human'},
+                {id: 17, label: 'Lord Liverpool', shape: 'circle', group: 'human'},
+                {id: 18, label: 'King George III', shape: 'circle', group: 'human'},
+                {id: 19, label: 'Lost-hope', shape: 'square', group: 'location'},
+                {id: 20, label: 'York', shape: 'square', group: 'location'},
+                {id: 21, label: 'London', shape: 'square', group: 'location'},
+                {id: 22, label: 'Venice', shape: 'square', group: 'location'},
+                {id: 23, label: 'Peninsula War', shape: 'triangle', group: 'event'},
+                {id: 24, label: 'Book of Magic', shape: 'box', group: 'object'},
+            ]);
+
+            const edges = new vis.DataSet([
+                {from: 1, to: 2, label: 'Teaches/Rivals', arrows: 'to,from'},
+                {from: 1, to: 3, label: 'Makes a bargain', arrows: 'to,from'},
+                {from: 1, to: 4, label: 'Resurrects', arrows: 'to'},
+                {from: 3, to: 4, label: 'Enchants', arrows: 'to'},
+                {from: 3, to: 6, label: 'Enchants', arrows: 'to'},
+                {from: 4, to: 5, label: 'Married', arrows: 'to,from'},
+                {from: 2, to: 8, label: 'Assists in war', arrows: 'to'},
+                {from: 2, to: 7, label: 'Married', arrows: 'to,from'},
+                {from: 3, to: 7, label: 'Abducts', arrows: 'to'},
+                {from: 4, to: 9, label: 'Cared for by', arrows: 'to'},
+                {from: 4, to: 10, label: 'Cared for by', arrows: 'to'},
+                {from: 2, to: 3, label: 'Summons/Confronts', arrows: 'to,from'},
+                {from: 2, to: 11, label: 'Seeks', arrows: 'to'},
+                {from: 1, to: 11, label: 'Fears/Opposes', arrows: 'to'},
+                {from: 12, to: 11, label: 'Prophesies', arrows: 'to'},
+                {from: 1, to: 13, label: 'Employs', arrows: 'to'},
+                {from: 13, to: 2, label: 'Respects', arrows: 'to'},
+                {from: 1, to: 14, label: 'Manipulated by', arrows: 'from'},
+                {from: 1, to: 15, label: 'Influenced by', arrows: 'from'},
+                {from: 2, to: 16, label: 'Son of', arrows: 'from'},
+                {from: 1, to: 17, label: 'Advises', arrows: 'to'},
+                {from: 1, to: 18, label: 'Attempts to cure', arrows: 'to'},
+                {from: 3, to: 19, label: 'Rules', arrows: 'to'},
+                {from: 1, to: 20, label: 'Originates from', arrows: 'from'},
+                {from: 1, to: 21, label: 'Moves to', arrows: 'to'},
+                {from: 2, to: 22, label: 'Travels to', arrows: 'to'},
+                {from: 2, to: 23, label: 'Participates in', arrows: 'to'},
+                {from: 2, to: 24, label: 'Writes', arrows: 'to'},
+                {from: 1, to: 24, label: 'Tries to suppress', arrows: 'to'},
+                {from: 11, to: 24, label: 'Subject of', arrows: 'from'},
+                {from: 12, to: 24, label: 'Becomes', arrows: 'to'},
+            ]);
+
+            const container = document.getElementById('mynetwork');
+            const data = {
+                nodes: nodes,
+                edges: edges
+            };
+            const options = {
+                nodes: {
+                    font: {
+                        size: 12
+                    }
+                },
+                edges: {
+                    font: {
+                        size: 10
+                    }
+                },
+                groups: {
+                    magician: {color: {background: '#97C2FC', border: '#2B7CE9'}},
+                    human: {color: {background: '#FB7E81', border: '#FA0010'}},
+                    fairy: {color: {background: '#7BE141', border: '#31B404'}},
+                    location: {color: {background: '#FFA807', border: '#FF6F00'}},
+                    event: {color: {background: '#6E6EFD', border: '#0000FF'}},
+                    object: {color: {background: '#E2D0E2', border: '#9B008B'}}
+                },
+                physics: {
+                    stabilization: false,
+                    barnesHut: {
+                        gravitationalConstant: -2000,
+                        centralGravity: 0.3,
+                        springLength: 150,
+                        springConstant: 0.04,
+                        damping: 0.09,
+                        avoidOverlap: 0.1
+                    }
+                }
+            };
+            const network = new vis.Network(container, data, options);
+        });
+    </script>
+</body>
+</html>
