@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LED Animation + Debug + Docs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- math.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #111;
+      color: #fff;
+    }
+    /* Tabs */
+    .tab-buttons {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #222;
+      border-bottom: 1px solid #333;
+    }
+    .tab-btn {
+      background: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #555;
+    }
+    .tab-panel {
+      display: none;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    /* LED & Controls */
+    #led-container {
+      display: flex;
+      gap: 5px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #000;
+      border-radius: 12px;
+      justify-content: center;
+      min-height: 60px;
+    }
+    .led {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #000;
+      transition: background-color 0.1s;
+      box-shadow: 0 0 5px rgba(255,255,255,0.2);
+    }
+    .controls {
+      background: #222;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-family: ui-monospace, monospace;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      caret-color: #fff; /* make cursor visible */
+    }
+    button {
+      padding: 10px 20px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #555;
+    }
+    .preset {
+      background: #222;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .preset:hover {
+      background: #2a2a2a;
+    }
+    .error {
+      color: #ff4444;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      background: rgba(255,0,0,0.1);
+      display: none;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+    input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+    }
+    /* Collapsible details for appargs */
+    details {
+      background: #222;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      outline: none;
+    }
+    /* Debug panel */
+    #debug-output {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 100px;
+      white-space: pre;
+      font-family: ui-monospace, monospace;
+    }
+    /* Docs panel */
+    #docs-content {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    code {
+      background: #333;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Tab Buttons -->
+  <div class="tab-buttons">
+    <button class="tab-btn active" data-panel="gallery">Gallery</button>
+    <button class="tab-btn" data-panel="debug">Debug</button>
+    <button class="tab-btn" data-panel="docs">Docs</button>
+  </div>
+
+  <!-- GALLERY TAB -->
+  <div id="gallery" class="tab-panel active">
+    <h2>LED Animation Gallery</h2>
+    <p style="opacity:0.8; font-size:0.9em;">
+      By default, we show a rainbow wave. If you see no color, open Debug for errors.
+    </p>
+    <div id="led-container"></div>
+
+    <div class="controls">
+      <div id="error" class="error"></div>
+      <!-- Default is rainbow, no *255 needed thanks to auto-scaling below. -->
+      <textarea id="expression" rows="4" spellcheck="false">
+vec3.hsv((x + t * speed) * 360, 100, 100)
+      </textarea>
+
+      <div class="speed-control">
+        <button id="update-expression">Update</button>
+        <button id="reset-time" style="margin-left:auto;">Reset Time</button>
+      </div>
+
+      <div class="speed-control">
+        <label>Speed:</label>
+        <!-- Range up to 5.0, default 1.0 for noticeable color motion -->
+        <input type="range" id="speed-slider" min="0.01" max="5.0" step="0.01" value="1">
+        <span id="speed-value">1</span>
+      </div>
+
+      <!-- Collapsible section for appargs sliders -->
+      <details>
+        <summary>Show bookshelf appargs</summary>
+        <div style="margin-top:10px;">
+          <label>appargs.x:</label>
+          <input type="range" id="appargsX" min="0" max="1" step="0.01" value="0.5">
+          <span id="appargsXVal">0.5</span>
+        </div>
+        <div style="margin-top:10px;">
+          <label>appargs.y:</label>
+          <input type="range" id="appargsY" min="0" max="1" step="0.01" value="0.1">
+          <span id="appargsYVal">0.1</span>
+        </div>
+        <div style="margin-top:10px;">
+          <label>appargs.z:</label>
+          <input type="range" id="appargsZ" min="0" max="2" step="0.01" value="1">
+          <span id="appargsZVal">1</span>
+        </div>
+        <div style="margin-top:10px;">
+          <label>appargs.w:</label>
+          <input type="range" id="appargsW" min="0" max="2" step="0.01" value="1">
+          <span id="appargsWVal">1</span>
+        </div>
+      </details>
+    </div>
+
+    <p>Presets:</p>
+    <div id="presets">
+      <div class="preset" data-code="vec3.hsv((x + t * speed) * 360, 100, 100)">
+        <h3>Rainbow Wave</h3>
+        <p>HSV-based rainbow wave</p>
+      </div>
+
+      <div class="preset" data-code="vec3.mix(vec3(1,0,0), vec3(0,0,1), (1+sin(x*6.28 - t*speed))/2)">
+        <h3>Red-Blue Sine</h3>
+        <p>Smooth red/blue wave (no 255, auto-scale used)</p>
+      </div>
+
+      <div class="preset" data-code="vec3.rotate(vec3(1,0,0), t*speed*360)">
+        <h3>Color Rotation</h3>
+        <p>Rotates red hue in HSV</p>
+      </div>
+
+      <div class="preset" data-code="vec3.mix(vec3(1,0,0), vec3(1,0.5,0), abs(sin(x*8 + t*speed)*sin(x*5 - t*speed*1.5)))">
+        <h3>Fire Effect</h3>
+        <p>Flickering red/orange wave</p>
+      </div>
+
+      <!-- Two new “Bookshelf pointer” examples using appargs.x,y,z,w -->
+      <div class="preset" data-code="
+vec3(
+  max(0, min(1, 1 - abs(x - appargs.x)/appargs.y)),
+  0,
+  0
+) * appargs.z
+">
+        <h3>Bookshelf Pointer #1</h3>
+        <p>Highlights a red band near <code>appargs.x</code>, width <code>appargs.y</code>, scaled by <code>appargs.z</code></p>
+      </div>
+
+      <div class="preset" data-code="
+vec3.mix(
+  vec3(0,0,0),
+  vec3(0,1,0),
+  max(0,1 - abs(x - appargs.x)/appargs.y)
+) * appargs.z
+">
+        <h3>Bookshelf Pointer #2</h3>
+        <p>Green highlight near <code>appargs.x</code>, fade by distance, scaled by <code>appargs.z</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEBUG TAB -->
+  <div id="debug" class="tab-panel">
+    <h2>Debug Panel</h2>
+    <div id="debug-output">No debug info yet...</div>
+  </div>
+
+  <!-- DOCS TAB -->
+  <div id="docs" class="tab-panel">
+    <h2>Docs</h2>
+    <div id="docs-content">
+      <p>Use these <strong>function calls</strong> in math.js expressions:</p>
+      <ul>
+        <li><code>vec3(r,g,b)</code> – Create an RGB vector (0–1 range)</li>
+        <li><code>vec3.mix(a,b,t)</code> – Linear interpolation</li>
+        <li><code>vec3.rotate(v,angle)</code> – Rotate hue (HSV)</li>
+        <li><code>vec3.hsv(h,s,v)</code> – Create color via HSV (<code>0–360</code>, <code>0–100</code>)</li>
+      </ul>
+      <p>Variables in scope:</p>
+      <ul>
+        <li><code>x</code>: LED index 0–1</li>
+        <li><code>t</code>: time in seconds (reset via “Reset Time”)</li>
+        <li><code>speed</code>: slider in 0.01–5.0 range</li>
+        <li><code>appargs</code>: <code>{x,y,z,w}</code> for bookshelf or other custom usage</li>
+      </ul>
+      <p>
+        <strong>Important:</strong>  
+        - Start the expression with a valid math token (not <code>//comment</code>).  
+        - If your expression returns 0–1 color channels, it’s auto-scaled to 0–255.  
+        - If it’s already in 0–255, no scaling is applied.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    /*******************************
+     * TAB UI
+     *******************************/
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.panel;
+        tabPanels.forEach(panel => {
+          panel.classList.remove('active');
+          if (panel.id === target) {
+            panel.classList.add('active');
+          }
+        });
+      });
+    });
+
+    /*******************************
+     * DEBUG LOGGING
+     *******************************/
+    const debugOutput = document.getElementById("debug-output");
+    let debugLogs = [];
+    function logDebug(msg) {
+      const timestamp = new Date().toLocaleTimeString();
+      debugLogs.push(`[${timestamp}] ${msg}`);
+      if (debugLogs.length > 200) debugLogs.shift();
+      debugOutput.textContent = debugLogs.join('\n');
+    }
+
+    /*******************************
+     * LED STRIP SETUP
+     *******************************/
+    const NUM_LEDS = 30;
+    const ledContainer = document.getElementById("led-container");
+    for (let i = 0; i < NUM_LEDS; i++) {
+      const led = document.createElement("div");
+      led.classList.add("led");
+      ledContainer.appendChild(led);
+    }
+    const leds = [...document.querySelectorAll(".led")];
+
+    /*******************************
+     * DEFINE vec3(...) + METHODS
+     *******************************/
+    const vec3 = function(r, g, b) {
+      return math.matrix([r, g, b]);
+    };
+    vec3.mix = function(a, b, t) {
+      return math.add(
+        math.multiply(a, 1 - t),
+        math.multiply(b, t)
+      );
+    };
+    vec3.hsv = function(h, s, v) {
+      h = ((h % 360) + 360) % 360;
+      s = Math.max(0, Math.min(100, s)) / 100;
+      v = Math.max(0, Math.min(100, v)) / 100;
+      const c = v * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = v - c;
+      let rgb;
+      if (h < 60) rgb = [c, x, 0];
+      else if (h < 120) rgb = [x, c, 0];
+      else if (h < 180) rgb = [0, c, x];
+      else if (h < 240) rgb = [0, x, c];
+      else if (h < 300) rgb = [x, 0, c];
+      else rgb = [c, 0, x];
+      return math.matrix([rgb[0] + m, rgb[1] + m, rgb[2] + m]);
+    };
+    vec3.rotate = function(v, angle) {
+      // Convert from RGB to HSV, rotate hue, then go back
+      const rgb = v.valueOf();
+      const max = Math.max(...rgb);
+      const min = Math.min(...rgb);
+      const delta = max - min;
+      let h;
+      if (delta === 0) {
+        h = 0;
+      } else if (max === rgb[0]) {
+        h = 60 * (((rgb[1] - rgb[2]) / delta) % 6);
+      } else if (max === rgb[1]) {
+        h = 60 * ((rgb[2] - rgb[0]) / delta + 2);
+      } else {
+        h = 60 * ((rgb[0] - rgb[1]) / delta + 4);
+      }
+      const s = (max === 0) ? 0 : delta / max;
+      const val = max;
+      return vec3.hsv((h + angle + 360) % 360, s * 100, val * 100);
+    };
+
+    /*******************************
+     * MATH.JS SCOPE
+     *******************************/
+    // We'll keep appargs in the scope so the user can do e.g. appargs.x or appargs.y
+    const scope = {
+      sin: Math.sin,
+      vec3: vec3,
+      x: 0,
+      t: 0,
+      speed: 0,
+      appargs: { x:0.5, y:0.1, z:1.0, w:1.0 }
+    };
+
+    /*******************************
+     * UI SLIDERS FOR appargs
+     *******************************/
+    const appargsX = document.getElementById("appargsX");
+    const appargsXVal = document.getElementById("appargsXVal");
+    appargsX.addEventListener("input", () => {
+      scope.appargs.x = parseFloat(appargsX.value);
+      appargsXVal.textContent = appargsX.value;
+      logDebug("appargs.x changed to " + appargsX.value);
+    });
+    const appargsY = document.getElementById("appargsY");
+    const appargsYVal = document.getElementById("appargsYVal");
+    appargsY.addEventListener("input", () => {
+      scope.appargs.y = parseFloat(appargsY.value);
+      appargsYVal.textContent = appargsY.value;
+      logDebug("appargs.y changed to " + appargsY.value);
+    });
+    const appargsZ = document.getElementById("appargsZ");
+    const appargsZVal = document.getElementById("appargsZVal");
+    appargsZ.addEventListener("input", () => {
+      scope.appargs.z = parseFloat(appargsZ.value);
+      appargsZVal.textContent = appargsZ.value;
+      logDebug("appargs.z changed to " + appargsZ.value);
+    });
+    const appargsW = document.getElementById("appargsW");
+    const appargsWVal = document.getElementById("appargsWVal");
+    appargsW.addEventListener("input", () => {
+      scope.appargs.w = parseFloat(appargsW.value);
+      appargsWVal.textContent = appargsW.value;
+      logDebug("appargs.w changed to " + appargsW.value);
+    });
+
+    /*******************************
+     * ANIMATION
+     *******************************/
+    const expressionEl = document.getElementById("expression");
+    const errorDisplay = document.getElementById("error");
+    let compiledExpression;
+    let lastFrameTime = 0;
+    const animationVars = { t: 0, speed: 1.0 };
+
+    // Attempt initial compile
+    try {
+      compiledExpression = math.compile(expressionEl.value.trim());
+      logDebug("Initial expression compiled OK");
+    } catch (e) {
+      logDebug("Initial compile error: " + e.message);
+    }
+
+    // Speed slider
+    const speedSlider = document.getElementById("speed-slider");
+    const speedValue = document.getElementById("speed-value");
+    speedSlider.addEventListener("input", () => {
+      animationVars.speed = parseFloat(speedSlider.value);
+      speedValue.textContent = speedSlider.value;
+      logDebug("Speed changed to " + speedSlider.value);
+    });
+    speedValue.textContent = speedSlider.value; // initial label
+
+    // Reset time button
+    const resetTimeBtn = document.getElementById("reset-time");
+    resetTimeBtn.addEventListener("click", () => {
+      animationVars.t = 0;
+      logDebug("Time reset to 0");
+    });
+
+    // Main animation loop
+    function updateLeds(timestamp) {
+      const deltaTime = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+      animationVars.t += deltaTime;
+      scope.t = animationVars.t;
+      scope.speed = animationVars.speed;
+
+      if (!compiledExpression) {
+        requestAnimationFrame(updateLeds);
+        return;
+      }
+
+      leds.forEach((led, i) => {
+        scope.x = i / NUM_LEDS;
+        try {
+          const result = compiledExpression.evaluate(scope).valueOf();
+          // result is an array [r,g,b]. If r/g/b <=1, scale up to 255; 
+          // if it's >1, assume user wants that literally.
+          const maxVal = Math.max(...result);
+          let scale = 1;
+          if (maxVal <= 1) {
+            scale = 255; // auto-scale for 0..1 colors
+          }
+          const rgb = result.map(v => {
+            const scaled = v * scale;
+            return Math.max(0, Math.min(255, Math.round(scaled)));
+          });
+          led.style.backgroundColor = `rgb(${rgb.join(",")})`;
+          errorDisplay.style.display = "none";
+        } catch (err) {
+          errorDisplay.textContent = "Error: " + err.message;
+          errorDisplay.style.display = "block";
+          logDebug("Eval error: " + err.message);
+        }
+      });
+      requestAnimationFrame(updateLeds);
+    }
+
+    // Update expression button
+    document.getElementById("update-expression").addEventListener("click", () => {
+      try {
+        const code = expressionEl.value.trim();
+        compiledExpression = math.compile(code);
+        errorDisplay.style.display = "none";
+        logDebug("New expression compiled OK");
+      } catch (err) {
+        errorDisplay.textContent = "Compilation error: " + err.message;
+        errorDisplay.style.display = "block";
+        logDebug("Compilation error: " + err.message);
+      }
+    });
+
+    // Preset click
+    document.querySelectorAll(".preset").forEach(preset => {
+      preset.addEventListener("click", () => {
+        const code = preset.dataset.code.trim();
+        expressionEl.value = code;
+        try {
+          compiledExpression = math.compile(code);
+          errorDisplay.style.display = "none";
+          logDebug("Preset compiled OK: " + code);
+        } catch (err) {
+          errorDisplay.textContent = "Preset error: " + err.message;
+          errorDisplay.style.display = "block";
+          logDebug("Preset error: " + err.message);
+        }
+      });
+    });
+
+    requestAnimationFrame(updateLeds);
+  </script>
+</body>
+</html>
