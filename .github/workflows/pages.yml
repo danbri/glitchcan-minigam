@@ -16,47 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for proper versioning
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          
-      - name: Print diagnostics
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in current directory:"
-          ls -la
-          echo "Content of index.html:"
-          cat index.html
-      
-      - name: Update repository information
-        run: |
-          # Get repo info
-          REPO_URL="https://github.com/danbri/glitchcan-minigam"
-          LAST_COMMIT_DATE=$(git log -1 --format="%ci")
-          LAST_COMMIT_ID=$(git rev-parse --short HEAD)
-          LAST_COMMIT_URL="$REPO_URL/commit/$LAST_COMMIT_ID"
-          LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-          
-          # Update index.html repository information
-          sed -i "s|<span id=\"last-commit-date\">Loading...</span>|<span id=\"last-commit-date\">$LAST_COMMIT_DATE</span>|g" index.html
-          sed -i "s|<span id=\"latest-commit-id\">Loading...</span>|<span id=\"latest-commit-id\">$LAST_COMMIT_ID</span>|g" index.html
-          sed -i "s|<a id=\"latest-commit-link\" href=\"#\" target=\"_blank\">|<a id=\"latest-commit-link\" href=\"$LAST_COMMIT_URL\" target=\"_blank\">|g" index.html
-          sed -i "s|<span id=\"latest-commit-message\">Loading...</span>|<span id=\"latest-commit-message\">$LAST_COMMIT_MSG</span>|g" index.html
-          
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
-      - name: Print final HTML
-        run: |
-          echo "Final content of index.html:"
-          cat index.html
-          echo "Directory structure:"
-          find . -type f -name "*.html" | sort
-          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
