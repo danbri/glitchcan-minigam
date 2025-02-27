@@ -41,125 +41,66 @@ jobs:
           LAST_COMMIT_URL="$REPO_URL/commit/$LAST_COMMIT_ID"
           LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
           
-          # Automatically detect all game directories and metadata IDs
-          echo "Detecting game directories and metadata..."
+          # Get game HTML file info
+          THUMBWAR_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- thumbwar/thumbwar.html)
+          THUMBWAR_LAST_COMMIT_ID=$(git log -1 --format="%h" -- thumbwar/thumbwar.html)
+          THUMBWAR_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- thumbwar/thumbwar.html)"
           
-          # First, discover all game directories - assuming each dir with HTML files is a game
-          GAME_DIRS=$(find . -maxdepth 1 -type d -not -path "./.*" -not -path "." | sort)
+          INKLET_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- inklet/inklet.html)
+          INKLET_LAST_COMMIT_ID=$(git log -1 --format="%h" -- inklet/inklet.html)
+          INKLET_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- inklet/inklet.html)"
           
-          # Remember all meta IDs found in the HTML
-          META_IDS=$(grep -o 'id="[^"]*-meta"' index.html | sed 's/id="//g' | sed 's/-meta"//g')
-          echo "Found metadata IDs: $META_IDS"
+          TOKITOKIPONA_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- tokitokipona/tokitokipona.html)
+          TOKITOKIPONA_LAST_COMMIT_ID=$(git log -1 --format="%h" -- tokitokipona/tokitokipona.html)
+          TOKITOKIPONA_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- tokitokipona/tokitokipona.html)"
           
-          # Create a temporary directory for metadata HTML files
-          mkdir -p metadata_tmp
+          SCHEMOIDS_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- schemoids/schemoids.html)
+          SCHEMOIDS_LAST_COMMIT_ID=$(git log -1 --format="%h" -- schemoids/schemoids.html)
+          SCHEMOIDS_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- schemoids/schemoids.html)"
           
-          # Process each game directory
-          for META_ID in $META_IDS; do
-            echo "Processing metadata for: $META_ID"
-            
-            # Find the corresponding HTML file(s)
-            if [ -d "$META_ID" ]; then
-              # Look for a matching HTML file
-              MAIN_HTML="$META_ID/$META_ID.html"
-              if [ ! -f "$MAIN_HTML" ]; then
-                # Find any HTML file in this directory
-                MAIN_HTML=$(find "$META_ID" -name "*.html" -maxdepth 1 | head -1)
-              fi
-              
-              if [ -f "$MAIN_HTML" ]; then
-                # Get commit info for this file
-                LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- "$MAIN_HTML")
-                LAST_COMMIT_ID=$(git log -1 --format="%h" -- "$MAIN_HTML")
-                COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- "$MAIN_HTML")"
-                
-                # Create HTML for this metadata
-                META_HTML="<!-- BEGIN: AUTO-GENERATED $(echo $META_ID | tr '[:lower:]' '[:upper:]') METADATA -->
-                    <p>
-                      Last modified: $LAST_COMMIT_DATE<br>
-                      Version: <span class=\"version-badge\">$LAST_COMMIT_ID</span><br>
-                      <a href=\"$COMMIT_URL\" target=\"_blank\">View changes</a> | 
-                      <a href=\"$REPO_URL/blob/master/$MAIN_HTML\" target=\"_blank\">View source</a> | 
-                      <a href=\"$REPO_URL/commits/master/$MAIN_HTML\" target=\"_blank\">History</a>
-                    </p>
-                    <!-- END: AUTO-GENERATED $(echo $META_ID | tr '[:lower:]' '[:upper:]') METADATA -->"
-                
-                # Save to a temporary file
-                echo "$META_HTML" > "metadata_tmp/${META_ID}_meta.html"
-                echo "Created metadata for $META_ID"
-              else
-                echo "Warning: No HTML files found for $META_ID"
-              fi
-            else
-              echo "Warning: Directory $META_ID not found"
-            fi
-          done
+          LIGHTSHOW_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- lightshow/bookshelf-a.html)
+          LIGHTSHOW_LAST_COMMIT_ID=$(git log -1 --format="%h" -- lightshow/bookshelf-a.html)
+          LIGHTSHOW_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- lightshow/bookshelf-a.html)"
           
-          # Update repository info in HTML
-          sed -i "s|<span id=\"last-commit-date\">Loading...</span>|<span id=\"last-commit-date\"><!-- AUTO-GENERATED -->$LAST_COMMIT_DATE<!-- /AUTO-GENERATED --></span>|g" index.html
-          sed -i "s|<span id=\"latest-commit-id\">Loading...</span>|<span id=\"latest-commit-id\"><!-- AUTO-GENERATED -->$LAST_COMMIT_ID<!-- /AUTO-GENERATED --></span>|g" index.html
+          SANDPIT_LAST_COMMIT_DATE=$(git log -1 --format="%ci" -- sandpit/sandpit.html)
+          SANDPIT_LAST_COMMIT_ID=$(git log -1 --format="%h" -- sandpit/sandpit.html)
+          SANDPIT_COMMIT_URL="$REPO_URL/commit/$(git log -1 --format="%H" -- sandpit/sandpit.html)"
+          
+          # Update index.html with commit info using direct string replacement
+          # First, update repository information
+          sed -i "s|<span id=\"last-commit-date\">Loading...</span>|<span id=\"last-commit-date\">$LAST_COMMIT_DATE</span>|g" index.html
+          sed -i "s|<span id=\"latest-commit-id\">Loading...</span>|<span id=\"latest-commit-id\">$LAST_COMMIT_ID</span>|g" index.html
           sed -i "s|<a id=\"latest-commit-link\" href=\"#\" target=\"_blank\">|<a id=\"latest-commit-link\" href=\"$LAST_COMMIT_URL\" target=\"_blank\">|g" index.html
-          sed -i "s|<span id=\"latest-commit-message\">Loading...</span>|<span id=\"latest-commit-message\"><!-- AUTO-GENERATED -->$LAST_COMMIT_MSG<!-- /AUTO-GENERATED --></span>|g" index.html
+          sed -i "s|<span id=\"latest-commit-message\">Loading...</span>|<span id=\"latest-commit-message\">$LAST_COMMIT_MSG</span>|g" index.html
           
-          # Debug - view the current content
-          echo "Checking current index.html content:"
-          grep -A3 "game-meta" index.html
+          # Now replace game metadata
+          # Thumbwar metadata
+          THUMBWAR_META="<p>Last modified: $THUMBWAR_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$THUMBWAR_LAST_COMMIT_ID</span><br><a href=\"$THUMBWAR_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/thumbwar/thumbwar.html\" target=\"_blank\">View source</a> | <a href=\"$REPO_URL/commits/master/thumbwar/thumbwar.html\" target=\"_blank\">History</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"thumbwar-meta\">.*<\/div>|<div class=\"game-meta\" id=\"thumbwar-meta\">$THUMBWAR_META</div>|" index.html
           
-          # Create an AWK script that will replace all game-meta divs at once
-          cat > update_metadata.awk << 'EOF'
-          BEGIN {
-            inDiv = 0;
-          }
+          # Inklet metadata
+          INKLET_META="<p>Last modified: $INKLET_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$INKLET_LAST_COMMIT_ID</span><br><a href=\"$INKLET_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/inklet/inklet.html\" target=\"_blank\">View source</a> | <a href=\"$REPO_URL/commits/master/inklet/inklet.html\" target=\"_blank\">History</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"inklet-meta\">.*<\/div>|<div class=\"game-meta\" id=\"inklet-meta\">$INKLET_META</div>|" index.html
           
-          # When we find a meta div, process it
-          /<div class="game-meta" id="([^"]+)-meta">/ {
-            # Extract the ID from the regex match
-            match($0, /<div class="game-meta" id="([^"]+)-meta">/, parts);
-            metaId = parts[1];
-            
-            # Output the opening div tag
-            print $0;
-            
-            # Check if we have metadata for this ID
-            metaFile = "metadata_tmp/" metaId "_meta.html";
-            cmd = "test -f " metaFile " && echo yes || echo no";
-            cmd | getline hasMetadata;
-            
-            if (hasMetadata == "yes") {
-              system("cat " metaFile);
-            } else {
-              print "            <p>Loading file information...</p>";
-            }
-            
-            inDiv = 1;
-            next;
-          }
+          # Tokitokipona metadata
+          TOKITOKIPONA_META="<p>Last modified: $TOKITOKIPONA_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$TOKITOKIPONA_LAST_COMMIT_ID</span><br><a href=\"$TOKITOKIPONA_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/tokitokipona/tokitokipona.html\" target=\"_blank\">View source</a> | <a href=\"$REPO_URL/commits/master/tokitokipona/tokitokipona.html\" target=\"_blank\">History</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"tokitokipona-meta\">.*<\/div>|<div class=\"game-meta\" id=\"tokitokipona-meta\">$TOKITOKIPONA_META</div>|" index.html
           
-          # When we're in a div and find the closing tag
-          inDiv && /<\/div>/ {
-            print $0;
-            inDiv = 0;
-            next;
-          }
+          # Schemoids metadata
+          SCHEMOIDS_META="<p>Last modified: $SCHEMOIDS_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$SCHEMOIDS_LAST_COMMIT_ID</span><br><a href=\"$SCHEMOIDS_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/schemoids/schemoids.html\" target=\"_blank\">View source</a> | <a href=\"$REPO_URL/commits/master/schemoids/schemoids.html\" target=\"_blank\">History</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"schemoids-meta\">.*<\/div>|<div class=\"game-meta\" id=\"schemoids-meta\">$SCHEMOIDS_META</div>|" index.html
           
-          # Skip other content in the div
-          inDiv {
-            next;
-          }
+          # Lightshow metadata
+          LIGHTSHOW_META="<p>Last modified: $LIGHTSHOW_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$LIGHTSHOW_LAST_COMMIT_ID</span><br><a href=\"$LIGHTSHOW_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/lightshow/bookshelf-a.html\" target=\"_blank\">View source A</a> | <a href=\"$REPO_URL/blob/master/lightshow/bookshelf-b.html\" target=\"_blank\">View source B</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"lightshow-meta\">.*<\/div>|<div class=\"game-meta\" id=\"lightshow-meta\">$LIGHTSHOW_META</div>|" index.html
           
-          # Print all other lines unchanged
-          {
-            print $0;
-          }
-          EOF
-          
-          # Run the AWK script to replace the metadata
-          awk -f update_metadata.awk index.html > index.html.new
-          
-          mv index.html.new index.html
+          # Sandpit metadata
+          SANDPIT_META="<p>Last modified: $SANDPIT_LAST_COMMIT_DATE<br>Version: <span class=\"version-badge\">$SANDPIT_LAST_COMMIT_ID</span><br><a href=\"$SANDPIT_COMMIT_URL\" target=\"_blank\">View changes</a> | <a href=\"$REPO_URL/blob/master/sandpit/sandpit.html\" target=\"_blank\">View source</a> | <a href=\"$REPO_URL/commits/master/sandpit/sandpit.html\" target=\"_blank\">History</a></p>"
+          sed -i "s|<div class=\"game-meta\" id=\"sandpit-meta\">.*<\/div>|<div class=\"game-meta\" id=\"sandpit-meta\">$SANDPIT_META</div>|" index.html
           
           # Debug - verify the replacement worked
           echo "Checking updated index.html content:"
+          grep -A1 "game-meta" index.html
           grep -A5 "game-meta" index.html
 
       - name: Remove version-info.js script tag
