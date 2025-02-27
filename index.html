@@ -40,28 +40,29 @@
             display: inline-block;
         }
         .glitch-emoji {
-            animation: random-glitch 3s infinite;
+            animation: heartbeat 2.5s ease-in-out infinite, random-glitch 30s infinite;
+            display: inline-block;
         }
         @keyframes random-glitch {
             0%, 97%, 100% { 
-                transform: scale(1) skew(0deg, 0deg); 
                 filter: none; 
                 text-shadow: none;
+                transform: scale(1) skew(0deg, 0deg); 
             }
             97.3% { 
-                transform: scale(1.5) skew(10deg, 5deg); 
                 filter: hue-rotate(90deg) brightness(1.5); 
                 text-shadow: -3px 0 #ff00cc, 3px 0 #00ffcc;
+                transform: scale(1.5) skew(10deg, 5deg); 
             }
             97.6% { 
-                transform: scale(0.8) skew(-20deg, -10deg); 
                 filter: invert(0.8) brightness(2) contrast(2); 
                 text-shadow: 2px 2px #ff0000, -2px -2px #0000ff;
+                transform: scale(0.8) skew(-20deg, -10deg); 
             }
             97.9% { 
-                transform: scale(1.1) skew(5deg, -5deg); 
                 filter: blur(2px) brightness(0.8);
                 text-shadow: 0 0 8px #ffffff;
+                transform: scale(1.1) skew(5deg, -5deg); 
             }
         }
         .game-container {
