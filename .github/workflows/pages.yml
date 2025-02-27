@@ -72,9 +72,35 @@ jobs:
           sed -i "s|<a id=\"latest-commit-link\" href=\"#\" target=\"_blank\">|<a id=\"latest-commit-link\" href=\"$LAST_COMMIT_URL\" target=\"_blank\">|g" index.html
           sed -i "s|<span id=\"latest-commit-message\">Loading...</span>|<span id=\"latest-commit-message\"><!-- AUTO-GENERATED -->$LAST_COMMIT_MSG<!-- /AUTO-GENERATED --></span>|g" index.html
           
-          # Replace the game-meta div content for each game
-          sed -i "s|<div class=\"game-meta\" id=\"thumbwar-meta\">.*<\/div>|<div class=\"game-meta\" id=\"thumbwar-meta\">$THUMBWAR_META_HTML</div>|s" index.html
-          sed -i "s|<div class=\"game-meta\" id=\"inklet-meta\">.*<\/div>|<div class=\"game-meta\" id=\"inklet-meta\">$INKLET_META_HTML</div>|s" index.html
+          # Debug - view the current content
+          echo "Checking current index.html content:"
+          grep -A3 "game-meta" index.html
+          
+          # Save metadata to files first to avoid issues with special characters and multiline content
+          echo "$THUMBWAR_META_HTML" > thumbwar_meta.html
+          echo "$INKLET_META_HTML" > inklet_meta.html
+          
+          # Replace the game-meta div content using awk for more reliable multiline replacement
+          awk '{
+            if (match($0, /<div class="game-meta" id="thumbwar-meta">/)) {
+              system("cat thumbwar_meta.html");
+              inDiv = 1;
+            } else if (match($0, /<div class="game-meta" id="inklet-meta">/)) {
+              system("cat inklet_meta.html");
+              inDiv = 1;
+            } else if (inDiv && match($0, /<\/div>/)) {
+              print "</div>";
+              inDiv = 0;
+            } else if (!inDiv) {
+              print $0;
+            }
+          }' index.html > index.html.new
+          
+          mv index.html.new index.html
+          
+          # Debug - verify the replacement worked
+          echo "Checking updated index.html content:"
+          grep -A5 "game-meta" index.html
 
       - name: Remove version-info.js script tag
         run: |
