@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Jet Set Willy – JS Powered Port</title>
+  <style>
+    /* Basic layout & styling */
+    body {
+      background: #222;
+      color: #eee;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0.5em;
+    }
+    #gameContainer {
+      position: relative;
+      width: 768px;  /* 32 tiles × 24px */
+      height: 384px; /* 16 tiles × 24px */
+      border: 2px solid #eee;
+      background: #000;
+      margin-bottom: 1em;
+    }
+    /* The room grid uses CSS Grid */
+    .room-grid {
+      display: grid;
+      grid-template-columns: repeat(32, 24px);
+      grid-template-rows: repeat(16, 24px);
+      pointer-events: none;
+    }
+    .tile {
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      font-size: 20px;
+    }
+    /* Sprite styling for player and enemies */
+    .sprite {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      text-align: center;
+      line-height: 20px;
+      /* We remove CSS animations here; all animation is done in JS */
+      pointer-events: none;
+    }
+    /* On-screen touch controls */
+    .touch-controls {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 1em;
+      z-index: 1000;
+    }
+    .touch-controls button {
+      background: rgba(68, 68, 68, 0.8);
+      border: 2px solid #eee;
+      border-radius: 50%;
+      color: #eee;
+      width: 50px;
+      height: 50px;
+      font-size: 1.5em;
+      outline: none;
+    }
+    .controls {
+      margin-top: 0.5em;
+    }
+    .controls button {
+      background: #444;
+      border: none;
+      color: #eee;
+      padding: 0.5em 1em;
+      margin: 0 0.5em;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .controls button:hover {
+      background: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <!-- The static room grid will be rendered here -->
+    <div id="roomGrid" class="room-grid"></div>
+    <!-- The main player sprite -->
+    <div id="player" class="sprite player">🕴️</div>
+  </div>
+  <div class="controls">
+    <button id="prevRoom">Prev Room</button>
+    <button id="nextRoom">Next Room</button>
+    <span id="roomName"></span>
+  </div>
+  <!-- On-screen touch controls for mobile -->
+  <div class="touch-controls">
+    <button id="leftBtn">◀️</button>
+    <button id="jumpBtn">🔼</button>
+    <button id="rightBtn">▶️</button>
+  </div>
+  <p style="max-width:768px; text-align:center;">
+    Use the left/right keys (or on‑screen buttons) to move, and up (or jump) to leap. Colliding with a hazard or enemy resets the room.
+  </p>
+  <script>
+    // ----- Constants & Tile Options -----
+    const TILE_SIZE = 24;
+    const GRAVITY = 0.6;
+    const FRICTION = 0.8;
+    const MOVE_SPEED = 2;
+    const JUMP_SPEED = -10;
+    
+    // For each tile type, we now have several emoji options.
+    const tileOptions = {
+      0: ["🌿", "🌱", "🍀", "🌾"],  // Background (plants)
+      1: ["🟫", "🟤"],             // Floor
+      2: ["🧱", "🟥"],             // Wall
+      3: ["🐍", "🦂", "🕷️"]         // Hazard
+    };
+
+    // For enemies, choose from a variety of animal emoji.
+    const enemyOptions = ["🐸", "🐍", "🐱", "🐶", "🐭", "🐰", "🦊", "🐼", "🐔", "🐢"];
+
+    // ----- Room Data (inspired by PDF disassembly) -----
+    // Each room is defined as 16 rows of 8 bytes (each byte gives 4 tiles).
+    // Entities are placed using sample positions.
+    const rooms = [
+      {
+        name: "The Off Licence",
+        layout: [
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,170,170,170,170,170],
+          [0,0,0,128,0,0,0,2],
+          [0,0,0,128,0,0,0,2],
+          [0,0,0,140,0,0,0,2],
+          [0,0,0,128,0,0,0,2],
+          [0,0,0,128,0,0,0,2],
+          [0,0,0,128,0,0,0,2],
+          [0,0,0,170,0,0,2,170],
+          [0,0,0,0,0,0,0,2],
+          [0,0,0,0,0,0,0,2],
+          [0,0,0,0,0,0,0,2],
+          [0,0,0,0,0,0,0,2],
+          [85,85,85,85,85,85,85,85]
+        ],
+        entities: [
+          { type: "guardian", x: 10 * TILE_SIZE, y: 10 * TILE_SIZE }
+        ]
+      },
+      {
+        name: "We must perform a Quirkafleeg",
+        layout: [
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [170,0,0,0,0,0,2,170],
+          [170,64,0,0,0,0,2,170],
+          [170,64,0,0,0,0,2,170],
+          [170,64,0,0,0,0,2,170],
+          [170,64,0,0,0,0,2,170],
+          [170,64,0,0,0,0,2,170],
+          [170,127,255,255,255,255,254,170]
+        ],
+        entities: [
+          { type: "guardian", x: 8 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "rope", x: 16 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "arrow", x: 22 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "terminator", x: 28 * TILE_SIZE, y: 8 * TILE_SIZE }
+        ]
+      },
+      {
+        name: "To the Kitchens    Main Stairway",
+        layout: [
+          [0,0,128,0,0,0,0,0],
+          [0,0,128,0,0,0,0,0],
+          [0,0,128,0,0,0,0,0],
+          [0,0,0,0,0,0,3,0],
+          [0,0,0,0,0,0,0,0],
+          [0,1,149,85,85,80,0,85],
+          [0,0,128,0,0,0,0,0],
+          [0,0,128,0,0,0,0,0],
+          [165,85,133,0,0,0,0,0],
+          [160,0,128,0,0,0,85,64],
+          [160,0,128,0,1,64,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [170,170,170,170,170,170,170,170],
+          [170,170,170,170,170,170,170,170]
+        ],
+        entities: [
+          { type: "guardian", x: 4 * TILE_SIZE, y: 10 * TILE_SIZE },
+          { type: "guardian", x: 16 * TILE_SIZE, y: 10 * TILE_SIZE },
+          { type: "guardian", x: 22 * TILE_SIZE, y: 10 * TILE_SIZE }
+        ]
+      },
+      {
+        name: "The Banyan Tree",
+        layout: [
+          [0,0,0,160,0,0,0,0],
+          [0,0,0,160,0,0,0,0],
+          [0,0,0,144,0,0,0,0],
+          [0,0,0,148,0,0,0,0],
+          [0,0,0,149,80,0,0,0],
+          [0,0,0,129,8,0,0,0],
+          [0,0,0,1,4,0,0,0],
+          [0,0,0,0,4,0,0,0],
+          [0,0,0,128,0,0,0,0],
+          [0,0,0,130,0,0,0,0],
+          [0,8,32,130,8,0,0,0],
+          [0,8,32,130,8,0,0,0],
+          [170,170,170,170,170,170,90,170],
+          [170,170,0,0,0,0,90,170],
+          [170,170,0,0,0,0,90,170],
+          [170,170,85,85,85,85,90,170]
+        ],
+        entities: [
+          { type: "guardian", x: 10 * TILE_SIZE, y: 12 * TILE_SIZE },
+          { type: "guardian", x: 14 * TILE_SIZE, y: 12 * TILE_SIZE }
+        ]
+      }
+    ];
+
+    // ----- Game State & Player Setup -----
+    let currentRoomIndex = 0, currentRoom, gridData;
+    const player = {
+      x: TILE_SIZE,
+      y: TILE_SIZE * 14,
+      width: 20,
+      height: 20,
+      vx: 0,
+      vy: 0,
+      onGround: false,
+      element: document.getElementById("player"),
+      // We'll animate the player by bobbing and slight rotation.
+      baseSprite: "🕴️"
+    };
+    let enemyElements = [];
+    const keys = {};
+
+    // ----- Keyboard Controls (Desktop) -----
+    window.addEventListener("keydown", e => { keys[e.code] = true; });
+    window.addEventListener("keyup", e => { keys[e.code] = false; });
+
+    // ----- Mobile Touch Controls -----
+    function setupTouchControls() {
+      const leftBtn = document.getElementById("leftBtn");
+      const rightBtn = document.getElementById("rightBtn");
+      const jumpBtn = document.getElementById("jumpBtn");
+
+      leftBtn.addEventListener("touchstart", e => { 
+        keys["ArrowLeft"] = true; 
+        e.preventDefault();
+      });
+      leftBtn.addEventListener("touchend", e => { 
+        keys["ArrowLeft"] = false; 
+        e.preventDefault();
+      });
+      rightBtn.addEventListener("touchstart", e => { 
+        keys["ArrowRight"] = true; 
+        e.preventDefault();
+      });
+      rightBtn.addEventListener("touchend", e => { 
+        keys["ArrowRight"] = false; 
+        e.preventDefault();
+      });
+      jumpBtn.addEventListener("touchstart", e => { 
+        keys["ArrowUp"] = true; 
+        e.preventDefault();
+      });
+      jumpBtn.addEventListener("touchend", e => { 
+        keys["ArrowUp"] = false; 
+        e.preventDefault();
+      });
+    }
+    setupTouchControls();
+
+    // ----- Utility Functions -----
+    // Decode a byte (0–255) into 4 two‑bit values.
+    function decodeByte(byte) {
+      return [
+        (byte >> 6) & 3,
+        (byte >> 4) & 3,
+        (byte >> 2) & 3,
+        byte & 3
+      ];
+    }
+    // Convert room layout (16 rows × 8 bytes) into a 2D array (16 × 32) of tile numbers.
+    function decodeRoomLayout(layout) {
+      let grid = [];
+      for (let row = 0; row < layout.length; row++) {
+        let rowTiles = [];
+        for (let b = 0; b < layout[row].length; b++) {
+          rowTiles = rowTiles.concat(decodeByte(layout[row][b]));
+        }
+        grid.push(rowTiles);
+      }
+      return grid;
+    }
+    // Render the static room grid into the #roomGrid div.
+    function renderRoomGrid(grid) {
+      const roomGridDiv = document.getElementById("roomGrid");
+      roomGridDiv.innerHTML = "";
+      for (let y = 0; y < grid.length; y++) {
+        for (let x = 0; x < grid[y].length; x++) {
+          const tileDiv = document.createElement("div");
+          tileDiv.className = "tile";
+          let t = grid[y][x];
+          // Choose a random emoji from the available options for this tile type.
+          let options = tileOptions[t] || ["?"];
+          tileDiv.textContent = options[Math.floor(Math.random() * options.length)];
+          roomGridDiv.appendChild(tileDiv);
+        }
+      }
+    }
+    // Position & animate the player sprite.
+    function renderPlayer() {
+      // Add a slight bobbing and rotation when moving.
+      const time = Date.now();
+      let bob = (Math.sin(time / 150) * 2);
+      let rotation = keys["ArrowLeft"] || keys["ArrowRight"] ? Math.sin(time / 150) * 5 : 0;
+      player.element.style.left = player.x + "px";
+      // Use transform to add bobbing & rotation
+      player.element.style.transform = `translateY(${bob}px) rotate(${rotation}deg) scale(1.0)`;
+      // Set the sprite character (could later be swapped out with frame cycling)
+      player.element.textContent = player.baseSprite;
+    }
+    // Create enemy sprite elements – assign each enemy random animation parameters.
+    function renderEnemies(room) {
+      enemyElements.forEach(obj => obj.element.remove());
+      enemyElements = [];
+      const gameContainer = document.getElementById("gameContainer");
+      room.entities.forEach(ent => {
+        const el = document.createElement("div");
+        el.className = "sprite enemy";
+        // Pick a random emoji for the enemy.
+        el.textContent = enemyOptions[Math.floor(Math.random()*enemyOptions.length)];
+        el.style.left = ent.x + "px";
+        el.style.top = ent.y + "px";
+        // Assign random animation parameters:
+        const anim = {
+          phase: Math.random() * Math.PI * 2,
+          rotationAmplitude: 10 + Math.random() * 10, // degrees
+          scaleAmplitude: 0.1 + Math.random() * 0.2,
+          baseScale: 1.0,
+          horizontalAmplitude: 5 + Math.random() * 5
+        };
+        enemyElements.push({ element: el, data: Object.assign({}, ent), anim: anim });
+        gameContainer.appendChild(el);
+      });
+    }
+    // ----- Room Loading -----
+    function loadRoom(index) {
+      currentRoomIndex = index;
+      currentRoom = rooms[index];
+      gridData = decodeRoomLayout(currentRoom.layout);
+      renderRoomGrid(gridData);
+      renderEnemies(currentRoom);
+      document.getElementById("roomName").textContent = currentRoom.name;
+      // Reset player state.
+      player.x = TILE_SIZE;
+      player.y = TILE_SIZE * 14;
+      player.vx = 0;
+      player.vy = 0;
+      renderPlayer();
+    }
+    // ----- Collision Detection -----
+    // Check if a rectangle (x,y,width,height) collides with a solid tile.
+    function isColliding(x, y, width, height) {
+      const points = [
+        {x: x, y: y},
+        {x: x + width, y: y},
+        {x: x, y: y + height},
+        {x: x + width, y: y + height}
+      ];
+      for (let p of points) {
+        let gridX = Math.floor(p.x / TILE_SIZE);
+        let gridY = Math.floor(p.y / TILE_SIZE);
+        if (gridX < 0 || gridX >= 32 || gridY < 0 || gridY >= 16) continue;
+        let tile = gridData[gridY][gridX];
+        // Floor (1) and wall (2) are solid.
+        if (tile === 1 || tile === 2) return true;
+        // Hazard tile (3) is lethal.
+        if (tile === 3) return "lethal";
+      }
+      return false;
+    }
+    // ----- Main Game Loop -----
+    function update() {
+      // Handle horizontal movement.
+      if (keys["ArrowLeft"]) {
+        player.vx = -MOVE_SPEED;
+      } else if (keys["ArrowRight"]) {
+        player.vx = MOVE_SPEED;
+      } else {
+        player.vx *= FRICTION;
+      }
+      // Jump if on ground.
+      if (keys["ArrowUp"] && player.onGround) {
+        player.vy = JUMP_SPEED;
+        player.onGround = false;
+      }
+      // Apply gravity.
+      player.vy += GRAVITY;
+      // Proposed new position.
+      let newX = player.x + player.vx;
+      let newY = player.y + player.vy;
+      // Horizontal collision.
+      let collision = isColliding(newX, player.y, player.width, player.height);
+      if (collision === true) {
+        newX = player.x;
+        player.vx = 0;
+      } else if (collision === "lethal") {
+        loadRoom(currentRoomIndex);
+        return;
+      }
+      // Vertical collision.
+      collision = isColliding(newX, newY, player.width, player.height);
+      if (collision === true) {
+        if (player.vy > 0) {
+          newY = Math.floor(newY / TILE_SIZE) * TILE_SIZE;
+          player.onGround = true;
+        }
+        player.vy = 0;
+      } else if (collision === "lethal") {
+        loadRoom(currentRoomIndex);
+        return;
+      } else {
+        player.onGround = false;
+      }
+      player.x = newX;
+      player.y = newY;
+      renderPlayer();
+
+      // Update enemy animations via JS.
+      enemyElements.forEach(obj => {
+        const { anim, data, element } = obj;
+        const time = Date.now() / 200;
+        // Horizontal oscillation.
+        let xOffset = Math.sin(time + anim.phase) * anim.horizontalAmplitude;
+        // Rotation oscillation.
+        let rotation = Math.sin(time + anim.phase) * anim.rotationAmplitude;
+        // Scale oscillation.
+        let scale = anim.baseScale + Math.sin(time + anim.phase) * anim.scaleAmplitude;
+        element.style.transform = `translateX(${xOffset}px) rotate(${rotation}deg) scale(${scale.toFixed(2)})`;
+        // Check collision with player.
+        const rectPlayer = { x: player.x, y: player.y, w: player.width, h: player.height };
+        // Note: enemy's collision box is approximated by 20×20.
+        let enemyX = data.x + xOffset;
+        let enemyY = data.y;
+        const rectEnemy = { x: enemyX, y: enemyY, w: 20, h: 20 };
+        if (rectPlayer.x < rectEnemy.x + rectEnemy.w && rectPlayer.x + rectPlayer.w > rectEnemy.x &&
+            rectPlayer.y < rectEnemy.y + rectEnemy.h && rectPlayer.y + rectPlayer.h > rectEnemy.y) {
+          loadRoom(currentRoomIndex);
+        }
+      });
+      requestAnimationFrame(update);
+    }
+    // ----- Room Navigation Controls -----
+    document.getElementById("prevRoom").addEventListener("click", () => {
+      let newIndex = (currentRoomIndex - 1 + rooms.length) % rooms.length;
+      loadRoom(newIndex);
+    });
+    document.getElementById("nextRoom").addEventListener("click", () => {
+      let newIndex = (currentRoomIndex + 1) % rooms.length;
+      loadRoom(newIndex);
+    });
+    // ----- Start the Game -----
+    loadRoom(0);
+    update();
+  </script>
+</body>
+</html>
