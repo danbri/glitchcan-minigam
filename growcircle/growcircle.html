@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Circle Growth Visualization</title>
     <style>
+        :root {
+            --thumb-size: 20px; /* Variable for animated slider thumb size */
+        }
         body {
             margin: 0;
             padding: 0;
@@ -134,13 +137,23 @@
         
         #sliderContainer {
             position: absolute;
-            bottom: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(400px, 80%);
-            text-align: center;
+            bottom: 100px;
+            left: 60px; /* Moved to bottom left */
+            width: min(300px, 40%);
+            text-align: left;
             z-index: 10;
             transition: opacity 0.5s;
+        }
+        
+        @keyframes sliderWobble {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(3px); }
+            75% { transform: translateX(-3px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .wobble {
+            animation: sliderWobble 6s ease-in-out infinite;
         }
         
         #radiusSlider {
@@ -155,22 +168,26 @@
         
         #radiusSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
+            width: var(--thumb-size);
+            height: var(--thumb-size);
             border-radius: 50%;
             background: #8d44ad;
             cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3), 0 0 15px rgba(141, 68, 173, 0.5);
             transition: all 0.2s ease;
         }
         
         #radiusSlider::-webkit-slider-thumb:hover {
             transform: scale(1.1);
             background: #9b59b6;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.4), 0 0 20px rgba(141, 68, 173, 0.7);
         }
         
         #sliderLabel {
             font-size: min(16px, 3.5vw);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            color: #e0e0e0;
+            font-weight: 500;
         }
         
         #keyboardHint {
@@ -316,9 +333,9 @@
         
         <div id="formula"></div>
         
-        <div id="sliderContainer">
-            <input type="range" id="radiusSlider" min="1" max="40" value="10">
-            <div id="sliderLabel">Change in radius (dr): 10 units</div>
+        <div id="sliderContainer" class="wobble">
+            <input type="range" id="radiusSlider" min="1" max="40" value="20">
+            <div id="sliderLabel">Change in radius (dr): 20 units</div>
         </div>
         
         <div id="stepCounter">Step 1 of 5</div>
@@ -370,7 +387,7 @@
         const totalSteps = 7; // Updated with 2 new steps
         let animationFrameId = null;
         let time = 0;
-        let dr = 10; // Initial change in radius
+        let dr = 20; // Initial change in radius - increased for better visibility
         
         // Set up progress tracking
         function updateProgress() {
@@ -613,7 +630,7 @@
             
             // Hide formula initially
             formula.style.opacity = 0;
-            sliderContainer.style.opacity = 0;
+            toggleSlider(false);
         }
         
         function renderStep1() {
@@ -674,8 +691,8 @@
             explanation.innerHTML = "When a circle's radius increases by a small amount (dr), the area grows by adding a thin ring around the original circle.<br><br>This 'donut ring' is the key to understanding how circle area changes.";
             formula.style.opacity = 0;
             
-            // Show slider
-            sliderContainer.style.opacity = 1;
+            // Show slider with wobble effect
+            toggleSlider(true, true);
             
             // Trigger visual highlighting of the donut ring periodically
             if (Math.abs(time % 8) < 0.05) {
@@ -816,25 +833,37 @@
             const baseRadius = getBaseRadius();
             
             // Position the strip higher on the screen to avoid being off-screen
-            const stripY = center.y - baseRadius * 0.2; // Moved up from center.y
+            const stripY = center.y - baseRadius * 0.3; // Moved up more
             const stripWidth = 2 * Math.PI * baseRadius;
             const stripStartX = center.x - stripWidth / 2;
             const stripEndX = center.x + stripWidth / 2;
             const stripHeight = dr;
             
-            // Show faded circle to remind where the strip came from
+            // Show faded circle to remind where the strip came from - moved up significantly
             const fadeAmount = 0.15 + 0.05 * Math.sin(time * 1.5);
+            const circleY = center.y + baseRadius * 0.3; // Moved up from 0.7
+            
             ctx.beginPath();
-            ctx.arc(center.x, center.y + baseRadius * 0.7, baseRadius, 0, Math.PI * 2);
+            ctx.arc(center.x, circleY, baseRadius, 0, Math.PI * 2);
             ctx.strokeStyle = hexToRgba(colors.blue, fadeAmount);
             ctx.lineWidth = 1;
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.arc(center.x, center.y + baseRadius * 0.7, baseRadius + dr, 0, Math.PI * 2);
+            ctx.arc(center.x, circleY, baseRadius + dr, 0, Math.PI * 2);
             ctx.strokeStyle = hexToRgba(colors.orange, fadeAmount);
             ctx.lineWidth = 1;
             ctx.stroke();
+            
+            // Draw a subtle connection between the circle and strip
+            ctx.beginPath();
+            ctx.setLineDash([2, 4]);
+            ctx.moveTo(center.x, circleY - baseRadius);
+            ctx.lineTo(center.x, stripY + stripHeight);
+            ctx.strokeStyle = hexToRgba(colors.yellow, 0.3);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
             
             // Animate pieces moving from circle to the final strip
             const segments = 10;
@@ -858,7 +887,7 @@
                     // Get position on arc
                     const arcMidAngle = (startAngle + endAngle) / 2;
                     const arcX = center.x + Math.cos(arcMidAngle) * (baseRadius + dr/2);
-                    const arcY = (center.y + baseRadius * 0.7) + Math.sin(arcMidAngle) * (baseRadius + dr/2);
+                    const arcY = circleY + Math.sin(arcMidAngle) * (baseRadius + dr/2); // Using updated circle Y
                     
                     // Interpolate position from arc to final strip position
                     const currentX = arcX + (segX + segmentWidth/2 - arcX) * moveProgress;
@@ -1210,6 +1239,21 @@
             }
         }
         
+        // Function for consistent slider show/hide with animations
+        function toggleSlider(show, wobble = true) {
+            if (show) {
+                sliderContainer.style.opacity = '1';
+                if (wobble) {
+                    sliderContainer.classList.add('wobble');
+                } else {
+                    sliderContainer.classList.remove('wobble');
+                }
+            } else {
+                sliderContainer.style.opacity = '0';
+                sliderContainer.classList.remove('wobble');
+            }
+        }
+        
         // Render the current step
         function render() {
             switch(currentStep) {
@@ -1227,12 +1271,22 @@
         function animate() {
             time += 0.02;
             
-            // Animate steps that have dynamic content
-            if (currentStep === 0 || currentStep === 1 || currentStep === 2 || 
-                currentStep === 3 || currentStep === 4 || currentStep === 5 || 
-                currentStep === 6) {
-                render();
+            // Animate subtle slider wobble on steps that use it
+            if (sliderContainer.style.opacity !== '0') {
+                // Animate the slider value slightly
+                const sliderAnimation = (Math.sin(time * 0.5) * 0.5 + 0.5) * 0.1; // 0 to 0.1
+                const baseValue = dr;
+                
+                // Only adjust visual appearance for hint, not actual value
+                if (currentStep === 1 || currentStep === 2 || currentStep === 3) {
+                    // Add subtle "breathing" animation to the thumb
+                    const thumbSize = 20 + Math.sin(time) * 2;
+                    document.documentElement.style.setProperty('--thumb-size', `${thumbSize}px`);
+                }
             }
+            
+            // Animate all steps
+            render();
             
             animationFrameId = requestAnimationFrame(animate);
         }
