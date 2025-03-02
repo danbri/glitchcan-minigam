@@ -121,22 +121,18 @@
         
         #controls {
             position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
+            top: 20px;
+            left: 20px;
             display: flex;
-            justify-content: center;
-            gap: 20px;
+            gap: 10px;
             z-index: 10;
         }
         
         #navigation-area {
             position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
+            top: 20px;
+            left: 80px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             gap: 10px;
             z-index: 10;
@@ -144,37 +140,40 @@
         
         #navigation-dots {
             display: flex;
-            gap: 8px;
-            margin: 10px 0;
+            gap: 5px;
         }
         
         button {
-            background: #8d44ad;
+            background: rgba(141, 68, 173, 0.8);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 12px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         button:hover {
-            background: #9b59b6;
-            transform: translateY(-2px);
+            background: rgba(155, 89, 182, 0.9);
         }
         
         button:active {
-            transform: translateY(1px);
+            transform: scale(0.95);
         }
         
         #stageTitle {
             position: absolute;
             top: 20px;
-            left: 0;
-            width: 100%;
+            left: 220px;
+            right: 120px;
             text-align: center;
-            font-size: min(24px, 5vw);
+            font-size: min(22px, 5vw);
             font-weight: bold;
             transition: opacity 0.5s, transform 0.5s;
             z-index: 10;
@@ -183,28 +182,34 @@
         
         #explanation {
             position: absolute;
-            top: 60px;
-            left: 50px;
-            width: calc(100% - 100px);
+            top: 70px;
+            left: 20px;
+            width: calc(100% - 40px);
             text-align: left;
-            font-size: min(18px, 4vw);
+            font-size: min(16px, 4vw);
             line-height: 1.5;
             transition: opacity 0.5s, transform 0.5s;
             z-index: 10;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            max-height: 40%;
+            overflow-y: auto;
         }
         
         #formula {
             position: absolute;
-            bottom: 100px;
-            left: 0;
-            width: 100%;
+            bottom: 20px;
+            left: 20px;
+            width: calc(100% - 40px);
             text-align: center;
-            font-size: min(26px, 5vw);
+            font-size: min(22px, 5vw);
             font-family: 'Times New Roman', serif;
             transition: opacity 0.5s;
             z-index: 10;
             opacity: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 8px;
         }
         
         #navigation {
@@ -235,12 +240,15 @@
         
         #sliderContainer {
             position: absolute;
-            bottom: 100px;
-            left: 60px; /* Moved to bottom left */
+            bottom: 80px;
+            left: 20px;
             width: min(300px, 40%);
             text-align: left;
             z-index: 10;
             transition: opacity 0.5s;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 8px;
         }
         
         @keyframes sliderWobble {
@@ -301,21 +309,22 @@
         
         #stepCounter {
             position: absolute;
-            bottom: 60px;
-            width: 100%;
-            text-align: center;
-            font-size: 16px;
+            top: 20px;
+            right: 20px;
+            font-size: 14px;
             z-index: 10;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 5px 10px;
+            border-radius: 20px;
         }
         
         #progressBar {
             position: absolute;
-            bottom: 55px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(300px, 60%);
+            top: 50px;
+            right: 20px;
+            width: 100px;
             height: 4px;
-            background-color: #555;
+            background-color: rgba(85, 85, 85, 0.5);
             border-radius: 2px;
             z-index: 10;
         }
@@ -372,6 +381,25 @@
             transition: opacity 0.4s ease;
         }
         
+        /* Enhanced transitions for smoother experience */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in forwards;
+        }
+        
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+        
         #contextHint {
             position: absolute;
             bottom: 120px;
@@ -391,7 +419,7 @@
         
         #stepIndicator {
             position: absolute;
-            display: flex;
+            display: none; /* Hidden as we're using navigation-dots instead */
             bottom: 80px;
             left: 50%;
             transform: translateX(-50%);
@@ -400,8 +428,8 @@
         }
         
         .nav-dot {
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             cursor: pointer;
@@ -420,18 +448,19 @@
         
         .nav-dot .tooltip {
             position: absolute;
-            bottom: 20px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 10px;
             white-space: nowrap;
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: none;
+            z-index: 25;
         }
         
         .nav-dot:hover .tooltip {
@@ -469,12 +498,14 @@
                 </div>
                 
                 <div id="controls">
-                    <button id="prevBtn">Previous</button>
-                    <button id="nextBtn">Next</button>
+                    <button id="prevBtn">&lt;</button>
+                    <button id="nextBtn">&gt;</button>
                 </div>
                 
-                <div id="keyboardHint">Use Left/Right arrow keys to navigate</div>
+                <div id="keyboardHint" style="display: none;">Use Left/Right arrow keys to navigate</div>
             </div>
+            
+            <button id="homeBtn" title="Reset to start" style="position: absolute; top: 20px; left: 140px; z-index: 20; width: 40px; height: 40px;">↺</button>
             
             <div id="focusHighlight" class="highlight-circle"></div>
             <div id="contextHint"></div>
@@ -500,7 +531,112 @@
                     <p>Think of it like ripples in a pond - as the circles get bigger, each new ring of water covers much more area than the one before it.</p>
                 </div>
                 
-                <!-- More sidebar screens will be added -->
+                <div id="sidebar-screen-1" class="sidebar-screen">
+                    <p>The new area forms a complete ring around the original circle.</p>
+                    <p>This ring is:</p>
+                    <ul>
+                        <li>Thicker when you grow the circle more</li>
+                        <li>Thinner when you grow the circle less</li>
+                    </ul>
+                    <p>Notice that:</p>
+                    <ul>
+                        <li>The ring is the ONLY new area added</li>
+                        <li>The original circle stays the same</li>
+                        <li>The ring wraps perfectly around the original circle</li>
+                    </ul>
+                    <p>This is why we can focus on just the ring to understand how much new area is created when a circle grows.</p>
+                </div>
+                
+                <div id="sidebar-screen-2" class="sidebar-screen">
+                    <p>The ring has the same thickness everywhere around the circle.</p>
+                    <p>This thickness exactly matches how much the radius grew:</p>
+                    <ul>
+                        <li>If the radius grew by 1 inch, the ring is 1 inch thick</li>
+                        <li>If the radius grew by 2 cm, the ring is 2 cm thick</li>
+                    </ul>
+                    <p>This even thickness makes the ring special - it's like a perfect band wrapped around the original circle.</p>
+                    <p>The even thickness will help us understand and measure the ring's area more easily.</p>
+                    <p>We can see this property if we think about how circles work - they have the same radius in every direction. When that radius increases, it increases the same amount in all directions.</p>
+                </div>
+                
+                <div id="sidebar-screen-3" class="sidebar-screen">
+                    <p>The key insight: we can unwrap the ring into a straight shape.</p>
+                    <p>Imagine cutting the ring at one point and then stretching it out straight - you'd get a rectangle!</p>
+                    <p>This rectangle has:</p>
+                    <ul>
+                        <li>Length = the circle's circumference (2πr)</li>
+                        <li>Height = the ring's thickness (dr)</li>
+                    </ul>
+                    <p>Since the area of a rectangle is length × height, the ring's area is 2πr × dr.</p>
+                    <p>This geometric approach helps us understand how the circle's area changes without relying on complex calculus.</p>
+                </div>
+                
+                <div id="sidebar-screen-4" class="sidebar-screen">
+                    <p>When we work with very small changes in radius (small dr):</p>
+                    <ul>
+                        <li>The ring becomes incredibly thin</li>
+                        <li>Our formula becomes more precise</li>
+                        <li>The area of the thin ring is still 2πr × dr</li>
+                    </ul>
+                    <p>In calculus terms, we're looking at the "instantaneous rate of change" of the circle's area with respect to its radius.</p>
+                    <p>This approach allows us to understand how circle area responds to tiny changes in radius at any given point.</p>
+                </div>
+                
+                <div id="sidebar-screen-5" class="sidebar-screen">
+                    <p>As dr approaches zero (becomes extremely small), we discover:</p>
+                    <p>The instantaneous rate of change in a circle's area equals exactly 2πr.</p>
+                    <p>In calculus notation: dA/dr = 2πr</p>
+                    <p>This means:</p>
+                    <ul>
+                        <li>At any radius r, the rate the area grows equals the circumference</li>
+                        <li>Small circles grow slower than large circles</li>
+                        <li>The growth rate itself increases as the circle gets bigger</li>
+                    </ul>
+                    <p>This is the definition of the derivative of the circle area formula (A = πr²).</p>
+                </div>
+                
+                <div id="sidebar-screen-6" class="sidebar-screen">
+                    <p>We've discovered a beautiful relationship:</p>
+                    <p>The circle's area increases at a rate equal to its circumference.</p>
+                    <p>This connects the circle's area formula (πr²) to its circumference formula (2πr) in a profound way.</p>
+                    <p>The circumference represents the "growth potential" of the circle's area at any given radius.</p>
+                    <p>Mathematically, the derivative of πr² is 2πr, but our visual approach helps us understand why this is true without relying on algebraic manipulation.</p>
+                </div>
+                
+                <div id="sidebar-screen-7" class="sidebar-screen">
+                    <p>Let's look at real-world applications of this relationship:</p>
+                    <ul>
+                        <li>In physics: pressure in expanding balloons varies based on this principle</li>
+                        <li>In engineering: designing circular membranes that respond to pressure</li>
+                        <li>In architecture: calculating material needs for domes and circular structures</li>
+                        <li>In nature: growth patterns of circular ripples, pond lilies, and tree rings</li>
+                    </ul>
+                    <p>This pattern appears throughout the natural and designed world, making it a fundamental concept with broad applications.</p>
+                </div>
+                
+                <div id="sidebar-screen-8" class="sidebar-screen">
+                    <p>The pattern we've discovered is actually a general principle:</p>
+                    <p>For many shapes, the rate of change in area relates to the perimeter in predictable ways.</p>
+                    <p>For example:</p>
+                    <ul>
+                        <li>Squares: When side length s increases, area grows at a rate of 4s (the perimeter)</li>
+                        <li>Spheres: The volume changes at a rate equal to the surface area</li>
+                        <li>Regular polygons: Area growth relates to the perimeter scaled by a constant</li>
+                    </ul>
+                    <p>This connection between rates of change and boundaries is a powerful mathematical pattern that appears throughout geometry.</p>
+                </div>
+                
+                <div id="sidebar-screen-9" class="sidebar-screen">
+                    <p>Our journey has shown us the deep connection between a circle's area and its circumference.</p>
+                    <p>This exploration revealed:</p>
+                    <ul>
+                        <li>Area doesn't grow linearly with radius - it grows with the square of radius</li>
+                        <li>At any instant, the rate of area change equals the circumference</li>
+                        <li>This relationship can be understood visually without complex formulas</li>
+                        <li>The pattern extends to many other shapes and dimensions</li>
+                    </ul>
+                    <p>This geometric understanding gives us insight into why πr² is the formula for a circle's area, and how it relates to the circumference 2πr in a beautiful, interconnected way.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -630,7 +766,7 @@
             stageTitle.textContent = screens[currentStep].title;
         }
         
-        // Create navigation dots
+        // Create navigation dots with enhanced navigation
         function setupNavigationDots() {
             navigationDots.innerHTML = '';
             
@@ -649,16 +785,64 @@
                     dot.classList.add('active');
                 }
                 
-                // Add click handler with closure to capture correct index
-                dot.addEventListener('click', (function(stepIndex) {
-                    return function() {
-                        if (stepIndex !== currentStep && !isTransitioning) {
-                            startTransition(stepIndex);
-                        }
-                    };
-                })(i));
+                // Add click handler that uses our enhanced transition system
+                dot.addEventListener('click', function() {
+                    const stepIndex = parseInt(this.dataset.step);
+                    if (stepIndex !== currentStep && !isTransitioning) {
+                        navigateToStep(stepIndex);
+                    }
+                });
                 
                 navigationDots.appendChild(dot);
+            }
+        }
+        
+        // Function to navigate directly to a specific step
+        function navigateToStep(targetStep) {
+            if (!isTransitioning && targetStep >= 0 && targetStep < totalSteps) {
+                isTransitioning = true;
+                
+                // Add fade-out animation to current elements
+                stageTitle.classList.add('fade-out');
+                explanation.classList.add('fade-out');
+                formula.classList.add('fade-out');
+                
+                // Transition effect
+                transitionOverlay.style.opacity = "0.7";
+                
+                setTimeout(() => {
+                    // Remove animation classes
+                    stageTitle.classList.remove('fade-out');
+                    explanation.classList.remove('fade-out');
+                    formula.classList.remove('fade-out');
+                    
+                    currentStep = targetStep;
+                    updateProgress();
+                    render();
+                    
+                    // Add fade-in animation to new content
+                    stageTitle.classList.add('fade-in');
+                    explanation.classList.add('fade-in');
+                    formula.classList.add('fade-in');
+                    
+                    // Fade back in
+                    setTimeout(() => {
+                        transitionOverlay.style.opacity = "0";
+                        
+                        // Show contextual hint for this step
+                        setTimeout(() => {
+                            introduceStep();
+                            
+                            // Remove animation classes after animation completes
+                            setTimeout(() => {
+                                stageTitle.classList.remove('fade-in');
+                                explanation.classList.remove('fade-in');
+                                formula.classList.remove('fade-in');
+                                isTransitioning = false;
+                            }, 500);
+                        }, 300);
+                    }, 300);
+                }, 400);
             }
         }
         
@@ -688,13 +872,16 @@
         // Add step introduction feature with contextual hints
         function introduceStep() {
             const messages = [
-                "Notice how the area changes when the radius grows",
-                "See how the new area forms a ring around the original circle", 
-                "Watch how the ring can be unwrapped into a rectangle",
-                "The area of the rectangle equals the area of the ring",
-                "Watch what happens as dr gets smaller and smaller",
-                "Very small changes show the instantaneous rate of change",
-                "The rate of area change equals the circumference"
+                "Notice how the circle's area changes when the radius grows",
+                "See where the new area appears as a ring around the original circle", 
+                "Explore what makes this ring special",
+                "Watch how the ring can be unwrapped into a straight shape",
+                "See how the ring transforms into a rectangle",
+                "Learn how to measure the rectangle's area simply",
+                "Discover how circles can be rearranged into rectangles",
+                "Observe what happens when the growth gets very small",
+                "See how the pattern holds for any size change",
+                "Understand the beautiful connection between radius and area"
             ];
             
             if (messages[currentStep]) {
@@ -748,23 +935,87 @@
                 nextStep();
             } else if (e.key === 'ArrowLeft') {
                 prevStep();
+            } else if (e.key === 'Home') {
+                resetToStart();
             }
         });
         
         prevBtn.addEventListener('click', prevStep);
         nextBtn.addEventListener('click', nextStep);
         
+        // Add home button functionality
+        const homeBtn = document.getElementById('homeBtn');
+        homeBtn.addEventListener('click', resetToStart);
+        
+        function resetToStart() {
+            if (currentStep !== 0 && !isTransitioning) {
+                isTransitioning = true;
+                
+                // Add fade-out animation to current elements
+                stageTitle.classList.add('fade-out');
+                explanation.classList.add('fade-out');
+                formula.classList.add('fade-out');
+                
+                // Transition effect with slightly longer duration for reset
+                transitionOverlay.style.opacity = "0.8";
+                
+                setTimeout(() => {
+                    // Remove animation classes
+                    stageTitle.classList.remove('fade-out');
+                    explanation.classList.remove('fade-out');
+                    formula.classList.remove('fade-out');
+                    
+                    currentStep = 0;
+                    dr = 20; // Reset to initial radius change
+                    radiusSlider.value = 20;
+                    sliderLabel.textContent = `Change in radius (dr): ${dr} units`;
+                    updateProgress();
+                    render();
+                    
+                    // Add fade-in animation to new content
+                    stageTitle.classList.add('fade-in');
+                    explanation.classList.add('fade-in');
+                    formula.classList.add('fade-in');
+                    
+                    // Fade back in
+                    setTimeout(() => {
+                        transitionOverlay.style.opacity = "0";
+                        
+                        // Show contextual hint for first step
+                        setTimeout(() => {
+                            introduceStep();
+                            
+                            // Remove animation classes after animation completes
+                            setTimeout(() => {
+                                stageTitle.classList.remove('fade-in');
+                                explanation.classList.remove('fade-in');
+                                formula.classList.remove('fade-in');
+                                isTransitioning = false;
+                            }, 500);
+                        }, 300);
+                    }, 400);
+                }, 500);
+            }
+        }
+        
         // Helper functions
         function getCenter() {
+            // Ensure the center point is adjusted to allow sufficient margins
+            // for UI elements (especially on small screens/mobile)
+            const rawX = canvas.width / (2 * (window.devicePixelRatio || 1));
+            const rawY = canvas.height / (2 * (window.devicePixelRatio || 1));
+            
+            // Adjust center point slightly down to account for top navigation
             return {
-                x: canvas.width / (2 * (window.devicePixelRatio || 1)),
-                y: canvas.height / (2 * (window.devicePixelRatio || 1))
+                x: rawX,
+                y: rawY + 20 // Shift down slightly to give more room for top controls
             };
         }
         
         function getBaseRadius() {
             const center = getCenter();
-            return Math.min(center.x, center.y) * 0.4;
+            // Use smaller percentage of available space for better mobile viewing
+            return Math.min(center.x, center.y) * 0.35;
         }
         
         function clear() {
@@ -862,36 +1113,229 @@
         }
         
         // Render steps with intuition-first approach
-        function renderStep0() {
+        function renderScreen0() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Animated growing circle
-            const animPulse = (Math.sin(time) * 0.5 + 0.5);
-            const pulseScale = 0.2;
-            const pulseRadius = baseRadius * (1 + animPulse * pulseScale);
+            // Animation control
+            const animPulse = (Math.sin(time * 0.7) * 0.5 + 0.5); // 0 to 1 oscillating value
+            const pulseScale = 0.3; // Scale of the pulse effect
             
-            // Circle with pulsing effect
-            fillCircle(center.x, center.y, pulseRadius, colors.blue, 0.3);
-            drawCircle(center.x, center.y, pulseRadius, colors.blue, false, 2);
+            // Calculate original and current values
+            const originalRadius = baseRadius;
+            const currentRadius = originalRadius * (1 + animPulse * pulseScale);
             
-            // Radius line
-            drawLine(center.x, center.y, center.x + pulseRadius, center.y, colors.green, 2);
+            // Ensure the circle center is visible on the canvas
+            if (center.x < originalRadius * 1.3 || 
+                center.y < originalRadius * 1.3 || 
+                center.x > canvas.width - originalRadius * 1.3 || 
+                center.y > canvas.height - originalRadius * 1.3) {
+                console.warn("Circle may be partially off-screen");
+            }
             
-            // Radius label
-            drawText("r", center.x + pulseRadius/2, center.y - 15, colors.green, 20, "center");
+            // Calculate areas (πr²)
+            const originalArea = Math.PI * originalRadius * originalRadius;
+            const currentArea = Math.PI * currentRadius * currentRadius;
             
-            // Text content
-            stageTitle.textContent = "Watching a Circle Grow";
-            explanation.innerHTML = "When a circle's radius changes, its area changes too.<br><br>Watch how the circle pulses as its radius grows and shrinks. What happens to the area?";
+            // Calculate percentage changes
+            const radiusChange = Math.round(((currentRadius / originalRadius) - 1) * 100);
+            const areaChange = Math.round(((currentArea / originalArea) - 1) * 100);
             
-            // Hide formula initially
+            // Draw grid for reference (subtle)
+            drawGrid(center, originalRadius);
+            
+            // FIRST, draw the original circle (static reference)
+            if (animPulse > 0.5) {
+                // Show original circle clearly when expanded
+                ctx.globalAlpha = 0.7;
+                ctx.setLineDash([5, 3]);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = colors.blue;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, originalRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Fill original area with very subtle blue
+                ctx.globalAlpha = 0.1;
+                ctx.fillStyle = colors.blue;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, originalRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Label original area for context
+                ctx.globalAlpha = 0.6;
+                ctx.font = "16px Arial";
+                ctx.fillStyle = colors.blue;
+                ctx.textAlign = "center";
+                ctx.fillText("Original Area", center.x, center.y);
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            // SECOND, draw the current circle with dynamic size
+            // Fill with semi-transparent color
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, currentRadius, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(colors.blue, 0.2);
+            ctx.fill();
+            
+            // Outline with solid color
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, currentRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = colors.blue;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // THIRD, add visual aids and annotations
+            // Draw radii
+            // Original radius line (only when circle is expanded)
+            if (animPulse > 0.5) {
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x + originalRadius, center.y);
+                ctx.strokeStyle = colors.green;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Current radius line
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y);
+            ctx.lineTo(center.x + currentRadius, center.y);
+            ctx.strokeStyle = colors.green;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // FOURTH, show measurements and comparisons clearly
+            ctx.font = "16px Arial";
+            ctx.textAlign = "left";
+            
+            // Show radius difference
+            if (animPulse > 0.5) {
+                // Draw bracket showing radius change
+                const bracketY1 = center.y + 20;
+                const bracketY2 = center.y + 40;
+                
+                // Draw bracket lines
+                ctx.beginPath();
+                ctx.moveTo(center.x + originalRadius, bracketY1);
+                ctx.lineTo(center.x + originalRadius, bracketY2);
+                ctx.moveTo(center.x + currentRadius, bracketY1);
+                ctx.lineTo(center.x + currentRadius, bracketY2);
+                ctx.moveTo(center.x + originalRadius, bracketY2);
+                ctx.lineTo(center.x + currentRadius, bracketY2);
+                ctx.strokeStyle = colors.green;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Label the radius change
+                const midX = center.x + originalRadius + (currentRadius - originalRadius) / 2;
+                ctx.fillStyle = colors.green;
+                ctx.textAlign = "center";
+                ctx.fillText(`Radius: +${radiusChange}%`, midX, bracketY2 + 20);
+            }
+            
+            // Show area comparison with animated emphasis
+            if (animPulse > 0.7) {
+                // Highlight text showing area change with pulsing effect
+                const textAlpha = 0.7 + 0.3 * Math.sin(time * 2);
+                ctx.globalAlpha = textAlpha;
+                ctx.fillStyle = colors.orange;
+                ctx.font = "bold 22px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(`Area: +${areaChange}%`, center.x, center.y - originalRadius - 30);
+                
+                // Add visual emphasis with pulsing glow
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, currentRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = hexToRgba(colors.orange, 0.3 * (Math.sin(time * 3) * 0.5 + 0.5));
+                ctx.lineWidth = 5;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Show a highlight on area vs radius difference
+                ctx.textAlign = "right";
+                ctx.font = "18px Arial";
+                ctx.fillStyle = hexToRgba(colors.orange, textAlpha);
+                ctx.fillText(`Area grows faster`, center.x - originalRadius - 20, center.y);
+                ctx.fillText(`than radius!`, center.x - originalRadius - 20, center.y + 25);
+            }
+            
+            // Label original and current radius
+            ctx.globalAlpha = 1;
+            ctx.font = "16px Arial";
+            ctx.fillStyle = colors.green;
+            ctx.textAlign = "center";
+            ctx.fillText("r", center.x + originalRadius/2, center.y - 15);
+            
+            if (animPulse > 0.6) {
+                // Draw arrow highlighting radius growth when circle is expanded
+                drawArrow(
+                    center.x + originalRadius + 5, 
+                    center.y - 30,
+                    center.x + currentRadius - 5,
+                    center.y - 30,
+                    colors.green,
+                    2
+                );
+            }
+            
+            // Explanation with intuitive focus
+            explanation.innerHTML = 
+                "What happens to a circle when it grows?<br><br>" + 
+                "Watch how the circle pulses and notice something interesting: " +
+                "when the radius increases a little bit, the area increases a lot more!<br><br>" +
+                "This is a pattern in nature - as circles grow, their area grows much faster than their radius.";
+            
+            // Hide formula and slider initially
             formula.style.opacity = 0;
             toggleSlider(false);
         }
         
-        function renderStep1() {
+        // Helper function to draw a subtle grid
+        function drawGrid(center, radius) {
+            const gridSize = radius * 0.2;
+            const gridExtent = radius * 3;
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            
+            // Draw vertical grid lines
+            for (let x = center.x - gridExtent; x <= center.x + gridExtent; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, center.y - gridExtent);
+                ctx.lineTo(x, center.y + gridExtent);
+                ctx.stroke();
+            }
+            
+            // Draw horizontal grid lines
+            for (let y = center.y - gridExtent; y <= center.y + gridExtent; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(center.x - gridExtent, y);
+                ctx.lineTo(center.x + gridExtent, y);
+                ctx.stroke();
+            }
+            
+            // Emphasize the center with subtle crosshair
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(center.x - gridExtent, center.y);
+            ctx.lineTo(center.x + gridExtent, center.y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y - gridExtent);
+            ctx.lineTo(center.x, center.y + gridExtent);
+            ctx.stroke();
+        }
+        
+        function renderScreen1() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -900,32 +1344,63 @@
             fillCircle(center.x, center.y, baseRadius, colors.blue, 0.3);
             drawCircle(center.x, center.y, baseRadius, colors.blue, false, 2);
             
-            // Radius
-            drawLine(center.x, center.y, center.x + baseRadius, center.y, colors.green, 2);
-            drawText("r", center.x + baseRadius/2, center.y - 15, colors.green);
+            // Add labels to original circle
+            drawText("Original Circle", center.x, center.y - 10, colors.blue, 20, "center");
             
-            // Expanded circle - with subtle pulse animation for emphasis
-            const pulsingEffect = Math.sin(time * 2) * 0.5 + 0.5;
+            // Slider-controlled growth
             const expandedRadius = baseRadius + dr;
             
-            // Create a subtle glow around the expanded circle
+            // Visual emphasis on the growth amount with animated elements
+            const pulsingEffect = Math.sin(time * 1.5) * 0.5 + 0.5;
+            
+            // Draw dashed line showing growth amount
+            ctx.setLineDash([4, 3]);
             ctx.beginPath();
-            ctx.arc(center.x, center.y, expandedRadius + 3 + pulsingEffect * 2, 0, Math.PI * 2);
-            ctx.strokeStyle = hexToRgba(colors.orange, 0.3 * pulsingEffect);
-            ctx.lineWidth = 3;
+            ctx.moveTo(center.x + baseRadius, center.y - 50);
+            ctx.lineTo(center.x + baseRadius, center.y + 50);
+            ctx.strokeStyle = hexToRgba(colors.blue, 0.4);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(center.x + expandedRadius, center.y - 50);
+            ctx.lineTo(center.x + expandedRadius, center.y + 50);
+            ctx.strokeStyle = hexToRgba(colors.orange, 0.4);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label the growth amount
+            const growthLabelY = center.y + 70;
+            ctx.fillStyle = hexToRgba(colors.green, 0.8 + pulsingEffect * 0.2);
+            ctx.textAlign = "center";
+            ctx.font = "18px Arial";
+            ctx.fillText("Growth amount", center.x + baseRadius + dr/2, growthLabelY);
+            
+            // Animated arrow showing growth
+            const arrowY = growthLabelY - 10;
+            drawArrow(
+                center.x + baseRadius + 5, 
+                arrowY,
+                center.x + expandedRadius - 5,
+                arrowY,
+                colors.green, 
+                2
+            );
+            
+            // Expanded circle with subtle glow
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, expandedRadius + 2 + pulsingEffect * 2, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(colors.orange, 0.2 + 0.2 * pulsingEffect);
+            ctx.lineWidth = 2;
             ctx.stroke();
             
             // Draw the expanded circle
             drawCircle(center.x, center.y, expandedRadius, colors.orange, false, 2);
+            drawText("Expanded Circle", center.x, center.y + expandedRadius + 25, colors.orange, 20, "center");
             
-            // New radius
-            const newRadiusX = center.x + baseRadius + dr;
-            drawLine(center.x, center.y, newRadiusX, center.y, colors.orange, 2, true);
-            
-            drawText("r + dr", center.x + baseRadius + dr/2, center.y - 30, colors.orange);
-            
-            // Highlight the ring (donut) with fill - use pulsing alpha for emphasis
-            const ringAlpha = 0.4 + 0.2 * pulsingEffect;
+            // Highlight the ring (donut) with pulsing effect
+            const ringAlpha = 0.5 + 0.2 * pulsingEffect;
             ctx.beginPath();
             ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
             ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
@@ -933,45 +1408,258 @@
             ctx.fillStyle = hexToRgba(colors.orange, ringAlpha);
             ctx.fill();
             
-            // Label the ring with arrow - animated
-            const arrowBobbing = Math.sin(time * 3) * 3;
-            drawArrow(
-                center.x + baseRadius + 70, 
-                center.y - 70 + arrowBobbing, 
-                center.x + baseRadius + dr/2, 
-                center.y - 40 + arrowBobbing/2, 
-                colors.red, 2
-            );
-            drawText("New Area", center.x + baseRadius + 100, center.y - 80 + arrowBobbing, colors.red, 20, "center");
+            // Animated arrows pointing to the ring with phased animation
+            const arrowCount = 8;
+            for (let i = 0; i < arrowCount; i++) {
+                const angle = (i / arrowCount) * Math.PI * 2;
+                const pulseFactor = Math.sin(time * 2 + i * 0.7) * 0.5 + 0.5;
+                
+                const innerX = center.x + Math.cos(angle) * (baseRadius + dr/3);
+                const innerY = center.y + Math.sin(angle) * (baseRadius + dr/3);
+                
+                const outerX = center.x + Math.cos(angle) * (baseRadius + dr*2/3);
+                const outerY = center.y + Math.sin(angle) * (baseRadius + dr*2/3);
+                
+                ctx.globalAlpha = 0.3 + pulseFactor * 0.7;
+                drawArrow(
+                    innerX, 
+                    innerY, 
+                    outerX, 
+                    outerY,
+                    colors.red, 
+                    1 + pulseFactor
+                );
+                ctx.globalAlpha = 1;
+            }
             
-            // Text content
-            stageTitle.textContent = "The 'Donut Ring' of New Area";
-            explanation.innerHTML = "When a circle's radius increases by a small amount (dr), the area grows by adding a thin ring around the original circle.<br><br>This 'donut ring' is the key to understanding how circle area changes.";
+            // Prominent "New Area" label
+            const labelAngle = Math.PI * 0.25; // Upper right
+            const labelDistance = baseRadius + dr * 1.5;
+            const labelX = center.x + Math.cos(labelAngle) * labelDistance;
+            const labelY = center.y + Math.sin(labelAngle) * labelDistance;
+            
+            // Draw with glow effect
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            drawText("NEW AREA", labelX, labelY, colors.red, 24, "center");
+            ctx.shadowBlur = 0;
+            
+            // Draw a pointing arrow to the ring
+            drawArrow(
+                labelX, 
+                labelY + 10, 
+                center.x + Math.cos(labelAngle) * (baseRadius + dr/2), 
+                center.y + Math.sin(labelAngle) * (baseRadius + dr/2),
+                colors.red, 
+                2
+            );
+            
+            // Explanatory text
+            explanation.innerHTML = 
+                "When a circle grows, the new area forms a ring around the original circle.<br><br>" +
+                "This 'donut-shaped' ring is exactly where all the new area appears.<br><br>" +
+                "Try adjusting the growth amount to see how the ring changes!";
+            
             formula.style.opacity = 0;
             
-            // Show slider with wobble effect
+            // Show slider with wobble effect to encourage interaction
             toggleSlider(true, true);
-            
-            // Trigger visual highlighting of the donut ring periodically
-            if (Math.abs(time % 8) < 0.05) {
-                const containerRect = container.getBoundingClientRect();
-                highlightArea(
-                    containerRect.left + center.x - expandedRadius, 
-                    containerRect.top + center.y - expandedRadius,
-                    expandedRadius * 2,
-                    1500
-                );
-            }
         }
         
-        function renderStep2() {
+        function renderScreen2() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Original circle
-            fillCircle(center.x, center.y, baseRadius, colors.blue, 0.3);
-            drawCircle(center.x, center.y, baseRadius, colors.blue, false, 2);
+            // Isolate and magnify the ring for detailed exploration
+            const expandedRadius = baseRadius + dr;
+            
+            // Animation and visual emphasis
+            const pulseTime = time * 0.8;
+            const pulseFactor = Math.sin(pulseTime) * 0.5 + 0.5;
+            const highlightAngle = (pulseTime * 0.5) % (Math.PI * 2);
+            
+            // Draw a magnification effect
+            const magnifierCenterAngle = highlightAngle;
+            const magnifierCenterRadius = baseRadius + dr/2;
+            const magnifierX = center.x + Math.cos(magnifierCenterAngle) * magnifierCenterRadius;
+            const magnifierY = center.y + Math.sin(magnifierCenterAngle) * magnifierCenterRadius;
+            const magnifierSize = 60 + pulseFactor * 10;
+            
+            // Background circles (faded)
+            ctx.globalAlpha = 0.2;
+            fillCircle(center.x, center.y, baseRadius, colors.blue, 0.2);
+            drawCircle(center.x, center.y, baseRadius, colors.blue, false, 1);
+            drawCircle(center.x, center.y, expandedRadius, colors.orange, false, 1);
+            ctx.globalAlpha = 1;
+            
+            // Draw the ring with highlighting
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
+            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            
+            // Create gradient fill for the ring to make it stand out
+            const gradient = ctx.createRadialGradient(
+                center.x, center.y, baseRadius,
+                center.x, center.y, expandedRadius
+            );
+            gradient.addColorStop(0, hexToRgba(colors.orange, 0.7));
+            gradient.addColorStop(1, hexToRgba(colors.orange, 0.4));
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Highlight specific segments of the ring with animation
+            const segmentCount = 8;
+            const segmentAngle = Math.PI * 2 / segmentCount;
+            
+            for (let i = 0; i < segmentCount; i++) {
+                const segStartAngle = i * segmentAngle;
+                const segEndAngle = (i + 1) * segmentAngle;
+                const segMidAngle = (segStartAngle + segEndAngle) / 2;
+                
+                // Determine if this segment is being highlighted
+                const angleDiff = Math.abs((segMidAngle - highlightAngle + Math.PI * 2) % (Math.PI * 2));
+                const isHighlighted = angleDiff < segmentAngle * 1.5;
+                
+                if (isHighlighted) {
+                    // Draw highlighted segment
+                    ctx.beginPath();
+                    ctx.arc(center.x, center.y, expandedRadius, segStartAngle, segEndAngle);
+                    ctx.arc(center.x, center.y, baseRadius, segEndAngle, segStartAngle, true);
+                    ctx.closePath();
+                    ctx.fillStyle = hexToRgba(colors.yellow, 0.7);
+                    ctx.fill();
+                    ctx.strokeStyle = colors.yellow;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Draw thickness measurement lines
+                    const midPointOuterX = center.x + Math.cos(segMidAngle) * expandedRadius;
+                    const midPointOuterY = center.y + Math.sin(segMidAngle) * expandedRadius;
+                    const midPointInnerX = center.x + Math.cos(segMidAngle) * baseRadius;
+                    const midPointInnerY = center.y + Math.sin(segMidAngle) * baseRadius;
+                    
+                    // Draw dotted line connecting inner and outer points
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(midPointInnerX, midPointInnerY);
+                    ctx.lineTo(midPointOuterX, midPointOuterY);
+                    ctx.strokeStyle = hexToRgba(colors.green, 0.8);
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Label the thickness
+                    const labelX = center.x + Math.cos(segMidAngle) * (baseRadius + dr * 1.3);
+                    const labelY = center.y + Math.sin(segMidAngle) * (baseRadius + dr * 1.3);
+                    ctx.save();
+                    ctx.translate(labelX, labelY);
+                    ctx.rotate(segMidAngle + Math.PI/2);
+                    drawText("thickness = dr", 0, 0, colors.green, 16, "center");
+                    ctx.restore();
+                }
+            }
+            
+            // Create magnifying glass effect
+            ctx.save();
+            // Draw magnifier circle
+            ctx.beginPath();
+            ctx.arc(magnifierX, magnifierY, magnifierSize, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(colors.background, 0.7);
+            ctx.fill();
+            
+            // Clip to the magnifier circle
+            ctx.clip();
+            
+            // Draw magnified content
+            const magnification = 2.5;
+            ctx.translate(magnifierX, magnifierY);
+            ctx.scale(magnification, magnification);
+            ctx.translate(-magnifierX, -magnifierY);
+            
+            // Draw the ring section inside the magnifier
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
+            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fillStyle = hexToRgba(colors.orange, 0.6);
+            ctx.fill();
+            
+            // Draw thickness measurement in magnified view
+            const magMidAngle = magnifierCenterAngle;
+            const magOuterX = center.x + Math.cos(magMidAngle) * expandedRadius;
+            const magOuterY = center.y + Math.sin(magMidAngle) * expandedRadius;
+            const magInnerX = center.x + Math.cos(magMidAngle) * baseRadius;
+            const magInnerY = center.y + Math.sin(magMidAngle) * baseRadius;
+            
+            // Draw arrow showing thickness
+            const arrowAngle = magMidAngle + Math.PI/2;
+            const arrowX1 = magInnerX + Math.cos(arrowAngle) * 5;
+            const arrowY1 = magInnerY + Math.sin(arrowAngle) * 5;
+            const arrowX2 = magOuterX + Math.cos(arrowAngle) * 5;
+            const arrowY2 = magOuterY + Math.sin(arrowAngle) * 5;
+            
+            drawArrow(arrowX1, arrowY1, arrowX2, arrowY2, colors.green, 3);
+            
+            ctx.restore();
+            
+            // Draw magnifier border
+            ctx.beginPath();
+            ctx.arc(magnifierX, magnifierY, magnifierSize, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(colors.white, 0.8);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Add "Magnified View" label
+            ctx.fillStyle = colors.white;
+            ctx.textAlign = "center";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText("Magnified View", magnifierX, magnifierY - magnifierSize - 10);
+            
+            // Add key measurement labels around the circle
+            ctx.globalAlpha = 0.8;
+            // Top measurement
+            drawText("dr", center.x, center.y - baseRadius - dr/2, colors.green, 18, "center");
+            // Right measurement
+            drawText("dr", center.x + baseRadius + dr/2, center.y, colors.green, 18, "center");
+            // Bottom measurement
+            drawText("dr", center.x, center.y + baseRadius + dr/2, colors.green, 18, "center");
+            // Left measurement
+            drawText("dr", center.x - baseRadius - dr/2, center.y, colors.green, 18, "center");
+            ctx.globalAlpha = 1;
+            
+            // Draw measurement lines
+            ctx.setLineDash([3, 2]);
+            // Top
+            drawLine(center.x, center.y - baseRadius, center.x, center.y - expandedRadius, colors.green, 1);
+            // Right
+            drawLine(center.x + baseRadius, center.y, center.x + expandedRadius, center.y, colors.green, 1);
+            // Bottom
+            drawLine(center.x, center.y + baseRadius, center.x, center.y + expandedRadius, colors.green, 1);
+            // Left
+            drawLine(center.x - baseRadius, center.y, center.x - expandedRadius, center.y, colors.green, 1);
+            ctx.setLineDash([]);
+            
+            // Draw title for the ring
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            drawText("The Donut Ring", center.x, center.y - expandedRadius - 30, colors.orange, 26, "center");
+            ctx.shadowBlur = 0;
+            
+            // Explanatory text emphasizing the ring's key property
+            explanation.innerHTML = 
+                "Let's explore this donut ring more closely.<br><br>" +
+                "Notice something important: <strong>the ring has the same thickness everywhere</strong>.<br><br>" +
+                "This thickness equals exactly how much the radius grew (dr).<br><br>" +
+                "This special property will help us find the ring's area in a clever way.";
+            
+            // Formula focus on the thickness
+            formula.textContent = "Ring thickness = dr";
+            formula.style.opacity = 1;
+            
+            // Show slider
+            toggleSlider(true);
             
             // Expanded circle
             drawCircle(center.x, center.y, baseRadius + dr, colors.orange, false, 2);
@@ -1085,7 +1773,7 @@
             }
         }
         
-        function renderStep3() {
+        function renderScreen3() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -1232,7 +1920,7 @@
             }
         }
         
-        function renderStep4() {
+        function renderScreen4() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -1306,7 +1994,7 @@
             }
         }
         
-        function renderStep5() {
+        function renderScreen5() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -1358,7 +2046,7 @@
             sliderContainer.style.opacity = 0;
         }
         
-        function renderStep6() {
+        function renderScreen6() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -1456,42 +2144,513 @@
             sliderContainer.style.opacity = 0;
         }
         
-        // Navigation functions with smooth transitions
+        function renderScreen7() {
+            clear();
+            const center = getCenter();
+            const baseRadius = getBaseRadius();
+            
+            // Animation timing
+            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            
+            // Draw background with subtle grid and visual depth
+            ctx.fillStyle = hexToRgba(colors.background, 0.4);
+            ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+            
+            // Draw real-world examples in a circular arrangement
+            const exampleCount = 4;
+            const exampleRadius = baseRadius * 1.2;
+            const iconSize = baseRadius * 0.4;
+            
+            // Central theme circle
+            fillCircle(center.x, center.y, baseRadius * 0.5, colors.blue, 0.2);
+            drawCircle(center.x, center.y, baseRadius * 0.5, colors.blue, false, 2);
+            drawText("Circle Growth", center.x, center.y, colors.white, 22, "center");
+            drawText("in Nature", center.x, center.y + 30, colors.white, 22, "center");
+            
+            // Draw examples
+            for (let i = 0; i < exampleCount; i++) {
+                const angle = (i / exampleCount) * Math.PI * 2 - Math.PI / 4; // Start from top-right
+                const exX = center.x + Math.cos(angle) * exampleRadius;
+                const exY = center.y + Math.sin(angle) * exampleRadius;
+                
+                // Animated pulse for each example
+                const individualPulse = (Math.sin(time * 0.7 + i * 1.5) * 0.5 + 0.5);
+                const pulseSize = iconSize * (1 + individualPulse * 0.2);
+                
+                // Draw connecting line
+                ctx.beginPath();
+                ctx.setLineDash([5, 3]);
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(exX, exY);
+                ctx.strokeStyle = hexToRgba(colors.purple, 0.3 + individualPulse * 0.3);
+                ctx.lineWidth = 1 + individualPulse * 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw example circle
+                fillCircle(exX, exY, pulseSize, colors.orange, 0.2 + individualPulse * 0.3);
+                drawCircle(exX, exY, pulseSize, colors.orange, false, 2);
+                
+                // Draw ripple effect around examples
+                for (let j = 1; j <= 3; j++) {
+                    const ripplePhase = (time * 0.5 + i * 0.7) % 3;
+                    if (j > ripplePhase && j < ripplePhase + 1.5) {
+                        const rippleSize = pulseSize + j * 20 * (1 - (j - ripplePhase) / 1.5);
+                        ctx.beginPath();
+                        ctx.arc(exX, exY, rippleSize, 0, Math.PI * 2);
+                        ctx.strokeStyle = hexToRgba(colors.orange, 0.5 * (1 - (j - ripplePhase) / 1.5));
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+                
+                // Example labels
+                let title, description;
+                switch(i) {
+                    case 0: 
+                        title = "Water Ripples";
+                        description = "Circular waves spread with area growth matching our pattern";
+                        break;
+                    case 1: 
+                        title = "Tree Rings";
+                        description = "Annual growth forms rings with consistent mathematical relationships";
+                        break;
+                    case 2: 
+                        title = "Planetary Orbits";
+                        description = "Orbital areas follow similar growth patterns";
+                        break;
+                    case 3: 
+                        title = "Sound Waves";
+                        description = "Circular sound propagation follows area-circumference relationship";
+                        break;
+                }
+                
+                // Title with background for better readability
+                ctx.fillStyle = hexToRgba(colors.background, 0.7);
+                ctx.fillRect(exX - 100, exY + pulseSize + 5, 200, 60);
+                
+                drawText(title, exX, exY + pulseSize + 20, colors.yellow, 18, "center");
+                
+                // Multi-line description
+                const words = description.split(' ');
+                let line = '';
+                let y = exY + pulseSize + 40;
+                
+                for (let w = 0; w < words.length; w++) {
+                    const testLine = line + words[w] + ' ';
+                    if (testLine.length > 25) {
+                        drawText(line, exX, y, colors.white, 14, "center");
+                        line = words[w] + ' ';
+                        y += 18;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                drawText(line, exX, y, colors.white, 14, "center");
+            }
+            
+            // Bottom information panel
+            const panelY = center.y + baseRadius * 0.8;
+            ctx.fillStyle = hexToRgba(colors.background, 0.8);
+            ctx.fillRect(center.x - baseRadius * 1.2, panelY, baseRadius * 2.4, 120);
+            ctx.strokeStyle = colors.blue;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(center.x - baseRadius * 1.2, panelY, baseRadius * 2.4, 120);
+            
+            drawText("Real-World Applications", center.x, panelY + 25, colors.blue, 22, "center");
+            drawText("The circle growth pattern appears throughout nature and technology", center.x, panelY + 60, colors.white, 16, "center");
+            drawText("This geometric principle helps us understand and model natural phenomena", center.x, panelY + 85, colors.white, 16, "center");
+            
+            // Text content
+            stageTitle.textContent = "Practical Applications";
+            explanation.innerHTML = "This circle growth relationship isn't just a mathematical curiosity - it appears in nature and has practical applications.<br><br>Water ripples, sound waves, planetary orbits, and growth patterns in plants all follow this principle, making it a fundamental pattern in our world.";
+            
+            // Show formula
+            formula.textContent = "Natural Growth Patterns ≈ 2πr";
+            formula.style.opacity = 1;
+            
+            // Hide slider
+            sliderContainer.style.opacity = 0;
+        }
+        
+        function renderScreen8() {
+            clear();
+            const center = getCenter();
+            const baseRadius = getBaseRadius();
+            
+            // Animation timing
+            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            
+            // Draw title at top
+            ctx.fillStyle = hexToRgba(colors.blue, 0.8);
+            ctx.textAlign = "center";
+            ctx.font = "bold 24px Arial";
+            ctx.fillText("Extending to Other Shapes", center.x, center.y - baseRadius * 1.1);
+            
+            // Draw comparison display with multiple shapes
+            const shapeCount = 3;
+            const shapesY = center.y - baseRadius * 0.2;
+            const spacing = baseRadius * 1.4;
+            
+            // Shape information
+            const shapes = [
+                {
+                    name: "Circle",
+                    area: "πr²",
+                    growth: "2πr",
+                    color: colors.blue,
+                    draw: (x, y, size) => {
+                        // Draw circle
+                        fillCircle(x, y, size, colors.blue, 0.3);
+                        drawCircle(x, y, size, colors.blue, false, 2);
+                        
+                        // Show circumference
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.setLineDash([5, 3]);
+                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                },
+                {
+                    name: "Square",
+                    area: "s²",
+                    growth: "4s",
+                    color: colors.green,
+                    draw: (x, y, size) => {
+                        // Draw square
+                        ctx.fillStyle = hexToRgba(colors.green, 0.3);
+                        ctx.fillRect(x - size, y - size, size * 2, size * 2);
+                        ctx.strokeStyle = colors.green;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x - size, y - size, size * 2, size * 2);
+                        
+                        // Show perimeter
+                        ctx.setLineDash([5, 3]);
+                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x - size, y - size, size * 2, size * 2);
+                        ctx.setLineDash([]);
+                    }
+                },
+                {
+                    name: "Sphere",
+                    area: "4πr²",
+                    growth: "8πr",
+                    color: colors.teal,
+                    draw: (x, y, size) => {
+                        // Draw sphere with shading for 3D effect
+                        const gradient = ctx.createRadialGradient(
+                            x - size * 0.3, y - size * 0.3, size * 0.1,
+                            x, y, size
+                        );
+                        gradient.addColorStop(0, hexToRgba(colors.teal, 0.7));
+                        gradient.addColorStop(1, hexToRgba(colors.teal, 0.1));
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.strokeStyle = colors.teal;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        
+                        // Draw surface highlight with ellipse
+                        ctx.beginPath();
+                        ctx.ellipse(x, y, size, size * 0.3, 0, 0, Math.PI * 2);
+                        ctx.setLineDash([5, 3]);
+                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        
+                        // Add some circle accents to show sphere
+                        ctx.beginPath();
+                        ctx.ellipse(x, y, size * 0.7, size * 0.2, Math.PI * 0.25, 0, Math.PI * 2);
+                        ctx.strokeStyle = hexToRgba(colors.teal, 0.5);
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            ];
+            
+            // Draw each shape with pulsating animation
+            for (let i = 0; i < shapeCount; i++) {
+                const x = center.x + (i - 1) * spacing;
+                
+                // Pulsing animation offset per shape
+                const individualPulse = (Math.sin(time * 0.7 + i * 1.5) * 0.5 + 0.5);
+                const size = baseRadius * 0.4 * (1 + individualPulse * 0.2);
+                
+                // Draw shape
+                shapes[i].draw(x, shapesY, size);
+                
+                // Draw title and formulas
+                drawText(shapes[i].name, x, shapesY - size - 20, shapes[i].color, 22, "center");
+                
+                // Formula card
+                const cardWidth = 220;
+                const cardHeight = 120;
+                const cardY = shapesY + baseRadius * 0.7;
+                
+                // Card background
+                ctx.fillStyle = hexToRgba(colors.background, 0.8);
+                ctx.fillRect(x - cardWidth/2, cardY, cardWidth, cardHeight);
+                ctx.strokeStyle = shapes[i].color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x - cardWidth/2, cardY, cardWidth, cardHeight);
+                
+                // Card content
+                drawText("Area:", x, cardY + 30, colors.white, 18, "center");
+                drawText(shapes[i].area, x, cardY + 60, shapes[i].color, 22, "center");
+                drawText("Growth Rate:", x, cardY + 90, colors.purple, 18, "center");
+                drawText(shapes[i].growth, x, cardY + 120 - 15, colors.purple, 22, "center");
+                
+                // Connection lines
+                drawArrow(
+                    x, shapesY + size + 10,
+                    x, cardY - 10,
+                    shapes[i].color,
+                    2
+                );
+            }
+            
+            // Draw observation at bottom
+            ctx.fillStyle = hexToRgba(colors.background, 0.9);
+            const observationY = shapesY + baseRadius * 1.6;
+            ctx.fillRect(center.x - baseRadius * 1.5, observationY, baseRadius * 3, 80);
+            
+            drawText("Common Pattern: Growth Rate relates to Boundary", 
+                    center.x, observationY + 30, colors.yellow, 22, "center");
+            drawText("For each shape, the rate of area/volume change is proportional to its perimeter/surface", 
+                    center.x, observationY + 60, colors.white, 16, "center");
+            
+            // Text content
+            stageTitle.textContent = "The Growth Pattern";
+            explanation.innerHTML = "This pattern extends beyond circles to many shapes and higher dimensions:<br><br>• Squares: Area = s², Growth rate = 4s (perimeter)<br>• Spheres: Volume = (4/3)πr³, Growth rate = 4πr² (surface area)<br><br>The boundary of a shape determines how quickly its area or volume grows!";
+            
+            // Show formula
+            formula.innerHTML = "Boundary → Growth Rate";
+            formula.style.opacity = 1;
+            
+            // Hide slider
+            sliderContainer.style.opacity = 0;
+        }
+        
+        function renderScreen9() {
+            clear();
+            const center = getCenter();
+            const baseRadius = getBaseRadius();
+            
+            // Animation timing
+            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            
+            // Draw beautiful starfield background for final screen
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * canvas.width / (window.devicePixelRatio || 1);
+                const y = Math.random() * canvas.height / (window.devicePixelRatio || 1);
+                const size = Math.random() * 2 + 1;
+                const alpha = Math.random() * 0.5 + 0.3;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.fill();
+            }
+            
+            // Draw animated central circle with rings
+            const circleX = center.x;
+            const circleY = center.y - baseRadius * 0.2;
+            const mainRadius = baseRadius * 0.6;
+            
+            // Glowing central circle with pulsating effect
+            const glowSize = mainRadius * (1 + animPulse * 0.2);
+            
+            // Multiple concentric circles with varying opacity
+            for (let i = 5; i >= 0; i--) {
+                const radius = glowSize * (1 + i * 0.3);
+                const alpha = 0.03 + 0.05 * animPulse * (1 - i/5);
+                
+                fillCircle(circleX, circleY, radius, colors.blue, alpha);
+            }
+            
+            // Main circle
+            fillCircle(circleX, circleY, glowSize, colors.blue, 0.6);
+            drawCircle(circleX, circleY, glowSize, colors.blue, false, 3);
+            
+            // Draw circumference with highlighted animated dots
+            const dotCount = 30;
+            for (let i = 0; i < dotCount; i++) {
+                const angle = (i / dotCount) * Math.PI * 2 + time * 0.2;
+                const x = circleX + Math.cos(angle) * glowSize;
+                const y = circleY + Math.sin(angle) * glowSize;
+                
+                const dotPulse = 0.5 + 0.5 * Math.sin(time * 2 + i * 0.3);
+                const dotSize = 3 + dotPulse * 2;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+                ctx.fillStyle = hexToRgba(colors.purple, 0.6 + 0.4 * dotPulse);
+                ctx.fill();
+            }
+            
+            // Draw area visualization
+            ctx.fillStyle = hexToRgba(colors.blue, 0.15 + 0.1 * animPulse);
+            ctx.beginPath();
+            ctx.arc(circleX, circleY, glowSize * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw final equations with beautiful formatting
+            const equationY = circleY + glowSize * 1.5;
+            
+            // Area equation
+            ctx.fillStyle = hexToRgba(colors.background, 0.8);
+            ctx.fillRect(circleX - baseRadius, equationY, baseRadius * 2, 40);
+            ctx.strokeStyle = colors.blue;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(circleX - baseRadius, equationY, baseRadius * 2, 40);
+            
+            drawText("Area = πr²", circleX, equationY + 25, colors.blue, 24, "center");
+            
+            // Rate equation
+            const rateY = equationY + 60;
+            ctx.fillStyle = hexToRgba(colors.background, 0.8);
+            ctx.fillRect(circleX - baseRadius, rateY, baseRadius * 2, 40);
+            ctx.strokeStyle = colors.purple;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(circleX - baseRadius, rateY, baseRadius * 2, 40);
+            
+            drawText("Rate of change = 2πr", circleX, rateY + 25, colors.purple, 24, "center");
+            
+            // Draw connection arrow
+            drawArrow(
+                circleX - baseRadius * 0.1, equationY + 45,
+                circleX - baseRadius * 0.1, rateY - 5,
+                colors.yellow,
+                3
+            );
+            drawText("derivative", circleX + baseRadius * 0.1, equationY + 65, colors.yellow, 18, "left");
+            
+            // Final message
+            const messageY = rateY + 80;
+            ctx.fillStyle = hexToRgba(colors.background, 0.8);
+            ctx.fillRect(center.x - baseRadius * 1.3, messageY, baseRadius * 2.6, 90);
+            
+            drawText("The Beautiful Connection", center.x, messageY + 30, colors.yellow, 24, "center");
+            drawText("Area and circumference are linked through growth.", center.x, messageY + 60, colors.white, 18, "center");
+            drawText("This is calculus made visible and intuitive!", center.x, messageY + 85, colors.white, 18, "center");
+            
+            // Text content
+            stageTitle.textContent = "The Beautiful Connection";
+            explanation.innerHTML = "Our journey comes full circle: we've discovered how a circle's area and its circumference are deeply connected through the concept of growth and change.<br><br>This beautiful relationship between πr² and 2πr gives us insight into the fundamental nature of circles, and helps us understand calculus visually.";
+            
+            // Show final formula
+            formula.innerHTML = "πr² → 2πr<br><small>The essence of calculus, visualized</small>";
+            formula.style.opacity = 1;
+            
+            // Hide slider
+            sliderContainer.style.opacity = 0;
+        }
+        
+        // Navigation functions with enhanced smooth transitions
+        let isTransitioning = false; // Prevent rapid navigation during transitions
+        
         function nextStep() {
-            if (currentStep < totalSteps - 1) {
+            if (currentStep < totalSteps - 1 && !isTransitioning) {
+                isTransitioning = true;
+                
+                // Add fade-out animation to current elements
+                stageTitle.classList.add('fade-out');
+                explanation.classList.add('fade-out');
+                formula.classList.add('fade-out');
+                
                 // Transition effect
                 transitionOverlay.style.opacity = "0.7";
                 
                 setTimeout(() => {
+                    // Remove animation classes
+                    stageTitle.classList.remove('fade-out');
+                    explanation.classList.remove('fade-out');
+                    formula.classList.remove('fade-out');
+                    
                     currentStep++;
                     updateProgress();
                     render();
                     
+                    // Add fade-in animation to new content
+                    stageTitle.classList.add('fade-in');
+                    explanation.classList.add('fade-in');
+                    formula.classList.add('fade-in');
+                    
                     // Fade back in
                     setTimeout(() => {
                         transitionOverlay.style.opacity = "0";
+                        
                         // Show contextual hint for this step
-                        setTimeout(introduceStep, 500);
+                        setTimeout(() => {
+                            introduceStep();
+                            
+                            // Remove animation classes after animation completes
+                            setTimeout(() => {
+                                stageTitle.classList.remove('fade-in');
+                                explanation.classList.remove('fade-in');
+                                formula.classList.remove('fade-in');
+                                isTransitioning = false;
+                            }, 500);
+                        }, 300);
                     }, 300);
                 }, 400);
             }
         }
         
         function prevStep() {
-            if (currentStep > 0) {
+            if (currentStep > 0 && !isTransitioning) {
+                isTransitioning = true;
+                
+                // Add fade-out animation to current elements
+                stageTitle.classList.add('fade-out');
+                explanation.classList.add('fade-out');
+                formula.classList.add('fade-out');
+                
                 // Transition effect
                 transitionOverlay.style.opacity = "0.7";
                 
                 setTimeout(() => {
+                    // Remove animation classes
+                    stageTitle.classList.remove('fade-out');
+                    explanation.classList.remove('fade-out');
+                    formula.classList.remove('fade-out');
+                    
                     currentStep--;
                     updateProgress();
                     render();
                     
+                    // Add fade-in animation to new content
+                    stageTitle.classList.add('fade-in');
+                    explanation.classList.add('fade-in');
+                    formula.classList.add('fade-in');
+                    
                     // Fade back in
                     setTimeout(() => {
                         transitionOverlay.style.opacity = "0";
+                        
                         // Show contextual hint for this step
-                        setTimeout(introduceStep, 500);
+                        setTimeout(() => {
+                            introduceStep();
+                            
+                            // Remove animation classes after animation completes
+                            setTimeout(() => {
+                                stageTitle.classList.remove('fade-in');
+                                explanation.classList.remove('fade-in');
+                                formula.classList.remove('fade-in');
+                                isTransitioning = false;
+                            }, 500);
+                        }, 300);
                     }, 300);
                 }, 400);
             }
@@ -1515,13 +2674,17 @@
         // Render the current step
         function render() {
             switch(currentStep) {
-                case 0: renderStep0(); break;
-                case 1: renderStep1(); break;
-                case 2: renderStep2(); break;
-                case 3: renderStep3(); break;
-                case 4: renderStep4(); break;
-                case 5: renderStep5(); break;
-                case 6: renderStep6(); break;
+                case 0: renderScreen0(); break;
+                case 1: renderScreen1(); break;
+                case 2: renderScreen2(); break;
+                case 3: renderScreen3(); break;
+                case 4: renderScreen4(); break;
+                case 5: renderScreen5(); break;
+                case 6: renderScreen6(); break;
+                case 7: renderScreen7(); break;
+                case 8: renderScreen8(); break;
+                case 9: renderScreen9(); break;
+                default: renderScreen0(); 
             }
         }
         
@@ -1549,28 +2712,29 @@
             animationFrameId = requestAnimationFrame(animate);
         }
         
-        // Set up the step dots for direct navigation
-        stepDots.forEach(dot => {
-            dot.addEventListener('click', () => {
-                if (parseInt(dot.dataset.step) !== currentStep) {
-                    // Transition effect
-                    transitionOverlay.style.opacity = "0.7";
-                    
-                    setTimeout(() => {
-                        currentStep = parseInt(dot.dataset.step);
-                        updateProgress();
-                        render();
-                        
-                        // Fade back in
-                        setTimeout(() => {
-                            transitionOverlay.style.opacity = "0";
-                            // Show contextual hint for this step
-                            setTimeout(introduceStep, 500);
-                        }, 300);
-                    }, 400);
-                }
-            });
+        // Touch swipe support for mobile devices
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        function checkSwipeDirection() {
+            if (touchEndX < touchStartX - 50) { // Swipe left
+                nextStep();
+            }
+            if (touchEndX > touchStartX + 50) { // Swipe right
+                prevStep();
+            }
+        }
+        
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
         });
+        
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            checkSwipeDirection();
+        });
+        
+        // Navigation dots are already set up in setupNavigationDots function
         
         // Initialize the new system
         function initializeVisualization() {
