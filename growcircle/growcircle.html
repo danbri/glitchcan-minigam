@@ -24,6 +24,7 @@
             height: min(600px, 95vh);
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden; /* Add this to contain the animation */
         }
         
         canvas {
@@ -146,6 +147,26 @@
             width: 100%;
             margin-bottom: 10px;
             cursor: pointer;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        #radiusSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #8d44ad;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        #radiusSlider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: #9b59b6;
         }
         
         #sliderLabel {
@@ -190,6 +211,96 @@
             border-radius: 2px;
             width: 0%;
         }
+        
+        /* New animations and visual elements */
+        .highlight-pulse {
+            animation: pulsate 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulsate {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        @keyframes unwind {
+            0% { 
+                transform: rotate(0deg); 
+                border-radius: 50%;
+            }
+            100% { 
+                transform: rotate(360deg);
+                border-radius: 0;
+            }
+        }
+        
+        .highlight-circle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.7);
+            transition: all 0.5s ease;
+            opacity: 0;
+            z-index: 20;
+        }
+        
+        #transitionOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0f0f1f;
+            opacity: 0;
+            z-index: 15;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        
+        #contextHint {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 20;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        #stepIndicator {
+            position: absolute;
+            display: flex;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            gap: 12px;
+            z-index: 20;
+        }
+        
+        .stepDot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .stepDot.active {
+            background: white;
+            transform: scale(1.2);
+        }
+        
+        .stepDot:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
     </style>
 </head>
 <body>
@@ -213,12 +324,24 @@
         <div id="stepCounter">Step 1 of 5</div>
         <div id="progressBar"><div id="progressIndicator"></div></div>
         
+        <div id="stepIndicator">
+            <div class="stepDot" data-step="0"></div>
+            <div class="stepDot" data-step="1"></div>
+            <div class="stepDot" data-step="2"></div>
+            <div class="stepDot" data-step="3"></div>
+            <div class="stepDot" data-step="4"></div>
+        </div>
+        
         <div id="controls">
             <button id="prevBtn">Previous</button>
             <button id="nextBtn">Next</button>
         </div>
         
         <div id="keyboardHint">Use Left/Right arrow keys to navigate</div>
+        
+        <div id="focusHighlight" class="highlight-circle"></div>
+        <div id="contextHint"></div>
+        <div id="transitionOverlay"></div>
     </div>
 
     <script>
@@ -235,6 +358,10 @@
         const nextBtn = document.getElementById('nextBtn');
         const radiusSlider = document.getElementById('radiusSlider');
         const sliderLabel = document.getElementById('sliderLabel');
+        const focusHighlight = document.getElementById('focusHighlight');
+        const contextHint = document.getElementById('contextHint');
+        const transitionOverlay = document.getElementById('transitionOverlay');
+        const stepDots = document.querySelectorAll('.stepDot');
         
         // State variables
         let currentStep = 0;
@@ -247,6 +374,53 @@
         function updateProgress() {
             stepCounter.textContent = `Step ${currentStep + 1} of ${totalSteps}`;
             progressIndicator.style.width = `${(currentStep / (totalSteps - 1)) * 100}%`;
+            
+            // Update step dots
+            stepDots.forEach(dot => {
+                if (parseInt(dot.dataset.step) === currentStep) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+        
+        // Function to highlight areas of interest
+        function highlightArea(x, y, size, duration = 2000) {
+            focusHighlight.style.left = `${x}px`;
+            focusHighlight.style.top = `${y}px`;
+            focusHighlight.style.width = `${size}px`;
+            focusHighlight.style.height = `${size}px`;
+            focusHighlight.style.opacity = "1";
+            
+            setTimeout(() => {
+                focusHighlight.style.opacity = "0";
+            }, duration);
+        }
+        
+        // Create a function for contextual hints
+        function showHint(message, duration = 5000) {
+            contextHint.textContent = message;
+            contextHint.style.opacity = '1';
+            
+            setTimeout(() => {
+                contextHint.style.opacity = '0';
+            }, duration);
+        }
+        
+        // Add step introduction feature with contextual hints
+        function introduceStep() {
+            const messages = [
+                "Notice how the area changes when the radius grows",
+                "See how the new area forms a ring around the original circle", 
+                "Watch how the ring can be unwrapped into a rectangle",
+                "The area of the rectangle equals the area of the ring",
+                "As dr gets infinitely small, we get to the instantaneous rate of change"
+            ];
+            
+            if (messages[currentStep]) {
+                showHint(messages[currentStep]);
+            }
         }
         
         // Colors
@@ -451,9 +625,18 @@
             drawLine(center.x, center.y, center.x + baseRadius, center.y, colors.green, 2);
             drawText("r", center.x + baseRadius/2, center.y - 15, colors.green);
             
-            // Expanded circle
+            // Expanded circle - with subtle pulse animation for emphasis
+            const pulsingEffect = Math.sin(time * 2) * 0.5 + 0.5;
             const expandedRadius = baseRadius + dr;
             
+            // Create a subtle glow around the expanded circle
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, expandedRadius + 3 + pulsingEffect * 2, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(colors.orange, 0.3 * pulsingEffect);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw the expanded circle
             drawCircle(center.x, center.y, expandedRadius, colors.orange, false, 2);
             
             // New radius
@@ -462,17 +645,25 @@
             
             drawText("r + dr", center.x + baseRadius + dr/2, center.y - 30, colors.orange);
             
-            // Highlight the ring (donut) with fill
+            // Highlight the ring (donut) with fill - use pulsing alpha for emphasis
+            const ringAlpha = 0.4 + 0.2 * pulsingEffect;
             ctx.beginPath();
             ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
             ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
             ctx.closePath();
-            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
+            ctx.fillStyle = hexToRgba(colors.orange, ringAlpha);
             ctx.fill();
             
-            // Label the ring with arrow
-            drawArrow(center.x + baseRadius + 70, center.y - 70, center.x + baseRadius + dr/2, center.y - 40, colors.red, 2);
-            drawText("New Area", center.x + baseRadius + 100, center.y - 80, colors.red, 20, "center");
+            // Label the ring with arrow - animated
+            const arrowBobbing = Math.sin(time * 3) * 3;
+            drawArrow(
+                center.x + baseRadius + 70, 
+                center.y - 70 + arrowBobbing, 
+                center.x + baseRadius + dr/2, 
+                center.y - 40 + arrowBobbing/2, 
+                colors.red, 2
+            );
+            drawText("New Area", center.x + baseRadius + 100, center.y - 80 + arrowBobbing, colors.red, 20, "center");
             
             // Text content
             stageTitle.textContent = "The 'Donut Ring' of New Area";
@@ -481,6 +672,17 @@
             
             // Show slider
             sliderContainer.style.opacity = 1;
+            
+            // Trigger visual highlighting of the donut ring periodically
+            if (Math.abs(time % 8) < 0.05) {
+                const containerRect = container.getBoundingClientRect();
+                highlightArea(
+                    containerRect.left + center.x - expandedRadius, 
+                    containerRect.top + center.y - expandedRadius,
+                    expandedRadius * 2,
+                    1500
+                );
+            }
         }
         
         function renderStep2() {
@@ -510,11 +712,59 @@
             const stripEndX = center.x + stripWidth / 2;
             const stripHeight = dr;
             
-            // Draw the strip
+            // Create unwrapping animation
+            let animProgress = (Math.sin(time * 1.5) + 1) / 2; // 0 to 1 value that oscillates
+            
+            // Draw imaginary segments unwrapping
+            const segments = 12;
+            const anglePer = Math.PI * 2 / segments;
+            const segmentWidth = stripWidth / segments;
+            
+            for (let i = 0; i < segments; i++) {
+                const startAngle = i * anglePer;
+                const endAngle = (i + 1) * anglePer;
+                
+                // Calculate how "unwrapped" this segment is
+                const unwrapFactor = Math.max(0, Math.min(1, (animProgress * segments * 1.2 - i)));
+                
+                // Draw segment in the circle if it's not fully unwrapped
+                if (unwrapFactor < 1) {
+                    ctx.beginPath();
+                    ctx.arc(center.x, center.y, baseRadius + dr, startAngle, endAngle);
+                    ctx.arc(center.x, center.y, baseRadius, endAngle, startAngle, true);
+                    ctx.closePath();
+                    ctx.fillStyle = hexToRgba(colors.yellow, 0.3 * (1 - unwrapFactor));
+                    ctx.fill();
+                }
+                
+                // Draw straightened segment if it's starting to unwrap
+                const segX = stripStartX + i * segmentWidth;
+                
+                if (unwrapFactor > 0) {
+                    ctx.beginPath();
+                    ctx.rect(segX, stripY, segmentWidth, stripHeight);
+                    ctx.fillStyle = hexToRgba(i % 2 === 0 ? colors.yellow : colors.orange, 0.5 * unwrapFactor);
+                    ctx.fill();
+                    
+                    // Draw connection line for segments that are in the process of unwrapping
+                    if (unwrapFactor > 0 && unwrapFactor < 1) {
+                        const arcMidAngle = (startAngle + endAngle) / 2;
+                        const arcX = center.x + Math.cos(arcMidAngle) * (baseRadius + dr/2);
+                        const arcY = center.y + Math.sin(arcMidAngle) * (baseRadius + dr/2);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(arcX, arcY);
+                        ctx.lineTo(segX + segmentWidth/2, stripY + stripHeight/2);
+                        ctx.strokeStyle = hexToRgba(colors.yellow, 0.4 * (1 - Math.abs(unwrapFactor - 0.5) * 2));
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw the completed strip outline
             ctx.beginPath();
             ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
-            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
-            ctx.fill();
             ctx.strokeStyle = colors.orange;
             ctx.lineWidth = 2;
             ctx.stroke();
@@ -526,9 +776,12 @@
             // Label height
             drawText("Height = dr", stripEndX + 15, stripY + stripHeight/2, colors.green, 18, "left");
             
-            // Draw unwrapping arrow
+            // Draw unwrapping arrow - pulse with animation
+            const arrowOpacity = 0.7 + 0.3 * Math.sin(time * 3);
+            ctx.globalAlpha = arrowOpacity;
             drawArrow(center.x, center.y + 50, center.x, stripY - 20, colors.yellow, 2);
             drawText("Unwrapping", center.x + 20, center.y + 50, colors.yellow, 18, "left");
+            ctx.globalAlpha = 1;
             
             // Text content
             stageTitle.textContent = "Unwrapping the Donut into a Strip";
@@ -540,6 +793,17 @@
             
             // Show slider
             sliderContainer.style.opacity = 1;
+            
+            // Trigger visual highlighting for the unwrapping effect when this slide first appears
+            if (Math.abs(time % 6) < 0.1) {
+                const containerRect = container.getBoundingClientRect();
+                highlightArea(
+                    containerRect.left + center.x - baseRadius, 
+                    containerRect.top + stripY - 20,
+                    baseRadius * 2,
+                    1500
+                );
+            }
         }
         
         function renderStep3() {
@@ -682,20 +946,44 @@
             sliderContainer.style.opacity = 0;
         }
         
-        // Navigation functions
+        // Navigation functions with smooth transitions
         function nextStep() {
             if (currentStep < totalSteps - 1) {
-                currentStep++;
-                updateProgress();
-                render();
+                // Transition effect
+                transitionOverlay.style.opacity = "0.7";
+                
+                setTimeout(() => {
+                    currentStep++;
+                    updateProgress();
+                    render();
+                    
+                    // Fade back in
+                    setTimeout(() => {
+                        transitionOverlay.style.opacity = "0";
+                        // Show contextual hint for this step
+                        setTimeout(introduceStep, 500);
+                    }, 300);
+                }, 400);
             }
         }
         
         function prevStep() {
             if (currentStep > 0) {
-                currentStep--;
-                updateProgress();
-                render();
+                // Transition effect
+                transitionOverlay.style.opacity = "0.7";
+                
+                setTimeout(() => {
+                    currentStep--;
+                    updateProgress();
+                    render();
+                    
+                    // Fade back in
+                    setTimeout(() => {
+                        transitionOverlay.style.opacity = "0";
+                        // Show contextual hint for this step
+                        setTimeout(introduceStep, 500);
+                    }, 300);
+                }, 400);
             }
         }
         
@@ -710,20 +998,49 @@
             }
         }
         
-        // Animation loop
+        // Animation loop - now animates for steps 0, 2, and 4
         function animate() {
             time += 0.02;
-            if (currentStep === 0 || currentStep === 4) {
+            
+            // Animate steps that have dynamic content
+            if (currentStep === 0 || currentStep === 2 || currentStep === 4) {
                 render();
             }
+            
             animationFrameId = requestAnimationFrame(animate);
         }
+        
+        // Set up the step dots for direct navigation
+        stepDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                if (parseInt(dot.dataset.step) !== currentStep) {
+                    // Transition effect
+                    transitionOverlay.style.opacity = "0.7";
+                    
+                    setTimeout(() => {
+                        currentStep = parseInt(dot.dataset.step);
+                        updateProgress();
+                        render();
+                        
+                        // Fade back in
+                        setTimeout(() => {
+                            transitionOverlay.style.opacity = "0";
+                            // Show contextual hint for this step
+                            setTimeout(introduceStep, 500);
+                        }, 300);
+                    }, 400);
+                }
+            });
+        });
         
         // Initialize
         setupCanvas();
         updateProgress();
         render();
         animate();
+        
+        // Show the first hint after page load
+        setTimeout(introduceStep, 1000);
     </script>
 </body>
 </html>
