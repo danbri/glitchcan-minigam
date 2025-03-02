@@ -7,11 +7,16 @@
     <style>
         :root {
             --thumb-size: 20px; /* Variable for animated slider thumb size */
+            --main-bg-color: #0f0f1f;
+            --sidebar-bg-color: #141428; 
+            --accent-color: #3498db;
+            --sidebar-width: 250px;
+            --sidebar-transition: 0.3s;
         }
         body {
             margin: 0;
             padding: 0;
-            background: #0f0f1f;
+            background: var(--main-bg-color);
             color: white;
             font-family: sans-serif;
             overflow: hidden;
@@ -23,11 +28,86 @@
         
         #container {
             position: relative;
-            width: min(900px, 95vw);
+            width: min(1100px, 95vw);
             height: min(600px, 95vh);
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            overflow: hidden; /* Add this to contain the animation */
+            overflow: hidden;
+            display: flex;
+        }
+        
+        #main-content {
+            position: relative;
+            flex: 1;
+            height: 100%;
+            transition: width var(--sidebar-transition) ease;
+            overflow: hidden;
+        }
+        
+        #main-content.sidebar-visible {
+            width: calc(100% - var(--sidebar-width));
+        }
+        
+        /* Sidebar styling */
+        #math-sidebar {
+            width: 0;
+            height: 100%;
+            background: var(--sidebar-bg-color);
+            transition: width var(--sidebar-transition) ease;
+            overflow: hidden;
+            border-left: 1px solid var(--accent-color);
+            opacity: 0;
+        }
+        
+        #math-sidebar.expanded {
+            width: var(--sidebar-width);
+            opacity: 1;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-header h3 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+        
+        .close-sidebar {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        .sidebar-content {
+            padding: 15px;
+            overflow-y: auto;
+            max-height: calc(100% - 60px);
+        }
+        
+        .toggle-sidebar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(52, 152, 219, 0.2);
+            border: 1px solid var(--accent-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .toggle-sidebar:hover {
+            background: rgba(52, 152, 219, 0.4);
         }
         
         canvas {
@@ -36,7 +116,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            border-radius: 12px;
+            border-radius: 12px 0 0 12px;
         }
         
         #controls {
@@ -48,6 +128,24 @@
             justify-content: center;
             gap: 20px;
             z-index: 10;
+        }
+        
+        #navigation-area {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        #navigation-dots {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
         }
         
         button {
@@ -301,71 +399,116 @@
             z-index: 20;
         }
         
-        .stepDot {
+        .nav-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
         
-        .stepDot.active {
+        .nav-dot.active {
             background: white;
             transform: scale(1.2);
         }
         
-        .stepDot:hover {
+        .nav-dot:hover {
             background: rgba(255, 255, 255, 0.7);
+        }
+        
+        .nav-dot .tooltip {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        
+        .nav-dot:hover .tooltip {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
     <div id="container">
-        <canvas id="animationCanvas"></canvas>
-        
-        <div id="stageTitle">Growing Circles: Understanding Area Change</div>
-        
-        <div id="explanation">
-            What happens to a circle's area when its radius grows slightly?
-            Let's explore this visually, building intuition before any formulas.
+        <div id="main-content">
+            <canvas id="animationCanvas"></canvas>
+            
+            <button id="toggle-sidebar" class="toggle-sidebar">Show Math Details</button>
+            
+            <div id="stageTitle">Growing Circles: Understanding Area Change</div>
+            
+            <div id="explanation">
+                What happens to a circle's area when its radius grows slightly?
+                Let's explore this visually, building intuition before any formulas.
+            </div>
+            
+            <div id="formula"></div>
+            
+            <div id="sliderContainer" class="wobble">
+                <input type="range" id="radiusSlider" min="1" max="40" value="20">
+                <div id="sliderLabel">Change in radius (dr): 20 units</div>
+            </div>
+            
+            <div id="stepCounter">Step 1 of 10</div>
+            <div id="progressBar"><div id="progressIndicator"></div></div>
+            
+            <div id="navigation-area">
+                <div id="navigation-dots">
+                    <!-- Will be populated dynamically -->
+                </div>
+                
+                <div id="controls">
+                    <button id="prevBtn">Previous</button>
+                    <button id="nextBtn">Next</button>
+                </div>
+                
+                <div id="keyboardHint">Use Left/Right arrow keys to navigate</div>
+            </div>
+            
+            <div id="focusHighlight" class="highlight-circle"></div>
+            <div id="contextHint"></div>
+            <div id="transitionOverlay"></div>
         </div>
         
-        <div id="formula"></div>
-        
-        <div id="sliderContainer" class="wobble">
-            <input type="range" id="radiusSlider" min="1" max="40" value="20">
-            <div id="sliderLabel">Change in radius (dr): 20 units</div>
+        <div id="math-sidebar">
+            <div class="sidebar-header">
+                <h3>Math Insights</h3>
+                <button class="close-sidebar">×</button>
+            </div>
+            <div class="sidebar-content" id="sidebar-content">
+                <!-- Content will change based on current screen -->
+                <div id="sidebar-screen-0" class="sidebar-screen">
+                    <p>When a circle grows, something interesting happens:</p>
+                    <p>The area grows FASTER than the radius!</p>
+                    <p>If you double the radius, the area gets FOUR times bigger, not just twice as big.</p>
+                    <p>It's like saying:</p>
+                    <ul>
+                        <li>Small increase in radius = Bigger increase in area</li>
+                        <li>Big increase in radius = Much, much bigger increase in area</li>
+                    </ul>
+                    <p>Think of it like ripples in a pond - as the circles get bigger, each new ring of water covers much more area than the one before it.</p>
+                </div>
+                
+                <!-- More sidebar screens will be added -->
+            </div>
         </div>
-        
-        <div id="stepCounter">Step 1 of 5</div>
-        <div id="progressBar"><div id="progressIndicator"></div></div>
-        
-        <div id="stepIndicator">
-            <div class="stepDot" data-step="0"></div>
-            <div class="stepDot" data-step="1"></div>
-            <div class="stepDot" data-step="2"></div>
-            <div class="stepDot" data-step="3"></div>
-            <div class="stepDot" data-step="4"></div>
-            <div class="stepDot" data-step="5"></div>
-            <div class="stepDot" data-step="6"></div>
-        </div>
-        
-        <div id="controls">
-            <button id="prevBtn">Previous</button>
-            <button id="nextBtn">Next</button>
-        </div>
-        
-        <div id="keyboardHint">Use Left/Right arrow keys to navigate</div>
-        
-        <div id="focusHighlight" class="highlight-circle"></div>
-        <div id="contextHint"></div>
-        <div id="transitionOverlay"></div>
     </div>
 
     <script>
         // Core elements
         const container = document.getElementById('container');
+        const mainContent = document.getElementById('main-content');
         const canvas = document.getElementById('animationCanvas');
         const ctx = canvas.getContext('2d');
         const stageTitle = document.getElementById('stageTitle');
@@ -373,6 +516,7 @@
         const formula = document.getElementById('formula');
         const stepCounter = document.getElementById('stepCounter');
         const progressIndicator = document.getElementById('progressIndicator');
+        const navigationDots = document.getElementById('navigation-dots');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
         const radiusSlider = document.getElementById('radiusSlider');
@@ -380,28 +524,142 @@
         const focusHighlight = document.getElementById('focusHighlight');
         const contextHint = document.getElementById('contextHint');
         const transitionOverlay = document.getElementById('transitionOverlay');
-        const stepDots = document.querySelectorAll('.stepDot');
+        
+        // Sidebar elements
+        const mathSidebar = document.getElementById('math-sidebar');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+        const closeSidebarBtn = document.querySelector('.close-sidebar');
+        const sidebarContent = document.getElementById('sidebar-content');
         
         // State variables
         let currentStep = 0;
-        const totalSteps = 7; // Updated with 2 new steps
+        const totalSteps = 10; // New expanded set of screens
         let animationFrameId = null;
         let time = 0;
         let dr = 20; // Initial change in radius - increased for better visibility
+        let sidebarVisible = false;
+        
+        // Screen information
+        const screens = [
+            { 
+                title: "Growing Circles", 
+                hint: "Circle Growth"
+            },
+            { 
+                title: "The Donut Ring", 
+                hint: "New Area"
+            },
+            { 
+                title: "Exploring the Ring", 
+                hint: "Ring Shape"
+            },
+            { 
+                title: "Unwrapping the Ring", 
+                hint: "Unwrap"
+            },
+            { 
+                title: "The Unwrapped Rectangle", 
+                hint: "Rectangle"
+            },
+            { 
+                title: "Measuring the Area", 
+                hint: "Area"
+            },
+            { 
+                title: "Smaller Changes", 
+                hint: "Small Changes"
+            },
+            { 
+                title: "The Growth Pattern", 
+                hint: "Pattern"
+            },
+            { 
+                title: "Practical Applications", 
+                hint: "Applications"
+            },
+            { 
+                title: "The Beautiful Connection", 
+                hint: "Connection"
+            }
+        ];
+        
+        // Sidebar toggle functionality
+        function toggleSidebar() {
+            sidebarVisible = !sidebarVisible;
+            if (sidebarVisible) {
+                mathSidebar.classList.add('expanded');
+                mainContent.classList.add('sidebar-visible');
+                toggleSidebarBtn.textContent = "Hide Math Details";
+            } else {
+                mathSidebar.classList.remove('expanded');
+                mainContent.classList.remove('sidebar-visible');
+                toggleSidebarBtn.textContent = "Show Math Details";
+            }
+        }
+        
+        toggleSidebarBtn.addEventListener('click', toggleSidebar);
+        closeSidebarBtn.addEventListener('click', toggleSidebar);
         
         // Set up progress tracking
         function updateProgress() {
             stepCounter.textContent = `Step ${currentStep + 1} of ${totalSteps}`;
             progressIndicator.style.width = `${(currentStep / (totalSteps - 1)) * 100}%`;
             
-            // Update step dots
-            stepDots.forEach(dot => {
+            // Update navigation dots
+            const dots = document.querySelectorAll('.nav-dot');
+            dots.forEach(dot => {
                 if (parseInt(dot.dataset.step) === currentStep) {
                     dot.classList.add('active');
                 } else {
                     dot.classList.remove('active');
                 }
             });
+            
+            // Update sidebar visibility
+            const allSidebarScreens = document.querySelectorAll('.sidebar-screen');
+            allSidebarScreens.forEach(screen => {
+                screen.style.display = 'none';
+            });
+            
+            const currentSidebarScreen = document.getElementById(`sidebar-screen-${currentStep}`);
+            if (currentSidebarScreen) {
+                currentSidebarScreen.style.display = 'block';
+            }
+            
+            // Update title and content based on current screen
+            stageTitle.textContent = screens[currentStep].title;
+        }
+        
+        // Create navigation dots
+        function setupNavigationDots() {
+            navigationDots.innerHTML = '';
+            
+            for (let i = 0; i < totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'nav-dot';
+                dot.dataset.step = i;
+                
+                // Add tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.textContent = screens[i].hint;
+                dot.appendChild(tooltip);
+                
+                if (i === currentStep) {
+                    dot.classList.add('active');
+                }
+                
+                // Add click handler with closure to capture correct index
+                dot.addEventListener('click', (function(stepIndex) {
+                    return function() {
+                        if (stepIndex !== currentStep && !isTransitioning) {
+                            startTransition(stepIndex);
+                        }
+                    };
+                })(i));
+                
+                navigationDots.appendChild(dot);
+            }
         }
         
         // Function to highlight areas of interest
@@ -1314,14 +1572,26 @@
             });
         });
         
-        // Initialize
-        setupCanvas();
-        updateProgress();
-        render();
-        animate();
+        // Initialize the new system
+        function initializeVisualization() {
+            setupCanvas();
+            setupNavigationDots();
+            updateProgress();
+            render();
+            animate();
+            
+            // Show the first hint after page load
+            setTimeout(introduceStep, 1000);
+            
+            // Update sidebar content for initial screen
+            const currentSidebarScreen = document.getElementById(`sidebar-screen-${currentStep}`);
+            if (currentSidebarScreen) {
+                currentSidebarScreen.style.display = 'block';
+            }
+        }
         
-        // Show the first hint after page load
-        setTimeout(introduceStep, 1000);
+        // Start the visualization
+        initializeVisualization();
     </script>
 </body>
 </html>
