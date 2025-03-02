@@ -117,11 +117,24 @@
                 const dot = document.createElement('div');
                 dot.className = 'navDot';
                 if (i === currentStep) dot.classList.add('active');
-                dot.addEventListener('click', () => {
-                    if (i !== currentStep && !isTransitioning) {
-                        startTransition(i);
-                    }
-                });
+                
+                // Use closure to capture the current value of i
+                dot.addEventListener('click', (function(stepIndex) {
+                    return function() {
+                        try {
+                            if (stepIndex !== currentStep && !isTransitioning) {
+                                console.log("Navigating to step", stepIndex);
+                                startTransition(stepIndex);
+                            } else if (isTransitioning) {
+                                console.log("Cannot navigate: transition in progress");
+                            }
+                        } catch (error) {
+                            console.error("Error in nav dot click handler:", error);
+                            isTransitioning = false; // Reset transition state on error
+                        }
+                    };
+                })(i)); // Pass current i value to capture it by value, not reference
+                
                 navigation.appendChild(dot);
             }
         }
@@ -140,15 +153,23 @@
         
         // Event listeners
         radiusSlider.addEventListener('input', function() {
-            dr = parseInt(this.value);
-            sliderLabel.textContent = `Change in radius (dr): ${dr} units`;
-            if (!isTransitioning) {
-                render(currentStep);
+            try {
+                dr = parseInt(this.value);
+                sliderLabel.textContent = `Change in radius (dr): ${dr} units`;
+                if (!isTransitioning) {
+                    console.log("Updating radius to", dr);
+                    render(currentStep);
+                }
+            } catch (error) {
+                console.error("Error in slider handler:", error);
             }
         });
         
         document.addEventListener('keydown', function(e) {
-            if (isTransitioning) return;
+            if (isTransitioning) {
+                console.log("Cannot navigate: transition in progress");
+                return;
+            }
             
             if (e.key === 'ArrowRight' || e.key === ' ') {
                 if (currentStep < totalSteps - 1) {
@@ -162,14 +183,18 @@
         });
         
         prevBtn.addEventListener('click', function() {
-            if (currentStep > 0 && !isTransitioning) {
+            if (!isTransitioning && currentStep > 0) {
                 startTransition(currentStep - 1);
+            } else if (isTransitioning) {
+                console.log("Cannot navigate: transition in progress");
             }
         });
         
         nextBtn.addEventListener('click', function() {
-            if (currentStep < totalSteps - 1 && !isTransitioning) {
+            if (!isTransitioning && currentStep < totalSteps - 1) {
                 startTransition(currentStep + 1);
+            } else if (isTransitioning) {
+                console.log("Cannot navigate: transition in progress");
             }
         });
         
@@ -649,32 +674,56 @@
         // Handle transitions between steps
         function startTransition(targetStep) {
             if (isTransitioning) return;
+            if (targetStep < 0 || targetStep >= totalSteps) return; // Bounds check
+            if (targetStep === currentStep) return; // Don't transition to same step
             
             isTransitioning = true;
             const startStep = currentStep;
             transitionProgress = 0;
             
-            function transition() {
-                transitionProgress += 0.03;
-                
-                if (transitionProgress < 0.5) {
-                    // First half: fade out current step
-                    render(startStep, 1 - transitionProgress * 2);
-                } else {
-                    // Second half: fade in new step
+            // Set a safety timeout to prevent transition state from getting stuck
+            const safetyTimeout = setTimeout(function() {
+                if (isTransitioning) {
+                    console.log("Safety timeout triggered - transition got stuck");
+                    isTransitioning = false;
                     currentStep = targetStep;
                     updateNavigation();
-                    render(targetStep, (transitionProgress - 0.5) * 2);
+                    render(targetStep, 1);
+                    animate();
                 }
-                
-                if (transitionProgress >= 1) {
+            }, 3000); // 3 second safety timeout
+            
+            function transition() {
+                try {
+                    transitionProgress += 0.03;
+                    
+                    if (transitionProgress < 0.5) {
+                        // First half: fade out current step
+                        render(startStep, 1 - transitionProgress * 2);
+                    } else {
+                        // Second half: fade in new step
+                        currentStep = targetStep;
+                        updateNavigation();
+                        render(targetStep, (transitionProgress - 0.5) * 2);
+                    }
+                    
+                    if (transitionProgress >= 1) {
+                        isTransitioning = false;
+                        clearTimeout(safetyTimeout); // Clear safety timeout
+                        cancelAnimationFrame(animationFrameId);
+                        animate(); // Resume normal animation
+                        return;
+                    }
+                    
+                    requestAnimationFrame(transition);
+                } catch (error) {
+                    console.error("Error during transition:", error);
                     isTransitioning = false;
-                    cancelAnimationFrame(animationFrameId);
-                    animate(); // Resume normal animation
-                    return;
+                    clearTimeout(safetyTimeout); // Clear safety timeout
+                    currentStep = targetStep;
+                    updateNavigation();
+                    animate();
                 }
-                
-                requestAnimationFrame(transition);
             }
             
             cancelAnimationFrame(animationFrameId);
@@ -683,13 +732,30 @@
         
         // Animation loop
         function animate() {
-            time += 0.02;
-            if (!isTransitioning) {
-                render(currentStep);
+            try {
+                time += 0.02;
+                if (!isTransitioning) {
+                    render(currentStep);
+                }
+                animationFrameId = requestAnimationFrame(animate);
+            } catch (error) {
+                console.error("Error in animation loop:", error);
+                isTransitioning = false; // Reset transition state on error
+                
+                // Attempt to recover the animation
+                setTimeout(function() {
+                    console.log("Attempting to recover animation");
+                    animationFrameId = requestAnimationFrame(animate);
+                }, 1000);
             }
-            animationFrameId = requestAnimationFrame(animate);
         }
         
         // Initialize
+        setupCanvas(); // Explicitly setup canvas before starting
         setupNavigation();
         animate();
+        
+        // Safety check - reset transition state if stuck
+        window.addEventListener('error', function() {
+            isTransitioning = false; // Reset if any error occurs
+        });
