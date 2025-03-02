@@ -330,6 +330,8 @@
             <div class="stepDot" data-step="2"></div>
             <div class="stepDot" data-step="3"></div>
             <div class="stepDot" data-step="4"></div>
+            <div class="stepDot" data-step="5"></div>
+            <div class="stepDot" data-step="6"></div>
         </div>
         
         <div id="controls">
@@ -365,7 +367,7 @@
         
         // State variables
         let currentStep = 0;
-        const totalSteps = 5;
+        const totalSteps = 7; // Updated with 2 new steps
         let animationFrameId = null;
         let time = 0;
         let dr = 10; // Initial change in radius
@@ -415,7 +417,9 @@
                 "See how the new area forms a ring around the original circle", 
                 "Watch how the ring can be unwrapped into a rectangle",
                 "The area of the rectangle equals the area of the ring",
-                "As dr gets infinitely small, we get to the instantaneous rate of change"
+                "Watch what happens as dr gets smaller and smaller",
+                "Very small changes show the instantaneous rate of change",
+                "The rate of area change equals the circumference"
             ];
             
             if (messages[currentStep]) {
@@ -811,14 +815,83 @@
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Draw the fully unwrapped strip
-            const stripY = center.y;
+            // Position the strip higher on the screen to avoid being off-screen
+            const stripY = center.y - baseRadius * 0.2; // Moved up from center.y
             const stripWidth = 2 * Math.PI * baseRadius;
             const stripStartX = center.x - stripWidth / 2;
             const stripEndX = center.x + stripWidth / 2;
             const stripHeight = dr;
             
-            // Draw the strip
+            // Show faded circle to remind where the strip came from
+            const fadeAmount = 0.15 + 0.05 * Math.sin(time * 1.5);
+            ctx.beginPath();
+            ctx.arc(center.x, center.y + baseRadius * 0.7, baseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(colors.blue, fadeAmount);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(center.x, center.y + baseRadius * 0.7, baseRadius + dr, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(colors.orange, fadeAmount);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Animate pieces moving from circle to the final strip
+            const segments = 10;
+            const anglePer = Math.PI * 2 / segments;
+            const segmentWidth = stripWidth / segments;
+            const slowAnimTime = time * 0.7; // Slower animation
+            
+            for (let i = 0; i < segments; i++) {
+                const startAngle = i * anglePer;
+                const endAngle = (i + 1) * anglePer;
+                const segX = stripStartX + i * segmentWidth;
+                
+                // Oscillate the animation to continuously show motion
+                const cyclePosition = ((slowAnimTime * 0.2) % 1);
+                const animPhase = (i / segments + cyclePosition) % 1;
+                
+                // Calculate movement progress - positions pieces along the path from circle to strip
+                const moveProgress = Math.max(0, Math.min(1, animPhase * 3));
+                
+                if (moveProgress < 1) {
+                    // Get position on arc
+                    const arcMidAngle = (startAngle + endAngle) / 2;
+                    const arcX = center.x + Math.cos(arcMidAngle) * (baseRadius + dr/2);
+                    const arcY = (center.y + baseRadius * 0.7) + Math.sin(arcMidAngle) * (baseRadius + dr/2);
+                    
+                    // Interpolate position from arc to final strip position
+                    const currentX = arcX + (segX + segmentWidth/2 - arcX) * moveProgress;
+                    const currentY = arcY + (stripY + stripHeight/2 - arcY) * moveProgress;
+                    
+                    // Draw fading segment
+                    const opacity = 0.5 * (1 - moveProgress);
+                    if (opacity > 0.05) {
+                        // Draw a small segment that gets gradually straighter
+                        ctx.beginPath();
+                        const morphProgress = Math.min(1, moveProgress * 2);
+                        const bendFactor = (1 - morphProgress) * 20;
+                        
+                        // Draw a curved rectangle morphing to a straight one
+                        ctx.moveTo(currentX - segmentWidth/2, currentY - stripHeight/2);
+                        ctx.quadraticCurveTo(
+                            currentX, currentY - stripHeight/2 - bendFactor,
+                            currentX + segmentWidth/2, currentY - stripHeight/2
+                        );
+                        ctx.lineTo(currentX + segmentWidth/2, currentY + stripHeight/2);
+                        ctx.quadraticCurveTo(
+                            currentX, currentY + stripHeight/2 + bendFactor,
+                            currentX - segmentWidth/2, currentY + stripHeight/2
+                        );
+                        ctx.closePath();
+                        
+                        ctx.fillStyle = hexToRgba(i % 2 === 0 ? colors.yellow : colors.orange, opacity);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Draw the final strip
             ctx.beginPath();
             ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
             ctx.fillStyle = hexToRgba(colors.orange, 0.5);
@@ -827,21 +900,25 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Label dimensions
+            // Label dimensions with subtle animation
+            const pulseText = 0.8 + 0.2 * Math.sin(time * 2);
+            ctx.globalAlpha = pulseText;
             drawText("Length = 2πr", center.x, stripY - 15, colors.purple, 18, "center");
             drawText("dr", stripEndX + 15, stripY + stripHeight/2, colors.green, 18, "left");
+            ctx.globalAlpha = 1;
             
-            // Area explanation
-            const areaStartY = stripY + stripHeight + 40;
-            drawText("Area of the Strip = Length × Height", center.x, areaStartY, colors.blue, 20, "center");
-            drawText("= 2πr × dr", center.x, areaStartY + 30, colors.blue, 20, "center");
-            
-            // Visual highlight
+            // Visual highlight on the strip that pulses
+            const glowSize = 2 + Math.sin(time * 2) * 1;
             ctx.beginPath();
             ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
             ctx.strokeStyle = colors.yellow;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = glowSize;
             ctx.stroke();
+            
+            // Area explanation - appears with a slight delay
+            const areaStartY = stripY + stripHeight + 40;
+            drawText("Area of the Strip = Length × Height", center.x, areaStartY, colors.blue, 20, "center");
+            drawText("= 2πr × dr", center.x, areaStartY + 30, colors.blue, 20, "center");
             
             // Text content
             stageTitle.textContent = "The Area of Our Donut Ring";
@@ -853,6 +930,19 @@
             
             // Show slider
             sliderContainer.style.opacity = 1;
+            
+            // Occasionally highlight the rectangle to emphasize its area
+            if (Math.abs(time % 7) < 0.05) {
+                const containerRect = container.getBoundingClientRect();
+                const rectCenterX = containerRect.left + center.x;
+                const rectCenterY = containerRect.top + stripY + stripHeight/2;
+                highlightArea(
+                    rectCenterX - stripWidth/2, 
+                    rectCenterY - stripHeight/2,
+                    stripWidth,
+                    1500
+                );
+            }
         }
         
         function renderStep4() {
@@ -860,18 +950,19 @@
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Show shrinking dr
-            const drProgress = 0.2;
+            // Animate dr shrinking
+            const animPulse = (Math.sin(time * 0.7) * 0.5 + 0.5);
+            const drProgress = 0.5 - animPulse * 0.3; // Smoothly varies between 0.2 and 0.5
             const visualDr = dr * drProgress;
             
             // Original circle
             fillCircle(center.x, center.y, baseRadius, colors.blue, 0.3);
             drawCircle(center.x, center.y, baseRadius, colors.blue, false, 2);
             
-            // Expanded circle
+            // Expanded circle with animated size
             drawCircle(center.x, center.y, baseRadius + visualDr, colors.orange, false, 2);
             
-            // Donut
+            // Donut with animated size
             ctx.beginPath();
             ctx.arc(center.x, center.y, baseRadius + visualDr, 0, Math.PI * 2);
             ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
@@ -879,15 +970,133 @@
             ctx.fillStyle = hexToRgba(colors.orange, 0.5);
             ctx.fill();
             
-            // Show dr getting smaller
+            // Show dr getting smaller - with animated value
             const drText = Math.max(1, Math.floor(dr * drProgress));
             drawText(`dr = ${drText}`, center.x + baseRadius + visualDr + 20, center.y, colors.orange, 20, "left");
             drawText("r", center.x + baseRadius/2, center.y - 15, colors.green);
             
-            // Graph
+            // Show corresponding rectangle
+            const stripY = center.y + baseRadius * 0.5;
+            const stripWidth = 2 * Math.PI * baseRadius;
+            const stripStartX = center.x - stripWidth / 2;
+            const stripHeight = visualDr; // Shrinking with dr
+            
+            // Draw the strip with animated height
+            ctx.beginPath();
+            ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
+            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
+            ctx.fill();
+            ctx.strokeStyle = colors.orange;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw an arrow showing the height shrinking
+            const arrowStartY = stripY - 40;
+            const arrowY = stripY - 15;
+            drawArrow(center.x, arrowStartY, center.x, arrowY, colors.yellow, 2);
+            drawText("dr getting smaller", center.x + 15, arrowStartY - 5, colors.yellow, 18, "left");
+            
+            // Text content
+            stageTitle.textContent = "What Happens When dr Gets Smaller?";
+            explanation.innerHTML = "Let's see what happens when we make dr smaller and smaller.<br><br>As dr gets smaller, our donut ring becomes thinner, but its formula stays the same: Area = 2πr × dr.<br><br>The smaller dr gets, the more precise our approximation becomes.";
+            
+            // Show formula
+            formula.textContent = "Area of thin ring = 2πr × dr";
+            formula.style.opacity = 1;
+            
+            // Hide slider
+            sliderContainer.style.opacity = 0;
+            
+            // Occasionally highlight the shrinking dr
+            if (Math.abs(time % 6) < 0.05) {
+                const containerRect = container.getBoundingClientRect();
+                highlightArea(
+                    containerRect.left + center.x + baseRadius, 
+                    containerRect.top + center.y - 10,
+                    visualDr * 2,
+                    1500
+                );
+            }
+        }
+        
+        function renderStep5() {
+            clear();
+            const center = getCenter();
+            const baseRadius = getBaseRadius();
+            
+            // Create an animation for the thin ring getting even thinner
+            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            const drProgress = 0.15 - animPulse * 0.1; // Very small dr
+            const visualDr = dr * drProgress;
+            
+            // Original circle
+            fillCircle(center.x, center.y, baseRadius, colors.blue, 0.3);
+            drawCircle(center.x, center.y, baseRadius, colors.blue, false, 2);
+            
+            // A very thin ring
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, baseRadius + visualDr, 0, Math.PI * 2);
+            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fillStyle = hexToRgba(colors.orange, 0.6);
+            ctx.fill();
+            
+            // Draw an arrow pointing to the thin ring with explanatory text
+            const ringArrowX = center.x + baseRadius * 0.7;
+            const ringArrowY = center.y - baseRadius * 0.7;
+            drawArrow(ringArrowX, ringArrowY, center.x + baseRadius, center.y, colors.red, 2);
+            drawText("Very small dr", ringArrowX + 15, ringArrowY - 5, colors.red, 18, "left");
+            
+            // Draw the rate of change as the circumference of the circle
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2);
+            ctx.setLineDash([5, 3]);
+            ctx.strokeStyle = hexToRgba(colors.purple, 0.7 + 0.3 * animPulse);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw text explaining the circumference
+            drawText("Circumference = 2πr", center.x, center.y - baseRadius - 25, colors.purple, 20, "center");
+            
+            // Text content
+            stageTitle.textContent = "Rate of Change at a Point";
+            explanation.innerHTML = "When we make dr extremely small (approaching zero), we're asking:<br><br>'At this exact radius, how quickly does the area change if we make a tiny increase in radius?'<br><br>This instantaneous rate of change equals the circumference of the circle (2πr).";
+            
+            // Show formula
+            formula.innerHTML = "Rate of Area Change = 2πr<br><small>(This is the derivative of area with respect to radius)</small>";
+            formula.style.opacity = 1;
+            
+            // Hide slider
+            sliderContainer.style.opacity = 0;
+        }
+        
+        function renderStep6() {
+            clear();
+            const center = getCenter();
+            const baseRadius = getBaseRadius();
+            
+            // Draw a growing circle animation
+            const animPulse = (Math.sin(time * 0.7) * 0.5 + 0.5);
+            const pulseRadius = baseRadius * (1 - 0.3 * animPulse);
+            
+            // Draw the circle with animated radius
+            fillCircle(center.x, center.y, pulseRadius, colors.blue, 0.3);
+            drawCircle(center.x, center.y, pulseRadius, colors.blue, false, 2);
+            
+            // Draw pulsing circumference
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, pulseRadius, 0, Math.PI * 2);
+            ctx.setLineDash([5, 3]);
+            ctx.strokeStyle = hexToRgba(colors.purple, 0.7 + 0.3 * animPulse);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Graph showing relationship
             const graphX = center.x + baseRadius * 0.9;
-            const graphY = center.y + baseRadius * 0.6;
-            const graphSize = baseRadius * 0.7;
+            const graphY = center.y + baseRadius * 0.3; // Moved higher
+            const graphSize = baseRadius * 0.6;
             
             // Axes
             drawLine(graphX - graphSize/2, graphY, graphX + graphSize/2, graphY, colors.white, 1);
@@ -911,38 +1120,52 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Tangent line at a point
-            const touchX = graphX + graphSize * 0.3;
-            const touchR = (touchX - (graphX - graphSize/2)) / graphSize - 0.5;
-            const touchY = graphY - (touchR * touchR) * graphSize * 0.8;
+            // Animated dot moving along the curve
+            const dotProgress = (animPulse * 0.8) + 0.1; // 0.1 to 0.9
+            const dotX = graphX - graphSize/2 + graphSize * dotProgress;
+            const xValue = dotProgress - 0.5; // -0.4 to 0.4
+            const dotY = graphY - (xValue * xValue) * graphSize * 0.8;
             
             // Point on curve
             ctx.beginPath();
-            ctx.arc(touchX, touchY, 4, 0, Math.PI * 2);
+            ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
             ctx.fillStyle = colors.red;
             ctx.fill();
             
-            // Tangent line
-            const slope = -2 * touchR * graphSize * 0.8;
+            // Tangent line at the point
+            const slope = -2 * xValue * graphSize * 0.8;
             ctx.beginPath();
-            ctx.moveTo(touchX - 30, touchY - slope * (-30/graphSize));
-            ctx.lineTo(touchX + 30, touchY - slope * (30/graphSize));
+            ctx.moveTo(dotX - 20, dotY - slope * (-20/graphSize));
+            ctx.lineTo(dotX + 20, dotY - slope * (20/graphSize));
             ctx.strokeStyle = colors.red;
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Label slope
-            drawText("Slope = 2πr", touchX + 35, touchY - 20, colors.red, 16, "left");
+            // Draw a connection line between the circle and the graph
+            ctx.beginPath();
+            ctx.setLineDash([3, 3]);
+            ctx.moveTo(center.x + pulseRadius, center.y);
+            ctx.lineTo(dotX, dotY);
+            ctx.strokeStyle = hexToRgba(colors.green, 0.4);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label the relationship
+            drawText("At any radius:", center.x, center.y + baseRadius * 0.7, colors.white, 20, "center");
+            drawText("• Circle area = πr²", center.x, center.y + baseRadius * 0.7 + 30, colors.blue, 18, "center");
+            drawText("• Rate of area change = 2πr", center.x, center.y + baseRadius * 0.7 + 60, colors.purple, 18, "center");
+            drawText("• Rate = Circumference", center.x, center.y + baseRadius * 0.7 + 90, colors.red, 18, "center");
             
             // Text content
-            stageTitle.textContent = "The Circle's Rate of Area Change";
-            explanation.innerHTML = "As our change in radius (dr) gets smaller and smaller, our approximation gets more and more accurate.<br><br>In the limit as dr approaches zero, we've found the <i>instantaneous rate of change</i> of area with respect to radius. This rate equals the circumference (2πr).";
+            stageTitle.textContent = "The Fundamental Relationship";
+            explanation.innerHTML = "We've discovered something profound: at any radius, the rate at which a circle's area changes equals its circumference.<br><br>This relationship connects the circle's area (πr²) to its perimeter (2πr) in a beautiful way that we can understand visually, without needing complex math.";
             
             // Show formula
-            formula.innerHTML = "Rate of Area Change = 2πr<br><small>(In calculus: dA/dr = 2πr)</small>";
+            formula.innerHTML = "Area = πr²<br>Rate of Change = 2πr";
             formula.style.opacity = 1;
             
-            // Fade out slider
+            // Hide slider
             sliderContainer.style.opacity = 0;
         }
         
@@ -995,15 +1218,19 @@
                 case 2: renderStep2(); break;
                 case 3: renderStep3(); break;
                 case 4: renderStep4(); break;
+                case 5: renderStep5(); break;
+                case 6: renderStep6(); break;
             }
         }
         
-        // Animation loop - now animates for steps 0, 2, and 4
+        // Animation loop - now animates for all steps except basic static ones
         function animate() {
             time += 0.02;
             
             // Animate steps that have dynamic content
-            if (currentStep === 0 || currentStep === 2 || currentStep === 4) {
+            if (currentStep === 0 || currentStep === 1 || currentStep === 2 || 
+                currentStep === 3 || currentStep === 4 || currentStep === 5 || 
+                currentStep === 6) {
                 render();
             }
             
