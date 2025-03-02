@@ -1509,113 +1509,47 @@
             ctx.fillStyle = gradient;
             ctx.fill();
             
-            // Highlight specific segments of the ring with animation
-            const segmentCount = 8;
-            const segmentAngle = Math.PI * 2 / segmentCount;
+            // Highlight just four points around the ring for clarity
+            const highlightPoints = [0, Math.PI/2, Math.PI, Math.PI*3/2];
             
-            for (let i = 0; i < segmentCount; i++) {
-                const segStartAngle = i * segmentAngle;
-                const segEndAngle = (i + 1) * segmentAngle;
-                const segMidAngle = (segStartAngle + segEndAngle) / 2;
+            for (let i = 0; i < highlightPoints.length; i++) {
+                const angle = highlightPoints[i];
                 
-                // Determine if this segment is being highlighted
-                const angleDiff = Math.abs((segMidAngle - highlightAngle + Math.PI * 2) % (Math.PI * 2));
-                const isHighlighted = angleDiff < segmentAngle * 1.5;
+                // Draw measurement lines at cardinal points
+                const outerX = center.x + Math.cos(angle) * expandedRadius;
+                const outerY = center.y + Math.sin(angle) * expandedRadius;
+                const innerX = center.x + Math.cos(angle) * baseRadius;
+                const innerY = center.y + Math.sin(angle) * baseRadius;
                 
-                if (isHighlighted) {
-                    // Draw highlighted segment
-                    ctx.beginPath();
-                    ctx.arc(center.x, center.y, expandedRadius, segStartAngle, segEndAngle);
-                    ctx.arc(center.x, center.y, baseRadius, segEndAngle, segStartAngle, true);
-                    ctx.closePath();
-                    ctx.fillStyle = hexToRgba(colors.yellow, 0.7);
-                    ctx.fill();
-                    ctx.strokeStyle = colors.yellow;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    
-                    // Draw thickness measurement lines
-                    const midPointOuterX = center.x + Math.cos(segMidAngle) * expandedRadius;
-                    const midPointOuterY = center.y + Math.sin(segMidAngle) * expandedRadius;
-                    const midPointInnerX = center.x + Math.cos(segMidAngle) * baseRadius;
-                    const midPointInnerY = center.y + Math.sin(segMidAngle) * baseRadius;
-                    
-                    // Draw dotted line connecting inner and outer points
-                    ctx.setLineDash([3, 3]);
-                    ctx.beginPath();
-                    ctx.moveTo(midPointInnerX, midPointInnerY);
-                    ctx.lineTo(midPointOuterX, midPointOuterY);
-                    ctx.strokeStyle = hexToRgba(colors.green, 0.8);
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                    
-                    // Label the thickness
-                    const labelX = center.x + Math.cos(segMidAngle) * (baseRadius + dr * 1.3);
-                    const labelY = center.y + Math.sin(segMidAngle) * (baseRadius + dr * 1.3);
-                    ctx.save();
-                    ctx.translate(labelX, labelY);
-                    ctx.rotate(segMidAngle + Math.PI/2);
-                    drawText("thickness = dr", 0, 0, colors.green, 16, "center");
-                    ctx.restore();
+                // Draw line connecting inner and outer points
+                ctx.beginPath();
+                ctx.moveTo(innerX, innerY);
+                ctx.lineTo(outerX, outerY);
+                ctx.strokeStyle = colors.green;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Label the thickness at one point only (right side)
+                if (i === 0) {
+                    drawText("thickness = dr", outerX + 20, outerY, colors.green, 16, "left");
                 }
             }
             
-            // Create magnifying glass effect
-            ctx.save();
-            // Draw magnifier circle
-            ctx.beginPath();
-            ctx.arc(magnifierX, magnifierY, magnifierSize, 0, Math.PI * 2);
-            ctx.fillStyle = hexToRgba(colors.background, 0.7);
-            ctx.fill();
+            // Simple callout to highlight the thickness
+            drawArrow(
+                center.x + baseRadius * 0.7, 
+                center.y - baseRadius * 0.7,
+                center.x + baseRadius + dr/2, 
+                center.y,
+                colors.green,
+                2
+            );
             
-            // Clip to the magnifier circle
-            ctx.clip();
-            
-            // Draw magnified content
-            const magnification = 2.5;
-            ctx.translate(magnifierX, magnifierY);
-            ctx.scale(magnification, magnification);
-            ctx.translate(-magnifierX, -magnifierY);
-            
-            // Draw the ring section inside the magnifier
-            ctx.beginPath();
-            ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
-            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.fillStyle = hexToRgba(colors.orange, 0.6);
-            ctx.fill();
-            
-            // Draw thickness measurement in magnified view
-            const magMidAngle = magnifierCenterAngle;
-            const magOuterX = center.x + Math.cos(magMidAngle) * expandedRadius;
-            const magOuterY = center.y + Math.sin(magMidAngle) * expandedRadius;
-            const magInnerX = center.x + Math.cos(magMidAngle) * baseRadius;
-            const magInnerY = center.y + Math.sin(magMidAngle) * baseRadius;
-            
-            // Draw arrow showing thickness
-            const arrowAngle = magMidAngle + Math.PI/2;
-            const arrowX1 = magInnerX + Math.cos(arrowAngle) * 5;
-            const arrowY1 = magInnerY + Math.sin(arrowAngle) * 5;
-            const arrowX2 = magOuterX + Math.cos(arrowAngle) * 5;
-            const arrowY2 = magOuterY + Math.sin(arrowAngle) * 5;
-            
-            drawArrow(arrowX1, arrowY1, arrowX2, arrowY2, colors.green, 3);
-            
-            ctx.restore();
-            
-            // Draw magnifier border
-            ctx.beginPath();
-            ctx.arc(magnifierX, magnifierY, magnifierSize, 0, Math.PI * 2);
-            ctx.strokeStyle = hexToRgba(colors.white, 0.8);
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Add "Magnified View" label
+            // Add "Thickness = dr" label
             ctx.fillStyle = colors.white;
             ctx.textAlign = "center";
-            ctx.font = "bold 14px Arial";
-            ctx.fillText("Magnified View", magnifierX, magnifierY - magnifierSize - 10);
+            ctx.font = "bold 16px Arial";
+            ctx.fillText("Thickness = dr", center.x + baseRadius + dr/2 + 40, center.y);
             
             // Add key measurement labels around the circle
             ctx.globalAlpha = 0.8;
@@ -2149,117 +2083,32 @@
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Animation timing
-            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            // Simple title text
+            drawText("Real-World Applications", center.x, center.y - baseRadius * 0.5, colors.blue, 24, "center");
             
-            // Draw background with subtle grid and visual depth
-            ctx.fillStyle = hexToRgba(colors.background, 0.4);
-            ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+            // List examples in a simple layout
+            const examples = [
+                "Water Ripples",
+                "Tree Rings",
+                "Planetary Orbits",
+                "Sound Waves"
+            ];
             
-            // Draw real-world examples in a circular arrangement
-            const exampleCount = 4;
-            const exampleRadius = baseRadius * 1.2;
-            const iconSize = baseRadius * 0.4;
+            // Draw simple list
+            const startY = center.y - baseRadius * 0.2;
+            const spacing = 40;
             
-            // Central theme circle
-            fillCircle(center.x, center.y, baseRadius * 0.5, colors.blue, 0.2);
-            drawCircle(center.x, center.y, baseRadius * 0.5, colors.blue, false, 2);
-            drawText("Circle Growth", center.x, center.y, colors.white, 22, "center");
-            drawText("in Nature", center.x, center.y + 30, colors.white, 22, "center");
-            
-            // Draw examples
-            for (let i = 0; i < exampleCount; i++) {
-                const angle = (i / exampleCount) * Math.PI * 2 - Math.PI / 4; // Start from top-right
-                const exX = center.x + Math.cos(angle) * exampleRadius;
-                const exY = center.y + Math.sin(angle) * exampleRadius;
-                
-                // Animated pulse for each example
-                const individualPulse = (Math.sin(time * 0.7 + i * 1.5) * 0.5 + 0.5);
-                const pulseSize = iconSize * (1 + individualPulse * 0.2);
-                
-                // Draw connecting line
-                ctx.beginPath();
-                ctx.setLineDash([5, 3]);
-                ctx.moveTo(center.x, center.y);
-                ctx.lineTo(exX, exY);
-                ctx.strokeStyle = hexToRgba(colors.purple, 0.3 + individualPulse * 0.3);
-                ctx.lineWidth = 1 + individualPulse * 2;
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                // Draw example circle
-                fillCircle(exX, exY, pulseSize, colors.orange, 0.2 + individualPulse * 0.3);
-                drawCircle(exX, exY, pulseSize, colors.orange, false, 2);
-                
-                // Draw ripple effect around examples
-                for (let j = 1; j <= 3; j++) {
-                    const ripplePhase = (time * 0.5 + i * 0.7) % 3;
-                    if (j > ripplePhase && j < ripplePhase + 1.5) {
-                        const rippleSize = pulseSize + j * 20 * (1 - (j - ripplePhase) / 1.5);
-                        ctx.beginPath();
-                        ctx.arc(exX, exY, rippleSize, 0, Math.PI * 2);
-                        ctx.strokeStyle = hexToRgba(colors.orange, 0.5 * (1 - (j - ripplePhase) / 1.5));
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
-                }
-                
-                // Example labels
-                let title, description;
-                switch(i) {
-                    case 0: 
-                        title = "Water Ripples";
-                        description = "Circular waves spread with area growth matching our pattern";
-                        break;
-                    case 1: 
-                        title = "Tree Rings";
-                        description = "Annual growth forms rings with consistent mathematical relationships";
-                        break;
-                    case 2: 
-                        title = "Planetary Orbits";
-                        description = "Orbital areas follow similar growth patterns";
-                        break;
-                    case 3: 
-                        title = "Sound Waves";
-                        description = "Circular sound propagation follows area-circumference relationship";
-                        break;
-                }
-                
-                // Title with background for better readability
-                ctx.fillStyle = hexToRgba(colors.background, 0.7);
-                ctx.fillRect(exX - 100, exY + pulseSize + 5, 200, 60);
-                
-                drawText(title, exX, exY + pulseSize + 20, colors.yellow, 18, "center");
-                
-                // Multi-line description
-                const words = description.split(' ');
-                let line = '';
-                let y = exY + pulseSize + 40;
-                
-                for (let w = 0; w < words.length; w++) {
-                    const testLine = line + words[w] + ' ';
-                    if (testLine.length > 25) {
-                        drawText(line, exX, y, colors.white, 14, "center");
-                        line = words[w] + ' ';
-                        y += 18;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                drawText(line, exX, y, colors.white, 14, "center");
+            for (let i = 0; i < examples.length; i++) {
+                const y = startY + i * spacing;
+                drawText("• " + examples[i], center.x, y, colors.orange, 20, "center");
             }
             
-            // Bottom information panel
-            const panelY = center.y + baseRadius * 0.8;
-            ctx.fillStyle = hexToRgba(colors.background, 0.8);
-            ctx.fillRect(center.x - baseRadius * 1.2, panelY, baseRadius * 2.4, 120);
-            ctx.strokeStyle = colors.blue;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(center.x - baseRadius * 1.2, panelY, baseRadius * 2.4, 120);
-            
-            drawText("Real-World Applications", center.x, panelY + 25, colors.blue, 22, "center");
-            drawText("The circle growth pattern appears throughout nature and technology", center.x, panelY + 60, colors.white, 16, "center");
-            drawText("This geometric principle helps us understand and model natural phenomena", center.x, panelY + 85, colors.white, 16, "center");
+            // Draw simple explanation
+            ctx.fillStyle = colors.white;
+            ctx.textAlign = "center";
+            ctx.font = "18px Arial";
+            ctx.fillText("The circle growth pattern appears throughout nature", center.x, center.y + baseRadius * 0.5, colors.white);
+            ctx.fillText("This geometric principle helps us understand natural phenomena", center.x, center.y + baseRadius * 0.5 + 30);
             
             // Text content
             stageTitle.textContent = "Practical Applications";
@@ -2278,157 +2127,48 @@
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Animation timing
-            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
-            
             // Draw title at top
-            ctx.fillStyle = hexToRgba(colors.blue, 0.8);
+            ctx.fillStyle = colors.blue;
             ctx.textAlign = "center";
             ctx.font = "bold 24px Arial";
-            ctx.fillText("Extending to Other Shapes", center.x, center.y - baseRadius * 1.1);
+            ctx.fillText("Extending to Other Shapes", center.x, center.y - baseRadius * 0.8);
             
-            // Draw comparison display with multiple shapes
-            const shapeCount = 3;
-            const shapesY = center.y - baseRadius * 0.2;
-            const spacing = baseRadius * 1.4;
+            // Simple table layout
+            const tableTop = center.y - baseRadius * 0.5;
+            const rowHeight = 50;
+            const colWidth = baseRadius * 0.8;
             
-            // Shape information
+            // Table headers
+            drawText("Shape", center.x - colWidth, tableTop, colors.white, 20, "center");
+            drawText("Area", center.x, tableTop, colors.white, 20, "center");
+            drawText("Growth Rate", center.x + colWidth, tableTop, colors.white, 20, "center");
+            
+            // Draw horizontal line
+            ctx.beginPath();
+            ctx.moveTo(center.x - colWidth * 2, tableTop + 20);
+            ctx.lineTo(center.x + colWidth * 2, tableTop + 20);
+            ctx.strokeStyle = colors.white;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Table data
             const shapes = [
-                {
-                    name: "Circle",
-                    area: "πr²",
-                    growth: "2πr",
-                    color: colors.blue,
-                    draw: (x, y, size) => {
-                        // Draw circle
-                        fillCircle(x, y, size, colors.blue, 0.3);
-                        drawCircle(x, y, size, colors.blue, false, 2);
-                        
-                        // Show circumference
-                        ctx.beginPath();
-                        ctx.arc(x, y, size, 0, Math.PI * 2);
-                        ctx.setLineDash([5, 3]);
-                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                    }
-                },
-                {
-                    name: "Square",
-                    area: "s²",
-                    growth: "4s",
-                    color: colors.green,
-                    draw: (x, y, size) => {
-                        // Draw square
-                        ctx.fillStyle = hexToRgba(colors.green, 0.3);
-                        ctx.fillRect(x - size, y - size, size * 2, size * 2);
-                        ctx.strokeStyle = colors.green;
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(x - size, y - size, size * 2, size * 2);
-                        
-                        // Show perimeter
-                        ctx.setLineDash([5, 3]);
-                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
-                        ctx.lineWidth = 3;
-                        ctx.strokeRect(x - size, y - size, size * 2, size * 2);
-                        ctx.setLineDash([]);
-                    }
-                },
-                {
-                    name: "Sphere",
-                    area: "4πr²",
-                    growth: "8πr",
-                    color: colors.teal,
-                    draw: (x, y, size) => {
-                        // Draw sphere with shading for 3D effect
-                        const gradient = ctx.createRadialGradient(
-                            x - size * 0.3, y - size * 0.3, size * 0.1,
-                            x, y, size
-                        );
-                        gradient.addColorStop(0, hexToRgba(colors.teal, 0.7));
-                        gradient.addColorStop(1, hexToRgba(colors.teal, 0.1));
-                        
-                        ctx.beginPath();
-                        ctx.arc(x, y, size, 0, Math.PI * 2);
-                        ctx.fillStyle = gradient;
-                        ctx.fill();
-                        
-                        ctx.beginPath();
-                        ctx.arc(x, y, size, 0, Math.PI * 2);
-                        ctx.strokeStyle = colors.teal;
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                        
-                        // Draw surface highlight with ellipse
-                        ctx.beginPath();
-                        ctx.ellipse(x, y, size, size * 0.3, 0, 0, Math.PI * 2);
-                        ctx.setLineDash([5, 3]);
-                        ctx.strokeStyle = hexToRgba(colors.purple, 0.8);
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                        
-                        // Add some circle accents to show sphere
-                        ctx.beginPath();
-                        ctx.ellipse(x, y, size * 0.7, size * 0.2, Math.PI * 0.25, 0, Math.PI * 2);
-                        ctx.strokeStyle = hexToRgba(colors.teal, 0.5);
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
-                }
+                { name: "Circle", area: "πr²", growth: "2πr", color: colors.blue },
+                { name: "Square", area: "s²", growth: "4s", color: colors.green },
+                { name: "Sphere", area: "4πr²", growth: "8πr", color: colors.teal }
             ];
             
-            // Draw each shape with pulsating animation
-            for (let i = 0; i < shapeCount; i++) {
-                const x = center.x + (i - 1) * spacing;
-                
-                // Pulsing animation offset per shape
-                const individualPulse = (Math.sin(time * 0.7 + i * 1.5) * 0.5 + 0.5);
-                const size = baseRadius * 0.4 * (1 + individualPulse * 0.2);
-                
-                // Draw shape
-                shapes[i].draw(x, shapesY, size);
-                
-                // Draw title and formulas
-                drawText(shapes[i].name, x, shapesY - size - 20, shapes[i].color, 22, "center");
-                
-                // Formula card
-                const cardWidth = 220;
-                const cardHeight = 120;
-                const cardY = shapesY + baseRadius * 0.7;
-                
-                // Card background
-                ctx.fillStyle = hexToRgba(colors.background, 0.8);
-                ctx.fillRect(x - cardWidth/2, cardY, cardWidth, cardHeight);
-                ctx.strokeStyle = shapes[i].color;
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x - cardWidth/2, cardY, cardWidth, cardHeight);
-                
-                // Card content
-                drawText("Area:", x, cardY + 30, colors.white, 18, "center");
-                drawText(shapes[i].area, x, cardY + 60, shapes[i].color, 22, "center");
-                drawText("Growth Rate:", x, cardY + 90, colors.purple, 18, "center");
-                drawText(shapes[i].growth, x, cardY + 120 - 15, colors.purple, 22, "center");
-                
-                // Connection lines
-                drawArrow(
-                    x, shapesY + size + 10,
-                    x, cardY - 10,
-                    shapes[i].color,
-                    2
-                );
+            for (let i = 0; i < shapes.length; i++) {
+                const y = tableTop + 40 + i * rowHeight;
+                drawText(shapes[i].name, center.x - colWidth, y, shapes[i].color, 18, "center");
+                drawText(shapes[i].area, center.x, y, shapes[i].color, 18, "center");
+                drawText(shapes[i].growth, center.x + colWidth, y, shapes[i].color, 18, "center");
             }
             
-            // Draw observation at bottom
-            ctx.fillStyle = hexToRgba(colors.background, 0.9);
-            const observationY = shapesY + baseRadius * 1.6;
-            ctx.fillRect(center.x - baseRadius * 1.5, observationY, baseRadius * 3, 80);
-            
-            drawText("Common Pattern: Growth Rate relates to Boundary", 
-                    center.x, observationY + 30, colors.yellow, 22, "center");
-            drawText("For each shape, the rate of area/volume change is proportional to its perimeter/surface", 
-                    center.x, observationY + 60, colors.white, 16, "center");
+            // Simple conclusion
+            const conclusionY = center.y + baseRadius * 0.5;
+            drawText("Common Pattern: Growth Rate relates to Boundary", center.x, conclusionY, colors.yellow, 20, "center");
+            drawText("The boundary of a shape determines how its area grows", center.x, conclusionY + 40, colors.white, 18, "center");
             
             // Text content
             stageTitle.textContent = "The Growth Pattern";
@@ -2447,103 +2187,33 @@
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
-            // Animation timing
-            const animPulse = (Math.sin(time * 0.5) * 0.5 + 0.5);
+            // Draw title
+            drawText("The Beautiful Connection", center.x, center.y - baseRadius * 0.8, colors.yellow, 24, "center");
             
-            // Draw beautiful starfield background for final screen
-            for (let i = 0; i < 100; i++) {
-                const x = Math.random() * canvas.width / (window.devicePixelRatio || 1);
-                const y = Math.random() * canvas.height / (window.devicePixelRatio || 1);
-                const size = Math.random() * 2 + 1;
-                const alpha = Math.random() * 0.5 + 0.3;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-                ctx.fill();
-            }
+            // Simple circle
+            fillCircle(center.x, center.y - baseRadius * 0.3, baseRadius * 0.4, colors.blue, 0.3);
+            drawCircle(center.x, center.y - baseRadius * 0.3, baseRadius * 0.4, colors.blue, false, 2);
             
-            // Draw animated central circle with rings
-            const circleX = center.x;
-            const circleY = center.y - baseRadius * 0.2;
-            const mainRadius = baseRadius * 0.6;
+            // Show simple equations
+            const equation1Y = center.y + baseRadius * 0.2;
+            drawText("Area = πr²", center.x, equation1Y, colors.blue, 24, "center");
             
-            // Glowing central circle with pulsating effect
-            const glowSize = mainRadius * (1 + animPulse * 0.2);
+            const equation2Y = equation1Y + 50;
+            drawText("Rate of change = 2πr", center.x, equation2Y, colors.purple, 24, "center");
             
-            // Multiple concentric circles with varying opacity
-            for (let i = 5; i >= 0; i--) {
-                const radius = glowSize * (1 + i * 0.3);
-                const alpha = 0.03 + 0.05 * animPulse * (1 - i/5);
-                
-                fillCircle(circleX, circleY, radius, colors.blue, alpha);
-            }
-            
-            // Main circle
-            fillCircle(circleX, circleY, glowSize, colors.blue, 0.6);
-            drawCircle(circleX, circleY, glowSize, colors.blue, false, 3);
-            
-            // Draw circumference with highlighted animated dots
-            const dotCount = 30;
-            for (let i = 0; i < dotCount; i++) {
-                const angle = (i / dotCount) * Math.PI * 2 + time * 0.2;
-                const x = circleX + Math.cos(angle) * glowSize;
-                const y = circleY + Math.sin(angle) * glowSize;
-                
-                const dotPulse = 0.5 + 0.5 * Math.sin(time * 2 + i * 0.3);
-                const dotSize = 3 + dotPulse * 2;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, dotSize, 0, Math.PI * 2);
-                ctx.fillStyle = hexToRgba(colors.purple, 0.6 + 0.4 * dotPulse);
-                ctx.fill();
-            }
-            
-            // Draw area visualization
-            ctx.fillStyle = hexToRgba(colors.blue, 0.15 + 0.1 * animPulse);
-            ctx.beginPath();
-            ctx.arc(circleX, circleY, glowSize * 0.9, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw final equations with beautiful formatting
-            const equationY = circleY + glowSize * 1.5;
-            
-            // Area equation
-            ctx.fillStyle = hexToRgba(colors.background, 0.8);
-            ctx.fillRect(circleX - baseRadius, equationY, baseRadius * 2, 40);
-            ctx.strokeStyle = colors.blue;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(circleX - baseRadius, equationY, baseRadius * 2, 40);
-            
-            drawText("Area = πr²", circleX, equationY + 25, colors.blue, 24, "center");
-            
-            // Rate equation
-            const rateY = equationY + 60;
-            ctx.fillStyle = hexToRgba(colors.background, 0.8);
-            ctx.fillRect(circleX - baseRadius, rateY, baseRadius * 2, 40);
-            ctx.strokeStyle = colors.purple;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(circleX - baseRadius, rateY, baseRadius * 2, 40);
-            
-            drawText("Rate of change = 2πr", circleX, rateY + 25, colors.purple, 24, "center");
-            
-            // Draw connection arrow
+            // Simple connection
             drawArrow(
-                circleX - baseRadius * 0.1, equationY + 45,
-                circleX - baseRadius * 0.1, rateY - 5,
+                center.x - 50, equation1Y + 15,
+                center.x - 50, equation2Y - 15,
                 colors.yellow,
-                3
+                2
             );
-            drawText("derivative", circleX + baseRadius * 0.1, equationY + 65, colors.yellow, 18, "left");
+            drawText("derivative", center.x + 20, equation1Y + 25, colors.yellow, 18, "left");
             
             // Final message
-            const messageY = rateY + 80;
-            ctx.fillStyle = hexToRgba(colors.background, 0.8);
-            ctx.fillRect(center.x - baseRadius * 1.3, messageY, baseRadius * 2.6, 90);
-            
-            drawText("The Beautiful Connection", center.x, messageY + 30, colors.yellow, 24, "center");
-            drawText("Area and circumference are linked through growth.", center.x, messageY + 60, colors.white, 18, "center");
-            drawText("This is calculus made visible and intuitive!", center.x, messageY + 85, colors.white, 18, "center");
+            const messageY = equation2Y + 70;
+            drawText("Area and circumference are linked through growth", center.x, messageY, colors.white, 18, "center");
+            drawText("This is calculus made visual and intuitive!", center.x, messageY + 30, colors.white, 18, "center");
             
             // Text content
             stageTitle.textContent = "The Beautiful Connection";
@@ -2688,28 +2358,23 @@
             }
         }
         
-        // Animation loop - now animates for all steps except basic static ones
+        // Simplified animation loop with reduced effects
         function animate() {
             time += 0.02;
             
-            // Animate subtle slider wobble on steps that use it
+            // Basic slider interaction - no animations
             if (sliderContainer.style.opacity !== '0') {
-                // Animate the slider value slightly
-                const sliderAnimation = (Math.sin(time * 0.5) * 0.5 + 0.5) * 0.1; // 0 to 0.1
-                const baseValue = dr;
-                
-                // Only adjust visual appearance for hint, not actual value
-                if (currentStep === 1 || currentStep === 2 || currentStep === 3) {
-                    // Add subtle "breathing" animation to the thumb
-                    const thumbSize = 20 + Math.sin(time) * 2;
-                    document.documentElement.style.setProperty('--thumb-size', `${thumbSize}px`);
-                }
+                // Just set a consistent thumb size
+                document.documentElement.style.setProperty('--thumb-size', `20px`);
             }
             
-            // Animate all steps
+            // Render current step
             render();
             
-            animationFrameId = requestAnimationFrame(animate);
+            // Use lower frame rate for better performance
+            setTimeout(() => {
+                animationFrameId = requestAnimationFrame(animate);
+            }, 33); // ~30fps instead of 60fps
         }
         
         // Touch swipe support for mobile devices
