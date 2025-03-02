@@ -5,23 +5,191 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Circle Growth Visualization</title>
     <style>
-        body{margin:0;padding:0;background:#0f0f1f;color:white;font-family:sans-serif;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;}
-        #container{position:relative;width:min(900px,95vw);height:min(600px,95vh);border-radius:12px;box-shadow:0 0 20px rgba(0,0,0,0.3);}
-        canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
-        #controls{position:absolute;bottom:20px;left:0;width:100%;display:flex;justify-content:center;gap:20px;z-index:10;}
-        button{background:#8d44ad;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-size:16px;transition:all 0.3s;}
-        button:hover{background:#9b59b6;transform:translateY(-2px);}
-        button:active{transform:translateY(1px);}
-        #stageTitle{position:absolute;top:20px;left:0;width:100%;text-align:center;font-size:min(24px,5vw);font-weight:bold;transition:opacity 0.5s,transform 0.5s;z-index:10;text-shadow:0 0 10px rgba(0,0,0,0.5);}
-        #explanation{position:absolute;top:60px;left:50px;width:calc(100% - 100px);text-align:left;font-size:min(18px,4vw);line-height:1.5;transition:opacity 0.5s,transform 0.5s;z-index:10;text-shadow:0 0 10px rgba(0,0,0,0.5);}
-        #formula{position:absolute;bottom:100px;left:0;width:100%;text-align:center;font-size:min(26px,5vw);font-family:'Times New Roman',serif;transition:opacity 0.5s;z-index:10;opacity:0;}
-        #navigation{position:absolute;bottom:70px;left:0;width:100%;display:flex;justify-content:center;align-items:center;gap:10px;z-index:10;}
-        .navDot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.3);transition:all 0.3s;cursor:pointer;}
-        .navDot.active{background:white;transform:scale(1.3);}
-        #sliderContainer{position:absolute;bottom:150px;left:50%;transform:translateX(-50%);width:min(400px,80%);text-align:center;z-index:10;transition:opacity 0.5s;}
-        #radiusSlider{width:100%;margin-bottom:10px;cursor:pointer;}
-        #sliderLabel{font-size:min(16px,3.5vw);}
-        #keyboardHint{position:absolute;bottom:15px;left:0;width:100%;text-align:center;font-size:14px;color:rgba(255,255,255,0.6);z-index:10;}
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f0f1f;
+            color: white;
+            font-family: sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        #container {
+            position: relative;
+            width: min(900px, 95vw);
+            height: min(600px, 95vh);
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+        }
+        
+        button {
+            background: #8d44ad;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #9b59b6;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        #stageTitle {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: min(24px, 5vw);
+            font-weight: bold;
+            transition: opacity 0.5s, transform 0.5s;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        #explanation {
+            position: absolute;
+            top: 60px;
+            left: 50px;
+            width: calc(100% - 100px);
+            text-align: left;
+            font-size: min(18px, 4vw);
+            line-height: 1.5;
+            transition: opacity 0.5s, transform 0.5s;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        #formula {
+            position: absolute;
+            bottom: 100px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: min(26px, 5vw);
+            font-family: 'Times New Roman', serif;
+            transition: opacity 0.5s;
+            z-index: 10;
+            opacity: 0;
+        }
+        
+        #navigation {
+            position: absolute;
+            bottom: 70px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .navDot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .navDot.active {
+            background: white;
+            transform: scale(1.3);
+        }
+        
+        #sliderContainer {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(400px, 80%);
+            text-align: center;
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+        
+        #radiusSlider {
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        #sliderLabel {
+            font-size: min(16px, 3.5vw);
+        }
+        
+        #keyboardHint {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            z-index: 10;
+        }
+        
+        #stepCounter {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            z-index: 10;
+        }
+        
+        #progressBar {
+            position: absolute;
+            bottom: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(300px, 60%);
+            height: 4px;
+            background-color: #555;
+            border-radius: 2px;
+            z-index: 10;
+        }
+        
+        #progressIndicator {
+            height: 100%;
+            background-color: #8d44ad;
+            border-radius: 2px;
+            width: 0%;
+        }
     </style>
 </head>
 <body>
@@ -42,7 +210,8 @@
             <div id="sliderLabel">Change in radius (dr): 10 units</div>
         </div>
         
-        <div id="navigation"></div>
+        <div id="stepCounter">Step 1 of 5</div>
+        <div id="progressBar"><div id="progressIndicator"></div></div>
         
         <div id="controls">
             <button id="prevBtn">Previous</button>
@@ -60,12 +229,12 @@
         const stageTitle = document.getElementById('stageTitle');
         const explanation = document.getElementById('explanation');
         const formula = document.getElementById('formula');
-        const navigation = document.getElementById('navigation');
+        const stepCounter = document.getElementById('stepCounter');
+        const progressIndicator = document.getElementById('progressIndicator');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
         const radiusSlider = document.getElementById('radiusSlider');
         const sliderLabel = document.getElementById('sliderLabel');
-        const sliderContainer = document.getElementById('sliderContainer');
         
         // State variables
         let currentStep = 0;
@@ -73,8 +242,12 @@
         let animationFrameId = null;
         let time = 0;
         let dr = 10; // Initial change in radius
-        let isTransitioning = false;
-        let transitionProgress = 0;
+        
+        // Set up progress tracking
+        function updateProgress() {
+            stepCounter.textContent = `Step ${currentStep + 1} of ${totalSteps}`;
+            progressIndicator.style.width = `${(currentStep / (totalSteps - 1)) * 100}%`;
+        }
         
         // Colors
         const colors = {
@@ -110,93 +283,23 @@
         window.addEventListener('load', setupCanvas);
         window.addEventListener('resize', setupCanvas);
         
-        // Setup navigation dots
-        function setupNavigation() {
-            navigation.innerHTML = '';
-            for (let i = 0; i < totalSteps; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'navDot';
-                if (i === currentStep) dot.classList.add('active');
-                
-                // Use closure to capture the current value of i
-                dot.addEventListener('click', (function(stepIndex) {
-                    return function() {
-                        try {
-                            if (stepIndex !== currentStep && !isTransitioning) {
-                                console.log("Navigating to step", stepIndex);
-                                startTransition(stepIndex);
-                            } else if (isTransitioning) {
-                                console.log("Cannot navigate: transition in progress");
-                            }
-                        } catch (error) {
-                            console.error("Error in nav dot click handler:", error);
-                            isTransitioning = false; // Reset transition state on error
-                        }
-                    };
-                })(i)); // Pass current i value to capture it by value, not reference
-                
-                navigation.appendChild(dot);
-            }
-        }
-        
-        // Update navigation dots
-        function updateNavigation() {
-            const dots = navigation.querySelectorAll('.navDot');
-            dots.forEach((dot, i) => {
-                if (i === currentStep) {
-                    dot.classList.add('active');
-                } else {
-                    dot.classList.remove('active');
-                }
-            });
-        }
-        
         // Event listeners
         radiusSlider.addEventListener('input', function() {
-            try {
-                dr = parseInt(this.value);
-                sliderLabel.textContent = `Change in radius (dr): ${dr} units`;
-                if (!isTransitioning) {
-                    console.log("Updating radius to", dr);
-                    render(currentStep);
-                }
-            } catch (error) {
-                console.error("Error in slider handler:", error);
-            }
+            dr = parseInt(this.value);
+            sliderLabel.textContent = `Change in radius (dr): ${dr} units`;
+            render();
         });
         
         document.addEventListener('keydown', function(e) {
-            if (isTransitioning) {
-                console.log("Cannot navigate: transition in progress");
-                return;
-            }
-            
             if (e.key === 'ArrowRight' || e.key === ' ') {
-                if (currentStep < totalSteps - 1) {
-                    startTransition(currentStep + 1);
-                }
+                nextStep();
             } else if (e.key === 'ArrowLeft') {
-                if (currentStep > 0) {
-                    startTransition(currentStep - 1);
-                }
+                prevStep();
             }
         });
         
-        prevBtn.addEventListener('click', function() {
-            if (!isTransitioning && currentStep > 0) {
-                startTransition(currentStep - 1);
-            } else if (isTransitioning) {
-                console.log("Cannot navigate: transition in progress");
-            }
-        });
-        
-        nextBtn.addEventListener('click', function() {
-            if (!isTransitioning && currentStep < totalSteps - 1) {
-                startTransition(currentStep + 1);
-            } else if (isTransitioning) {
-                console.log("Cannot navigate: transition in progress");
-            }
-        });
+        prevBtn.addEventListener('click', prevStep);
+        nextBtn.addEventListener('click', nextStep);
         
         // Helper functions
         function getCenter() {
@@ -306,14 +409,14 @@
         }
         
         // Render steps with intuition-first approach
-        function renderStep0(progress = 1) {
+        function renderStep0() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
             // Animated growing circle
             const animPulse = (Math.sin(time) * 0.5 + 0.5);
-            const pulseScale = 0.2 * progress;
+            const pulseScale = 0.2;
             const pulseRadius = baseRadius * (1 + animPulse * pulseScale);
             
             // Circle with pulsing effect
@@ -323,10 +426,8 @@
             // Radius line
             drawLine(center.x, center.y, center.x + pulseRadius, center.y, colors.green, 2);
             
-            // Radius label with fade-in
-            ctx.globalAlpha = progress;
+            // Radius label
             drawText("r", center.x + pulseRadius/2, center.y - 15, colors.green, 20, "center");
-            ctx.globalAlpha = 1;
             
             // Text content
             stageTitle.textContent = "Watching a Circle Grow";
@@ -337,7 +438,7 @@
             sliderContainer.style.opacity = 0;
         }
         
-        function renderStep1(progress = 1) {
+        function renderStep1() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -350,40 +451,28 @@
             drawLine(center.x, center.y, center.x + baseRadius, center.y, colors.green, 2);
             drawText("r", center.x + baseRadius/2, center.y - 15, colors.green);
             
-            // Expanded circle with animated transition
-            const growthProgress = Math.min(progress, 1);
-            const expandedRadius = baseRadius + dr * growthProgress;
+            // Expanded circle
+            const expandedRadius = baseRadius + dr;
             
             drawCircle(center.x, center.y, expandedRadius, colors.orange, false, 2);
             
             // New radius
-            const newRadiusX = center.x + baseRadius + dr * growthProgress;
+            const newRadiusX = center.x + baseRadius + dr;
             drawLine(center.x, center.y, newRadiusX, center.y, colors.orange, 2, true);
             
-            if (progress > 0.5) {
-                ctx.globalAlpha = (progress - 0.5) * 2;
-                drawText("r + dr", center.x + baseRadius + dr/2, center.y - 30, colors.orange);
-                ctx.globalAlpha = 1;
-            }
+            drawText("r + dr", center.x + baseRadius + dr/2, center.y - 30, colors.orange);
             
-            // Highlight the ring (donut) with animated fill
-            if (progress > 0.3) {
-                const ringAlpha = Math.min(((progress - 0.3) * 2), 1) * 0.5;
-                ctx.beginPath();
-                ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
-                ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
-                ctx.closePath();
-                ctx.fillStyle = hexToRgba(colors.orange, ringAlpha);
-                ctx.fill();
-            }
+            // Highlight the ring (donut) with fill
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, expandedRadius, 0, Math.PI * 2);
+            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
+            ctx.fill();
             
             // Label the ring with arrow
-            if (progress > 0.7) {
-                ctx.globalAlpha = (progress - 0.7) * 3.33;
-                drawArrow(center.x + baseRadius + 70, center.y - 70, center.x + baseRadius + dr/2, center.y - 40, colors.red, 2);
-                drawText("New Area", center.x + baseRadius + 100, center.y - 80, colors.red, 20, "center");
-                ctx.globalAlpha = 1;
-            }
+            drawArrow(center.x + baseRadius + 70, center.y - 70, center.x + baseRadius + dr/2, center.y - 40, colors.red, 2);
+            drawText("New Area", center.x + baseRadius + 100, center.y - 80, colors.red, 20, "center");
             
             // Text content
             stageTitle.textContent = "The 'Donut Ring' of New Area";
@@ -391,10 +480,10 @@
             formula.style.opacity = 0;
             
             // Show slider
-            sliderContainer.style.opacity = progress;
+            sliderContainer.style.opacity = 1;
         }
         
-        function renderStep2(progress = 1) {
+        function renderStep2() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
@@ -414,98 +503,49 @@
             ctx.fillStyle = hexToRgba(colors.orange, 0.5);
             ctx.fill();
             
-            // Animate "unwrapping" the donut
-            const unwrapAmount = progress;
+            // Position for the unwrapped strip
+            const stripY = center.y + baseRadius * 0.8;
+            const stripWidth = 2 * Math.PI * baseRadius; 
+            const stripStartX = center.x - stripWidth / 2;
+            const stripEndX = center.x + stripWidth / 2;
+            const stripHeight = dr;
             
-            // Calculate the angle of unwrapping (partial circle)
-            const unwrapAngle = Math.PI * 2 * (1 - unwrapAmount);
+            // Draw the strip
+            ctx.beginPath();
+            ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
+            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
+            ctx.fill();
+            ctx.strokeStyle = colors.orange;
+            ctx.lineWidth = 2;
+            ctx.stroke();
             
-            // Hide the original donut as it unwraps
-            if (unwrapAmount > 0) {
-                ctx.globalAlpha = 1 - unwrapAmount;
-                ctx.beginPath();
-                ctx.arc(center.x, center.y, baseRadius + dr, 0, unwrapAngle);
-                ctx.arc(center.x, center.y, baseRadius, unwrapAngle, 0, true);
-                ctx.closePath();
-                ctx.fillStyle = hexToRgba(colors.orange, 0.5);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
+            // Label the dimensions
+            // Label width
+            drawText("Width = Circumference = 2πr", center.x, stripY - 15, colors.purple, 18, "center");
             
-            // Draw the unwrapped strip
-            if (unwrapAmount > 0) {
-                // Position for the unwrapped strip
-                const stripY = center.y + baseRadius * 0.8;
-                const stripStartX = center.x - (2 * Math.PI * baseRadius * unwrapAmount) / 2;
-                const stripEndX = center.x + (2 * Math.PI * baseRadius * unwrapAmount) / 2;
-                const stripHeight = dr;
-                
-                // Draw the strip
-                ctx.beginPath();
-                ctx.rect(stripStartX, stripY, stripEndX - stripStartX, stripHeight);
-                ctx.fillStyle = hexToRgba(colors.orange, 0.5);
-                ctx.fill();
-                ctx.strokeStyle = colors.orange;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // Label the dimensions
-                if (unwrapAmount > 0.7) {
-                    ctx.globalAlpha = (unwrapAmount - 0.7) * 3.33;
-                    
-                    // Label width
-                    drawText("Width = Circumference = 2πr", center.x, stripY - 15, colors.purple, 18, "center");
-                    
-                    // Label height
-                    drawText("Height = dr", stripEndX + 15, stripY + stripHeight/2, colors.green, 18, "left");
-                    
-                    ctx.globalAlpha = 1;
-                }
-                
-                // Draw unwrapping arrow
-                if (unwrapAmount < 0.8) {
-                    ctx.globalAlpha = 1 - unwrapAmount;
-                    drawArrow(center.x, center.y - baseRadius/2, center.x, stripY - 20, colors.yellow, 2);
-                    drawText("Unwrapping", center.x + 20, center.y - baseRadius/2, colors.yellow, 18, "left");
-                    ctx.globalAlpha = 1;
-                }
-            }
+            // Label height
+            drawText("Height = dr", stripEndX + 15, stripY + stripHeight/2, colors.green, 18, "left");
+            
+            // Draw unwrapping arrow
+            drawArrow(center.x, center.y + 50, center.x, stripY - 20, colors.yellow, 2);
+            drawText("Unwrapping", center.x + 20, center.y + 50, colors.yellow, 18, "left");
             
             // Text content
             stageTitle.textContent = "Unwrapping the Donut into a Strip";
             explanation.innerHTML = "Imagine 'unwrapping' our donut ring and straightening it out into a thin strip.<br><br>The length of this strip equals the circumference of the circle (2πr). The height of the strip equals our small change in radius (dr).";
             
             // Show formula
-            if (progress > 0.8) {
-                formula.textContent = "Strip Area = Length × Height = 2πr × dr";
-                formula.style.opacity = (progress - 0.8) * 5;
-            } else {
-                formula.style.opacity = 0;
-            }
+            formula.textContent = "Strip Area = Length × Height = 2πr × dr";
+            formula.style.opacity = 1;
             
             // Show slider
             sliderContainer.style.opacity = 1;
         }
         
-        function renderStep3(progress = 1) {
+        function renderStep3() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
-            
-            // Fade out the circle/donut visual
-            ctx.globalAlpha = Math.max(0, 1 - progress);
-            fillCircle(center.x, center.y, baseRadius, colors.blue, 0.3);
-            drawCircle(center.x, center.y, baseRadius, colors.blue, false, 2);
-            drawCircle(center.x, center.y, baseRadius + dr, colors.orange, false, 2);
-            
-            // Donut
-            ctx.beginPath();
-            ctx.arc(center.x, center.y, baseRadius + dr, 0, Math.PI * 2);
-            ctx.arc(center.x, center.y, baseRadius, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.fillStyle = hexToRgba(colors.orange, 0.5);
-            ctx.fill();
-            ctx.globalAlpha = 1;
             
             // Draw the fully unwrapped strip
             const stripY = center.y;
@@ -527,48 +567,37 @@
             drawText("Length = 2πr", center.x, stripY - 15, colors.purple, 18, "center");
             drawText("dr", stripEndX + 15, stripY + stripHeight/2, colors.green, 18, "left");
             
-            // Highlight area calculation
-            if (progress > 0.3) {
-                ctx.globalAlpha = (progress - 0.3) * 1.5;
-                
-                // Area explanation
-                const areaStartY = stripY + stripHeight + 40;
-                drawText("Area of the Strip = Length × Height", center.x, areaStartY, colors.blue, 20, "center");
-                drawText("= 2πr × dr", center.x, areaStartY + 30, colors.blue, 20, "center");
-                
-                // Visual highlight
-                ctx.beginPath();
-                ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
-                ctx.strokeStyle = colors.yellow;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                
-                ctx.globalAlpha = 1;
-            }
+            // Area explanation
+            const areaStartY = stripY + stripHeight + 40;
+            drawText("Area of the Strip = Length × Height", center.x, areaStartY, colors.blue, 20, "center");
+            drawText("= 2πr × dr", center.x, areaStartY + 30, colors.blue, 20, "center");
+            
+            // Visual highlight
+            ctx.beginPath();
+            ctx.rect(stripStartX, stripY, stripWidth, stripHeight);
+            ctx.strokeStyle = colors.yellow;
+            ctx.lineWidth = 3;
+            ctx.stroke();
             
             // Text content
             stageTitle.textContent = "The Area of Our Donut Ring";
             explanation.innerHTML = "The area of the donut ring equals the area of our unwrapped strip.<br><br>Simple geometry tells us that the area of a rectangle equals length × height. So the area of our strip (and therefore our donut) is:<br>2πr × dr";
             
             // Show formula
-            if (progress > 0.5) {
-                formula.textContent = "Donut Area = 2πr × dr";
-                formula.style.opacity = Math.min(1, (progress - 0.5) * 2);
-            } else {
-                formula.style.opacity = 0;
-            }
+            formula.textContent = "Donut Area = 2πr × dr";
+            formula.style.opacity = 1;
             
             // Show slider
             sliderContainer.style.opacity = 1;
         }
         
-        function renderStep4(progress = 1) {
+        function renderStep4() {
             clear();
             const center = getCenter();
             const baseRadius = getBaseRadius();
             
             // Show shrinking dr
-            const drProgress = Math.max(0.1, 1 - progress * 0.8);
+            const drProgress = 0.2;
             const visualDr = dr * drProgress;
             
             // Original circle
@@ -591,62 +620,55 @@
             drawText(`dr = ${drText}`, center.x + baseRadius + visualDr + 20, center.y, colors.orange, 20, "left");
             drawText("r", center.x + baseRadius/2, center.y - 15, colors.green);
             
-            // Show instantaneous rate of change
-            if (progress > 0.6) {
-                ctx.globalAlpha = Math.min(1, (progress - 0.6) * 2.5);
-                
-                // Graph
-                const graphX = center.x + baseRadius * 0.9;
-                const graphY = center.y + baseRadius * 0.6;
-                const graphSize = baseRadius * 0.7;
-                
-                // Axes
-                drawLine(graphX - graphSize/2, graphY, graphX + graphSize/2, graphY, colors.white, 1);
-                drawLine(graphX, graphY - graphSize/2, graphX, graphY + graphSize/2, colors.white, 1);
-                
-                // Labels
-                drawText("r", graphX + graphSize/2, graphY + 20, colors.green, 16, "center");
-                drawText("Area", graphX - 10, graphY - graphSize/2, colors.blue, 16, "right");
-                
-                // Area curve (r²)
-                ctx.beginPath();
-                ctx.moveTo(graphX - graphSize/2, graphY);
-                
-                for (let i = 0; i <= graphSize; i++) {
-                    const x = i / graphSize - 0.5; // [-0.5, 0.5]
-                    const y = -(x * x) * graphSize * 0.8; // Parabola
-                    ctx.lineTo(graphX + i - graphSize/2, graphY + y);
-                }
-                
-                ctx.strokeStyle = colors.blue;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // Tangent line at a point
-                const touchX = graphX + graphSize * 0.3;
-                const touchR = (touchX - (graphX - graphSize/2)) / graphSize - 0.5;
-                const touchY = graphY - (touchR * touchR) * graphSize * 0.8;
-                
-                // Point on curve
-                ctx.beginPath();
-                ctx.arc(touchX, touchY, 4, 0, Math.PI * 2);
-                ctx.fillStyle = colors.red;
-                ctx.fill();
-                
-                // Tangent line
-                const slope = -2 * touchR * graphSize * 0.8;
-                ctx.beginPath();
-                ctx.moveTo(touchX - 30, touchY - slope * (-30/graphSize));
-                ctx.lineTo(touchX + 30, touchY - slope * (30/graphSize));
-                ctx.strokeStyle = colors.red;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // Label slope
-                drawText("Slope = 2πr", touchX + 35, touchY - 20, colors.red, 16, "left");
-                
-                ctx.globalAlpha = 1;
+            // Graph
+            const graphX = center.x + baseRadius * 0.9;
+            const graphY = center.y + baseRadius * 0.6;
+            const graphSize = baseRadius * 0.7;
+            
+            // Axes
+            drawLine(graphX - graphSize/2, graphY, graphX + graphSize/2, graphY, colors.white, 1);
+            drawLine(graphX, graphY - graphSize/2, graphX, graphY + graphSize/2, colors.white, 1);
+            
+            // Labels
+            drawText("r", graphX + graphSize/2, graphY + 20, colors.green, 16, "center");
+            drawText("Area", graphX - 10, graphY - graphSize/2, colors.blue, 16, "right");
+            
+            // Area curve (r²)
+            ctx.beginPath();
+            ctx.moveTo(graphX - graphSize/2, graphY);
+            
+            for (let i = 0; i <= graphSize; i++) {
+                const x = i / graphSize - 0.5; // [-0.5, 0.5]
+                const y = -(x * x) * graphSize * 0.8; // Parabola
+                ctx.lineTo(graphX + i - graphSize/2, graphY + y);
             }
+            
+            ctx.strokeStyle = colors.blue;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Tangent line at a point
+            const touchX = graphX + graphSize * 0.3;
+            const touchR = (touchX - (graphX - graphSize/2)) / graphSize - 0.5;
+            const touchY = graphY - (touchR * touchR) * graphSize * 0.8;
+            
+            // Point on curve
+            ctx.beginPath();
+            ctx.arc(touchX, touchY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = colors.red;
+            ctx.fill();
+            
+            // Tangent line
+            const slope = -2 * touchR * graphSize * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(touchX - 30, touchY - slope * (-30/graphSize));
+            ctx.lineTo(touchX + 30, touchY - slope * (30/graphSize));
+            ctx.strokeStyle = colors.red;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Label slope
+            drawText("Slope = 2πr", touchX + 35, touchY - 20, colors.red, 16, "left");
             
             // Text content
             stageTitle.textContent = "The Circle's Rate of Area Change";
@@ -654,108 +676,54 @@
             
             // Show formula
             formula.innerHTML = "Rate of Area Change = 2πr<br><small>(In calculus: dA/dr = 2πr)</small>";
-            formula.style.opacity = Math.min(1, progress * 1.5);
+            formula.style.opacity = 1;
             
             // Fade out slider
-            sliderContainer.style.opacity = Math.max(0, 1 - progress);
+            sliderContainer.style.opacity = 0;
         }
         
-        // Render with transitions
-        function render(step, transitionProgress = 1) {
-            switch(step) {
-                case 0: renderStep0(transitionProgress); break;
-                case 1: renderStep1(transitionProgress); break;
-                case 2: renderStep2(transitionProgress); break;
-                case 3: renderStep3(transitionProgress); break;
-                case 4: renderStep4(transitionProgress); break;
+        // Navigation functions
+        function nextStep() {
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                updateProgress();
+                render();
             }
         }
         
-        // Handle transitions between steps
-        function startTransition(targetStep) {
-            if (isTransitioning) return;
-            if (targetStep < 0 || targetStep >= totalSteps) return; // Bounds check
-            if (targetStep === currentStep) return; // Don't transition to same step
-            
-            isTransitioning = true;
-            const startStep = currentStep;
-            transitionProgress = 0;
-            
-            // Set a safety timeout to prevent transition state from getting stuck
-            const safetyTimeout = setTimeout(function() {
-                if (isTransitioning) {
-                    console.log("Safety timeout triggered - transition got stuck");
-                    isTransitioning = false;
-                    currentStep = targetStep;
-                    updateNavigation();
-                    render(targetStep, 1);
-                    animate();
-                }
-            }, 3000); // 3 second safety timeout
-            
-            function transition() {
-                try {
-                    transitionProgress += 0.03;
-                    
-                    if (transitionProgress < 0.5) {
-                        // First half: fade out current step
-                        render(startStep, 1 - transitionProgress * 2);
-                    } else {
-                        // Second half: fade in new step
-                        currentStep = targetStep;
-                        updateNavigation();
-                        render(targetStep, (transitionProgress - 0.5) * 2);
-                    }
-                    
-                    if (transitionProgress >= 1) {
-                        isTransitioning = false;
-                        clearTimeout(safetyTimeout); // Clear safety timeout
-                        cancelAnimationFrame(animationFrameId);
-                        animate(); // Resume normal animation
-                        return;
-                    }
-                    
-                    requestAnimationFrame(transition);
-                } catch (error) {
-                    console.error("Error during transition:", error);
-                    isTransitioning = false;
-                    clearTimeout(safetyTimeout); // Clear safety timeout
-                    currentStep = targetStep;
-                    updateNavigation();
-                    animate();
-                }
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateProgress();
+                render();
             }
-            
-            cancelAnimationFrame(animationFrameId);
-            requestAnimationFrame(transition);
+        }
+        
+        // Render the current step
+        function render() {
+            switch(currentStep) {
+                case 0: renderStep0(); break;
+                case 1: renderStep1(); break;
+                case 2: renderStep2(); break;
+                case 3: renderStep3(); break;
+                case 4: renderStep4(); break;
+            }
         }
         
         // Animation loop
         function animate() {
-            try {
-                time += 0.02;
-                if (!isTransitioning) {
-                    render(currentStep);
-                }
-                animationFrameId = requestAnimationFrame(animate);
-            } catch (error) {
-                console.error("Error in animation loop:", error);
-                isTransitioning = false; // Reset transition state on error
-                
-                // Attempt to recover the animation
-                setTimeout(function() {
-                    console.log("Attempting to recover animation");
-                    animationFrameId = requestAnimationFrame(animate);
-                }, 1000);
+            time += 0.02;
+            if (currentStep === 0 || currentStep === 4) {
+                render();
             }
+            animationFrameId = requestAnimationFrame(animate);
         }
         
         // Initialize
-        setupCanvas(); // Explicitly setup canvas before starting
-        setupNavigation();
+        setupCanvas();
+        updateProgress();
+        render();
         animate();
-        
-        // Safety check - reset transition state if stuck
-        window.addEventListener('error', function() {
-            isTransitioning = false; // Reset if any error occurs
-        });
+    </script>
+</body>
+</html>
