@@ -29,7 +29,7 @@
             font-weight: bold;
         }
         #emojiContainer {
-            height: 150px;
+            height: 200px;
             position: relative;
             overflow: hidden;
         }
@@ -37,25 +37,35 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) scale(5);
-            font-size: 4rem;
+            transform: translate(-50%, -50%) scale(10);
+            font-size: 6rem;
             opacity: 0;
             filter: grayscale(100%);
         }
         @keyframes emojiReveal {
             0% {
-                transform: translate(-50%, -50%) scale(5);
+                transform: translate(-50%, -50%) scale(10);
                 opacity: 0;
                 filter: grayscale(100%);
             }
+            30% {
+                transform: translate(-50%, -50%) scale(8);
+                opacity: 0.3;
+                filter: grayscale(70%);
+            }
+            60% {
+                transform: translate(-50%, -50%) scale(6);
+                opacity: 0.6;
+                filter: grayscale(40%);
+            }
             100% {
-                transform: translate(-50%, -50%) scale(1);
+                transform: translate(-50%, -50%) scale(3);
                 opacity: 1;
                 filter: grayscale(0%);
             }
         }
         .emoji-animate {
-            animation: emojiReveal 2s ease-in-out forwards;
+            animation: emojiReveal 3s ease-out forwards;
         }
         .choice {
             font-size: 1rem;
@@ -72,21 +82,14 @@
             font-weight: bold;
             height: 1.5em;
         }
-        #hardMode {
-            margin-top: 1rem;
-        }
         #dictionary-info {
             margin-top: 1.5rem;
             padding-top: 1rem;
             border-top: 1px dashed #ccc;
             text-align: left;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-out;
-        }
-        #dictionary-info.active {
-            max-height: 300px;
-            overflow-y: auto;
+            opacity: 0;
+            font-size: 0;
+            transition: opacity 3s ease-out, font-size 3s ease-out;
         }
         .pos-tag {
             display: inline-block;
@@ -102,24 +105,6 @@
         .definition-item {
             margin-bottom: 0.5rem;
         }
-        #toggle-dictionary {
-            background: none;
-            border: none;
-            color: #4CAF50;
-            text-decoration: underline;
-            cursor: pointer;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-        }
-        #toggle-dictionary:hover {
-            color: #2E7D32;
-        }
-        #settings {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-        }
     </style>
 </head>
 <body>
@@ -130,19 +115,6 @@
         </div>
         <div id="choices"></div>
         <div id="result"></div>
-        <div id="settings">
-            <div id="hardMode">
-                <label>
-                    <input type="checkbox" id="hardModeCheckbox"> Hard Mode (Delayed Emoji)
-                </label>
-            </div>
-            <div id="fullDictMode">
-                <label>
-                    <input type="checkbox" id="fullDictCheckbox"> Full Dictionary
-                </label>
-            </div>
-        </div>
-        <button id="toggle-dictionary">Show Dictionary Info</button>
         <div id="dictionary-info"></div>
     </div>
 
@@ -299,8 +271,6 @@
         let tokiPona = [...legacyTokiPona];
         
         let currentWord;
-        let hardMode = false;
-        let useFullDictionary = false;
         
         // Load the full dictionary from the JSON file
         async function loadDictionary() {
@@ -314,8 +284,13 @@
                 
                 // Merge with legacy dictionary to assign emojis
                 enrichDictionary();
+                
+                // Now that dictionary is loaded, display the first word
+                displayWord();
             } catch (error) {
                 console.error('Failed to load dictionary:', error);
+                // If we can't load the full dictionary, still show a word from the legacy list
+                displayWord();
             }
         }
         
@@ -373,10 +348,8 @@
         loadDictionary();
 
         function getRandomWord() {
-            // When in full dictionary mode, use the entire tokiPona array
-            // Otherwise, just use the legacy list for simplicity
-            const wordList = useFullDictionary ? tokiPona : legacyTokiPona;
-            return wordList[Math.floor(Math.random() * wordList.length)];
+            // Always use the full dictionary
+            return tokiPona[Math.floor(Math.random() * tokiPona.length)];
         }
 
         function getChoices(correct) {
@@ -391,16 +364,20 @@
         }
 
         function displayWord() {
-            // Get random word from either the full or limited dictionary
+            // Get random word from the full dictionary
             currentWord = getRandomWord();
             document.getElementById('word').textContent = currentWord.word;
             const emojiElement = document.getElementById('emoji');
+            const dictionaryInfo = document.getElementById('dictionary-info');
             
-            // Reset emoji state
+            // Reset emoji and dictionary info state
             emojiElement.className = '';
             emojiElement.style.opacity = '0';
-            emojiElement.style.transform = 'translate(-50%, -50%) scale(5)';
+            emojiElement.style.transform = 'translate(-50%, -50%) scale(10)';
             emojiElement.style.filter = 'grayscale(100%)';
+            
+            dictionaryInfo.style.opacity = '0';
+            dictionaryInfo.style.fontSize = '0';
             
             // Set the emoji text
             emojiElement.textContent = currentWord.emoji;
@@ -408,11 +385,22 @@
             // Force a reflow
             void emojiElement.offsetWidth;
 
-            // Start animation after a delay in hard mode
+            // Start emoji animation with delay (always in "hard mode")
             setTimeout(() => {
                 emojiElement.classList.add('emoji-animate');
-            }, hardMode ? 2000 : 50);
+                
+                // After emoji animation starts, begin dictionary info fade-in
+                setTimeout(() => {
+                    // Update dictionary information
+                    updateDictionaryInfo();
+                    
+                    // Fade in the dictionary info
+                    dictionaryInfo.style.opacity = '1';
+                    dictionaryInfo.style.fontSize = '1rem';
+                }, 1500);
+            }, 2000);
 
+            // Set up multiple choice answers
             const choices = getChoices(currentWord.meaning);
             let choicesHtml = '';
             choices.forEach(choice => {
@@ -420,9 +408,6 @@
             });
             document.getElementById('choices').innerHTML = choicesHtml;
             document.getElementById('result').textContent = '';
-            
-            // Update dictionary information panel if we have full entry data
-            updateDictionaryInfo();
         }
 
         function updateDictionaryInfo() {
@@ -466,37 +451,7 @@
             setTimeout(displayWord, 1500);
         }
 
-        // Configure the toggle dictionary button
-        document.getElementById('toggle-dictionary').addEventListener('click', function() {
-            const dictionaryInfo = document.getElementById('dictionary-info');
-            dictionaryInfo.classList.toggle('active');
-            
-            if (dictionaryInfo.classList.contains('active')) {
-                this.textContent = 'Hide Dictionary Info';
-            } else {
-                this.textContent = 'Show Dictionary Info';
-            }
-        });
-
-        // Configure hard mode
-        document.getElementById('hardModeCheckbox').addEventListener('change', function() {
-            hardMode = this.checked;
-            displayWord();
-        });
-        
-        // Configure full dictionary mode
-        document.getElementById('fullDictCheckbox').addEventListener('change', function() {
-            useFullDictionary = this.checked;
-            // If we're switching to full dictionary mode, make sure it's loaded
-            if (useFullDictionary && fullDictionary.length === 0) {
-                loadDictionary().then(() => displayWord());
-            } else {
-                displayWord();
-            }
-        });
-
-        // Initial word display
-        displayWord();
+        // Don't automatically call displayWord - it's called after dictionary loads
     </script>
 </body>
 </html>
