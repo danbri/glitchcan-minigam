@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Riverbend - INK Story Player</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --background: #f3f4f6;
+            --text: #1f2937;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        #story-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            margin-bottom: 20px;
+            display: none;
+        }
+        #story {
+            margin-bottom: 1.5em;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        .scene {
+            font-size: 3em;
+            text-align: center;
+            margin: 0.5em 0;
+            animation: bounce 0.5s ease;
+        }
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 1.5em;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s ease;
+            text-align: left;
+            line-height: 1.4;
+        }
+        button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        p {
+            margin: 0 0 1em;
+        }
+        @keyframes bounce {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        #ink-url-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .url-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            .container {
+                padding: 16px;
+                border-radius: 12px;
+            }
+            .scene {
+                font-size: 2.5em;
+            }
+            button {
+                padding: 16px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Riverbend - INK Story Player</h1>
+        
+        <div class="url-form">
+            <input type="text" id="ink-url-input" value="riverbend.ink" placeholder="Enter URL of .ink file">
+            <button id="load-ink-button">Load Story</button>
+        </div>
+        
+        <div id="status">Enter a URL above to load an INK story</div>
+        
+        <img id="story-image" alt="Story scene">
+        
+        <div id="story"></div>
+        <div id="choices" class="choices"></div>
+    </div>
+
+    <script>
+        // Main state variables
+        let inkStoryContent = '';
+        let storyKnots = {};
+        let currentKnot = '';
+        let imageBasePath = './'; // Base path for images
+        
+        // DOM elements
+        const storyElement = document.getElementById('story');
+        const choicesElement = document.getElementById('choices');
+        const statusElement = document.getElementById('status');
+        const inkUrlInput = document.getElementById('ink-url-input');
+        const loadInkButton = document.getElementById('load-ink-button');
+        const storyImage = document.getElementById('story-image');
+        
+        // Initialize the story player
+        function init() {
+            loadInkButton.addEventListener('click', loadInkStory);
+            
+            // Load default story if URL is already provided
+            if (inkUrlInput.value) {
+                loadInkStory();
+            }
+        }
+        
+        // Load the INK story from the provided URL
+        async function loadInkStory() {
+            const inkUrl = inkUrlInput.value.trim();
+            if (!inkUrl) {
+                showStatus('Please enter a URL to an INK file');
+                return;
+            }
+            
+            showStatus('Loading story...');
+            
+            try {
+                const response = await fetch(inkUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load story: ${response.statusText}`);
+                }
+                
+                inkStoryContent = await response.text();
+                parseInkStory(inkStoryContent);
+                
+                // Start the story from the first knot or the intro knot
+                const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+                showKnot(startKnot);
+                
+                showStatus('Story loaded successfully!');
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 2000);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`);
+            }
+        }
+        
+        // Parse the raw INK content into our internal format
+        function parseInkStory(content) {
+            storyKnots = {};
+            
+            // Split the content by knot definitions
+            const lines = content.split(/\r?\n/);
+            let currentKnotName = '';
+            let currentKnotContent = [];
+            
+            for (const line of lines) {
+                // If this is a knot definition
+                if (line.trim().startsWith('===')) {
+                    // If we were already parsing a knot, save it
+                    if (currentKnotName) {
+                        storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                        currentKnotContent = [];
+                    }
+                    
+                    // Extract the new knot name
+                    currentKnotName = line.trim().replace('===', '').trim();
+                } 
+                // If this is a directive like "-> intro"
+                else if (line.trim().startsWith('->') && !currentKnotName) {
+                    // This is the entry point directive
+                    const startKnot = line.trim().replace('->', '').trim();
+                    currentKnotName = startKnot;
+                }
+                // Otherwise, add to the current knot's content
+                else if (currentKnotName) {
+                    currentKnotContent.push(line);
+                }
+            }
+            
+            // Save the last knot
+            if (currentKnotName && currentKnotContent.length > 0) {
+                storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+            }
+        }
+        
+        // Parse the content of a single knot
+        function parseKnotContent(lines) {
+            const knot = {
+                text: [],
+                choices: [],
+                image: null
+            };
+            
+            // Process each line
+            for (const line of lines) {
+                // Check for image tags
+                if (line.trim().startsWith('[[Image:')) {
+                    const imagePath = line.trim().match(/\[\[Image:\s*(.*?)\s*\]\]/)[1];
+                    knot.image = imagePath;
+                }
+                // Check for choice tags
+                else if (line.trim().startsWith('[[')) {
+                    const choiceMatch = line.trim().match(/\[\[(.*?)\]\]\s*->\s*(.*)/);
+                    if (choiceMatch) {
+                        const choiceText = choiceMatch[1];
+                        const target = choiceMatch[2].trim();
+                        knot.choices.push({ text: choiceText, target: target });
+                    }
+                }
+                // Regular text
+                else if (line.trim() && !line.trim().startsWith('->')) {
+                    knot.text.push(line);
+                }
+            }
+            
+            return knot;
+        }
+        
+        // Display a specific knot
+        function showKnot(knotName) {
+            currentKnot = knotName;
+            
+            // Check if this is an ending knot
+            if (knotName === 'END') {
+                storyElement.innerHTML = '<p>The End</p>';
+                choicesElement.innerHTML = '<button id="restart-button">Restart Story</button>';
+                document.getElementById('restart-button').addEventListener('click', restartStory);
+                return;
+            }
+            
+            // Get the knot data
+            const knot = storyKnots[knotName];
+            if (!knot) {
+                storyElement.innerHTML = `<p>Error: Knot "${knotName}" not found!</p>`;
+                return;
+            }
+            
+            // Display the knot text
+            storyElement.innerHTML = '<p>' + knot.text.join('</p><p>') + '</p>';
+            
+            // Display image if present
+            if (knot.image) {
+                storyImage.src = imageBasePath + knot.image;
+                storyImage.style.display = 'block';
+            } else {
+                storyImage.style.display = 'none';
+            }
+            
+            // Display choices
+            choicesElement.innerHTML = '';
+            if (knot.choices && knot.choices.length > 0) {
+                for (const choice of knot.choices) {
+                    const button = document.createElement('button');
+                    button.textContent = choice.text;
+                    button.dataset.target = choice.target;
+                    button.addEventListener('click', () => {
+                        showKnot(choice.target);
+                        button.blur(); // Remove focus after click
+                    });
+                    choicesElement.appendChild(button);
+                }
+            } else {
+                // If no choices, this is an ending
+                const restartButton = document.createElement('button');
+                restartButton.textContent = 'Restart Story';
+                restartButton.addEventListener('click', restartStory);
+                choicesElement.appendChild(restartButton);
+            }
+        }
+        
+        // Restart the story
+        function restartStory() {
+            const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+            showKnot(startKnot);
+        }
+        
+        // Show a status message
+        function showStatus(message) {
+            statusElement.textContent = message;
+            statusElement.style.display = 'block';
+        }
+        
+        // Initialize when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
