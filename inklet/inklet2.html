@@ -3,136 +3,547 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Riverbend - INK Story Player</title>
+    <title>Riverbend - Immersive INK Stories</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-dark: #4338ca;
-            --background: #f3f4f6;
-            --text: #1f2937;
+            --primary: #6d28d9;
+            --primary-dark: #5b21b6;
+            --primary-light: #8b5cf6;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-red: #f43f5e;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --choice-left: #f43f5e;
+            --choice-middle: #10b981;
+            --choice-right: #3b82f6;
+            --choice-height: 40vh;
+            --transition-time: 0.5s;
         }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
             margin: 0;
-            padding: 16px;
-            background: var(--background);
+            padding: 0;
+            height: 100%;
+            font-family: 'Literata', serif;
+            background-color: var(--background);
             color: var(--text);
-            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            background-color: var(--surface);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .title-bar h1 {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .url-form {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            background-color: var(--surface);
+            padding: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .url-form.active {
+            transform: translateY(0);
+        }
+
+        #ink-url-input {
+            flex-grow: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px 0 0 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        #ink-url-input:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        #load-ink-button {
+            padding: 10px 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        #load-ink-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .story-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 35vh;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        #story-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 1s ease, transform 1.5s ease;
+            transform-origin: center;
+        }
+
+        #story-image.hidden {
+            opacity: 0;
+        }
+
+        #story-image.zoom-in {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: linear-gradient(to top, var(--background), transparent);
+        }
+
+        .story-content {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        #story {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            font-size: 1.2rem;
+            line-height: 1.7;
+            transition: opacity 0.5s ease;
+        }
+
+        #story p {
+            margin-bottom: 1rem;
+        }
+
+        #story.fading {
+            opacity: 0;
+        }
+
+        .status-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #status {
+            background-color: var(--surface);
+            padding: 20px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .status-spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .choices-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--choice-height);
+            display: flex;
+            z-index: 5;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .choices-container.hidden {
+            transform: translateY(100%);
+        }
+
+        .choice {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: flex-end;
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: bottom center;
         }
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        .choice-1 { background-color: var(--choice-left); }
+        .choice-2 { background-color: var(--choice-middle); }
+        .choice-3 { background-color: var(--choice-right); }
+
+        .choice-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            transition: all var(--transition-time) cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: grayscale(30%) opacity(0.8);
+            transform-origin: center;
         }
-        #status {
+
+        .choice:hover .choice-emoji {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.1);
+        }
+
+        .choice-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
             text-align: center;
-            margin-bottom: 20px;
-            font-style: italic;
-            color: #666;
+            opacity: 0.9;
+            transition: all var(--transition-time) ease;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            max-width: 100%;
         }
-        #story-image {
-            width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            margin-bottom: 20px;
-            display: none;
+
+        .choice:hover .choice-label {
+            opacity: 1;
         }
-        #story {
-            margin-bottom: 1.5em;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
-        .scene {
-            font-size: 3em;
-            text-align: center;
-            margin: 0.5em 0;
-            animation: bounce 0.5s ease;
-        }
-        .choices {
+
+        .expanding-choice {
+            position: fixed;
+            bottom: 0;
+            height: var(--choice-height);
+            transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 1.5em;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 20px;
+            z-index: 10;
         }
-        button {
-            padding: 12px 20px;
+
+        .expanding-choice .choice-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            transition: all var(--transition-time) cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .expanding-choice .choice-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            max-width: 100%;
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .menu-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .restart-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
             background-color: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
-            font-size: 1em;
-            transition: all 0.2s ease;
-            text-align: left;
-            line-height: 1.4;
+            z-index: 20;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: float 3s ease-in-out infinite;
         }
-        button:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
+
+        @keyframes float {
+            0% { transform: translateX(-50%) translateY(0px); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+            100% { transform: translateX(-50%) translateY(0px); }
         }
-        button:active {
-            transform: translateY(0);
-        }
-        p {
-            margin: 0 0 1em;
-        }
-        @keyframes bounce {
-            0% { transform: scale(0.8); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        #ink-url-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            margin-bottom: 12px;
-        }
-        .url-form {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
+
+        /* Loading animation */
+        .loading-animation {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
             margin-bottom: 20px;
         }
-        @media (max-width: 480px) {
-            body {
-                padding: 12px;
-            }
-            .container {
+        .loading-animation div {
+            position: absolute;
+            top: 33px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .loading-animation div:nth-child(1) {
+            left: 8px;
+            animation: loading1 0.6s infinite;
+        }
+        .loading-animation div:nth-child(2) {
+            left: 8px;
+            animation: loading2 0.6s infinite;
+        }
+        .loading-animation div:nth-child(3) {
+            left: 32px;
+            animation: loading2 0.6s infinite;
+        }
+        .loading-animation div:nth-child(4) {
+            left: 56px;
+            animation: loading3 0.6s infinite;
+        }
+        @keyframes loading1 {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        @keyframes loading2 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(24px, 0); }
+        }
+        @keyframes loading3 {
+            0% { transform: scale(1); }
+            100% { transform: scale(0); }
+        }
+
+        /* Animation classes */
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        .slide-up {
+            animation: slide-up 0.5s ease forwards;
+        }
+
+        @media (max-width: 768px) {
+            .story-content {
                 padding: 16px;
-                border-radius: 12px;
             }
-            .scene {
-                font-size: 2.5em;
+            
+            #story {
+                font-size: 1.1rem;
+                line-height: 1.6;
             }
-            button {
-                padding: 16px;
-                font-size: 1.1em;
+            
+            .title-bar h1 {
+                font-size: 1.2rem;
             }
+            
+            .choice-label {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+            
+            .choice-emoji {
+                font-size: 3rem;
+            }
+        }
+
+        /* End screen styles */
+        .end-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--background);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .end-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .end-screen h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .end-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Riverbend - INK Story Player</h1>
+    <div class="app-container">
+        <div class="title-bar">
+            <h1>Riverbend</h1>
+            <button class="menu-button" id="menu-button">⚙️</button>
+        </div>
         
-        <div class="url-form">
+        <div class="url-form" id="url-form">
             <input type="text" id="ink-url-input" value="riverbend.ink" placeholder="Enter URL of .ink file">
             <button id="load-ink-button">Load Story</button>
         </div>
         
-        <div id="status">Enter a URL above to load an INK story</div>
+        <div class="story-container">
+            <div class="image-container">
+                <img id="story-image" alt="Story scene" class="hidden">
+                <div class="image-overlay"></div>
+            </div>
+            
+            <div class="story-content">
+                <div id="story"></div>
+            </div>
+        </div>
         
-        <img id="story-image" alt="Story scene">
+        <div class="choices-container" id="choices-container">
+            <!-- Choices will be added here dynamically -->
+        </div>
         
-        <div id="story"></div>
-        <div id="choices" class="choices"></div>
+        <div class="status-overlay" id="status-overlay">
+            <div id="status">
+                <div class="loading-animation"><div></div><div></div><div></div><div></div></div>
+                <div id="status-text">Loading story...</div>
+            </div>
+        </div>
+        
+        <div class="end-screen" id="end-screen">
+            <h2>The End</h2>
+            <p>Your journey through Riverbend has concluded. What mysteries remain undiscovered?</p>
+            <button class="restart-button" id="end-restart-button">Begin Again</button>
+        </div>
     </div>
 
     <script>
@@ -141,34 +552,100 @@
         let storyKnots = {};
         let currentKnot = '';
         let imageBasePath = './'; // Base path for images
+        let animationInProgress = false;
+        let expandingElement = null;
         
         // DOM elements
         const storyElement = document.getElementById('story');
-        const choicesElement = document.getElementById('choices');
-        const statusElement = document.getElementById('status');
+        const choicesContainer = document.getElementById('choices-container');
+        const statusOverlay = document.getElementById('status-overlay');
+        const statusText = document.getElementById('status-text');
         const inkUrlInput = document.getElementById('ink-url-input');
         const loadInkButton = document.getElementById('load-ink-button');
         const storyImage = document.getElementById('story-image');
+        const menuButton = document.getElementById('menu-button');
+        const urlForm = document.getElementById('url-form');
+        const endScreen = document.getElementById('end-screen');
+        const endRestartButton = document.getElementById('end-restart-button');
+        
+        // Emoji mapping for common themes in choices
+        const emojiMap = {
+            // Actions
+            'go': '🚶', 'walk': '🚶‍♂️', 'run': '🏃‍♀️', 'look': '👀', 'search': '🔍',
+            'take': '🤲', 'grab': '✊', 'hold': '👐', 'find': '🔎',
+            'talk': '💬', 'ask': '❓', 'tell': '🗣️', 'speak': '🗯️',
+            'listen': '👂', 'hear': '🔊', 'watch': '👁️', 'observe': '🧐',
+            'wait': '⏳', 'stay': '⌛', 'hide': '🙈', 'escape': '🏃‍♂️',
+            'open': '🔓', 'close': '🔒', 'climb': '🧗‍♀️', 'jump': '⏫',
+            'drink': '🥤', 'eat': '🍽️', 'sleep': '😴', 'wake': '⏰',
+            'use': '🔧', 'call': '📞', 'push': '👉', 'pull': '👈',
+            'read': '📚', 'write': '✍️', 'follow': '🦮', 'lead': '🧭',
+            
+            // Directions
+            'right': '➡️', 'left': '⬅️', 'up': '⬆️', 'down': '⬇️',
+            'forward': '⏩', 'back': '⏪', 'north': '🧭', 'south': '🧭',
+            'east': '🧭', 'west': '🧭', 'inside': '🚪', 'outside': '🌳',
+            
+            // Emotions
+            'happy': '😊', 'sad': '😢', 'angry': '😠', 'afraid': '😨',
+            'confused': '😕', 'surprised': '😲', 'excited': '🤩', 'calm': '😌',
+            'suspicious': '🤨', 'curious': '🧐', 'worried': '😟', 'annoyed': '😒',
+            
+            // Objects
+            'door': '🚪', 'key': '🔑', 'book': '📕', 'letter': '✉️',
+            'light': '💡', 'dark': '🌑', 'water': '💧', 'fire': '🔥',
+            'phone': '📱', 'money': '💰', 'clock': '🕰️', 'picture': '🖼️',
+            'weapon': '🗡️', 'sword': '⚔️', 'gun': '🔫', 'shield': '🛡️',
+            
+            // Places
+            'house': '🏠', 'room': '🏘️', 'cave': '🕳️', 'forest': '🌲',
+            'mountain': '⛰️', 'river': '🏞️', 'lake': '🌊', 'beach': '🏖️',
+            'city': '🏙️', 'village': '🏘️', 'castle': '🏰', 'tower': '🗼',
+            
+            // Misc
+            'yes': '✅', 'no': '❌', 'maybe': '❓', 'help': '🆘',
+            'danger': '⚠️', 'safe': '🛡️', 'secret': '🤫', 'trap': '⚡',
+            'accept': '👍', 'refuse': '👎', 'ignore': '🙄', 'question': '❓',
+            'restart': '🔄'
+        };
+        
+        // Default choice emojis when no keyword match is found
+        const defaultEmojis = ['🚀', '🧩', '🎯'];
         
         // Initialize the story player
         function init() {
             loadInkButton.addEventListener('click', loadInkStory);
+            menuButton.addEventListener('click', toggleUrlForm);
+            endRestartButton.addEventListener('click', restartStory);
             
             // Load default story if URL is already provided
             if (inkUrlInput.value) {
                 loadInkStory();
+            } else {
+                showStatus('Enter a URL to load an INK story');
             }
+            
+            // Add touch handling
+            document.addEventListener('touchstart', handleTouchStart);
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+        }
+        
+        // Toggle the URL form
+        function toggleUrlForm() {
+            urlForm.classList.toggle('active');
         }
         
         // Load the INK story from the provided URL
         async function loadInkStory() {
+            urlForm.classList.remove('active');
             const inkUrl = inkUrlInput.value.trim();
             if (!inkUrl) {
                 showStatus('Please enter a URL to an INK file');
                 return;
             }
             
-            showStatus('Loading story...');
+            showStatus('Loading story...', true);
             
             try {
                 const response = await fetch(inkUrl);
@@ -181,12 +658,11 @@
                 
                 // Start the story from the first knot or the intro knot
                 const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
-                showKnot(startKnot);
                 
-                showStatus('Story loaded successfully!');
                 setTimeout(() => {
-                    statusElement.style.display = 'none';
-                }, 2000);
+                    hideStatus();
+                    showKnot(startKnot);
+                }, 1000);
             } catch (error) {
                 showStatus(`Error: ${error.message}`);
             }
@@ -264,15 +740,30 @@
             return knot;
         }
         
-        // Display a specific knot
+        // Choose an emoji for a choice based on its text
+        function chooseEmoji(choiceText) {
+            const text = choiceText.toLowerCase();
+            
+            // Check each emoji keyword against the choice text
+            for (const [keyword, emoji] of Object.entries(emojiMap)) {
+                if (text.includes(keyword)) {
+                    return emoji;
+                }
+            }
+            
+            // If we reach here, no keyword matched
+            // Return a random default emoji
+            const index = Math.floor(Math.random() * defaultEmojis.length);
+            return defaultEmojis[index];
+        }
+        
+        // Display a specific knot with animation
         function showKnot(knotName) {
             currentKnot = knotName;
             
             // Check if this is an ending knot
             if (knotName === 'END') {
-                storyElement.innerHTML = '<p>The End</p>';
-                choicesElement.innerHTML = '<button id="restart-button">Restart Story</button>';
-                document.getElementById('restart-button').addEventListener('click', restartStory);
+                showEndScreen();
                 return;
             }
             
@@ -283,49 +774,222 @@
                 return;
             }
             
-            // Display the knot text
-            storyElement.innerHTML = '<p>' + knot.text.join('</p><p>') + '</p>';
+            // Start with fading out current content
+            storyElement.classList.add('fading');
             
-            // Display image if present
-            if (knot.image) {
-                storyImage.src = imageBasePath + knot.image;
-                storyImage.style.display = 'block';
+            setTimeout(() => {
+                // Update story text
+                const paragraphs = knot.text.filter(line => line.trim()).map(line => `<p class="slide-up" style="opacity: 0;">${line}</p>`);
+                storyElement.innerHTML = paragraphs.join('');
+                
+                // Remove the fading class after content is updated
+                storyElement.classList.remove('fading');
+                
+                // Animate in paragraphs
+                const storyParagraphs = storyElement.querySelectorAll('p');
+                storyParagraphs.forEach((p, index) => {
+                    setTimeout(() => {
+                        p.style.opacity = '1';
+                    }, 100 * index);
+                });
+                
+                // Update image with animation
+                updateImage(knot.image);
+                
+                // Update choices with animation
+                updateChoices(knot.choices);
+            }, 300);
+        }
+        
+        // Update the story image with animation
+        function updateImage(imagePath) {
+            if (imagePath) {
+                storyImage.classList.add('hidden');
+                setTimeout(() => {
+                    storyImage.src = imageBasePath + imagePath;
+                    storyImage.classList.remove('hidden');
+                    storyImage.classList.add('zoom-in');
+                    
+                    // Reset zoom after animation completes
+                    setTimeout(() => {
+                        storyImage.classList.remove('zoom-in');
+                    }, 1500);
+                }, 300);
             } else {
-                storyImage.style.display = 'none';
+                storyImage.classList.add('hidden');
+            }
+        }
+        
+        // Update the choices with animation
+        function updateChoices(choices) {
+            choicesContainer.innerHTML = '';
+            choicesContainer.classList.add('hidden');
+            
+            if (!choices || choices.length === 0) {
+                return;
             }
             
-            // Display choices
-            choicesElement.innerHTML = '';
-            if (knot.choices && knot.choices.length > 0) {
-                for (const choice of knot.choices) {
-                    const button = document.createElement('button');
-                    button.textContent = choice.text;
-                    button.dataset.target = choice.target;
-                    button.addEventListener('click', () => {
-                        showKnot(choice.target);
-                        button.blur(); // Remove focus after click
-                    });
-                    choicesElement.appendChild(button);
-                }
-            } else {
-                // If no choices, this is an ending
-                const restartButton = document.createElement('button');
-                restartButton.textContent = 'Restart Story';
-                restartButton.addEventListener('click', restartStory);
-                choicesElement.appendChild(restartButton);
-            }
+            // Create each choice element
+            choices.forEach((choice, index) => {
+                const emoji = chooseEmoji(choice.text);
+                const choiceEl = document.createElement('div');
+                choiceEl.className = `choice choice-${index + 1}`;
+                choiceEl.dataset.target = choice.target;
+                choiceEl.dataset.index = index;
+                
+                choiceEl.innerHTML = `
+                    <div class="choice-emoji">${emoji}</div>
+                    <div class="choice-label">${choice.text}</div>
+                `;
+                
+                choiceEl.addEventListener('click', (e) => handleChoiceClick(e, index, choice.target));
+                choicesContainer.appendChild(choiceEl);
+            });
+            
+            // Show choices with animation
+            setTimeout(() => {
+                choicesContainer.classList.remove('hidden');
+            }, 500);
+        }
+        
+        // Handle choice click
+        function handleChoiceClick(event, index, target) {
+            if (animationInProgress) return;
+            animationInProgress = true;
+            
+            const choiceElement = event.currentTarget;
+            const rect = choiceElement.getBoundingClientRect();
+            
+            // Create expanding element
+            expandingElement = document.createElement('div');
+            expandingElement.className = 'expanding-choice';
+            expandingElement.style.backgroundColor = getComputedStyle(choiceElement).backgroundColor;
+            expandingElement.style.left = `${rect.left}px`;
+            expandingElement.style.width = `${rect.width}px`;
+            expandingElement.innerHTML = choiceElement.innerHTML;
+            document.body.appendChild(expandingElement);
+            
+            // Start expanding animation
+            requestAnimationFrame(() => {
+                expandingElement.style.height = '100%';
+                expandingElement.style.left = '0';
+                expandingElement.style.width = '100%';
+                
+                // Hide original choices
+                choicesContainer.style.opacity = '0';
+                
+                // Grow emoji during expansion
+                const emoji = expandingElement.querySelector('.choice-emoji');
+                emoji.style.fontSize = '8rem';
+                emoji.style.filter = 'grayscale(0%) opacity(1)';
+                
+                // Fade out choice background
+                setTimeout(() => {
+                    expandingElement.style.backgroundColor = 'rgba(0,0,0,0)';
+                    storyElement.classList.add('fading');
+                }, 500);
+                
+                // Once animation is complete, navigate to target
+                setTimeout(() => {
+                    expandingElement.remove();
+                    expandingElement = null;
+                    showKnot(target);
+                    choicesContainer.style.opacity = '1';
+                    animationInProgress = false;
+                }, 1000);
+            });
+        }
+        
+        // Show the end screen
+        function showEndScreen() {
+            endScreen.classList.add('active');
+        }
+        
+        // Hide the end screen
+        function hideEndScreen() {
+            endScreen.classList.remove('active');
         }
         
         // Restart the story
         function restartStory() {
+            hideEndScreen();
             const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
             showKnot(startKnot);
         }
         
         // Show a status message
-        function showStatus(message) {
-            statusElement.textContent = message;
-            statusElement.style.display = 'block';
+        function showStatus(message, showLoader = false) {
+            statusText.textContent = message;
+            statusOverlay.classList.add('active');
+            
+            const loader = statusOverlay.querySelector('.loading-animation');
+            if (showLoader) {
+                loader.style.display = 'inline-block';
+            } else {
+                loader.style.display = 'none';
+            }
+        }
+        
+        // Hide the status message
+        function hideStatus() {
+            statusOverlay.classList.remove('active');
+        }
+        
+        // Touch handling for choice expansion
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let choiceIndex = -1;
+        let touchStartTime = 0;
+        
+        function handleTouchStart(event) {
+            if (animationInProgress || !event.touches[0]) return;
+            
+            touchStartY = event.touches[0].clientY;
+            touchStartX = event.touches[0].clientX;
+            touchStartTime = Date.now();
+            
+            // Find the choice element that was touched
+            const choice = document.elementFromPoint(touchStartX, touchStartY);
+            const choiceEl = choice ? choice.closest('.choice') : null;
+            
+            if (choiceEl) {
+                choiceIndex = parseInt(choiceEl.dataset.index);
+            }
+        }
+        
+        function handleTouchMove(event) {
+            if (choiceIndex === -1 || !event.touches[0]) return;
+            
+            const touchY = event.touches[0].clientY;
+            const touchX = event.touches[0].clientX;
+            
+            // Calculate how much the user has pulled down
+            const deltaY = touchStartY - touchY;
+            
+            // If they're pulling up significantly
+            if (deltaY > 50) {
+                // Start expanding the choice
+                if (!expandingElement && !animationInProgress) {
+                    const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
+                    if (choiceEl) {
+                        handleChoiceClick({currentTarget: choiceEl}, choiceIndex, choiceEl.dataset.target);
+                    }
+                }
+            }
+        }
+        
+        function handleTouchEnd(event) {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            // Treat short touches as taps/clicks
+            if (touchDuration < 300 && choiceIndex !== -1) {
+                const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
+                if (choiceEl && !animationInProgress) {
+                    handleChoiceClick({currentTarget: choiceEl}, choiceIndex, choiceEl.dataset.target);
+                }
+            }
+            
+            choiceIndex = -1;
         }
         
         // Initialize when the page loads
