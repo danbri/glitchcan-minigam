@@ -1170,8 +1170,9 @@
                 // Adjust dynamic sizing - expand image container if we're not on a tiny screen
                 const windowHeight = window.innerHeight;
                 if (windowHeight > 700) {
-                    // On larger screens, give images more room
-                    const newHeight = Math.min(45, Math.max(38, 50 - (choices?.length * 3 || 0))) + 'vh';
+                    // On larger screens, give images more room - count existing choices
+                    const choicesCount = document.querySelectorAll('.choice').length;
+                    const newHeight = Math.min(45, Math.max(38, 50 - (choicesCount * 3 || 0))) + 'vh';
                     imageContainer.style.height = newHeight;
                     console.log('Adjusted image container height to', newHeight);
                 }
