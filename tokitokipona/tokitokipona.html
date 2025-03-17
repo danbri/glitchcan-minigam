@@ -21,7 +21,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             max-width: 80%;
-            width: 400px;
+            width: 500px;
         }
         #word {
             font-size: 2.5rem;
@@ -75,6 +75,51 @@
         #hardMode {
             margin-top: 1rem;
         }
+        #dictionary-info {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #ccc;
+            text-align: left;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        #dictionary-info.active {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .pos-tag {
+            display: inline-block;
+            background-color: #f0f0f0;
+            color: #555;
+            font-size: 0.8rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            margin-right: 0.5rem;
+            margin-bottom: 0.3rem;
+            font-weight: bold;
+        }
+        .definition-item {
+            margin-bottom: 0.5rem;
+        }
+        #toggle-dictionary {
+            background: none;
+            border: none;
+            color: #4CAF50;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        #toggle-dictionary:hover {
+            color: #2E7D32;
+        }
+        #settings {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -85,15 +130,25 @@
         </div>
         <div id="choices"></div>
         <div id="result"></div>
-        <div id="hardMode">
-            <label>
-                <input type="checkbox" id="hardModeCheckbox"> Hard Mode (Delayed Emoji)
-            </label>
+        <div id="settings">
+            <div id="hardMode">
+                <label>
+                    <input type="checkbox" id="hardModeCheckbox"> Hard Mode (Delayed Emoji)
+                </label>
+            </div>
+            <div id="fullDictMode">
+                <label>
+                    <input type="checkbox" id="fullDictCheckbox"> Full Dictionary
+                </label>
+            </div>
         </div>
+        <button id="toggle-dictionary">Show Dictionary Info</button>
+        <div id="dictionary-info"></div>
     </div>
 
     <script>
-        const tokiPona = [
+        // Legacy word list with emojis for backward compatibility
+        const legacyTokiPona = [
             { word: "mi", meaning: "I, me, we, us", emoji: "👤" },
             { word: "sina", meaning: "you", emoji: "👉" },
             { word: "ona", meaning: "he, she, it, they", emoji: "👥" },
@@ -105,9 +160,201 @@
             { word: "moku", meaning: "food, eat", emoji: "🍽️" },
             { word: "telo", meaning: "water, liquid", emoji: "💧" }
         ];
+        
+        // Emoji mappings for new dictionary words that don't exist in legacy list
+        const emojiMappings = {
+            "a": "😮", "kin": "😮",
+            "akesi": "🦎",
+            "alasa": "🏹",
+            "ali": "🌍",
+            "anpa": "👇",
+            "ante": "🔄",
+            "anu": "🔀",
+            "awen": "⏱️",
+            "e": "🎯",
+            "en": "➕",
+            "esun": "🛒",
+            "ijo": "🔮",
+            "ike": "👎",
+            "insa": "🫀",
+            "jaki": "🤢",
+            "jan": "👥",
+            "jelo": "💛",
+            "jo": "✊",
+            "kala": "🐟",
+            "kalama": "🔊",
+            "kama": "➡️",
+            "kasi": "🌿",
+            "ken": "💪",
+            "kepeken": "🔨",
+            "kiwen": "🪨",
+            "ko": "🧴",
+            "kon": "💨",
+            "kule": "🌈",
+            "kulupu": "👨‍👩‍👧‍👦",
+            "kute": "👂",
+            "la": "🔍",
+            "lape": "😴",
+            "laso": "💙",
+            "lawa": "🧠",
+            "len": "👕",
+            "lete": "❄️",
+            "li": "⚡",
+            "lili": "🤏",
+            "linja": "🧵",
+            "lipu": "📄",
+            "loje": "❤️",
+            "lon": "📍",
+            "luka": "🖐️",
+            "lukin": "👁️", "oko": "👁️",
+            "lupa": "🕳️",
+            "ma": "🗺️",
+            "mama": "👪",
+            "mani": "💰",
+            "meli": "👩",
+            "mije": "👨",
+            "moli": "💀",
+            "monsi": "🍑",
+            "mu": "🐮",
+            "mun": "🌙",
+            "musi": "🎮",
+            "mute": "🔢",
+            "nanpa": "🔢",
+            "nasa": "🥴",
+            "nasin": "🛣️",
+            "nena": "⛰️",
+            "ni": "👉",
+            "nimi": "🏷️",
+            "noka": "🦶",
+            "o": "📣",
+            "olin": "❤️",
+            "open": "🔓",
+            "pakala": "💥",
+            "pali": "🔨",
+            "palisa": "🥖",
+            "pan": "🍞",
+            "pana": "🎁",
+            "pi": "🔗",
+            "pilin": "💭",
+            "pimeja": "⚫",
+            "pini": "🏁",
+            "pipi": "🐜",
+            "poka": "👫",
+            "poki": "📦",
+            "pu": "📕",
+            "sama": "🪞",
+            "seli": "🔥",
+            "selo": "🧥",
+            "seme": "❓",
+            "sewi": "☁️",
+            "sijelo": "🧍",
+            "sike": "⭕",
+            "sin": "✨", "namako": "✨",
+            "sinpin": "😐",
+            "sitelen": "🖼️",
+            "sona": "🧠",
+            "soweli": "🐱",
+            "suli": "🐘",
+            "suno": "☀️",
+            "supa": "🪑",
+            "suwi": "🍬",
+            "tan": "🔙",
+            "taso": "⚠️",
+            "tawa": "➡️",
+            "tenpo": "⏰",
+            "toki": "💬",
+            "tomo": "🏠",
+            "tu": "✌️",
+            "unpa": "💋",
+            "uta": "👄",
+            "utala": "⚔️",
+            "walo": "⚪",
+            "wan": "1️⃣",
+            "waso": "🐦",
+            "wawa": "💪",
+            "weka": "🚫",
+            "wile": "🙏"
+        };
 
+        // Full dictionary will be loaded here
+        let fullDictionary = [];
+        
+        // Combined dictionary for app use
+        let tokiPona = [...legacyTokiPona];
+        
         let currentWord;
         let hardMode = false;
+        let useFullDictionary = false;
+        
+        // Load the full dictionary from the JSON file
+        async function loadDictionary() {
+            try {
+                const response = await fetch('dictionary.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+                fullDictionary = await response.json();
+                console.log(`Loaded ${fullDictionary.length} words from dictionary.json`);
+                
+                // Merge with legacy dictionary to assign emojis
+                enrichDictionary();
+            } catch (error) {
+                console.error('Failed to load dictionary:', error);
+            }
+        }
+        
+        // Enhance the dictionary with emoji and simplified meanings
+        function enrichDictionary() {
+            fullDictionary.forEach(entry => {
+                // Get the primary word
+                const word = entry.words[0];
+                
+                // Combine all definitions into one string
+                let meaning = "";
+                entry.definitions.forEach(def => {
+                    if (meaning.length > 0) meaning += "; ";
+                    meaning += def.definition;
+                });
+                
+                // Find if we already have an emoji for this word
+                let emoji = null;
+                
+                // Check legacy dictionary first
+                const legacyEntry = legacyTokiPona.find(item => item.word === word);
+                if (legacyEntry) {
+                    emoji = legacyEntry.emoji;
+                } 
+                // Then check our emoji mapping
+                else if (emojiMappings[word]) {
+                    emoji = emojiMappings[word];
+                }
+                // Fallback emoji
+                else {
+                    emoji = "❓";
+                }
+                
+                // Add to the combined dictionary
+                if (!tokiPona.some(item => item.word === word)) {
+                    tokiPona.push({
+                        word: word,
+                        meaning: meaning,
+                        emoji: emoji,
+                        fullEntry: entry // Keep reference to full entry
+                    });
+                } else {
+                    // Update existing entry with full data
+                    const existingIndex = tokiPona.findIndex(item => item.word === word);
+                    if (existingIndex >= 0) {
+                        tokiPona[existingIndex].fullEntry = entry;
+                    }
+                }
+            });
+            
+            console.log(`Dictionary enriched, now contains ${tokiPona.length} words`);
+        }
+        
+        // Load dictionary when page loads
+        loadDictionary();
 
         function getRandomWord() {
             return tokiPona[Math.floor(Math.random() * tokiPona.length)];
@@ -125,6 +372,7 @@
         }
 
         function displayWord() {
+            // Get random word from either the full or limited dictionary
             currentWord = getRandomWord();
             document.getElementById('word').textContent = currentWord.word;
             const emojiElement = document.getElementById('emoji');
@@ -149,10 +397,43 @@
             const choices = getChoices(currentWord.meaning);
             let choicesHtml = '';
             choices.forEach(choice => {
-                choicesHtml += `<button class="choice" onclick="checkAnswer('${choice}')">${choice}</button>`;
+                choicesHtml += `<button class="choice" onclick="checkAnswer('${choice.replace(/'/g, "\\'")}')">${choice}</button>`;
             });
             document.getElementById('choices').innerHTML = choicesHtml;
             document.getElementById('result').textContent = '';
+            
+            // Update dictionary information panel if we have full entry data
+            updateDictionaryInfo();
+        }
+
+        function updateDictionaryInfo() {
+            const dictionaryInfo = document.getElementById('dictionary-info');
+            
+            if (currentWord.fullEntry) {
+                let infoHtml = '';
+                const entry = currentWord.fullEntry;
+                
+                // Display alternative forms if available
+                if (entry.words.length > 1) {
+                    infoHtml += `<div><strong>Alternative forms:</strong> ${entry.words.join(', ')}</div>`;
+                }
+                
+                // Display definitions grouped by part of speech
+                infoHtml += '<div class="definitions">';
+                entry.definitions.forEach(def => {
+                    infoHtml += `
+                        <div class="definition-item">
+                            <span class="pos-tag">${def.pos}</span>
+                            ${def.definition}
+                        </div>
+                    `;
+                });
+                infoHtml += '</div>';
+                
+                dictionaryInfo.innerHTML = infoHtml;
+            } else {
+                dictionaryInfo.innerHTML = '<div>No additional dictionary information available.</div>';
+            }
         }
 
         function checkAnswer(choice) {
@@ -166,9 +447,33 @@
             setTimeout(displayWord, 1500);
         }
 
+        // Configure the toggle dictionary button
+        document.getElementById('toggle-dictionary').addEventListener('click', function() {
+            const dictionaryInfo = document.getElementById('dictionary-info');
+            dictionaryInfo.classList.toggle('active');
+            
+            if (dictionaryInfo.classList.contains('active')) {
+                this.textContent = 'Hide Dictionary Info';
+            } else {
+                this.textContent = 'Show Dictionary Info';
+            }
+        });
+
+        // Configure hard mode
         document.getElementById('hardModeCheckbox').addEventListener('change', function() {
             hardMode = this.checked;
             displayWord();
+        });
+        
+        // Configure full dictionary mode
+        document.getElementById('fullDictCheckbox').addEventListener('change', function() {
+            useFullDictionary = this.checked;
+            // If we're switching to full dictionary mode, make sure it's loaded
+            if (useFullDictionary && fullDictionary.length === 0) {
+                loadDictionary().then(() => displayWord());
+            } else {
+                displayWord();
+            }
         });
 
         // Initial word display
