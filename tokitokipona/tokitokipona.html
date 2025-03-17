@@ -161,119 +161,135 @@
             { word: "telo", meaning: "water, liquid", emoji: "💧" }
         ];
         
-        // Emoji mappings for new dictionary words that don't exist in legacy list
+        // Emoji mappings for all Toki Pona words - carefully selected to match meanings
         const emojiMappings = {
-            "a": "😮", "kin": "😮",
-            "akesi": "🦎",
-            "alasa": "🏹",
-            "ali": "🌍",
-            "anpa": "👇",
-            "ante": "🔄",
-            "anu": "🔀",
-            "awen": "⏱️",
-            "e": "🎯",
-            "en": "➕",
-            "esun": "🛒",
-            "ijo": "🔮",
-            "ike": "👎",
-            "insa": "🫀",
-            "jaki": "🤢",
-            "jan": "👥",
-            "jelo": "💛",
-            "jo": "✊",
-            "kala": "🐟",
-            "kalama": "🔊",
-            "kama": "➡️",
-            "kasi": "🌿",
-            "ken": "💪",
-            "kepeken": "🔨",
-            "kiwen": "🪨",
-            "ko": "🧴",
-            "kon": "💨",
-            "kule": "🌈",
-            "kulupu": "👨‍👩‍👧‍👦",
-            "kute": "👂",
-            "la": "🔍",
-            "lape": "😴",
-            "laso": "💙",
-            "lawa": "🧠",
-            "len": "👕",
-            "lete": "❄️",
-            "li": "⚡",
-            "lili": "🤏",
-            "linja": "🧵",
-            "lipu": "📄",
-            "loje": "❤️",
-            "lon": "📍",
-            "luka": "🖐️",
-            "lukin": "👁️", "oko": "👁️",
-            "lupa": "🕳️",
-            "ma": "🗺️",
-            "mama": "👪",
-            "mani": "💰",
-            "meli": "👩",
-            "mije": "👨",
-            "moli": "💀",
-            "monsi": "🍑",
-            "mu": "🐮",
-            "mun": "🌙",
-            "musi": "🎮",
-            "mute": "🔢",
-            "nanpa": "🔢",
-            "nasa": "🥴",
-            "nasin": "🛣️",
-            "nena": "⛰️",
-            "ni": "👉",
-            "nimi": "🏷️",
-            "noka": "🦶",
-            "o": "📣",
-            "olin": "❤️",
-            "open": "🔓",
-            "pakala": "💥",
-            "pali": "🔨",
-            "palisa": "🥖",
-            "pan": "🍞",
-            "pana": "🎁",
-            "pi": "🔗",
-            "pilin": "💭",
-            "pimeja": "⚫",
-            "pini": "🏁",
-            "pipi": "🐜",
-            "poka": "👫",
-            "poki": "📦",
-            "pu": "📕",
-            "sama": "🪞",
-            "seli": "🔥",
-            "selo": "🧥",
-            "seme": "❓",
-            "sewi": "☁️",
-            "sijelo": "🧍",
-            "sike": "⭕",
-            "sin": "✨", "namako": "✨",
-            "sinpin": "😐",
-            "sitelen": "🖼️",
-            "sona": "🧠",
-            "soweli": "🐱",
-            "suli": "🐘",
-            "suno": "☀️",
-            "supa": "🪑",
-            "suwi": "🍬",
-            "tan": "🔙",
-            "taso": "⚠️",
-            "tawa": "➡️",
-            "tenpo": "⏰",
-            "toki": "💬",
-            "tomo": "🏠",
-            "tu": "✌️",
-            "unpa": "💋",
-            "uta": "👄",
-            "utala": "⚔️",
-            "walo": "⚪",
-            "wan": "1️⃣",
-            "waso": "🐦",
-            "wawa": "💪",
-            "weka": "🚫",
-            "wile": "🙏"
+            // Original words with improved emoji
+            "mi": "👤",        // person (I, me)
+            "sina": "👉",      // you (pointing at you)
+            "ona": "👥",       // they/them (multiple people)
+            "ilo": "🔧",       // tool
+            "pona": "👍",      // good
+            "ala": "❌",       // no, not
+            "ale": "🌍",       // everything, universe
+            "ali": "🌍",       // alternative form of ale
+            "kili": "🍎",      // fruit
+            "moku": "🍽️",      // food, eat
+            "telo": "💧",      // water
+            
+            // Additional words with carefully chosen emoji
+            "a": "😮",         // emphasis (surprised face)
+            "kin": "😮",       // emphasis (alternative form)
+            "akesi": "🦎",     // reptile
+            "alasa": "🏹",     // hunt, forage
+            "anpa": "👇",      // down, lowly
+            "ante": "🔄",      // different, changed
+            "anu": "🔀",       // or (shuffle symbol)
+            "awen": "⏱️",       // enduring, waiting
+            "e": "🎯",         // direct object marker (target)
+            "en": "➕",         // and (plus symbol)
+            "esun": "🛒",      // market, shop
+            "ijo": "🔮",       // thing, object
+            "ike": "👎",       // bad
+            "insa": "🫀",      // inside, internal organ
+            "jaki": "🤢",      // disgusting, unclean
+            "jan": "🧑",       // human, person
+            "jelo": "🟡",      // yellow
+            "jo": "✊",         // have, hold
+            "kala": "🐟",      // fish
+            "kalama": "🔊",    // sound
+            "kama": "🚶",      // coming, arriving
+            "kasi": "🌿",      // plant
+            "ken": "💪",       // can, able to
+            "kepeken": "🧰",   // use, with
+            "kiwen": "🪨",     // hard object, stone
+            "ko": "🧴",        // semi-solid, paste
+            "kon": "💨",       // air, breath, spirit
+            "kule": "🎨",      // color
+            "kulupu": "👪",    // community, group
+            "kute": "👂",      // hear, listen
+            "la": "🔍",        // context marker (magnifying glass)
+            "lape": "😴",      // sleep
+            "laso": "🔵",      // blue/green
+            "lawa": "🧠",      // head, mind
+            "len": "👕",       // clothing
+            "lete": "❄️",       // cold
+            "li": "🔗",        // linking particle (chain link)
+            "lili": "🤏",      // small
+            "linja": "🧵",     // long flexible thing, thread
+            "lipu": "📄",      // flat object, paper
+            "loje": "🔴",      // red
+            "lon": "📍",       // at, in, existing
+            "luka": "🖐️",      // hand, arm
+            "lukin": "👁️",     // see, look
+            "oko": "👁️",       // eye (alternative form)
+            "lupa": "🕳️",      // hole, door
+            "ma": "🏞️",        // land, earth
+            "mama": "👪",      // parent
+            "mani": "💰",      // money
+            "meli": "👩",      // woman
+            "mije": "👨",      // man
+            "moli": "💀",      // death
+            "monsi": "🔙",     // back, behind
+            "mu": "🐾",        // animal sound
+            "mun": "🌙",       // moon, night sky object
+            "musi": "🎯",      // fun, game
+            "mute": "🔢",      // many, multiple
+            "nanpa": "#️⃣",     // number
+            "nasa": "🥴",      // strange, unusual
+            "nasin": "🛣️",     // way, path
+            "nena": "⛰️",      // bump, hill, mountain
+            "ni": "👇",        // this, that
+            "nimi": "🏷️",      // name, word
+            "noka": "🦶",      // foot, leg
+            "o": "📣",         // hey! (vocative)
+            "olin": "💗",      // love
+            "open": "🔓",      // open, begin
+            "pakala": "💥",    // broken, damaged
+            "pali": "⚒️",       // work, do
+            "palisa": "📏",    // long hard thing, rod
+            "pan": "🍞",       // bread, cereal
+            "pana": "🎁",      // give, send
+            "pi": "🔗",        // of (possessive)
+            "pilin": "💭",     // feeling, emotion
+            "pimeja": "⚫",    // black, dark
+            "pini": "🏁",      // end, finish
+            "pipi": "🐜",      // bug, insect
+            "poka": "↔️",      // side, nearby
+            "poki": "📦",      // container, box
+            "pu": "📕",        // interacting with the official Toki Pona book
+            "sama": "🪞",      // same, similar
+            "seli": "🔥",      // fire, heat
+            "selo": "🧥",      // outer layer, skin
+            "seme": "❓",      // what? which?
+            "sewi": "☁️",      // above, divine
+            "sijelo": "🧍",    // body
+            "sike": "⭕",      // circle, round thing
+            "sin": "✨",       // new, fresh
+            "namako": "✨",    // new, fresh (alternative form)
+            "sinpin": "🧱",    // front, wall
+            "sitelen": "🖼️",   // image, picture
+            "sona": "🧠",      // knowledge, wisdom
+            "soweli": "🐱",    // animal, beast
+            "suli": "🐘",      // big, important
+            "suno": "☀️",      // sun, light
+            "supa": "🪑",      // horizontal surface
+            "suwi": "🍬",      // sweet, cute
+            "tan": "📍",       // from, because
+            "taso": "🚫",      // but, only
+            "tawa": "🚶",      // going to, movement
+            "tenpo": "⏰",      // time, moment
+            "toki": "💬",      // talk, language
+            "tomo": "🏠",      // indoor space, building
+            "tu": "✌️",        // two
+            "unpa": "💏",      // intimate relationship
+            "uta": "👄",       // mouth
+            "utala": "⚔️",     // battle, fight
+            "walo": "⚪",      // white
+            "wan": "1️⃣",       // one
+            "waso": "🐦",      // bird
+            "wawa": "💪",      // strong, powerful
+            "weka": "🚫",      // away, absent
+            "wile": "🙏"       // want, need
         };
 
         // Full dictionary will be loaded here
@@ -357,7 +373,10 @@
         loadDictionary();
 
         function getRandomWord() {
-            return tokiPona[Math.floor(Math.random() * tokiPona.length)];
+            // When in full dictionary mode, use the entire tokiPona array
+            // Otherwise, just use the legacy list for simplicity
+            const wordList = useFullDictionary ? tokiPona : legacyTokiPona;
+            return wordList[Math.floor(Math.random() * wordList.length)];
         }
 
         function getChoices(correct) {
