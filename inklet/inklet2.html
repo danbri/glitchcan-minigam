@@ -22,7 +22,7 @@
             --choice-left: #f43f5e;
             --choice-middle: #10b981;
             --choice-right: #3b82f6;
-            --choice-height: 40vh;
+            --choice-height: 25vh; /* Reduced from 40vh to take less space */
             --transition-time: 0.5s;
         }
 
@@ -53,13 +53,26 @@
         .title-bar {
             background-color: var(--surface);
             padding: 12px 20px;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .title-bar.visible {
+            transform: translateY(0);
+        }
+        
+        /* Show menu when hovering near top of screen */
+        .app-container.show-menu .title-bar {
+            transform: translateY(0);
         }
 
         .title-bar h1 {
@@ -93,17 +106,25 @@
             transform: translateY(0);
         }
 
-        #ink-url-input {
+        #ink-url-input, #media-path-input {
             flex-grow: 1;
             padding: 10px 16px;
             border: none;
-            border-radius: 8px 0 0 8px;
             background-color: rgba(255, 255, 255, 0.1);
             color: var(--text);
             font-size: 0.9rem;
+            margin-right: 2px;
+        }
+        
+        #ink-url-input {
+            border-radius: 8px 0 0 8px;
+        }
+        
+        #media-path-input {
+            border-radius: 0;
         }
 
-        #ink-url-input:focus {
+        #ink-url-input:focus, #media-path-input:focus {
             outline: none;
             background-color: rgba(255, 255, 255, 0.15);
         }
@@ -137,21 +158,35 @@
         .image-container {
             position: relative;
             width: 100%;
-            height: 35vh;
+            height: 38vh; /* Increased from 30vh to 38vh for more prominence */
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: height 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.1);
         }
 
         #story-image {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Ensures full image is visible */
             transition: opacity 1s ease, transform 1.5s ease;
             transform-origin: center;
+            max-height: 100%;
+            max-width: 100%;
         }
 
         #story-image.hidden {
             opacity: 0;
+        }
+        
+        .image-container.hidden {
+            height: 0;
+            margin: 0;
+            padding: 0;
+            border: none;
         }
 
         #story-image.zoom-in {
@@ -163,8 +198,51 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 150px;
+            height: 80px;
             background: linear-gradient(to top, var(--background), transparent);
+            z-index: 1;
+        }
+        
+        .image-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 15px;
+            background-color: rgba(15, 23, 42, 0.75); /* Using --background with 75% opacity */
+            color: var(--text);
+            font-size: 0.9rem;
+            text-align: center;
+            z-index: 2;
+            font-family: 'Montserrat', sans-serif;
+            backdrop-filter: blur(2px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* Expanded caption when clicked */
+        .image-caption.expanded {
+            padding: 15px;
+            font-size: 1rem;
+            background-color: rgba(15, 23, 42, 0.9);
+        }
+        
+        /* Hide caption on hover to see image better */
+        .image-container:hover .image-caption:not(.expanded) {
+            opacity: 0.2;
+        }
+        
+        /* Add caption instructions */
+        .image-caption::after {
+            content: "👆 tap for details";
+            display: block;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+        
+        .image-caption.expanded::after {
+            content: "👆 tap to minimize";
         }
 
         .story-content {
@@ -181,6 +259,7 @@
             font-size: 1.2rem;
             line-height: 1.7;
             transition: opacity 0.5s ease;
+            padding-bottom: 30vh; /* Extra padding to ensure text isn't hidden behind choices */
         }
 
         #story p {
@@ -249,6 +328,7 @@
             display: flex;
             z-index: 5;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 40vh;
         }
 
         .choices-container.hidden {
@@ -267,6 +347,7 @@
             overflow: hidden;
             transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
             transform-origin: bottom center;
+            min-height: 0;
         }
 
         .choice-1 { background-color: var(--choice-left); }
@@ -293,10 +374,11 @@
             text-align: center;
             opacity: 0.9;
             transition: all var(--transition-time) ease;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.5);
             padding: 8px 16px;
             border-radius: 8px;
             max-width: 100%;
+            z-index: 5;
         }
 
         .choice:hover .choice-label {
@@ -327,13 +409,14 @@
             font-weight: 600;
             font-size: 1rem;
             text-align: center;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.5);
             padding: 8px 16px;
             border-radius: 8px;
             max-width: 100%;
+            z-index: 5;
         }
 
-        .menu-button {
+        .menu-button, .fullscreen-button {
             background: none;
             border: none;
             color: var(--text-secondary);
@@ -342,11 +425,31 @@
             padding: 6px 12px;
             border-radius: 6px;
             transition: all 0.2s ease;
+            margin-left: 8px;
         }
 
-        .menu-button:hover {
+        .menu-button:hover, .fullscreen-button:hover {
             background-color: rgba(255, 255, 255, 0.1);
             color: var(--text);
+        }
+        
+        /* Fullscreen mode specific styles */
+        :fullscreen .app-container, 
+        :-webkit-full-screen .app-container, 
+        :-moz-full-screen .app-container {
+            background-color: var(--background);
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Menu trigger area at top of screen */
+        .menu-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 15px;
+            z-index: 5;
         }
 
         .restart-button {
@@ -439,6 +542,24 @@
             animation: slide-up 0.5s ease forwards;
         }
 
+        /* Desktop-specific adjustments */
+        @media (min-width: 769px) {
+            .choices-container {
+                --choice-height: 20vh; /* Even smaller on desktops/laptops */
+                height: var(--choice-height);
+            }
+            
+            .choice-emoji {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+            }
+            
+            #story {
+                padding-bottom: 25vh;
+            }
+        }
+        
+        /* Mobile-specific adjustments */
         @media (max-width: 768px) {
             .story-content {
                 padding: 16px;
@@ -460,6 +581,23 @@
             
             .choice-emoji {
                 font-size: 3rem;
+            }
+        }
+        
+        /* Small screens (like chromebooks) */
+        @media (max-height: 700px) {
+            .choices-container {
+                --choice-height: 100px; /* Reduced height for small screens */
+                height: var(--choice-height);
+            }
+            
+            .image-container {
+                height: 42vh; /* Increased height for small screens to give more space to images */
+            }
+            
+            .choice-emoji {
+                font-size: 1.8rem; /* Smaller emoji for small screens */
+                margin-bottom: 5px;
             }
         }
 
@@ -506,14 +644,19 @@
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <div class="title-bar">
+    <div class="app-container" id="app-container">
+        <div class="menu-trigger" id="menu-trigger"></div>
+        <div class="title-bar" id="title-bar">
             <h1>Riverbend</h1>
-            <button class="menu-button" id="menu-button">⚙️</button>
+            <div class="controls">
+                <button class="fullscreen-button" id="fullscreen-button">📺</button>
+                <button class="menu-button" id="menu-button">⚙️</button>
+            </div>
         </div>
         
         <div class="url-form" id="url-form">
             <input type="text" id="ink-url-input" value="riverbend.ink" placeholder="Enter URL of .ink file">
+            <input type="text" id="media-path-input" value="villaged/" placeholder="Media assets directory">
             <button id="load-ink-button">Load Story</button>
         </div>
         
@@ -551,22 +694,30 @@
         let inkStoryContent = '';
         let storyKnots = {};
         let currentKnot = '';
-        let imageBasePath = './'; // Base path for images
+        let mediaBasePath = 'villaged/'; // Configurable media assets root directory
         let animationInProgress = false;
         let expandingElement = null;
         
         // DOM elements
+        const appContainer = document.getElementById('app-container');
+        const menuTrigger = document.getElementById('menu-trigger');
+        const titleBar = document.getElementById('title-bar');
         const storyElement = document.getElementById('story');
         const choicesContainer = document.getElementById('choices-container');
         const statusOverlay = document.getElementById('status-overlay');
         const statusText = document.getElementById('status-text');
         const inkUrlInput = document.getElementById('ink-url-input');
+        const mediaPathInput = document.getElementById('media-path-input');
         const loadInkButton = document.getElementById('load-ink-button');
         const storyImage = document.getElementById('story-image');
         const menuButton = document.getElementById('menu-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
         const urlForm = document.getElementById('url-form');
         const endScreen = document.getElementById('end-screen');
         const endRestartButton = document.getElementById('end-restart-button');
+        
+        // State for fullscreen and menu
+        let isFullscreen = false;
         
         // Emoji mapping for common themes in choices
         const emojiMap = {
@@ -614,9 +765,29 @@
         
         // Initialize the story player
         function init() {
+            // Setup menu and UI controls
             loadInkButton.addEventListener('click', loadInkStory);
             menuButton.addEventListener('click', toggleUrlForm);
             endRestartButton.addEventListener('click', restartStory);
+            fullscreenButton.addEventListener('click', toggleFullscreen);
+            
+            // Setup menu trigger for showing the menu when cursor is near top
+            menuTrigger.addEventListener('mouseenter', () => {
+                appContainer.classList.add('show-menu');
+            });
+            
+            // Hide menu when mouse leaves menu area
+            titleBar.addEventListener('mouseleave', () => {
+                if (!urlForm.classList.contains('active')) {
+                    appContainer.classList.remove('show-menu');
+                }
+            });
+            
+            // Handle tap near top of screen to show menu (for mobile)
+            menuTrigger.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                titleBar.classList.toggle('visible');
+            });
             
             // Debug helper
             console.log('Initializing INK player...');
@@ -628,24 +799,85 @@
                 showStatus('Enter a URL to load an INK story');
             }
             
-            // Add touch handling
+            // Add touch handling for mobile
             document.addEventListener('touchstart', handleTouchStart);
             document.addEventListener('touchmove', handleTouchMove);
             document.addEventListener('touchend', handleTouchEnd);
+            
+            // Add a click handler for the document to handle clicks on choices
+            document.addEventListener('click', (e) => {
+                const choiceEl = e.target.closest('.choice');
+                if (choiceEl && !animationInProgress) {
+                    const index = parseInt(choiceEl.dataset.index);
+                    const target = choiceEl.dataset.target;
+                    handleChoiceClick({currentTarget: choiceEl}, index, target);
+                }
+            });
+        }
+        
+        // Toggle fullscreen mode
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                // Enter fullscreen
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                }
+                
+                fullscreenButton.textContent = '❌';
+                fullscreenButton.title = 'Exit fullscreen';
+                isFullscreen = true;
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+                
+                fullscreenButton.textContent = '📺';
+                fullscreenButton.title = 'Enter fullscreen';
+                isFullscreen = false;
+            }
         }
         
         // Toggle the URL form
         function toggleUrlForm() {
+            titleBar.classList.add('visible');
             urlForm.classList.toggle('active');
         }
         
         // Load the INK story from the provided URL
         async function loadInkStory() {
             urlForm.classList.remove('active');
+            
+            // Auto-hide menu after loading a story
+            setTimeout(() => {
+                appContainer.classList.remove('show-menu');
+                titleBar.classList.remove('visible');
+            }, 1000);
+            
             const inkUrl = inkUrlInput.value.trim();
             if (!inkUrl) {
                 showStatus('Please enter a URL to an INK file');
                 return;
+            }
+            
+            // Update media assets path
+            const newMediaPath = mediaPathInput.value.trim();
+            if (newMediaPath) {
+                // Ensure path ends with a slash
+                mediaBasePath = newMediaPath.endsWith('/') ? newMediaPath : newMediaPath + '/';
+                console.log('Media assets path set to:', mediaBasePath);
             }
             
             showStatus('Loading story...', true);
@@ -926,25 +1158,47 @@
         // Update the story image with animation
         function updateImage(imagePath) {
             console.log('Updating image:', imagePath);
+            const imageContainer = document.querySelector('.image-container');
             
             if (imagePath) {
                 storyImage.classList.add('hidden');
+                imageContainer.classList.remove('hidden');
                 
-                // For demo/testing, use a placeholder if image doesn't exist
-                const placeholderImage = 'https://placehold.co/600x400/1e293b/ffffff?text=Riverbend:+' + encodeURIComponent(imagePath);
+                // Add descriptive text from filename
+                showDescriptiveText(imagePath);
+                
+                // Adjust dynamic sizing - expand image container if we're not on a tiny screen
+                const windowHeight = window.innerHeight;
+                if (windowHeight > 700) {
+                    // On larger screens, give images more room
+                    const newHeight = Math.min(45, Math.max(38, 50 - (choices?.length * 3 || 0))) + 'vh';
+                    imageContainer.style.height = newHeight;
+                    console.log('Adjusted image container height to', newHeight);
+                }
                 
                 setTimeout(() => {
-                    // First try to load the actual image
-                    const actualImage = imageBasePath + imagePath;
+                    // Try to load the image from the media assets directory
+                    const actualImage = mediaBasePath + imagePath;
                     
                     // Preload image to check if it exists
                     const img = new Image();
                     img.onload = function() {
+                        // Once we have image dimensions, we can optimize the container size
+                        const imgRatio = img.width / img.height;
+                        
+                        // For very wide images, we might want to adjust padding
+                        if (imgRatio > 2) {
+                            storyImage.style.padding = '0 15%';
+                        } else {
+                            storyImage.style.padding = '0';
+                        }
+                        
                         // Image exists, use the actual image
                         storyImage.src = actualImage;
+                        storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
                         storyImage.classList.remove('hidden');
                         storyImage.classList.add('zoom-in');
-                        console.log('Image displayed:', storyImage.src);
+                        console.log('Image displayed:', storyImage.src, 'ratio:', imgRatio);
                         
                         // Reset zoom after animation completes
                         setTimeout(() => {
@@ -953,16 +1207,16 @@
                     };
                     
                     img.onerror = function() {
-                        // Image doesn't exist, use placeholder
-                        console.warn('Image not found, using placeholder:', placeholderImage);
-                        storyImage.src = placeholderImage;
-                        storyImage.classList.remove('hidden');
-                        storyImage.classList.add('zoom-in');
+                        // Image doesn't exist, hide image container completely
+                        console.warn('Image not found:', actualImage);
+                        storyImage.classList.add('hidden');
+                        imageContainer.classList.add('hidden');
                         
-                        // Reset zoom after animation completes
-                        setTimeout(() => {
-                            storyImage.classList.remove('zoom-in');
-                        }, 1500);
+                        // Remove any caption
+                        const existingCaption = document.querySelector('.image-caption');
+                        if (existingCaption) {
+                            existingCaption.remove();
+                        }
                     };
                     
                     // Start loading the image
@@ -971,7 +1225,57 @@
             } else {
                 console.log('No image to display');
                 storyImage.classList.add('hidden');
+                imageContainer.classList.add('hidden');
+                
+                // Remove any caption
+                const existingCaption = document.querySelector('.image-caption');
+                if (existingCaption) {
+                    existingCaption.remove();
+                }
             }
+        }
+        
+        // Add a function to show descriptive image text
+        function showDescriptiveText(imagePath) {
+            // Extract alt text from the image filename
+            if (!imagePath) return;
+            
+            // Remove file extension and replace underscores with spaces
+            let descriptiveText = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+            
+            // Convert to sentence case (capitalize first letter) and handle words
+            descriptiveText = descriptiveText
+                .split(' ')
+                .map((word, i) => {
+                    // Don't capitalize articles, conjunctions, and prepositions unless first word
+                    const minorWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from', 'by', 'with'];
+                    if (i === 0 || !minorWords.includes(word.toLowerCase())) {
+                        return word.charAt(0).toUpperCase() + word.slice(1);
+                    }
+                    return word;
+                })
+                .join(' ');
+            
+            // Add as caption below image
+            const caption = document.createElement('div');
+            caption.className = 'image-caption';
+            caption.textContent = descriptiveText;
+            
+            // Add a click listener to toggle caption visibility
+            caption.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.classList.toggle('expanded');
+            });
+            
+            // Remove any existing caption
+            const existingCaption = document.querySelector('.image-caption');
+            if (existingCaption) {
+                existingCaption.remove();
+            }
+            
+            // Add caption to container
+            const imageContainer = document.querySelector('.image-container');
+            imageContainer.appendChild(caption);
         }
         
         // Update the choices with animation
@@ -999,7 +1303,13 @@
                     <div class="choice-label">${choice.text}</div>
                 `;
                 
-                choiceEl.addEventListener('click', (e) => handleChoiceClick(e, index, choice.target));
+                // We're now handling clicks at the document level
+                // This is just for touch interactions
+                choiceEl.addEventListener('touchstart', (e) => {
+                    // Mark this element as touched
+                    choiceEl.dataset.touched = 'true';
+                });
+                
                 choicesContainer.appendChild(choiceEl);
                 console.log(`Added choice ${index + 1}:`, choice.text, '→', choice.target);
             });
@@ -1140,13 +1450,20 @@
         function handleTouchEnd(event) {
             const touchDuration = Date.now() - touchStartTime;
             
+            // Find the element that was touched
+            const touchedElement = document.querySelector('.choice[data-touched="true"]');
+            
             // Treat short touches as taps/clicks
-            if (touchDuration < 300 && choiceIndex !== -1) {
-                const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
-                if (choiceEl && !animationInProgress) {
-                    handleChoiceClick({currentTarget: choiceEl}, choiceIndex, choiceEl.dataset.target);
-                }
+            if (touchDuration < 300 && touchedElement && !animationInProgress) {
+                const index = parseInt(touchedElement.dataset.index);
+                const target = touchedElement.dataset.target;
+                handleChoiceClick({currentTarget: touchedElement}, index, target);
             }
+            
+            // Reset all touched flags
+            document.querySelectorAll('.choice[data-touched="true"]').forEach(el => {
+                delete el.dataset.touched;
+            });
             
             choiceIndex = -1;
         }
@@ -1202,6 +1519,28 @@
         
         // Initialize when the page loads
         window.addEventListener('DOMContentLoaded', init);
+        
+        // Resize handler - recalculate image dimensions when window is resized
+        window.addEventListener('resize', () => {
+            console.log('Window resized to', window.innerWidth, 'x', window.innerHeight);
+            
+            // Adjust image container height based on screen size
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer && !imageContainer.classList.contains('hidden')) {
+                // Dynamically adjust image height based on window size
+                const windowHeight = window.innerHeight;
+                
+                if (windowHeight <= 700) {
+                    // Small screens like Chromebooks
+                    imageContainer.style.height = '42vh';
+                } else {
+                    // Larger screens
+                    const choicesCount = document.querySelectorAll('.choice').length;
+                    const newHeight = Math.min(45, Math.max(38, 50 - (choicesCount * 3 || 0))) + 'vh';
+                    imageContainer.style.height = newHeight;
+                }
+            }
+        });
         
         // Expose debug function globally
         window.debugStoryStructure = debugStoryStructure;
