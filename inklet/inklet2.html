@@ -618,6 +618,9 @@
             menuButton.addEventListener('click', toggleUrlForm);
             endRestartButton.addEventListener('click', restartStory);
             
+            // Debug helper
+            console.log('Initializing INK player...');
+            
             // Load default story if URL is already provided
             if (inkUrlInput.value) {
                 loadInkStory();
@@ -646,6 +649,7 @@
             }
             
             showStatus('Loading story...', true);
+            console.log('Loading INK story from:', inkUrl);
             
             try {
                 const response = await fetch(inkUrl);
@@ -654,16 +658,20 @@
                 }
                 
                 inkStoryContent = await response.text();
+                console.log('Story content loaded, length:', inkStoryContent.length);
                 parseInkStory(inkStoryContent);
                 
                 // Start the story from the first knot or the intro knot
                 const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+                console.log('Starting at knot:', startKnot);
+                console.log('Available knots:', Object.keys(storyKnots));
                 
                 setTimeout(() => {
                     hideStatus();
                     showKnot(startKnot);
                 }, 1000);
             } catch (error) {
+                console.error('Error loading story:', error);
                 showStatus(`Error: ${error.message}`);
             }
         }
@@ -760,9 +768,11 @@
         // Display a specific knot with animation
         function showKnot(knotName) {
             currentKnot = knotName;
+            console.log('Showing knot:', knotName);
             
             // Check if this is an ending knot
             if (knotName === 'END') {
+                console.log('End of story reached');
                 showEndScreen();
                 return;
             }
@@ -770,9 +780,12 @@
             // Get the knot data
             const knot = storyKnots[knotName];
             if (!knot) {
+                console.error('Knot not found:', knotName);
                 storyElement.innerHTML = `<p>Error: Knot "${knotName}" not found!</p>`;
                 return;
             }
+            
+            console.log('Knot data:', knot);
             
             // Start with fading out current content
             storyElement.classList.add('fading');
@@ -781,6 +794,7 @@
                 // Update story text
                 const paragraphs = knot.text.filter(line => line.trim()).map(line => `<p class="slide-up" style="opacity: 0;">${line}</p>`);
                 storyElement.innerHTML = paragraphs.join('');
+                console.log('Updated story text with', paragraphs.length, 'paragraphs');
                 
                 // Remove the fading class after content is updated
                 storyElement.classList.remove('fading');
@@ -803,12 +817,21 @@
         
         // Update the story image with animation
         function updateImage(imagePath) {
+            console.log('Updating image:', imagePath);
+            
             if (imagePath) {
                 storyImage.classList.add('hidden');
                 setTimeout(() => {
                     storyImage.src = imageBasePath + imagePath;
                     storyImage.classList.remove('hidden');
                     storyImage.classList.add('zoom-in');
+                    console.log('Image displayed:', storyImage.src);
+                    
+                    // Handle image load errors
+                    storyImage.onerror = function() {
+                        console.error('Failed to load image:', storyImage.src);
+                        storyImage.classList.add('hidden');
+                    };
                     
                     // Reset zoom after animation completes
                     setTimeout(() => {
@@ -816,16 +839,19 @@
                     }, 1500);
                 }, 300);
             } else {
+                console.log('No image to display');
                 storyImage.classList.add('hidden');
             }
         }
         
         // Update the choices with animation
         function updateChoices(choices) {
+            console.log('Updating choices:', choices);
             choicesContainer.innerHTML = '';
             choicesContainer.classList.add('hidden');
             
             if (!choices || choices.length === 0) {
+                console.log('No choices to display');
                 return;
             }
             
@@ -833,7 +859,8 @@
             choices.forEach((choice, index) => {
                 const emoji = chooseEmoji(choice.text);
                 const choiceEl = document.createElement('div');
-                choiceEl.className = `choice choice-${index + 1}`;
+                const choiceNumber = Math.min(index + 1, 3); // Only support up to 3 distinct styles
+                choiceEl.className = `choice choice-${choiceNumber}`;
                 choiceEl.dataset.target = choice.target;
                 choiceEl.dataset.index = index;
                 
@@ -844,11 +871,13 @@
                 
                 choiceEl.addEventListener('click', (e) => handleChoiceClick(e, index, choice.target));
                 choicesContainer.appendChild(choiceEl);
+                console.log(`Added choice ${index + 1}:`, choice.text, '→', choice.target);
             });
             
             // Show choices with animation
             setTimeout(() => {
                 choicesContainer.classList.remove('hidden');
+                console.log('Choices displayed');
             }, 500);
         }
         
