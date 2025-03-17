@@ -382,4 +382,4 @@ The Roman numerals etched on the gear seem to represent the numbers 5, 8, and 12
 
 [[Try entering these numbers in various orders. (Go on)]] -> try_roman_codes
 [[Consider if these numbers relate to something else in the village. (Detect/Engage - village knowledge)]] -> roman_numeral_meaning
-[[Look for other gears or similar markings. (Go back - to look for
+[[Look for other gears or similar markings. (Go back - to look for clues)]] -> look_for_clues
