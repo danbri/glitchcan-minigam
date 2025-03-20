@@ -697,6 +697,7 @@
         let mediaBasePath = 'villaged/'; // Configurable media assets root directory
         let animationInProgress = false;
         let expandingElement = null;
+        let isNavigatingFromHistory = false; // Flag to prevent double history entries
         
         // DOM elements
         const appContainer = document.getElementById('app-container');
@@ -789,11 +790,24 @@
                 titleBar.classList.toggle('visible');
             });
             
+            // Listen for history navigation (browser back/forward buttons)
+            window.addEventListener('popstate', handleHistoryNavigation);
+            
             // Debug helper
             console.log('Initializing INK player...');
             
-            // Load default story if URL is already provided
-            if (inkUrlInput.value) {
+            // Check if we have a hash fragment in the URL to restore position
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#js-')) {
+                const knotFromHash = hash.substring(4); // Remove '#js-' prefix
+                console.log('Found knot in URL hash:', knotFromHash);
+                // We'll load the story first, then navigate to the specific knot
+                if (inkUrlInput.value) {
+                    loadInkStory(knotFromHash);
+                } else {
+                    showStatus('Enter a URL to load an INK story');
+                }
+            } else if (inkUrlInput.value) {
                 loadInkStory();
             } else {
                 showStatus('Enter a URL to load an INK story');
@@ -857,7 +871,7 @@
         }
         
         // Load the INK story from the provided URL
-        async function loadInkStory() {
+        async function loadInkStory(targetKnot = null) {
             urlForm.classList.remove('active');
             
             // Auto-hide menu after loading a story
@@ -899,7 +913,18 @@
                     console.log(`Knot "${knotName}":`, storyKnots[knotName]);
                 });
                 
-                // Check if intro knot has content, if not use the first knot with actual content
+                // If a target knot was provided (from URL hash), check if it exists
+                if (targetKnot && storyKnots[targetKnot]) {
+                    console.log(`Using requested knot from URL: ${targetKnot}`);
+                    
+                    setTimeout(() => {
+                        hideStatus();
+                        showKnot(targetKnot, true); // Pass true to indicate this is from URL/history
+                    }, 1000);
+                    return;
+                }
+                
+                // Otherwise, start from intro or first available knot
                 let startKnot = 'intro';
                 
                 // If intro exists but is empty, find the first knot with content
@@ -1087,9 +1112,20 @@
         }
         
         // Display a specific knot with animation
-        function showKnot(knotName) {
+        function showKnot(knotName, fromHistory = false) {
             currentKnot = knotName;
-            console.log('Showing knot:', knotName);
+            console.log('Showing knot:', knotName, fromHistory ? '(from history)' : '');
+            
+            // Update browser history if not already navigating from history
+            if (!fromHistory && !isNavigatingFromHistory) {
+                // Create a nicely formatted URL fragment
+                const hashFragment = `#js-${knotName}`;
+                const stateObj = { knotName: knotName };
+                
+                // Update the URL without reloading the page
+                window.history.pushState(stateObj, '', hashFragment);
+                console.log('Updated URL with hash:', hashFragment);
+            }
             
             // Check if this is an ending knot
             if (knotName === 'END') {
@@ -1363,7 +1399,8 @@
                 setTimeout(() => {
                     expandingElement.remove();
                     expandingElement = null;
-                    showKnot(target);
+                    // showKnot will update browser history automatically
+                    showKnot(target, false);
                     choicesContainer.style.opacity = '1';
                     animationInProgress = false;
                 }, 1000);
@@ -1384,7 +1421,10 @@
         function restartStory() {
             hideEndScreen();
             const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
-            showKnot(startKnot);
+            // Reset URL hash to the starting knot
+            const hashFragment = `#js-${startKnot}`;
+            window.history.pushState({ knotName: startKnot }, '', hashFragment);
+            showKnot(startKnot, true); // true here to prevent adding another history entry
         }
         
         // Show a status message
@@ -1467,6 +1507,42 @@
             });
             
             choiceIndex = -1;
+        }
+        
+        // Handle browser history navigation (back/forward buttons)
+        function handleHistoryNavigation(event) {
+            console.log('History navigation event:', event);
+            
+            // Set flag to prevent double history entries
+            isNavigatingFromHistory = true;
+            
+            // Extract the knot name from the hash
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#js-')) {
+                const knotName = hash.substring(4); // Remove '#js-' prefix
+                
+                console.log('Navigating to knot from history:', knotName);
+                
+                // Check if the knot exists
+                if (storyKnots[knotName]) {
+                    showKnot(knotName, true); // The second parameter indicates this is from history
+                } else {
+                    console.warn(`Knot ${knotName} from history not found in current story`);
+                }
+            } else {
+                // If no hash or invalid format, go to the intro or first knot
+                const defaultKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+                console.log('No valid knot in history, defaulting to:', defaultKnot);
+                
+                if (defaultKnot) {
+                    showKnot(defaultKnot, true);
+                }
+            }
+            
+            // Reset the flag after a short delay
+            setTimeout(() => {
+                isNavigatingFromHistory = false;
+            }, 100);
         }
         
         // Helper function to display debug information
