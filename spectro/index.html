@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spectro JSW - ZX Spectrum Style</title>
+  <style>
+    :root {
+      /* Authentic ZX Spectrum color palette */
+      --spectrum-black: #000000;
+      --spectrum-blue: #0000D7;
+      --spectrum-red: #D70000;
+      --spectrum-magenta: #D700D7;
+      --spectrum-green: #00D700;
+      --spectrum-cyan: #00D7D7;
+      --spectrum-yellow: #D7D700;
+      --spectrum-white: #D7D7D7;
+      --spectrum-bright-blue: #0000FF;
+      --spectrum-bright-red: #FF0000;
+      --spectrum-bright-magenta: #FF00FF;
+      --spectrum-bright-green: #00FF00;
+      --spectrum-bright-cyan: #00FFFF;
+      --spectrum-bright-yellow: #FFFF00;
+      --spectrum-bright-white: #FFFFFF;
+      
+      /* Game settings */
+      --pixel-size: 4px;
+      --char-width: 8px;
+      --char-height: 8px;
+      --screen-width: 256px;
+      --screen-height: 192px;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #111;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    #spectrum-frame {
+      position: relative;
+      width: 100%;
+      padding-bottom: 75%; /* 4:3 ratio */
+      margin: 0 auto;
+      background: #000;
+      border: 20px solid #333;
+      border-radius: 10px;
+      box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+    
+    #spectrum-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    
+    /* CRT and scanline effects */
+    .crt-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.1) 100%);
+      z-index: 10;
+    }
+    
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 1px,
+        rgba(0,0,0,0.3) 1px,
+        rgba(0,0,0,0.3) 2px
+      );
+      z-index: 11;
+      opacity: 0.4;
+    }
+    
+    /* ZX Spectrum border and credits */
+    .zx-border {
+      border: 2px solid var(--spectrum-cyan);
+      margin-top: 2em;
+      padding: 0.5em;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .zx-credits {
+      font-family: 'Courier New', monospace;
+      color: var(--spectrum-bright-white);
+      font-size: 0.8em;
+      letter-spacing: 1px;
+    }
+    
+    #game-controls {
+      margin-top: 1em;
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5em;
+      background: rgba(0,0,0,0.7);
+      border-radius: 8px;
+    }
+    
+    button {
+      background: #333;
+      color: var(--spectrum-bright-cyan);
+      border: 1px solid var(--spectrum-cyan);
+      border-radius: 4px;
+      padding: 0.5em 1em;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #444;
+      color: var(--spectrum-bright-white);
+    }
+    
+    #touch-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 1em;
+      z-index: 100;
+      display: none; /* Hidden by default, shown on mobile */
+    }
+    
+    .d-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 5px;
+    }
+    
+    .d-pad button {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      padding: 0;
+    }
+    
+    #jump-btn {
+      width: 70px;
+      height: 70px;
+      border-color: var(--spectrum-magenta);
+      color: var(--spectrum-bright-magenta);
+    }
+    
+    /* Game Menu */
+    #game-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    
+    #menu-title {
+      color: var(--spectrum-bright-yellow);
+      font-size: 2em;
+      margin-bottom: 1.5em;
+      text-shadow: 0 0 10px var(--spectrum-yellow);
+      text-transform: uppercase;
+    }
+    
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+    }
+    
+    .menu-button {
+      background: transparent;
+      border: 2px solid var(--spectrum-cyan);
+      color: var(--spectrum-bright-cyan);
+      padding: 0.5em 2em;
+      font-size: 1.2em;
+      min-width: 200px;
+      text-transform: uppercase;
+    }
+    
+    /* Loading screen */
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--spectrum-black);
+      z-index: 90;
+    }
+    
+    #loading-border {
+      width: 80%;
+      height: 80%;
+      border: 16px solid var(--spectrum-bright-cyan);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: var(--spectrum-bright-white);
+    }
+    
+    .loading-message {
+      margin-bottom: 2em;
+      font-size: 1.5em;
+      text-transform: uppercase;
+    }
+    
+    #loading-progress {
+      width: 80%;
+      height: 20px;
+      border: 2px solid var(--spectrum-cyan);
+    }
+    
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--spectrum-bright-cyan);
+      transition: width 0.3s;
+    }
+    
+    /* Stats Display */
+    #game-stats {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 1em;
+      color: var(--spectrum-bright-white);
+      font-size: 0.9em;
+      z-index: 50;
+      pointer-events: none;
+      font-family: 'Courier New', monospace;
+      text-shadow: 1px 1px 1px black;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+      #touch-controls {
+        display: flex;
+      }
+      
+      .d-pad button {
+        width: 40px;
+        height: 40px;
+      }
+      
+      #jump-btn {
+        width: 60px;
+        height: 60px;
+      }
+      
+      #game-controls {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="spectrum-frame">
+      <canvas id="spectrum-canvas"></canvas>
+      
+      <!-- Game Statistics Overlay -->
+      <div id="game-stats">
+        <div id="score">SCORE: 0</div>
+        <div id="room-name">OFF LICENCE</div>
+        <div id="lives">LIVES: 3</div>
+      </div>
+      
+      <!-- Loading Screen -->
+      <div id="loading-screen">
+        <div id="loading-border">
+          <div class="loading-message">LOADING...</div>
+          <div id="loading-progress">
+            <div id="progress-bar"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Game Menu -->
+      <div id="game-menu">
+        <h1 id="menu-title">Spectro JSW</h1>
+        <div class="menu-buttons">
+          <button class="menu-button" id="start-btn">Start Game</button>
+          <button class="menu-button" id="controls-btn">Controls</button>
+          <button class="menu-button" id="settings-btn">Settings</button>
+        </div>
+        <div class="zx-border">
+          <div class="zx-credits">
+            © 1984 STYLE ZX SPECTRUM 48K
+          </div>
+        </div>
+      </div>
+      
+      <!-- Visual Effects -->
+      <div class="crt-overlay"></div>
+      <div class="scanlines"></div>
+    </div>
+    
+    <!-- Desktop Controls -->
+    <div id="game-controls">
+      <button id="menu-btn">Menu</button>
+      <button id="sound-btn">Sound: ON</button>
+      <button id="reset-btn">Reset Room</button>
+      <button id="prev-room-btn">� Prev Room</button>
+      <button id="next-room-btn">Next Room �</button>
+    </div>
+  </div>
+  
+  <!-- Mobile Touch Controls -->
+  <div id="touch-controls">
+    <div class="d-pad">
+      <button id="up-btn">�</button>
+      <button id="left-btn">�</button>
+      <button id="right-btn">�</button>
+      <button id="down-btn">�</button>
+    </div>
+    <button id="jump-btn">Jump</button>
+  </div>
+  
+  <!-- Main Scripts -->
+  <script src="src/spectrum.js"></script>
+  <script src="src/rooms.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/renderer.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/game.js"></script>
+  <script>
+    // Initialize the game once all resources are loaded
+    window.addEventListener('load', () => {
+      // Start loading sequence
+      const progressBar = document.getElementById('progress-bar');
+      const loadingScreen = document.getElementById('loading-screen');
+      const gameMenu = document.getElementById('game-menu');
+      
+      // Simulate loading with progress
+      let progress = 0;
+      const loadingInterval = setInterval(() => {
+        progress += 5;
+        progressBar.style.width = `${progress}%`;
+        
+        if (progress >= 100) {
+          clearInterval(loadingInterval);
+          
+          // Show menu after loading is complete
+          setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+            gameMenu.classList.remove('hidden');
+          }, 500);
+        }
+      }, 200);
+      
+      // Initialize the game
+      SpectroJSW.init();
+      
+      // Set up event listeners for buttons
+      document.getElementById('start-btn').addEventListener('click', () => {
+        gameMenu.classList.add('hidden');
+        SpectroJSW.startGame();
+      });
+      
+      document.getElementById('menu-btn').addEventListener('click', () => {
+        gameMenu.classList.remove('hidden');
+        SpectroJSW.pauseGame();
+      });
+      
+      document.getElementById('reset-btn').addEventListener('click', () => {
+        SpectroJSW.resetRoom();
+      });
+      
+      document.getElementById('prev-room-btn').addEventListener('click', () => {
+        SpectroJSW.prevRoom();
+      });
+      
+      document.getElementById('next-room-btn').addEventListener('click', () => {
+        SpectroJSW.nextRoom();
+      });
+    });
+  </script>
+</body>
+</html>

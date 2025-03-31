@@ -1,0 +1,33 @@
+{
+  "name": "spectro",
+  "version": "1.0.0",
+  "description": "ZX Spectrum-style Jet Set Willy implementation with faithful color clash and rendering",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "start": "http-server -p 8000",
+    "lint": "eslint src/**/*.js"
+  },
+  "keywords": [
+    "zx-spectrum",
+    "retro",
+    "game",
+    "platformer",
+    "canvas"
+  ],
+  "author": "Claude Code",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/preset-env": "^7.23.3",
+    "eslint": "^8.52.0",
+    "http-server": "^14.1.1",
+    "jest": "^29.7.0",
+    "jest-canvas-mock": "^2.5.2"
+  },
+  "jest": {
+    "setupFiles": [
+      "jest-canvas-mock"
+    ],
+    "testEnvironment": "jsdom"
+  }
+}
