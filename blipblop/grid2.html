@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"> <!-- Prevent zoom jiggle -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Chromatic Bass Sequencer V3</title>
+    <style>
+        :root {
+            --bg-color: #1a1053;
+            --primary-glow: #ff00a0;
+            --secondary-glow: #2de2e6;
+            --dark-accent: #100830;
+            --light-text: #f0f0f0;
+            --button-text: #0a051f;
+            --black-key-color: #4b0082;
+            --monospace-font: 'Courier New', Courier, monospace;
+            --sans-serif-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            --border-radius: 6px;
+            --transition-speed: 0.15s;
+            --note-size: clamp(24px, 6vw, 30px);
+            --grid-gap: 3px;
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        html, body {
+             overscroll-behavior: contain; /* Prevent pull-to-refresh */
+             margin: 0; padding: 0;
+             background-color: var(--bg-color); /* Ensure body bg */
+             min-height: 100vh;
+        }
+
+        body {
+            font-family: var(--sans-serif-font);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--primary-glow);
+            padding: 10px 5px;
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Controls grouped below sequencer */
+        #bottom-controls {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 15px; margin-top: 20px; width: 100%; max-width: 500px;
+        }
+        #app-controls-row1, #app-controls-row2 {
+            display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+            gap: 10px; width: 100%;
+        }
+        .control-group {
+            display: flex; gap: 8px; border: 1px solid var(--primary-glow); padding: 5px;
+            border-radius: var(--border-radius); background-color: rgba(0,0,0,0.2);
+        }
+        .control-button {
+             padding: 8px 12px; font-size: 0.85em; font-weight: bold; background-color: transparent;
+             border: none; color: var(--secondary-glow); cursor: pointer; transition: all var(--transition-speed) ease;
+             border-radius: 4px; opacity: 0.7; white-space: nowrap;
+        }
+        .control-button.active { background-color: var(--secondary-glow); color: var(--button-text); opacity: 1; box-shadow: 0 0 6px var(--secondary-glow); }
+        .control-button:not(.active):hover { background-color: rgba(45, 226, 230, 0.2); opacity: 1; }
+
+        #library-controls {
+             margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 300px;
+        }
+        #library-controls label { font-size: 0.9em; color: var(--secondary-glow); margin-bottom: 4px; }
+        #librarySelect {
+             background-color: var(--dark-accent); color: var(--light-text); border: 1px solid var(--secondary-glow);
+             padding: 8px 10px; border-radius: var(--border-radius); font-size: 1em; width: 100%;
+             text-align: center; cursor: pointer; -webkit-appearance: none; appearance: none; /* Basic style reset */
+        }
+        #librarySelect:focus { outline: none; box-shadow: 0 0 8px var(--secondary-glow); }
+        #library-controls { display: none; } /* Hide library controls initially */
+        body.library-mode #library-controls { display: flex; }
+
+        #playback-controls { margin: 0; }
+        #playPause {
+             padding: 10px 25px; font-size: 1.1em; margin: 0; font-weight: bold; background-color: var(--secondary-glow);
+             border: none; color: var(--button-text); cursor: pointer; transition: all 0.2s ease; border-radius: 5px;
+             box-shadow: 0 3px 6px rgba(0,0,0,0.2), 0 0 8px rgba(45, 226, 230, 0.5);
+        }
+         #playPause:hover { background-color: var(--primary-glow); color: var(--light-text); box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 15px var(--primary-glow); }
+         #playPause:active { transform: translateY(1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 5px var(--primary-glow); }
+
+        #sequencer-container {
+            width: fit-content; max-width: 100%; margin: 20px auto 15px auto;
+            background-color: var(--dark-accent); padding: 8px; border: 1px solid var(--primary-glow);
+            border-radius: var(--border-radius); box-shadow: 0 0 15px rgba(255, 0, 160, 0.3);
+            overflow-x: auto; /* Keep horizontal scroll for grid */
+        }
+        #sequencer { display: grid; gap: var(--grid-gap); position: relative; width: fit-content; } /* Ensure grid width fits content */
+
+        .row-label {
+             display: flex; align-items: center; justify-content: flex-end; font-weight: bold; min-width: 30px;
+             color: var(--light-text); font-size: 0.8em; padding-right: 6px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+             height: var(--note-size); /* Match note height */
+        }
+        .row-label.sharp-flat { color: var(--secondary-glow); font-style: italic; }
+
+        .note {
+            width: var(--note-size); height: var(--note-size); border: 1px solid var(--primary-glow); cursor: default;
+            transition: opacity var(--transition-speed) ease, box-shadow var(--transition-speed) ease, transform var(--transition-speed) ease; /* Use transform */
+            border-radius: 4px; position: relative; background-color: rgba(255, 255, 255, 0.05);
+            transform: scale(1); /* Base scale */
+            /* Assign note color via CSS variable for glow */
+            --note-color: var(--primary-glow); /* Default glow color */
+        }
+         .note.sharp-flat { border-color: var(--secondary-glow); }
+         body.create-mode .note { cursor: pointer; }
+
+        .note.active {
+            box-shadow: 0 0 5px var(--note-color), 0 0 10px var(--note-color);
+            transform: scale(1.08);
+            opacity: 1 !important;
+        }
+        .note.playing {
+            box-shadow: 0 0 8px #ffffff, 0 0 16px #ffffff !important; /* White playing glow */
+            border: 1px solid #ffffff !important;
+            opacity: 1 !important; transform: scale(1.12); z-index: 2;
+         }
+         .note:not(.playing) { border-color: var(--note-border-color, var(--primary-glow)); }
+         .note.sharp-flat:not(.playing) { --note-border-color: var(--secondary-glow); }
+
+
+        .vertical-highlight {
+            position: absolute; top: 8px; bottom: 8px;
+            /* width calculated dynamically */ background-color: rgba(45, 226, 230, 0.35); pointer-events: none;
+            transition: left 0.05s linear; z-index: 3; border-radius: 3px; left: -1000px; display: none;
+        }
+        body.playing .vertical-highlight { display: block; }
+
+        #log-container { display: flex; flex-direction: column; align-items: center; width: 95%; max-width: 450px; margin-top: 20px; gap: 10px; }
+        #activity-stream, #console-log { width: 100%; height: 60px; overflow-y: scroll; border: 1px solid var(--primary-glow); padding: 8px; background-color: rgba(18, 4, 88, 0.75); font-size: 0.8em; border-radius: 4px; color: var(--light-text); }
+        #console-log { color: var(--secondary-glow); font-family: var(--monospace-font); }
+
+    </style>
+</head>
+<body class="create-mode eight-steps"> <!-- Start in create mode, 8 steps -->
+
+    <!-- Sequencer Grid -->
+    <div id="sequencer-container">
+        <div id="sequencer"></div>
+    </div>
+
+    <!-- Controls Below Grid -->
+    <div id="bottom-controls">
+        <div id="app-controls-row1">
+            <div class="control-group" id="mode-selection">
+                <button id="createModeBtn" class="control-button active" onclick="switchToMode('create')">Create</button>
+                <button id="libraryModeBtn" class="control-button" onclick="switchToMode('library')">Library</button>
+            </div>
+            <div class="control-group" id="size-selection">
+                 <button id="toggleSizeButton" class="control-button" onclick="toggleGridSize()">8 Steps</button>
+            </div>
+        </div>
+
+        <div id="app-controls-row2">
+            <!-- Library Selection Dropdown (shown/hidden by body class) -->
+            <div id="library-controls">
+                <label for="librarySelect">Load Pattern:</label>
+                <select id="librarySelect"> </select>
+            </div>
+            <div id="playback-controls">
+                <button id="playPause">Play</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div id="log-container">
+        <div id="activity-stream">Activity Log Initialized...</div>
+        <div id="console-log">Console Log Initialized...</div>
+    </div>
+
+    <script>
+        let audioContext;
+        // Chromatic notes E2-E3. Store original index before reversing for UI.
+        const baseNotes = [
+            { index: 0, name: 'E2',   freq: 82.41,  key: 'E2',  color: '#4575b4', isSharpFlat: false },
+            { index: 1, name: 'F2',   freq: 87.31,  key: 'F2',  color: '#6a5acd', isSharpFlat: false },
+            { index: 2, name: 'F#2',  freq: 92.50,  key: 'F#2', color: '#4682b4', isSharpFlat: true },
+            { index: 3, name: 'G2',   freq: 98.00,  key: 'G2',  color: '#7d0abf', isSharpFlat: false },
+            { index: 4, name: 'G#2',  freq: 103.83, key: 'G#2', color: '#6a0dad', isSharpFlat: true },
+            { index: 5, name: 'A2',   freq: 110.00, key: 'A2',  color: '#d73027', isSharpFlat: false },
+            { index: 6, name: 'A#2',  freq: 116.54, key: 'A#2', color: '#b22222', isSharpFlat: true },
+            { index: 7, name: 'B2',   freq: 123.47, key: 'B2',  color: '#2477db', isSharpFlat: false },
+            { index: 8, name: 'C3',   freq: 130.81, key: 'C3',  color: '#8a2be2', isSharpFlat: false },
+            { index: 9, name: 'C#3',  freq: 138.59, key: 'C#3', color: '#6a0dad', isSharpFlat: true },
+            { index: 10, name: 'D3',  freq: 146.83, key: 'D3',  color: '#1a9850', isSharpFlat: false },
+            { index: 11, name: 'D#3', freq: 155.56, key: 'D#3', color: '#006400', isSharpFlat: true },
+            { index: 12, name: 'E3',  freq: 164.81, key: 'E3',  color: '#fee08b', isSharpFlat: false },
+        ];
+        // Array used for UI rendering (reversed so E2 is visually at bottom)
+        const notes = [...baseNotes].reverse();
+        const noteMap = new Map(baseNotes.map(n => [n.name, n.index])); // Map name to original index
+
+        const MAX_STEPS = 16;
+        let currentSteps = 8;
+        let isPlaying = false;
+        let currentStep = 0;
+        let intervalId = null;
+        const stepDuration = 0.25;
+
+        let currentMode = 'create';
+        let userGrid = createEmptyGrid(); // User's pattern
+        let selectedLibraryIndex = 0;
+
+        // DOM Elements
+        const sequencer = document.getElementById('sequencer');
+        const playPauseBtn = document.getElementById('playPause');
+        const librarySelect = document.getElementById('librarySelect');
+        const createModeBtn = document.getElementById('createModeBtn');
+        const libraryModeBtn = document.getElementById('libraryModeBtn');
+        const toggleSizeButton = document.getElementById('toggleSizeButton');
+        const activityStream = document.getElementById('activity-stream');
+        const consoleElement = document.getElementById('console-log');
+        const body = document.body;
+
+        // --- Library Data ---
+        function createEmptyGrid() { return Array(baseNotes.length).fill(0).map(() => Array(MAX_STEPS).fill(false)); };
+        const duplicate8to16 = (pattern8) => {
+            const pattern16 = createEmptyGrid();
+            const numSourceRows = pattern8.length;
+            for (let r = 0; r < baseNotes.length; r++) { // Iterate over full possible rows
+                // Check if this row index exists in the source pattern
+                if (r < numSourceRows && pattern8[r]) {
+                    for (let c = 0; c < 8; c++) {
+                        pattern16[r][c] = pattern8[r][c];
+                        pattern16[r][c + 8] = pattern8[r][c]; // Duplicate
+                    }
+                }
+            }
+            return pattern16;
+        };
+        const findNoteIndex = (name) => {
+            const index = noteMap.get(name);
+            if (index === undefined) consoleError(`Note name "${name}" not found!`);
+            return index;
+        };
+        // Helper to create 8-step patterns using note names for clarity
+        const buildPattern8 = (stepsData) => {
+             const p8 = Array(baseNotes.length).fill(0).map(() => Array(8).fill(false));
+             stepsData.forEach((noteName, stepIndex) => {
+                 if (noteName && stepIndex < 8) { // If a note name is provided for the step
+                     const rowIndex = findNoteIndex(noteName);
+                     if (rowIndex !== undefined) p8[rowIndex][stepIndex] = true;
+                 }
+             });
+             return p8;
+        }
+
+        const libraryPatterns = [
+            { name: "Load Pattern...", pattern: createEmptyGrid() },
+            {
+                name: "EGDA Loop (Original Accurate)", // E2 G2 D3 A2
+                pattern: duplicate8to16( buildPattern8(['E2','E2','G2','G2','D3','D3','A2','A2']) )
+            },
+            {
+                name: "EBEG Loop (Alternate Sparse)", // E2 B2 E2 G2
+                pattern: duplicate8to16( buildPattern8(['E2', null,'B2', null,'E2', null,'G2', null]) )
+            },
+            {
+                name: "Mary Had... (Simple Chromatic)", // E3 D#3 C#3 D#3 E3 E3 E3 - null rhythm
+                pattern: duplicate8to16( buildPattern8(['E3','D#3','C#3','D#3','E3','E3','E3', null]) )
+            },
+            {
+                name: "Simple Ascending Chrom", // E2 F2 F#2 G2 G#2 A2 A#2 B2
+                pattern: duplicate8to16( buildPattern8(['E2','F2','F#2','G2','G#2','A2','A#2','B2']) )
+            },
+             {
+                name: "London Bridge (Simple)", // G2 A2 G2 F#2 E2 F#2 G2 - x x x
+                 pattern: duplicate8to16( buildPattern8(['G2','A2','G2','F#2','E2','F#2','G2', null]) )
+            },
+            {
+                name: "Old MacDonald (Simple)", // G2 G2 G2 D3 E3 E3 D3 - x
+                pattern: duplicate8to16( buildPattern8(['G2','G2','G2','D3','E3','E3','D3', null]) )
+            },
+             {
+                name: "Frère Jacques (Simple)", // C3 D3 E3 C3 C3 D3 E3 C3
+                 pattern: duplicate8to16( buildPattern8(['C3','D3','E3','C3','C3','D3','E3','C3']) )
+            },
+            {
+                name: "Row Your Boat (Simple)", // C3 C3 C3 D3 E3 - E3 D3 E3 F#2 G2
+                pattern: duplicate8to16( buildPattern8(['C3','C3','C3','D3','E3','E3','D3','E3']) ) // First half only fits 8 steps
+                // Second half could be pattern B: buildPattern8(['E3','D3','E3','F#2','G2', null, null, null])
+            },
+             {
+                name: "Ode to Joy Intro (Simple)", // E3 E3 F#2 G2 G2 F#2 E3 D3
+                pattern: duplicate8to16( buildPattern8(['E3','E3','F#2','G2','G2','F#2','E3','D3']) )
+            },
+            {
+                name: "Clear Pattern",
+                pattern: createEmptyGrid() // Just an empty grid
+            },
+        ];
+
+
+        // --- Web Audio Functions ---
+        function initAudioContext() { /* (Same - robust) */
+             if (!audioContext) {
+                try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); consoleLog('Audio context initialized.'); if (audioContext.state === 'suspended') { audioContext.resume().then(() => { consoleLog('Audio context resumed successfully on init.'); }).catch(e => consoleLog(`Context suspended, needs interaction.`)); }
+                } catch (e) { consoleError('Web Audio API not supported.'); alert('Web Audio API not supported.'); return false; }
+            } else if (audioContext.state === 'suspended') { consoleLog(`Context suspended, needs interaction.`); }
+            return true;
+         }
+        function playNote(noteData, duration = stepDuration * 0.85) { /* (Same - Suno tone match - slight duration tweak) */
+            if (!audioContext || audioContext.state !== 'running') { consoleError(`PlayNote context not running`); return; }
+            const now = audioContext.currentTime;
+            const oscType = 'sawtooth'; const filterFreq = 350; const filterQ = 1.0; const attackTime = 0.02; const sustainLevel = 0.4; const releaseTime = 0.18;
+            const effectiveSustainDuration = Math.max(0.01, duration - attackTime);
+            const oscillator = audioContext.createOscillator(); const filter = audioContext.createBiquadFilter(); const gainNode = audioContext.createGain();
+            oscillator.type = oscType; oscillator.frequency.setValueAtTime(noteData.freq, now); // Uses correct freq
+            filter.type = 'lowpass'; filter.frequency.setValueAtTime(filterFreq, now); filter.Q.setValueAtTime(filterQ, now);
+            gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(sustainLevel, now + attackTime);
+            const releaseStartTime = now + effectiveSustainDuration;
+            gainNode.gain.setValueAtTime(sustainLevel, releaseStartTime); gainNode.gain.linearRampToValueAtTime(0.0001, releaseStartTime + releaseTime);
+            oscillator.connect(filter); filter.connect(gainNode); gainNode.connect(audioContext.destination);
+            oscillator.start(now); oscillator.stop(releaseStartTime + releaseTime + 0.05);
+         }
+
+        // --- UI and Sequencer Logic ---
+         function createSequencer() {
+            sequencer.innerHTML = ''; // Clear existing grid
+            sequencer.style.gridTemplateColumns = `auto repeat(${currentSteps}, 1fr)`; // Use currentSteps
+
+            let noteWidth = 30; let gap = 3; // Defaults
+
+            // Use the notes array (reversed for UI)
+            notes.forEach((noteData) => {
+                const rowLabel = document.createElement('div');
+                rowLabel.className = 'row-label';
+                rowLabel.textContent = noteData.name;
+                if(noteData.isSharpFlat) rowLabel.classList.add('sharp-flat');
+                sequencer.appendChild(rowLabel);
+
+                for (let col = 0; col < currentSteps; col++) { // Use currentSteps for columns
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'note';
+                    if(noteData.isSharpFlat) noteElement.classList.add('sharp-flat');
+                    // Use the original index (before reverse) for data-row
+                    noteElement.dataset.row = noteData.index;
+                    noteElement.dataset.col = col;
+                    // Set color using CSS variable for active glow
+                    noteElement.style.setProperty('--note-color', noteData.color);
+                    // Set background explicitly for differentiation
+                     noteElement.style.backgroundColor = noteData.isSharpFlat ? 'var(--black-key-color)' : 'rgba(255, 255, 255, 0.08)';
+
+
+                    noteElement.addEventListener('click', toggleNote);
+                    noteElement.addEventListener('touchstart', (e) => { e.preventDefault(); toggleNote(e); }, { passive: false });
+                    sequencer.appendChild(noteElement);
+
+                     if (noteData.index === 0 && col === 0) { // Get actual size
+                         noteWidth = parseFloat(getComputedStyle(noteElement).width);
+                         gap = parseFloat(getComputedStyle(sequencer).gap);
+                     }
+                }
+            });
+
+            // Add/Update highlight bar
+            let verticalHighlight = sequencer.querySelector('.vertical-highlight');
+            if (!verticalHighlight) { verticalHighlight = document.createElement('div'); verticalHighlight.className = 'vertical-highlight'; sequencer.appendChild(verticalHighlight); }
+            verticalHighlight.style.width = `${noteWidth + gap}px`; // Set dynamic width
+
+            // Set initial highlight position
+            const firstLabel = sequencer.querySelector('.row-label');
+            if(firstLabel) {
+                 const labelWidth = parseFloat(getComputedStyle(firstLabel).width);
+                 verticalHighlight.style.left = `${labelWidth + 6 + 8}px`; // label width + label padding + grid padding
+            } else { verticalHighlight.style.left = '45px'; }
+
+            if (!librarySelect.options.length) populateLibraryDropdown();
+            updateGridVisuals(); // Set initial visual state
+            consoleLog(`Sequencer grid created (${baseNotes.length} rows, ${currentSteps} steps). Mode: ${currentMode}`);
+        }
+
+        // Updates grid visuals based on mode and selection
+        function updateGridVisuals() {
+            const gridToDisplay = (currentMode === 'create') ? userGrid : libraryPatterns[selectedLibraryIndex].pattern;
+            sequencer.querySelectorAll('.note').forEach(noteElement => {
+                // data-row holds the ORIGINAL index (0-12)
+                const originalRowIndex = parseInt(noteElement.dataset.row, 10);
+                const col = parseInt(noteElement.dataset.col, 10);
+
+                if (col < currentSteps) { // Only handle columns within current view
+                    // Check grid using the ORIGINAL index
+                    const isActive = gridToDisplay[originalRowIndex] ? gridToDisplay[originalRowIndex][col] : false;
+                    noteElement.style.opacity = isActive ? '1' : '0.4'; // Make inactive slightly more visible
+                    noteElement.classList.toggle('active', isActive);
+                    noteElement.style.display = ''; // Ensure visible
+                } else {
+                    noteElement.style.display = 'none'; // Hide note elements beyond currentSteps
+                }
+            });
+        }
+
+
+        // Only allows editing in create mode, updates userGrid
+        function toggleNote(event) {
+            if (currentMode !== 'create') return; // No editing in library mode
+             if (!initAudioContext()) return;
+             if(audioContext.state === 'suspended'){
+                 audioContext.resume().then(()=>{ consoleLog('Audio resumed on note toggle.'); _performToggle(event); })
+                 .catch(e => consoleError('Failed to resume audio on toggle.')); return;
+             }
+             _performToggle(event);
+        }
+
+        // Updates userGrid (always stores MAX_STEPS) using originalRowIndex
+        function _performToggle(event) {
+            const target = event.target; if (!target.classList.contains('note')) return;
+            // data-row holds ORIGINAL index
+            const originalRowIndex = parseInt(target.dataset.row, 10);
+            const col = parseInt(target.dataset.col, 10);
+            if (isNaN(originalRowIndex) || isNaN(col) || originalRowIndex < 0 || originalRowIndex >= baseNotes.length || col < 0 || col >= currentSteps) {
+                 consoleError(`Invalid toggle coordinates: index=${originalRowIndex}, col=${col}`); return;
+            }
+
+            // Update userGrid using original index
+            userGrid[originalRowIndex][col] = !userGrid[originalRowIndex][col];
+            // Update visuals
+            target.style.opacity = userGrid[originalRowIndex][col] ? '1' : '0.4';
+            target.classList.toggle('active', userGrid[originalRowIndex][col]);
+
+            if (userGrid[originalRowIndex][col]) {
+                const noteToPlay = baseNotes.find(n => n.index === originalRowIndex); // Find in baseNotes
+                if(noteToPlay) { playNote(noteToPlay, 0.15); } // Feedback
+            }
+            const noteName = baseNotes.find(n => n.index === originalRowIndex)?.name || `Row ${originalRowIndex}`;
+            logActivity(`Create Mode: Toggled ${noteName} [Col ${col}] to ${userGrid[originalRowIndex][col] ? 'ON' : 'OFF'}`);
+        }
+
+        // --- Mode & Size Switching ---
+        function switchToMode(mode) {
+            if (mode === currentMode) return; currentMode = mode;
+            body.className = `${mode}-mode ${currentSteps === 8 ? 'eight-steps' : 'sixteen-steps'}`;
+            createModeBtn.classList.toggle('active', mode === 'create'); libraryModeBtn.classList.toggle('active', mode === 'library');
+            updateGridVisuals(); stopPlayback();
+            logActivity(`Switched to ${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`);
+        }
+
+        function toggleGridSize() {
+            currentSteps = (currentSteps === 8) ? 16 : 8;
+            toggleSizeButton.textContent = `${currentSteps} Steps`;
+             body.classList.toggle('eight-steps', currentSteps === 8);
+             body.classList.toggle('sixteen-steps', currentSteps === 16);
+            stopPlayback(); createSequencer(); // Re-render grid
+            logActivity(`Switched grid size to ${currentSteps} steps.`);
+        }
+
+
+        // --- Library Logic ---
+        function populateLibraryDropdown() { /* (Same) */
+             librarySelect.innerHTML = '';
+             libraryPatterns.forEach((item, index) => {
+                 const option = document.createElement('option'); option.value = index; option.textContent = item.name;
+                 librarySelect.appendChild(option);
+             });
+         }
+
+        // Load pattern into userGrid and switch to Create mode
+        function loadLibraryPattern() {
+            selectedLibraryIndex = parseInt(librarySelect.value, 10);
+            const selectedPatternData = libraryPatterns[selectedLibraryIndex].pattern;
+            const patternName = libraryPatterns[selectedLibraryIndex].name;
+
+            if (patternName === "Load Pattern...") return; // Ignore placeholder selection
+
+            if(patternName === "Clear Pattern") { userGrid = createEmptyGrid(); logActivity(`Cleared pattern.`); }
+            else if (selectedPatternData) { userGrid = selectedPatternData.map(row => [...row]); logActivity(`Loaded Library Pattern: ${patternName}`); }
+            else { consoleError("Selected library pattern data not found."); return; }
+
+            switchToMode('create'); // Switch to create mode after loading/clearing
+            librarySelect.value = 0; // Reset dropdown
+        }
+
+
+         // --- Logging Functions (Same) ---
+         function logActivity(message) { const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}); const logEntry = document.createElement('div'); logEntry.textContent = `[${time}] ${message}`; activityStream.insertBefore(logEntry, activityStream.firstChild); if (activityStream.childNodes.length > 30) { activityStream.removeChild(activityStream.lastChild); } }
+         function consoleLog(message) { console.log(message); const logEntry = document.createElement('div'); logEntry.textContent = `> ${message}`; consoleElement.appendChild(logEntry); consoleElement.scrollTop = consoleElement.scrollHeight; }
+         function consoleError(message) { console.error(message); const logEntry = document.createElement('div'); logEntry.style.color = '#FF6B6B'; logEntry.textContent = `> ERROR: ${message}`; consoleElement.appendChild(logEntry); consoleElement.scrollTop = consoleElement.scrollHeight; }
+
+        // Use userGrid directly, check correct index, use currentSteps
+        function step() {
+             if (!isPlaying || !audioContext || audioContext.state !== 'running') return;
+             const playbackGrid = userGrid; // Always play from userGrid
+             const prevStep = (currentStep - 1 + currentSteps) % currentSteps;
+
+             sequencer.querySelectorAll(`.note[data-col="${prevStep}"]`).forEach(noteEl => { noteEl.classList.remove('playing'); });
+
+             // Iterate over baseNotes to get original indices
+             baseNotes.forEach((noteData) => {
+                 const originalRowIndex = noteData.index;
+                 const noteElement = sequencer.querySelector(`.note[data-row="${originalRowIndex}"][data-col="${currentStep}"]`);
+
+                 if (noteElement && currentStep < currentSteps) { // Check if element exists for current view
+                     noteElement.classList.add('playing');
+                     if (playbackGrid[originalRowIndex]?.[currentStep]) { // Check grid using original index
+                         playNote(noteData);
+                     }
+                 }
+             });
+
+             // Move highlight bar
+             const verticalHighlight = sequencer.querySelector('.vertical-highlight');
+             if (verticalHighlight) { /* (Same position logic as before) */
+                  const firstLabel = sequencer.querySelector('.row-label');
+                  const firstNote = sequencer.querySelector('.note');
+                  if (firstLabel && firstNote) {
+                      const labelWidth = parseFloat(getComputedStyle(firstLabel).width);
+                      const noteWidth = parseFloat(getComputedStyle(firstNote).width);
+                      const gap = parseFloat(getComputedStyle(sequencer).gap);
+                      const highlightLeft = labelWidth + 6 + 8 + currentStep * (noteWidth + gap); // label width + label pad + grid pad
+                      verticalHighlight.style.left = `${highlightLeft}px`;
+                  }
+             }
+             currentStep = (currentStep + 1) % currentSteps; // Use currentSteps
+         }
+
+        // --- Playback Controls (Robust resume logic) ---
+        function togglePlayPause() {
+            if (!initAudioContext()) { alert("Could not initialize audio..."); return; }
+             if (audioContext.state === 'suspended') {
+                 consoleLog('Attempting to resume audio context...');
+                audioContext.resume().then(() => {
+                     consoleLog('Audio context RESUMED successfully.');
+                     if (!isPlaying) { startPlayback(); }
+                }).catch(e => { consoleError(`Failed resume: ${e}`); alert("Audio couldn't start. Please tap screen & try Play again."); });
+             } else if (audioContext.state === 'running') {
+                  if (isPlaying) { stopPlayback(); } else { startPlayback(); }
+             } else { consoleError(`Audio context in unexpected state: ${audioContext.state}`); }
+        }
+
+        function startPlayback() { /* (Same) */
+            if (isPlaying || !audioContext || audioContext.state !== 'running') { consoleLog(`Start ignored: isPlaying=${isPlaying}, contextState=${audioContext?.state}`); return; }
+            consoleLog('Starting playback...'); currentStep = 0; body.classList.add('playing'); step();
+            intervalId = setInterval(step, stepDuration * 1000); playPauseBtn.textContent = 'Pause'; isPlaying = true; logActivity('Sequencer Started');
+        }
+        function stopPlayback() { /* (Same) */
+             if (!isPlaying) return; consoleLog('Stopping playback...'); clearInterval(intervalId); intervalId = null; body.classList.remove('playing');
+             sequencer.querySelectorAll(`.note.playing`).forEach(noteEl => { noteEl.classList.remove('playing'); });
+             const verticalHighlight = sequencer.querySelector('.vertical-highlight'); if(verticalHighlight) verticalHighlight.style.left = '-1000px';
+             playPauseBtn.textContent = 'Play'; isPlaying = false; currentStep = 0; logActivity('Sequencer Stopped');
+        }
+
+
+        // --- Initialization ---
+        body.classList.add(currentSteps === 8 ? 'eight-steps' : 'sixteen-steps');
+        createSequencer();
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        librarySelect.addEventListener('change', loadLibraryPattern);
+
+        const initInteractionHandler = () => { initAudioContext(); consoleLog('Initial user interaction detected.'); };
+        document.body.addEventListener('click', initInteractionHandler, { once: true });
+        document.body.addEventListener('touchstart', initInteractionHandler, { once: true });
+
+        consoleLog('Chromatic Sequencer V3 initialized.');
+        logActivity('App loaded. Select mode or start creating.');
+
+    </script>
+</body>
+</html>

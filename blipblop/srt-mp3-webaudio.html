@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual MP3+SRT Player V3</title>
+    <style>
+        :root {
+            --bg-color: #181818; /* Slightly darker */
+            --panel-bg: #242424;
+            --border-color: #3a3a3a;
+            --text-color: #ddd;
+            --accent-color: #1DB954; /* Spotify Green */
+            --highlight-color: #ffffff; /* White for subs */
+            --button-bg: #3f3f3f;
+            --button-hover-bg: #5a5a5a;
+            --debug-bg: #111;
+            --debug-text: #bbb;
+            --seekbar-track: #444;
+            --seekbar-thumb: var(--accent-color);
+            --seekbar-progress: rgba(29, 185, 84, 0.6); /* Accent with alpha */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        #player-container {
+            display: flex;
+            flex-direction: column;
+            width: 95%;
+            max-width: 800px;
+            height: 95%;
+            max-height: 900px;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+            overflow: hidden; /* Contained elements */
+            margin-top: 2vh; /* Center vertically slightly */
+        }
+
+        /* --- Top Bar --- */
+        #top-bar {
+            padding: 10px 15px;
+            background-color: #2d2d2d; /* Slightly lighter top */
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px; /* Reduced gap */
+            align-items: center;
+            flex-wrap: wrap;
+        }
+         #top-bar label {
+             font-size: 0.85em;
+             font-weight: bold;
+             color: var(--accent-color);
+             margin-right: 3px;
+         }
+         #top-bar input[type="file"] {
+             color: var(--text-color);
+             background-color: #404552;
+             border: 1px solid #565c64;
+             padding: 5px 8px;
+             border-radius: 4px;
+             cursor: pointer;
+             font-size: 0.8em;
+             max-width: 130px; /* Smaller file inputs */
+             margin-right: 10px;
+         }
+         #top-bar input[type="file"]::file-selector-button {
+             background-color: var(--accent-color);
+             color: #111;
+             border: none;
+             padding: 3px 8px;
+             border-radius: 3px;
+             cursor: pointer;
+             margin-right: 8px;
+         }
+         .status {
+             font-size: 0.9em;
+             font-style: italic;
+             color: #aaa; /* Lighter status */
+             text-align: right;
+             flex-grow: 1;
+             margin: 0 5px;
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis;
+         }
+
+        /* --- Visualizer --- */
+        #visualizer-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #000;
+            min-height: 200px;
+            display: flex;
+            overflow: hidden;
+        }
+        #visualizerCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer; /* Indicate clickable for fullscreen */
+        }
+         #fullscreen-btn { /* Removed explicit button, use canvas click */
+             display: none;
+         }
+
+        /* --- Info/Subtitle Panel --- */
+        #info-panel {
+            padding: 12px 15px; /* Adjusted padding */
+            min-height: 50px; /* Adjusted height */
+            max-height: 90px;
+            overflow-y: auto;
+            text-align: center;
+            background-color: #202020;
+            border-top: 1px solid var(--border-color);
+            line-height: 1.3; /* Tighter line height */
+        }
+        #subtitle-display {
+            font-size: 1.25em; /* Slightly smaller */
+            color: var(--highlight-color);
+            font-weight: 500; /* Less bold */
+        }
+
+        /* --- Controls Panel --- */
+        #controls-panel {
+            display: flex;
+            flex-direction: column; /* Stack controls */
+            padding: 10px 15px;
+            background-color: #2d2d2d;
+            border-top: 1px solid var(--border-color);
+        }
+        #seek-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        #currentTimeDisplay, #durationDisplay {
+            font-size: 0.8em;
+            color: #aaa;
+            min-width: 40px; /* Fixed width for time */
+            text-align: center;
+        }
+         #seekBar {
+            flex-grow: 1;
+            cursor: pointer;
+            height: 8px; /* Thicker bar */
+            background: var(--seekbar-track);
+            border-radius: 4px;
+            outline: none;
+            appearance: none; /* Override default */
+            -webkit-appearance: none;
+            position: relative; /* For pseudo-element */
+        }
+         /* Seekbar Track */
+         #seekBar::-webkit-slider-runnable-track { background: var(--seekbar-track); height: 8px; border-radius: 4px; }
+         #seekBar::-moz-range-track { background: var(--seekbar-track); height: 8px; border-radius: 4px; }
+
+         /* Seekbar Thumb */
+         #seekBar::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; background: var(--seekbar-thumb); border-radius: 50%; margin-top: -4px; /* Center thumb vertically */ cursor: pointer; transition: background 0.1s; }
+         #seekBar::-moz-range-thumb { width: 16px; height: 16px; background: var(--seekbar-thumb); border-radius: 50%; border: none; cursor: pointer; transition: background 0.1s; }
+         #seekBar:hover::-webkit-slider-thumb { background: #fff; }
+         #seekBar:hover::-moz-range-thumb { background: #fff; }
+
+        #button-controls {
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             width: 100%;
+             gap: 20px;
+        }
+        .control-button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 25px; /* Wider button */
+            border-radius: 20px; /* Rounded pill shape */
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+         .control-button:active:not(:disabled) {
+             transform: scale(0.95);
+         }
+        .control-button:disabled { background-color: #444; color: #777; cursor: not-allowed; opacity: 0.6; }
+        .control-button:not(:disabled):hover { background-color: var(--button-hover-bg); }
+
+        /* --- Debug Console Styles (Optional) --- */
+        /* ... (Debug styles remain the same) ... */
+         #debug-toggle { position: fixed; bottom: 5px; right: 5px; font-size: 0.8em; padding: 3px 6px; background: #555; color: #ccc; border: 1px solid #888; border-radius: 3px; cursor: pointer; z-index: 100; }
+         #debug-container { position: fixed; bottom: 0; left: 0; width: 100%; max-height: 30%; background-color: var(--debug-bg); border-top: 2px solid var(--accent-color); box-shadow: 0 -5px 15px rgba(0,0,0,0.3); padding: 10px; box-sizing: border-box; display: none; flex-direction: column; z-index: 99; }
+         #debug-container.visible { display: flex; }
+         #debug-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid var(--border-color); }
+         #debug-header h2 { margin: 0; font-size: 1.1em; color: var(--accent-color); }
+         #copy-debug-button { background-color: var(--button-bg); color: var(--accent-color); border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 3px; font-size: 0.8em; cursor: pointer; }
+         #copy-debug-button:hover { background-color: var(--button-hover-bg); }
+         #debug-output { flex-grow: 1; overflow-y: scroll; font-family: 'Courier New', Courier, monospace; font-size: 0.85em; color: var(--debug-text); white-space: pre-wrap; background: #1e1e1e; padding: 5px; border-radius: 3px; }
+         .log-entry { padding: 1px 0; border-bottom: 1px dotted #333; } .log-entry:last-child { border-bottom: none; } .log-error { color: #ff6b6b; font-weight: bold; } .log-warn { color: #ffcc00; } .log-success { color: #6bff6b; } .log-info { color: #ccc; } .log-debug { color: #777; } .log-time { color: #00aaff; margin-right: 8px; font-size: 0.9em;}
+
+    </style>
+</head>
+<body>
+    <div id="player-container">
+
+        <div id="top-bar">
+            <label for="mp3File">MP3:</label>
+            <input type="file" id="mp3File" accept=".mp3">
+            <label for="srtFile">SRT:</label>
+            <input type="file" id="srtFile" accept=".srt">
+             <div class="status" id="status-message">Load MP3 & SRT</div>
+        </div>
+
+        <div id="visualizer-container" title="Click to toggle Fullscreen">
+            <canvas id="visualizerCanvas"></canvas>
+            <!-- Fullscreen button removed, click canvas instead -->
+        </div>
+
+        <div id="info-panel">
+            <div id="subtitle-display">[Subtitles]</div>
+        </div>
+
+        <div id="controls-panel">
+            <div id="seek-container">
+                 <span id="currentTimeDisplay">0:00</span>
+                 <input type="range" id="seekBar" min="0" value="0" step="0.1" disabled>
+                 <span id="durationDisplay">0:00</span>
+            </div>
+            <div id="button-controls">
+                <button id="playPauseButton" class="control-button" disabled>Play</button>
+                <!-- Add more controls here later (e.g., volume) -->
+            </div>
+        </div>
+
+    </div>
+
+     <!-- Debug Console (Initially Hidden) -->
+     <button id="debug-toggle">Debug</button>
+     <div id="debug-container">
+         <div id="debug-header">
+             <h2>Debug Console</h2>
+             <button id="copy-debug-button" title="Copy Debug Log">Copy Log</button>
+         </div>
+         <div id="debug-output"></div>
+     </div>
+
+    <script>
+        // --- DOM Elements ---
+        const mp3Input = document.getElementById('mp3File');
+        const srtInput = document.getElementById('srtFile');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const subtitleDisplay = document.getElementById('subtitle-display');
+        const statusMessage = document.getElementById('status-message');
+        const canvas = document.getElementById('visualizerCanvas');
+        const canvasCtx = canvas.getContext('2d');
+        const visualizerContainer = document.getElementById('visualizer-container');
+        // const fullscreenBtn = document.getElementById('fullscreen-btn'); // Removed
+        const debugOutput = document.getElementById('debug-output');
+        const copyDebugButton = document.getElementById('copy-debug-button');
+        const debugToggle = document.getElementById('debug-toggle');
+        const debugContainer = document.getElementById('debug-container');
+        const seekBar = document.getElementById('seekBar');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        const durationDisplay = document.getElementById('durationDisplay');
+
+
+        // --- Audio & State Variables ---
+        let audioContext;
+        let audioBuffer;
+        let sourceNode;
+        let analyserNode;
+        let gainNode;
+        let frequencyData;
+        let timeDomainData;
+        let subtitles = [];
+        let isPlaying = false;
+        let isSeeking = false; // Flag to prevent unwanted updates during seek
+        let startTime = 0;
+        let pauseOffset = 0;
+        let animationFrameId = null;
+        let mp3Loaded = false;
+        let srtLoaded = false;
+
+        // --- Visualization & Beat Detection Params ---
+        const FFT_SIZE = 512;
+        let currentHue = 0;
+        let beatFlashIntensity = 0;
+        let detectedBPM = null;
+        let detectedOffset = null;
+        let secondsPerBeat = null;
+        let lastBeatTriggeredNum = -1;
+        const BEAT_TRIGGER_WINDOW = 0.08;
+        // Particle system (simple)
+        let particles = [];
+        const MAX_PARTICLES = 50;
+        const PARTICLE_LIFESPAN = 60; // Frames
+        const PARTICLE_GRAVITY = 0.05;
+
+        // --- Logging Utility ---
+        /* ... (logging function remains the same) ... */
+        function logDebug(message, type = 'info') { const now = new Date(); const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`; const logEntry = document.createElement('div'); logEntry.classList.add('log-entry', `log-${type}`); const timeSpan = document.createElement('span'); timeSpan.classList.add('log-time'); timeSpan.textContent = `[${timestamp}]`; const msgSpan = document.createElement('span'); if (message instanceof Error) { msgSpan.textContent = `Error: ${message.message} (Stack: ${message.stack || 'N/A'})`; type = 'error'; logEntry.classList.replace(`log-${type}`, `log-error`); } else { msgSpan.textContent = message; } logEntry.appendChild(timeSpan); logEntry.appendChild(msgSpan); debugOutput.appendChild(logEntry); debugOutput.scrollTop = debugOutput.scrollHeight; switch(type) { case 'error': console.error(timestamp, message); break; case 'warn': console.warn(timestamp, message); break; case 'success': console.log(timestamp, message); break; default: console.log(timestamp, message); } }
+        logDebug("App started. Interface initialized.", 'info');
+
+
+        // --- Debug Console Toggle & Copy ---
+        /* ... (same as before) ... */
+         debugToggle.addEventListener('click', () => debugContainer.classList.toggle('visible'));
+         copyDebugButton.addEventListener('click', () => { const logText = debugOutput.innerText || debugOutput.textContent; navigator.clipboard.writeText(logText).then(() => logDebug("Debug log copied.", 'success')).catch(err => logDebug(`Copy failed: ${err}`, 'error')); });
+
+
+        // --- Canvas Resize & Fullscreen ---
+        /* ... (fullscreen trigger moved to canvas click) ... */
+        function resizeCanvas() { canvas.width = visualizerContainer.clientWidth; canvas.height = visualizerContainer.clientHeight; logDebug(`Canvas resized ${canvas.width}x${canvas.height}`, 'debug'); }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
+        visualizerContainer.addEventListener('click', toggleFullscreen); // Use container click
+        function toggleFullscreen() { if (!document.fullscreenElement) { visualizerContainer.requestFullscreen().catch(err => logDebug(`FS failed: ${err.message}`, 'warn')); } else { if (document.exitFullscreen) document.exitFullscreen(); } } document.addEventListener('fullscreenchange', () => { resizeCanvas(); logDebug(`FS change. Is FS: ${!!document.fullscreenElement}`, 'info'); });
+
+
+        // --- Beat Detector Library Code ---
+        /* ... (beatDetectorWorkerString, createLoadOrReturnBroker, simulateLoadBroker remain exactly the same) ... */
+        const beatDetectorWorkerString = `(()=>{var e={455:function(e,t){!function(e){"use strict";var t=function(e){return function(t){var r=e(t);return t.add(r),r}},r=function(e){return function(t,r){return e.set(t,r),r}},n=void 0===Number.MAX_SAFE_INTEGER?9007199254740991:Number.MAX_SAFE_INTEGER,o=536870912,s=2*o,a=function(e,t){return function(r){var a=t.get(r),i=void 0===a?r.size:a<s?a+1:0;if(!r.has(i))return e(r,i);if(r.size<o){for(;r.has(i);)i=Math.floor(Math.random()*s);return e(r,i)}if(r.size>n)throw new Error("Congratulations, you created a collection of unique numbers which uses all available integers!");for(;r.has(i);)i=Math.floor(Math.random()*n);return e(r,i)}},i=new WeakMap,c=r(i),u=a(c,i),l=t(u);e.addUniqueNumber=l,e.generateUniqueNumber=u}(t)}},t={};function r(n){var o=t[n];if(void 0!==o)return o.exports;var s=t[n]={exports:{}};return e[n].call(s.exports,s,s.exports,r),s.exports}(()=>{"use strict";const e=-32603,t=-32602,n=-32601,o=(e,t)=>Object.assign(new Error(e),{status:t}),s=t=>o('The handler of the method called "'.concat(t,'" returned an unexpected result.'),e),a=(t,r)=>async({data:{id:a,method:i,params:c}})=>{const u=r[i];try{if(void 0===u)throw(e=>o('The requested method called "'.concat(e,'" is not supported.'),n))(i);const r=void 0===c?u():u(c);if(void 0===r)throw(t=>o('The handler of the method called "'.concat(t,'" returned no required result.'),e))(i);const l=r instanceof Promise?await r:r;if(null===a){if(void 0!==l.result)throw s(i)}else{if(void 0===l.result)throw s(i);const{result:e,transferables:r=[]}=l;t.postMessage({id:a,result:e},r)}}catch(e){const{message:r,status:n=-32603}=e;t.postMessage({error:{code:n,message:r},id:a})}};var i=r(455);const c=new Map,u=(e,r,n)=>({...r,connect:({port:t})=>{t.start();const n=e(t,r),o=(0,i.generateUniqueNumber)(c);return c.set(o,(()=>{n(),t.close(),c.delete(o)})),{result:o}},disconnect:({portId:e})=>{const r=c.get(e);if(void 0===r)throw(e=>o('The specified parameter called "portId" with the given value "'.concat(e,'" does not identify a port connected to this worker.'),t))(e);return r(),{result:null}},isSupported:async()=>{if(await new Promise((e=>{const t=new ArrayBuffer(0),{port1:r,port2:n}=new MessageChannel;r.onmessage=({data:t})=>e(null!==t),n.postMessage(t,[t])}))){const e=n();return{result:e instanceof Promise?await e:e}}return{result:!1}}}),l=(e,t,r=()=>!0)=>{const n=u(l,t,r),o=a(e,n);return e.addEventListener("message",o),()=>e.removeEventListener("message",o)},h=(e,t,r)=>{const n=e.length,o=[];let s=!1;for(let a=0;a<n;a+=1)e[a]>t?s=!0:s&&(s=!1,o.push(a-1),a+=r/4-1);return s&&o.push(n-1),o},d=(e,t,r)=>{const n=(e=>{let t=0;const r=e.length;for(let n=0;n<r;n+=1)e[n]>t&&(t=e[n]);return t})(e),o=.3*n;let s=[],a=n-.05*n;if(n>.25)for(;s.length<30&&a>=o;)s=h(e,a,t),a-=.05*n;const i=(e=>{const t=[];return e.forEach(((r,n)=>{const o=Math.min(e.length-n,10);for(let s=1;s<o;s+=1){const o=e[n+s]-r;t.some((e=>e.interval===o&&(e.peaks.push(r),!0)))||t.push({interval:o,peaks:[r]})}})),t})(s),c=((e,t,r={})=>{var n,o;const s=Math.max(0,null!==(n=r.maxTempo)&&void 0!==n?n:180),a=Math.max(0,null!==(o=r.minTempo)&&void 0!==o?o:90),i=[];return e.forEach((e=>{let r=60/(e.interval/t);for(;r<a;)r*=2;for(;r>s;)r/=2;if(r<a)return;let n=!1,o=e.peaks.length;i.forEach((t=>{if(t.tempo===r&&(t.score+=e.peaks.length,t.peaks=[...t.peaks,...e.peaks],n=!0),t.tempo>r-.5&&t.tempo<r+.5){const n=2*Math.abs(t.tempo-r);o+=(1-n)*t.peaks.length,t.score+=(1-n)*e.peaks.length}})),n||i.push({peaks:e.peaks,score:o,tempo:r})})),i})(i,t,r);return c.sort(((e,t)=>t.score-e.score)),c},p=(e,t,r)=>{const n=d(e,t,r);if(0===n.length)throw new Error("The given channelData does not contain any detectable beats.");return n[0].tempo},f=(e,t,r)=>{const n=d(e,t,r);if(0===n.length)throw new Error("The given channelData does not contain any detectable beats.");const{peaks:o,tempo:s}=n[0],a=Math.round(s),i=60/a;o.sort(((e,t)=>e-t));let c=o[0]/t;for(;c>i;)c-=i;return{bpm:a,offset:c,tempo:s}};l(self,{analyze:({channelData:e,sampleRate:t,tempoSettings:r})=>({result:p(e,t,r)}),guess:({channelData:e,sampleRate:t,tempoSettings:r})=>({result:f(e,t,r)})})})()})();`;
+        const createLoadOrReturnBroker = (loadBrokerFn, workerString) => { let broker = null; return () => { if (broker !== null) { return broker; } logDebug("Creating beat detector worker & broker...", 'debug'); const blob = new Blob([workerString], { type: 'application/javascript; charset=utf-8' }); const url = URL.createObjectURL(blob); broker = loadBrokerFn(url); setTimeout(() => { logDebug(`Revoking worker URL: ${url}`, 'debug'); URL.revokeObjectURL(url); }, 500); return broker; }; };
+        const simulateLoadBroker = (workerUrl) => { logDebug(`Simulating loadBroker for: ${workerUrl}`, 'info'); const worker = new Worker(workerUrl); const pendingRequests = new Map(); let requestIdCounter = 0; worker.onmessage = ({ data }) => { const { id, result, error } = data; logDebug(`Worker msg RX: ID=${id}, Res=${!!result}, Err=${!!error}`, 'debug'); if (pendingRequests.has(id)) { const { resolve, reject } = pendingRequests.get(id); if (error) { logDebug(`Worker ERR ID ${id}: ${error.message}`, 'error'); reject(new Error(`Worker Error: ${error.message}`)); } else { logDebug(`Worker OK ID ${id}.`, 'success'); resolve(result); } pendingRequests.delete(id); } else { logDebug(`Unknown worker msg ID: ${id}`, 'warn'); } }; worker.onerror = (event) => { logDebug(`Worker onerror: ${event.message}`, 'error'); event.preventDefault(); }; const sendMessage = (method, params) => { return new Promise((resolve, reject) => { const id = requestIdCounter++; pendingRequests.set(id, { resolve, reject }); const message = { id, method, params }; logDebug(`Posting to worker: ID=${id}, Method=${method}`, 'debug'); worker.postMessage(message, []); }); }; return { analyze: (params) => sendMessage('analyze', params), guess: (params) => sendMessage('guess', params), terminate: () => { logDebug("Terminating worker.", 'info'); worker.terminate(); pendingRequests.clear(); } }; };
+        const loadOrReturnBroker = createLoadOrReturnBroker(simulateLoadBroker, beatDetectorWorkerString);
+        const analyzeBeat = (args) => loadOrReturnBroker().analyze(args);
+        const guessBeat = (args) => loadOrReturnBroker().guess(args);
+
+
+        // --- Utility ---
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // --- File Loading & Audio Init ---
+        mp3Input.addEventListener('change', handleMp3Load);
+        srtInput.addEventListener('change', handleSrtLoad);
+
+         function handleMp3Load(event) { /* ... (same as before) ... */ mp3Loaded = false; const file = event.target.files[0]; if (!file) return; logDebug(`MP3 selected: ${file.name}`, 'info'); statusMessage.textContent = 'Reading MP3...'; playPauseButton.disabled = true; seekBar.disabled = true; seekBar.value = 0; currentTimeDisplay.textContent = '0:00'; durationDisplay.textContent = '0:00'; const reader = new FileReader(); reader.onload = (e) => { logDebug("MP3 read. Decoding...", 'info'); initAudio(e.target.result); }; reader.onerror = (err) => { logDebug(`MP3 read error: ${err}`, 'error'); mp3Loaded = false; checkFilesReady(); }; reader.readAsArrayBuffer(file); }
+         function handleSrtLoad(event) { /* ... (same as before) ... */ srtLoaded = false; const file = event.target.files[0]; if (!file) return; logDebug(`SRT selected: ${file.name}`, 'info'); statusMessage.textContent = 'Reading SRT...'; playPauseButton.disabled = true; const reader = new FileReader(); reader.onload = (e) => { logDebug("SRT read. Parsing...", 'info'); try { subtitles = parseSRT(e.target.result); logDebug(`SRT parsed: ${subtitles.length} entries.`, 'success'); srtLoaded = true; } catch (error) { logDebug(`SRT Parse Error: ${error}`, 'error'); srtLoaded = false; } checkFilesReady(); }; reader.onerror = (err) => { logDebug(`SRT read error: ${err}`, 'error'); srtLoaded = false; checkFilesReady(); }; reader.readAsText(file); }
+         function checkFilesReady() { /* ... (Enable seekbar only when MP3 loaded) ... */ logDebug(`CheckReady: MP3=${mp3Loaded}, SRT=${srtLoaded}`, 'debug'); if (mp3Loaded && srtLoaded) { playPauseButton.disabled = false; seekBar.disabled = false; statusMessage.textContent = 'Ready'; logDebug("Ready to play.", 'success'); } else if (mp3Loaded) { seekBar.disabled = false; statusMessage.textContent = 'Need SRT'; } else if (srtLoaded) { seekBar.disabled = true; statusMessage.textContent = 'Need MP3'; } else { playPauseButton.disabled = true; seekBar.disabled = true; statusMessage.textContent = 'Load Files'; } }
+
+        function initAudio(arrayBuffer) { /* ... (Updates seekbar duration) ... */
+             logDebug("Initializing Audio...", 'info'); detectedBPM = null; detectedOffset = null; secondsPerBeat = null; lastBeatTriggeredNum = -1; particles = []; // Clear particles
+             if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null;
+             if (sourceNode) { try { sourceNode.stop(); } catch(e){} sourceNode.disconnect(); sourceNode = null; }
+             if (gainNode) gainNode.disconnect(); gainNode = null;
+             if (analyserNode) analyserNode.disconnect(); analyserNode = null;
+             if (audioContext && (audioContext.state === 'running' || audioContext.state === 'suspended')) { logDebug("Closing previous AudioContext.", 'debug'); audioContext.close().catch(e => logDebug(`Error closing previous context: ${e}`, 'warn')); }
+
+             try {
+                 audioContext = new (window.AudioContext || window.webkitAudioContext)(); logDebug(`AudioContext created. State: ${audioContext.state}`, 'success'); if (audioContext.state === 'suspended') { logDebug("Context suspended - needs interaction.", 'warn'); }
+                 audioContext.decodeAudioData(arrayBuffer)
+                     .then(buffer => {
+                         logDebug(`Audio decoded. Duration: ${buffer.duration.toFixed(2)}s`, 'success'); audioBuffer = buffer; mp3Loaded = true; statusMessage.textContent = 'MP3 Decoded';
+                         // Update Seek Bar Max & Duration Display
+                         seekBar.max = buffer.duration;
+                         durationDisplay.textContent = formatTime(buffer.duration);
+                         // --- Setup Nodes ---
+                         analyserNode = audioContext.createAnalyser(); analyserNode.fftSize = FFT_SIZE; const bufferLength = analyserNode.frequencyBinCount; frequencyData = new Uint8Array(bufferLength); timeDomainData = new Uint8Array(bufferLength); logDebug(`AnalyserNode created. FFT: ${FFT_SIZE}, Bins: ${bufferLength}`, 'success');
+                         gainNode = audioContext.createGain(); logDebug("GainNode created.", 'debug');
+                         gainNode.connect(analyserNode); analyserNode.connect(audioContext.destination); logDebug("Node chain: Gain->Analyser->Dest", 'debug');
+                         checkFilesReady();
+                         runBeatDetectionAnalysis(audioBuffer);
+                     })
+                     .catch(error => { logDebug(`Audio Decode Error: ${error}`, 'error'); mp3Loaded = false; checkFilesReady(); statusMessage.textContent = 'Decode Error'; seekBar.disabled = true; });
+             } catch (e) { logDebug(`AudioContext creation failed: ${e}`, 'error'); statusMessage.textContent = 'Web Audio Error'; mp3Loaded = false; checkFilesReady(); seekBar.disabled = true; }
+        }
+
+
+        // --- Beat Detection Analysis ---
+        /* ... (runBeatDetectionAnalysis function remains the same) ... */
+        async function runBeatDetectionAnalysis(buffer) { if (!buffer) { logDebug("Beat Analysis skipped: No buffer.", 'warn'); return; } logDebug("Starting beat detection analysis...", 'info'); statusMessage.textContent = 'Analyzing beat...'; try { const channelData = buffer.getChannelData(0); logDebug(`Calling guessBeat worker SR=${buffer.sampleRate}`, 'debug'); const result = await guessBeat({ channelData: channelData, sampleRate: buffer.sampleRate }); logDebug(`Beat analysis complete. Result: ${JSON.stringify(result)}`, 'success'); if (result && typeof result.bpm === 'number' && typeof result.offset === 'number') { detectedBPM = result.bpm; detectedOffset = result.offset; secondsPerBeat = 60.0 / detectedBPM; logDebug(`Stored: BPM=${detectedBPM.toFixed(1)}, Offset=${detectedOffset.toFixed(3)}s, Secs/Beat=${secondsPerBeat.toFixed(3)}`, 'success'); statusMessage.textContent = `Ready (BPM: ${detectedBPM.toFixed(1)})`; } else { throw new Error("Worker returned invalid result format."); } } catch (error) { logDebug(`Beat detection analysis failed: ${error}`, 'error'); statusMessage.textContent = 'Beat analysis failed'; detectedBPM = null; detectedOffset = null; secondsPerBeat = null; } }
+
+
+        // --- SRT Parsing ---
+        /* ... (parseSRT function remains the same) ... */
+        function parseSRT(data) { logDebug("Parsing SRT...", 'debug'); const blocks=data.trim().replace(/\r/g,'').split(/\n\n+/); const subs=[]; let count=0; function timeToSeconds(t){const m=t.match(/(\d{1,2}):(\d{2}):(\d{2})[,.](\d{3})/); if(!m)throw new Error(`Time: ${t}`); const[,h,n,s,l]=m; return parseInt(h)*3600+parseInt(n)*60+parseInt(s)+parseInt(l)/1000;} for(const b of blocks){const l=b.split('\n'); if(l.length<3||!l[1]||!l[1].includes('-->')){ continue;} const tL=l[1]; const tM=tL.match(/([^\s]+)\s*-->\s*([^\s]+)/); if(!tM){ continue;} const txt=l.slice(2).map(ln=>ln.trim()).join('\n').trim(); if(!txt){ continue;} try {const sT=timeToSeconds(tM[1].trim()); const eT=timeToSeconds(tM[2].trim()); if(eT<sT){continue;} subs.push({startTime:sT,endTime:eT,text:txt}); count++;} catch(e){logDebug(`SRT Time Error: ${e}\nBlock:\n${b}`,'error'); continue;}} subs.sort((a,b)=>a.startTime-b.startTime); logDebug(`SRT Parse OK: ${count} entries.`, 'debug'); return subs; }
+
+
+        // --- Playback Control (Includes Seek Handling) ---
+        playPauseButton.addEventListener('click', togglePlayPause);
+        seekBar.addEventListener('input', handleSeekInput); // While dragging
+        seekBar.addEventListener('change', handleSeekChange); // When drag finishes
+
+        function handleSeekInput() {
+            // While dragging, only update the time display, don't actually seek yet
+            isSeeking = true; // Set seeking flag
+            currentTimeDisplay.textContent = formatTime(parseFloat(seekBar.value));
+             // Maybe slightly dim visuals or pause updates while actively dragging? Optional.
+             if (animationFrameId) cancelAnimationFrame(animationFrameId); // Pause updates
+             animationFrameId = null;
+             // Update subtitle display immediately based on seek bar value
+             updateSubtitleDisplay(parseFloat(seekBar.value));
+             logDebug(`Seek input: ${seekBar.value}`, 'debug');
+        }
+
+        function handleSeekChange() {
+            // When dragging stops (or clicked), perform the actual seek
+            const seekTime = parseFloat(seekBar.value);
+            logDebug(`Seek change: User wants to seek to ${seekTime.toFixed(3)}s`, 'info');
+            isSeeking = false; // Unset seeking flag
+            pauseOffset = seekTime; // Update the target time
+            lastBeatTriggeredNum = -1; // Reset last beat on seek
+
+            if (isPlaying) {
+                // Stop current source cleanly, then restart
+                if (sourceNode) {
+                    sourceNode.onended = null; // Prevent handleSourceEnd logic during seek restart
+                    try { sourceNode.stop(0); } catch(e) {}
+                    sourceNode.disconnect();
+                    sourceNode = null;
+                    logDebug("Stopped current source due to seek.", 'debug');
+                }
+                startPlayback(pauseOffset); // Restart from the new position
+            } else {
+                // If paused, just update pauseOffset. Playback will start from here.
+                logDebug(`Seek while paused. New pauseOffset: ${pauseOffset.toFixed(3)}s`, 'info');
+                // Update visuals/subs one last time for the new paused position if needed
+                updateTimeDisplay(pauseOffset);
+                updateSubtitleDisplay(pauseOffset);
+                 // If context is running, request one animation frame to redraw at the paused seek position
+                 if(audioContext && audioContext.state === 'running') {
+                    requestAnimationFrame(() => {
+                        if(!isPlaying && analyserNode && frequencyData) { // Redraw only if still paused
+                            analyserNode.getByteFrequencyData(frequencyData);
+                            analyserNode.getByteTimeDomainData(timeDomainData);
+                            drawVisualization(frequencyData, timeDomainData, false); // Draw static frame
+                        }
+                    });
+                 }
+            }
+        }
+
+
+        function togglePlayPause() {
+            logDebug(`PlayToggle: isPlaying=${isPlaying}, ContextState=${audioContext?.state}`, 'info');
+             if (!audioContext || !mp3Loaded || !srtLoaded || !audioBuffer || !gainNode || !analyserNode) { logDebug("Cannot play: Prerequisites missing.", 'warn'); return; }
+
+             if (audioContext.state === 'suspended') { /* ... (resume logic same as before) ... */ logDebug("Context suspended, attempting resume...", 'info'); audioContext.resume().then(() => { logDebug(`Context resumed. State: ${audioContext.state}`, 'success'); if (!isPlaying) { startPlayback(pauseOffset); } else { logDebug("Context resumed while isPlaying=true.", 'debug'); } }).catch(err => { logDebug(`Resume failed: ${err}`, 'error'); statusMessage.textContent = "Failed to start audio."; }); if (!isPlaying) return; }
+
+             if (isPlaying) { // PAUSE
+                 logDebug("Attempting pause...", 'info'); if (audioContext.state === 'running') { audioContext.suspend().then(() => { if(audioContext.state === 'suspended') { pauseOffset += audioContext.currentTime - startTime; logDebug(`Paused OK. Offset: ${pauseOffset.toFixed(3)}s.`, 'success'); } else { logDebug(`Ctx state changed after suspend: ${audioContext.state}`, 'warn'); } isPlaying = false; playPauseButton.textContent = 'Play'; statusMessage.textContent = 'Paused'; if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null; }).catch(err => { logDebug(`Suspend failed: ${err}`, 'error'); isPlaying = false; playPauseButton.textContent = 'Play'; statusMessage.textContent = 'Pause Error'; }); } else { logDebug(`Cannot pause, context not running: ${audioContext.state}`, 'warn'); isPlaying = false; playPauseButton.textContent = 'Play'; statusMessage.textContent = 'Ctx Issue'; if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+             } else { // PLAY
+                 logDebug("Attempting play...", 'info');
+                 startPlayback(pauseOffset);
+             }
+        }
+
+         function startPlayback(offset = 0) {
+            logDebug(`startPlayback offset: ${offset.toFixed(3)}s`, 'debug');
+             if (!audioContext || audioContext.state !== 'running' || !audioBuffer || !gainNode) { logDebug("Cannot startPlayback - invalid state/nodes.", 'error'); statusMessage.textContent = "Start Playback Error"; return; }
+             // Stop and disconnect previous source if it exists (essential for seeking/restarting)
+             if (sourceNode) {
+                 sourceNode.onended = null; // Prevent old handler firing
+                 try { sourceNode.stop(0); } catch(e) { logDebug(`Ignoring error stopping previous source: ${e}`, 'warn'); }
+                 sourceNode.disconnect();
+                 sourceNode = null;
+                 logDebug("Cleaned up previous source node.", 'debug');
+             }
+
+             try {
+                 sourceNode = audioContext.createBufferSource(); sourceNode.buffer = audioBuffer;
+                 sourceNode.connect(gainNode); logDebug("SourceNode created & connected to Gain.", 'debug');
+                 startTime = audioContext.currentTime; // Record the context time when this segment *starts*
+                 // The offset passed to source.start() is the time *within the buffer* to start playing
+                 sourceNode.start(0, offset);
+                 // Adjust pauseOffset to reflect the *actual* start position within the context timeline
+                 // No, pauseOffset *is* the desired start position. We subtract startTime later to get elapsed.
+                 isPlaying = true; playPauseButton.textContent = 'Pause'; statusMessage.textContent = 'Playing';
+                 logDebug(`Source started at CT: ${startTime.toFixed(3)}, Buffer Offset: ${offset.toFixed(3)}`, 'success');
+                 sourceNode.onended = handleSourceEnd; // Assign the end handler
+                 if (animationFrameId) cancelAnimationFrame(animationFrameId); // Ensure no duplicate loops
+                 update(); // Start update loop
+             } catch (e) { logDebug(`Source start error: ${e}`, 'error'); isPlaying = false; statusMessage.textContent = "Audio Start Error"; }
+         }
+
+         function handleSourceEnd() {
+             const sourceEndedTime = audioContext.currentTime; // Capture time immediately
+             const endedNaturally = isPlaying; // If flag is still true, it wasn't paused/stopped manually
+             logDebug(`Source 'onended'. isPlaying flag was: ${isPlaying}`, 'info');
+             isPlaying = false; // Now set to false
+             if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null;
+
+             // Determine if it was a natural end based on timing
+             const tolerance = 0.2; // Allow 200ms tolerance
+             let expectedDuration = 0;
+             if (audioBuffer) {
+                 expectedDuration = audioBuffer.duration;
+             }
+             // Check if pauseOffset (where we started) + elapsed time gets close to total duration
+             const totalPlayedDuration = pauseOffset + (sourceEndedTime - startTime);
+
+             if (audioBuffer && Math.abs(totalPlayedDuration - expectedDuration) < tolerance) {
+                 logDebug(`Audio finished naturally. TotalPlayed: ${totalPlayedDuration.toFixed(3)}, Expected: ${expectedDuration.toFixed(3)}`, 'info');
+                 playPauseButton.textContent = 'Play'; statusMessage.textContent = 'Finished';
+                 subtitleDisplay.textContent = '[Finished]';
+                 // Update UI to final state
+                 seekBar.value = seekBar.max;
+                 currentTimeDisplay.textContent = formatTime(parseFloat(seekBar.max));
+                 pauseOffset = 0; // Reset offset ONLY on natural finish
+             } else {
+                 // If it didn't end naturally, it was likely stopped by pause or seek
+                 logDebug(`Audio ended prematurely/stopped. TotalPlayed: ${totalPlayedDuration.toFixed(3)}, Expected: ${expectedDuration.toFixed(3)}`, 'info');
+                 if (playPauseButton.textContent !== 'Play') {
+                     playPauseButton.textContent = 'Play';
+                     // Status message might already be 'Paused' or will be updated by seek
+                 }
+                 // Don't reset pauseOffset if stopped/paused
+             }
+             // sourceNode = null; // Maybe null out ref
+         }
+
+
+        // --- Update Subtitle Display Helper ---
+         function updateSubtitleDisplay(elapsedSeconds) {
+            let currentSubtitle = '';
+            let subFound = false;
+            for (const sub of subtitles) {
+                if (elapsedSeconds >= sub.startTime && elapsedSeconds < sub.endTime) {
+                    const newSubHTML = sub.text.replace(/\n/g, '<br>');
+                    if (subtitleDisplay.innerHTML !== newSubHTML) {
+                         subtitleDisplay.innerHTML = newSubHTML;
+                    }
+                    subFound = true;
+                    break;
+                }
+            }
+            if (!subFound && subtitleDisplay.innerHTML !== '') {
+                subtitleDisplay.innerHTML = '';
+            }
+         }
+         // --- Update Time Display Helper ---
+         function updateTimeDisplay(elapsedSeconds) {
+             if(!isSeeking) { // Only update seek bar visually if user isn't dragging it
+                 seekBar.value = elapsedSeconds;
+             }
+            currentTimeDisplay.textContent = formatTime(elapsedSeconds);
+         }
+
+
+        // --- Update & Drawing Loop ---
+        function update() {
+             if (!audioContext || audioContext.state !== 'running') {
+                 // Stop loop if context is lost or not running (unless we are just paused)
+                 if(audioContext && audioContext.state === 'suspended' && !isPlaying) {
+                      // It's okay to be suspended if we are paused, do nothing here
+                 } else {
+                      logDebug("Update loop exiting: context not running or missing.", 'debug');
+                      animationFrameId = null;
+                      return;
+                 }
+            }
+             // If paused, don't run the main update logic, but keep checking
+             if (!isPlaying) {
+                 animationFrameId = requestAnimationFrame(update);
+                 return;
+             }
+
+            const elapsedSeconds = pauseOffset + (audioContext.currentTime - startTime);
+
+            // --- Get Audio Data ---
+             if (!analyserNode || !frequencyData || !timeDomainData) {
+                 logDebug("Analyser node or data arrays missing in update loop.", 'warn');
+                 animationFrameId = requestAnimationFrame(update); // Keep trying? Or stop?
+                 return;
+             }
+            analyserNode.getByteFrequencyData(frequencyData);
+            analyserNode.getByteTimeDomainData(timeDomainData);
+
+
+            // --- Check for Calculated Beat ---
+            let isBeatFrame = false;
+            if (detectedBPM && detectedOffset !== null && secondsPerBeat) { /* ... (beat calculation logic same as before) ... */ const timeSinceOffset = elapsedSeconds - detectedOffset; if (timeSinceOffset >= -BEAT_TRIGGER_WINDOW) { const currentBeatValue = timeSinceOffset / secondsPerBeat; const closestBeatNum = Math.round(currentBeatValue); const timeToClosestBeat = Math.abs(timeSinceOffset - closestBeatNum * secondsPerBeat); if (timeToClosestBeat <= BEAT_TRIGGER_WINDOW && closestBeatNum !== lastBeatTriggeredNum && closestBeatNum >= 0) { isBeatFrame = true; lastBeatTriggeredNum = closestBeatNum; beatFlashIntensity = 1.0; } } }
+
+            // --- Update UI Elements ---
+            updateTimeDisplay(elapsedSeconds);
+            updateSubtitleDisplay(elapsedSeconds);
+
+
+            // --- Draw Visualization ---
+            drawVisualization(frequencyData, timeDomainData, isBeatFrame);
+
+             // --- Manage Particles ---
+             updateParticles(); // Update particle physics
+
+            // --- Continue Loop ---
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        // --- Particle Functions ---
+        function createParticle(x, y, hue) {
+            if (particles.length >= MAX_PARTICLES) return;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1 + Math.random() * 3;
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1, // Slight upward bias
+                life: PARTICLE_LIFESPAN,
+                radius: 1 + Math.random() * 3,
+                color: `hsl(${hue}, 100%, ${60 + Math.random() * 20}%)` // Vary lightness
+            });
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.vy += PARTICLE_GRAVITY;
+                p.vx *= 0.99; // Air friction
+                p.vy *= 0.99;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0 || p.y > canvas.height + 20) { // Remove if dead or off-screen
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+
+        function drawVisualization(freqData, timeData, isBeat) {
+            const WIDTH = canvas.width;
+            const HEIGHT = canvas.height;
+            const bufferLength = analyserNode.frequencyBinCount;
+
+            // --- Background ---
+            canvasCtx.fillStyle = '#000000'; // Black background
+            canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+
+             // --- Beat Flash (Subtler) ---
+             if (beatFlashIntensity > 0) {
+                 canvasCtx.fillStyle = `hsla(${(currentHue + 90) % 360}, 100%, 70%, ${beatFlashIntensity * 0.15})`; // Much softer flash
+                 canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+                 beatFlashIntensity -= 0.05; // Fade slower
+             }
+
+             // --- Spawn Particles on Beat ---
+             if (isBeat) {
+                 for(let i = 0; i < 5; i++) { // Create a small burst
+                     createParticle(WIDTH / 2, HEIGHT / 2, (currentHue + 180) % 360);
+                 }
+             }
+
+             // --- Draw Particles ---
+             particles.forEach(p => {
+                 canvasCtx.beginPath();
+                 canvasCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                 canvasCtx.fillStyle = p.color;
+                 canvasCtx.fill();
+             });
+
+
+            // --- Draw Waveform ---
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = `hsl(${currentHue}, 80%, 50%)`; // Waveform color cycles
+            canvasCtx.beginPath();
+            const sliceWidth = WIDTH / bufferLength;
+            let x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                // timeData values are 0-255, map to vertical position
+                const v = timeData[i] / 128.0; // Range 0.0 to 2.0
+                const y = (v * HEIGHT / 2) - (HEIGHT*0.1); // Center vertically, slight offset down maybe
+
+                if (i === 0) {
+                    canvasCtx.moveTo(x, HEIGHT / 2 + y);
+                } else {
+                    canvasCtx.lineTo(x, HEIGHT / 2 + y);
+                }
+                x += sliceWidth;
+            }
+            canvasCtx.lineTo(WIDTH, HEIGHT / 2); // End line in the middle
+            canvasCtx.stroke();
+
+
+            // --- Draw Frequency Bars (Optional - overlay or replace waveform) ---
+            /*
+            const barWidth = (WIDTH / bufferLength) * 1.0; // Thinner bars maybe
+            x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (freqData[i] / 255) * HEIGHT * 0.4; // Lower bars if overlaying
+                const barHue = (currentHue + 120 + (i / bufferLength) * 120) % 360;
+                const lightness = isBeat ? 60 : 40;
+                canvasCtx.fillStyle = `hsla(${barHue}, 80%, ${lightness}%, 0.7)`; // Semi-transparent
+                canvasCtx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+            */
+
+
+            // --- Cycle Hue ---
+            currentHue = (currentHue + 0.1) % 360;
+        }
+
+    </script>
+</body>
+</html>
