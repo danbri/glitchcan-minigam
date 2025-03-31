@@ -41,27 +41,33 @@ const SpectroJSW = (() => {
   function init() {
     // Get canvas element
     canvas = document.getElementById('spectrum-canvas');
-    
-    // Initialize modules
-    Renderer.initialize(canvas);
-    Input.initialize();
-    Renderer.setupDefaultAnimations();
-    
-    // Initialize audio context
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) {
-      console.warn('Web Audio API not supported:', e);
+    if (!canvas) {
+      console.error('Canvas element not found in SpectroJSW.init!');
+      return;
     }
     
-    // Set up event listeners for game controls
-    document.getElementById('sound-btn').addEventListener('click', toggleSound);
-    document.getElementById('menu-btn').addEventListener('click', () => {
-      pauseGame();
-      document.getElementById('game-menu').classList.remove('hidden');
-    });
-    
-    console.log('SpectroJSW initialized');
+    try {
+      // Initialize modules
+      Renderer.initialize(canvas);
+      Input.initialize();
+      Renderer.setupDefaultAnimations();
+      
+      // Initialize audio context
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.warn('Web Audio API not supported:', e);
+      }
+      
+      // Set up event listeners for game controls
+      document.getElementById('sound-btn').addEventListener('click', toggleSound);
+      document.getElementById('menu-btn').addEventListener('click', () => {
+        pauseGame();
+        document.getElementById('game-menu').classList.remove('hidden');
+      });
+    } catch (e) {
+      console.error('Error in SpectroJSW.init:', e);
+    }
   }
   
   /**
@@ -85,15 +91,22 @@ const SpectroJSW = (() => {
       deathCount: 0
     };
     
-    // Load first room
-    loadRoom(gameState.currentRoomId);
-    
-    // Hide loading screen and menu
-    document.getElementById('loading-screen').classList.add('hidden');
-    document.getElementById('game-menu').classList.add('hidden');
-    
-    // Start game loop
-    requestAnimationFrame(gameLoop);
+    try {
+      // Load first room
+      loadRoom(gameState.currentRoomId);
+      
+      // Hide loading screen and menu
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('game-menu').classList.add('hidden');
+      
+      // Start game loop
+      requestAnimationFrame(gameLoop);
+    } catch (e) {
+      console.error('Error starting game:', e);
+      // Try to show some debug info on screen
+      document.getElementById('menu-title').textContent = 'ERROR STARTING GAME';
+      document.getElementById('game-menu').classList.remove('hidden');
+    }
     
     console.log('Game started');
   }
@@ -221,6 +234,9 @@ const SpectroJSW = (() => {
    * @param {number} timestamp - Current timestamp
    */
   function gameLoop(timestamp) {
+    // Schedule next frame immediately to maintain animation even if there's an error
+    requestAnimationFrame(gameLoop);
+    
     // Skip if game is not playing or paused
     if (!gameState.isPlaying || gameState.isPaused) {
       return;
@@ -234,17 +250,19 @@ const SpectroJSW = (() => {
     // Update input
     Input.update();
     
-    // Update game state
-    updateGame(deltaTime);
-    
-    // Render the game
-    renderGame(timestamp);
-    
-    // Schedule next frame
-    requestAnimationFrame(gameLoop);
-    
-    // Increment frame counter
-    frameCount++;
+    try {
+      // Update game state
+      updateGame(deltaTime);
+      
+      // Render the game
+      renderGame(timestamp);
+      
+      // Increment frame counter
+      frameCount++;
+    } catch (e) {
+      console.error('Error in game loop:', e);
+      // Don't stop the game loop on error
+    }
   }
   
   /**
@@ -301,8 +319,11 @@ const SpectroJSW = (() => {
       player.animState = 'stand';
     }
     
-    // Handle jumping
-    const jumpPressed = Input.isActionActive('jump');
+    // Handle jumping - add direct space key check for maximum compatibility
+    const jumpPressed = Input.isActionActive('jump') || 
+                        Input.isKeyPressed('Space') || 
+                        Input.isKeyPressed(' ') || 
+                        Input.isKeyPressed('32');
     
     if (jumpPressed && player.onGround && !player.isJumping) {
       player.vy = JUMP_STRENGTH;
@@ -459,64 +480,79 @@ const SpectroJSW = (() => {
    * Check player collisions with entities
    */
   function checkCollisions() {
-    // Check entity collisions
-    const collidingEntity = Entities.checkPlayerEntityCollisions();
-    
-    if (collidingEntity) {
-      // Player hit a deadly entity
-      handlePlayerDeath();
-      return;
-    }
-    
-    // Check door use
-    const doorUse = Entities.checkDoorUse(Input.wasActionJustActivated('action'));
-    
-    if (doorUse) {
-      switch (doorUse.action) {
-        case 'enter':
-          // Change to new room
-          if (doorUse.door.destinationRoom) {
-            changeRoom(doorUse.door.destinationRoom);
-          }
-          break;
-        case 'unlock':
-          // Door was unlocked
-          playSound('unlock');
-          Renderer.startScreenShake(3, 200);
-          break;
-        case 'locked':
-          // Door is locked, show message
-          console.log('This door is locked! Find a key.');
-          break;
+    try {
+      // Check entity collisions
+      const collidingEntity = Entities.checkPlayerEntityCollisions();
+      
+      if (collidingEntity) {
+        // Player hit a deadly entity
+        handlePlayerDeath();
+        return;
       }
-    }
-    
-    // Collect items
-    const player = Entities.getPlayer();
-    const collectibles = Entities.getEntitiesByType(Entities.ENTITY_TYPES.COLLECTIBLE);
-    
-    for (const item of collectibles) {
-      if (!item.collected && !item.removed && Entities.isColliding(player, item)) {
-        const value = Entities.collectItem(item);
-        if (value) {
-          gameState.score += value;
-          gameState.collectedItems++;
-          playSound('collect');
+      
+      // Check door use
+      const doorUse = Entities.checkDoorUse(Input.wasActionJustActivated('action'));
+      
+      if (doorUse) {
+        switch (doorUse.action) {
+          case 'enter':
+            // Change to new room
+            if (doorUse.door.destinationRoom) {
+              changeRoom(doorUse.door.destinationRoom);
+            }
+            break;
+          case 'unlock':
+            // Door was unlocked
+            playSound('unlock');
+            Renderer.startScreenShake(3, 200);
+            break;
+          case 'locked':
+            // Door is locked, show message
+            console.log('This door is locked! Find a key.');
+            break;
         }
       }
+    } catch (e) {
+      console.error('Error in collision handling:', e);
     }
     
-    // Collect keys
-    const keys = Entities.getEntitiesByType(Entities.ENTITY_TYPES.KEY);
-    
-    for (const key of keys) {
-      if (!key.collected && !key.removed && Entities.isColliding(player, key)) {
-        Entities.collectKey(key);
-        player.hasKey = true;
-        gameState.score += 50;
-        playSound('key');
-        Renderer.startScreenShake(5, 300);
+    try {
+      // Use the global collision function
+      // Collect items
+      const player = Entities.getPlayer();
+      if (!player) return;
+      
+      const collectibles = Entities.getEntitiesByType(Entities.ENTITY_TYPES.COLLECTIBLE);
+      if (collectibles && collectibles.length) {
+        for (const item of collectibles) {
+          if (item && !item.collected && !item.removed && window.checkCollisionBetween(player, item)) {
+            // Simple collection logic
+            item.collected = true;
+            item.removed = true;
+            gameState.score += (item.value || 10);
+            gameState.collectedItems++;
+            playSound('collect');
+          }
+        }
       }
+      
+      // Collect keys
+      const keys = Entities.getEntitiesByType(Entities.ENTITY_TYPES.KEY);
+      if (keys && keys.length) {
+        for (const key of keys) {
+          if (key && !key.collected && !key.removed && window.checkCollisionBetween(player, key)) {
+            // Simple key collection
+            key.collected = true;
+            key.removed = true;
+            player.hasKey = true;
+            gameState.score += 50;
+            playSound('key');
+            Renderer.startScreenShake(5, 300);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error in item collection:', e);
     }
   }
   

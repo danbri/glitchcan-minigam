@@ -29,14 +29,52 @@ const Renderer = (() => {
    * @param {HTMLCanvasElement} canvasEl - Canvas element to render to
    */
   function initialize(canvasEl) {
+    if (!canvasEl) {
+      console.error('Renderer.initialize received null canvas');
+      return;
+    }
+    
     canvas = canvasEl;
     
-    // Initialize the Spectrum display
-    Spectrum.initialize(canvas, 2);
-    screenProps = Spectrum.getScreenProperties();
-    
-    // Define additional characters for the game
-    defineGameCharacters();
+    try {
+      // Initialize the Spectrum display with explicit scale factor
+      Spectrum.initialize(canvas, 2);
+      
+      // Get screen properties
+      screenProps = Spectrum.getScreenProperties();
+      
+      // Define additional characters for the game
+      defineGameCharacters();
+    } catch (e) {
+      console.error('Error in Renderer.initialize:', e);
+    }
+  }
+  
+  /**
+   * Render a test pattern to verify drawing is working
+   */
+  function renderTestPattern() {
+    try {
+      // Set up a simple pattern with bright colors
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 32; x++) {
+          const colorIndex = (x + y) % 7 + 1; // cycle through colors 1-7
+          Spectrum.setAttribute(x, y, colorIndex, 0, true, false);
+          
+          // Draw alternating characters
+          if ((x + y) % 2 === 0) {
+            Spectrum.drawChar(x, y, 'BLOCK');
+          } else {
+            Spectrum.drawChar(x, y, 'PLAYER');
+          }
+        }
+      }
+      
+      // Force an update
+      Spectrum.update(performance.now());
+    } catch (e) {
+      console.error('Error rendering test pattern:', e);
+    }
   }
   
   /**
@@ -327,13 +365,23 @@ const Renderer = (() => {
    * @param {number} timestamp - Current timestamp
    */
   function renderRoom(room, entities, player, timestamp) {
+    // Safety check - if room is invalid, render a fallback pattern
+    if (!room || !room.layout) {
+      renderTestPattern();
+      return;
+    }
+    
     // Clear screen with room background color
     const bgColorIndex = room.backgroundColor || 0;
     const bgBright = room.backgroundBright || false;
     Spectrum.clearScreen(bgColorIndex, bgBright);
     
     // Add subtle background patterns
-    renderBackgroundPatterns(room);
+    try {
+      renderBackgroundPatterns(room);
+    } catch (e) {
+      console.error('Error rendering background patterns:', e);
+    }
     
     // Set up standard border attributes
     const borderAttr = {
@@ -361,15 +409,19 @@ const Renderer = (() => {
     }
     
     // Render room name in top border
-    const roomName = room.name.toUpperCase();
-    const nameStartX = Math.floor((screenProps.cols - roomName.length) / 2);
-    
-    for (let i = 0; i < roomName.length; i++) {
-      const x = nameStartX + i;
-      if (x >= 0 && x < screenProps.cols) {
-        const char = roomName[i];
-        Spectrum.drawChar(x, 1, char);
+    try {
+      const roomName = (room.name || "DEFAULT ROOM").toUpperCase();
+      const nameStartX = Math.floor((screenProps.cols - roomName.length) / 2);
+      
+      for (let i = 0; i < roomName.length; i++) {
+        const x = nameStartX + i;
+        if (x >= 0 && x < screenProps.cols) {
+          const char = roomName[i];
+          Spectrum.drawChar(x, 1, char);
+        }
       }
+    } catch (e) {
+      console.error('Error rendering room name:', e);
     }
     
     // Render platform tiles
@@ -582,7 +634,8 @@ const Renderer = (() => {
     resetAnimation,
     startScreenShake,
     startRoomTransition,
-    setupDefaultAnimations
+    setupDefaultAnimations,
+    renderTestPattern // Expose the test pattern function
   };
 })();
 

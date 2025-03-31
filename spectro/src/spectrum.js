@@ -157,8 +157,18 @@ const Spectrum = (() => {
    */
   function initialize(canvasEl, scale = 2) {
     canvas = canvasEl;
-    ctx = canvas.getContext('2d');
+    if (!canvas) {
+      console.error('Canvas element is null or undefined!');
+      return;
+    }
     
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Failed to get 2D context from canvas!');
+      return;
+    }
+    
+    // Force explicit dimensions on the canvas element
     canvas.width = SCREEN_WIDTH * scale;
     canvas.height = SCREEN_HEIGHT * scale;
     
@@ -168,6 +178,11 @@ const Spectrum = (() => {
     screenBuffer.height = SCREEN_HEIGHT;
     
     const bufferCtx = screenBuffer.getContext('2d');
+    if (!bufferCtx) {
+      console.error('Failed to get 2D context for screen buffer!');
+      return;
+    }
+    
     bufferCtx.imageSmoothingEnabled = false;
     
     // Clear to black
@@ -186,6 +201,15 @@ const Spectrum = (() => {
         flash: false      // Flash attribute off
       };
     }
+    
+    // Draw basic test pattern to show graphics are working
+    for (let i = 0; i < 8; i++) {
+      setAttribute(i, 0, i, 0, true, false);
+      drawChar(i, 0, 'BLOCK');
+    }
+    
+    // Initial render
+    update(0);
   }
   
   /**
@@ -446,6 +470,11 @@ const Spectrum = (() => {
    * @param {number} timestamp - Current timestamp for animations
    */
   function update(timestamp) {
+    if (!canvas || !ctx || !screenBuffer) {
+      console.error('Canvas, context or screen buffer is missing in update()!');
+      return;
+    }
+    
     // Handle flash attribute (toggle every ~0.5 seconds)
     if (timestamp - lastFlashToggle > 500) {
       flashPhase = !flashPhase;
@@ -453,6 +482,10 @@ const Spectrum = (() => {
       
       // Redraw any flashing cells
       const bufferCtx = screenBuffer.getContext('2d');
+      if (!bufferCtx) {
+        console.error('Failed to get 2D context for screen buffer in update()!');
+        return;
+      }
       
       for (let y = 0; y < ATTR_ROWS; y++) {
         for (let x = 0; x < ATTR_COLS; x++) {
@@ -466,12 +499,16 @@ const Spectrum = (() => {
       }
     }
     
-    // Render screen buffer to main canvas (scaled)
-    ctx.drawImage(
-      screenBuffer,
-      0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
-      0, 0, canvas.width, canvas.height
-    );
+    try {
+      // Render screen buffer to main canvas (scaled)
+      ctx.drawImage(
+        screenBuffer,
+        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
+        0, 0, canvas.width, canvas.height
+      );
+    } catch (e) {
+      console.error('Error in Spectrum.update():', e);
+    }
   }
   
   /**

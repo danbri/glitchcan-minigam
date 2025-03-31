@@ -15,8 +15,8 @@ const Input = (() => {
     'right': ['ArrowRight', 'KeyD'],
     'up': ['ArrowUp', 'KeyW', 'KeyZ'],
     'down': ['ArrowDown', 'KeyS'],
-    'jump': ['ArrowUp', 'KeyW', 'KeyZ', 'Space'],
-    'action': ['KeyE', 'Enter', 'KeyX'],
+    'jump': ['Space', ' ', 'ArrowUp', 'KeyW', 'KeyZ'],  // Space as primary jump key - include both event.code and event.key options
+    'action': ['Enter', 'KeyE', 'KeyX'],
     'menu': ['Escape', 'KeyP'],
     'restart': ['KeyR']
   };
@@ -46,11 +46,25 @@ const Input = (() => {
    */
   function handleKeyDown(event) {
     // Prevent default browser behavior for game controls
-    if (Object.values(keyAliases).some(aliases => aliases.includes(event.code))) {
+    if (Object.values(keyAliases).some(aliases => 
+      aliases.includes(event.code) || 
+      aliases.includes(event.key) || 
+      aliases.includes(event.keyCode?.toString())
+    )) {
       event.preventDefault();
     }
     
-    keyState[event.code] = true;
+    // Special handling for Space key which is super important for jumping
+    if (event.code === 'Space' || event.key === ' ' || event.keyCode === 32) {
+      keyState['Space'] = true;
+      keyState[' '] = true;
+      keyState['32'] = true;
+      console.log('Jump key pressed!');
+    } else {
+      keyState[event.code] = true;
+      keyState[event.key] = true;
+      if (event.keyCode) keyState[event.keyCode.toString()] = true;
+    }
   }
   
   /**
@@ -58,7 +72,16 @@ const Input = (() => {
    * @param {KeyboardEvent} event - Keyboard event
    */
   function handleKeyUp(event) {
-    keyState[event.code] = false;
+    // Special handling for Space key
+    if (event.code === 'Space' || event.key === ' ' || event.keyCode === 32) {
+      keyState['Space'] = false;
+      keyState[' '] = false;
+      keyState['32'] = false;
+    } else {
+      keyState[event.code] = false;
+      keyState[event.key] = false;
+      if (event.keyCode) keyState[event.keyCode.toString()] = false;
+    }
   }
   
   /**
@@ -165,6 +188,11 @@ const Input = (() => {
   function isActionActive(action) {
     // First check touch state
     if (touchState[action]) return true;
+    
+    // Special case for jump action to ensure it works with Space key
+    if (action === 'jump' && (keyState['Space'] || keyState[' '] || keyState['32'])) {
+      return true;
+    }
     
     // Then check keyboard aliases
     if (keyAliases[action]) {

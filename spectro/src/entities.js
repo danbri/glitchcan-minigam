@@ -471,6 +471,9 @@ const Entities = (() => {
     checkDoorUse,
     resetEntities,
     getPlayer,
+    isColliding,
+    collectItem,
+    collectKey,
     ENTITY_TYPES
   };
 })();

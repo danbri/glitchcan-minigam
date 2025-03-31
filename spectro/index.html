@@ -339,8 +339,20 @@
         <div class="menu-buttons">
           <button class="menu-button" id="start-btn">Start Game</button>
           <button class="menu-button" id="controls-btn">Controls</button>
-          <button class="menu-button" id="settings-btn">Settings</button>
+          <button class="menu-button" id="back-btn" style="display: none;">Back to Menu</button>
         </div>
+        
+        <!-- Controls Instructions (hidden by default) -->
+        <div id="controls-panel" style="display: none;">
+          <h2 style="color: cyan;">Game Controls</h2>
+          <div style="text-align: left; margin: 20px; color: white;">
+            <p><span style="color: yellow;">SPACE</span> - Jump</p>
+            <p><span style="color: yellow;">← →</span> - Move Left/Right</p>
+            <p><span style="color: yellow;">ENTER</span> - Action/Use Door</p>
+            <p><span style="color: yellow;">ESC</span> - Menu</p>
+          </div>
+        </div>
+        
         <div class="zx-border">
           <div class="zx-credits">
             © 1984 STYLE ZX SPECTRUM 48K
@@ -377,10 +389,22 @@
   <!-- Main Scripts -->
   <script src="src/spectrum.js"></script>
   <script src="src/rooms.js"></script>
-  <script src="src/entities.js"></script>
+  <script>
+    // Define global collision detection that will be available to all modules
+    window.checkCollisionBetween = function(a, b) {
+      if (!a || !b) return false;
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    };
+  </script>
+  <script src="src/entities.js?v=1"></script>
   <script src="src/renderer.js"></script>
   <script src="src/input.js"></script>
-  <script src="src/game.js"></script>
+  <script src="src/game.js?v=1"></script>
   <script>
     // Initialize the game once all resources are loaded
     window.addEventListener('load', () => {
@@ -389,22 +413,9 @@
       const loadingScreen = document.getElementById('loading-screen');
       const gameMenu = document.getElementById('game-menu');
       
-      // Simulate loading with progress
-      let progress = 0;
-      const loadingInterval = setInterval(() => {
-        progress += 5;
-        progressBar.style.width = `${progress}%`;
-        
-        if (progress >= 100) {
-          clearInterval(loadingInterval);
-          
-          // Show menu after loading is complete
-          setTimeout(() => {
-            loadingScreen.classList.add('hidden');
-            gameMenu.classList.remove('hidden');
-          }, 500);
-        }
-      }, 200);
+      // Skip loading animation and go straight to menu
+      loadingScreen.classList.add('hidden');
+      gameMenu.classList.remove('hidden');
       
       // Initialize the game
       SpectroJSW.init();
@@ -413,6 +424,20 @@
       document.getElementById('start-btn').addEventListener('click', () => {
         gameMenu.classList.add('hidden');
         SpectroJSW.startGame();
+      });
+      
+      document.getElementById('controls-btn').addEventListener('click', () => {
+        // Hide menu buttons and show controls
+        document.querySelector('.menu-buttons').style.display = 'none';
+        document.getElementById('controls-panel').style.display = 'block';
+        document.getElementById('back-btn').style.display = 'block';
+      });
+      
+      document.getElementById('back-btn').addEventListener('click', () => {
+        // Show menu buttons and hide controls
+        document.querySelector('.menu-buttons').style.display = 'flex';
+        document.getElementById('controls-panel').style.display = 'none';
+        document.getElementById('back-btn').style.display = 'none';
       });
       
       document.getElementById('menu-btn').addEventListener('click', () => {
