@@ -1,722 +1,821 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Retro Platform Adventure - Expanded</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RetroSpec ZX</title>
   <style>
-    /* ======== Base / Reset ======== */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #111; font-family: sans-serif; }
-    #gameContainer { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-
-    /* ======== UI Header & Narrative ======== */
-    #uiHeader {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      background: rgba(0, 0, 0, 0.7);
-      color: #fff;
-      padding: 8px 12px;
-      z-index: 100;
+    :root {
+      --primary-color: #00caff;
+      --secondary-color: #ff4d88;
+      --background-color: #111;
+      --text-color: #eee;
+      --tape-color: #ffcc00;
+      --pixel-size: 4px;
+    }
+    
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    
+    body {
+      background: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
     }
-    #narrativePanel {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: rgba(0, 0, 0, 0.85);
-      color: #fff;
-      padding: 12px;
-      z-index: 100;
-      display: none;
+    
+    #computer {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 1em auto;
+      padding: 1em;
+      background: #222;
+      border-radius: 10px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
     }
-    #narrativeText { margin-bottom: 8px; }
-    .choiceBtn {
-      background: #444;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      margin-right: 6px;
-      cursor: pointer;
-      border-radius: 4px;
+    
+    #screen-container {
+      position: relative;
+      width: 100%;
+      padding-bottom: 75%; /* 4:3 aspect ratio */
+      margin-bottom: 1em;
+      border: 10px solid #333;
+      border-radius: 10px;
+      background: #000;
+      overflow: hidden;
     }
-    .choiceBtn:hover { background: #666; }
-
-    /* ======== Overlays (Start / Victory / Game Over) ======== */
-    .overlay {
+    
+    #screen {
       position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      color: #fff;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 200;
-      text-align: center;
-      padding: 20px;
+      overflow: hidden;
+      background: #000;
     }
-    .overlay button {
-      background: #0088cc;
-      color: #fff;
+    
+    #screen-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* CRT Effect */
+    .crt-effect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.15) 100%
+      );
+      opacity: 0.3;
+      z-index: 20;
+    }
+    
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 1px,
+        rgba(0, 0, 0, 0.3) 1px,
+        rgba(0, 0, 0, 0.3) 2px
+      );
+      pointer-events: none;
+      z-index: 21;
+    }
+    
+    /* Controls */
+    #controls {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.5em;
+      flex-wrap: wrap;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 0.5em;
+      margin-bottom: 0.5em;
+    }
+    
+    button {
+      background: #333;
+      color: var(--text-color);
       border: none;
-      padding: 10px 20px;
-      margin-top: 20px;
-      font-size: 18px;
+      padding: 0.5em 1em;
       border-radius: 4px;
+      font-family: inherit;
       cursor: pointer;
+      transition: all 0.2s;
     }
-    .overlay button:hover { background: #00aaff; }
-
-    /* ======== Game Elements ======== */
-    .platform {
-      position: absolute;
-      background: #5a3e1b;
+    
+    button:hover {
+      background: #444;
     }
-    .platform.elevator { background: #7a7a7a; }
-    .platform.escalator { background: #3e7a5a; }
-
-    .interactive {
+    
+    button:active {
+      transform: translateY(2px);
+    }
+    
+    button.highlighted {
+      background: var(--primary-color);
+      color: #000;
+    }
+    
+    /* Tape Loading Screen */
+    #loading-screen {
       position: absolute;
-      font-size: 32px;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      z-index: 10;
+      color: var(--primary-color);
+      text-align: center;
+    }
+    
+    #loading-border {
+      width: 80%;
+      height: 80%;
+      border: 16px solid var(--primary-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .loading-title {
+      font-size: 2em;
+      margin-bottom: 1em;
+      text-transform: uppercase;
+    }
+    
+    .loading-message {
+      font-size: 1.2em;
+      margin-bottom: 1em;
+    }
+    
+    #loading-progress {
+      width: 80%;
+      height: 20px;
+      border: 2px solid var(--primary-color);
+      margin-top: 1em;
+    }
+    
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--primary-color);
+      transition: width 0.2s;
+    }
+    
+    /* Cassette Selector */
+    #cassette-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      height: 200px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding: 1em 0;
+      margin-top: 1em;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .cassette {
+      display: inline-block;
+      width: 160px;
+      height: 100px;
+      margin: 0 1em;
+      background: var(--tape-color);
+      border-radius: 5px;
+      position: relative;
+      padding: 0.5em;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       cursor: pointer;
+      transition: transform 0.2s;
+      vertical-align: top;
     }
-    .decoration {
+    
+    .cassette:hover {
+      transform: translateY(-5px);
+    }
+    
+    .cassette::before {
+      content: '';
       position: absolute;
-      font-size: 24px;
+      top: 30px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #333;
+      box-shadow: 80px 0 0 #333;
     }
-    .enemy {
+    
+    .cassette-title {
       position: absolute;
-      font-size: 32px;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 0.8em;
+      color: #000;
+      font-weight: bold;
     }
-    .collectible {
+    
+    /* ZX Font */
+    .zx-font {
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    
+    /* Game Selector Screen */
+    #game-selector {
       position: absolute;
-      font-size: 24px;
-      transition: transform 0.4s ease;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      color: var(--primary-color);
+      background: #000;
+      padding: 2em;
+      overflow: auto;
+      z-index: 9;
     }
-    .player {
-      position: absolute;
-      font-size: 32px;
-      z-index: 50;
-      transition: transform 0.1s linear;
-    }
-    .boss {
-      font-size: 48px; /* Larger for a "boss" enemy */
-    }
-
-    /* ======== Mobile Controls ======== */
-    #mobileControls {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+    
+    #game-selector.hidden {
       display: none;
-      gap: 10px;
-      z-index: 150;
     }
-    #mobileControls button {
-      width: 50px; height: 50px;
-      font-size: 24px;
-      border: none; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
+    
+    .selector-title {
+      text-align: center;
+      margin-bottom: 1em;
+      font-size: 1.5em;
+      text-shadow: 0 0 5px var(--primary-color);
+      border-bottom: 1px solid var(--primary-color);
+      padding-bottom: 0.5em;
     }
+    
+    .game-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    
+    .game-item {
+      padding: 0.5em;
+      margin-bottom: 0.5em;
+      border: 1px solid var(--primary-color);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .game-item:hover, .game-item.selected {
+      background: var(--primary-color);
+      color: #000;
+    }
+    
+    .game-title {
+      font-weight: bold;
+    }
+    
+    .game-details {
+      font-size: 0.8em;
+      opacity: 0.8;
+    }
+    
+    /* Pixel Art Canvas */
+    #pixel-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(64, var(--pixel-size));
+      grid-template-rows: repeat(48, var(--pixel-size));
+      z-index: 5;
+    }
+    
+    .pixel {
+      width: var(--pixel-size);
+      height: var(--pixel-size);
+    }
+    
+    /* Small screen adjustments */
+    @media (max-width: 600px) {
+      :root {
+        --pixel-size: 3px;
+      }
+      
+      #controls {
+        flex-direction: column;
+      }
+      
+      .control-group {
+        justify-content: center;
+      }
+      
+      button {
+        padding: 0.3em 0.6em;
+        font-size: 0.9em;
+      }
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    /* Basic ZX Spectrum colors */
+    .zx-black { background-color: #000000; }
+    .zx-blue { background-color: #0000d7; }
+    .zx-red { background-color: #d70000; }
+    .zx-magenta { background-color: #d700d7; }
+    .zx-green { background-color: #00d700; }
+    .zx-cyan { background-color: #00d7d7; }
+    .zx-yellow { background-color: #d7d700; }
+    .zx-white { background-color: #d7d7d7; }
+    .zx-bright-black { background-color: #000000; }
+    .zx-bright-blue { background-color: #0000ff; }
+    .zx-bright-red { background-color: #ff0000; }
+    .zx-bright-magenta { background-color: #ff00ff; }
+    .zx-bright-green { background-color: #00ff00; }
+    .zx-bright-cyan { background-color: #00ffff; }
+    .zx-bright-yellow { background-color: #ffff00; }
+    .zx-bright-white { background-color: #ffffff; }
   </style>
 </head>
 <body>
-  <div id="gameContainer">
-    <!-- UI Header -->
-    <div id="uiHeader">
-      <div id="scoreDisplay">Score: 0</div>
-      <div id="livesDisplay">Lives: 3</div>
-      <div id="roomDisplay">Room: (0, 0)</div>
+  <div id="computer">
+    <div id="screen-container">
+      <div id="screen">
+        <div id="screen-content">
+          <!-- Loading screen -->
+          <div id="loading-screen">
+            <div id="loading-border">
+              <div class="loading-title zx-font">RetroSpec ZX</div>
+              <div class="loading-message">LOADING...</div>
+              <div id="loading-progress">
+                <div id="progress-bar"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Game selector screen -->
+          <div id="game-selector" class="hidden">
+            <div class="selector-title zx-font">GAME SELECTION</div>
+            <ul class="game-list">
+              <li class="game-item" data-game="manic-miner">
+                <div class="game-title">Manic Miner</div>
+                <div class="game-details">Platform game • 1983 • Bug-Byte</div>
+              </li>
+              <li class="game-item" data-game="jet-set-willy">
+                <div class="game-title">Jet Set Willy</div>
+                <div class="game-details">Platform game • 1984 • Software Projects</div>
+              </li>
+              <li class="game-item" data-game="skool-daze">
+                <div class="game-title">Skool Daze</div>
+                <div class="game-details">Adventure • 1984 • Microsphere</div>
+              </li>
+              <li class="game-item" data-game="atic-atac">
+                <div class="game-title">Atic Atac</div>
+                <div class="game-details">Adventure • 1983 • Ultimate</div>
+              </li>
+              <li class="game-item" data-game="lords-of-midnight">
+                <div class="game-title">The Lords of Midnight</div>
+                <div class="game-details">Strategy/RPG • 1984 • Beyond Software</div>
+              </li>
+              <li class="game-item" data-game="dun-darach">
+                <div class="game-title">Dun Darach</div>
+                <div class="game-details">Adventure • 1985 • Gargoyle Games</div>
+              </li>
+              <li class="game-item" data-game="knight-lore">
+                <div class="game-title">Knight Lore</div>
+                <div class="game-details">Isometric adventure • 1984 • Ultimate</div>
+              </li>
+              <li class="game-item" data-game="the-hobbit">
+                <div class="game-title">The Hobbit</div>
+                <div class="game-details">Text adventure • 1982 • Melbourne House</div>
+              </li>
+            </ul>
+          </div>
+          
+          <!-- Game display area -->
+          <div id="game-display" class="hidden">
+            <div id="pixel-canvas"></div>
+          </div>
+          
+          <!-- Effects overlays -->
+          <div class="scanlines"></div>
+          <div class="crt-effect"></div>
+        </div>
+      </div>
     </div>
     
-    <!-- Player -->
-    <div id="player" class="player">🤖</div>
-    
-    <!-- Narrative Panel -->
-    <div id="narrativePanel">
-      <div id="narrativeText"></div>
-      <div id="choiceContainer"></div>
+    <div id="controls">
+      <div class="control-group">
+        <button id="powerBtn">POWER</button>
+        <button id="resetBtn">RESET</button>
+      </div>
+      <div class="control-group">
+        <button id="loadBtn">LOAD</button>
+        <button id="playBtn" disabled>PLAY</button>
+      </div>
     </div>
-    
-    <!-- Overlay (start screen, replaced on victory or game over) -->
-    <div id="overlay" class="overlay">
-      <h1>Retro Platform Adventure - Expanded</h1>
-      <p>Use arrow keys or on‐screen buttons to move/jump.<br>
-         Press X or tap the action button to interact.</p>
-      <button id="startGameBtn">Start Game</button>
+  </div>
+  
+  <div id="cassette-container">
+    <div class="cassette" data-game="jet-set-willy">
+      <div class="cassette-title">Jet Set Willy</div>
     </div>
-    
-    <!-- Mobile Controls -->
-    <div id="mobileControls">
-      <button id="btnLeft">◀</button>
-      <button id="btnJump">▲</button>
-      <button id="btnRight">▶</button>
-      <button id="btnAction">X</button>
+    <div class="cassette" data-game="manic-miner">
+      <div class="cassette-title">Manic Miner</div>
+    </div>
+    <div class="cassette" data-game="knight-lore">
+      <div class="cassette-title">Knight Lore</div>
+    </div>
+    <div class="cassette" data-game="skool-daze">
+      <div class="cassette-title">Skool Daze</div>
+    </div>
+    <div class="cassette" data-game="the-hobbit">
+      <div class="cassette-title">The Hobbit</div>
+    </div>
+    <div class="cassette" data-game="atic-atac">
+      <div class="cassette-title">Atic Atac</div>
     </div>
   </div>
   
   <script>
-  (() => {
-    // ==========================
-    // Game State
-    // ==========================
-    const gameState = {
-      score: 0,
-      lives: 3,
-      roomX: 0,
-      roomY: 0,
-      narrativeNode: 'start',
-      running: false,
-      time: 0,
-      player: {
-        x: 50,
-        y: 300,
-        vx: 0,
-        vy: 0,
-        width: 32,
-        height: 32,
-        onGround: false,
-        onLadder: false
-      },
-      platforms: [],
-      enemies: [],
-      collectibles: [],
-      interactiveObjects: [],
-      input: {
-        left: false,
-        right: false,
-        up: false,
-        down: false,
-        action: false
-      }
+    // Game/system state
+    const systemState = {
+      power: false,
+      loading: false,
+      selectedGame: null,
+      loadingProgress: 0,
+      loadingInterval: null
     };
-
-    // ==========================
-    // Narrative Nodes
-    // ==========================
-    // Each node has text, commands to run immediately, and choices.
-    // Commands supported: "AWARD_POINTS X", "GOTO_ROOM X,Y", "WIN_GAME"
-    const narrativeNodes = {
-      start: {
-        text: "Welcome to the Retro Platform Adventure! Begin your quest.",
-        commands: [],
-        choices: [
-          { text: "Let's go!", next: "explore" }
-        ]
-      },
-      explore: {
-        text: "You find yourself in a mysterious chamber. A door stands nearby.",
-        commands: [],
-        choices: [
-          { text: "Open the door", next: "door" },
-          { text: "Look around", next: "look" }
-        ]
-      },
-      look: {
-        text: "Strange symbols on the wall glow with energy. You touch them.",
-        commands: ["AWARD_POINTS 50"],
-        choices: [
-          { text: "Continue", next: "door" }
-        ]
-      },
-      door: {
-        text: "The door leads to another chamber. You step through...",
-        commands: ["GOTO_ROOM 1,0"],
-        choices: [
-          { text: "Ok", next: "explore2" }
-        ]
-      },
-      // "Level 2" or second area
-      explore2: {
-        text: "This new area is slightly more challenging. Another door stands ahead.",
-        commands: [],
-        choices: [
-          { text: "Proceed deeper...", next: "door2" }
-        ]
-      },
-      door2: {
-        text: "You sense a powerful presence beyond the door...",
-        commands: ["GOTO_ROOM 2,0"],
-        choices: [
-          { text: "Go", next: "bossIntro" }
-        ]
-      },
-      bossIntro: {
-        text: "A huge glitchy monster (👾) looms before you. Prepare for a fight!",
-        commands: [],
-        choices: [
-          { text: "Fight the boss", next: "bossFight" }
-        ]
-      },
-      // The boss fight node just transitions you to the boss room. 
-      bossFight: {
-        text: "Defeat the boss to claim victory.",
-        commands: ["GOTO_ROOM 2,1"],
-        choices: []
-      },
-      bossVictory: {
-        text: "You have vanquished the glitch monster!",
-        commands: ["AWARD_POINTS 500", "WIN_GAME"],
-        choices: []
-      }
-    };
-
-    // ==========================
+    
     // DOM Elements
-    // ==========================
-    const gameContainer = document.getElementById('gameContainer');
-    const playerEl = document.getElementById('player');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    const livesDisplay = document.getElementById('livesDisplay');
-    const roomDisplay = document.getElementById('roomDisplay');
-    const narrativePanel = document.getElementById('narrativePanel');
-    const narrativeText = document.getElementById('narrativeText');
-    const choiceContainer = document.getElementById('choiceContainer');
-    const overlay = document.getElementById('overlay');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const mobileControls = document.getElementById('mobileControls');
-    const btnLeft = document.getElementById('btnLeft');
-    const btnRight = document.getElementById('btnRight');
-    const btnJump = document.getElementById('btnJump');
-    const btnAction = document.getElementById('btnAction');
-
-    // ==========================
-    // UI Functions
-    // ==========================
-    function updateUI() {
-      scoreDisplay.textContent = "Score: " + gameState.score;
-      livesDisplay.textContent = "Lives: " + gameState.lives;
-      roomDisplay.textContent = `Room: (${gameState.roomX}, ${gameState.roomY})`;
-    }
-
-    // Show narrative node
-    function updateNarrative(nodeKey) {
-      const node = narrativeNodes[nodeKey];
-      if (!node) return;
-      gameState.narrativeNode = nodeKey;
-      
-      // Display text
-      narrativeText.textContent = node.text;
-      
-      // Run immediate commands
-      node.commands.forEach(cmd => {
-        const parts = cmd.split(" ");
-        if (parts[0] === "AWARD_POINTS") {
-          const pts = parseInt(parts[1]);
-          gameState.score += pts;
-          updateUI();
-        } else if (parts[0] === "GOTO_ROOM") {
-          const coords = parts[1].split(",");
-          transitionRoom(parseInt(coords[0]), parseInt(coords[1]));
-        } else if (parts[0] === "WIN_GAME") {
-          winGame();
-        }
-      });
-
-      // Build choices
-      choiceContainer.innerHTML = "";
-      node.choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.classList.add('choiceBtn');
-        btn.textContent = choice.text;
-        btn.addEventListener('click', () => {
-          narrativePanel.style.display = 'none';
-          updateNarrative(choice.next);
-        });
-        choiceContainer.appendChild(btn);
-      });
-
-      // Show the panel if there are choices or text
-      narrativePanel.style.display = (node.choices.length > 0 || node.text) ? 'block' : 'none';
-    }
-
-    // ==========================
-    // Random Utilities
-    // ==========================
-    function seededRandom(seed) {
-      let x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    }
-    function randRange(seed, min, max) {
-      return min + seededRandom(seed) * (max - min);
-    }
-
-    // ==========================
-    // Room Generation
-    // ==========================
-    function generateRoom(roomX, roomY) {
-      // Clear old elements
-      document.querySelectorAll('.platform, .enemy, .collectible, .interactive, .decoration').forEach(el => el.remove());
-      gameState.platforms = [];
-      gameState.enemies = [];
-      gameState.collectibles = [];
-      gameState.interactiveObjects = [];
-
-      const roomWidth = gameContainer.clientWidth;
-      const roomHeight = gameContainer.clientHeight;
-
-      // Background color
-      let hue = (roomX * 45 + roomY * 70) % 360;
-      gameContainer.style.background = `hsl(${hue}, 30%, 15%)`;
-
-      // Ground platform
-      const ground = document.createElement('div');
-      ground.className = 'platform';
-      ground.style.left = '0px';
-      ground.style.top = (roomHeight - 40) + 'px';
-      ground.style.width = roomWidth + 'px';
-      ground.style.height = '40px';
-      gameContainer.appendChild(ground);
-      gameState.platforms.push({ x: 0, y: roomHeight - 40, width: roomWidth, height: 40, element: ground, type: "static" });
-
-      // Add some variety of platforms
-      for (let i = 0; i < 4; i++) {
-        let seed = roomX * 100 + roomY * 10 + i;
-        let w = randRange(seed, 80, 150);
-        let h = 20;
-        let x = randRange(seed + 1, 0, roomWidth - w);
-        let y = randRange(seed + 2, 60, roomHeight - 120);
-        let type = "static";
-        if (i % 3 === 0) type = "elevator";
-        if (i % 3 === 1) type = "escalator";
-
-        const plat = document.createElement('div');
-        plat.className = 'platform';
-        if (type === "elevator") plat.classList.add("elevator");
-        if (type === "escalator") plat.classList.add("escalator");
-        plat.style.left = x + 'px';
-        plat.style.top = y + 'px';
-        plat.style.width = w + 'px';
-        plat.style.height = h + 'px';
-        gameContainer.appendChild(plat);
-
-        gameState.platforms.push({
-          x, y, width: w, height: h,
-          element: plat,
-          type,
-          direction: 1,
-          range: { min: y - 20, max: y + 20 }
-        });
+    const loadingScreen = document.getElementById('loading-screen');
+    const gameSelector = document.getElementById('game-selector');
+    const gameDisplay = document.getElementById('game-display');
+    const progressBar = document.getElementById('progress-bar');
+    const powerBtn = document.getElementById('powerBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const loadBtn = document.getElementById('loadBtn');
+    const playBtn = document.getElementById('playBtn');
+    const pixelCanvas = document.getElementById('pixel-canvas');
+    
+    // Audio elements (for ZX Spectrum loading sounds)
+    const loadingSound = new Audio();
+    loadingSound.loop = true;
+    loadingSound.volume = 0.3;
+    
+    // Create loading sound dynamically with AudioContext
+    function createLoadingSound() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        
+        // Set up a modulation to simulate the ZX Spectrum loading sound
+        setInterval(() => {
+          const randomFreq = 800 + Math.random() * 1200;
+          oscillator.frequency.setValueAtTime(randomFreq, audioContext.currentTime);
+        }, 200);
+        
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        return { oscillator, gainNode, audioContext };
+      } catch (e) {
+        console.error("Web Audio API not supported:", e);
+        return null;
       }
-
-      // Decorations
-      const themes = ['jungle', 'library', 'default'];
-      let themeIndex = Math.floor(randRange(roomX + roomY, 0, themes.length));
-      let theme = themes[themeIndex];
-      let decorationEmoji = (theme === 'jungle') ? '🌴' : (theme === 'library') ? '📚' : '✨';
-      for (let i = 0; i < 6; i++) {
-        let seed = roomX * 200 + roomY * 20 + i;
-        let dec = document.createElement('div');
-        dec.className = 'decoration';
-        dec.textContent = decorationEmoji;
-        let size = 24;
-        dec.style.fontSize = size + 'px';
-        let dx = randRange(seed, 0, roomWidth - size);
-        let dy = randRange(seed + 1, 0, roomHeight - size);
-        dec.style.left = dx + 'px';
-        dec.style.top = dy + 'px';
-        gameContainer.appendChild(dec);
-      }
-
-      // If this is the "boss" room at (2,1), place a big “boss”.
-      if (roomX === 2 && roomY === 1) {
-        let boss = document.createElement('div');
-        boss.className = 'enemy boss';
-        boss.textContent = '👾'; 
-        // Place it near the center
-        let bx = roomWidth/2 - 48;
-        let by = roomHeight - 40 - 80;
-        boss.style.left = bx + 'px';
-        boss.style.top = by + 'px';
-        gameContainer.appendChild(boss);
-
-        gameState.enemies.push({
-          x: bx, y: by, width: 48, height: 48,
-          vx: 1.0,
-          bounds: { min: bx - 70, max: bx + 70 },
-          element: boss,
-          contactTimer: 0,
-          isBoss: true
-        });
+    }
+    
+    // Button event handlers
+    powerBtn.addEventListener('click', togglePower);
+    resetBtn.addEventListener('click', resetSystem);
+    loadBtn.addEventListener('click', loadTape);
+    playBtn.addEventListener('click', playGame);
+    
+    // Game selection handlers
+    document.querySelectorAll('.game-item').forEach(item => {
+      item.addEventListener('click', () => {
+        selectGame(item.dataset.game);
+      });
+    });
+    
+    // Cassette selection
+    document.querySelectorAll('.cassette').forEach(cassette => {
+      cassette.addEventListener('click', () => {
+        if (!systemState.power) togglePower();
+        systemState.selectedGame = cassette.dataset.game;
+        loadBtn.disabled = false;
+      });
+    });
+    
+    // Toggle power
+    function togglePower() {
+      systemState.power = !systemState.power;
+      powerBtn.classList.toggle('highlighted', systemState.power);
+      
+      if (systemState.power) {
+        // Power on sequence
+        showScreen(loadingScreen);
+        setTimeout(() => {
+          showScreen(gameSelector);
+        }, 2000);
       } else {
-        // Normal enemy
-        let enemy = document.createElement('div');
-        enemy.className = 'enemy';
-        enemy.textContent = '👾';
-        let ex = randRange(roomX + roomY, 100, roomWidth - 100);
-        let ey = roomHeight - 40 - 32;
-        enemy.style.left = ex + 'px';
-        enemy.style.top = ey + 'px';
-        gameContainer.appendChild(enemy);
-
-        gameState.enemies.push({
-          x: ex, y: ey, width: 32, height: 32,
-          vx: 1.2,
-          bounds: { min: ex - 50, max: ex + 50 },
-          element: enemy,
-          contactTimer: 0
-        });
+        // Power off sequence
+        resetSystem();
+        showScreen(loadingScreen);
+        powerBtn.classList.remove('highlighted');
+        loadBtn.classList.remove('highlighted');
+        playBtn.classList.remove('highlighted');
+        loadBtn.disabled = true;
+        playBtn.disabled = true;
       }
-
-      // Door on a random platform if not the boss room
-      if (!(roomX === 2 && roomY === 1)) {
-        const randomPlatform = gameState.platforms[Math.floor(Math.random() * gameState.platforms.length)];
-        let door = document.createElement('div');
-        door.className = 'interactive';
-        door.textContent = '🚪';
-        door.style.left = (randomPlatform.x + randomPlatform.width/2 - 16) + 'px';
-        door.style.top = (randomPlatform.y - 32) + 'px';
-        door.addEventListener('click', () => {
-          // For demonstration, let's open a node that transitions.
-          updateNarrative('door2');
-        });
-        gameContainer.appendChild(door);
-
-        gameState.interactiveObjects.push({
-          x: randomPlatform.x + randomPlatform.width/2 - 16,
-          y: randomPlatform.y - 32,
-          width: 32,
-          height: 32,
-          type: 'door',
-          destination: { x: roomX + 1, y: roomY },
-          element: door
-        });
-      }
-
-      // A collectible (🍎)
-      let collectible = document.createElement('div');
-      collectible.className = 'collectible';
-      let cx = randRange(roomX + roomY, 50, roomWidth - 50);
-      let cy = roomHeight - 40 - 32;
-      collectible.textContent = '🍎';
-      collectible.style.left = cx + 'px';
-      collectible.style.top = cy + 'px';
-      gameContainer.appendChild(collectible);
-
-      gameState.collectibles.push({
-        x: cx, y: cy, width: 32, height: 32,
-        collected: false,
-        element: collectible,
-        animation: 'pop'
-      });
     }
-
-    // ==========================
-    // Room Transition
-    // ==========================
-    function transitionRoom(newX, newY) {
-      // Fade the player out
-      playerEl.style.transition = "opacity 0.5s";
-      playerEl.style.opacity = 0.3;
-      setTimeout(() => {
-        gameState.roomX = newX;
-        gameState.roomY = newY;
-        updateUI();
-        generateRoom(newX, newY);
-        // Reset player position (simple approach)
-        gameState.player.x = 50;
-        gameState.player.y = 300;
-        playerEl.style.left = gameState.player.x + "px";
-        playerEl.style.top = gameState.player.y + "px";
-        // Reset opacity
-        playerEl.style.opacity = 1;
-      }, 500);
-    }
-
-    // ==========================
-    // Collision Detection
-    // ==========================
-    function isColliding(a, b) {
-      return a.x < b.x + b.width &&
-             a.x + a.width > b.x &&
-             a.y < b.y + b.height &&
-             a.y + a.height > b.y;
-    }
-
-    // ==========================
-    // Main Game Loop
-    // ==========================
-    function gameLoop() {
-      if (!gameState.running) return;
-      gameState.time++;
-      const player = gameState.player;
-
-      // Movement
-      if (gameState.input.left) player.vx -= 0.6;
-      if (gameState.input.right) player.vx += 0.6;
-      if (gameState.input.up && player.onGround) {
-        player.vy = -11;
-        player.onGround = false;
+    
+    // Reset the system
+    function resetSystem() {
+      if (!systemState.power) return;
+      
+      // Stop any loading
+      if (systemState.loading) {
+        clearInterval(systemState.loadingInterval);
+        systemState.loading = false;
+        loadingSound.pause();
       }
-
-      // Gravity
-      if (!player.onLadder) player.vy += 0.6;
-      // Friction
-      player.vx *= 0.85;
-
-      // Update player position
-      player.x += player.vx;
-      player.y += player.vy;
-
-      // If player falls below screen
-      if (player.y > gameContainer.clientHeight) {
-        gameState.lives--;
-        if (gameState.lives <= 0) {
-          gameOver();
-          return;
-        } else {
-          player.x = 50; player.y = 300;
-          player.vx = 0; player.vy = 0;
-        }
+      
+      // Reset UI
+      loadBtn.disabled = false;
+      loadBtn.classList.remove('highlighted');
+      playBtn.disabled = true;
+      playBtn.classList.remove('highlighted');
+      
+      // Go back to game selection
+      showScreen(gameSelector);
+    }
+    
+    // Load a game
+    function loadTape() {
+      if (!systemState.power || systemState.loading) return;
+      
+      systemState.loading = true;
+      loadBtn.classList.add('highlighted');
+      showScreen(loadingScreen);
+      
+      // Start loading animation
+      systemState.loadingProgress = 0;
+      updateProgressBar();
+      
+      // Create loading sound
+      const audio = createLoadingSound();
+      if (audio) {
+        audio.oscillator.start();
       }
-
-      // Check platform collisions
-      player.onGround = false;
-      gameState.platforms.forEach(plat => {
-        // Elevator movement
-        if (plat.type === "elevator") {
-          plat.y += 0.5 * plat.direction;
-          if (plat.y < plat.range.min || plat.y > plat.range.max) {
-            plat.direction *= -1;
-          }
-          plat.element.style.top = plat.y + "px";
-        }
-        // Collision (only if moving downward)
-        if (player.vy >= 0 && isColliding(player, plat)) {
-          player.y = plat.y - player.height;
-          player.vy = 0;
-          player.onGround = true;
-          // Escalator can push horizontally
-          if (plat.type === "escalator") {
-            player.vx += 0.5 * plat.direction;
+      
+      // Simulate loading with progress
+      systemState.loadingInterval = setInterval(() => {
+        systemState.loadingProgress += 1;
+        updateProgressBar();
+        
+        if (systemState.loadingProgress >= 100) {
+          // Loading complete
+          clearInterval(systemState.loadingInterval);
+          systemState.loading = false;
+          loadBtn.classList.remove('highlighted');
+          playBtn.disabled = false;
+          
+          // Stop loading sound
+          if (audio) {
+            audio.oscillator.stop();
           }
         }
+      }, 100);
+    }
+    
+    // Play the loaded game
+    function playGame() {
+      if (!systemState.power || systemState.loading || !systemState.selectedGame) return;
+      
+      playBtn.classList.add('highlighted');
+      showScreen(gameDisplay);
+      
+      // Load the appropriate game
+      switch (systemState.selectedGame) {
+        case 'jet-set-willy':
+          loadJetSetWilly();
+          break;
+        case 'manic-miner':
+          loadManicMiner();
+          break;
+        default:
+          loadPlaceholder(systemState.selectedGame);
+      }
+    }
+    
+    // Select a game from the menu
+    function selectGame(game) {
+      systemState.selectedGame = game;
+      
+      // Update UI for selected game
+      document.querySelectorAll('.game-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.game === game);
       });
-
-      // Update player element
-      playerEl.style.left = player.x + "px";
-      playerEl.style.top = player.y + "px";
-
+      
+      loadBtn.disabled = false;
+    }
+    
+    // Show a specific screen, hide others
+    function showScreen(screenToShow) {
+      [loadingScreen, gameSelector, gameDisplay].forEach(screen => {
+        screen.classList.toggle('hidden', screen !== screenToShow);
+      });
+    }
+    
+    // Update the loading progress bar
+    function updateProgressBar() {
+      progressBar.style.width = `${systemState.loadingProgress}%`;
+    }
+    
+    // Pixel art rendering functions
+    function clearPixelCanvas() {
+      pixelCanvas.innerHTML = '';
+    }
+    
+    function createPixelGrid(width, height) {
+      clearPixelCanvas();
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const pixel = document.createElement('div');
+          pixel.className = 'pixel';
+          pixel.id = `pixel-${x}-${y}`;
+          pixelCanvas.appendChild(pixel);
+        }
+      }
+    }
+    
+    function setPixel(x, y, colorClass) {
+      const pixel = document.getElementById(`pixel-${x}-${y}`);
+      if (pixel) {
+        // Clear existing color classes
+        pixel.className = 'pixel';
+        if (colorClass) {
+          pixel.classList.add(colorClass);
+        }
+      }
+    }
+    
+    function drawRect(x, y, width, height, colorClass) {
+      for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+          setPixel(x + dx, y + dy, colorClass);
+        }
+      }
+    }
+    
+    // Simplified sample games
+    function loadJetSetWilly() {
+      createPixelGrid(64, 48);
+      
+      // Draw a basic Jet Set Willy scene
+      // Background
+      drawRect(0, 0, 64, 48, 'zx-black');
+      
+      // Floor
+      drawRect(0, 40, 64, 8, 'zx-bright-blue');
+      
+      // Platforms
+      drawRect(10, 30, 20, 2, 'zx-yellow');
+      drawRect(35, 25, 20, 2, 'zx-yellow');
+      drawRect(15, 15, 15, 2, 'zx-yellow');
+      
+      // Enemies (simplified)
+      drawRect(20, 28, 2, 2, 'zx-bright-red');
+      drawRect(50, 23, 2, 2, 'zx-bright-red');
+      
+      // Items
+      drawRect(15, 13, 1, 1, 'zx-bright-white');
+      drawRect(25, 13, 1, 1, 'zx-bright-white');
+      drawRect(40, 23, 1, 1, 'zx-bright-white');
+      
+      // "Willy" character
+      drawRect(5, 38, 2, 2, 'zx-bright-magenta');
+    }
+    
+    function loadManicMiner() {
+      createPixelGrid(64, 48);
+      
+      // Draw a basic Manic Miner scene
+      // Background
+      drawRect(0, 0, 64, 48, 'zx-black');
+      
+      // Central cavern
+      drawRect(0, 40, 64, 8, 'zx-bright-cyan');
+      
+      // Platforms
+      drawRect(5, 35, 20, 1, 'zx-bright-green');
+      drawRect(30, 30, 25, 1, 'zx-bright-green');
+      drawRect(10, 25, 20, 1, 'zx-bright-green');
+      drawRect(35, 20, 20, 1, 'zx-bright-green');
+      
       // Enemies
-      gameState.enemies.forEach(enemy => {
-        enemy.x += enemy.vx;
-        if (enemy.x < enemy.bounds.min || enemy.x > enemy.bounds.max) {
-          enemy.vx *= -1;
-        }
-        enemy.element.style.left = enemy.x + "px";
-
-        // Check collision with player
-        if (isColliding(player, enemy)) {
-          enemy.contactTimer++;
-          // Boss gets "defeated" after more sustained contact?
-          if (enemy.isBoss) {
-            if (enemy.contactTimer > 60) {
-              // Boss is defeated => bossVictory
-              updateNarrative("bossVictory");
-            }
-          } else {
-            // Normal enemy contact => drop collectible
-            if (enemy.contactTimer > 30) {
-              let drop = document.createElement('div');
-              drop.className = 'collectible';
-              drop.style.left = enemy.x + "px";
-              drop.style.top = enemy.y + "px";
-              drop.textContent = '💰';
-              gameContainer.appendChild(drop);
-              gameState.collectibles.push({
-                x: enemy.x, y: enemy.y, width: 32, height: 32,
-                collected: false, element: drop, animation: 'burst'
-              });
-              enemy.contactTimer = 0;
-            }
-          }
-        } else {
-          enemy.contactTimer = 0;
-        }
-      });
-
-      // Collectibles
-      gameState.collectibles.forEach(coll => {
-        if (!coll.collected && isColliding(player, coll)) {
-          coll.collected = true;
-          coll.element.style.transform = "scale(2)";
-          gameState.score += 100;
-          updateUI();
-          setTimeout(() => {
-            coll.element.remove();
-          }, 400);
-        }
-      });
-
-      requestAnimationFrame(gameLoop);
+      drawRect(15, 33, 3, 2, 'zx-bright-yellow');
+      drawRect(40, 28, 3, 2, 'zx-bright-yellow');
+      drawRect(20, 23, 3, 2, 'zx-bright-yellow');
+      
+      // Air bar
+      drawRect(2, 2, 40, 2, 'zx-bright-white');
+      
+      // "Miner Willy"
+      drawRect(7, 33, 2, 2, 'zx-bright-red');
     }
-
-    // ==========================
-    // Game Over and Win
-    // ==========================
-    function gameOver() {
-      gameState.running = false;
-      overlay.innerHTML = "<h1>Game Over</h1><button id='restartBtn'>Restart</button>";
-      overlay.style.display = "flex";
-      document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+    
+    function loadPlaceholder(gameName) {
+      createPixelGrid(64, 48);
+      
+      // Generic placeholder for other games
+      // Background
+      drawRect(0, 0, 64, 48, 'zx-black');
+      
+      // Add some random colored blocks for visual interest
+      const colors = [
+        'zx-blue', 'zx-red', 'zx-magenta', 'zx-green', 
+        'zx-cyan', 'zx-yellow', 'zx-white',
+        'zx-bright-blue', 'zx-bright-red', 'zx-bright-magenta',
+        'zx-bright-green', 'zx-bright-cyan', 'zx-bright-yellow'
+      ];
+      
+      // Generate a pseudo-random pattern based on the game name
+      const seed = gameName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      
+      for (let i = 0; i < 20; i++) {
+        const x = (seed * (i + 1)) % 60;
+        const y = (seed * (i * 3)) % 40;
+        const w = (i % 5) + 3;
+        const h = (i % 3) + 2;
+        drawRect(x, y, w, h, colors[i % colors.length]);
+      }
+      
+      // Draw a border
+      for (let x = 0; x < 64; x++) {
+        setPixel(x, 0, 'zx-bright-white');
+        setPixel(x, 47, 'zx-bright-white');
+      }
+      
+      for (let y = 0; y < 48; y++) {
+        setPixel(0, y, 'zx-bright-white');
+        setPixel(63, y, 'zx-bright-white');
+      }
     }
-    function winGame() {
-      gameState.running = false;
-      overlay.innerHTML = "<h1>Victory!</h1><p>You have defeated the final boss!</p><button id='restartBtn'>Play Again</button>";
-      overlay.style.display = "flex";
-      document.getElementById('restartBtn').addEventListener('click', () => location.reload());
-    }
-
-    // ==========================
-    // Input Handling
-    // ==========================
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") gameState.input.left = true;
-      if (e.key === "ArrowRight") gameState.input.right = true;
-      if (e.key === "ArrowUp" || e.key === " ") gameState.input.up = true;
-      if (e.key === "ArrowDown") gameState.input.down = true;
-      if (e.key.toLowerCase() === "x") gameState.input.action = true;
-    });
-    window.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowLeft") gameState.input.left = false;
-      if (e.key === "ArrowRight") gameState.input.right = false;
-      if (e.key === "ArrowUp" || e.key === " ") gameState.input.up = false;
-      if (e.key === "ArrowDown") gameState.input.down = false;
-      if (e.key.toLowerCase() === "x") gameState.input.action = false;
-    });
-
-    // Mobile controls
-    btnLeft.addEventListener("touchstart", () => gameState.input.left = true);
-    btnLeft.addEventListener("touchend", () => gameState.input.left = false);
-    btnRight.addEventListener("touchstart", () => gameState.input.right = true);
-    btnRight.addEventListener("touchend", () => gameState.input.right = false);
-    btnJump.addEventListener("touchstart", () => gameState.input.up = true);
-    btnJump.addEventListener("touchend", () => gameState.input.up = false);
-    btnAction.addEventListener("touchstart", () => gameState.input.action = true);
-    btnAction.addEventListener("touchend", () => gameState.input.action = false);
-
-    if ('ontouchstart' in window) {
-      mobileControls.style.display = "flex";
-    }
-
-    // ==========================
-    // Start Game
-    // ==========================
-    startGameBtn.addEventListener("click", () => {
-      overlay.style.display = "none";
-      gameState.running = true;
-      updateUI();
-      // Generate initial room and narrative
-      generateRoom(gameState.roomX, gameState.roomY);
-      updateNarrative("start");
-      requestAnimationFrame(gameLoop);
-    });
-  })();
+    
+    // Initialize system in power off state
+    showScreen(loadingScreen);
   </script>
 </body>
 </html>

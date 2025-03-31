@@ -2,134 +2,569 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Jet Set Willy – JS Powered Port</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>JSW Pocket Edition</title>
   <style>
-    /* Basic layout & styling */
+    :root {
+      --primary-color: #00caff;
+      --secondary-color: #ff4d88;
+      --background-color: #111;
+      --text-color: #eee;
+      --tile-size: 24px;
+      --game-width: calc(32 * var(--tile-size));
+      --game-height: calc(16 * var(--tile-size));
+    }
+    
+    /* === Core Layout & Styling === */
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    
     body {
-      background: #222;
-      color: #eee;
+      background: var(--background-color);
+      color: var(--text-color);
       font-family: monospace;
       display: flex;
       flex-direction: column;
       align-items: center;
       margin: 0;
-      padding: 0.5em;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
     }
+    
+    /* === Game Container === */
+    #gameWrapper {
+      position: relative;
+      width: 100%;
+      max-width: var(--game-width);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+    
     #gameContainer {
       position: relative;
-      width: 768px;  /* 32 tiles × 24px */
-      height: 384px; /* 16 tiles × 24px */
-      border: 2px solid #eee;
+      width: 100%;
+      max-width: var(--game-width);
+      height: var(--game-height);
+      border: 2px solid var(--primary-color);
       background: #000;
-      margin-bottom: 1em;
+      overflow: hidden;
+      margin: 0.5em 0;
+      box-shadow: 0 0 10px var(--primary-color), 
+                  0 0 20px rgba(0, 202, 255, 0.2);
     }
-    /* The room grid uses CSS Grid */
+    
+    /* === CRT Effect === */
+    .crt-effect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      opacity: 0.3;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      background-size: 100% 2px;
+    }
+    
+    /* === Game Grid === */
     .room-grid {
       display: grid;
-      grid-template-columns: repeat(32, 24px);
-      grid-template-rows: repeat(16, 24px);
+      grid-template-columns: repeat(32, var(--tile-size));
+      grid-template-rows: repeat(16, var(--tile-size));
       pointer-events: none;
     }
+    
     .tile {
-      width: 24px;
-      height: 24px;
+      width: var(--tile-size);
+      height: var(--tile-size);
       text-align: center;
-      line-height: 24px;
+      line-height: var(--tile-size);
       font-size: 20px;
     }
-    /* Sprite styling for player and enemies */
+    
+    /* === Sprites === */
     .sprite {
       position: absolute;
       width: 20px;
       height: 20px;
       text-align: center;
       line-height: 20px;
-      /* We remove CSS animations here; all animation is done in JS */
       pointer-events: none;
+      filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
     }
-    /* On-screen touch controls */
-    .touch-controls {
-      position: fixed;
-      bottom: 10px;
+    
+    .player {
+      z-index: 5;
+      animation: playerAnimation 0.6s steps(2) infinite;
+    }
+    
+    .enemy {
+      z-index: 4;
+    }
+    
+    .guardian {
+      animation: guardianAnimation 1s infinite alternate;
+    }
+    
+    .rope {
+      animation: ropeSwing 3s ease-in-out infinite;
+    }
+    
+    .door {
+      animation: doorPulse 2s infinite alternate;
+    }
+    
+    .lift {
+      animation: liftMovement 4s ease-in-out infinite;
+    }
+    
+    .collectible {
+      z-index: 3;
+      animation: pulse 1.5s infinite alternate;
+    }
+    
+    /* Background elements should be faded */
+    .background {
+      opacity: 0.4;
+      z-index: 1;
+      filter: blur(1px) brightness(0.7);
+    }
+    
+    /* Special animated game elements */
+    .rope {
+      position: absolute;
+      width: 10px;
+      height: 100px;
+      background: linear-gradient(to bottom, var(--secondary-color), var(--tape-color));
+      transform-origin: top center;
+      z-index: 3;
+    }
+    
+    .lift {
+      z-index: 2;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      animation: lift-glow 2s infinite alternate;
+    }
+    
+    .door {
+      font-size: 1.5em;
+      z-index: 2;
+      filter: drop-shadow(0 0 3px var(--primary-color));
+    }
+    
+    .conveyor {
+      background: repeating-linear-gradient(
+        to right,
+        #666 0px,
+        #999 3px,
+        #666 6px
+      );
+      animation: conveyor-move 0.5s linear infinite;
+    }
+    
+    @keyframes conveyor-move {
+      from { background-position: 0 0; }
+      to { background-position: 6px 0; }
+    }
+    
+    @keyframes lift-glow {
+      0% { box-shadow: 0 0 5px rgba(0, 202, 255, 0.3); }
+      100% { box-shadow: 0 0 15px rgba(0, 202, 255, 0.7); }
+    }
+    
+    /* Game messages */
+    .game-message {
+      position: absolute;
+      top: 30%;
       left: 50%;
       transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: var(--primary-color);
+      padding: 1em;
+      border-radius: 8px;
+      border: 2px solid var(--primary-color);
+      font-size: 1.2em;
+      text-align: center;
+      z-index: 100;
+      transition: opacity 0.5s;
+    }
+    
+    .fade-out {
+      opacity: 0;
+    }
+    
+    /* Room transition effect */
+    #gameContainer.fade {
+      transition: opacity 0.4s;
+      opacity: 0;
+    }
+    
+    @keyframes playerAnimation {
+      0% { transform: translateY(0) scaleX(1); }
+      50% { transform: translateY(-2px) scaleX(1.1); }
+      100% { transform: translateY(0) scaleX(1); }
+    }
+    
+    @keyframes guardianAnimation {
+      0% { transform: translateX(-5px); }
+      100% { transform: translateX(5px); }
+    }
+    
+    @keyframes ropeSwing {
+      0% { transform: rotate(-15deg); }
+      50% { transform: rotate(15deg); }
+      100% { transform: rotate(-15deg); }
+    }
+    
+    @keyframes doorPulse {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    
+    @keyframes liftMovement {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(30px); }
+      100% { transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(0.9); }
+      100% { transform: scale(1.1); }
+    }
+    
+    /* === HUD === */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 0.5em;
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.2em;
+      z-index: 20;
+      color: var(--primary-color);
+      text-shadow: 0 0 5px var(--primary-color);
+    }
+    
+    #lives {
+      margin-right: 0.5em;
+    }
+    
+    /* === Game Controls === */
+    .game-controls {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.5em;
+      background: rgba(0, 0, 0, 0.7);
+    }
+    
+    .game-controls button {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      border-radius: 4px;
+      padding: 0.3em 0.6em;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 1em;
+      transition: all 0.2s;
+    }
+    
+    .game-controls button:hover {
+      background: rgba(0, 202, 255, 0.3);
+    }
+    
+    /* === Touch Controls === */
+    .touch-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 1em;
+      z-index: 30;
+    }
+    
+    .direction-pad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2em;
+    }
+    
+    .direction-row {
+      display: flex;
+      gap: 0.2em;
+    }
+    
+    .touch-controls button {
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid var(--primary-color);
+      color: var(--primary-color);
+      border-radius: 50%;
+      width: 3.5em;
+      height: 3.5em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2em;
+      padding: 0;
+      margin: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .touch-controls button:active {
+      background: rgba(0, 202, 255, 0.3);
+      transform: scale(0.95);
+    }
+    
+    .action-buttons {
       display: flex;
       gap: 1em;
-      z-index: 1000;
     }
-    .touch-controls button {
-      background: rgba(68, 68, 68, 0.8);
-      border: 2px solid #eee;
-      border-radius: 50%;
-      color: #eee;
-      width: 50px;
-      height: 50px;
+    
+    #jumpBtn {
+      width: 4em;
+      height: 4em;
       font-size: 1.5em;
-      outline: none;
+      border-color: var(--secondary-color);
+      color: var(--secondary-color);
     }
-    .controls {
-      margin-top: 0.5em;
+    
+    #jumpBtn:active {
+      background: rgba(255, 77, 136, 0.3);
     }
-    .controls button {
-      background: #444;
-      border: none;
-      color: #eee;
+    
+    /* === Game Menu === */
+    #gameMenu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    .menu-title {
+      font-size: 2em;
+      color: var(--primary-color);
+      margin-bottom: 1em;
+      text-shadow: 0 0 10px var(--primary-color);
+    }
+    
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+    }
+    
+    .menu-button {
+      background: transparent;
+      border: 2px solid var(--primary-color);
+      color: var(--primary-color);
       padding: 0.5em 1em;
-      margin: 0 0.5em;
+      font-size: 1.2em;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 1em;
+      min-width: 200px;
+      text-align: center;
+      transition: all 0.2s;
     }
-    .controls button:hover {
-      background: #666;
+    
+    .menu-button:hover, .menu-button:active {
+      background: rgba(0, 202, 255, 0.3);
+    }
+    
+    /* === Responsive Adjustments === */
+    @media (max-height: 700px) {
+      .touch-controls button {
+        width: 3em;
+        height: 3em;
+      }
+      
+      #jumpBtn {
+        width: 3.5em;
+        height: 3.5em;
+      }
+      
+      #hud {
+        font-size: 1em;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      :root {
+        --tile-size: 16px;
+      }
+      
+      .tile {
+        font-size: 14px;
+      }
+      
+      .sprite {
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        font-size: 12px;
+      }
+    }
+    
+    /* === Animations === */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes roomTransition {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 <body>
-  <div id="gameContainer">
-    <!-- The static room grid will be rendered here -->
-    <div id="roomGrid" class="room-grid"></div>
-    <!-- The main player sprite -->
-    <div id="player" class="sprite player">🕴️</div>
+  <div id="gameWrapper">
+    <div id="gameContainer">
+      <!-- HUD for lives, score, etc -->
+      <div id="hud">
+        <div id="score">💎 0</div>
+        <div id="roomInfo"><span id="roomName"></span> <span id="roomCount"></span></div>
+        <div id="lives">❤️❤️❤️</div>
+      </div>
+      
+      <!-- The static room grid will be rendered here -->
+      <div id="roomGrid" class="room-grid"></div>
+      
+      <!-- The main player sprite -->
+      <div id="player" class="sprite player">🕴️</div>
+      
+      <!-- CRT effect overlay -->
+      <div class="crt-effect"></div>
+    </div>
+    
+    <div class="game-controls">
+      <button id="menuBtn">⚙️ Menu</button>
+      <button id="soundBtn">🔊 Sound</button>
+      <button id="prevRoom">◀️ Prev</button>
+      <button id="nextRoom">Next ▶️</button>
+    </div>
   </div>
-  <div class="controls">
-    <button id="prevRoom">Prev Room</button>
-    <button id="nextRoom">Next Room</button>
-    <span id="roomName"></span>
-  </div>
+  
   <!-- On-screen touch controls for mobile -->
   <div class="touch-controls">
-    <button id="leftBtn">◀️</button>
-    <button id="jumpBtn">🔼</button>
-    <button id="rightBtn">▶️</button>
+    <div class="direction-pad">
+      <div class="direction-row">
+        <button id="leftBtn">◀️</button>
+        <button id="rightBtn">▶️</button>
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button id="jumpBtn">🔼</button>
+    </div>
   </div>
-  <p style="max-width:768px; text-align:center;">
-    Use the left/right keys (or on‑screen buttons) to move, and up (or jump) to leap. Colliding with a hazard or enemy resets the room.
-  </p>
+  
+  <!-- Game menu -->
+  <div id="gameMenu" class="hidden">
+    <h1 class="menu-title">JSW Pocket Edition</h1>
+    <div class="menu-buttons">
+      <button class="menu-button" id="startBtn">Start Game</button>
+      <button class="menu-button" id="optionsBtn">Options</button>
+      <button class="menu-button" id="helpBtn">How to Play</button>
+    </div>
+  </div>
+  
   <script>
-    // ----- Constants & Tile Options -----
-    const TILE_SIZE = 24;
+    // ----- Constants & Game Settings -----
+    const TILE_SIZE = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size'));
     const GRAVITY = 0.6;
     const FRICTION = 0.8;
-    const MOVE_SPEED = 2;
+    const MOVE_SPEED = 2.5;
     const JUMP_SPEED = -10;
+    const MAX_LIVES = 3;
     
-    // For each tile type, we now have several emoji options.
-    const tileOptions = {
-      0: ["🌿", "🌱", "🍀", "🌾"],  // Background (plants)
-      1: ["🟫", "🟤"],             // Floor
-      2: ["🧱", "🟥"],             // Wall
-      3: ["🐍", "🦂", "🕷️"]         // Hazard
+    // These values will be initialized in the gameState object below
+    
+    // ----- Theme Sets for Levels -----
+    const themeOptions = {
+      nature: {
+        background: ["🌿", "🌱", "🍀", "🌾"],
+        floor: ["🟫", "🟤"],
+        wall: ["🧱", "🟥"],
+        hazard: ["🐍", "🦂", "🕷️"],
+        collectible: ["💎", "🪙", "💍"],
+        enemies: ["🐸", "🐍", "🐢", "🦎"],
+        player: "🕴️"
+      },
+      space: {
+        background: ["⭐", "✨", "🌠", "🔭"],
+        floor: ["🌑", "🪐"],
+        wall: ["🌌", "🔮"],
+        hazard: ["☄️", "🌋", "🔥"],
+        collectible: ["🌟", "💫", "✨"],
+        enemies: ["👾", "👽", "🛸", "🤖"],
+        player: "👨‍🚀"
+      },
+      ocean: {
+        background: ["🌊", "💧", "🐚", "🐙"],
+        floor: ["🏝️", "🏖️"],
+        wall: ["🧊", "🗿"],
+        hazard: ["🦑", "🦈", "🐡"],
+        collectible: ["🧠", "🐚", "🦪"],
+        enemies: ["🐬", "🐟", "🐠", "🐙"],
+        player: "🏄"
+      },
+      dungeon: {
+        background: ["🕸️", "🦇", "🕯️", "⚰️"],
+        floor: ["🧿", "🔮"],
+        wall: ["🧱", "🪦"],
+        hazard: ["⚔️", "🗡️", "🔪"],
+        collectible: ["💰", "👑", "💎"],
+        enemies: ["🧟", "👻", "🧛", "💀"],
+        player: "🧙"
+      }
     };
-
-    // For enemies, choose from a variety of animal emoji.
-    const enemyOptions = ["🐸", "🐍", "🐱", "🐶", "🐭", "🐰", "🦊", "🐼", "🐔", "🐢"];
-
-    // ----- Room Data (inspired by PDF disassembly) -----
-    // Each room is defined as 16 rows of 8 bytes (each byte gives 4 tiles).
-    // Entities are placed using sample positions.
+    
+    // For each tile type, we now have themed emoji options.
+    let currentTheme = themeOptions.nature;
+    const tileOptions = {
+      0: currentTheme.background,  // Background 
+      1: currentTheme.floor,       // Floor
+      2: currentTheme.wall,        // Wall
+      3: currentTheme.hazard,      // Hazard
+      4: currentTheme.collectible  // Collectible
+    };
+    
+    // ----- Enhanced Room Data -----
+    // Each room is defined with layout, entities, and theme
     const rooms = [
       {
+        id: "offLicence",
         name: "The Off Licence",
+        theme: "nature",
         layout: [
           [0,0,0,0,0,0,0,0],
           [0,0,0,0,0,0,0,0],
@@ -148,12 +583,21 @@
           [0,0,0,0,0,0,0,2],
           [85,85,85,85,85,85,85,85]
         ],
+        rightExit: "quirkafleeg",
         entities: [
-          { type: "guardian", x: 10 * TILE_SIZE, y: 10 * TILE_SIZE }
+          { type: "guardian", id: "offLicGuard", x: 10 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.2, direction: 1, minX: 9 * TILE_SIZE, maxX: 18 * TILE_SIZE },
+          { type: "collectible", id: "coin1", x: 15 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "collectible", id: "coin2", x: 20 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "door", id: "offLicDoor", x: 26 * TILE_SIZE, y: 9 * TILE_SIZE, destinationRoom: "quirkafleeg", emoji: "🚪" },
+          { type: "background", id: "plant1", x: 5 * TILE_SIZE, y: 5 * TILE_SIZE, emoji: "🌿" },
+          { type: "background", id: "plant2", x: 15 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "🌱" },
+          { type: "background", id: "plant3", x: 22 * TILE_SIZE, y: 4 * TILE_SIZE, emoji: "🍀" }
         ]
       },
       {
+        id: "quirkafleeg",
         name: "We must perform a Quirkafleeg",
+        theme: "space",
         layout: [
           [0,0,0,0,0,0,0,0],
           [0,0,0,0,0,0,0,0],
@@ -172,15 +616,26 @@
           [170,64,0,0,0,0,2,170],
           [170,127,255,255,255,255,254,170]
         ],
+        leftExit: "offLicence",
+        rightExit: "kitchens",
         entities: [
-          { type: "guardian", x: 8 * TILE_SIZE, y: 8 * TILE_SIZE },
-          { type: "rope", x: 16 * TILE_SIZE, y: 8 * TILE_SIZE },
-          { type: "arrow", x: 22 * TILE_SIZE, y: 8 * TILE_SIZE },
-          { type: "terminator", x: 28 * TILE_SIZE, y: 8 * TILE_SIZE }
+          { type: "guardian", id: "qGuard1", x: 8 * TILE_SIZE, y: 8 * TILE_SIZE, speed: 1.5, direction: 1, minX: 8 * TILE_SIZE, maxX: 14 * TILE_SIZE },
+          { type: "guardian", id: "qGuard2", x: 22 * TILE_SIZE, y: 8 * TILE_SIZE, speed: 1.5, direction: -1, minX: 16 * TILE_SIZE, maxX: 22 * TILE_SIZE },
+          { type: "collectible", id: "coin3", x: 12 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "collectible", id: "coin4", x: 19 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "rope", id: "qRope1", x: 16 * TILE_SIZE, y: 2 * TILE_SIZE, height: 8 * TILE_SIZE, phase: 0.5 },
+          { type: "rope", id: "qRope2", x: 24 * TILE_SIZE, y: 2 * TILE_SIZE, height: 8 * TILE_SIZE, phase: 0 },
+          { type: "door", id: "qDoor", x: 29 * TILE_SIZE, y: 8 * TILE_SIZE, destinationRoom: "kitchens", emoji: "🚪" },
+          { type: "background", id: "star1", x: 5 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "⭐" },
+          { type: "background", id: "star2", x: 12 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "✨" },
+          { type: "background", id: "star3", x: 20 * TILE_SIZE, y: 4 * TILE_SIZE, emoji: "⭐" },
+          { type: "background", id: "star4", x: 28 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "🌠" }
         ]
       },
       {
-        name: "To the Kitchens    Main Stairway",
+        id: "kitchens",
+        name: "To the Kitchens",
+        theme: "ocean",
         layout: [
           [0,0,128,0,0,0,0,0],
           [0,0,128,0,0,0,0,0],
@@ -199,14 +654,26 @@
           [170,170,170,170,170,170,170,170],
           [170,170,170,170,170,170,170,170]
         ],
+        leftExit: "quirkafleeg",
+        rightExit: "banyanTree",
+        topExit: "masterBedroom",
         entities: [
-          { type: "guardian", x: 4 * TILE_SIZE, y: 10 * TILE_SIZE },
-          { type: "guardian", x: 16 * TILE_SIZE, y: 10 * TILE_SIZE },
-          { type: "guardian", x: 22 * TILE_SIZE, y: 10 * TILE_SIZE }
+          { type: "guardian", id: "kGuard1", x: 4 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.0, direction: 1, minX: 4 * TILE_SIZE, maxX: 10 * TILE_SIZE },
+          { type: "guardian", id: "kGuard2", x: 22 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.3, direction: -1, minX: 16 * TILE_SIZE, maxX: 22 * TILE_SIZE },
+          { type: "collectible", id: "coin5", x: 9 * TILE_SIZE, y: 4 * TILE_SIZE },
+          { type: "collectible", id: "coin6", x: 18 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "lift", id: "kLift1", x: 14 * TILE_SIZE, y: 12 * TILE_SIZE, width: 4 * TILE_SIZE, height: TILE_SIZE, originalY: 12 * TILE_SIZE },
+          { type: "door", id: "kDoor1", x: 29 * TILE_SIZE, y: 13 * TILE_SIZE, destinationRoom: "banyanTree", emoji: "🚪" },
+          { type: "door", id: "kDoor2", x: 14 * TILE_SIZE, y: 2 * TILE_SIZE, destinationRoom: "masterBedroom", emoji: "🚪" },
+          { type: "background", id: "water1", x: 5 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "🌊" },
+          { type: "background", id: "water2", x: 15 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "💧" },
+          { type: "background", id: "shell", x: 24 * TILE_SIZE, y: 4 * TILE_SIZE, emoji: "🐚" }
         ]
       },
       {
+        id: "banyanTree",
         name: "The Banyan Tree",
+        theme: "dungeon",
         layout: [
           [0,0,0,160,0,0,0,0],
           [0,0,0,160,0,0,0,0],
@@ -225,41 +692,433 @@
           [170,170,0,0,0,0,90,170],
           [170,170,85,85,85,85,90,170]
         ],
+        leftExit: "kitchens",
+        topExit: "bathroom",
         entities: [
-          { type: "guardian", x: 10 * TILE_SIZE, y: 12 * TILE_SIZE },
-          { type: "guardian", x: 14 * TILE_SIZE, y: 12 * TILE_SIZE }
+          { type: "guardian", id: "bGuard1", x: 10 * TILE_SIZE, y: 12 * TILE_SIZE, speed: 1.8, direction: 1, minX: 8 * TILE_SIZE, maxX: 16 * TILE_SIZE },
+          { type: "guardian", id: "bGuard2", x: 20 * TILE_SIZE, y: 12 * TILE_SIZE, speed: 1.4, direction: -1, minX: 14 * TILE_SIZE, maxX: 26 * TILE_SIZE },
+          { type: "collectible", id: "coin7", x: 4 * TILE_SIZE, y: 5 * TILE_SIZE },
+          { type: "collectible", id: "coin8", x: 12 * TILE_SIZE, y: 5 * TILE_SIZE },
+          { type: "collectible", id: "coin9", x: 24 * TILE_SIZE, y: 8 * TILE_SIZE },
+          { type: "rope", id: "bRope", x: 20 * TILE_SIZE, y: 2 * TILE_SIZE, height: 10 * TILE_SIZE, phase: 0.3 },
+          { type: "door", id: "bDoor", x: 18 * TILE_SIZE, y: 3 * TILE_SIZE, destinationRoom: "bathroom", emoji: "🚪" },
+          { type: "background", id: "spiderweb", x: 6 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "🕸️" },
+          { type: "background", id: "bat", x: 14 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "🦇" },
+          { type: "background", id: "candle", x: 28 * TILE_SIZE, y: 6 * TILE_SIZE, emoji: "🕯️" }
+        ]
+      },
+      {
+        id: "masterBedroom",
+        name: "The Master Bedroom",
+        theme: "nature",
+        layout: [
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [2,2,2,2,2,2,2,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,1,1,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,1,1,1,1,1,1,2]
+        ],
+        bottomExit: "kitchens",
+        rightExit: "bathroom",
+        entities: [
+          { type: "guardian", id: "mGuard1", x: 6 * TILE_SIZE, y: 6 * TILE_SIZE, speed: 1.0, direction: 1, minX: 4 * TILE_SIZE, maxX: 10 * TILE_SIZE },
+          { type: "guardian", id: "mGuard2", x: 18 * TILE_SIZE, y: 8 * TILE_SIZE, speed: 1.2, direction: -1, minX: 12 * TILE_SIZE, maxX: 25 * TILE_SIZE },
+          { type: "collectible", id: "coin10", x: 16 * TILE_SIZE, y: 6 * TILE_SIZE },
+          { type: "collectible", id: "coin11", x: 24 * TILE_SIZE, y: 6 * TILE_SIZE },
+          { type: "lift", id: "mLift", x: 12 * TILE_SIZE, y: 10 * TILE_SIZE, width: 8 * TILE_SIZE, height: TILE_SIZE, originalY: 10 * TILE_SIZE },
+          { type: "door", id: "mDoor1", x: 16 * TILE_SIZE, y: 14 * TILE_SIZE, destinationRoom: "kitchens", emoji: "🚪" },
+          { type: "door", id: "mDoor2", x: 28 * TILE_SIZE, y: 6 * TILE_SIZE, destinationRoom: "bathroom", emoji: "🚪" },
+          { type: "background", id: "mPlant1", x: 7 * TILE_SIZE, y: 4 * TILE_SIZE, emoji: "🌿" },
+          { type: "background", id: "mPlant2", x: 22 * TILE_SIZE, y: 5 * TILE_SIZE, emoji: "🌱" },
+          { type: "background", id: "mPlant3", x: 14 * TILE_SIZE, y: 7 * TILE_SIZE, emoji: "🍀" }
+        ]
+      },
+      {
+        id: "bathroom",
+        name: "The Bathroom",
+        theme: "ocean",
+        layout: [
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0],
+          [2,2,2,2,2,2,2,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,3,3,0,0,2],
+          [2,0,0,3,3,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,1,1,0,0,1,1,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,1,1,1,1,1,1,2]
+        ],
+        leftExit: "masterBedroom",
+        bottomExit: "banyanTree",
+        rightExit: "attic",
+        entities: [
+          { type: "guardian", id: "bathroomGuard1", x: 6 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.1, direction: 1, minX: 4 * TILE_SIZE, maxX: 12 * TILE_SIZE },
+          { type: "guardian", id: "bathroomGuard2", x: 22 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.3, direction: -1, minX: 16 * TILE_SIZE, maxX: 26 * TILE_SIZE },
+          { type: "collectible", id: "coin12", x: 16 * TILE_SIZE, y: 5 * TILE_SIZE },
+          { type: "collectible", id: "coin13", x: 26 * TILE_SIZE, y: 5 * TILE_SIZE },
+          { type: "conveyor", id: "bathConveyor", x: 8 * TILE_SIZE, y: 11 * TILE_SIZE, width: 8 * TILE_SIZE, height: TILE_SIZE, direction: 1 },
+          { type: "door", id: "bathDoor1", x: 3 * TILE_SIZE, y: 9 * TILE_SIZE, destinationRoom: "masterBedroom", emoji: "🚪" },
+          { type: "door", id: "bathDoor2", x: 16 * TILE_SIZE, y: 14 * TILE_SIZE, destinationRoom: "banyanTree", emoji: "🚪" },
+          { type: "door", id: "bathDoor3", x: 28 * TILE_SIZE, y: 9 * TILE_SIZE, destinationRoom: "attic", emoji: "🚪" },
+          { type: "background", id: "bathWater1", x: 8 * TILE_SIZE, y: 7 * TILE_SIZE, emoji: "🌊" },
+          { type: "background", id: "bathWater2", x: 15 * TILE_SIZE, y: 4 * TILE_SIZE, emoji: "💧" },
+          { type: "background", id: "bathShell", x: 24 * TILE_SIZE, y: 5 * TILE_SIZE, emoji: "🐚" }
+        ]
+      },
+      {
+        id: "attic",
+        name: "The Attic",
+        theme: "space",
+        layout: [
+          [2,2,2,2,2,2,2,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,1,1,1,1,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,1,1,1,1,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,1,1,1,1,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,0,0,0,0,0,0,2],
+          [2,1,1,1,1,1,1,2]
+        ],
+        leftExit: "bathroom",
+        rightExit: "cellar",
+        entities: [
+          { type: "guardian", id: "atticGuard1", x: 8 * TILE_SIZE, y: 4 * TILE_SIZE, speed: 1.0, direction: 1, minX: 4 * TILE_SIZE, maxX: 12 * TILE_SIZE },
+          { type: "guardian", id: "atticGuard2", x: 16 * TILE_SIZE, y: 7 * TILE_SIZE, speed: 1.2, direction: -1, minX: 12 * TILE_SIZE, maxX: 20 * TILE_SIZE },
+          { type: "guardian", id: "atticGuard3", x: 24 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 1.3, direction: 1, minX: 20 * TILE_SIZE, maxX: 26 * TILE_SIZE },
+          { type: "collectible", id: "coin14", x: 7 * TILE_SIZE, y: 3 * TILE_SIZE },
+          { type: "collectible", id: "coin15", x: 16 * TILE_SIZE, y: 3 * TILE_SIZE },
+          { type: "collectible", id: "coin16", x: 26 * TILE_SIZE, y: 3 * TILE_SIZE },
+          { type: "rope", id: "atticRope1", x: 10 * TILE_SIZE, y: 2 * TILE_SIZE, height: 12 * TILE_SIZE, phase: 0.1 },
+          { type: "rope", id: "atticRope2", x: 22 * TILE_SIZE, y: 2 * TILE_SIZE, height: 12 * TILE_SIZE, phase: 0.6 },
+          { type: "door", id: "atticDoor1", x: 3 * TILE_SIZE, y: 7 * TILE_SIZE, destinationRoom: "bathroom", emoji: "🚪" },
+          { type: "door", id: "atticDoor2", x: 28 * TILE_SIZE, y: 7 * TILE_SIZE, destinationRoom: "cellar", locked: true, emoji: "🔒" },
+          { type: "key", id: "atticKey", x: 16 * TILE_SIZE, y: 13 * TILE_SIZE, emoji: "🔑" },
+          { type: "background", id: "astar1", x: 5 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "⭐" },
+          { type: "background", id: "astar2", x: 14 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "✨" },
+          { type: "background", id: "astar3", x: 20 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "🌠" }
+        ]
+      },
+      {
+        id: "cellar",
+        name: "The Cellar",
+        theme: "dungeon",
+        layout: [
+          [0,0,0,0,0,0,0,0],
+          [2,2,2,2,2,2,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,3,3,0,2,0],
+          [2,0,0,3,3,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,0,0,0,0,0,2,0],
+          [2,1,1,1,1,1,2,0]
+        ],
+        leftExit: "attic",
+        entities: [
+          { type: "guardian", id: "cellarGuard1", x: 12 * TILE_SIZE, y: 10 * TILE_SIZE, speed: 0.8, direction: 1, minX: 4 * TILE_SIZE, maxX: 20 * TILE_SIZE },
+          { type: "guardian", id: "cellarGuard2", x: 12 * TILE_SIZE, y: 12 * TILE_SIZE, speed: 1.2, direction: -1, minX: 4 * TILE_SIZE, maxX: 20 * TILE_SIZE },
+          { type: "boss", id: "finalBoss", x: 14 * TILE_SIZE, y: 4 * TILE_SIZE, width: 2 * TILE_SIZE, height: 2 * TILE_SIZE, health: 3, emoji: "👾" },
+          { type: "collectible", id: "coin17", x: 4 * TILE_SIZE, y: 3 * TILE_SIZE },
+          { type: "collectible", id: "coin18", x: 16 * TILE_SIZE, y: 3 * TILE_SIZE },
+          { type: "collectible", id: "coin19", x: 4 * TILE_SIZE, y: 12 * TILE_SIZE },
+          { type: "collectible", id: "finalCoin", x: 14 * TILE_SIZE, y: 9 * TILE_SIZE, value: 500, emoji: "💎" },
+          { type: "door", id: "cellarDoor", x: 3 * TILE_SIZE, y: 7 * TILE_SIZE, destinationRoom: "attic", emoji: "🚪" },
+          { type: "background", id: "cspider", x: 8 * TILE_SIZE, y: 2 * TILE_SIZE, emoji: "🕸️" },
+          { type: "background", id: "cbat", x: 18 * TILE_SIZE, y: 3 * TILE_SIZE, emoji: "🦇" },
+          { type: "background", id: "ccoffin", x: 5 * TILE_SIZE, y: 7 * TILE_SIZE, emoji: "⚰️" }
         ]
       }
     ];
 
     // ----- Game State & Player Setup -----
     let currentRoomIndex = 0, currentRoom, gridData;
+    let lastRenderTime = 0;
+    let animationFrameId = null;
+    let collectibleElements = [];
+    let enemyElements = [];
+    
+    // Initialize gameState object for tracking various game elements
+    const gameState = {
+      isPlaying: false,
+      isSoundOn: true,
+      score: 0,
+      lives: MAX_LIVES,
+      collectedItems: new Set(),
+      hasKey: false,
+      platforms: [],
+      ropes: [],
+      doors: [],
+      lifts: [],
+      conveyors: [],
+      keys: [],
+      backgroundElements: []
+    };
+    
     const player = {
       x: TILE_SIZE,
       y: TILE_SIZE * 14,
-      width: 20,
-      height: 20,
+      width: TILE_SIZE * 0.8,
+      height: TILE_SIZE * 0.8,
       vx: 0,
       vy: 0,
       onGround: false,
-      element: document.getElementById("player"),
-      // We'll animate the player by bobbing and slight rotation.
-      baseSprite: "🕴️"
+      onRope: false,
+      standingPlatform: null,
+      facingLeft: false,
+      keepPosition: false,
+      element: null, // Will be set in initGame
+      baseSprite: "🕴️",
+      frameCount: 0
     };
-    let enemyElements = [];
     const keys = {};
-
+    
+    // ----- Audio Effects -----
+    const AUDIO = {
+      jump: {
+        play: () => playSound(600, 100, 'sine', 0.2)
+      },
+      collect: {
+        play: () => playSound(800, 100, 'sine', 0.2)
+      },
+      death: {
+        play: () => playSound(200, 300, 'sawtooth', 0.3)
+      },
+      roomChange: {
+        play: () => playSound(400, 200, 'triangle', 0.2)
+      }
+    };
+    
+    function playSound(frequency, duration, type = 'sine', volume = 0.2) {
+      if (!gameState.isSoundOn) return;
+      
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration / 1000);
+      } catch (e) {
+        console.error("Audio failed to play:", e);
+      }
+    }
+    
+    // ----- Game Initialization -----
+    function initGame() {
+      console.log("Initializing game");
+      
+      // Initialize gameState
+      gameState.score = 0;
+      gameState.lives = MAX_LIVES;
+      gameState.collectedItems = new Set();
+      gameState.hasKey = false;
+      gameState.platforms = [];
+      gameState.ropes = [];
+      gameState.doors = [];
+      gameState.lifts = [];
+      gameState.conveyors = [];
+      gameState.keys = [];
+      gameState.backgroundElements = [];
+      
+      // Reset collision data
+      gridData = null;
+      
+      // Make sure player element exists
+      const existingPlayer = document.getElementById("player");
+      if (!existingPlayer) {
+        console.error("Player element missing! Creating it.");
+        const playerEl = document.createElement("div");
+        playerEl.id = "player";
+        playerEl.className = "sprite player";
+        playerEl.textContent = "🕴️";
+        document.getElementById("gameContainer").appendChild(playerEl);
+        player.element = playerEl;
+      } else {
+        player.element = existingPlayer;
+      }
+      
+      // Set player element style
+      player.element.style.display = "block";
+      player.element.style.fontSize = "24px";
+      player.element.style.zIndex = "5";
+      
+      // Initialize the keys object
+      Object.keys(keys).forEach(key => delete keys[key]);
+      
+      // Set up event listeners
+      setupControls();
+      
+      // Set up menu
+      document.getElementById('menuBtn').addEventListener('click', toggleMenu);
+      document.getElementById('startBtn').addEventListener('click', startGame);
+      document.getElementById('soundBtn').addEventListener('click', toggleSound);
+      document.getElementById('optionsBtn').addEventListener('click', showOptions);
+      document.getElementById('helpBtn').addEventListener('click', showHelp);
+      
+      // Show game menu on start
+      toggleMenu(true);
+      
+      // Update UI
+      updateScoreDisplay();
+      updateLivesDisplay();
+      document.getElementById('roomCount').textContent = `(${currentRoomIndex + 1}/${rooms.length})`;
+      
+      console.log("Game initialized");
+    }
+    
+    function startGame() {
+      console.log("Starting game");
+      
+      // Reset player
+      player.x = TILE_SIZE;
+      player.y = TILE_SIZE * 14;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = false;
+      player.onRope = false;
+      player.standingPlatform = null;
+      player.facingLeft = false;
+      player.keepPosition = false;
+      
+      // Ensure player element is visible and properly styled
+      player.element = document.getElementById("player");
+      player.element.style.display = "block";
+      player.element.style.fontSize = "24px";
+      player.element.textContent = "🕴️";
+      
+      // Reset game state
+      gameState.isPlaying = true;
+      gameState.score = 0;
+      gameState.lives = MAX_LIVES;
+      gameState.collectedItems = new Set();
+      gameState.hasKey = false;
+      
+      // Update UI
+      updateScoreDisplay();
+      updateLivesDisplay();
+      
+      // Load first room (ensuring it's fully rendered before starting)
+      loadRoom(0);
+      toggleMenu(false);
+      
+      console.log("Game started, player at:", player.x, player.y);
+    }
+    
+    function toggleMenu(forceState) {
+      const menuElement = document.getElementById('gameMenu');
+      if (typeof forceState === 'boolean') {
+        menuElement.classList.toggle('hidden', !forceState);
+        gameState.isPlaying = !forceState;
+      } else {
+        menuElement.classList.toggle('hidden');
+        gameState.isPlaying = menuElement.classList.contains('hidden');
+      }
+      
+      if (gameState.isPlaying && !animationFrameId) {
+        lastRenderTime = 0;
+        console.log("Starting game loop");
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+    
+    function toggleSound() {
+      gameState.isSoundOn = !gameState.isSoundOn;
+      document.getElementById('soundBtn').textContent = 
+        gameState.isSoundOn ? '🔊 Sound' : '🔇 Sound';
+    }
+    
+    function showOptions() {
+      alert('Options will be available in a future update!');
+    }
+    
+    function showHelp() {
+      alert('Use arrow keys or touch controls to move and jump.\nCollect all the items and avoid enemies.\nYou have ' + MAX_LIVES + ' lives.');
+    }
+    
     // ----- Keyboard Controls (Desktop) -----
-    window.addEventListener("keydown", e => { keys[e.code] = true; });
-    window.addEventListener("keyup", e => { keys[e.code] = false; });
-
+    function setupControls() {
+      // Keyboard controls
+      window.addEventListener("keydown", e => { 
+        console.log("Keydown detected:", e.code);
+        keys[e.code] = true;
+        if (e.code === 'ArrowUp' && player.onGround) {
+          AUDIO.jump.play();
+        }
+      });
+      window.addEventListener("keyup", e => { 
+        keys[e.code] = false; 
+      });
+      
+      // Touch controls
+      setupTouchControls();
+      
+      // Room navigation
+      document.getElementById("prevRoom").addEventListener("click", () => {
+        if (!gameState.isPlaying) return;
+        let newIndex = (currentRoomIndex - 1 + rooms.length) % rooms.length;
+        AUDIO.roomChange.play();
+        loadRoom(newIndex);
+      });
+      
+      document.getElementById("nextRoom").addEventListener("click", () => {
+        if (!gameState.isPlaying) return;
+        let newIndex = (currentRoomIndex + 1) % rooms.length;
+        AUDIO.roomChange.play();
+        loadRoom(newIndex);
+      });
+    }
+    
     // ----- Mobile Touch Controls -----
     function setupTouchControls() {
       const leftBtn = document.getElementById("leftBtn");
       const rightBtn = document.getElementById("rightBtn");
       const jumpBtn = document.getElementById("jumpBtn");
-
+      
+      // Left button
       leftBtn.addEventListener("touchstart", e => { 
+        if (!gameState.isPlaying) return;
         keys["ArrowLeft"] = true; 
         e.preventDefault();
       });
@@ -267,7 +1126,10 @@
         keys["ArrowLeft"] = false; 
         e.preventDefault();
       });
+      
+      // Right button
       rightBtn.addEventListener("touchstart", e => { 
+        if (!gameState.isPlaying) return;
         keys["ArrowRight"] = true; 
         e.preventDefault();
       });
@@ -275,17 +1137,31 @@
         keys["ArrowRight"] = false; 
         e.preventDefault();
       });
+      
+      // Jump button with haptic feedback
       jumpBtn.addEventListener("touchstart", e => { 
+        if (!gameState.isPlaying) return;
         keys["ArrowUp"] = true; 
         e.preventDefault();
+        
+        if (player.onGround) {
+          AUDIO.jump.play();
+          // Vibrate device if supported
+          if (navigator.vibrate) {
+            navigator.vibrate(40);
+          }
+        }
       });
       jumpBtn.addEventListener("touchend", e => { 
         keys["ArrowUp"] = false; 
         e.preventDefault();
       });
+      
+      // Prevent default touch actions on the game container
+      document.getElementById('gameContainer').addEventListener('touchmove', 
+        e => e.preventDefault(), { passive: false });
     }
-    setupTouchControls();
-
+    
     // ----- Utility Functions -----
     // Decode a byte (0–255) into 4 two‑bit values.
     function decodeByte(byte) {
@@ -296,6 +1172,7 @@
         byte & 3
       ];
     }
+    
     // Convert room layout (16 rows × 8 bytes) into a 2D array (16 × 32) of tile numbers.
     function decodeRoomLayout(layout) {
       let grid = [];
@@ -308,10 +1185,13 @@
       }
       return grid;
     }
+    
     // Render the static room grid into the #roomGrid div.
     function renderRoomGrid(grid) {
       const roomGridDiv = document.getElementById("roomGrid");
       roomGridDiv.innerHTML = "";
+      
+      // Apply the theme for this room
       for (let y = 0; y < grid.length; y++) {
         for (let x = 0; x < grid[y].length; x++) {
           const tileDiv = document.createElement("div");
@@ -324,161 +1204,964 @@
         }
       }
     }
-    // Position & animate the player sprite.
-    function renderPlayer() {
-      // Add a slight bobbing and rotation when moving.
-      const time = Date.now();
-      let bob = (Math.sin(time / 150) * 2);
-      let rotation = keys["ArrowLeft"] || keys["ArrowRight"] ? Math.sin(time / 150) * 5 : 0;
-      player.element.style.left = player.x + "px";
-      // Use transform to add bobbing & rotation
-      player.element.style.transform = `translateY(${bob}px) rotate(${rotation}deg) scale(1.0)`;
-      // Set the sprite character (could later be swapped out with frame cycling)
-      player.element.textContent = player.baseSprite;
+    
+    // Create collectible items
+    function renderCollectibles(room) {
+      collectibleElements.forEach(obj => obj.element.remove());
+      collectibleElements = [];
+      
+      const gameContainer = document.getElementById("gameContainer");
+      
+      room.entities.filter(ent => ent.type === "collectible").forEach(ent => {
+        // Skip if this item was already collected
+        if (gameState.collectedItems.has(ent.id)) return;
+        
+        const el = document.createElement("div");
+        el.className = "sprite collectible";
+        // Pick a random collectible emoji from the current theme
+        el.textContent = currentTheme.collectible[Math.floor(Math.random() * currentTheme.collectible.length)];
+        el.style.left = ent.x + "px";
+        el.style.top = ent.y + "px";
+        
+        collectibleElements.push({ element: el, data: Object.assign({}, ent) });
+        gameContainer.appendChild(el);
+      });
     }
+    
+    // Position & animate the player sprite.
+    function renderPlayer(deltaTime) {
+      // Safety check if player element doesn't exist
+      if (!player.element) {
+        console.error("Player element is missing during rendering!");
+        player.element = document.getElementById("player");
+        
+        if (!player.element) {
+          console.error("Could not find player element. Creating it now.");
+          const playerEl = document.createElement("div");
+          playerEl.id = "player";
+          playerEl.className = "sprite player";
+          playerEl.textContent = "🕴️";
+          document.getElementById("gameContainer").appendChild(playerEl);
+          player.element = playerEl;
+        }
+      }
+      
+      // Add movement animation
+      player.frameCount += deltaTime;
+      
+      const bob = (Math.sin(player.frameCount / 150) * 2);
+      let rotation = (keys["ArrowLeft"] || keys["ArrowRight"]) ? 
+                     Math.sin(player.frameCount / 150) * 5 : 0;
+      let scaleX = player.facingLeft ? -1.0 : 1.0;
+      
+      // Update position
+      player.element.style.left = `${player.x}px`;
+      player.element.style.top = `${player.y}px`;
+      
+      // Apply animation transforms
+      player.element.style.transform = 
+        `translateY(${bob}px) rotate(${rotation}deg) scaleX(${scaleX}) scale(1.0)`;
+      
+      // Ensure the sprite is visible with proper character
+      player.element.textContent = player.baseSprite;
+      player.element.style.display = 'block';
+      player.element.style.fontSize = '24px';
+      player.element.style.zIndex = '5';
+    }
+    
     // Create enemy sprite elements – assign each enemy random animation parameters.
     function renderEnemies(room) {
       enemyElements.forEach(obj => obj.element.remove());
       enemyElements = [];
+      
       const gameContainer = document.getElementById("gameContainer");
-      room.entities.forEach(ent => {
+      
+      room.entities.filter(ent => ent.type === "guardian").forEach(ent => {
         const el = document.createElement("div");
         el.className = "sprite enemy";
-        // Pick a random emoji for the enemy.
-        el.textContent = enemyOptions[Math.floor(Math.random()*enemyOptions.length)];
+        
+        // Pick a random emoji for the enemy based on the current theme
+        el.textContent = currentTheme.enemies[Math.floor(Math.random() * currentTheme.enemies.length)];
         el.style.left = ent.x + "px";
         el.style.top = ent.y + "px";
+        
         // Assign random animation parameters:
         const anim = {
           phase: Math.random() * Math.PI * 2,
-          rotationAmplitude: 10 + Math.random() * 10, // degrees
+          rotationAmplitude: 10 + Math.random() * 10,
           scaleAmplitude: 0.1 + Math.random() * 0.2,
           baseScale: 1.0,
-          horizontalAmplitude: 5 + Math.random() * 5
+          horizontalAmplitude: 5 + Math.random() * 15,
+          verticalAmplitude: 3 + Math.random() * 5
         };
+        
         enemyElements.push({ element: el, data: Object.assign({}, ent), anim: anim });
         gameContainer.appendChild(el);
       });
     }
+    
     // ----- Room Loading -----
-    function loadRoom(index) {
-      currentRoomIndex = index;
-      currentRoom = rooms[index];
-      gridData = decodeRoomLayout(currentRoom.layout);
-      renderRoomGrid(gridData);
-      renderEnemies(currentRoom);
-      document.getElementById("roomName").textContent = currentRoom.name;
-      // Reset player state.
-      player.x = TILE_SIZE;
-      player.y = TILE_SIZE * 14;
-      player.vx = 0;
-      player.vy = 0;
-      renderPlayer();
+    function loadRoom(roomId) {
+      try {
+        // If roomId is a number, use it as index, otherwise find room by ID
+        let roomIndex;
+        
+        if (typeof roomId === 'number') {
+          roomIndex = roomId;
+        } else {
+          roomIndex = rooms.findIndex(r => r.id === roomId);
+          if (roomIndex === -1) {
+            console.error(`Room ID ${roomId} not found`);
+            roomIndex = 0;
+          }
+        }
+        
+        // Apply transition effect
+        const gameContainer = document.getElementById("gameContainer");
+        if (gameContainer) {
+          gameContainer.classList.add('fade');
+        }
+        
+        // Reset game state elements
+        gameState.platforms = [];
+        gameState.ropes = [];
+        gameState.doors = [];
+        gameState.lifts = [];
+        gameState.conveyors = [];
+        gameState.keys = [];
+        gameState.backgroundElements = [];
+        
+        // Clear existing special elements from DOM
+        const specialElements = document.querySelectorAll('.lift, .rope, .door, .conveyor, .background, .key, .boss');
+        specialElements.forEach(el => {
+          if (el && el.parentNode) {
+            el.remove();
+          }
+        });
+        
+        // Proceed with room loading after a short delay
+        setTimeout(() => {
+          currentRoomIndex = roomIndex;
+          currentRoom = rooms[roomIndex];
+          
+          // Set current theme for the room
+          currentTheme = themeOptions[currentRoom.theme || "nature"];
+          tileOptions[0] = currentTheme.background;
+          tileOptions[1] = currentTheme.floor;
+          tileOptions[2] = currentTheme.wall;
+          tileOptions[3] = currentTheme.hazard;
+          tileOptions[4] = currentTheme.collectible;
+          
+          // Update player sprite based on theme
+          player.baseSprite = currentTheme.player;
+          player.element.textContent = player.baseSprite;
+          
+          // Decode and render room grid
+          gridData = decodeRoomLayout(currentRoom.layout);
+          renderRoomGrid(gridData);
+          
+          // Process all entity types
+          renderEntities(currentRoom);
+          
+          // Update UI
+          const roomNameEl = document.getElementById("roomName");
+          const roomCountEl = document.getElementById('roomCount');
+          
+          if (roomNameEl) roomNameEl.textContent = currentRoom.name;
+          if (roomCountEl) roomCountEl.textContent = `(${currentRoomIndex + 1}/${rooms.length})`;
+          
+          // Reset player state if not specified otherwise
+          if (!player.keepPosition) {
+            player.x = TILE_SIZE;
+            player.y = TILE_SIZE * 14;
+            player.vx = 0;
+            player.vy = 0;
+          }
+          
+          player.keepPosition = false;
+          renderPlayer(0);
+          
+          // Clear transition effect
+          if (gameContainer) {
+            setTimeout(() => {
+              gameContainer.classList.remove('fade');
+            }, 100);
+          }
+        }, 250);
+      } catch (err) {
+        console.error("Error loading room:", err);
+        // Fall back to a safe state
+        currentRoomIndex = 0;
+        currentRoom = rooms[0];
+        gridData = decodeRoomLayout(currentRoom.layout);
+      }
     }
+    
+    // Render all entities in a room based on their type
+    function renderEntities(room) {
+      try {
+        // Safely clear previous entities
+        enemyElements.forEach(obj => {
+          if (obj && obj.element && obj.element.parentNode) {
+            obj.element.remove();
+          }
+        });
+        
+        collectibleElements.forEach(obj => {
+          if (obj && obj.element && obj.element.parentNode) {
+            obj.element.remove();
+          }
+        });
+        
+        // Reset arrays
+        enemyElements = [];
+        collectibleElements = [];
+        
+        // Get container for entities
+        const gameContainer = document.getElementById("gameContainer");
+        if (!gameContainer) {
+          console.error("Game container not found");
+          return;
+        }
+        
+        // Safety check for entities
+        if (!room || !room.entities || !Array.isArray(room.entities)) {
+          console.error("Invalid room or entities data");
+          return;
+        }
+        
+        // Process each entity
+        room.entities.forEach(entity => {
+          // Skip invalid entities
+          if (!entity || !entity.type) return;
+          
+          // Create element
+          const el = document.createElement('div');
+          el.id = entity.id || `entity-${Math.random().toString(36).substr(2, 9)}`;
+          
+          switch(entity.type) {
+            case "guardian": {
+              el.className = 'sprite enemy guardian';
+              
+              // Make sure theme is valid
+              const enemyEmoji = currentTheme && currentTheme.enemies && currentTheme.enemies.length > 0 
+                ? currentTheme.enemies[Math.floor(Math.random() * currentTheme.enemies.length)]
+                : "👾";
+              
+              el.textContent = enemyEmoji;
+              el.style.left = entity.x + "px";
+              el.style.top = entity.y + "px";
+              
+              // Add to enemies array with animation parameters
+              const anim = {
+                phase: Math.random() * Math.PI * 2,
+                rotationAmplitude: 10 + Math.random() * 10,
+                scaleAmplitude: 0.1 + Math.random() * 0.2,
+                baseScale: 1.0,
+                horizontalAmplitude: 5 + Math.random() * 15,
+                verticalAmplitude: 3 + Math.random() * 5
+              };
+              
+              // Set initial direction
+              if (entity.direction < 0) {
+                el.style.transform = "scaleX(-1)";
+              }
+              
+              enemyElements.push({ 
+                element: el, 
+                data: {...entity, type: "guardian"}, 
+                anim 
+              });
+              break;
+            }
+          
+          case "boss": {
+            el.className = 'sprite enemy boss';
+            el.textContent = entity.emoji || "👾";
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            el.style.fontSize = `${(entity.width / TILE_SIZE) * 24}px`;
+            
+            enemyElements.push({
+              element: el,
+              data: {...entity, type: "boss"},
+              anim: {
+                phase: Math.random() * Math.PI * 2,
+                rotationAmplitude: 5,
+                scaleAmplitude: 0.1,
+                baseScale: 1.0,
+                horizontalAmplitude: 10,
+                verticalAmplitude: 10
+              }
+            });
+            break;
+          }
+          
+          case "collectible": {
+            el.className = 'sprite collectible';
+            el.textContent = entity.emoji || currentTheme.collectible[Math.floor(Math.random() * currentTheme.collectible.length)];
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            
+            // Special style for high-value collectibles
+            if (entity.value && entity.value > 100) {
+              el.style.filter = "drop-shadow(0 0 5px gold)";
+              el.style.fontSize = "1.5em";
+            }
+            
+            collectibleElements.push({
+              element: el,
+              data: entity
+            });
+            break;
+          }
+          
+          case "rope": {
+            el.className = 'rope';
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            el.style.height = entity.height + "px";
+            
+            gameState.ropes.push({
+              element: el,
+              x: entity.x,
+              y: entity.y,
+              width: 10,
+              height: entity.height,
+              phase: entity.phase || 0
+            });
+            break;
+          }
+          
+          case "lift": {
+            el.className = 'platform lift';
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            el.style.width = entity.width + "px";
+            el.style.height = entity.height + "px";
+            
+            gameState.lifts.push({
+              element: el,
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: entity.width,
+              height: entity.height,
+              originalY: entity.originalY || entity.y,
+              lastY: entity.y
+            });
+            
+            // Add the platform to the platforms array
+            gameState.platforms.push({
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: entity.width,
+              height: entity.height,
+              type: "lift",
+              element: el
+            });
+            break;
+          }
+          
+          case "conveyor": {
+            el.className = 'platform conveyor';
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            el.style.width = entity.width + "px";
+            el.style.height = entity.height + "px";
+            
+            // If direction is negative, reverse animation
+            if (entity.direction < 0) {
+              el.style.animationDirection = "reverse";
+            }
+            
+            gameState.conveyors.push({
+              element: el,
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: entity.width,
+              height: entity.height,
+              direction: entity.direction || 1
+            });
+            
+            // Add the conveyor to the platforms array
+            gameState.platforms.push({
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: entity.width,
+              height: entity.height,
+              type: "conveyor",
+              direction: entity.direction || 1,
+              element: el
+            });
+            break;
+          }
+          
+          case "door": {
+            el.className = 'sprite door';
+            el.textContent = entity.emoji || "🚪";
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            
+            // If door is locked, apply lock icon and different style
+            if (entity.locked) {
+              el.textContent = entity.emoji || "🔒";
+              el.style.filter = "brightness(0.7)";
+            }
+            
+            gameState.doors.push({
+              element: el,
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: TILE_SIZE,
+              height: TILE_SIZE,
+              locked: entity.locked || false,
+              destinationRoom: entity.destinationRoom
+            });
+            break;
+          }
+          
+          case "key": {
+            el.className = 'sprite collectible key';
+            el.textContent = entity.emoji || "🔑";
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            el.style.filter = "drop-shadow(0 0 5px yellow)";
+            
+            gameState.keys.push({
+              element: el,
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              width: TILE_SIZE * 0.8,
+              height: TILE_SIZE * 0.8,
+              collected: false
+            });
+            break;
+          }
+          
+          case "background": {
+            el.className = 'sprite background';
+            el.textContent = entity.emoji || "✨";
+            el.style.left = entity.x + "px";
+            el.style.top = entity.y + "px";
+            
+            gameState.backgroundElements.push({
+              element: el,
+              id: entity.id,
+              x: entity.x,
+              y: entity.y,
+              baseHue: Math.random() * 360
+            });
+            break;
+          }
+        }
+        
+        // Add element to DOM
+        if (el && el.className) {
+          gameContainer.appendChild(el);
+        }
+      });
+      } catch (error) {
+        console.error("Error rendering entities:", error);
+      }
+    }
+    
+    // ----- Game UI -----
+    function updateScoreDisplay() {
+      document.getElementById('score').textContent = `💎 ${gameState.score}`;
+    }
+    
+    function updateLivesDisplay() {
+      document.getElementById('lives').textContent = '❤️'.repeat(gameState.lives);
+    }
+    
     // ----- Collision Detection -----
     // Check if a rectangle (x,y,width,height) collides with a solid tile.
     function isColliding(x, y, width, height) {
+      if (!gridData) return false; // Safety check if grid data isn't loaded yet
+      
       const points = [
         {x: x, y: y},
         {x: x + width, y: y},
         {x: x, y: y + height},
         {x: x + width, y: y + height}
       ];
+      
       for (let p of points) {
         let gridX = Math.floor(p.x / TILE_SIZE);
         let gridY = Math.floor(p.y / TILE_SIZE);
+        
+        // Boundary check
         if (gridX < 0 || gridX >= 32 || gridY < 0 || gridY >= 16) continue;
+        
+        // Safety check for grid data at this position
+        if (!gridData[gridY] || typeof gridData[gridY][gridX] === 'undefined') continue;
+        
         let tile = gridData[gridY][gridX];
         // Floor (1) and wall (2) are solid.
         if (tile === 1 || tile === 2) return true;
         // Hazard tile (3) is lethal.
         if (tile === 3) return "lethal";
       }
+      
+      // Check collision with platforms
+      for (const platform of gameState.platforms) {
+        if (x < platform.x + platform.width &&
+            x + width > platform.x &&
+            y < platform.y + platform.height &&
+            y + height > platform.y) {
+          return platform; // Return the platform object for special handling
+        }
+      }
+      
       return false;
     }
+    
+    // Check collisions with collectibles
+    function checkCollectibles() {
+      // Check standard collectibles
+      collectibleElements.forEach((obj, index) => {
+        if (isCollidingWithRect(player, {
+          x: obj.data.x,
+          y: obj.data.y,
+          width: TILE_SIZE * 0.8,
+          height: TILE_SIZE * 0.8
+        })) {
+          // Collect the item
+          gameState.collectedItems.add(obj.data.id);
+          gameState.score += obj.data.value || 10;
+          updateScoreDisplay();
+          
+          // Play sound effect
+          AUDIO.collect.play();
+          
+          // Add visual effect before removing
+          obj.element.style.animation = "fadeOut 0.3s";
+          setTimeout(() => {
+            obj.element.remove();
+            collectibleElements.splice(index, 1);
+          }, 300);
+        }
+      });
+      
+      // Check for key items
+      if (gameState.keys) {
+        gameState.keys.forEach((key, index) => {
+          if (!key.collected && isCollidingWithRect(player, key)) {
+            // Collect the key
+            key.collected = true;
+            gameState.hasKey = true;
+            gameState.score += 50;
+            updateScoreDisplay();
+            
+            // Play special key sound
+            AUDIO.collect.play();
+            setTimeout(() => AUDIO.collect.play(), 200);
+            
+            // Show message
+            showMessage("You found a key! 🔑");
+            
+            // Add visual effect and remove
+            key.element.style.animation = "fadeOut 0.3s";
+            setTimeout(() => {
+              key.element.remove();
+              gameState.keys.splice(index, 1);
+            }, 300);
+          }
+        });
+      }
+      
+      // Check for doors
+      if (gameState.doors) {
+        gameState.doors.forEach(door => {
+          if (isCollidingWithRect(player, door) && keys["KeyE"]) {
+            // If door is locked, check for key
+            if (door.locked && !gameState.hasKey) {
+              // Door is locked and player has no key
+              showMessage("This door is locked! Find a key 🔑");
+              return;
+            }
+            
+            // If door was locked but player has key, unlock it
+            if (door.locked && gameState.hasKey) {
+              door.locked = false;
+              gameState.hasKey = false; // Use the key
+              door.element.textContent = "🚪"; // Change icon to open door
+              door.element.style.filter = ""; // Remove lock effect
+              
+              // Show message and play sound
+              showMessage("You unlocked the door! 🔓");
+              AUDIO.collect.play();
+              return;
+            }
+            
+            // Enter the door (transition to new room)
+            if (door.destinationRoom) {
+              // Play door sound
+              AUDIO.roomChange.play();
+              
+              // Transition to new room
+              transitionToRoom(door.destinationRoom);
+            }
+          }
+        });
+      }
+    }
+    
+    // Show a temporary message on screen
+    function showMessage(text, duration = 2000) {
+      // Simple console log as a fallback
+      console.log(`Game message: ${text}`);
+      
+      try {
+        // Remove any existing messages
+        document.querySelectorAll('.game-message').forEach(el => el.remove());
+        
+        // Create new message element
+        const msgEl = document.createElement('div');
+        msgEl.className = 'game-message';
+        msgEl.textContent = text;
+        
+        // Safely append to container if it exists
+        const container = document.getElementById('gameContainer');
+        if (container) {
+          container.appendChild(msgEl);
+          
+          // Fade out and remove after duration
+          setTimeout(() => {
+            msgEl.classList.add('fade-out');
+            setTimeout(() => {
+              if (msgEl.parentNode) {
+                msgEl.remove();
+              }
+            }, 500);
+          }, duration);
+        }
+      } catch (err) {
+        console.error("Error showing message:", err);
+      }
+    }
+    
+    // Room transition
+    function transitionToRoom(roomId) {
+      // Fade out current room
+      document.getElementById('gameContainer').classList.add('fade');
+      
+      setTimeout(() => {
+        // Load the new room
+        loadRoom(roomId);
+      }, 400);
+    }
+    
+    // Player death handling
+    function handlePlayerDeath() {
+      // Add death animation
+      player.element.classList.add('dying');
+      player.element.style.transform = 'rotate(180deg) scale(0.5)';
+      player.element.style.opacity = '0.7';
+      
+      // Decrease lives
+      gameState.lives--;
+      updateLivesDisplay();
+      
+      // Play death sound
+      AUDIO.death.play();
+      
+      if (gameState.lives <= 0) {
+        // Game over
+        setTimeout(() => {
+          showGameOver();
+        }, 1000);
+      } else {
+        // Reset room
+        setTimeout(() => {
+          player.element.classList.remove('dying');
+          player.element.style.transform = '';
+          player.element.style.opacity = '1';
+          loadRoom(currentRoomIndex);
+        }, 800);
+      }
+    }
+    
+    // Show game over screen
+    function showGameOver() {
+      const gameOverEl = document.createElement('div');
+      gameOverEl.className = 'overlay';
+      gameOverEl.innerHTML = `
+        <h1>GAME OVER</h1>
+        <p>Your score: ${gameState.score}</p>
+        <button id="tryAgainBtn">Try Again</button>
+      `;
+      
+      document.getElementById('gameContainer').appendChild(gameOverEl);
+      document.getElementById('tryAgainBtn').addEventListener('click', () => {
+        gameOverEl.remove();
+        initGame();
+      });
+      
+      gameState.isPlaying = false;
+    }
+    
     // ----- Main Game Loop -----
-    function update() {
-      // Handle horizontal movement.
+    function gameLoop(timestamp) {
+      if (!gameState.isPlaying) {
+        animationFrameId = null;
+        return;
+      }
+      
+      // Calculate delta time (time since last frame in seconds)
+      const deltaTime = timestamp - lastRenderTime;
+      lastRenderTime = timestamp;
+      
+      // Skip the first frame
+      if (deltaTime === timestamp) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+        return;
+      }
+      
+      // Handle horizontal movement
       if (keys["ArrowLeft"]) {
         player.vx = -MOVE_SPEED;
+        player.facingLeft = true;
+        if (player.element) {
+          player.element.style.transform = "scaleX(-1)";
+        }
       } else if (keys["ArrowRight"]) {
         player.vx = MOVE_SPEED;
+        player.facingLeft = false;
+        if (player.element) {
+          player.element.style.transform = "scaleX(1)";
+        }
       } else {
         player.vx *= FRICTION;
       }
-      // Jump if on ground.
+      
+      // Jump if on ground
       if (keys["ArrowUp"] && player.onGround) {
         player.vy = JUMP_SPEED;
         player.onGround = false;
+        AUDIO.jump.play();
       }
-      // Apply gravity.
+      
+      // Apply gravity
       player.vy += GRAVITY;
-      // Proposed new position.
+      
+      // Handle special platforms (lifts, conveyors)
+      gameState.platforms.forEach(platform => {
+        if (platform.type === "lift") {
+          // Update lift position based on time
+          const offset = Math.sin(timestamp / 2000) * 40;
+          const baseY = platform.originalY || platform.y;
+          platform.y = baseY + offset;
+          platform.element.style.top = platform.y + "px";
+          
+          // If player is standing on this lift, move them with it
+          if (player.standingPlatform === platform.id) {
+            const deltaY = platform.y - platform.lastY;
+            player.y += deltaY;
+          }
+          
+          platform.lastY = platform.y;
+        }
+      });
+      
+      // Proposed new position
       let newX = player.x + player.vx;
       let newY = player.y + player.vy;
-      // Horizontal collision.
+      
+      // Horizontal collision
       let collision = isColliding(newX, player.y, player.width, player.height);
       if (collision === true) {
         newX = player.x;
         player.vx = 0;
       } else if (collision === "lethal") {
-        loadRoom(currentRoomIndex);
+        handlePlayerDeath();
+        animationFrameId = requestAnimationFrame(gameLoop);
         return;
       }
-      // Vertical collision.
+      
+      // Vertical collision
+      player.standingPlatform = null;
       collision = isColliding(newX, newY, player.width, player.height);
+      
       if (collision === true) {
         if (player.vy > 0) {
+          // Landing on something solid
           newY = Math.floor(newY / TILE_SIZE) * TILE_SIZE;
           player.onGround = true;
+        } else if (player.vy < 0) {
+          // Hitting ceiling
+          newY = Math.ceil(newY / TILE_SIZE) * TILE_SIZE;
+        }
+        player.vy = 0;
+      } else if (typeof collision === 'object') {
+        // Landing on a specific platform
+        if (player.vy > 0) {
+          newY = collision.y - player.height;
+          player.onGround = true;
+          player.standingPlatform = collision.id;
+          
+          if (collision.type === "conveyor") {
+            // Conveyor belt effect
+            newX += collision.direction * 0.5;
+          }
         }
         player.vy = 0;
       } else if (collision === "lethal") {
-        loadRoom(currentRoomIndex);
+        handlePlayerDeath();
+        animationFrameId = requestAnimationFrame(gameLoop);
         return;
       } else {
         player.onGround = false;
       }
+      
       player.x = newX;
       player.y = newY;
-      renderPlayer();
-
-      // Update enemy animations via JS.
-      enemyElements.forEach(obj => {
-        const { anim, data, element } = obj;
-        const time = Date.now() / 200;
-        // Horizontal oscillation.
-        let xOffset = Math.sin(time + anim.phase) * anim.horizontalAmplitude;
-        // Rotation oscillation.
-        let rotation = Math.sin(time + anim.phase) * anim.rotationAmplitude;
-        // Scale oscillation.
-        let scale = anim.baseScale + Math.sin(time + anim.phase) * anim.scaleAmplitude;
-        element.style.transform = `translateX(${xOffset}px) rotate(${rotation}deg) scale(${scale.toFixed(2)})`;
-        // Check collision with player.
-        const rectPlayer = { x: player.x, y: player.y, w: player.width, h: player.height };
-        // Note: enemy's collision box is approximated by 20×20.
-        let enemyX = data.x + xOffset;
-        let enemyY = data.y;
-        const rectEnemy = { x: enemyX, y: enemyY, w: 20, h: 20 };
-        if (rectPlayer.x < rectEnemy.x + rectEnemy.w && rectPlayer.x + rectPlayer.w > rectEnemy.x &&
-            rectPlayer.y < rectEnemy.y + rectEnemy.h && rectPlayer.y + rectPlayer.h > rectEnemy.y) {
-          loadRoom(currentRoomIndex);
+      
+      // Check for collectibles
+      checkCollectibles();
+      
+      // Update sprites
+      renderPlayer(deltaTime);
+      
+      // Update rope animations
+      gameState.ropes.forEach(rope => {
+        // Simple swing animation
+        const angle = Math.sin(timestamp / 1000 + rope.phase) * 15;
+        rope.element.style.transform = `rotate(${angle}deg)`;
+        
+        // Check if player is touching rope - slow fall
+        const ropeRect = {
+          x: rope.x - 5,
+          y: rope.y,
+          width: 10,
+          height: rope.height
+        };
+        
+        if (isCollidingWithRect(player, ropeRect) && player.vy > 0) {
+          player.vy = 1; // Slow fall when on rope
         }
       });
-      requestAnimationFrame(update);
+      
+      // Update enemy animations
+      enemyElements.forEach(obj => {
+        const { anim, data, element } = obj;
+        
+        if (data.type === "guardian") {
+          // Guardians patrol back and forth
+          data.x += data.speed * data.direction;
+          
+          // Check boundaries and reverse direction
+          if (data.x <= data.minX || data.x >= data.maxX) {
+            data.direction *= -1;
+            // Flip the sprite horizontally
+            element.style.transform = `scaleX(${data.direction})`;
+          }
+          
+          // Update position
+          element.style.left = data.x + "px";
+          element.style.top = data.y + "px";
+        } else {
+          // Flying enemies with complex movement patterns
+          const time = timestamp / 200;
+          
+          // Combined oscillation with vertical component
+          let xOffset = Math.sin(time + anim.phase) * anim.horizontalAmplitude;
+          let yOffset = Math.cos(time + anim.phase) * anim.verticalAmplitude;
+          
+          // Rotation oscillation
+          let rotation = Math.sin(time + anim.phase) * anim.rotationAmplitude;
+          
+          // Scale oscillation
+          let scale = anim.baseScale + Math.sin(time + anim.phase) * anim.scaleAmplitude;
+          
+          element.style.transform = 
+            `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg) scale(${scale.toFixed(2)})`;
+          
+          // Update collision position
+          data.currentX = data.x + xOffset;
+          data.currentY = data.y + yOffset;
+        }
+        
+        // Check collision with player - only if game is active
+        if (gameState.isPlaying) {
+          const enemyX = data.currentX || data.x;
+          const enemyY = data.currentY || data.y;
+          const rectEnemy = { 
+            x: enemyX, 
+            y: enemyY, 
+            width: TILE_SIZE * 0.8, 
+            height: TILE_SIZE * 0.8 
+          };
+          
+          if (isCollidingWithRect(player, rectEnemy)) {
+            console.log("Player collision with enemy!");
+            handlePlayerDeath();
+          }
+        }
+      });
+      
+      // Fade background elements (already handled by CSS class)
+      
+      animationFrameId = requestAnimationFrame(gameLoop);
     }
-    // ----- Room Navigation Controls -----
-    document.getElementById("prevRoom").addEventListener("click", () => {
-      let newIndex = (currentRoomIndex - 1 + rooms.length) % rooms.length;
-      loadRoom(newIndex);
-    });
-    document.getElementById("nextRoom").addEventListener("click", () => {
-      let newIndex = (currentRoomIndex + 1) % rooms.length;
-      loadRoom(newIndex);
-    });
+    
+    // Helper function for rectangle collision with error handling
+    function isCollidingWithRect(obj1, obj2) {
+      // Check if objects exist and have necessary properties
+      if (!obj1 || !obj2) {
+        console.warn("Missing object in collision check");
+        return false;
+      }
+      
+      // Make sure all required properties exist
+      const rect1 = {
+        x: obj1.x || 0,
+        y: obj1.y || 0,
+        width: obj1.width || 20,
+        height: obj1.height || 20
+      };
+      
+      const rect2 = {
+        x: obj2.x || 0,
+        y: obj2.y || 0,
+        width: obj2.width || 20,
+        height: obj2.height || 20
+      };
+      
+      // Standard AABB collision check
+      const collision = rect1.x < rect2.x + rect2.width &&
+             rect1.x + rect1.width > rect2.x &&
+             rect1.y < rect2.y + rect2.height &&
+             rect1.y + rect1.height > rect2.y;
+             
+      // Debug collision
+      if (collision) {
+        console.log("Collision detected between:", rect1, rect2);
+      }
+      
+      return collision;
+    }
+    
     // ----- Start the Game -----
-    loadRoom(0);
-    update();
+    // Wait for DOM to be fully ready before initializing
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initGame);
+    } else {
+      // DOM is already ready
+      console.log("DOM is ready, initializing game");
+      setTimeout(initGame, 100);
+    }
+    
+    // Add event listener for key events for debugging
+    window.addEventListener('keydown', function(e) {
+      console.log("Key pressed:", e.code);
+    });
   </script>
 </body>
 </html>
