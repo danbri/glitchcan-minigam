@@ -1,6 +1,6 @@
 /**
- * Rooms.js - Game levels and layouts
- * Defines the rooms, their layouts, and entities for Jet Set Willy
+ * Rooms.js - Enhanced room management for the Spectro platformer game
+ * Handles room definitions, layouts, and transitions
  */
 
 const Rooms = (() => {
@@ -51,7 +51,7 @@ const Rooms = (() => {
     return grid;
   }
   
-  // Room definitions
+  // Enhanced room definitions with platformer features
   const rooms = [
     {
       id: "offLicence",
@@ -77,21 +77,86 @@ const Rooms = (() => {
         [0,0,0,0,0,0],
         [85,85,85,85,85,85]
       ],
+      // Platform definitions for the room - including regular, sloped, and moving platforms
+      platforms: [
+        // Bottom floor
+        {
+          type: 'platform',
+          x: 16,
+          y: 184,
+          width: 224,
+          height: 8
+        },
+        // Middle platforms
+        {
+          type: 'platform',
+          x: 32,
+          y: 112,
+          width: 64,
+          height: 8
+        },
+        // Moving platform
+        {
+          type: 'moving_platform',
+          x: 112,
+          y: 80,
+          width: 32,
+          height: 8,
+          vx: 0.5,
+          vy: 0,
+          bounds: {
+            left: 112,
+            right: 160,
+            top: 80,
+            bottom: 80
+          },
+          movementType: 'horizontal'
+        }
+      ],
       // Room connections
       leftExit: null,
       rightExit: "quirkafleeg",
       topExit: null,
       bottomExit: null,
-      // Initial entities in the room
+      // Player start position (or respawn position)
+      playerStart: { x: 48, y: 160 },
+      // Initial entities in the room with enhanced properties
       entities: [
-        { type: "guardian", id: "offLicGuard", x: 80, y: 80, speed: 1.2, direction: 1, minX: 72, maxX: 144 },
-        { type: "collectible", id: "coin1", x: 120, y: 64 },
-        { type: "collectible", id: "coin2", x: 160, y: 64 },
-        { type: "door", id: "offLicDoor", x: 208, y: 72, destinationRoom: "quirkafleeg", locked: false },
-        // Background decorations using ZX spectrum patterns instead of emojis
-        { type: "background", id: "plant1", x: 40, y: 40 },
-        { type: "background", id: "plant2", x: 120, y: 24 },
-        { type: "background", id: "plant3", x: 176, y: 32 }
+        { 
+          type: "guardian", 
+          id: "offLicGuard", 
+          x: 80, 
+          y: 80, 
+          speed: 1.2, 
+          direction: 1, 
+          minX: 72, 
+          maxX: 144,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "collectible", 
+          id: "coin1", 
+          x: 120, 
+          y: 64,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin2", 
+          x: 160, 
+          y: 64,
+          value: 10
+        },
+        { 
+          type: "door", 
+          id: "offLicDoor", 
+          x: 208, 
+          y: 72, 
+          destinationRoom: "quirkafleeg", 
+          locked: false,
+          exitDirection: 'right'
+        }
       ]
     },
     {
@@ -118,21 +183,95 @@ const Rooms = (() => {
         [170,64,0,0,0,0],
         [170,127,255,255,255,255]
       ],
+      // Enhanced platforms with slopes
+      platforms: [
+        // Bottom floor
+        {
+          type: 'platform',
+          x: 16,
+          y: 184,
+          width: 224,
+          height: 8
+        },
+        // Left platforms
+        {
+          type: 'platform',
+          x: 16,
+          y: 112,
+          width: 48,
+          height: 8
+        },
+        // Central sloped platform
+        {
+          type: 'slope',
+          x: 64,
+          y: 144,
+          width: 128,
+          height: 24,
+          angle: 45 // 45 degrees upward slope
+        },
+        // Right platform
+        {
+          type: 'platform',
+          x: 192,
+          y: 112,
+          width: 48,
+          height: 8
+        }
+      ],
       leftExit: "offLicence",
       rightExit: "kitchens",
       topExit: null,
       bottomExit: null,
+      playerStart: { x: 32, y: 160 },
       entities: [
-        { type: "guardian", id: "qGuard1", x: 64, y: 64, speed: 1.5, direction: 1, minX: 64, maxX: 112 },
-        { type: "guardian", id: "qGuard2", x: 176, y: 64, speed: 1.5, direction: -1, minX: 128, maxX: 176 },
-        { type: "collectible", id: "coin3", x: 96, y: 64 },
-        { type: "collectible", id: "coin4", x: 152, y: 64 },
-        { type: "door", id: "qDoor", x: 232, y: 64, destinationRoom: "kitchens", locked: false },
-        // Space-themed background elements using patterns instead of emojis
-        { type: "background", id: "star1", x: 40, y: 24, patternIndex: 1, colorIndex: 7, bright: true }, // Bright white stars
-        { type: "background", id: "star2", x: 96, y: 16, patternIndex: 1, colorIndex: 7, bright: true },
-        { type: "background", id: "star3", x: 160, y: 32, patternIndex: 1, colorIndex: 7, bright: true },
-        { type: "background", id: "star4", x: 224, y: 24, patternIndex: 1, colorIndex: 7, bright: true }
+        { 
+          type: "guardian", 
+          id: "qGuard1", 
+          x: 100, 
+          y: 64, 
+          speed: 1.5, 
+          direction: 1, 
+          minX: 80, 
+          maxX: 112,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "guardian", 
+          id: "qGuard2", 
+          x: 150, 
+          y: 64, 
+          speed: 1.5, 
+          direction: -1, 
+          minX: 128, 
+          maxX: 176,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "collectible", 
+          id: "coin3", 
+          x: 96, 
+          y: 64,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin4", 
+          x: 152, 
+          y: 64,
+          value: 10
+        },
+        { 
+          type: "door", 
+          id: "qDoor", 
+          x: 232, 
+          y: 64, 
+          destinationRoom: "kitchens", 
+          locked: false,
+          exitDirection: 'right'
+        }
       ]
     },
     {
@@ -158,21 +297,118 @@ const Rooms = (() => {
         [170,170,170,170,170,170],
         [170,170,170,170,170,170]
       ],
+      // Enhanced platforms with moving platforms
+      platforms: [
+        // Bottom floors
+        {
+          type: 'platform',
+          x: 16,
+          y: 184,
+          width: 224,
+          height: 8
+        },
+        // Middle platform
+        {
+          type: 'platform',
+          x: 32,
+          y: 80,
+          width: 96,
+          height: 8
+        },
+        // Moving platforms (vertical)
+        {
+          type: 'moving_platform',
+          x: 160,
+          y: 120,
+          width: 32,
+          height: 8,
+          vx: 0,
+          vy: 0.5,
+          bounds: {
+            left: 160,
+            right: 160,
+            top: 80,
+            bottom: 136
+          },
+          movementType: 'vertical'
+        },
+        // Right platform
+        {
+          type: 'platform',
+          x: 192,
+          y: 112,
+          width: 48,
+          height: 8
+        }
+      ],
       leftExit: "quirkafleeg",
       rightExit: "banyanTree",
-      topExit: "masterBedroom",
+      topExit: "atticRoom",
       bottomExit: null,
+      playerStart: { x: 32, y: 64 },
       entities: [
-        { type: "guardian", id: "kGuard1", x: 32, y: 80, speed: 1.0, direction: 1, minX: 32, maxX: 80 },
-        { type: "guardian", id: "kGuard2", x: 176, y: 80, speed: 1.3, direction: -1, minX: 128, maxX: 176 },
-        { type: "collectible", id: "coin5", x: 72, y: 32 },
-        { type: "collectible", id: "coin6", x: 144, y: 64 },
-        { type: "door", id: "kDoor1", x: 232, y: 104, destinationRoom: "banyanTree", locked: false },
-        { type: "door", id: "kDoor2", x: 112, y: 16, destinationRoom: "masterBedroom", locked: false },
-        // Ocean-themed background elements using patterns instead of emojis
-        { type: "background", id: "water1", x: 40, y: 24, patternIndex: 0, colorIndex: 1, bright: true }, // Blue dots for water
-        { type: "background", id: "water2", x: 120, y: 16, patternIndex: 2, colorIndex: 5, bright: false }, // Cyan lines for ripples
-        { type: "background", id: "shell", x: 192, y: 32, patternIndex: 3, colorIndex: 7, bright: false } // White grid pattern for shell
+        { 
+          type: "guardian", 
+          id: "kGuard1", 
+          x: 32, 
+          y: 64, 
+          speed: 1.0, 
+          direction: 1, 
+          minX: 32, 
+          maxX: 80,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "enemy", 
+          id: "kGuard2", 
+          x: 176, 
+          y: 96, 
+          width: 16, 
+          height: 16,
+          speed: 0.8, 
+          jumpPower: 4.5,
+          behavior: 'jumper',
+          deadly: true
+        },
+        { 
+          type: "collectible", 
+          id: "coin5", 
+          x: 72, 
+          y: 32,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin6", 
+          x: 144, 
+          y: 64,
+          value: 10
+        },
+        { 
+          type: "door", 
+          id: "kDoor1", 
+          x: 232, 
+          y: 96, 
+          destinationRoom: "banyanTree", 
+          locked: false,
+          exitDirection: 'right'
+        },
+        { 
+          type: "door", 
+          id: "kDoor2", 
+          x: 112, 
+          y: 16, 
+          destinationRoom: "atticRoom", 
+          locked: true,
+          exitDirection: 'up'
+        },
+        {
+          type: "key",
+          id: "kitchenKey",
+          x: 208,
+          y: 96
+        }
       ]
     },
     {
@@ -198,35 +434,148 @@ const Rooms = (() => {
         [170,170,0,0,0,0],
         [170,170,85,85,85,85]
       ],
+      // Complex platform layouts with multiple slope angles
+      platforms: [
+        // Bottom floor
+        {
+          type: 'platform',
+          x: 16,
+          y: 184,
+          width: 224,
+          height: 8
+        },
+        // Tree platforms
+        {
+          type: 'platform',
+          x: 16,
+          y: 160,
+          width: 64,
+          height: 8
+        },
+        // Sloped platforms (branches)
+        {
+          type: 'slope',
+          x: 80,
+          y: 144,
+          width: 64,
+          height: 16,
+          angle: 30 // Gentle upward slope
+        },
+        {
+          type: 'slope',
+          x: 144,
+          y: 128,
+          width: 48,
+          height: 16,
+          angle: -30 // Gentle downward slope
+        },
+        // Top platform
+        {
+          type: 'platform',
+          x: 192,
+          y: 112,
+          width: 48,
+          height: 8
+        },
+        // Moving platform (circular)
+        {
+          type: 'moving_platform',
+          x: 128,
+          y: 80,
+          width: 32,
+          height: 8,
+          vx: 0.3,
+          vy: 0.3,
+          bounds: {
+            left: 96,
+            right: 160,
+            top: 48,
+            bottom: 96
+          },
+          movementType: 'circular'
+        }
+      ],
       leftExit: "kitchens",
       rightExit: null,
-      topExit: "bathroom",
+      topExit: "atticRoom",
       bottomExit: null,
+      playerStart: { x: 32, y: 136 },
       entities: [
-        { type: "guardian", id: "bGuard1", x: 80, y: 96, speed: 1.8, direction: 1, minX: 64, maxX: 128 },
-        { type: "guardian", id: "bGuard2", x: 160, y: 96, speed: 1.4, direction: -1, minX: 112, maxX: 208 },
-        { type: "collectible", id: "coin7", x: 32, y: 40 },
-        { type: "collectible", id: "coin8", x: 96, y: 40 },
-        { type: "collectible", id: "coin9", x: 192, y: 64 },
-        { type: "door", id: "bDoor", x: 144, y: 24, destinationRoom: "bathroom", locked: false },
-        // Dungeon-themed background elements using patterns instead of emojis
-        { type: "background", id: "spiderweb", x: 48, y: 16, patternIndex: 2, colorIndex: 3, bright: false }, // Magenta lines for spider web
-        { type: "background", id: "bat", x: 112, y: 24, patternIndex: 0, colorIndex: 7, bright: false }, // White dots for bat
-        { type: "background", id: "candle", x: 224, y: 48, patternIndex: 1, colorIndex: 6, bright: true } // Bright yellow stars for candle
+        { 
+          type: "guardian", 
+          id: "bGuard1", 
+          x: 80, 
+          y: 120, 
+          speed: 1.0, 
+          direction: 1, 
+          minX: 64, 
+          maxX: 128,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "enemy", 
+          id: "flyingGuard", 
+          x: 160, 
+          y: 64, 
+          vx: 0.8, 
+          vy: 0.5,
+          behavior: 'bounce',
+          deadly: true
+        },
+        { 
+          type: "collectible", 
+          id: "coin7", 
+          x: 32, 
+          y: 136,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin8", 
+          x: 96, 
+          y: 112,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin9", 
+          x: 192, 
+          y: 96,
+          value: 10
+        },
+        { 
+          type: "door", 
+          id: "bDoor", 
+          x: 128, 
+          y: 24, 
+          destinationRoom: "atticRoom", 
+          locked: false,
+          exitDirection: 'up'
+        },
+        {
+          type: "rope",
+          id: "climbingRope",
+          x: 208,
+          y: 112,
+          height: 64,
+          swingSpeed: 0.5,
+          swingAmplitude: 4
+        }
       ]
     },
     {
-      id: "masterBedroom",
-      name: "The Master Bedroom",
+      id: "atticRoom",
+      name: "The Attic Room",
       backgroundColor: MAGENTA,
       backgroundBright: false,
       layout: [
         [0,0,0,0,0,0],
         [0,0,0,0,0,0],
         [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
         [2,2,2,2,2,2],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
         [2,0,0,0,0,0],
         [2,0,0,0,0,0],
         [2,0,0,0,0,0],
@@ -238,146 +587,288 @@ const Rooms = (() => {
         [2,0,0,0,0,0],
         [2,1,1,1,1,1]
       ],
+      // Advanced platform layout with boss encounter arena
+      platforms: [
+        // Bottom floor
+        {
+          type: 'platform',
+          x: 32,
+          y: 184,
+          width: 208,
+          height: 8
+        },
+        // Middle platform for boss arena
+        {
+          type: 'platform',
+          x: 128,
+          y: 112,
+          width: 64,
+          height: 8
+        },
+        // Moving platforms for reaching boss
+        {
+          type: 'moving_platform',
+          x: 64,
+          y: 144,
+          width: 32,
+          height: 8,
+          vx: 0.7,
+          vy: 0,
+          bounds: {
+            left: 64,
+            right: 112,
+            top: 144,
+            bottom: 144
+          },
+          movementType: 'horizontal'
+        },
+        {
+          type: 'moving_platform',
+          x: 192,
+          y: 144,
+          width: 32,
+          height: 8,
+          vx: 0.7,
+          vy: 0,
+          bounds: {
+            left: 160,
+            right: 208,
+            top: 144,
+            bottom: 144
+          },
+          movementType: 'horizontal'
+        },
+        // Top ledges
+        {
+          type: 'platform',
+          x: 32,
+          y: 64,
+          width: 40,
+          height: 8
+        },
+        {
+          type: 'platform',
+          x: 192,
+          y: 64,
+          width: 40,
+          height: 8
+        }
+      ],
       leftExit: null,
-      rightExit: "bathroom",
+      rightExit: null,
       topExit: null,
       bottomExit: "kitchens",
+      playerStart: { x: 64, y: 160 },
       entities: [
-        { type: "guardian", id: "mGuard1", x: 48, y: 48, speed: 1.0, direction: 1, minX: 32, maxX: 80 },
-        { type: "guardian", id: "mGuard2", x: 144, y: 64, speed: 1.2, direction: -1, minX: 96, maxX: 200 },
-        { type: "collectible", id: "coin10", x: 128, y: 48 },
-        { type: "collectible", id: "coin11", x: 192, y: 48 },
-        { type: "door", id: "mDoor1", x: 128, y: 112, destinationRoom: "kitchens", locked: false },
-        { type: "door", id: "mDoor2", x: 224, y: 48, destinationRoom: "bathroom", locked: false },
-        // Nature-themed decoration using patterns
-        { type: "background", id: "mPlant1", x: 56, y: 32, patternIndex: 0, colorIndex: 4, bright: true }, // Green dots for plants
-        { type: "background", id: "mPlant2", x: 176, y: 40, patternIndex: 2, colorIndex: 4, bright: false }, // Green lines for stems
-        { type: "background", id: "mPlant3", x: 112, y: 56, patternIndex: 3, colorIndex: 4, bright: true } // Green grid for foliage
+        // Boss entity
+        {
+          type: "boss",
+          id: "atticBoss",
+          x: 128,
+          y: 80,
+          width: 24,
+          height: 24,
+          health: 3,
+          speed: 0.8,
+          deadly: true,
+          attackCooldown: 2000,
+          state: 'chase',
+          value: 500
+        },
+        // Guardians
+        { 
+          type: "guardian", 
+          id: "aGuard1", 
+          x: 48, 
+          y: 48, 
+          speed: 1.2, 
+          direction: 1, 
+          minX: 32, 
+          maxX: 72,
+          behavior: 'patrol',
+          deadly: true
+        },
+        { 
+          type: "guardian", 
+          id: "aGuard2", 
+          x: 208, 
+          y: 48, 
+          speed: 1.2, 
+          direction: -1, 
+          minX: 192, 
+          maxX: 232,
+          behavior: 'patrol',
+          deadly: true
+        },
+        // Collectibles
+        { 
+          type: "collectible", 
+          id: "coin10", 
+          x: 56, 
+          y: 40,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin11", 
+          x: 208, 
+          y: 40,
+          value: 10
+        },
+        { 
+          type: "collectible", 
+          id: "coin12", 
+          x: 128, 
+          y: 40,
+          value: 50
+        },
+        // Doors
+        { 
+          type: "door", 
+          id: "aDoor1", 
+          x: 64, 
+          y: 156, 
+          destinationRoom: "kitchens", 
+          locked: false,
+          exitDirection: 'down'
+        },
+        {
+          type: "door",
+          id: "finalDoor",
+          x: 192,
+          y: 96,
+          destinationRoom: "theWatch",
+          locked: true,
+          exitDirection: 'right',
+          requiresAllItems: true
+        },
+        // Keys
+        {
+          type: "key",
+          id: "atticKey",
+          x: 128,
+          y: 96
+        },
+        // Rope for climbing
+        {
+          type: "rope",
+          id: "atticRope1",
+          x: 112,
+          y: 64,
+          height: 48,
+          swingSpeed: 0.3,
+          swingAmplitude: 2
+        },
+        {
+          type: "rope",
+          id: "atticRope2",
+          x: 160,
+          y: 64,
+          height: 48,
+          swingSpeed: 0.3,
+          swingAmplitude: 2
+        }
       ]
     },
     {
-      id: "bathroom",
-      name: "The Bathroom",
-      backgroundColor: CYAN,
+      id: "theWatch",
+      name: "The Watch", // Final room
+      backgroundColor: YELLOW,
       backgroundBright: true,
       layout: [
         [0,0,0,0,0,0],
         [0,0,0,0,0,0],
         [0,0,0,0,0,0],
-        [2,2,2,2,2,2],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,3,3,0],
-        [2,0,0,3,3,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,1,1,0,0,1],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,1,1,1,1,1]
-      ],
-      leftExit: "masterBedroom",
-      rightExit: "attic",
-      topExit: null,
-      bottomExit: "banyanTree",
-      entities: [
-        { type: "guardian", id: "bathroomGuard1", x: 48, y: 80, speed: 1.1, direction: 1, minX: 32, maxX: 96 },
-        { type: "guardian", id: "bathroomGuard2", x: 176, y: 80, speed: 1.3, direction: -1, minX: 128, maxX: 208 },
-        { type: "collectible", id: "coin12", x: 128, y: 40 },
-        { type: "collectible", id: "coin13", x: 208, y: 40 },
-        { type: "door", id: "bathDoor1", x: 24, y: 72, destinationRoom: "masterBedroom", locked: false },
-        { type: "door", id: "bathDoor2", x: 128, y: 112, destinationRoom: "banyanTree", locked: false },
-        { type: "door", id: "bathDoor3", x: 224, y: 72, destinationRoom: "attic", locked: false },
-        // Bathroom-themed decor with patterns
-        { type: "background", id: "bathWater1", x: 64, y: 56, patternIndex: 0, colorIndex: 5, bright: true }, // Cyan dots for water droplets
-        { type: "background", id: "bathWater2", x: 120, y: 32, patternIndex: 2, colorIndex: 5, bright: true }, // Cyan lines for water streams
-        { type: "background", id: "bathShell", x: 192, y: 40, patternIndex: 3, colorIndex: 5, bright: false } // Cyan grid pattern for tiles
-      ]
-    },
-    {
-      id: "attic",
-      name: "The Attic",
-      backgroundColor: BLACK,
-      backgroundBright: false,
-      layout: [
-        [2,2,2,2,2,2],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,1,1,1,1],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,1,1,1,1],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,1,1,1,1],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,1,1,1,1,1]
-      ],
-      leftExit: "bathroom",
-      rightExit: "cellar",
-      topExit: null,
-      bottomExit: null,
-      entities: [
-        { type: "guardian", id: "atticGuard1", x: 64, y: 32, speed: 1.0, direction: 1, minX: 32, maxX: 96 },
-        { type: "guardian", id: "atticGuard2", x: 128, y: 56, speed: 1.2, direction: -1, minX: 96, maxX: 160 },
-        { type: "guardian", id: "atticGuard3", x: 192, y: 80, speed: 1.3, direction: 1, minX: 160, maxX: 208 },
-        { type: "collectible", id: "coin14", x: 56, y: 24 },
-        { type: "collectible", id: "coin15", x: 128, y: 24 },
-        { type: "collectible", id: "coin16", x: 208, y: 24 },
-        { type: "door", id: "atticDoor1", x: 24, y: 56, destinationRoom: "bathroom", locked: false },
-        { type: "door", id: "atticDoor2", x: 224, y: 56, destinationRoom: "cellar", locked: true },
-        { type: "key", id: "atticKey", x: 128, y: 104 },
-        // Space-themed attic decorations
-        { type: "background", id: "astar1", x: 40, y: 16, patternIndex: 1, colorIndex: 7, bright: true }, // Bright white stars
-        { type: "background", id: "astar2", x: 112, y: 24, patternIndex: 1, colorIndex: 7, bright: true },
-        { type: "background", id: "astar3", x: 160, y: 16, patternIndex: 1, colorIndex: 7, bright: true }
-      ]
-    },
-    {
-      id: "cellar",
-      name: "The Cellar",
-      backgroundColor: RED,
-      backgroundBright: false,
-      layout: [
         [0,0,0,0,0,0],
-        [2,2,2,2,2,2],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,3,3,0],
-        [2,0,0,3,3,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,0,0,0,0,0],
-        [2,1,1,1,1,1]
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+        [85,85,85,85,85,85]
       ],
-      leftExit: "attic",
+      // Victory room with special platforms
+      platforms: [
+        // Bottom floor
+        {
+          type: 'platform',
+          x: 16,
+          y: 184,
+          width: 224,
+          height: 8
+        },
+        // Victory platform
+        {
+          type: 'platform',
+          x: 112,
+          y: 112,
+          width: 64,
+          height: 8
+        }
+      ],
+      leftExit: "atticRoom",
       rightExit: null,
       topExit: null,
       bottomExit: null,
+      playerStart: { x: 32, y: 160 },
       entities: [
-        { type: "guardian", id: "cellarGuard1", x: 96, y: 80, speed: 0.8, direction: 1, minX: 32, maxX: 160 },
-        { type: "guardian", id: "cellarGuard2", x: 96, y: 96, speed: 1.2, direction: -1, minX: 32, maxX: 160 },
-        { type: "collectible", id: "coin17", x: 32, y: 24 },
-        { type: "collectible", id: "coin18", x: 128, y: 24 },
-        { type: "collectible", id: "coin19", x: 32, y: 96 },
-        { type: "collectible", id: "finalCoin", x: 112, y: 72, value: 500 },
-        { type: "door", id: "cellarDoor", x: 24, y: 56, destinationRoom: "attic", locked: false },
-        // Dungeon-themed decor with patterns
-        { type: "background", id: "cspider", x: 64, y: 16, patternIndex: 2, colorIndex: 2, bright: false }, // Red lines for cobwebs
-        { type: "background", id: "cbat", x: 144, y: 24, patternIndex: 0, colorIndex: 2, bright: true }, // Bright red dots for eyes
-        { type: "background", id: "ccoffin", x: 40, y: 56, patternIndex: 3, colorIndex: 2, bright: false } // Red grid for coffin
+        // Victory collectible
+        { 
+          type: "collectible", 
+          id: "victoryCoin", 
+          x: 128, 
+          y: 80,
+          value: 1000
+        },
+        // Moving platforms to reach victory
+        {
+          type: 'moving_platform',
+          x: 64,
+          y: 144,
+          width: 32,
+          height: 8,
+          vx: 0,
+          vy: 0.5,
+          bounds: {
+            left: 64,
+            right: 64,
+            top: 112,
+            bottom: 160
+          },
+          movementType: 'vertical'
+        },
+        {
+          type: 'moving_platform',
+          x: 192,
+          y: 144,
+          width: 32,
+          height: 8,
+          vx: 0,
+          vy: 0.5,
+          bounds: {
+            left: 192,
+            right: 192,
+            top: 112,
+            bottom: 160
+          },
+          movementType: 'vertical'
+        },
+        // Exit door back to attic
+        { 
+          type: "door", 
+          id: "watchDoor", 
+          x: 32, 
+          y: 168, 
+          destinationRoom: "atticRoom", 
+          locked: false,
+          exitDirection: 'left'
+        }
       ]
     }
   ];
@@ -406,11 +897,10 @@ const Rooms = (() => {
    * @returns {string} Next room ID
    */
   function getNextRoom(currentRoomId) {
-    const currentIndex = rooms.findIndex(r => r.id === currentRoomId);
-    if (currentIndex === -1) return rooms[0].id;
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return rooms[0].id;
     
-    const nextIndex = (currentIndex + 1) % rooms.length;
-    return rooms[nextIndex].id;
+    return room.rightExit || currentRoomId;
   }
   
   /**
@@ -419,11 +909,34 @@ const Rooms = (() => {
    * @returns {string} Previous room ID
    */
   function getPrevRoom(currentRoomId) {
-    const currentIndex = rooms.findIndex(r => r.id === currentRoomId);
-    if (currentIndex === -1) return rooms[0].id;
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return rooms[0].id;
     
-    const prevIndex = (currentIndex - 1 + rooms.length) % rooms.length;
-    return rooms[prevIndex].id;
+    return room.leftExit || currentRoomId;
+  }
+  
+  /**
+   * Get the room above the current room
+   * @param {string} currentRoomId - Current room ID
+   * @returns {string} Room ID above or null
+   */
+  function getTopRoom(currentRoomId) {
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return null;
+    
+    return room.topExit || null;
+  }
+  
+  /**
+   * Get the room below the current room
+   * @param {string} currentRoomId - Current room ID
+   * @returns {string} Room ID below or null
+   */
+  function getBottomRoom(currentRoomId) {
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return null;
+    
+    return room.bottomExit || null;
   }
   
   /**
@@ -442,13 +955,55 @@ const Rooms = (() => {
     return rooms.length;
   }
   
+  /**
+   * Get the player start position for a room
+   * @param {string} roomId - Room ID
+   * @returns {Object} Player start position {x, y}
+   */
+  function getPlayerStartPosition(roomId) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room || !room.playerStart) {
+      return { x: 128, y: 160 }; // Default position
+    }
+    
+    return room.playerStart;
+  }
+  
+  /**
+   * Get the room in a specified direction
+   * @param {string} currentRoomId - Current room ID
+   * @param {string} direction - Direction to check ('left', 'right', 'up', 'down')
+   * @returns {string} Room ID in that direction or null
+   */
+  function getRoomInDirection(currentRoomId, direction) {
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return null;
+    
+    switch (direction) {
+      case 'left':
+        return room.leftExit;
+      case 'right':
+        return room.rightExit;
+      case 'up':
+        return room.topExit;
+      case 'down':
+        return room.bottomExit;
+      default:
+        return null;
+    }
+  }
+  
   // Public API
   return {
     getRoom,
     getNextRoom,
     getPrevRoom,
+    getTopRoom,
+    getBottomRoom,
     getAllRoomIds,
-    getRoomCount
+    getRoomCount,
+    getPlayerStartPosition,
+    getRoomInDirection
   };
 })();
 

@@ -4,12 +4,18 @@
  */
 
 const SpectroJSW = (() => {
-  // Game constants
-  const GRAVITY = 0.5;
-  const JUMP_STRENGTH = -8.5;
-  const MOVE_SPEED = 2.5;
+  // Enhanced platformer physics constants
+  const GRAVITY = 0.25;
+  const JUMP_STRENGTH = -5.5;
+  const MOVE_SPEED = 1.5;
+  const MAX_SPEED = 3.0;
+  const ACCELERATION = 0.2;
+  const DECELERATION = 0.3;
   const FRICTION = 0.8;
-  const MAX_FALL_SPEED = 10;
+  const MAX_FALL_SPEED = 6.0;
+  const JUMP_BUFFER_TIME = 100; // ms
+  const COYOTE_TIME = 100; // ms
+  const JUMP_RELEASE_VELOCITY = -1.0;
   const TILE_SIZE = 8; // ZX Spectrum character cell size
   
   // Game state
@@ -26,8 +32,13 @@ const SpectroJSW = (() => {
     hasKey: false,
     gameTime: 0,
     lastUpdate: 0,
-    deathCount: 0
+    deathCount: 0,
+    isInvulnerable: false,
+    invulnerableTimer: 0
   };
+  
+  // Expose gameState to debug module
+  window.SpectroJSW = { gameState };
   
   // References to other modules
   let canvas, audioContext;
@@ -39,6 +50,10 @@ const SpectroJSW = (() => {
    * Initialize the game
    */
   function init() {
+    // Very explicit debug log to verify logging is working
+    console.log('====== SPECTRO JSW INITIALIZING v2.0.0 ======');
+    console.log('DEBUG MODE ENABLED - Enhanced platformer edition');
+    
     // Get canvas element
     canvas = document.getElementById('spectrum-canvas');
     if (!canvas) {
@@ -154,7 +169,7 @@ const SpectroJSW = (() => {
     gameState.currentRoomId = roomId;
     gameState.currentRoom = room;
     
-    // Load room entities
+    // Load room entities including platform definitions
     Entities.loadRoomEntities(room);
     
     // Count collectibles
@@ -164,8 +179,18 @@ const SpectroJSW = (() => {
     // Create player if doesn't exist, or reset position
     const player = Entities.getPlayer();
     if (!player) {
-      // Create player at default position
-      Entities.createPlayer(40, 160);
+      // Use playerStart position from room data if available
+      const startPos = Rooms.getPlayerStartPosition(roomId);
+      Entities.createPlayer(startPos.x, startPos.y);
+      
+      // Initialize player properties for enhanced platformer physics
+      const player = Entities.getPlayer();
+      player.coyoteTimeCounter = 0;
+      player.jumpBufferCounter = 0;
+      player.jumpReleased = true;
+      player.height = 16; // 2 chars high for better platformer character
+      
+      console.log(`Created player at position (${startPos.x}, ${startPos.y})`);
     } else {
       // Reset player state based on entry direction
       resetPlayerForRoom(room);
@@ -174,7 +199,7 @@ const SpectroJSW = (() => {
     // Update room name in UI
     document.getElementById('room-name').textContent = room.name.toUpperCase();
     
-    console.log(`Loaded room: ${room.name}`);
+    console.log(`Loaded room: ${room.name} with ${room.platforms ? room.platforms.length : 0} platforms`);
   }
   
   /**
@@ -188,17 +213,29 @@ const SpectroJSW = (() => {
     const prevRoomId = gameState.currentRoomId;
     const prevRoom = Rooms.getRoom(prevRoomId);
     
+    // Log the room transition for debugging
+    console.log("Player transition:", { 
+      from: prevRoomId, 
+      to: room.id,
+      transition: prevRoom ? 
+        (prevRoom.rightExit === room.id ? "right→left" : 
+         prevRoom.leftExit === room.id ? "left→right" : 
+         prevRoom.bottomExit === room.id ? "bottom→top" : 
+         prevRoom.topExit === room.id ? "top→bottom" : "unknown") 
+        : "initial spawn"
+    });
+    
     if (prevRoom && prevRoom.rightExit === room.id) {
       // Entered from left
       player.x = 16;
-      player.y = 120;
+      player.y = 160; // Back to original position
       player.vx = 0;
       player.vy = 0;
       player.facingLeft = false;
     } else if (prevRoom && prevRoom.leftExit === room.id) {
       // Entered from right
       player.x = 240;
-      player.y = 120;
+      player.y = 160; // Back to original position
       player.vx = 0;
       player.vy = 0;
       player.facingLeft = true;
@@ -211,19 +248,20 @@ const SpectroJSW = (() => {
     } else if (prevRoom && prevRoom.topExit === room.id) {
       // Entered from bottom
       player.x = 128;
-      player.y = 168;
+      player.y = 168; // Back to original position
       player.vx = 0;
       player.vy = 0;
     } else {
       // Default position
       player.x = 40;
-      player.y = 160;
+      player.y = 160; // Back to original position
       player.vx = 0;
       player.vy = 0;
       player.facingLeft = false;
     }
     
-    player.onGround = false;
+    // Force player to ground for safe landing
+    player.onGround = true;
     player.onRope = false;
     player.standingPlatform = null;
     player.isJumping = false;
@@ -276,10 +314,25 @@ const SpectroJSW = (() => {
     // Update player
     updatePlayer(dt);
     
-    // Update entities
+    // Update entities and platforms
     Entities.updateEntities(dt, gameState.currentRoom.layout);
     
-    // Check collisions
+    // Update invulnerability timer
+    if (gameState.isInvulnerable) {
+      gameState.invulnerableTimer -= dt;
+      if (gameState.invulnerableTimer <= 0) {
+        gameState.isInvulnerable = false;
+        console.log("Player vulnerability restored");
+      }
+    }
+    
+    // Handle platform collisions first (for jumping/landing)
+    const player = Entities.getPlayer();
+    if (player) {
+      handlePlatformCollisions(player);
+    }
+    
+    // Then check other collisions (enemies, items, etc.)
     checkCollisions();
     
     // Check for room transitions
@@ -293,42 +346,94 @@ const SpectroJSW = (() => {
   }
   
   /**
-   * Update player position and state
+   * Update player position and state with enhanced platformer physics
    * @param {number} deltaTime - Time since last update in ms
    */
   function updatePlayer(deltaTime) {
     const player = Entities.getPlayer();
     if (!player) return;
     
-    // Handle horizontal movement
+    const timeScale = deltaTime / 16.7; // Scale for 60fps
+    
+    // Handle horizontal movement with acceleration/deceleration
     const horizontalInput = Input.getHorizontalAxis();
     
-    if (horizontalInput < 0) {
-      player.vx = -MOVE_SPEED;
-      player.facingLeft = true;
-      player.animState = 'walk';
-    } else if (horizontalInput > 0) {
-      player.vx = MOVE_SPEED;
-      player.facingLeft = false;
+    if (horizontalInput !== 0) {
+      // Accelerate in input direction
+      player.vx += horizontalInput * ACCELERATION * timeScale;
+      player.facingRight = horizontalInput > 0;
+      player.facingLeft = !player.facingRight;
+      
+      // Clamp to max speed
+      if (Math.abs(player.vx) > MAX_SPEED) {
+        player.vx = MAX_SPEED * Math.sign(player.vx);
+      }
+      
+      // Set walking animation
       player.animState = 'walk';
     } else {
-      player.vx *= FRICTION;
-      if (Math.abs(player.vx) < 0.1) {
-        player.vx = 0;
+      // No input, decelerate
+      if (Math.abs(player.vx) > 0) {
+        const decel = DECELERATION * timeScale;
+        if (Math.abs(player.vx) > decel) {
+          player.vx -= decel * Math.sign(player.vx);
+        } else {
+          player.vx = 0;
+        }
       }
+      
+      // Set idle animation
       player.animState = 'stand';
     }
     
-    // Handle jumping - add direct space key check for maximum compatibility
+    // Coyote time for more forgiving jumps
+    if (player.onGround) {
+      player.coyoteTimeCounter = COYOTE_TIME;
+    } else {
+      player.coyoteTimeCounter -= deltaTime;
+    }
+    
+    // Jump buffer timing
+    if (player.jumpBufferCounter > 0) {
+      player.jumpBufferCounter -= deltaTime;
+    }
+    
+    // Handle jumping with buffer and coyote time
     const jumpPressed = Input.isActionActive('jump') || 
                         Input.isKeyPressed('Space') || 
                         Input.isKeyPressed(' ') || 
                         Input.isKeyPressed('32');
     
-    if (jumpPressed && player.onGround && !player.isJumping) {
+    // Debug info with enhanced details
+    if (jumpPressed && !player.isJumping) {
+      console.log("Jump key pressed:", {
+        playerState: {
+          onGround: player.onGround,
+          isJumping: player.isJumping,
+          coyoteTime: player.coyoteTimeCounter,
+          jumpBuffer: player.jumpBufferCounter,
+          position: { x: player.x, y: player.y },
+          velocity: { vx: player.vx, vy: player.vy }
+        },
+        roomInfo: {
+          id: gameState.currentRoomId,
+          name: gameState.currentRoom.name
+        }
+      });
+      
+      // Start jump buffer when button is pressed
+      player.jumpBufferCounter = JUMP_BUFFER_TIME;
+    }
+    
+    // Execute jump if either on ground or in coyote time and jump was buffered
+    if (player.jumpBufferCounter > 0 && player.coyoteTimeCounter > 0 && player.jumpReleased) {
+      console.log("JUMPING with enhanced physics!");
       player.vy = JUMP_STRENGTH;
       player.onGround = false;
       player.isJumping = true;
+      player.jumpReleased = false;
+      player.jumpBufferCounter = 0;
+      player.coyoteTimeCounter = 0;
       player.jumpTime = gameState.gameTime;
       player.animState = 'jump';
       
@@ -336,28 +441,34 @@ const SpectroJSW = (() => {
       playSound('jump');
     }
     
-    // Allow variable jump height based on how long jump button is held
-    if (player.isJumping && !jumpPressed) {
-      // Release jump early
-      if (player.vy < 0) {
-        player.vy *= 0.5; // Cut jump short
+    // Variable jump height by checking if jump button is released while still moving upward
+    if (player.isJumping && player.vy < 0) {
+      if (!jumpPressed) {
+        // Cut the jump short if button released
+        if (player.vy < JUMP_RELEASE_VELOCITY) {
+          player.vy = JUMP_RELEASE_VELOCITY;
+        }
+        player.isJumping = false;
       }
-      player.isJumping = false;
     }
     
-    // Maximum jump time
+    // Mark jump as released when button is up
+    if (!jumpPressed) {
+      player.jumpReleased = true;
+    }
+    
+    // Maximum jump time safety cap
     if (player.isJumping && gameState.gameTime - player.jumpTime > player.maxJumpTime) {
       player.isJumping = false;
     }
     
-    // Apply gravity
-    if (!player.onGround) {
-      player.vy += GRAVITY;
-      
-      // Slow fall if on rope
-      if (player.onRope && player.vy > 0) {
-        player.vy = 1;
-      }
+    // Apply gravity if not on rope
+    if (!player.onGround && !player.onRope) {
+      player.vy += GRAVITY * timeScale;
+    } else if (player.onRope) {
+      // On rope movement (climb up/down)
+      const verticalInput = Input.getVerticalAxis();
+      player.vy = verticalInput * 2.0;
     }
     
     // Cap fall speed
@@ -365,9 +476,9 @@ const SpectroJSW = (() => {
       player.vy = MAX_FALL_SPEED;
     }
     
-    // Apply velocity
-    player.x += player.vx;
-    player.y += player.vy;
+    // Apply velocity with time scaling
+    player.x += player.vx * timeScale;
+    player.y += player.vy * timeScale;
     
     // Keep player within screen bounds
     if (player.x < 0) player.x = 0;
@@ -379,16 +490,159 @@ const SpectroJSW = (() => {
       player.onGround = true;
     }
     
-    // Check grid collisions
+    // Update animation state based on movement
+    if (!player.onGround) {
+      if (player.vy < 0) {
+        // Going up = jump
+        player.animState = 'jump';
+      } else {
+        // Going down = fall
+        player.animState = 'fall';
+      }
+    } else if (Math.abs(player.vx) > 0.1) {
+      // Moving = walk
+      player.animState = 'walk';
+    } else {
+      // Standing still = idle
+      player.animState = 'stand';
+    }
+    
+    // Check platform and grid collisions
+    handlePlatformCollisions(player);
     checkPlayerGridCollisions(player);
     
     // Reset platform state unless colliding
-    player.standingPlatform = null;
+    if (!player.onPlatform) {
+      player.standingPlatform = null;
+    }
     
     // Update animation state timing
     player.animStateTime = gameState.gameTime;
   }
   
+  /**
+   * Handle platform collisions for the player
+   * @param {Object} player - Player entity
+   */
+  function handlePlatformCollisions(player) {
+    // Skip if player doesn't exist
+    if (!player) return;
+    
+    // Reset ground state unless confirmed otherwise
+    const wasOnGround = player.onGround;
+    player.onGround = false;
+    player.onPlatform = false;
+    
+    // Get all platform entities 
+    const platforms = Entities.getAllEntities().filter(e => 
+      (e.type === 'platform' || e.type === 'slope' || 
+       e.type === 'moving_platform' || e.type === 'lift' ||
+       e.type === 'conveyor') &&
+      !e.hidden && !e.removed
+    );
+    
+    for (const platform of platforms) {
+      if (!platform) continue;
+      
+      // Enhanced collision detection based on platform type
+      switch(platform.type) {
+        case 'platform':
+        case 'lift':
+        case 'moving_platform':
+        case 'conveyor':
+          // Standard platform collision
+          if (window.checkCollisionBetween(player, platform)) {
+            // Check if player is landing on top of platform
+            if (player.vy >= 0 && player.y + player.height - player.vy <= platform.y + 2) {
+              // Land on platform
+              player.y = platform.y - player.height;
+              player.vy = 0;
+              player.onGround = true;
+              player.onPlatform = true;
+              player.isJumping = false;
+              player.standingPlatform = platform.id;
+              
+              // Move with platform if moving
+              if (platform.type === 'moving_platform' || platform.type === 'lift') {
+                if (platform.lastX !== undefined && platform.lastY !== undefined) {
+                  player.x += platform.x - platform.lastX;
+                }
+              }
+              
+              // Apply conveyor belt effect
+              if (platform.type === 'conveyor' && platform.direction) {
+                player.x += platform.direction * (platform.speed || 0.5);
+              }
+            } 
+            // Wall collision from sides
+            else if (player.x + player.width > platform.x && player.x < platform.x + platform.width) {
+              // If moving right and hit left side of platform
+              if (player.vx > 0 && player.x + player.width - player.vx <= platform.x + 2) {
+                player.x = platform.x - player.width;
+                player.vx = 0;
+              }
+              // If moving left and hit right side of platform
+              else if (player.vx < 0 && player.x - player.vx >= platform.x + platform.width - 2) {
+                player.x = platform.x + platform.width;
+                player.vx = 0;
+              }
+              
+              // Ceiling collision (hitting bottom of platform while jumping)
+              if (player.vy < 0 && player.y - player.vy >= platform.y + platform.height - 2) {
+                player.y = platform.y + platform.height;
+                player.vy = 0;
+              }
+            }
+          }
+          break;
+          
+        case 'slope':
+          // Sloped platform - more advanced collision
+          if (player.x + player.width > platform.x && player.x < platform.x + platform.width) {
+            // Calculate Y position at this X based on slope angle
+            const playerCenterX = player.x + player.width / 2;
+            const slopeProgress = (playerCenterX - platform.x) / platform.width;
+            let slopeY;
+            
+            if (platform.angle > 0) {
+              // Rising slope (left to right)
+              slopeY = platform.y + platform.height - (slopeProgress * platform.height);
+            } else if (platform.angle < 0) {
+              // Falling slope (left to right)
+              slopeY = platform.y + (slopeProgress * platform.height);
+            } else {
+              // Flat slope (no angle)
+              slopeY = platform.y;
+            }
+            
+            // Check if player is on or slightly above the slope
+            if (player.y + player.height >= slopeY - 2 && 
+                player.y + player.height <= slopeY + 5 &&
+                player.vy >= 0) {
+              player.y = slopeY - player.height;
+              player.onGround = true;
+              player.onPlatform = true;
+              player.isJumping = false;
+              
+              // Apply slight horizontal slowdown when going uphill
+              if ((player.vx > 0 && platform.angle > 0) || 
+                  (player.vx < 0 && platform.angle < 0)) {
+                player.vx *= 0.95; // Slow down a bit when going uphill
+              }
+            }
+          }
+          break;
+      }
+    }
+    
+    // Play landing sound if just landed
+    if (!wasOnGround && player.onGround) {
+      playSound('jump');
+      Renderer.startScreenShake(2, 100);
+      console.log("Player landed on platform or ground!");
+    }
+  }
+
   /**
    * Check player collision with grid tiles
    * @param {Object} player - Player entity
@@ -404,6 +658,14 @@ const SpectroJSW = (() => {
     
     // Check collisions with floor and walls
     let onGround = false;
+    
+    // First check if player is at bottom of screen
+    if (player.y + player.height >= 192 - 2) {
+      player.y = 192 - player.height;
+      player.vy = 0;
+      onGround = true;
+      console.log("Player grounded at screen bottom");
+    }
     
     // Check each potential colliding tile
     for (let y = top; y <= bottom; y++) {
@@ -473,7 +735,10 @@ const SpectroJSW = (() => {
       }
     }
     
-    player.onGround = onGround;
+    // Only set onGround from grid if not already set from platforms
+    if (onGround) {
+      player.onGround = true;
+    }
   }
   
   /**
@@ -481,13 +746,16 @@ const SpectroJSW = (() => {
    */
   function checkCollisions() {
     try {
-      // Check entity collisions
-      const collidingEntity = Entities.checkPlayerEntityCollisions();
-      
-      if (collidingEntity) {
-        // Player hit a deadly entity
-        handlePlayerDeath();
-        return;
+      // Skip deadly entity collision checks if player is invulnerable
+      if (!gameState.isInvulnerable) {
+        // Check entity collisions with enhanced handling
+        const collidingEntity = Entities.checkPlayerEntityCollisions();
+        
+        if (collidingEntity) {
+          // Player hit a deadly entity
+          handlePlayerDeath();
+          return;
+        }
       }
       
       // Check door use
@@ -498,7 +766,7 @@ const SpectroJSW = (() => {
           case 'enter':
             // Change to new room
             if (doorUse.door.destinationRoom) {
-              changeRoom(doorUse.door.destinationRoom);
+              changeRoom(doorUse.door.destinationRoom, doorUse.door.exitDirection || 'right');
             }
             break;
           case 'unlock':
@@ -517,21 +785,24 @@ const SpectroJSW = (() => {
     }
     
     try {
-      // Use the global collision function
-      // Collect items
+      // Enhanced collision handling
       const player = Entities.getPlayer();
       if (!player) return;
       
+      // Collect items with improved feedback
       const collectibles = Entities.getEntitiesByType(Entities.ENTITY_TYPES.COLLECTIBLE);
       if (collectibles && collectibles.length) {
         for (const item of collectibles) {
           if (item && !item.collected && !item.removed && window.checkCollisionBetween(player, item)) {
-            // Simple collection logic
+            // Enhanced collection logic
             item.collected = true;
             item.removed = true;
             gameState.score += (item.value || 10);
             gameState.collectedItems++;
             playSound('collect');
+            
+            // Small screen shake for feedback
+            Renderer.startScreenShake(1, 100);
           }
         }
       }
@@ -541,13 +812,33 @@ const SpectroJSW = (() => {
       if (keys && keys.length) {
         for (const key of keys) {
           if (key && !key.collected && !key.removed && window.checkCollisionBetween(player, key)) {
-            // Simple key collection
+            // Enhanced key collection
             key.collected = true;
             key.removed = true;
             player.hasKey = true;
+            gameState.hasKey = true; // Also store in game state
             gameState.score += 50;
             playSound('key');
             Renderer.startScreenShake(5, 300);
+          }
+        }
+      }
+      
+      // Check for rope interaction
+      const ropes = Entities.getEntitiesByType(Entities.ENTITY_TYPES.ROPE);
+      if (ropes && ropes.length) {
+        player.onRope = false; // Reset rope state
+        
+        for (const rope of ropes) {
+          if (rope && !rope.removed) {
+            // Check if player is touching rope along its height
+            if (player.x + player.width / 2 >= rope.x - 2 && 
+                player.x + player.width / 2 <= rope.x + 2 &&
+                player.y + player.height >= rope.y &&
+                player.y <= rope.y + rope.height) {
+              player.onRope = true;
+              break;
+            }
           }
         }
       }
@@ -564,20 +855,41 @@ const SpectroJSW = (() => {
     const room = gameState.currentRoom;
     
     // Exit left
-    if (player.x <= 0 && room.leftExit) {
-      changeRoom(room.leftExit);
+    if (player.x <= 0) {
+      if (room.leftExit) {
+        changeRoom(room.leftExit);
+      } else {
+        // Prevent going off screen if no exit
+        player.x = 0;
+      }
     }
     // Exit right
-    else if (player.x + player.width >= 256 && room.rightExit) {
-      changeRoom(room.rightExit);
+    else if (player.x + player.width >= 256) {
+      if (room.rightExit) {
+        changeRoom(room.rightExit);
+      } else {
+        // Prevent going off screen if no exit
+        player.x = 256 - player.width;
+      }
     }
     // Exit top
-    else if (player.y <= 0 && room.topExit) {
-      changeRoom(room.topExit);
+    else if (player.y <= 0) {
+      if (room.topExit) {
+        changeRoom(room.topExit);
+      } else {
+        // Prevent going off screen if no exit
+        player.y = 0;
+      }
     }
     // Exit bottom
-    else if (player.y + player.height >= 192 && room.bottomExit) {
-      changeRoom(room.bottomExit);
+    else if (player.y + player.height >= 192) {
+      if (room.bottomExit) {
+        changeRoom(room.bottomExit);
+      } else {
+        // Prevent going off screen if no exit
+        player.y = 192 - player.height;
+        player.onGround = true; // Set grounded when at bottom
+      }
     }
   }
   
@@ -586,6 +898,21 @@ const SpectroJSW = (() => {
    */
   function handlePlayerDeath() {
     const player = Entities.getPlayer();
+    
+    // Add detailed debug information about the death
+    console.log("PLAYER DEATH:", {
+      position: { x: player.x, y: player.y },
+      velocity: { vx: player.vx, vy: player.vy },
+      state: { 
+        onGround: player.onGround, 
+        isJumping: player.isJumping,
+        room: gameState.currentRoomId
+      },
+      nearestEntities: Entities.getAllEntities().filter(e => 
+        Math.abs(e.x - player.x) < 50 && 
+        Math.abs(e.y - player.y) < 50
+      ).map(e => ({ type: e.type, id: e.id, x: e.x, y: e.y }))
+    });
     
     // Decrease lives
     gameState.lives--;
@@ -607,15 +934,20 @@ const SpectroJSW = (() => {
   }
   
   /**
-   * Change to another room
+   * Change to another room with transition direction
    * @param {string} roomId - Room identifier
+   * @param {string} direction - Direction of exit ('left', 'right', 'up', 'down')
    */
-  function changeRoom(roomId) {
+  function changeRoom(roomId, direction = 'right') {
     // Play room change sound
     playSound('room');
     
-    // Transition to new room
-    Renderer.startRoomTransition()
+    // Set player invulnerable for a short time after room transition
+    gameState.isInvulnerable = true;
+    gameState.invulnerableTimer = 1500; // 1.5 seconds of invulnerability
+    
+    // Transition to new room with direction effect
+    Renderer.startRoomTransition(direction)
       .then(() => {
         loadRoom(roomId);
       });
@@ -628,8 +960,15 @@ const SpectroJSW = (() => {
     // Game over logic
     gameState.isPlaying = false;
     
-    // Show game over screen
-    console.log('Game Over');
+    // Show game over screen with more info
+    console.log('Game Over - Final state:', {
+      room: gameState.currentRoomId,
+      score: gameState.score,
+      deathCount: gameState.deathCount,
+      lastPosition: Entities.getPlayer() ? 
+        { x: Entities.getPlayer().x, y: Entities.getPlayer().y } : 
+        'Unknown'
+    });
     
     // Show menu with game over message
     document.getElementById('menu-title').textContent = 'GAME OVER';
@@ -655,7 +994,7 @@ const SpectroJSW = (() => {
   }
   
   /**
-   * Play a sound effect
+   * Play a sound effect with enhanced platformer sounds
    * @param {string} sound - Sound identifier
    */
   function playSound(sound) {
@@ -667,9 +1006,10 @@ const SpectroJSW = (() => {
       
       switch (sound) {
         case 'jump':
-          oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.2);
+          // Better jump sound with more "bounce" feel
+          oscillator.type = 'triangle';
+          oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
           gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
           oscillator.connect(gainNode);
@@ -678,10 +1018,11 @@ const SpectroJSW = (() => {
           oscillator.stop(audioContext.currentTime + 0.2);
           break;
           
-        case 'collect':
-          oscillator.type = 'square';
-          oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+        case 'land':
+          // Landing sound for when player hits ground
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
           gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
           oscillator.connect(gainNode);
@@ -690,9 +1031,23 @@ const SpectroJSW = (() => {
           oscillator.stop(audioContext.currentTime + 0.1);
           break;
           
+        case 'collect':
+          // Brighter collection sound
+          oscillator.type = 'square';
+          oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(900, audioContext.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+          
         case 'death':
+          // More dramatic death sound
           oscillator.type = 'sawtooth';
-          oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
           oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.5);
           gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
@@ -700,9 +1055,28 @@ const SpectroJSW = (() => {
           gainNode.connect(audioContext.destination);
           oscillator.start();
           oscillator.stop(audioContext.currentTime + 0.5);
+          
+          // Add a small crash sound after initial death sound
+          setTimeout(() => {
+            if (!gameState.soundEnabled || !audioContext) return;
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(100, audioContext.currentTime);
+            gain2.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            
+            osc2.start();
+            osc2.stop(audioContext.currentTime + 0.2);
+          }, 150);
           break;
           
         case 'room':
+          // Smoother room transition sound
           oscillator.type = 'triangle';
           oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
           oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3);
@@ -715,43 +1089,57 @@ const SpectroJSW = (() => {
           break;
           
         case 'key':
-          // Play a descending arpeggio for key collection
-          for (let i = 0; i < 3; i++) {
+          // More distinctive key collection sound
+          for (let i = 0; i < 4; i++) {
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
             
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(800 - i * 200, audioContext.currentTime + i * 0.1);
+            osc.type = i % 2 === 0 ? 'square' : 'triangle';
+            osc.frequency.setValueAtTime(600 + i * 200, audioContext.currentTime + i * 0.08);
             
-            gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.1);
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime + i * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.08 + 0.1);
             
             osc.connect(gain);
             gain.connect(audioContext.destination);
             
-            osc.start(audioContext.currentTime + i * 0.1);
-            osc.stop(audioContext.currentTime + i * 0.1 + 0.1);
+            osc.start(audioContext.currentTime + i * 0.08);
+            osc.stop(audioContext.currentTime + i * 0.08 + 0.1);
           }
           break;
           
         case 'unlock':
-          // Play an ascending arpeggio for unlocking
-          for (let i = 0; i < 3; i++) {
+          // More dramatic unlock sound
+          for (let i = 0; i < 4; i++) {
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
             
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(400 + i * 200, audioContext.currentTime + i * 0.1);
+            // Alternate between waveforms for a richer sound
+            osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+            osc.frequency.setValueAtTime(300 + i * 150, audioContext.currentTime + i * 0.1);
             
             gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.15);
             
             osc.connect(gain);
             gain.connect(audioContext.destination);
             
             osc.start(audioContext.currentTime + i * 0.1);
-            osc.stop(audioContext.currentTime + i * 0.1 + 0.1);
+            osc.stop(audioContext.currentTime + i * 0.1 + 0.15);
           }
+          break;
+          
+        case 'bounce':
+          // Sound for bouncing off enemies
+          oscillator.type = 'triangle';
+          oscillator.frequency.setValueAtTime(500, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.15);
+          gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.15);
           break;
       }
     } catch (e) {

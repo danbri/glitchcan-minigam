@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Spectro JSW - ZX Spectrum Style</title>
   <style>
     :root {
@@ -355,7 +358,7 @@
         
         <div class="zx-border">
           <div class="zx-credits">
-            © 1984 STYLE ZX SPECTRUM 48K
+            © 1984 STYLE ZX SPECTRUM 48K - v2.0.0
           </div>
         </div>
       </div>
@@ -401,11 +404,19 @@
       );
     };
   </script>
-  <script src="src/entities.js?v=1"></script>
+  <!-- Debug helper -->
+  <script src="debug.js"></script>
+  
+  <!-- Game scripts -->
+  <script src="src/entities.js"></script>
   <script src="src/renderer.js"></script>
   <script src="src/input.js"></script>
-  <script src="src/game.js?v=1"></script>
+  <script src="src/game.js"></script>
   <script>
+    // Very explicit test log to verify browser console is working
+    console.log("BROWSER CONSOLE TEST - SPECTRO v2.0.0");
+    console.log("If you can see this message, console logging is working");
+    
     // Initialize the game once all resources are loaded
     window.addEventListener('load', () => {
       // Start loading sequence
@@ -438,6 +449,20 @@
         document.querySelector('.menu-buttons').style.display = 'flex';
         document.getElementById('controls-panel').style.display = 'none';
         document.getElementById('back-btn').style.display = 'none';
+      });
+      
+      // Add ESC key handler for the controls panel
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' || event.code === 'Escape') {
+          // Check if controls panel is visible
+          const controlsPanel = document.getElementById('controls-panel');
+          if (controlsPanel && controlsPanel.style.display === 'block') {
+            // Hide controls panel and show menu buttons
+            document.querySelector('.menu-buttons').style.display = 'flex';
+            controlsPanel.style.display = 'none';
+            document.getElementById('back-btn').style.display = 'none';
+          }
+        }
       });
       
       document.getElementById('menu-btn').addEventListener('click', () => {

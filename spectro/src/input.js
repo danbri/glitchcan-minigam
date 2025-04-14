@@ -59,7 +59,23 @@ const Input = (() => {
       keyState['Space'] = true;
       keyState[' '] = true;
       keyState['32'] = true;
-      console.log('Jump key pressed!');
+      // Enhanced space key logging
+      console.log('====== SPACE KEY PRESSED v1.0.2 ======');
+      console.log('Input system state:', { 
+        eventCode: event.code, 
+        eventKey: event.key, 
+        keyCode: event.keyCode 
+      });
+    } else if (event.code === 'Escape' || event.key === 'Escape' || event.keyCode === 27) {
+      // Special handling for Escape key
+      keyState['Escape'] = true;
+      keyState['menu'] = true;
+      document.getElementById('game-menu').classList.remove('hidden');
+      
+      // If SpectroJSW is available, pause the game
+      if (typeof SpectroJSW !== 'undefined') {
+        SpectroJSW.pauseGame();
+      }
     } else {
       keyState[event.code] = true;
       keyState[event.key] = true;

@@ -8,6 +8,7 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 - **Open game in browser:** http://localhost:8000/glitchcan-minigam/thumbwar/thumbwar.html
 - **Validate HTML:** `npx html-validate glitchcan-minigam/**/*.html`
 - **JS Linting:** `npx eslint glitchcan-minigam/**/*.html --ext .html`
+- **Spectro-specific commands:** `cd spectro && npm install && npm start` (runs http-server)
 
 ## Code Style
 - **HTML:** Semantic elements, accessibility attributes, responsive viewport meta
@@ -58,3 +59,16 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 - Configure-pages action: v4 (not v3)
 - Upload-pages-artifact action: v3 (deprecated v1)
 - Deploy-pages action: v4 (not v1)
+
+## Spectro Development Notes
+- Retro ZX Spectrum style platformer inspired by Jet Set Willy
+- Currently has 4 rooms to explore
+- **Known issues:**
+  - Collision detection needs improvement for guardians
+  - Jumping functionality not fully reliable
+  - ESC key handling in menus requires fixing
+- When debugging, check browser console for detailed output about:
+  - Room transitions (`Player transition:...`)
+  - Collision detection (`Deadly collision with:...`)
+  - Player deaths (`PLAYER DEATH:...`)
+  - Jumping state (`Jump key pressed:...`)
