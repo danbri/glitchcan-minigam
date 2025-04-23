@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🌳 Emoji Jungle Quest 🔑 (v8 - Layout Fix)</title>
+    <style>
+        /* Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Body & Layout */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a2e1a;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            touch-action: manipulation;
+        }
+
+        /* --- Top Level Tabs --- */
+        #top-tabs {
+            display: flex;
+            width: 100%;
+            background-color: #0a140a;
+            flex-shrink: 0;
+            border-bottom: 2px solid #4a7a4a;
+        }
+        .top-tab-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: transparent;
+            color: #a0c0a0;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            border-right: 1px solid #4a7a4a;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .top-tab-button:last-child { border-right: none; }
+        .top-tab-button:hover { background-color: #2a4e2a; }
+        .top-tab-button.active {
+            background-color: #1a2e1a;
+            color: #ffffff;
+            border-bottom: 3px solid #e94560;
+            margin-bottom: -2px;
+        }
+
+        /* --- Main Content Area --- */
+        #main-content {
+            flex-grow: 1;
+            width: 100%;
+            position: relative;
+            display: flex;
+            overflow: hidden;
+        }
+        .main-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            background-color: #112211;
+        }
+        .main-view.active {
+            display: flex;
+        }
+
+        /* --- WRLD View Specific Styles --- */
+        #wrld-view {
+            padding: 20px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #story-text {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 1px solid #3a6a3a;
+            font-size: 1.2em;
+            line-height: 1.6;
+            max-width: 85%;
+            margin-bottom: 20px;
+            color: #c0e0c0;
+            text-align: center;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+        #wrld-actions {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid #3a6a3a;
+            flex-shrink: 0;
+        }
+        .wrld-action-button {
+            background-color: #5a8a5a;
+            border: 2px solid #8ac08a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 110px;
+            text-align: center;
+        }
+        .wrld-action-button .button-icon { font-size: 1.8em; margin-bottom: 5px; line-height: 1; }
+        .wrld-action-button:hover { background-color: #7aa07a; }
+        .wrld-action-button:active { transform: scale(0.97); }
+
+        /* --- MINIGAM View Specific Styles --- */
+        #minigam-view {
+            /* Structure provided by children */
+        }
+        #game-area {
+            flex-grow: 1; /* Takes up most space */
+            width: 100%;
+            display: flex; /* Uses flexbox */
+            justify-content: center; /* Center canvas horizontally */
+            align-items: center; /* *** Vertically center canvas in game area *** */
+            position: relative; /* For overlay positioning */
+            background-color: #112211;
+            overflow: hidden;
+            padding: 5px; /* Add small padding around canvas */
+        }
+        #gameCanvas {
+             border: 2px solid #5a8a5a;
+             background-color: #1a2e1a;
+             display: block;
+             /* Removed max-width/max-height, JS sets exact size */
+             object-fit: contain; /* Still useful conceptually */
+             image-rendering: pixelated;
+             image-rendering: crisp-edges;
+        }
+        /* Room Name Overlay */
+        #room-name-overlay {
+            position: absolute;
+            top: 15px; /* Position near top + padding */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.65); /* Slightly more opaque */
+            color: white;
+            padding: 8px 18px; /* More padding */
+            border-radius: 8px;
+            font-size: clamp(1.2em, 4vw, 1.8em); /* Responsive font size */
+            font-weight: bold;
+            text-align: center;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            pointer-events: none;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+                         -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000;
+            white-space: nowrap;
+        }
+        #room-name-overlay.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0px); /* Animate from slight offset if desired */
+        }
+
+        /* Footer UI (within MINIGAM view) */
+        #footer-ui {
+             width: 100%;
+             min-height: 120px;
+             max-height: 180px;
+             background-color: #0f1a0f;
+             border-top: 2px solid #5a8a5a;
+             display: flex;
+             flex-direction: column;
+             flex-shrink: 0;
+        }
+        #tab-buttons { display: flex; width: 100%; background-color: #1a2e1a; border-bottom: 1px solid #5a8a5a; flex-shrink: 0; }
+        .tab-button { padding: 8px 15px; border: none; background-color: transparent; color: #a0c0a0; font-size: 1em; cursor: pointer; border-right: 1px solid #5a8a5a; transition: background-color 0.2s ease; flex-grow: 1; text-align: center; }
+        .tab-button:last-child { border-right: none; }
+        .tab-button:hover { background-color: #2a4e2a; }
+        .tab-button.active { background-color: #0f1a0f; color: #e0e0e0; font-weight: bold; border-bottom: 2px solid #e94560; }
+        #tab-panels { flex-grow: 1; padding: 8px; position: relative; overflow-y: auto; min-height: 80px; }
+        .tab-panel { display: none; width: 100%; height: 100%; align-items: flex-start; justify-content: space-around; flex-wrap: wrap; }
+        .tab-panel.active { display: flex; }
+        .ui-section { margin: 5px 10px; text-align: center; flex-shrink: 0; }
+        .ui-section h4 { color: #8ac08a; margin-bottom: 4px; font-size: 0.9em; text-transform: uppercase; }
+        #info-panel { justify-content: space-between; align-items: center; }
+        #room-name { font-size: 1.1em; color: #e94560; flex-basis: auto; text-align: left; word-wrap: break-word; margin-right: 10px;}
+        #ui-info span { display: inline-block; margin: 0 6px; font-size: 1.3em; }
+        #ui-keys span { display: inline-block; margin: 0 4px; font-size: 1.6em; opacity: 0.3; transition: opacity 0.3s ease; }
+        #ui-keys span.has-key { opacity: 1.0; }
+        #guide-panel { justify-content: space-around; align-items: flex-start; }
+        #walkthrough { flex-basis: 48%; text-align: left; font-size: 0.8em; background-color: rgba(40, 60, 40, 0.3); padding: 8px; border-radius: 4px; max-height: 90px; overflow-y: auto; border: 1px solid #2a4e2a; }
+        #walkthrough ul { list-style: disc; padding-left: 18px; }
+        #walkthrough li { margin-bottom: 3px; }
+        #minimap-container { flex-basis: 48%; display: flex; flex-direction: column; align-items: center; }
+        #minimap { display: grid; gap: 2px; border: 1px solid #5a8a5a; margin-top: 5px; }
+        .map-cell { width: 20px; height: 20px; background-color: #333; border: 1px solid #555; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; justify-content: center; align-items: center; }
+        .map-cell:hover { background-color: #7aa07a; border-color: white; }
+        .map-cell.visited { background-color: #5a8a5a; }
+        .map-cell.current { background-color: #e94560; border: 1px solid white; }
+        .map-cell[style*="opacity: 0.3"] { cursor: not-allowed; }
+        #dev-panel { justify-content: flex-start; align-items: stretch; }
+        #debug-container { width: 100%; display: flex; align-items: stretch; padding: 5px; height: 100%; }
+        #debug-container label { margin-right: 10px; font-size: 0.9em; color: #ccc; flex-shrink: 0; display: flex; align-items: center; cursor: pointer; white-space: nowrap; }
+        #debug-output { background-color: rgba(0, 0, 0, 0.7); color: #0f0; font-family: monospace; font-size: 0.8em; padding: 5px 8px; border: 1px solid #0f0; flex-grow: 1; height: 100%; overflow-y: scroll; white-space: pre-wrap; opacity: 0.9; margin-left: 0; }
+
+        /* Controls (within MINIGAM view) */
+        #controls {
+            width: 100%;
+            height: 75px; /* Keep slightly taller */
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .control-button {
+             background-color: #5a8a5a;
+             border: none;
+             border-radius: 50%;
+             width: 58px; /* Adjusted size */
+             height: 58px; /* Adjusted size */
+             font-size: 2.3em; /* Adjusted emoji size */
+             color: white;
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             cursor: pointer;
+             transition: background-color 0.1s ease, transform 0.1s ease;
+             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+             -webkit-tap-highlight-color: transparent;
+        }
+        .control-button:active { background-color: #8ac08a; transform: scale(0.95); }
+
+        /* Overlays */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); color: white; display: none; justify-content: center; align-items: center; text-align: center; z-index: 100; cursor: pointer; flex-direction: column; font-size: 1.2em; padding: 20px; }
+        .overlay button { padding: 15px 30px; font-size: 1em; margin-top: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        .overlay button:hover { background-color: #45a049; }
+        #start-overlay { /* Hidden by default */ }
+        #end-overlay { /* Hidden by default */ }
+        #end-overlay button#return-to-wrld-button { background-color: #5a8a5a; margin-left: 15px; }
+        #end-overlay button#return-to-wrld-button:hover { background-color: #7aa07a; }
+
+    </style>
+</head>
+<body>
+    <div id="top-tabs">
+        <button class="top-tab-button active" data-view="wrld-view">WRLD</button>
+        <button class="top-tab-button" data-view="minigam-view">MINIGAM</button>
+    </div>
+
+    <div id="main-content">
+
+        <div id="wrld-view" class="main-view active">
+            <div id="story-text">
+                <p>We find ourself in a shimmering underground cavern where precious gems gleam somehow through the darkness and mud...</p>
+                </div>
+            <div id="wrld-actions">
+                <button class="wrld-action-button" data-action="play">
+                    <span class="button-icon">▶️</span> Explore <br>(Play Minigame)
+                </button>
+                <button class="wrld-action-button" data-action="quit">
+                    <span class="button-icon">❌</span> Quit (Stub)
+                </button>
+                <button class="wrld-action-button" data-action="help">
+                    <span class="button-icon">❓</span> Help (Stub)
+                </button>
+            </div>
+        </div>
+
+        <div id="minigam-view" class="main-view">
+            <div id="game-area">
+                <canvas id="gameCanvas"></canvas>
+                <div id="room-name-overlay"></div> <div id="start-overlay" class="overlay">
+                    <div> Loading Minigame... <br> <button id="start-button-minigame">Ready?</button> </div>
+                </div>
+                <div id="end-overlay" class="overlay">
+                    <div id="end-message">Game Over / You Win!</div>
+                    <button id="restart-button">Play Minigame Again?</button>
+                    <button id="return-to-wrld-button">Return to WRLD</button>
+                </div>
+            </div>
+
+            <div id="footer-ui">
+                <div id="tab-buttons">
+                    <button class="tab-button active" data-tab="info-panel">Info</button>
+                    <button class="tab-button" data-tab="guide-panel">Guide</button>
+                    <button class="tab-button" data-tab="dev-panel">Dev</button>
+                </div>
+                <div id="tab-panels">
+                    <div id="info-panel" class="tab-panel active">
+                        <div id="room-name" class="ui-section">Room Name</div>
+                        <div id="ui-info" class="ui-section"> <span id="score">💎 0</span> <span id="lives">❤️ 3</span> </div>
+                        <div id="ui-keys" class="ui-section"> <span id="key-yellow" data-key="yellow">🔑<span style="color:#ff0;">🟡</span></span> <span id="key-blue" data-key="blue">🔑<span style="color:#0cf;">🔵</span></span> <span id="key-red" data-key="red">🔑<span style="color:#f00;">🔴</span></span> <span id="key-green" data-key="green">🔑<span style="color:#0f0;">🟢</span></span> </div>
+                    </div>
+                    <div id="guide-panel" class="tab-panel">
+                         <div id="walkthrough" class="ui-section">
+                             <h4>Minigame Guide</h4>
+                             <ul>
+                                 <li>Explore using controls or WASD/Arrows.</li>
+                                 <li>Keys 🔑 open Locks 🔒. Doors 🚪 are portals.</li>
+                                 <li>Collect gems 💎! Avoid snakes 🐍 & rocks 🪨!</li>
+                                 <li>River 🌊 is North of 'River Ledge'. Dangerous!</li>
+                                 <li>Use switch 🔘 in 'Control Room' to make river safe 🪵.</li>
+                                 <li>Get Red Key 🔑🔴 ('Far Shore') for Vault Locks 🔒🔴.</li>
+                                 <li>Reach Vault & unlock locks to win minigame!</li>
+                                 <li>Map: Click room below to teleport (debug).</li>
+                             </ul>
+                         </div>
+                         <div id="minimap-container" class="ui-section">
+                              <h4>Debug Map (Click to Teleport)</h4>
+                             <div id="minimap"></div>
+                         </div>
+                    </div>
+                    <div id="dev-panel" class="tab-panel">
+                         <div id="debug-container">
+                             <label><input type="checkbox" id="verbose-debug"> Verbose Log</label>
+                             <div id="debug-output">Debug Initializing...</div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="controls">
+                <button class="control-button" id="btn-left">⬅️</button>
+                <button class="control-button" id="btn-up">⬆️</button>
+                <button class="control-button" id="btn-down">⬇️</button>
+                <button class="control-button" id="btn-right">➡️</button>
+            </div>
+        </div>
+
+    </div> <script>
+        // --- Debug Function ---
+        let debugOutputElement;
+        let verboseCheckbox;
+        let debugLines = [];
+        const MAX_DEBUG_LINES = 100;
+        function debugLog(message, level = 'info') { if (!debugOutputElement) { console.log(`[${level}] ${message}`); return; } const isVerbose = verboseCheckbox ? verboseCheckbox.checked : false; let shouldDisplay = false; if (level === 'error' || level === 'warn' || level === 'info') { shouldDisplay = true; } else if (level === 'verbose' && isVerbose) { shouldDisplay = true; } if (shouldDisplay) { const now = new Date(); const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`; let prefix = ''; let color = '#0f0'; switch (level) { case 'error': prefix = '!! ERROR: '; color = '#f55'; break; case 'warn': prefix = '! WARN: '; color = '#ff5'; break; case 'verbose': prefix = 'V_ '; break; } const logEntry = `[${timeString}] ${prefix}${message}`; debugLines.push({ text: logEntry, color: color }); if (debugLines.length > MAX_DEBUG_LINES) { debugLines.shift(); } let logHTML = ''; debugLines.forEach(line => { const isVerboseLine = line.text.includes('V_ '); if (!isVerboseLine || (isVerboseLine && (verboseCheckbox ? verboseCheckbox.checked : false))) { logHTML += `<span style="color: ${line.color};">${line.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>\n`; } }); debugOutputElement.innerHTML = logHTML; debugOutputElement.scrollTop = debugOutputElement.scrollHeight; } }
+        window.onerror = function(message, source, lineno, colno, error) { const errorMsg = `GLOBAL ERROR: ${message} at ${source}:${lineno}:${colno}`; debugLog(errorMsg, 'error'); if (error && error.stack) { debugLog(`   Stack: ${error.stack}`, 'error');} return true; };
+        window.onunhandledrejection = function(event) { debugLog(`UNHANDLED PROMISE REJECTION: ${event.reason}`, 'error'); if (event.reason && event.reason.stack) { debugLog(`   Stack: ${event.reason.stack}`, 'error');}};
+
+        // --- Constants, World Data, State ---
+        const EMOJI_PLAYER = '🧑‍🚀'; const EMOJI_DIRT = '🟫'; const EMOJI_ROCK = '🪨'; const EMOJI_GEM = '💎'; const EMOJI_EMPTY = ' '; const EMOJI_EXPLOSION = '💥'; const EMOJI_WALL = '🧱'; const EMOJI_STAR = '✨'; const EMOJI_DOOR_RED = '🚪🟥'; const EMOJI_DOOR_BLUE = '🚪🟦'; const EMOJI_DOOR_YELLOW = '🚪🟨'; const EMOJI_DOOR_GREEN = '🚪🟩'; const E_KEY_Y = '🔑🟡'; const E_LOCK_Y = '🔒🟡'; const E_KEY_B = '🔑🔵'; const E_LOCK_B = '🔒🔵'; const E_KEY_R = '🔑🔴'; const E_LOCK_R = '🔒🔴'; const E_KEY_G = '🔑🟢'; const E_LOCK_G = '🔒🟢';
+        const EMOJI_GRASS = '🌿'; const EMOJI_FLOWER = '🌺'; const EMOJI_LIANA = '〰️'; const EMOJI_TREE = '🌳'; const EMOJI_SNAKE = '🐍';
+        const EMOJI_WATER = '🌊'; const EMOJI_RIVER_WOOD = '🪵'; const EMOJI_SWITCH_OFF = '🔘'; const EMOJI_SWITCH_ON = '🟢'; const EMOJI_RIVER_BLOCK = '⬛'; const EMOJI_RIVER_LOG = '➖';
+        const TILES = { EMPTY: 0, DIRT: 1, ROCK: 2, GEM: 3, PLAYER: 4, WALL: 5, EXPLOSION: 6, DOOR_RED: 7, DOOR_BLUE: 8, DOOR_YELLOW: 9, DOOR_GREEN: 16, KEY_YELLOW: 10, LOCK_YELLOW: 11, KEY_BLUE: 12, LOCK_BLUE: 13, KEY_RED: 14, LOCK_RED: 15, KEY_GREEN: 17, LOCK_GREEN: 18, GRASS: 20, FLOWER: 21, LIANA: 22, TREE_TL: 30, TREE_TR: 31, TREE_BL: 32, TREE_BR: 33, WATER: 40, RIVER_WOOD: 41, SWITCH_OFF: 42, SWITCH_ON: 43, };
+        const TILE_EMOJIS = { [TILES.EMPTY]: EMOJI_EMPTY, [TILES.DIRT]: EMOJI_DIRT, [TILES.ROCK]: EMOJI_ROCK, [TILES.GEM]: EMOJI_GEM, [TILES.WALL]: EMOJI_WALL, [TILES.EXPLOSION]: EMOJI_EXPLOSION, [TILES.DOOR_RED]: EMOJI_DOOR_RED, [TILES.DOOR_BLUE]: EMOJI_DOOR_BLUE, [TILES.DOOR_YELLOW]: EMOJI_DOOR_YELLOW, [TILES.DOOR_GREEN]: EMOJI_DOOR_GREEN, [TILES.KEY_YELLOW]: E_KEY_Y, [TILES.LOCK_YELLOW]: E_LOCK_Y, [TILES.KEY_BLUE]: E_KEY_B, [TILES.LOCK_BLUE]: E_LOCK_B, [TILES.KEY_RED]: E_KEY_R, [TILES.LOCK_RED]: E_LOCK_R, [TILES.KEY_GREEN]: E_KEY_G, [TILES.LOCK_GREEN]: E_LOCK_G, [TILES.GRASS]: EMOJI_GRASS, [TILES.FLOWER]: EMOJI_FLOWER, [TILES.LIANA]: EMOJI_LIANA, [TILES.TREE_TL]: EMOJI_TREE, [TILES.TREE_TR]: EMOJI_TREE, [TILES.TREE_BL]: EMOJI_TREE, [TILES.TREE_BR]: EMOJI_TREE, [TILES.WATER]: EMOJI_WATER, [TILES.RIVER_WOOD]: EMOJI_RIVER_WOOD, [TILES.SWITCH_OFF]: EMOJI_SWITCH_OFF, [TILES.SWITCH_ON]: EMOJI_SWITCH_ON, };
+        const TILE_PROPERTIES = { [TILES.DOOR_RED]: { isPortal: true, color: 'red'}, [TILES.DOOR_BLUE]: { isPortal: true, color: 'blue'}, [TILES.DOOR_YELLOW]: { isPortal: true, color: 'yellow'}, [TILES.DOOR_GREEN]: { isPortal: true, color: 'green'}, [TILES.LOCK_YELLOW]: { isLock: true, color: 'yellow', isSolid: true }, [TILES.LOCK_BLUE]: { isLock: true, color: 'blue', isSolid: true }, [TILES.LOCK_RED]: { isLock: true, color: 'red', isSolid: true }, [TILES.LOCK_GREEN]: { isLock: true, color: 'green', isSolid: true }, [TILES.KEY_YELLOW]: { isKey: true, color: 'yellow' }, [TILES.KEY_BLUE]: { isKey: true, color: 'blue' }, [TILES.KEY_RED]: { isKey: true, color: 'red' }, [TILES.KEY_GREEN]: { isKey: true, color: 'green' }, [TILES.WALL]: { isSolid: true }, [TILES.ROCK]: { isSolid: true }, [TILES.TREE_TL]: { isSolid: true, isMultiTile: true, multiTileEmoji: EMOJI_TREE, multiTileWidth: 2, multiTileHeight: 2, multiTileOffsetX: 0, multiTileOffsetY: 0 }, [TILES.TREE_TR]: { isSolid: true, isMultiTile: true }, [TILES.TREE_BL]: { isSolid: true, isMultiTile: true }, [TILES.TREE_BR]: { isSolid: true, isMultiTile: true }, [TILES.GRASS]: { isBackground: true }, [TILES.FLOWER]: { isBackground: true }, [TILES.LIANA]: { isBackground: true }, [TILES.WATER]: { isSolid: true }, [TILES.RIVER_WOOD]: { isBackground: true }, [TILES.SWITCH_OFF]: { isSwitch: true, targetRoom: '1,3', stateVariable: 'riverFilled', targetTileFrom: TILES.WATER, targetTileTo: TILES.RIVER_WOOD, targetSwitchTile: TILES.SWITCH_ON }, [TILES.SWITCH_ON]: { isSolid: false, isBackground: true }, };
+        const GRID_COLS = 15; const GRID_ROWS = 10; let tileSize = 30;
+        const FALL_DELAY = 180; const PARTICLE_COUNT = 6; const PARTICLE_LIFESPAN = 800;
+        const WORLD_WIDTH = 4; const WORLD_HEIGHT = 5;
+        const ENEMY_SNAKE_SPEED = 50;
+        const RIVER_SPAWN_INTERVAL = 400; const RIVER_BLOCK_CHANCE = 0.6; const RIVER_LOG_CHANCE = 0.15; const RIVER_OBJECT_SPEED = 80;
+        const worldData = { '0,0': { name: "Crash Site Clearing", layout: [[20, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 20, 20], [20, 5, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 5, 20], [5, 0, 3, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5], [5, 0, 0, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 0, 5], [5, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 5], [5, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 9, 5], [5, 1, 1, 0, 3, 0, 0, 1, 16, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 13, y: 7, tileType: TILES.DOOR_YELLOW, target: '1,0', exitX: 1, exitY: 7 }, { x: 8, y: 8, tileType: TILES.DOOR_GREEN, target: '0,1', exitX: 8, exitY: 1 }] }, '1,0': { name: "Overgrown Path", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 20, 20, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 10, 0, 2, 0, 0, 0, 2, 0, 0, 20, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: TILES.DOOR_YELLOW, target: '0,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: TILES.DOOR_BLUE, target: '2,0', exitX: 1, exitY: 7 }, { x: 7, y: 5, tileType: TILES.DOOR_GREEN, target: '1,1', exitX: 7, exitY: 1 }] }, '2,0': { name: "Snake Pit", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 12, 0, 1, 1, 1, 1, 1, 0, 14, 17, 1, 5], [5, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: TILES.DOOR_BLUE, target: '1,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: TILES.DOOR_RED, target: '2,1', exitX: 1, exitY: 1 }], enemies: [{ type: EMOJI_SNAKE, x: 3, y: 6, speed: ENEMY_SNAKE_SPEED, path: [{ x: 3, y: 6 }, { x: 11, y: 6 }] }], items: [TILES.KEY_GREEN] }, '2,1': { name: "Ancient Grove", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 7, 0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 0, 3, 5], [5, 0, 0, 20, 1, 1, 1, 1, 1, 1, 1, 20, 0, 0, 5], [5, 20, 1, 1, 1, 30, 31, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 1, 1, 32, 33, 1, 1, 1, 1, 1, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 13, 1, 1, 1, 1, 1, 1, 1, 13, 1, 5], [5, 1, 1, 0, 1, 1, 3, 16, 3, 1, 1, 0, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 1, tileType: TILES.DOOR_RED, target: '2,0', exitX: 12, exitY: 7 }, { x: 7, y: 8, tileType: TILES.DOOR_GREEN, target: '2,2', exitX: 7, exitY: 1 }], enemies: [{ type: EMOJI_SNAKE, x: 2, y: 5, speed: ENEMY_SNAKE_SPEED * 0.8, path: [{ x: 2, y: 5 }, { x: 12, y: 5 }] }] }, '0,1': { name: "Dark Cave", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 0, 0, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 0, 5], [5, 0, 1, 1, 2, 1, 1, 1, 0, 1, 1, 2, 1, 0, 5], [5, 1, 1, 2, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 1, 2, 1, 1, 1, 2, 1, 0, 1, 1, 1, 2, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 8, y: 1, tileType: TILES.DOOR_GREEN, target: '0,0', exitX: 8, exitY: 8 }, { x: 7, y: 8, tileType: TILES.DOOR_BLUE, target: '0,2', exitX: 7, exitY: 1 }] }, '1,1': { name: "Control Room", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 0, 42, 0, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.DOOR_GREEN, target: '1,0', exitX: 7, exitY: 5 }, { x: 7, y: 7, tileType: TILES.DOOR_RED, target: '1,2', exitX: 7, exitY: 1 }], items: [TILES.GEM] }, '0,2': { name: "Waterfall Base", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 1, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.DOOR_BLUE, target: '0,1', exitX: 7, exitY: 8 }] }, '1,2': { name: "River Ledge", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.DOOR_RED, target: '1,1', exitX: 7, exitY: 7 }, { x: 7, y: 8, tileType: TILES.EMPTY, target: '1,3', exitX: 7, exitY: 1, implicit: true }], items: [TILES.GEM] }, '1,3': { name: "River Crossing", special: 'river', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.EMPTY, target: '1,2', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: TILES.EMPTY, target: '1,4', exitX: 7, exitY: 1, implicit: true }] }, '1,4': { name: "Far Shore", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 2, 1, 2, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 3, 1, 1, 1, 1, 1, 3, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.EMPTY, target: '1,3', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: TILES.DOOR_GREEN, target: '2,4', exitX: 1, exitY: 4 }], items: [TILES.KEY_RED] }, '2,2': { name: "Hidden Shrine", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: TILES.DOOR_GREEN, target: '2,1', exitX: 7, exitY: 8 }], items: [TILES.KEY_BLUE] }, '2,4': { name: "Ancient Vault", special: 'win_condition', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 3, 15, 3, 3, 3, 3, 3, 15, 3, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 4, tileType: TILES.DOOR_GREEN, target: '1,4', exitX: 7, exitY: 8 }], items: [] },
+        };
+
+        // --- Game State Variables ---
+        let playerState = { currentScreenId: '0,0', lives: 3, score: 0, keys: { yellow: false, blue: false, red: false, green: false }, visited: new Set(['0,0']), flags: { riverFilled: false } };
+        let worldState = {};
+        let currentScreen = { grid: null, fallingObjects: [], riverObstacles: [], gemsLeft: 0, enemies: [], lastRiverSpawnTime: 0 };
+        let player = { x: 1, y: 1, dx: 0, dy: 0, alive: true };
+        let particles = []; let gemRotation = 0; let lastTime = 0;
+        let gameOver = false; let gameWon = false;
+        let audioContext; let audioInitialized = false;
+        let isTransitioning = false;
+        let animationFrameId = null;
+        let isGameLoopRunning = false;
+        let roomNameOverlayTimeoutId = null;
+
+        // DOM Element References
+        let canvas, ctx, minimapElement, roomNameElement, scoreElement, livesElement, roomNameOverlayElement;
+        let startOverlay, endOverlay, endMessage;
+        let wrldView, minigamView, controlsElement, footerUiElement, wrldActionsElement;
+
+        // --- Audio ---
+        function initAudio() { if (audioInitialized) return; try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); const buffer = audioContext.createBuffer(1, 1, 22050); const source = audioContext.createBufferSource(); source.buffer = buffer; source.connect(audioContext.destination); source.start(0); audioInitialized = true; debugLog("Audio Initialized OK", 'info'); } catch (e) { debugLog(`Audio Init FAILED: ${e.message}`, 'error'); } }
+        function playSound(type, f1, f2, dur=0.1, vol=0.3, atk=0.01, dcy=0.05) { if (!audioInitialized || !audioContext) return; try { const now = audioContext.currentTime; const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); osc.type = type; osc.frequency.setValueAtTime(f1, now); if (f1 !== f2) osc.frequency.linearRampToValueAtTime(f2, now + dur * 0.8); gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(vol, now + atk); gain.gain.linearRampToValueAtTime(0, now + dur + dcy); osc.connect(gain); gain.connect(audioContext.destination); osc.start(now); osc.stop(now + dur + dcy + 0.1); } catch(e){ debugLog(`PlaySound Error: ${e.message}`, 'error')} }
+        const playDigSound = () => playSound('square', 100, 80, 0.05, 0.2, 0.005, 0.04);
+        const playGemSound = () => playSound('triangle', 880, 1200, 0.15, 0.4, 0.01, 0.1);
+        const playRockFallSound = () => playSound('sawtooth', 150, 50, 0.2, 0.5, 0.02, 0.15);
+        const playPlayerDieSound = () => playSound('sawtooth', 440, 110, 0.5, 0.6, 0.01, 0.4);
+        const playKeySound = () => playSound('sine', 600, 900, 0.2, 0.4, 0.01, 0.15);
+        const playLockSound = (success) => success ? playSound('sine', 500, 700, 0.15, 0.3, 0.01, 0.1) : playSound('square', 150, 100, 0.1, 0.4, 0.01, 0.08);
+        const playPortalSound = () => playSound('sawtooth', 200, 800, 0.3, 0.5, 0.05, 0.2);
+        const playWinSound = () => playSound('sine', 523, 1046, 0.6, 0.5, 0.02, 0.4);
+        const playEnemyHitSound = () => playSound('square', 300, 50, 0.2, 0.5, 0.01, 0.15);
+        const playSwitchSound = () => playSound('triangle', 300, 600, 0.2, 0.4, 0.01, 0.15);
+        const playRiverHitSound = () => playSound('sawtooth', 200, 50, 0.3, 0.6, 0.01, 0.2);
+        const playButtonClickSound = () => playSound('sine', 440, 440, 0.05, 0.3);
+
+        // --- Particles ---
+        function createParticles(x, y, emoji, count) { const startX = x * tileSize + tileSize / 2; const startY = y * tileSize + tileSize / 2; if (emoji === EMOJI_GEM) particles.push({ x: startX, y: startY, emoji: emoji, vx: (Math.random()-0.5)*80, vy: -150 - Math.random()*50, rotation: 0, spin: (Math.random()-0.5)*10, scale: 1, scaleRate: -0.2, alpha: 1, fadeRate: 0.5, lifespan: PARTICLE_LIFESPAN*0.8, gravityY: 100 }); for (let i = 0; i < count; i++) { const angle = Math.random()*Math.PI*2; const speed = 80+Math.random()*50; particles.push({ x: startX, y: startY, emoji: EMOJI_STAR, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, rotation: Math.random()*Math.PI*2, spin: (Math.random()-0.5)*15, scale: 0.5+Math.random()*0.3, scaleRate: 0.8+Math.random()*0.5, alpha: 1, fadeRate: 1.0/(PARTICLE_LIFESPAN/1000), lifespan: PARTICLE_LIFESPAN*(0.7+Math.random()*0.6), gravityY: 150 }); } }
+        function updateParticles(deltaTime) { try { const dtSeconds = deltaTime / 1000.0; for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.lifespan -= deltaTime; if (p.lifespan <= 0 || p.alpha <= 0) { particles.splice(i, 1); continue; } p.x += p.vx * dtSeconds; p.y += p.vy * dtSeconds; if(p.gravityY) p.vy += p.gravityY * dtSeconds; p.rotation += p.spin * dtSeconds; p.scale += p.scaleRate * dtSeconds; if (p.scale < 0) p.scale = 0; p.alpha -= p.fadeRate * dtSeconds; if (p.alpha < 0) p.alpha = 0; } } catch (e) { debugLog(`Particle Update Error: ${e.message}`, 'error'); } }
+        function drawParticles() { if (!ctx || particles.length === 0) return; const baseFontSize = Math.floor(tileSize * 0.8); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; try { for (const p of particles) { ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(p.x, p.y); ctx.rotate(p.rotation); const currentScale = Math.max(0.1, p.scale); ctx.scale(currentScale, currentScale); ctx.font = `${baseFontSize}px Arial`; ctx.fillText(p.emoji, 0, 0); ctx.restore(); } } catch (e) { debugLog(`Particle Draw Error: ${e.message}`, 'error'); } finally { if(ctx) ctx.globalAlpha = 1.0; } }
+
+        // --- Enemies ---
+        function initializeEnemyState(enemyData) { if(!enemyData) return []; try { return enemyData.map(data => ({ type: data.type, startX: data.x, startY: data.y, currentX: data.x * tileSize + tileSize / 2, currentY: data.y * tileSize + tileSize / 2, speed: data.speed, path: data.path.map(p => ({ x: p.x * tileSize + tileSize / 2, y: p.y * tileSize + tileSize / 2 })), targetPathIndex: 1, directionX: 0, directionY: 0, })); } catch(e) { debugLog(`Enemy Init Error: ${e.message}`, 'error'); return []; } }
+        function updateEnemies(deltaTime) { if (!currentScreen.enemies || currentScreen.enemies.length === 0 || isTransitioning || !player.alive) return; try { const dtSeconds = deltaTime / 1000.0; let hitPlayerCheck = false; for (const enemy of currentScreen.enemies) { if (!enemy.path || enemy.path.length === 0) continue; const target = enemy.path[enemy.targetPathIndex % enemy.path.length]; const dx = target.x - enemy.currentX; const dy = target.y - enemy.currentY; const dist = Math.sqrt(dx * dx + dy * dy); if (dist < 2) { enemy.targetPathIndex = (enemy.targetPathIndex + 1) % enemy.path.length; const nextTarget = enemy.path[enemy.targetPathIndex]; const nextDx = nextTarget.x - enemy.currentX; const nextDy = nextTarget.y - enemy.currentY; const nextDist = Math.sqrt(nextDx*nextDx + nextDy*nextDy); if (nextDist > 0.1) { enemy.directionX = nextDx / nextDist; enemy.directionY = nextDy / nextDist; } else { enemy.directionX = 0; enemy.directionY = 0; } } else { if (Math.abs(enemy.directionX) < 0.01 && Math.abs(enemy.directionY) < 0.01) { enemy.directionX = dx / dist; enemy.directionY = dy / dist; } enemy.currentX += enemy.directionX * enemy.speed * dtSeconds; enemy.currentY += enemy.directionY * enemy.speed * dtSeconds; } const playerCenterX = player.x * tileSize + tileSize / 2; const playerCenterY = player.y * tileSize + tileSize / 2; const collisionDist = tileSize * 0.6; const enemyPlayerDx = playerCenterX - enemy.currentX; const enemyPlayerDy = playerCenterY - enemy.currentY; if (Math.sqrt(enemyPlayerDx*enemyPlayerDx + enemyPlayerDy*enemyPlayerDy) < collisionDist) { hitPlayerCheck = true; } } if (hitPlayerCheck) { triggerPlayerDeath("Enemy"); } } catch (e) { debugLog(`Enemy Update Error: ${e.message}`, 'error'); } }
+        function drawEnemies() { if (!ctx || !currentScreen.enemies || currentScreen.enemies.length === 0) return; const fontSize = Math.floor(tileSize * 0.8); ctx.font = `${fontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; try { for (const enemy of currentScreen.enemies) { ctx.fillText(enemy.type, enemy.currentX, enemy.currentY); } } catch (e) { debugLog(`Enemy Draw Error: ${e.message}`, 'error'); } }
+
+        // --- State Management ---
+        function saveCurrentScreenState() { try { if (!playerState.currentScreenId || !currentScreen.grid) return; const enemyList = currentScreen.enemies || []; const savedEnemies = enemyList.map(e => ({ type: e.type, startX: e.startX, startY: e.startY, speed: e.speed, path: worldData[playerState.currentScreenId]?.enemies?.find(ed => ed.startX === e.startX && ed.startY === e.startY)?.path || [], currentX: e.currentX, currentY: e.currentY, targetPathIndex: e.targetPathIndex })); worldState[playerState.currentScreenId] = { grid: currentScreen.grid.map(row => [...row]), fallingObjects: JSON.parse(JSON.stringify(currentScreen.fallingObjects || [])), gemsLeft: currentScreen.gemsLeft || 0, enemies: savedEnemies, }; debugLog(`Saved state OK for ${playerState.currentScreenId}`, 'verbose'); } catch(e) { debugLog(`Save State FAILED: ${e.message}`, 'error'); }}
+        function loadScreenState(screenId) { try { debugLog(`Loading screen: ${screenId}`, 'info'); const targetScreenId = worldData[screenId] ? screenId : '0,0'; if (screenId !== targetScreenId) { debugLog(`!! Screen data missing: ${screenId}, fallback to ${targetScreenId}`, 'warn'); } const data = worldData[targetScreenId]; if (!data || !Array.isArray(data.layout)) { throw new Error(`Invalid worldData for ${targetScreenId}`); } currentScreen.fallingObjects = []; currentScreen.riverObstacles = []; currentScreen.lastRiverSpawnTime = 0; if (worldState[targetScreenId]) { const state = worldState[targetScreenId]; currentScreen.grid = state.grid.map(row => [...row]); currentScreen.fallingObjects = JSON.parse(JSON.stringify(state.fallingObjects || [])); currentScreen.gemsLeft = state.gemsLeft || 0; currentScreen.enemies = (state.enemies || []).map(se => ({ type: se.type, startX: se.startX, startY: se.startY, speed: se.speed, currentX: se.currentX, currentY: se.currentY, path: (se.path || []).map(p => ({ x: p.x * tileSize + tileSize / 2, y: p.y * tileSize + tileSize / 2 })), targetPathIndex: se.targetPathIndex || 1, directionX: 0, directionY: 0 })); debugLog(`Loaded saved state OK for ${targetScreenId}`, 'info'); } else { currentScreen.grid = data.layout.map(row => [...row]); currentScreen.gemsLeft = 0; currentScreen.grid.forEach(row => row.forEach(tile => { if (tile === TILES.GEM) currentScreen.gemsLeft++; })); currentScreen.enemies = data.enemies ? initializeEnemyState(data.enemies) : []; debugLog(`Initialized new state OK for ${targetScreenId} (${currentScreen.gemsLeft} gems, ${currentScreen.enemies.length} enemies)`, 'info'); } if (targetScreenId === '1,3' && playerState.flags.riverFilled) { debugLog("Applying riverFilled state to grid on load.", 'info'); for (let y = 0; y < GRID_ROWS; y++) for (let x = 0; x < GRID_COLS; x++) if (currentScreen.grid[y]?.[x] === TILES.WATER) currentScreen.grid[y][x] = TILES.RIVER_WOOD; } if (targetScreenId === '1,1') { const switchX = 7, switchY = 4; const expectedSwitchTile = playerState.flags.riverFilled ? TILES.SWITCH_ON : TILES.SWITCH_OFF; if (currentScreen.grid[switchY]?.[switchX] !== expectedSwitchTile) { debugLog(`Correcting switch tile state on load to ${expectedSwitchTile == TILES.SWITCH_ON ? 'ON':'OFF'}.`, 'info'); currentScreen.grid[switchY][switchX] = expectedSwitchTile;} } playerState.currentScreenId = targetScreenId; playerState.visited.add(targetScreenId); updateGlobalUI(); displayRoomNameOverlay(data.name); particles = []; debugLog("Initial physics scan...", 'verbose'); scanForFallingObjects(); debugLog("LoadScreen OK", 'info'); } catch(e) { debugLog(`Load State FAILED for ${screenId}: ${e.message}`, 'error'); currentScreen.grid = null; } }
+        function modifyRoomGridState(roomId, modificationFunction) { debugLog(`Attempting grid modification for room: ${roomId}`, 'info'); try { let gridToModify = null; let gridSource = null; if (worldState[roomId]?.grid) { gridToModify = worldState[roomId].grid; gridSource = 'worldState'; } else if (worldData[roomId]?.layout) { gridToModify = worldData[roomId].layout; gridSource = 'worldData (template)'; debugLog('Note: Modifying worldData template directly.', 'warn');} if (gridToModify) { debugLog(`Modifying grid from ${gridSource}...`, 'verbose'); modificationFunction(gridToModify); debugLog(`Grid modification applied to ${gridSource} for ${roomId}.`, 'info'); if (playerState.currentScreenId === roomId && currentScreen.grid) { debugLog("Applying modification to currentScreen grid.", 'verbose'); currentScreen.grid = gridToModify.map(row => [...row]); } } else { debugLog(`Cannot find grid data for room ${roomId} to modify.`, 'error'); } } catch (e) { debugLog(`Error in modifyRoomGridState for ${roomId}: ${e.message}`, 'error'); } }
+
+        // --- UI ---
+        function updateGlobalUI() { try { if (roomNameElement) roomNameElement.textContent = worldData[playerState.currentScreenId]?.name || "???"; if (scoreElement) scoreElement.innerHTML = `${EMOJI_GEM} ${playerState.score}`; if (livesElement) livesElement.innerHTML = `❤️ ${playerState.lives}`; for (const color in playerState.keys) { const keyElement = document.getElementById(`key-${color}`); if (keyElement) keyElement.classList.toggle('has-key', playerState.keys[color]); } updateMinimap(); } catch(e) { debugLog(`UI Update Error: ${e.message}`, 'error'); } }
+        function generateMinimap() { if (!minimapElement) {debugLog("Cannot generate minimap, element not found.", "error"); return;} debugLog("Generating minimap...", 'verbose'); try { minimapElement.innerHTML = ''; minimapElement.style.gridTemplateColumns = `repeat(${WORLD_WIDTH}, 1fr)`; for (let y = 0; y < WORLD_HEIGHT; y++) for (let x = 0; x < WORLD_WIDTH; x++) { const cell = document.createElement('div'); const screenId = `${x},${y}`; cell.classList.add('map-cell'); cell.id = `map-${x},${y}`; cell.dataset.screenId = screenId; cell.addEventListener('click', handleMapClick); minimapElement.appendChild(cell); } updateMinimap(); } catch(e) { debugLog(`Minimap Gen Error: ${e.message}`, 'error'); } }
+        function updateMinimap() { if (!minimapElement) return; debugLog("Updating minimap display", 'verbose'); try { const currentCoords = playerState.currentScreenId.split(','); const currentX = parseInt(currentCoords[0], 10); const currentY = parseInt(currentCoords[1], 10); for (let y = 0; y < WORLD_HEIGHT; y++) for (let x = 0; x < WORLD_WIDTH; x++) { const cellId = `map-${x},${y}`; const screenId = `${x},${y}`; const cell = document.getElementById(cellId); if (cell) { cell.classList.remove('current', 'visited'); const roomExists = !!worldData[screenId]; cell.style.opacity = roomExists ? '1' : '0.3'; cell.style.cursor = roomExists ? 'pointer' : 'not-allowed'; if (roomExists) { if (playerState.visited.has(screenId)) cell.classList.add('visited'); if (x === currentX && y === currentY) cell.classList.add('current'); } } } } catch(e) { debugLog(`Minimap Update Error: ${e.message}`, 'error'); } }
+        function handleMapClick(event) { if (isTransitioning) { debugLog("Map click ignored: Transitioning", 'verbose'); return; } const cell = event.target; const screenId = cell.dataset.screenId; if (screenId && worldData[screenId]) { debugLog(`Map teleport requested to: ${screenId}`, 'info'); if (screenId === playerState.currentScreenId) { debugLog("Already in target room.", 'verbose'); return; } playButtonClickSound(); isTransitioning = true; saveCurrentScreenState(); loadScreenState(screenId); const spawnPos = findSafeSpawn(currentScreen.grid); player.x = spawnPos.x; player.y = spawnPos.y; player.dx = 0; player.dy = 0; debugLog(`Teleported player to ${player.x},${player.y} in ${screenId}`, 'info'); updateGlobalUI(); setTimeout(() => { isTransitioning = false; }, 100); } else if (screenId) { debugLog(`Map click ignored: Room ${screenId} does not exist.`, 'warn'); } else { debugLog(`Map click error: Could not determine screenId.`, 'error'); } }
+        function setupFooterTabs() { const tabButtons = document.querySelectorAll('#footer-ui .tab-button'); const tabPanels = document.querySelectorAll('#footer-ui .tab-panel'); tabButtons.forEach(button => { button.addEventListener('click', () => { playButtonClickSound(); const targetPanelId = button.dataset.tab; tabButtons.forEach(btn => btn.classList.remove('active')); tabPanels.forEach(panel => panel.classList.remove('active')); button.classList.add('active'); const targetPanel = document.getElementById(targetPanelId); if (targetPanel) { targetPanel.classList.add('active'); debugLog(`Switched footer tab to: ${targetPanelId}`, 'verbose'); } else { debugLog(`Footer tab panel not found: ${targetPanelId}`, 'error'); } }); }); document.querySelector('#footer-ui .tab-button[data-tab="info-panel"]')?.classList.add('active'); document.querySelector('#info-panel')?.classList.add('active'); }
+        function handleTopTabSwitch(event) {
+             playButtonClickSound();
+             const targetViewId = event?.target?.dataset?.view;
+             if (!targetViewId) return;
+
+             // Update active button state
+             document.querySelectorAll('.top-tab-button').forEach(btn => btn.classList.remove('active'));
+             event.target.classList.add('active');
+
+             // Update active view panel
+             document.querySelectorAll('.main-view').forEach(view => view.classList.remove('active'));
+             const targetView = document.getElementById(targetViewId);
+
+             if (targetView) {
+                 targetView.classList.add('active');
+                 debugLog(`Switched main view to: ${targetViewId}`, 'info');
+
+                 // Manage visibility of controls and game loop
+                 if (targetViewId === 'minigam-view') {
+                     if(wrldActionsElement) wrldActionsElement.style.display = 'none';
+                     if(controlsElement) controlsElement.style.display = 'flex';
+                     if(footerUiElement) footerUiElement.style.display = 'flex';
+                     // Use rAF to ensure layout is updated before resizing
+                     requestAnimationFrame(() => {
+                         resizeCanvas();
+                         startGameLoop();
+                     });
+                 } else { // WRLD View
+                     if(wrldActionsElement) wrldActionsElement.style.display = 'flex';
+                     if(controlsElement) controlsElement.style.display = 'none';
+                     if(footerUiElement) footerUiElement.style.display = 'none';
+                     stopGameLoop();
+                 }
+             } else {
+                 debugLog(`Main view panel not found: ${targetViewId}`, 'error');
+             }
+         }
+         function displayRoomNameOverlay(name) {
+             if (!roomNameOverlayElement) return;
+             // Clear previous timeout if it exists
+             if (roomNameOverlayTimeoutId) {
+                 clearTimeout(roomNameOverlayTimeoutId);
+                 roomNameOverlayTimeoutId = null;
+                 // Instantly remove visible class to reset animation state if needed
+                 roomNameOverlayElement.classList.remove('visible');
+                 // Force reflow to ensure transition restarts correctly - slight hack
+                 void roomNameOverlayElement.offsetWidth;
+             }
+             // Update text and make visible
+             roomNameOverlayElement.textContent = name || '???';
+             // Use rAF to apply class after text update, ensuring transition triggers
+             requestAnimationFrame(() => {
+                roomNameOverlayElement.classList.add('visible');
+                // Set timeout to remove class for fade out
+                roomNameOverlayTimeoutId = setTimeout(() => {
+                    roomNameOverlayElement.classList.remove('visible');
+                    roomNameOverlayTimeoutId = null;
+                }, 1800); // Duration visible + fade out
+             });
+         }
+
+        // --- Core Game Logic ---
+        function resizeCanvas() {
+             debugLog("Resizing canvas...", 'verbose');
+             try {
+                 const gameArea = document.getElementById('game-area');
+                 if (!gameArea) { throw new Error("Game area not found for resize."); }
+
+                 // Use clientWidth/Height as they account for padding
+                 const availableWidth = gameArea.clientWidth;
+                 const availableHeight = gameArea.clientHeight;
+
+                 if (availableWidth <= 0 || availableHeight <= 0) {
+                     debugLog(`Resize skipped: Invalid game area dimensions (${availableWidth}x${availableHeight})`, "warn");
+                     return;
+                 }
+                 if (GRID_COLS <= 0 || GRID_ROWS <= 0) {
+                    debugLog("Resize skipped: Invalid grid dimensions in constants", "error");
+                    return;
+                 }
+
+                 const baseSize = 35; // Base size reference
+                 const tileWidthBased = availableWidth / GRID_COLS;
+                 const tileHeightBased = availableHeight / GRID_ROWS;
+
+                 // Choose the smaller dimension to fit the grid, allow larger tiles
+                 tileSize = Math.max(8, Math.floor(Math.min(tileWidthBased, tileHeightBased)));
+
+                 if (canvas) {
+                     canvas.width = GRID_COLS * tileSize;
+                     canvas.height = GRID_ROWS * tileSize;
+                     // Canvas is centered by flexbox in #game-area, no need to adjust margin here
+                     debugLog(`Canvas resized OK: ${canvas.width}x${canvas.height}, TileSize: ${tileSize}`, 'info');
+                 } else {
+                     throw new Error("Canvas element not found for resize.");
+                 }
+             } catch (e) {
+                 debugLog(`Resize FAILED: ${e.message}`, 'error');
+             }
+         }
+        function triggerPlayerDeath(reason) { if (!player.alive) return; player.alive = false; playerState.lives--; debugLog(`Player died! Reason: ${reason}. Lives left: ${playerState.lives}`, 'info'); if (reason === "Enemy") playEnemyHitSound(); else if (reason === "Rock") playRockFallSound(); else if (reason === "River Obstacle") playRiverHitSound(); else playPlayerDieSound(); if (currentScreen.grid && currentScreen.grid[player.y]?.[player.x] !== undefined && TILE_PROPERTIES[currentScreen.grid[player.y]?.[player.x]]?.isSolid !== true) { currentScreen.grid[player.y][player.x] = TILES.EXPLOSION; } updateGlobalUI(); setTimeout(() => { if (currentScreen.grid && currentScreen.grid[player.y]?.[player.x] === TILES.EXPLOSION) { currentScreen.grid[player.y][player.x] = TILES.EMPTY; } if (playerState.lives > 0) { debugLog("Respawning player...", 'info'); const startPos = findSafeSpawn(currentScreen.grid); player.x = startPos.x; player.y = startPos.y; player.alive = true; scanForFallingObjects(); debugLog(`Player respawned at ${player.x},${player.y}`, 'info'); } else { debugLog("Game Over condition met.", 'info'); gameOver = true; stopGameLoop(); if(endMessage) endMessage.textContent = "💥 GAME OVER 💥"; if(endOverlay) endOverlay.style.display = 'flex'; } }, 800); }
+        function handlePortalEntry(portal) { if (isTransitioning || !portal || !portal.target) return; debugLog(`Entering portal to ${portal.target} at ${portal.exitX}, ${portal.exitY}`, 'info'); playPortalSound(); isTransitioning = true; saveCurrentScreenState(); loadScreenState(portal.target); player.x = portal.exitX; player.y = portal.exitY; if(currentScreen.grid && TILE_PROPERTIES[currentScreen.grid[player.y]?.[player.x]]?.isSolid) { currentScreen.grid[player.y][player.x] = TILES.EMPTY; } setTimeout(() => { isTransitioning = false; debugLog("Transition complete.", 'verbose');}, 50); }
+        function handleMove(dx, dy) { if (!isGameLoopRunning) return; debugLog(`handleMove: dx=${dx}, dy=${dy}`, 'verbose'); if (!audioInitialized) { debugLog("Audio not init, trying now...", 'info'); initAudio(); } if (!player.alive || gameOver || gameWon || isTransitioning) { return; } if (player.dx === 0 && player.dy === 0) { debugLog("Setting intention.", 'verbose'); player.dx = dx; player.dy = dy; } }
+        function activateSwitch(switchX, switchY, switchProps) { if (!switchProps || playerState.flags[switchProps.stateVariable]) { debugLog(`Switch ${switchProps?.stateVariable || ''} already activated.`, 'info'); return; } debugLog(`Activating switch for flag: ${switchProps.stateVariable}`, 'info'); playSwitchSound(); playerState.flags[switchProps.stateVariable] = true; if(currentScreen.grid) currentScreen.grid[switchY][switchX] = switchProps.targetSwitchTile; if (switchProps.targetRoom && typeof switchProps.targetTileFrom !== 'undefined' && typeof switchProps.targetTileTo !== 'undefined') { modifyRoomGridState(switchProps.targetRoom, (grid) => { for (let y = 0; y < grid.length; y++) for (let x = 0; x < grid[y].length; x++) if (grid[y]?.[x] === switchProps.targetTileFrom) grid[y][x] = switchProps.targetTileTo; }); debugLog(`Triggered state change in room ${switchProps.targetRoom}. ${TILE_EMOJIS[switchProps.targetTileFrom]} -> ${TILE_EMOJIS[switchProps.targetTileTo]}`, 'info'); } createParticles(switchX, switchY, EMOJI_STAR, PARTICLE_COUNT / 2); updateGlobalUI(); }
+        function movePlayer(dx, dy) { debugLog(`movePlayer: dx=${dx}, dy=${dy}`, 'verbose'); if (gameOver || gameWon || !player.alive || isTransitioning) { return; } let nextX = player.x + dx; let nextY = player.y + dy; debugLog(` -> Target: ${nextX},${nextY}`, 'verbose'); if (nextX < 0 || nextX >= GRID_COLS || nextY < 0 || nextY >= GRID_ROWS) { debugLog(" -> Blocked: Bounds", 'verbose'); return; } if (!currentScreen.grid || !currentScreen.grid[nextY]) { debugLog(`!! movePlayer Error: Invalid grid state y=${nextY}`, 'error'); return; } const nextTile = currentScreen.grid[nextY]?.[nextX]; if (nextTile === undefined) { debugLog(`!! movePlayer Error: Undefined tile ${nextX},${nextY}`, 'error'); return; } const tileProps = TILE_PROPERTIES[nextTile] || {}; debugLog(` -> Target Tile: ${TILE_EMOJIS[nextTile]}(${nextTile}), Props: ${JSON.stringify(tileProps)}`, 'verbose'); const screenData = worldData[playerState.currentScreenId]; const implicitPortal = screenData?.portals?.find(p => p.x === nextX && p.y === nextY && p.implicit); if (implicitPortal) { debugLog(" -> Entering Implicit Portal.", 'info'); handlePortalEntry(implicitPortal); return; } if (tileProps.isSolid) { debugLog(" -> Path solid.", 'verbose'); if (tileProps.isLock && playerState.keys[tileProps.color]) { debugLog(` -> Unlock attempt (${tileProps.color})...`, 'verbose'); playLockSound(true); createParticles(nextX, nextY, TILE_EMOJIS[nextTile]?.charAt(0) || '🔓', 5); player.x = nextX; player.y = nextY; currentScreen.grid[player.y][player.x] = TILES.EMPTY; debugLog(" -> Unlock SUCCESS", 'info'); } else if (tileProps.isLock) { debugLog(" -> Blocked: Lock", 'verbose'); playLockSound(false); } else { debugLog(" -> Blocked: Solid", 'verbose'); } } else if (tileProps.isSwitch) { debugLog(" -> Activating Switch.", 'info'); activateSwitch(nextX, nextY, tileProps); player.x = nextX; player.y = nextY; debugLog(` -> Player POS updated: ${player.x},${player.y} after switch`, 'info'); } else if (nextTile === TILES.EMPTY || nextTile === TILES.DIRT || tileProps.isBackground) { debugLog(" -> Moving into Empty/Dirt/Bg.", 'verbose'); if (nextTile === TILES.DIRT) playDigSound(); player.x = nextX; player.y = nextY; debugLog(` -> Player POS updated: ${player.x},${player.y}`, 'info'); if(nextTile === TILES.DIRT && currentScreen.grid) currentScreen.grid[player.y][player.x] = TILES.EMPTY; } else if (tileProps.isKey) { debugLog(" -> Collecting Key.", 'info'); playKeySound(); createParticles(nextX, nextY, TILE_EMOJIS[nextTile]?.charAt(0) || '🔑', 5); playerState.keys[tileProps.color] = true; player.x = nextX; player.y = nextY; if(currentScreen.grid) currentScreen.grid[player.y][player.x] = TILES.EMPTY; updateGlobalUI(); debugLog(` -> Player POS updated to: ${player.x}, ${player.y}`, 'info'); } else if (nextTile === TILES.GEM) { debugLog(" -> Collecting Gem.", 'info'); playGemSound(); createParticles(nextX, nextY, EMOJI_GEM, PARTICLE_COUNT); player.x = nextX; player.y = nextY; if(currentScreen.grid) currentScreen.grid[player.y][player.x] = TILES.EMPTY; playerState.score++; currentScreen.gemsLeft--; updateGlobalUI(); debugLog(` -> Player POS updated to: ${player.x}, ${player.y}`, 'info'); } else if (tileProps.isPortal) { debugLog(" -> Entering Explicit Portal.", 'info'); const portalData = screenData?.portals?.find(p => p.x === nextX && p.y === nextY && !p.implicit); if (portalData) handlePortalEntry(portalData); else debugLog(`!! Explicit Portal data missing at ${nextX},${nextY}`, 'error'); } else { debugLog(` -> Unhandled move onto tile type: ${nextTile}`, 'warn'); } if (!isTransitioning) scanForFallingObjects(); else debugLog(" -> Skip physics (transition)", 'verbose'); }
+
+        // --- Physics (Falling Rocks/Gems) ---
+        function scanForFallingObjects() { if (!currentScreen.grid || !currentScreen.fallingObjects) return; const grid = currentScreen.grid; const fallingObjects = currentScreen.fallingObjects; currentScreen.fallingObjects = fallingObjects.filter(obj => obj.falling); for (let y = GRID_ROWS - 2; y >= 0; y--) { for (let x = 1; x < GRID_COLS - 1; x++) { const currentTile = grid[y]?.[x]; if (currentTile === undefined) continue; const isScheduled = currentScreen.fallingObjects.some(obj => obj.x === x && obj.y === y && !obj.falling); if (isScheduled) continue; if (currentTile === TILES.ROCK || currentTile === TILES.GEM) { const belowTile = grid[y + 1]?.[x]; if (belowTile === undefined) continue; if (belowTile === TILES.EMPTY) { currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + FALL_DELAY, falling: false }); } else if (belowTile === TILES.ROCK || belowTile === TILES.GEM) { const canRollLeft = (grid[y]?.[x-1] === TILES.EMPTY && grid[y+1]?.[x-1] === TILES.EMPTY); const canRollRight = (grid[y]?.[x+1] === TILES.EMPTY && grid[y+1]?.[x+1] === TILES.EMPTY); if(canRollLeft) currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + FALL_DELAY, falling: false, roll: 'left'}); else if (canRollRight) currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + FALL_DELAY, falling: false, roll: 'right'}); } } } } }
+        function processFallingObjects() { if (!currentScreen.grid || !currentScreen.fallingObjects || currentScreen.fallingObjects.length === 0) return; const now = Date.now(); const grid = currentScreen.grid; const fallingObjects = currentScreen.fallingObjects; let somethingMoved = false; let hitPlayerCheck = false; const targetPositions = new Set(); for (let i = fallingObjects.length - 1; i >= 0; i--) { const obj = fallingObjects[i]; if (!obj || obj.falling || now < obj.delay) continue; let targetX = obj.x; let targetY = obj.y + 1; let moveType = 'fall'; if (obj.roll === 'left') { targetX = obj.x - 1; targetY = obj.y + 1; moveType = 'roll-left'; } else if (obj.roll === 'right') { targetX = obj.x + 1; targetY = obj.y + 1; moveType = 'roll-right'; } const targetValid = targetY < GRID_ROWS && targetX >= 0 && targetX < GRID_COLS; const targetTile = targetValid ? grid[targetY]?.[targetX] : TILES.WALL; const targetEmpty = targetTile === TILES.EMPTY; const rollSpaceEmpty = moveType.startsWith('roll') ? (targetValid && grid[obj.y]?.[targetX] === TILES.EMPTY) : true; const targetKey = `${targetX},${targetY}`; if (targetValid && targetEmpty && rollSpaceEmpty && !targetPositions.has(targetKey)) { if (targetX === player.x && targetY === player.y && obj.type === TILES.ROCK) hitPlayerCheck = true; targetPositions.add(targetKey); grid[targetY][targetX] = obj.type; grid[obj.y][obj.x] = TILES.EMPTY; fallingObjects.splice(i, 1); somethingMoved = true; if(obj.type === TILES.ROCK) playRockFallSound(); const landedObjectY = targetY; const landedObjectX = targetX; const belowLanded = grid[landedObjectY + 1]?.[landedObjectX] ?? TILES.WALL; if (belowLanded === TILES.EMPTY) { fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false}); } else if (belowLanded === TILES.ROCK || belowLanded === TILES.GEM) { const canRollLeft = (grid[landedObjectY]?.[landedObjectX-1] === TILES.EMPTY && grid[landedObjectY+1]?.[landedObjectX-1] === TILES.EMPTY); const canRollRight = (grid[landedObjectY]?.[landedObjectX+1] === TILES.EMPTY && grid[landedObjectY+1]?.[landedObjectX+1] === TILES.EMPTY); if(canRollLeft) fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, roll: 'left'}); else if (canRollRight) fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, roll: 'right'}); } } else if (now >= obj.delay) { fallingObjects.splice(i, 1); if (targetValid && targetTile !== TILES.EMPTY && targetX === player.x && targetY === player.y && obj.type === TILES.ROCK) hitPlayerCheck = true; } } if (hitPlayerCheck) triggerPlayerDeath("Rock"); if (somethingMoved) scanForFallingObjects(); }
+
+        // --- River Obstacle Logic ---
+        function updateRiverObstacles(deltaTime) { const screenData = worldData[playerState.currentScreenId]; if (!screenData || screenData.special !== 'river' || playerState.flags.riverFilled || isTransitioning || !player.alive) { currentScreen.riverObstacles = []; return; } const now = Date.now(); const dtSeconds = deltaTime / 1000.0; if (now > currentScreen.lastRiverSpawnTime + RIVER_SPAWN_INTERVAL) { currentScreen.lastRiverSpawnTime = now; const spawnRoll = Math.random(); let spawnType = null; if (spawnRoll < RIVER_LOG_CHANCE) spawnType = EMOJI_RIVER_LOG; else if (spawnRoll < RIVER_LOG_CHANCE + RIVER_BLOCK_CHANCE) spawnType = EMOJI_RIVER_BLOCK; if (spawnType) { const possibleCols = [4, 5, 6, 8, 9, 10]; const spawnX = possibleCols[Math.floor(Math.random() * possibleCols.length)]; const spawnPixelX = spawnX * tileSize + tileSize / 2; const spawnPixelY = -tileSize / 2; currentScreen.riverObstacles.push({ type: spawnType, x: spawnPixelX, y: spawnPixelY, }); debugLog(`Spawned river ${spawnType} at col ${spawnX}`, 'verbose'); } } let hitPlayerCheck = false; for (let i = currentScreen.riverObstacles.length - 1; i >= 0; i--) { const obj = currentScreen.riverObstacles[i]; obj.y += RIVER_OBJECT_SPEED * dtSeconds; if (obj.y > canvas.height + tileSize) { currentScreen.riverObstacles.splice(i, 1); continue; } const playerCenterX = player.x * tileSize + tileSize / 2; const playerCenterY = player.y * tileSize + tileSize / 2; const collisionDist = tileSize * 0.7; const dx = playerCenterX - obj.x; const dy = playerCenterY - obj.y; if (Math.sqrt(dx*dx + dy*dy) < collisionDist) hitPlayerCheck = true; } if (hitPlayerCheck) triggerPlayerDeath("River Obstacle"); }
+        function drawRiverObstacles() { if (!ctx || !currentScreen.riverObstacles || currentScreen.riverObstacles.length === 0 || playerState.flags.riverFilled) return; const fontSize = Math.floor(tileSize * 0.9); ctx.font = `${fontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; try { for (const obj of currentScreen.riverObstacles) ctx.fillText(obj.type, obj.x, obj.y); } catch (e) { debugLog(`River Obstacle Draw Error: ${e.message}`, 'error'); } }
+
+        // --- Update Function ---
+        function update(deltaTime) { if (gameOver || gameWon || !player.alive) return; try { if (!isTransitioning && (player.dx !== 0 || player.dy !== 0)) { movePlayer(player.dx, player.dy); player.dx = 0; player.dy = 0; } if (!isTransitioning) { processFallingObjects(); updateRiverObstacles(deltaTime); updateEnemies(deltaTime); } updateParticles(deltaTime); gemRotation += (deltaTime / 1000.0) * 3; if (playerState.currentScreenId === '2,4' && !gameWon) { const lock1X=4, lock1Y=4, lock2X=10, lock2Y=4; if (currentScreen.grid?.[lock1Y]?.[lock1X] !== TILES.LOCK_RED && currentScreen.grid?.[lock2Y]?.[lock2X] !== TILES.LOCK_RED) { debugLog("Win Condition Met! Vault Unlocked!", 'info'); gameWon = true; stopGameLoop(); playWinSound(); if(endMessage) endMessage.textContent = "🏆 Vault Found! Minigame Complete! 🏆"; if(endOverlay) endOverlay.style.display = 'flex'; } } } catch(e) { debugLog(`Update Error: ${e.message}`, 'error'); } }
+
+        // --- Draw Function ---
+        function draw() { try { if (!ctx || !canvas) return; ctx.fillStyle = '#1a2e1a'; ctx.fillRect(0, 0, canvas.width, canvas.height); if (!currentScreen.grid || !Array.isArray(currentScreen.grid)) { debugLog(`!! Draw skipped: Invalid grid state`, 'error'); ctx.fillStyle = "red"; ctx.font = "16px Arial"; ctx.textAlign = "center"; ctx.fillText("Error: Grid not loaded!", canvas.width / 2, canvas.height / 2); return; } const grid = currentScreen.grid; const fontSize = Math.floor(tileSize * 0.8); const baseFont = `${fontSize}px Arial`; ctx.font = baseFont; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const drawnMultiTiles = new Set(); try { for (let y = 0; y < GRID_ROWS; y++) { for (let x = 0; x < GRID_COLS; x++) { const tile = grid[y]?.[x]; if (tile === undefined) continue; const props = TILE_PROPERTIES[tile] || {}; const emoji = TILE_EMOJIS[tile]; const drawX = x * tileSize + tileSize / 2; const drawY = y * tileSize + tileSize / 2; if (props.isMultiTile) { const originX = x - (props.multiTileOffsetX || 0); const originY = y - (props.multiTileOffsetY || 0); const originKey = `${originX},${originY}`; if (!drawnMultiTiles.has(originKey) && props.multiTileEmoji) { const multiCenterX = (originX + (props.multiTileWidth || 1) / 2) * tileSize; const multiCenterY = (originY + (props.multiTileHeight || 1) / 2) * tileSize; const multiFontSize = Math.floor(tileSize * (props.multiTileWidth || 1) * 0.7); ctx.font = `${multiFontSize}px Arial`; ctx.fillText(props.multiTileEmoji, multiCenterX, multiCenterY); ctx.font = baseFont; for (let my=0; my < (props.multiTileHeight || 1); my++) for (let mx=0; mx < (props.multiTileWidth || 1); mx++) drawnMultiTiles.add(`${originX + mx},${originY + my}`); } continue; } if (emoji && emoji !== EMOJI_EMPTY) { if (tile === TILES.GEM) { ctx.save(); ctx.translate(drawX, drawY); ctx.rotate(gemRotation); ctx.fillText(emoji, 0, 0); ctx.restore(); } else { ctx.fillText(emoji, drawX, drawY); } } } } } catch (gridError) { debugLog(`!! Grid Draw Loop Error: ${gridError.message}`, 'error'); ctx.fillStyle = "orange"; ctx.font = "14px Arial"; ctx.textAlign = "left"; ctx.fillText(`Grid Draw Error!`, 10, canvas.height - 10); } try { drawRiverObstacles(); } catch(e){ debugLog(`River Obstacle Draw Error: ${e.message}`, 'error')} if (player.alive) { try { ctx.font = baseFont; ctx.fillText(EMOJI_PLAYER, player.x * tileSize + tileSize / 2, player.y * tileSize + tileSize / 2); } catch(e){ debugLog(`Player Draw Error: ${e.message}`, 'error')} } try { drawEnemies(); } catch(e){ debugLog(`Enemy Draw Error: ${e.message}`, 'error')} try { drawParticles(); } catch(e){ debugLog(`Particle Draw Error: ${e.message}`, 'error')} } catch (e) { debugLog(`!! Draw Function Error: ${e.message}`, 'error'); } }
+
+        // --- Game Loop Control ---
+        function gameLoop(timestamp) { if (!isGameLoopRunning) return; if (!lastTime) lastTime = timestamp; const deltaTime = Math.min(100, timestamp - lastTime); lastTime = timestamp; try { if(!document.hidden) { update(deltaTime); draw(); } } catch (e) { debugLog(`!! CRITICAL GAMELOOP ERROR: ${e.message}`, 'error'); stopGameLoop(); } animationFrameId = requestAnimationFrame(gameLoop); }
+        function startGameLoop() { if (!isGameLoopRunning) { debugLog("Starting game loop", "info"); isGameLoopRunning = true; lastTime = performance.now(); animationFrameId = requestAnimationFrame(gameLoop); } }
+        function stopGameLoop() { if (isGameLoopRunning) { debugLog("Stopping game loop", "info"); isGameLoopRunning = false; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } } }
+
+        // --- Unit Testing Framework ---
+        const testResults = { pass: 0, fail: 0 };
+        function assert(condition, message) { if (condition) { debugLog(`PASS: ${message}`, 'verbose'); testResults.pass++; } else { debugLog(`FAIL: ${message}`, 'error'); testResults.fail++; } }
+        function assertExists(value, name) { assert(typeof value !== 'undefined' && value !== null, `${name} should exist`); }
+        function runUnitTests() { debugLog("--- Running Startup Unit Tests ---", 'info'); testResults.pass = 0; testResults.fail = 0; try { debugLog("Testing Data Integrity...", 'verbose'); assertExists(worldData, "worldData object"); assertExists(worldData['0,0'], "worldData['0,0'] (Start Room)"); assertExists(worldData['1,1'], "worldData['1,1'] (Control Room)"); assertExists(worldData['1,3'], "worldData['1,3'] (River Crossing)"); assertExists(worldData['2,4'], "worldData['2,4'] (Vault Room)"); assert(worldData['1,1']?.layout?.[4]?.[7] === TILES.SWITCH_OFF, "Switch tile present in Control Room layout"); assert(worldData['2,4']?.layout?.[4]?.[4] === TILES.LOCK_RED, "Vault lock tile (left) present"); debugLog("Testing Core Function Existence...", 'verbose'); assertExists(movePlayer, "movePlayer function"); assertExists(loadScreenState, "loadScreenState function"); assertExists(activateSwitch, "activateSwitch function"); assertExists(runUnitTests, "runUnitTests function"); debugLog("Testing Initial Player State...", 'verbose'); const initialPlayerState = { currentScreenId: '0,0', lives: 3, score: 0, keys: { yellow: false, blue: false, red: false, green: false }, visited: new Set(['0,0']), flags: { riverFilled: false } }; assert(playerState.lives === initialPlayerState.lives, `Initial lives should be ${initialPlayerState.lives}`); assert(playerState.score === initialPlayerState.score, `Initial score should be ${initialPlayerState.score}`); assert(playerState.keys.red === initialPlayerState.keys.red, "Initial red key state"); assert(playerState.flags.riverFilled === initialPlayerState.flags.riverFilled, "Initial riverFilled flag"); /* Cannot assert initial screen ID here as restart happens before tests */ debugLog("Testing Constants...", 'verbose'); assertExists(TILES.WALL, "TILES.WALL constant"); assertExists(TILE_EMOJIS[TILES.WALL], "Emoji for WALL"); assertExists(TILES.SWITCH_OFF, "TILES.SWITCH_OFF constant"); assertExists(TILE_EMOJIS[TILES.SWITCH_OFF], "Emoji for SWITCH_OFF"); assertExists(TILE_PROPERTIES[TILES.SWITCH_OFF]?.isSwitch, "Switch property"); } catch (e) { debugLog(`!! ERROR DURING TESTS: ${e.message}`, 'error'); testResults.fail++; } debugLog(`--- Test Summary: ${testResults.pass} Passed, ${testResults.fail} Failed ---`, testResults.fail > 0 ? 'error' : 'info'); }
+
+        // --- Initialization and Game Start ---
+        function findSafeSpawn(grid) { if(!grid) return {x:1, y:1}; for(let y=1; y < GRID_ROWS - 1; y++) for(let x=1; x < GRID_COLS - 1; x++) if (grid[y]?.[x] === TILES.EMPTY && !TILE_PROPERTIES[grid[y+1]?.[x]]?.isSolid) return {x, y}; debugLog("No ideal safe spawn found, using default 1,1", "warn"); return {x: 1, y: 1}; }
+        function calculateTotalGems() { let count = 0; try { for (const screenId in worldData) { const layout = worldData[screenId].layout; if(layout) for (let y = 0; y < layout.length; y++) for (let x = 0; x < (layout[y]?.length || 0); x++) if (layout[y][x] === TILES.GEM) count++; } } catch(e){ debugLog(`CalcGems Error: ${e.message}`, 'error');} return count; }
+        function restartMinigame() { debugLog("Restarting minigame state...", 'info'); try { playerState = { currentScreenId: '0,0', lives: 3, score: 0, keys: { yellow: false, blue: false, red: false, green: false }, visited: new Set(['0,0']), flags: { riverFilled: false } }; player.alive = true; gameOver = false; gameWon = false; worldState = {}; loadScreenState('0,0'); const startPos = findSafeSpawn(currentScreen.grid); player.x = startPos.x; player.y = startPos.y; player.dx = 0; player.dy = 0; updateGlobalUI(); if(endOverlay) endOverlay.style.display = 'none'; } catch(e){ debugLog(`Minigame Restart FAILED: ${e.message}`, 'error'); } }
+        function initializeApp() {
+             debugLog("Initializing App...", 'info');
+             try {
+                 // Assign global DOM element references
+                 canvas = document.getElementById('gameCanvas');
+                 ctx = canvas?.getContext('2d');
+                 minimapElement = document.getElementById('minimap');
+                 roomNameElement = document.getElementById('room-name'); // In footer
+                 scoreElement = document.getElementById('score');
+                 livesElement = document.getElementById('lives');
+                 roomNameOverlayElement = document.getElementById('room-name-overlay'); // In game area
+                 startOverlay = document.getElementById('start-overlay');
+                 endOverlay = document.getElementById('end-overlay');
+                 endMessage = document.getElementById('end-message');
+                 debugOutputElement = document.getElementById('debug-output');
+                 verboseCheckbox = document.getElementById('verbose-debug');
+                 wrldView = document.getElementById('wrld-view');
+                 minigamView = document.getElementById('minigam-view');
+                 controlsElement = document.getElementById('controls');
+                 footerUiElement = document.getElementById('footer-ui');
+                 wrldActionsElement = document.getElementById('wrld-actions');
+
+                 if (!canvas || !ctx || !wrldView || !minigamView || !controlsElement || !footerUiElement || !wrldActionsElement || !debugOutputElement || !roomNameOverlayElement) { throw new Error("One or more essential UI elements not found during init."); }
+
+                 initAudio();
+                 setupFooterTabs();
+
+                 // Setup WRLD action buttons
+                 document.querySelectorAll('.wrld-action-button').forEach(button => { button.addEventListener('click', (e) => { playButtonClickSound(); const action = e.currentTarget.dataset.action; debugLog(`WRLD Action: ${action}`, 'info'); if (action === 'play') { document.querySelector('.top-tab-button[data-view="minigam-view"]')?.click(); /* restartMinigame(); // Restart now happens on init */ } else if (action === 'quit') { alert("Quit action (stub)!"); } else if (action === 'help') { alert("Help action (stub)!"); document.querySelector('.top-tab-button[data-view="minigam-view"]')?.click(); setTimeout(()=> document.querySelector('#footer-ui .tab-button[data-tab="guide-panel"]')?.click(), 50); } }); });
+
+                 // Setup Minigame specific buttons
+                 document.getElementById('start-button-minigame')?.addEventListener('click', () => { playButtonClickSound(); if(startOverlay) startOverlay.style.display = 'none'; startGameLoop(); });
+                 document.getElementById('restart-button')?.addEventListener('click', () => { playButtonClickSound(); restartMinigame(); startGameLoop(); });
+                 document.getElementById('return-to-wrld-button')?.addEventListener('click', () => { playButtonClickSound(); if(endOverlay) endOverlay.style.display = 'none'; document.querySelector('.top-tab-button[data-view="wrld-view"]')?.click(); });
+
+                 // Setup Minigame control listeners
+                 document.getElementById('btn-left')?.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(-1, 0); }, { passive: false });
+                 document.getElementById('btn-right')?.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(1, 0); }, { passive: false });
+                 document.getElementById('btn-up')?.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(0, -1); }, { passive: false });
+                 document.getElementById('btn-down')?.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(0, 1); }, { passive: false });
+                 window.addEventListener('keydown', (e) => { if (document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return; if (minigamView?.classList.contains('active') === false) return; if (gameOver || gameWon || isTransitioning) return; let moved = false; switch (e.key) { case 'ArrowLeft': case 'a': handleMove(-1, 0); moved = true; break; case 'ArrowRight': case 'd': handleMove(1, 0); moved = true; break; case 'ArrowUp': case 'w': handleMove(0, -1); moved = true; break; case 'ArrowDown': case 's': handleMove(0, 1); moved = true; break; } if (moved) e.preventDefault(); });
+                 window.addEventListener('resize', resizeCanvas); // Resize canvas when window resizes
+                 if (verboseCheckbox) { verboseCheckbox.addEventListener('change', () => { debugLog(`Verbose logging ${verboseCheckbox.checked ? 'enabled' : 'disabled'}.`, 'info'); if(debugOutputElement) debugOutputElement.innerHTML = debugLines.filter(line => !line.text.includes('V_ ') || (line.text.includes('V_ ') && verboseCheckbox.checked)).map(l => `<span style="color: ${l.color};">${l.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`).join('\n'); }); }
+
+                 // Initial setup complete
+                 debugLog("App Initialized.", 'info');
+                 restartMinigame(); // Initialize minigame state
+                 resizeCanvas(); // Initial resize attempt
+                 generateMinimap();
+                 runUnitTests();
+
+                  // Setup Top Tabs AFTER other elements are ready
+                 document.querySelectorAll('.top-tab-button').forEach(btn => btn.addEventListener('click', handleTopTabSwitch));
+
+                 // Set initial view to WRLD and ensure controls are correct
+                 // Use setTimeout to ensure layout is calculated before first switch/resize
+                 setTimeout(() => {
+                     handleTopTabSwitch({ target: document.querySelector('.top-tab-button[data-view="wrld-view"]') });
+                     resizeCanvas(); // Call resize again after view is set
+                 }, 0);
+
+
+             } catch (e) {
+                 console.error("Initialization failed:", e);
+                 debugLog(`!! App Initialization FAILED: ${e.message}`, 'error');
+                 document.body.innerHTML = `<div style="color: #f55; background: #300; border: 2px solid red; padding: 20px; font-family: sans-serif; font-size: 1.2em;"><strong>App Initialization Failed!</strong><br>${e.message}<br><br>Check console (F12) for details.</div><pre style="color:#aaa; background: #111; border: 1px solid #555; padding: 5px; font-family: monospace; white-space: pre-wrap; height: 300px; overflow-y: scroll; margin-top: 10px;">${debugLines.map(l=>l.text).join('\n')}</pre>`;
+             }
+         }
+
+        // --- Startup ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
