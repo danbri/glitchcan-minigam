@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🌳 Emoji Jungle Quest 🔑 (Web Components - Inline)</title>
+    <style>
+        /* Reset & Global Styles (Keep minimal essentials here) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a2e1a; /* Base background */
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            display: flex; /* Ensure body takes full height */
+            flex-direction: column;
+            touch-action: manipulation; /* Prevent zoom/scroll */
+        }
+        /* Let the component handle its own layout */
+        gc-gamgam {
+            flex-grow: 1;
+            display: flex; /* Allow gc-gamgam to control its internal flex layout */
+            overflow: hidden; /* Prevent component content from overflowing body */
+            width: 100%; /* Ensure it takes full width */
+            height: 100%; /* Ensure it takes full height */
+        }
+    </style>
+
+    <script type="module">
+        // Shared utility/debug (can remain outside classes if preferred, or be methods)
+        // Note: For components, accessing debugOutputElement might need adaptation
+        // if it lives *inside* a component's shadow DOM. Here, we'll make it
+        // part of the minigam component. Error handlers are kept global.
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorMsg = `GLOBAL ERROR: ${message} at ${source}:${lineno}:${colno}`;
+            console.error(errorMsg);
+            // Attempt to log to debug panel if available (might fail if component not ready)
+            try {
+                const minigam = document.querySelector('gc-gamgam')?.shadowRoot?.querySelector('gc-minigam-slovib');
+                minigam?._debugLog(errorMsg, 'error');
+                if (error && error.stack) {
+                    minigam?._debugLog(`   Stack: ${error.stack}`, 'error');
+                }
+            } catch (e) { /* ignore */ }
+            return true;
+        };
+
+        window.onunhandledrejection = function(event) {
+             const errorMsg = `UNHANDLED PROMISE REJECTION: ${event.reason}`;
+             console.error(errorMsg);
+             try {
+                const minigam = document.querySelector('gc-gamgam')?.shadowRoot?.querySelector('gc-minigam-slovib');
+                minigam?._debugLog(errorMsg, 'error');
+                if (event.reason && event.reason.stack) {
+                    minigam?._debugLog(`   Stack: ${event.reason.stack}`, 'error');
+                }
+            } catch (e) { /* ignore */ }
+        };
+
+        // --- Component: gc-inkblot ---
+        class GCInkblot extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this._boundHandleActionClick = this._handleActionClick.bind(this); // Bind listener once
+            }
+
+            connectedCallback() {
+                this._render();
+                this._setupEventListeners();
+            }
+
+            disconnectedCallback() {
+                // Remove listeners if added directly to elements in shadow DOM
+                const actionsContainer = this.shadowRoot.getElementById('wrld-actions');
+                if (actionsContainer) {
+                    actionsContainer.removeEventListener('click', this._boundHandleActionClick);
+                }
+            }
+
+            _render() {
+                // Simplified initial story text
+                const initialStory = "We find ourself in a shimmering underground cavern where precious gems gleam somehow through the darkness and mud...";
+
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        /* Styles specific to WRLD/Inkblot View */
+                        :host {
+                            display: flex; /* Changed from block to flex */
+                            flex-direction: column;
+                            padding: 20px;
+                            justify-content: space-between;
+                            align-items: center;
+                            background-color: #112211; /* Added background */
+                            color: #e0e0e0;
+                            font-family: 'Arial', sans-serif;
+                            width: 100%;
+                            height: 100%;
+                            overflow: hidden; /* Prevent internal overflow */
+                        }
+
+                        #story-text {
+                            background-color: rgba(0, 0, 0, 0.3);
+                            padding: 15px 25px;
+                            border-radius: 8px;
+                            border: 1px solid #3a6a3a;
+                            font-size: 1.2em;
+                            line-height: 1.6;
+                            max-width: 85%;
+                            margin-bottom: 20px; /* Space between text and buttons */
+                            color: #c0e0c0;
+                            text-align: center;
+                            flex-grow: 1; /* Allow text area to grow */
+                            max-height: 75%; /* Limit height */
+                            overflow-y: auto; /* Allow scrolling if needed */
+                        }
+
+                        #wrld-actions {
+                            display: flex;
+                            justify-content: space-around;
+                            align-items: center;
+                            width: 100%;
+                            max-width: 600px;
+                            padding: 10px;
+                            background-color: rgba(0, 0, 0, 0.2);
+                            border-top: 1px solid #3a6a3a;
+                            flex-shrink: 0; /* Prevent shrinking */
+                        }
+
+                        .wrld-action-button {
+                            background-color: #5a8a5a;
+                            border: 2px solid #8ac08a;
+                            border-radius: 10px;
+                            padding: 15px 25px;
+                            color: white;
+                            font-size: 1.1em;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: background-color 0.2s, transform 0.1s;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            min-width: 110px;
+                            text-align: center;
+                        }
+                        .wrld-action-button .button-icon { font-size: 1.8em; margin-bottom: 5px; line-height: 1; }
+                        .wrld-action-button:hover { background-color: #7aa07a; }
+                        .wrld-action-button:active { transform: scale(0.97); }
+                    </style>
+
+                    <div id="story-text">
+                        <p>${initialStory}</p>
+                        </div>
+                    <div id="wrld-actions">
+                         <button class="wrld-action-button" data-action="play">
+                            <span class="button-icon">▶️</span> Explore <br>(Play Minigame)
+                        </button>
+                        <button class="wrld-action-button" data-action="quit">
+                            <span class="button-icon">❌</span> Quit (Stub)
+                        </button>
+                        <button class="wrld-action-button" data-action="help">
+                             <span class="button-icon">❓</span> Help (Guide)
+                        </button>
+                    </div>
+                `;
+            }
+
+            _setupEventListeners() {
+                // Use event delegation on the container
+                const actionsContainer = this.shadowRoot.getElementById('wrld-actions');
+                if (actionsContainer) {
+                    actionsContainer.addEventListener('click', this._boundHandleActionClick);
+                }
+            }
+
+            _handleActionClick(e) {
+                 const button = e.target.closest('.wrld-action-button');
+                 if (button) {
+                    const action = button.dataset.action;
+                    console.log(`[gc-inkblot] Action clicked: ${action}`);
+                    // Optional: Play sound via parent or shared audio context if needed
+                    // this.dispatchEvent(new CustomEvent('play-sound', { detail: 'button_click', bubbles: true, composed: true }));
+
+                    switch (action) {
+                        case 'play':
+                            // Signal to parent (gc-gamgam) to switch view
+                            this.dispatchEvent(new CustomEvent('play-minigame-requested', { bubbles: true, composed: true }));
+                            break;
+                        case 'quit':
+                            alert("Quit action (stub) - Not implemented in Web Component version yet.");
+                            break;
+                        case 'help':
+                             // Signal to parent to switch view AND potentially tell minigame to open help
+                            this.dispatchEvent(new CustomEvent('show-minigame-guide-requested', { bubbles: true, composed: true }));
+                            break;
+                    }
+                }
+            }
+
+            // --- Public API (Example - could be called by gc-gamgam or Ink integration) ---
+            setStoryText(htmlContent) {
+                const storyElement = this.shadowRoot.getElementById('story-text');
+                if (storyElement) {
+                    storyElement.innerHTML = htmlContent;
+                }
+            }
+
+            setActions(actionsArray) {
+                // TODO: Dynamically generate buttons based on Ink choices/tags
+                console.warn('[gc-inkblot] setActions not fully implemented.');
+                // Example: Clear existing buttons and add new ones based on actionsArray
+            }
+        }
+        customElements.define('gc-inkblot', GCInkblot);
+
+        // --- Component: gc-minigam-slovib ---
+        class GCMinigamSlovib extends HTMLElement {
+
+            // --- Constants (Static properties of the class) ---
+            static EMOJI_PLAYER = '🧑‍🚀'; static EMOJI_DIRT = '🟫'; static EMOJI_ROCK = '🪨'; static EMOJI_GEM = '💎'; static EMOJI_EMPTY = ' '; static EMOJI_EXPLOSION = '💥'; static EMOJI_WALL = '🧱'; static EMOJI_STAR = '✨'; static EMOJI_DOOR_RED = '🚪🟥'; static EMOJI_DOOR_BLUE = '🚪🟦'; static EMOJI_DOOR_YELLOW = '🚪🟨'; static EMOJI_DOOR_GREEN = '🚪🟩';
+            static E_KEY_Y = '🔑🟡'; static E_LOCK_Y = '🔒🟡'; static E_KEY_B = '🔑🔵'; static E_LOCK_B = '🔒🔵'; static E_KEY_R = '🔑🔴'; static E_LOCK_R = '🔒🔴'; static E_KEY_G = '🔑🟢'; static E_LOCK_G = '🔒🟢';
+            static EMOJI_GRASS = '🌿'; static EMOJI_FLOWER = '🌺'; static EMOJI_LIANA = '〰️'; static EMOJI_TREE = '🌳'; static EMOJI_SNAKE = '🐍';
+            static EMOJI_WATER = '🌊'; static EMOJI_RIVER_WOOD = '🪵'; static EMOJI_SWITCH_OFF = '🔘'; static EMOJI_SWITCH_ON = '🟢'; static EMOJI_RIVER_BLOCK = '⬛'; static EMOJI_RIVER_LOG = '➖';
+            static TILES = { EMPTY: 0, DIRT: 1, ROCK: 2, GEM: 3, PLAYER: 4, WALL: 5, EXPLOSION: 6, DOOR_RED: 7, DOOR_BLUE: 8, DOOR_YELLOW: 9, DOOR_GREEN: 16, KEY_YELLOW: 10, LOCK_YELLOW: 11, KEY_BLUE: 12, LOCK_BLUE: 13, KEY_RED: 14, LOCK_RED: 15, KEY_GREEN: 17, LOCK_GREEN: 18, GRASS: 20, FLOWER: 21, LIANA: 22, TREE_TL: 30, TREE_TR: 31, TREE_BL: 32, TREE_BR: 33, WATER: 40, RIVER_WOOD: 41, SWITCH_OFF: 42, SWITCH_ON: 43, };
+            static TILE_EMOJIS = { [this.TILES.EMPTY]: this.EMOJI_EMPTY, [this.TILES.DIRT]: this.EMOJI_DIRT, [this.TILES.ROCK]: this.EMOJI_ROCK, [this.TILES.GEM]: this.EMOJI_GEM, [this.TILES.WALL]: this.EMOJI_WALL, [this.TILES.EXPLOSION]: this.EMOJI_EXPLOSION, [this.TILES.DOOR_RED]: this.EMOJI_DOOR_RED, [this.TILES.DOOR_BLUE]: this.EMOJI_DOOR_BLUE, [this.TILES.DOOR_YELLOW]: this.EMOJI_DOOR_YELLOW, [this.TILES.DOOR_GREEN]: this.EMOJI_DOOR_GREEN, [this.TILES.KEY_YELLOW]: this.E_KEY_Y, [this.TILES.LOCK_YELLOW]: this.E_LOCK_Y, [this.TILES.KEY_BLUE]: this.E_KEY_B, [this.TILES.LOCK_BLUE]: this.E_LOCK_B, [this.TILES.KEY_RED]: this.E_KEY_R, [this.TILES.LOCK_RED]: this.E_LOCK_R, [this.TILES.KEY_GREEN]: this.E_KEY_G, [this.TILES.LOCK_GREEN]: this.E_LOCK_G, [this.TILES.GRASS]: this.EMOJI_GRASS, [this.TILES.FLOWER]: this.EMOJI_FLOWER, [this.TILES.LIANA]: this.EMOJI_LIANA, [this.TILES.TREE_TL]: this.EMOJI_TREE, [this.TILES.TREE_TR]: this.EMOJI_TREE, [this.TILES.TREE_BL]: this.EMOJI_TREE, [this.TILES.TREE_BR]: this.EMOJI_TREE, [this.TILES.WATER]: this.EMOJI_WATER, [this.TILES.RIVER_WOOD]: this.EMOJI_RIVER_WOOD, [this.TILES.SWITCH_OFF]: this.EMOJI_SWITCH_OFF, [this.TILES.SWITCH_ON]: this.EMOJI_SWITCH_ON, };
+            static TILE_PROPERTIES = { [this.TILES.DOOR_RED]: { isPortal: true, color: 'red'}, [this.TILES.DOOR_BLUE]: { isPortal: true, color: 'blue'}, [this.TILES.DOOR_YELLOW]: { isPortal: true, color: 'yellow'}, [this.TILES.DOOR_GREEN]: { isPortal: true, color: 'green'}, [this.TILES.LOCK_YELLOW]: { isLock: true, color: 'yellow', isSolid: true }, [this.TILES.LOCK_BLUE]: { isLock: true, color: 'blue', isSolid: true }, [this.TILES.LOCK_RED]: { isLock: true, color: 'red', isSolid: true }, [this.TILES.LOCK_GREEN]: { isLock: true, color: 'green', isSolid: true }, [this.TILES.KEY_YELLOW]: { isKey: true, color: 'yellow' }, [this.TILES.KEY_BLUE]: { isKey: true, color: 'blue' }, [this.TILES.KEY_RED]: { isKey: true, color: 'red' }, [this.TILES.KEY_GREEN]: { isKey: true, color: 'green' }, [this.TILES.WALL]: { isSolid: true }, [this.TILES.ROCK]: { isSolid: true }, [this.TILES.TREE_TL]: { isSolid: true, isMultiTile: true, multiTileEmoji: this.EMOJI_TREE, multiTileWidth: 2, multiTileHeight: 2, multiTileOffsetX: 0, multiTileOffsetY: 0 }, [this.TILES.TREE_TR]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BL]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BR]: { isSolid: true, isMultiTile: true }, [this.TILES.GRASS]: { isBackground: true }, [this.TILES.FLOWER]: { isBackground: true }, [this.TILES.LIANA]: { isBackground: true }, [this.TILES.WATER]: { isSolid: true }, [this.TILES.RIVER_WOOD]: { isBackground: true }, [this.TILES.SWITCH_OFF]: { isSwitch: true, targetRoom: '1,3', stateVariable: 'riverFilled', targetTileFrom: this.TILES.WATER, targetTileTo: this.TILES.RIVER_WOOD, targetSwitchTile: this.TILES.SWITCH_ON }, [this.TILES.SWITCH_ON]: { isSolid: false, isBackground: true }, };
+            static GRID_COLS = 15; static GRID_ROWS = 10;
+            static FALL_DELAY = 180; static PARTICLE_COUNT = 6; static PARTICLE_LIFESPAN = 800;
+            static WORLD_WIDTH = 4; static WORLD_HEIGHT = 5;
+            static ENEMY_SNAKE_SPEED = 50;
+            static RIVER_SPAWN_INTERVAL = 400; static RIVER_BLOCK_CHANCE = 0.6; static RIVER_LOG_CHANCE = 0.15; static RIVER_OBJECT_SPEED = 80;
+            static MAX_DEBUG_LINES = 100;
+
+            // --- World Data (Static property) ---
+             static worldData = { /* ... Copied exactly from original ... */
+                 '0,0': { name: "Crash Site Clearing", layout: [[20, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 20, 20], [20, 5, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 5, 20], [5, 0, 3, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5], [5, 0, 0, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 0, 5], [5, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 5], [5, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 9, 5], [5, 1, 1, 0, 3, 0, 0, 1, 16, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 13, y: 7, tileType: 9 /*YELLOW*/, target: '1,0', exitX: 1, exitY: 7 }, { x: 8, y: 8, tileType: 16 /*GREEN*/, target: '0,1', exitX: 8, exitY: 1 }] },
+                 '1,0': { name: "Overgrown Path", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 20, 20, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 10, 0, 2, 0, 0, 0, 2, 0, 0, 20, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: 9 /*YELLOW*/, target: '0,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: 8 /*BLUE*/, target: '2,0', exitX: 1, exitY: 7 }, { x: 7, y: 5, tileType: 16 /*GREEN*/, target: '1,1', exitX: 7, exitY: 1 }] },
+                 '2,0': { name: "Snake Pit", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 12, 0, 1, 1, 1, 1, 1, 0, 14, 17, 1, 5], [5, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: 8 /*BLUE*/, target: '1,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: 7 /*RED*/, target: '2,1', exitX: 1, exitY: 1 }], enemies: [{ type: this.EMOJI_SNAKE, x: 3, y: 6, speed: 50 /*ENEMY_SNAKE_SPEED*/, path: [{ x: 3, y: 6 }, { x: 11, y: 6 }] }], items: [17 /*KEY_GREEN*/] },
+                 '2,1': { name: "Ancient Grove", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 7, 0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 0, 3, 5], [5, 0, 0, 20, 1, 1, 1, 1, 1, 1, 1, 20, 0, 0, 5], [5, 20, 1, 1, 1, 30, 31, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 1, 1, 32, 33, 1, 1, 1, 1, 1, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 13, 1, 1, 1, 1, 1, 1, 1, 13, 1, 1, 5], [5, 1, 1, 0, 1, 1, 3, 16, 3, 1, 1, 0, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 1, tileType: 7 /*RED*/, target: '2,0', exitX: 12, exitY: 7 }, { x: 7, y: 8, tileType: 16 /*GREEN*/, target: '2,2', exitX: 7, exitY: 1 }], enemies: [{ type: this.EMOJI_SNAKE, x: 2, y: 5, speed: 40 /*ENEMY_SNAKE_SPEED * 0.8*/, path: [{ x: 2, y: 5 }, { x: 12, y: 5 }] }] },
+                 '0,1': { name: "Dark Cave", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 0, 0, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 0, 5], [5, 0, 1, 1, 2, 1, 1, 1, 0, 1, 1, 2, 1, 0, 5], [5, 1, 1, 2, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 1, 2, 1, 1, 1, 2, 1, 0, 1, 1, 1, 2, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 8, y: 1, tileType: 16 /*GREEN*/, target: '0,0', exitX: 8, exitY: 8 }, { x: 7, y: 8, tileType: 8 /*BLUE*/, target: '0,2', exitX: 7, exitY: 1 }] },
+                 '1,1': { name: "Control Room", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 0, 42, 0, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 16 /*GREEN*/, target: '1,0', exitX: 7, exitY: 5 }, { x: 7, y: 7, tileType: 7 /*RED*/, target: '1,2', exitX: 7, exitY: 1 }], items: [3 /*GEM*/] },
+                 '0,2': { name: "Waterfall Base", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 1, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 8 /*BLUE*/, target: '0,1', exitX: 7, exitY: 8 }] },
+                 '1,2': { name: "River Ledge", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 7 /*RED*/, target: '1,1', exitX: 7, exitY: 7 }, { x: 7, y: 8, tileType: 0 /*EMPTY*/, target: '1,3', exitX: 7, exitY: 1, implicit: true }], items: [3 /*GEM*/] },
+                 '1,3': { name: "River Crossing", special: 'river', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 0 /*EMPTY*/, target: '1,2', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: 0 /*EMPTY*/, target: '1,4', exitX: 7, exitY: 1, implicit: true }] },
+                 '1,4': { name: "Far Shore", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 2, 1, 2, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 3, 1, 1, 1, 1, 1, 3, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 0 /*EMPTY*/, target: '1,3', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: 16 /*GREEN*/, target: '2,4', exitX: 1, exitY: 4 }], items: [14 /*KEY_RED*/] },
+                 '2,2': { name: "Hidden Shrine", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 16 /*GREEN*/, target: '2,1', exitX: 7, exitY: 8 }], items: [12 /*KEY_BLUE*/] },
+                 '2,4': { name: "Ancient Vault", special: 'win_condition', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 3, 15, 3, 3, 3, 3, 3, 15, 3, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 4, tileType: 16 /*GREEN*/, target: '1,4', exitX: 7, exitY: 8 }], items: [] },
+            };
+
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+
+                // --- Game State Variables (Component Instance Properties) ---
+                // Avoid initializing complex objects here if they depend on static props not yet available
+                this.playerState = {}; // Initialized in _resetStateAndRestart
+                this.worldState = {}; // Persists between loads within instance
+                this.currentScreen = {}; // Initialized in _resetStateAndRestart
+                this.player = {}; // Initialized in _resetStateAndRestart
+                this.particles = [];
+                this.gemRotation = 0;
+                this.lastTime = 0;
+                this.gameOver = false;
+                this.gameWon = false;
+                this.isTransitioning = false;
+                this.animationFrameId = null;
+                this.isGameLoopRunning = false;
+                this.isActive = false; // Is the component visible and running?
+                this.audioContext = null;
+                this.audioInitialized = false;
+                this.tileSize = 30; // Initial value, recalculated on resize
+                this.debugLines = []; // Debug log buffer
+                this.roomNameOverlayTimeoutId = null;
+
+                // Bound event listeners for internal/window listeners added by this component
+                this._boundGameLoop = this._gameLoop.bind(this);
+                this._boundHandleKeyDown = this._handleKeyDown.bind(this);
+                this._boundHandleResize = this._resizeCanvas.bind(this);
+                this._boundHandleTouchStart = this._handleTouchStart.bind(this);
+            }
+
+            connectedCallback() {
+                this._debugLog("Minigam component connected.", 'verbose');
+                this._render();
+                this._cacheDomReferences();
+                this._setupInternalEventListeners();
+
+                // Initialize but don't start game loop yet
+                this._initAudio(); // Try to initialize audio context early
+                this._setupFooterTabs();
+                this._resetStateAndRestart(); // Set initial game state
+                this._generateMinimap();
+                this._runUnitTests(); // Run tests on init
+
+                // Global listeners added only when component is active (see activate/deactivate)
+                // window.addEventListener('resize', this._boundHandleResize);
+                // window.addEventListener('keydown', this._boundHandleKeyDown);
+
+                 // Show start overlay initially by default via CSS/render
+                 // Ensure start overlay is shown if game isn't over/won yet
+                 if (this.startOverlay && !this.gameOver && !this.gameWon) {
+                     this.startOverlay.style.display = 'flex';
+                 }
+            }
+
+            disconnectedCallback() {
+                this._debugLog("Minigam component disconnected.", 'verbose');
+                this._stopGameLoop(); // Ensure loop stops
+                // Remove global listeners if they were added
+                window.removeEventListener('resize', this._boundHandleResize);
+                window.removeEventListener('keydown', this._boundHandleKeyDown);
+                // Clean up audio context? Maybe not if shared globally
+                if (this.roomNameOverlayTimeoutId) {
+                     clearTimeout(this.roomNameOverlayTimeoutId);
+                }
+                // Detach touch listeners to prevent potential memory leaks
+                this.shadowRoot.getElementById('btn-left')?.removeEventListener('touchstart', this._boundHandleTouchStart);
+                this.shadowRoot.getElementById('btn-right')?.removeEventListener('touchstart', this._boundHandleTouchStart);
+                this.shadowRoot.getElementById('btn-up')?.removeEventListener('touchstart', this._boundHandleTouchStart);
+                this.shadowRoot.getElementById('btn-down')?.removeEventListener('touchstart', this._boundHandleTouchStart);
+            }
+
+            // --- Public API Methods ---
+            activate() {
+                if (this.isActive) return; // Already active
+                this._debugLog("Activating Minigam...", 'info');
+                this.isActive = true;
+                // Add global listeners only when active
+                window.addEventListener('resize', this._boundHandleResize);
+                window.addEventListener('keydown', this._boundHandleKeyDown);
+
+                // Use rAF to ensure element is rendered before resizing
+                requestAnimationFrame(() => {
+                    this._resizeCanvas(); // Resize now that it's likely visible
+                });
+
+                // Show start overlay if game not started/over/won
+                if (this.startOverlay && !this.isGameLoopRunning && !this.gameOver && !this.gameWon) {
+                     this.startOverlay.style.display = 'flex';
+                } else if (this.isGameLoopRunning === false && (this.gameOver || this.gameWon)) {
+                    // If returning to view after game over/won, keep overlay visible but don't restart loop
+                    if(this.endOverlay) this.endOverlay.style.display = 'flex';
+                } else if (!this.gameOver && !this.gameWon && this.isGameLoopRunning === false) {
+                     // If game was already started and is returning, resume loop
+                     this._debugLog("Resuming game loop on activate.", 'info');
+                     this._startGameLoop();
+                }
+                 // Re-display room name if needed
+                 if (this.playerState?.currentScreenId && GCMinigamSlovib.worldData[this.playerState.currentScreenId]) {
+                      this._displayRoomNameOverlay(GCMinigamSlovib.worldData[this.playerState.currentScreenId].name);
+                 }
+            }
+
+            deactivate() {
+                if (!this.isActive) return; // Already inactive
+                this._debugLog("Deactivating Minigam...", 'info');
+                this.isActive = false;
+                this._stopGameLoop();
+                // Remove global listeners when inactive
+                window.removeEventListener('resize', this._boundHandleResize);
+                window.removeEventListener('keydown', this._boundHandleKeyDown);
+
+                 if (this.roomNameOverlayTimeoutId) {
+                     clearTimeout(this.roomNameOverlayTimeoutId);
+                     this.roomNameOverlayTimeoutId = null;
+                     if(this.roomNameOverlayElement) this.roomNameOverlayElement.classList.remove('visible');
+                 }
+            }
+
+            showGuideTab() {
+                this._debugLog("Request received to show Guide tab", 'info');
+                if (!this.isActive) {
+                    this._debugLog("Cannot show guide tab, component not active", 'warn');
+                    return;
+                }
+                const guideButton = this.shadowRoot.querySelector('#footer-ui .tab-button[data-tab="guide-panel"]');
+                if (guideButton) {
+                    guideButton.click(); // Simulate click to switch tab via existing logic
+                } else {
+                    this._debugLog("Guide tab button not found", 'error');
+                }
+            }
+
+            // --- Rendering and DOM ---
+            _render() {
+                 // Move HTML structure from original #minigam-view here
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        /* --- ALL MINIGAM CSS from original <style> block goes here --- */
+                        /* Make sure selectors target elements within the Shadow DOM */
+                        /* e.g., #gameCanvas, .control-button */
+                        :host {
+                            display: flex; /* Host needs flex */
+                            flex-direction: column;
+                            width: 100%;
+                            height: 100%;
+                            background-color: #112211;
+                            overflow: hidden; /* Prevent content spilling */
+                        }
+
+                        /* --- MINIGAM View Specific Styles --- */
+                        #minigam-view-content { /* Added wrapper */
+                            display: flex;
+                            flex-direction: column;
+                            flex-grow: 1;
+                            width: 100%;
+                            height: 100%; /* Ensure it tries to fill space */
+                            overflow: hidden; /* Contain children */
+                        }
+
+                        #game-area {
+                            flex-grow: 1; /* Takes up most space */
+                            width: 100%;
+                            display: flex; /* Uses flexbox */
+                            justify-content: center; /* Center canvas horizontally */
+                            align-items: center; /* *** Vertically center canvas in game area *** */
+                            position: relative; /* For overlay positioning */
+                            background-color: #112211;
+                            overflow: hidden;
+                            padding: 5px; /* Add small padding around canvas */
+                            min-height: 100px; /* Ensure it doesn't collapse */
+                        }
+                        #gameCanvas {
+                             border: 2px solid #5a8a5a;
+                             background-color: #1a2e1a;
+                             display: block;
+                             /* Removed max-width/max-height, JS sets exact size */
+                             object-fit: contain; /* Still useful conceptually */
+                             image-rendering: pixelated;
+                             image-rendering: crisp-edges;
+                        }
+                        /* Room Name Overlay */
+                        #room-name-overlay {
+                            position: absolute;
+                            top: 15px; /* Position near top + padding */
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background-color: rgba(0, 0, 0, 0.65); /* Slightly more opaque */
+                            color: white;
+                            padding: 8px 18px; /* More padding */
+                            border-radius: 8px;
+                            font-size: clamp(1.2em, 4vw, 1.8em); /* Responsive font size */
+                            font-weight: bold;
+                            text-align: center;
+                            z-index: 50;
+                            opacity: 0;
+                            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+                            pointer-events: none;
+                            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+                                         -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000;
+                            white-space: nowrap;
+                        }
+                        #room-name-overlay.visible {
+                            opacity: 1;
+                            transform: translateX(-50%) translateY(0px); /* Animate from slight offset if desired */
+                        }
+
+                        /* Footer UI (within MINIGAM view) */
+                        #footer-ui {
+                             width: 100%;
+                             min-height: 120px;
+                             max-height: 180px; /* Limit max height */
+                             background-color: #0f1a0f;
+                             border-top: 2px solid #5a8a5a;
+                             display: flex;
+                             flex-direction: column;
+                             flex-shrink: 0;
+                             overflow: hidden; /* Prevent footer content itself from overflowing */
+                        }
+                        #tab-buttons { display: flex; width: 100%; background-color: #1a2e1a; border-bottom: 1px solid #5a8a5a; flex-shrink: 0; }
+                        .tab-button { padding: 8px 15px; border: none; background-color: transparent; color: #a0c0a0; font-size: 1em; cursor: pointer; border-right: 1px solid #5a8a5a; transition: background-color 0.2s ease; flex-grow: 1; text-align: center; white-space: nowrap;} /* Added nowrap */
+                        .tab-button:last-child { border-right: none; }
+                        .tab-button:hover { background-color: #2a4e2a; }
+                        .tab-button.active { background-color: #0f1a0f; color: #e0e0e0; font-weight: bold; border-bottom: 2px solid #e94560; margin-bottom: -1px; } /* Adjust margin */
+                        #tab-panels { flex-grow: 1; padding: 8px; position: relative; overflow-y: auto; min-height: 50px; /* Ensure some space */ }
+                        .tab-panel { display: none; width: 100%; height: 100%; align-items: flex-start; justify-content: space-around; flex-wrap: wrap; /* Allow wrapping */ }
+                        .tab-panel.active { display: flex; }
+                        .ui-section { margin: 5px 10px; text-align: center; flex-shrink: 0; flex-basis: auto; /* Allow natural sizing */}
+                        .ui-section h4 { color: #8ac08a; margin-bottom: 4px; font-size: 0.9em; text-transform: uppercase; }
+                        #info-panel { justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; /* Add gap */}
+                        #room-name { font-size: 1.1em; color: #e94560; flex-basis: auto; text-align: left; word-wrap: break-word; margin-right: 10px; /* flex-basis: 30%; order: 1; */ }
+                        #ui-info { /* order: 2; flex-basis: 30%;*/ }
+                        #ui-keys { /* order: 3; flex-basis: 30%; */}
+                        #ui-info span { display: inline-block; margin: 0 6px; font-size: 1.3em; }
+                        #ui-keys span { display: inline-block; margin: 0 4px; font-size: 1.6em; opacity: 0.3; transition: opacity 0.3s ease; }
+                        #ui-keys span.has-key { opacity: 1.0; }
+                        #guide-panel { justify-content: space-around; align-items: flex-start; gap: 10px;} /* Add gap */
+                        #walkthrough { flex-basis: 45%; text-align: left; font-size: 0.8em; background-color: rgba(40, 60, 40, 0.3); padding: 8px; border-radius: 4px; max-height: 90px; overflow-y: auto; border: 1px solid #2a4e2a; min-width: 200px; }
+                        #walkthrough ul { list-style: disc; padding-left: 18px; }
+                        #walkthrough li { margin-bottom: 3px; }
+                        #minimap-container { flex-basis: 45%; display: flex; flex-direction: column; align-items: center; min-width: 150px; }
+                        #minimap { display: grid; gap: 2px; border: 1px solid #5a8a5a; margin-top: 5px; }
+                        .map-cell { width: 20px; height: 20px; background-color: #333; border: 1px solid #555; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; justify-content: center; align-items: center; font-size: 0.6em; } /* Smaller font */
+                        .map-cell:hover { background-color: #7aa07a; border-color: white; }
+                        .map-cell.visited { background-color: #5a8a5a; }
+                        .map-cell.current { background-color: #e94560; border: 1px solid white; }
+                        .map-cell[style*="opacity: 0.3"] { cursor: not-allowed; }
+                        #dev-panel { justify-content: flex-start; align-items: stretch; height: 100%; }
+                        #debug-container { width: 100%; display: flex; align-items: stretch; padding: 5px; height: 100%; min-height: 50px; /* Ensure minimum height */}
+                        #debug-container label { margin-right: 10px; font-size: 0.9em; color: #ccc; flex-shrink: 0; display: flex; align-items: center; cursor: pointer; white-space: nowrap; }
+                        #debug-output { background-color: rgba(0, 0, 0, 0.7); color: #0f0; font-family: monospace; font-size: 0.8em; padding: 5px 8px; border: 1px solid #0f0; flex-grow: 1; height: 100%; overflow-y: scroll; white-space: pre-wrap; opacity: 0.9; margin-left: 0; max-height: 80px; /* Limit height */}
+
+                        /* Controls (within MINIGAM view) */
+                        #controls {
+                            width: 100%;
+                            height: 75px; /* Keep slightly taller */
+                            display: flex;
+                            justify-content: space-around;
+                            align-items: center;
+                            padding: 5px;
+                            background-color: rgba(0, 0, 0, 0.5);
+                            flex-shrink: 0;
+                            user-select: none;
+                        }
+                        .control-button {
+                             background-color: #5a8a5a;
+                             border: none;
+                             border-radius: 50%;
+                             width: 58px; /* Adjusted size */
+                             height: 58px; /* Adjusted size */
+                             font-size: 2.3em; /* Adjusted emoji size */
+                             color: white;
+                             display: flex;
+                             justify-content: center;
+                             align-items: center;
+                             cursor: pointer;
+                             transition: background-color 0.1s ease, transform 0.1s ease;
+                             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+                             -webkit-tap-highlight-color: transparent;
+                        }
+                        .control-button:active { background-color: #8ac08a; transform: scale(0.95); }
+
+                        /* Overlays */
+                        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); color: white; display: none; justify-content: center; align-items: center; text-align: center; z-index: 100; cursor: pointer; flex-direction: column; font-size: 1.2em; padding: 20px; }
+                        .overlay button { padding: 15px 30px; font-size: 1em; margin-top: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+                        .overlay button:hover { background-color: #45a049; }
+                        #start-overlay { /* display: flex; /* Initially shown by logic in connectedCallback/activate */ }
+                        #end-overlay { /* Hidden by default */ }
+                        #end-overlay button#return-to-wrld-button { background-color: #5a8a5a; margin-left: 15px; }
+                        #end-overlay button#return-to-wrld-button:hover { background-color: #7aa07a; }
+
+                    </style>
+
+                    <div id="minigam-view-content"> ${/* Wrap content */}
+                        <div id="game-area">
+                            <canvas id="gameCanvas"></canvas>
+                            <div id="room-name-overlay"></div>
+                            <div id="start-overlay" class="overlay">
+                                <div>Loading Minigame... <br> <button id="start-button-minigame">Ready?</button> </div>
+                            </div>
+                            <div id="end-overlay" class="overlay">
+                                <div id="end-message">Game Over / You Win!</div>
+                                <button id="restart-button">Play Minigame Again?</button>
+                                <button id="return-to-wrld-button">Return to WRLD</button>
+                            </div>
+                        </div>
+
+                        <div id="footer-ui">
+                            <div id="tab-buttons">
+                                <button class="tab-button active" data-tab="info-panel">Info</button>
+                                <button class="tab-button" data-tab="guide-panel">Guide</button>
+                                <button class="tab-button" data-tab="dev-panel">Dev</button>
+                            </div>
+                            <div id="tab-panels">
+                                <div id="info-panel" class="tab-panel active">
+                                    <div id="room-name" class="ui-section">Room Name</div>
+                                    <div id="ui-info" class="ui-section"> <span id="score">💎 0</span> <span id="lives">❤️ 3</span> </div>
+                                    <div id="ui-keys" class="ui-section"> <span id="key-yellow" data-key="yellow">🔑<span style="color:#ff0;">🟡</span></span> <span id="key-blue" data-key="blue">🔑<span style="color:#0cf;">🔵</span></span> <span id="key-red" data-key="red">🔑<span style="color:#f00;">🔴</span></span> <span id="key-green" data-key="green">🔑<span style="color:#0f0;">🟢</span></span> </div>
+                                </div>
+                                <div id="guide-panel" class="tab-panel">
+                                     <div id="walkthrough" class="ui-section">
+                                         <h4>Minigame Guide</h4>
+                                         <ul>
+                                             <li>Explore using controls or WASD/Arrows.</li>
+                                             <li>Keys 🔑 open Locks 🔒. Doors 🚪 are portals.</li>
+                                             <li>Collect gems 💎! Avoid snakes 🐍 & rocks 🪨!</li>
+                                             <li>River 🌊 is North of 'River Ledge'. Dangerous!</li>
+                                             <li>Use switch 🔘 in 'Control Room' to make river safe 🪵.</li>
+                                             <li>Get Red Key 🔑🔴 ('Far Shore') for Vault Locks 🔒🔴.</li>
+                                             <li>Reach Vault & unlock locks to win minigame!</li>
+                                             <li>Map: Click room below to teleport (debug).</li>
+                                         </ul>
+                                     </div>
+                                     <div id="minimap-container" class="ui-section">
+                                          <h4>Debug Map (Click to Teleport)</h4>
+                                         <div id="minimap"></div>
+                                     </div>
+                                </div>
+                                <div id="dev-panel" class="tab-panel">
+                                     <div id="debug-container">
+                                         <label><input type="checkbox" id="verbose-debug"> Verbose Log</label>
+                                         <div id="debug-output">Debug Initializing...</div>
+                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="controls">
+                            <button class="control-button" id="btn-left">⬅️</button>
+                            <button class="control-button" id="btn-up">⬆️</button>
+                            <button class="control-button" id="btn-down">⬇️</button>
+                            <button class="control-button" id="btn-right">➡️</button>
+                        </div>
+                    </div> ${/* End wrapper */}
+                `;
+            }
+
+            _cacheDomReferences() {
+                // Use this.shadowRoot to find elements
+                this.canvas = this.shadowRoot.getElementById('gameCanvas');
+                this.ctx = this.canvas?.getContext('2d');
+                this.minimapElement = this.shadowRoot.getElementById('minimap');
+                this.roomNameElement = this.shadowRoot.getElementById('room-name'); // In footer
+                this.scoreElement = this.shadowRoot.getElementById('score');
+                this.livesElement = this.shadowRoot.getElementById('lives');
+                this.roomNameOverlayElement = this.shadowRoot.getElementById('room-name-overlay'); // In game area
+                this.startOverlay = this.shadowRoot.getElementById('start-overlay');
+                this.endOverlay = this.shadowRoot.getElementById('end-overlay');
+                this.endMessage = this.shadowRoot.getElementById('end-message');
+                this.debugOutputElement = this.shadowRoot.getElementById('debug-output');
+                this.verboseCheckbox = this.shadowRoot.getElementById('verbose-debug');
+                this.controlsElement = this.shadowRoot.getElementById('controls');
+                this.footerUiElement = this.shadowRoot.getElementById('footer-ui');
+
+                 if (!this.canvas || !this.ctx || !this.minimapElement || !this.roomNameOverlayElement || !this.debugOutputElement) {
+                     console.error("[gc-minigam-slovib] Critical DOM elements missing in shadow DOM!");
+                     this._debugLog("Critical DOM elements missing!", 'error');
+                 }
+            }
+
+            _setupInternalEventListeners() {
+                 // Setup Minigame specific buttons (overlays)
+                this.shadowRoot.getElementById('start-button-minigame')?.addEventListener('click', () => {
+                    this._playButtonClickSound();
+                    if(this.startOverlay) this.startOverlay.style.display = 'none';
+                     this._startGameLoop();
+                });
+                this.shadowRoot.getElementById('restart-button')?.addEventListener('click', () => {
+                    this._playButtonClickSound();
+                     this._resetStateAndRestart(); // Resets state
+                     if(this.startOverlay) this.startOverlay.style.display = 'none'; // Hide overlay
+                     if(this.endOverlay) this.endOverlay.style.display = 'none'; // Hide overlay
+                     this._startGameLoop(); // Start loop immediately after restart
+                });
+                this.shadowRoot.getElementById('return-to-wrld-button')?.addEventListener('click', () => {
+                     this._playButtonClickSound();
+                     if(this.endOverlay) this.endOverlay.style.display = 'none';
+                     // Signal parent (gc-gamgam) to switch back
+                     this.dispatchEvent(new CustomEvent('return-to-wrld-requested', { bubbles: true, composed: true }));
+                });
+
+                 // Setup Minigame control listeners (Touch) - Use bound listeners
