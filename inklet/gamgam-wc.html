@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🌳 Emoji Jungle Quest 🔑 (Web Components - Inline)</title>
+    <title>🌳 Emoji Jungle Quest 🔑 (v10 - WC Architecture)</title>
     <style>
         /* Reset & Global Styles (Keep minimal essentials here) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,53 +14,35 @@
             background-color: #1a2e1a; /* Base background */
             color: #e0e0e0;
             font-family: 'Arial', sans-serif;
-            display: flex; /* Ensure body takes full height */
-            flex-direction: column;
+            display: flex; /* Make body a flex container */
             touch-action: manipulation; /* Prevent zoom/scroll */
         }
         /* Let the component handle its own layout */
         gc-gamgam {
-            flex-grow: 1;
+            flex-grow: 1; /* Take up all available space */
             display: flex; /* Allow gc-gamgam to control its internal flex layout */
             overflow: hidden; /* Prevent component content from overflowing body */
-            width: 100%; /* Ensure it takes full width */
-            height: 100%; /* Ensure it takes full height */
+            width: 100%;
+            height: 100%;
         }
     </style>
 
     <script type="module">
-        // Shared utility/debug (can remain outside classes if preferred, or be methods)
-        // Note: For components, accessing debugOutputElement might need adaptation
-        // if it lives *inside* a component's shadow DOM. Here, we'll make it
-        // part of the minigam component. Error handlers are kept global.
-
+        // --- Global Error Handlers ---
+        // Keep these simple. Components log their own detailed errors.
         window.onerror = function(message, source, lineno, colno, error) {
             const errorMsg = `GLOBAL ERROR: ${message} at ${source}:${lineno}:${colno}`;
-            console.error(errorMsg);
-            // Attempt to log to debug panel if available (might fail if component not ready)
-            try {
-                const minigam = document.querySelector('gc-gamgam')?.shadowRoot?.querySelector('gc-minigam-slovib');
-                minigam?._debugLog(errorMsg, 'error');
-                if (error && error.stack) {
-                    minigam?._debugLog(`   Stack: ${error.stack}`, 'error');
-                }
-            } catch (e) { /* ignore */ }
-            return true;
+            console.error(errorMsg, error);
+            // Optional: Display a generic error message overlay to the user
+            return true; // Prevents default browser error handling
         };
 
         window.onunhandledrejection = function(event) {
              const errorMsg = `UNHANDLED PROMISE REJECTION: ${event.reason}`;
-             console.error(errorMsg);
-             try {
-                const minigam = document.querySelector('gc-gamgam')?.shadowRoot?.querySelector('gc-minigam-slovib');
-                minigam?._debugLog(errorMsg, 'error');
-                if (event.reason && event.reason.stack) {
-                    minigam?._debugLog(`   Stack: ${event.reason.stack}`, 'error');
-                }
-            } catch (e) { /* ignore */ }
+             console.error(errorMsg, event);
         };
 
-        // --- Component: gc-inkblot ---
+        // --- Component: gc-inkblot (Narrative View) ---
         class GCInkblot extends HTMLElement {
             constructor() {
                 super();
@@ -71,109 +53,42 @@
             connectedCallback() {
                 this._render();
                 this._setupEventListeners();
+                console.log("[gc-inkblot] Connected.");
             }
 
             disconnectedCallback() {
-                // Remove listeners if added directly to elements in shadow DOM
                 const actionsContainer = this.shadowRoot.getElementById('wrld-actions');
                 if (actionsContainer) {
                     actionsContainer.removeEventListener('click', this._boundHandleActionClick);
                 }
+                 console.log("[gc-inkblot] Disconnected.");
             }
 
             _render() {
-                // Simplified initial story text
-                const initialStory = "We find ourself in a shimmering underground cavern where precious gems gleam somehow through the darkness and mud...";
-
+                const initialStory = "You find yourself in a shimmering underground cavern where precious gems gleam somehow through the darkness and mud...";
                 this.shadowRoot.innerHTML = `
                     <style>
-                        /* Styles specific to WRLD/Inkblot View */
-                        :host {
-                            display: flex; /* Changed from block to flex */
-                            flex-direction: column;
-                            padding: 20px;
-                            justify-content: space-between;
-                            align-items: center;
-                            background-color: #112211; /* Added background */
-                            color: #e0e0e0;
-                            font-family: 'Arial', sans-serif;
-                            width: 100%;
-                            height: 100%;
-                            overflow: hidden; /* Prevent internal overflow */
-                        }
-
-                        #story-text {
-                            background-color: rgba(0, 0, 0, 0.3);
-                            padding: 15px 25px;
-                            border-radius: 8px;
-                            border: 1px solid #3a6a3a;
-                            font-size: 1.2em;
-                            line-height: 1.6;
-                            max-width: 85%;
-                            margin-bottom: 20px; /* Space between text and buttons */
-                            color: #c0e0c0;
-                            text-align: center;
-                            flex-grow: 1; /* Allow text area to grow */
-                            max-height: 75%; /* Limit height */
-                            overflow-y: auto; /* Allow scrolling if needed */
-                        }
-
-                        #wrld-actions {
-                            display: flex;
-                            justify-content: space-around;
-                            align-items: center;
-                            width: 100%;
-                            max-width: 600px;
-                            padding: 10px;
-                            background-color: rgba(0, 0, 0, 0.2);
-                            border-top: 1px solid #3a6a3a;
-                            flex-shrink: 0; /* Prevent shrinking */
-                        }
-
-                        .wrld-action-button {
-                            background-color: #5a8a5a;
-                            border: 2px solid #8ac08a;
-                            border-radius: 10px;
-                            padding: 15px 25px;
-                            color: white;
-                            font-size: 1.1em;
-                            font-weight: bold;
-                            cursor: pointer;
-                            transition: background-color 0.2s, transform 0.1s;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            min-width: 110px;
-                            text-align: center;
-                        }
+                        :host { display: none; /* Hidden by default */ flex-direction: column; padding: 20px; justify-content: space-between; align-items: center; background-color: #112211; color: #e0e0e0; font-family: 'Arial', sans-serif; width: 100%; height: 100%; overflow: hidden; }
+                        :host(.active) { display: flex; } /* Shown when active */
+                        #story-text { background-color: rgba(0, 0, 0, 0.3); padding: 15px 25px; border-radius: 8px; border: 1px solid #3a6a3a; font-size: 1.2em; line-height: 1.6; max-width: 85%; margin-bottom: 20px; color: #c0e0c0; text-align: center; flex-grow: 1; max-height: 75%; overflow-y: auto; }
+                        #wrld-actions { display: flex; justify-content: space-around; align-items: center; width: 100%; max-width: 600px; padding: 10px; background-color: rgba(0, 0, 0, 0.2); border-top: 1px solid #3a6a3a; flex-shrink: 0; }
+                        .wrld-action-button { background-color: #5a8a5a; border: 2px solid #8ac08a; border-radius: 10px; padding: 15px 25px; color: white; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: background-color 0.2s, transform 0.1s; display: flex; flex-direction: column; align-items: center; min-width: 110px; text-align: center; }
                         .wrld-action-button .button-icon { font-size: 1.8em; margin-bottom: 5px; line-height: 1; }
                         .wrld-action-button:hover { background-color: #7aa07a; }
                         .wrld-action-button:active { transform: scale(0.97); }
                     </style>
-
-                    <div id="story-text">
-                        <p>${initialStory}</p>
-                        </div>
+                    <div id="story-text"><p>${initialStory}</p></div>
                     <div id="wrld-actions">
-                         <button class="wrld-action-button" data-action="play">
-                            <span class="button-icon">▶️</span> Explore <br>(Play Minigame)
-                        </button>
-                        <button class="wrld-action-button" data-action="quit">
-                            <span class="button-icon">❌</span> Quit (Stub)
-                        </button>
-                        <button class="wrld-action-button" data-action="help">
-                             <span class="button-icon">❓</span> Help (Guide)
-                        </button>
+                         <button class="wrld-action-button" data-action="play"><span class="button-icon">▶️</span> Explore <br>(Play Minigame)</button>
+                         <button class="wrld-action-button" data-action="quit"><span class="button-icon">❌</span> Quit (Stub)</button>
+                         <button class="wrld-action-button" data-action="help"><span class="button-icon">❓</span> Help (Guide)</button>
                     </div>
                 `;
             }
 
             _setupEventListeners() {
-                // Use event delegation on the container
                 const actionsContainer = this.shadowRoot.getElementById('wrld-actions');
-                if (actionsContainer) {
-                    actionsContainer.addEventListener('click', this._boundHandleActionClick);
-                }
+                actionsContainer?.addEventListener('click', this._boundHandleActionClick);
             }
 
             _handleActionClick(e) {
@@ -181,185 +96,176 @@
                  if (button) {
                     const action = button.dataset.action;
                     console.log(`[gc-inkblot] Action clicked: ${action}`);
-                    // Optional: Play sound via parent or shared audio context if needed
-                    // this.dispatchEvent(new CustomEvent('play-sound', { detail: 'button_click', bubbles: true, composed: true }));
-
+                    // Play sound maybe via parent: this.dispatchEvent(new CustomEvent('play-sound', { detail: 'button_click', bubbles: true, composed: true }));
                     switch (action) {
-                        case 'play':
-                            // Signal to parent (gc-gamgam) to switch view
-                            this.dispatchEvent(new CustomEvent('play-minigame-requested', { bubbles: true, composed: true }));
-                            break;
-                        case 'quit':
-                            alert("Quit action (stub) - Not implemented in Web Component version yet.");
-                            break;
-                        case 'help':
-                             // Signal to parent to switch view AND potentially tell minigame to open help
-                            this.dispatchEvent(new CustomEvent('show-minigame-guide-requested', { bubbles: true, composed: true }));
-                            break;
+                        case 'play': this.dispatchEvent(new CustomEvent('play-minigame-requested', { bubbles: true, composed: true })); break;
+                        case 'quit': alert("Quit action (stub)"); break;
+                        case 'help': this.dispatchEvent(new CustomEvent('show-minigame-guide-requested', { bubbles: true, composed: true })); break;
                     }
                 }
             }
 
-            // --- Public API (Example - could be called by gc-gamgam or Ink integration) ---
+            // --- Public API ---
             setStoryText(htmlContent) {
                 const storyElement = this.shadowRoot.getElementById('story-text');
-                if (storyElement) {
-                    storyElement.innerHTML = htmlContent;
-                }
+                if (storyElement) { storyElement.innerHTML = htmlContent; console.log("[gc-inkblot] Story text updated."); }
             }
-
-            setActions(actionsArray) {
-                // TODO: Dynamically generate buttons based on Ink choices/tags
+            setActions(actionsArray) { // Placeholder for Ink integration
                 console.warn('[gc-inkblot] setActions not fully implemented.');
-                // Example: Clear existing buttons and add new ones based on actionsArray
+                 const actionsContainer = this.shadowRoot.getElementById('wrld-actions');
+                 if (!actionsContainer) return;
+                 actionsContainer.innerHTML = ''; // Clear previous
+                 actionsArray.forEach(action => {
+                     const button = document.createElement('button');
+                     button.classList.add('wrld-action-button');
+                     button.dataset.action = action.id || action.text.toLowerCase();
+                     button.innerHTML = `<span class="button-icon">${action.icon || '🔘'}</span> ${action.text}`;
+                     actionsContainer.appendChild(button);
+                 });
+                 console.log("[gc-inkblot] Actions updated (placeholder).");
             }
         }
         customElements.define('gc-inkblot', GCInkblot);
 
-        // --- Component: gc-minigam-slovib ---
+
+        // --- Component: gc-minigam-slovib (Minigame View) ---
         class GCMinigamSlovib extends HTMLElement {
 
-            // --- Constants (Static properties of the class) ---
-            static EMOJI_PLAYER = '🧑‍🚀'; static EMOJI_DIRT = '🟫'; static EMOJI_ROCK = '🪨'; static EMOJI_GEM = '💎'; static EMOJI_EMPTY = ' '; static EMOJI_EXPLOSION = '💥'; static EMOJI_WALL = '🧱'; static EMOJI_STAR = '✨'; static EMOJI_DOOR_RED = '🚪🟥'; static EMOJI_DOOR_BLUE = '🚪🟦'; static EMOJI_DOOR_YELLOW = '🚪🟨'; static EMOJI_DOOR_GREEN = '🚪🟩';
-            static E_KEY_Y = '🔑🟡'; static E_LOCK_Y = '🔒🟡'; static E_KEY_B = '🔑🔵'; static E_LOCK_B = '🔒🔵'; static E_KEY_R = '🔑🔴'; static E_LOCK_R = '🔒🔴'; static E_KEY_G = '🔑🟢'; static E_LOCK_G = '🔒🟢';
-            static EMOJI_GRASS = '🌿'; static EMOJI_FLOWER = '🌺'; static EMOJI_LIANA = '〰️'; static EMOJI_TREE = '🌳'; static EMOJI_SNAKE = '🐍';
-            static EMOJI_WATER = '🌊'; static EMOJI_RIVER_WOOD = '🪵'; static EMOJI_SWITCH_OFF = '🔘'; static EMOJI_SWITCH_ON = '🟢'; static EMOJI_RIVER_BLOCK = '⬛'; static EMOJI_RIVER_LOG = '➖';
-            static TILES = { EMPTY: 0, DIRT: 1, ROCK: 2, GEM: 3, PLAYER: 4, WALL: 5, EXPLOSION: 6, DOOR_RED: 7, DOOR_BLUE: 8, DOOR_YELLOW: 9, DOOR_GREEN: 16, KEY_YELLOW: 10, LOCK_YELLOW: 11, KEY_BLUE: 12, LOCK_BLUE: 13, KEY_RED: 14, LOCK_RED: 15, KEY_GREEN: 17, LOCK_GREEN: 18, GRASS: 20, FLOWER: 21, LIANA: 22, TREE_TL: 30, TREE_TR: 31, TREE_BL: 32, TREE_BR: 33, WATER: 40, RIVER_WOOD: 41, SWITCH_OFF: 42, SWITCH_ON: 43, };
-            static TILE_EMOJIS = { [this.TILES.EMPTY]: this.EMOJI_EMPTY, [this.TILES.DIRT]: this.EMOJI_DIRT, [this.TILES.ROCK]: this.EMOJI_ROCK, [this.TILES.GEM]: this.EMOJI_GEM, [this.TILES.WALL]: this.EMOJI_WALL, [this.TILES.EXPLOSION]: this.EMOJI_EXPLOSION, [this.TILES.DOOR_RED]: this.EMOJI_DOOR_RED, [this.TILES.DOOR_BLUE]: this.EMOJI_DOOR_BLUE, [this.TILES.DOOR_YELLOW]: this.EMOJI_DOOR_YELLOW, [this.TILES.DOOR_GREEN]: this.EMOJI_DOOR_GREEN, [this.TILES.KEY_YELLOW]: this.E_KEY_Y, [this.TILES.LOCK_YELLOW]: this.E_LOCK_Y, [this.TILES.KEY_BLUE]: this.E_KEY_B, [this.TILES.LOCK_BLUE]: this.E_LOCK_B, [this.TILES.KEY_RED]: this.E_KEY_R, [this.TILES.LOCK_RED]: this.E_LOCK_R, [this.TILES.KEY_GREEN]: this.E_KEY_G, [this.TILES.LOCK_GREEN]: this.E_LOCK_G, [this.TILES.GRASS]: this.EMOJI_GRASS, [this.TILES.FLOWER]: this.EMOJI_FLOWER, [this.TILES.LIANA]: this.EMOJI_LIANA, [this.TILES.TREE_TL]: this.EMOJI_TREE, [this.TILES.TREE_TR]: this.EMOJI_TREE, [this.TILES.TREE_BL]: this.EMOJI_TREE, [this.TILES.TREE_BR]: this.EMOJI_TREE, [this.TILES.WATER]: this.EMOJI_WATER, [this.TILES.RIVER_WOOD]: this.EMOJI_RIVER_WOOD, [this.TILES.SWITCH_OFF]: this.EMOJI_SWITCH_OFF, [this.TILES.SWITCH_ON]: this.EMOJI_SWITCH_ON, };
-            static TILE_PROPERTIES = { [this.TILES.DOOR_RED]: { isPortal: true, color: 'red'}, [this.TILES.DOOR_BLUE]: { isPortal: true, color: 'blue'}, [this.TILES.DOOR_YELLOW]: { isPortal: true, color: 'yellow'}, [this.TILES.DOOR_GREEN]: { isPortal: true, color: 'green'}, [this.TILES.LOCK_YELLOW]: { isLock: true, color: 'yellow', isSolid: true }, [this.TILES.LOCK_BLUE]: { isLock: true, color: 'blue', isSolid: true }, [this.TILES.LOCK_RED]: { isLock: true, color: 'red', isSolid: true }, [this.TILES.LOCK_GREEN]: { isLock: true, color: 'green', isSolid: true }, [this.TILES.KEY_YELLOW]: { isKey: true, color: 'yellow' }, [this.TILES.KEY_BLUE]: { isKey: true, color: 'blue' }, [this.TILES.KEY_RED]: { isKey: true, color: 'red' }, [this.TILES.KEY_GREEN]: { isKey: true, color: 'green' }, [this.TILES.WALL]: { isSolid: true }, [this.TILES.ROCK]: { isSolid: true }, [this.TILES.TREE_TL]: { isSolid: true, isMultiTile: true, multiTileEmoji: this.EMOJI_TREE, multiTileWidth: 2, multiTileHeight: 2, multiTileOffsetX: 0, multiTileOffsetY: 0 }, [this.TILES.TREE_TR]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BL]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BR]: { isSolid: true, isMultiTile: true }, [this.TILES.GRASS]: { isBackground: true }, [this.TILES.FLOWER]: { isBackground: true }, [this.TILES.LIANA]: { isBackground: true }, [this.TILES.WATER]: { isSolid: true }, [this.TILES.RIVER_WOOD]: { isBackground: true }, [this.TILES.SWITCH_OFF]: { isSwitch: true, targetRoom: '1,3', stateVariable: 'riverFilled', targetTileFrom: this.TILES.WATER, targetTileTo: this.TILES.RIVER_WOOD, targetSwitchTile: this.TILES.SWITCH_ON }, [this.TILES.SWITCH_ON]: { isSolid: false, isBackground: true }, };
-            static GRID_COLS = 15; static GRID_ROWS = 10;
-            static FALL_DELAY = 180; static PARTICLE_COUNT = 6; static PARTICLE_LIFESPAN = 800;
-            static WORLD_WIDTH = 4; static WORLD_HEIGHT = 5;
-            static ENEMY_SNAKE_SPEED = 50;
-            static RIVER_SPAWN_INTERVAL = 400; static RIVER_BLOCK_CHANCE = 0.6; static RIVER_LOG_CHANCE = 0.15; static RIVER_OBJECT_SPEED = 80;
-            static MAX_DEBUG_LINES = 100;
+             // --- Constants (Static properties) ---
+             static TILES = Object.freeze({ EMPTY: 0, DIRT: 1, ROCK: 2, GEM: 3, PLAYER: 4, WALL: 5, EXPLOSION: 6, DOOR_RED: 7, DOOR_BLUE: 8, DOOR_YELLOW: 9, DOOR_GREEN: 16, KEY_YELLOW: 10, LOCK_YELLOW: 11, KEY_BLUE: 12, LOCK_BLUE: 13, KEY_RED: 14, LOCK_RED: 15, KEY_GREEN: 17, LOCK_GREEN: 18, GRASS: 20, FLOWER: 21, LIANA: 22, TREE_TL: 30, TREE_TR: 31, TREE_BL: 32, TREE_BR: 33, WATER: 40, RIVER_WOOD: 41, SWITCH_OFF: 42, SWITCH_ON: 43 });
+             static EMOJI_PLAYER = '🧑‍🚀'; static EMOJI_DIRT = '🟫'; static EMOJI_ROCK = '🪨'; static EMOJI_GEM = '💎'; static EMOJI_EMPTY = ' '; static EMOJI_EXPLOSION = '💥'; static EMOJI_WALL = '🧱'; static EMOJI_STAR = '✨'; static EMOJI_DOOR_RED = '🚪🟥'; static EMOJI_DOOR_BLUE = '🚪🟦'; static EMOJI_DOOR_YELLOW = '🚪🟨'; static EMOJI_DOOR_GREEN = '🚪🟩';
+             static E_KEY_Y = '🔑🟡'; static E_LOCK_Y = '🔒🟡'; static E_KEY_B = '🔑🔵'; static E_LOCK_B = '🔒🔵'; static E_KEY_R = '🔑🔴'; static E_LOCK_R = '🔒🔴'; static E_KEY_G = '🔑🟢'; static E_LOCK_G = '🔒🟢';
+             static EMOJI_GRASS = '🌿'; static EMOJI_FLOWER = '🌺'; static EMOJI_LIANA = '〰️'; static EMOJI_TREE = '🌳'; static EMOJI_SNAKE = '🐍';
+             static EMOJI_WATER = '🌊'; static EMOJI_RIVER_WOOD = '🪵'; static EMOJI_SWITCH_OFF = '🔘'; static EMOJI_SWITCH_ON = '🟢'; static EMOJI_RIVER_BLOCK = '⬛'; static EMOJI_RIVER_LOG = '➖';
+             static TILE_EMOJIS = Object.freeze({ [this.TILES.EMPTY]: this.EMOJI_EMPTY, [this.TILES.DIRT]: this.EMOJI_DIRT, [this.TILES.ROCK]: this.EMOJI_ROCK, [this.TILES.GEM]: this.EMOJI_GEM, [this.TILES.WALL]: this.EMOJI_WALL, [this.TILES.EXPLOSION]: this.EMOJI_EXPLOSION, [this.TILES.DOOR_RED]: this.EMOJI_DOOR_RED, [this.TILES.DOOR_BLUE]: this.EMOJI_DOOR_BLUE, [this.TILES.DOOR_YELLOW]: this.EMOJI_DOOR_YELLOW, [this.TILES.DOOR_GREEN]: this.EMOJI_DOOR_GREEN, [this.TILES.KEY_YELLOW]: this.E_KEY_Y, [this.TILES.LOCK_YELLOW]: this.E_LOCK_Y, [this.TILES.KEY_BLUE]: this.E_KEY_B, [this.TILES.LOCK_BLUE]: this.E_LOCK_B, [this.TILES.KEY_RED]: this.E_KEY_R, [this.TILES.LOCK_RED]: this.E_LOCK_R, [this.TILES.KEY_GREEN]: this.E_KEY_G, [this.TILES.LOCK_GREEN]: this.E_LOCK_G, [this.TILES.GRASS]: this.EMOJI_GRASS, [this.TILES.FLOWER]: this.EMOJI_FLOWER, [this.TILES.LIANA]: this.EMOJI_LIANA, [this.TILES.TREE_TL]: this.EMOJI_TREE, [this.TILES.TREE_TR]: this.EMOJI_TREE, [this.TILES.TREE_BL]: this.EMOJI_TREE, [this.TILES.TREE_BR]: this.EMOJI_TREE, [this.TILES.WATER]: this.EMOJI_WATER, [this.TILES.RIVER_WOOD]: this.EMOJI_RIVER_WOOD, [this.TILES.SWITCH_OFF]: this.EMOJI_SWITCH_OFF, [this.TILES.SWITCH_ON]: this.EMOJI_SWITCH_ON });
+             static TILE_PROPERTIES = Object.freeze({ [this.TILES.DOOR_RED]: { isPortal: true, color: 'red'}, [this.TILES.DOOR_BLUE]: { isPortal: true, color: 'blue'}, [this.TILES.DOOR_YELLOW]: { isPortal: true, color: 'yellow'}, [this.TILES.DOOR_GREEN]: { isPortal: true, color: 'green'}, [this.TILES.LOCK_YELLOW]: { isLock: true, color: 'yellow', isSolid: true }, [this.TILES.LOCK_BLUE]: { isLock: true, color: 'blue', isSolid: true }, [this.TILES.LOCK_RED]: { isLock: true, color: 'red', isSolid: true }, [this.TILES.LOCK_GREEN]: { isLock: true, color: 'green', isSolid: true }, [this.TILES.KEY_YELLOW]: { isKey: true, color: 'yellow' }, [this.TILES.KEY_BLUE]: { isKey: true, color: 'blue' }, [this.TILES.KEY_RED]: { isKey: true, color: 'red' }, [this.TILES.KEY_GREEN]: { isKey: true, color: 'green' }, [this.TILES.WALL]: { isSolid: true }, [this.TILES.ROCK]: { isSolid: true }, [this.TILES.TREE_TL]: { isSolid: true, isMultiTile: true, multiTileEmoji: this.EMOJI_TREE, multiTileWidth: 2, multiTileHeight: 2, multiTileOffsetX: 0, multiTileOffsetY: 0 }, [this.TILES.TREE_TR]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BL]: { isSolid: true, isMultiTile: true }, [this.TILES.TREE_BR]: { isSolid: true, isMultiTile: true }, [this.TILES.GRASS]: { isBackground: true }, [this.TILES.FLOWER]: { isBackground: true }, [this.TILES.LIANA]: { isBackground: true }, [this.TILES.WATER]: { isSolid: true }, [this.TILES.RIVER_WOOD]: { isBackground: true }, [this.TILES.SWITCH_OFF]: { isSwitch: true, targetRoom: '1,3', stateVariable: 'riverFilled', targetTileFrom: this.TILES.WATER, targetTileTo: this.TILES.RIVER_WOOD, targetSwitchTile: this.TILES.SWITCH_ON }, [this.TILES.SWITCH_ON]: { isSolid: false, isBackground: true } });
+             static GRID_COLS = 15; static GRID_ROWS = 10;
+             static FALL_DELAY = 180; static PARTICLE_COUNT = 6; static PARTICLE_LIFESPAN = 800;
+             static WORLD_WIDTH = 4; static WORLD_HEIGHT = 5;
+             static ENEMY_SNAKE_SPEED = 50;
+             static RIVER_SPAWN_INTERVAL = 400; static RIVER_BLOCK_CHANCE = 0.6; static RIVER_LOG_CHANCE = 0.15; static RIVER_OBJECT_SPEED = 80;
+             static MAX_DEBUG_LINES = 100;
 
-            // --- World Data (Static property) ---
-             static worldData = { /* ... Copied exactly from original ... */
-                 '0,0': { name: "Crash Site Clearing", layout: [[20, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 20, 20], [20, 5, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 5, 20], [5, 0, 3, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5], [5, 0, 0, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 0, 5], [5, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 5], [5, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 9, 5], [5, 1, 1, 0, 3, 0, 0, 1, 16, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 13, y: 7, tileType: 9 /*YELLOW*/, target: '1,0', exitX: 1, exitY: 7 }, { x: 8, y: 8, tileType: 16 /*GREEN*/, target: '0,1', exitX: 8, exitY: 1 }] },
-                 '1,0': { name: "Overgrown Path", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 20, 20, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 10, 0, 2, 0, 0, 0, 2, 0, 0, 20, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: 9 /*YELLOW*/, target: '0,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: 8 /*BLUE*/, target: '2,0', exitX: 1, exitY: 7 }, { x: 7, y: 5, tileType: 16 /*GREEN*/, target: '1,1', exitX: 7, exitY: 1 }] },
-                 '2,0': { name: "Snake Pit", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 12, 0, 1, 1, 1, 1, 1, 0, 14, 17, 1, 5], [5, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: 8 /*BLUE*/, target: '1,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: 7 /*RED*/, target: '2,1', exitX: 1, exitY: 1 }], enemies: [{ type: this.EMOJI_SNAKE, x: 3, y: 6, speed: 50 /*ENEMY_SNAKE_SPEED*/, path: [{ x: 3, y: 6 }, { x: 11, y: 6 }] }], items: [17 /*KEY_GREEN*/] },
-                 '2,1': { name: "Ancient Grove", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 7, 0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 0, 3, 5], [5, 0, 0, 20, 1, 1, 1, 1, 1, 1, 1, 20, 0, 0, 5], [5, 20, 1, 1, 1, 30, 31, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 1, 1, 32, 33, 1, 1, 1, 1, 1, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 13, 1, 1, 1, 1, 1, 1, 1, 13, 1, 1, 5], [5, 1, 1, 0, 1, 1, 3, 16, 3, 1, 1, 0, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 1, tileType: 7 /*RED*/, target: '2,0', exitX: 12, exitY: 7 }, { x: 7, y: 8, tileType: 16 /*GREEN*/, target: '2,2', exitX: 7, exitY: 1 }], enemies: [{ type: this.EMOJI_SNAKE, x: 2, y: 5, speed: 40 /*ENEMY_SNAKE_SPEED * 0.8*/, path: [{ x: 2, y: 5 }, { x: 12, y: 5 }] }] },
-                 '0,1': { name: "Dark Cave", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 0, 0, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 0, 5], [5, 0, 1, 1, 2, 1, 1, 1, 0, 1, 1, 2, 1, 0, 5], [5, 1, 1, 2, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 1, 2, 1, 1, 1, 2, 1, 0, 1, 1, 1, 2, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 8, y: 1, tileType: 16 /*GREEN*/, target: '0,0', exitX: 8, exitY: 8 }, { x: 7, y: 8, tileType: 8 /*BLUE*/, target: '0,2', exitX: 7, exitY: 1 }] },
-                 '1,1': { name: "Control Room", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 0, 42, 0, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 16 /*GREEN*/, target: '1,0', exitX: 7, exitY: 5 }, { x: 7, y: 7, tileType: 7 /*RED*/, target: '1,2', exitX: 7, exitY: 1 }], items: [3 /*GEM*/] },
-                 '0,2': { name: "Waterfall Base", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 8, 1, 1, 1, 1, 1, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 40, 40, 1, 1, 1, 0, 1, 1, 1, 40, 40, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 8 /*BLUE*/, target: '0,1', exitX: 7, exitY: 8 }] },
-                 '1,2': { name: "River Ledge", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 7, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 7 /*RED*/, target: '1,1', exitX: 7, exitY: 7 }, { x: 7, y: 8, tileType: 0 /*EMPTY*/, target: '1,3', exitX: 7, exitY: 1, implicit: true }], items: [3 /*GEM*/] },
-                 '1,3': { name: "River Crossing", special: 'river', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 1, 1, 1, 40, 40, 40, 0, 40, 40, 40, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 0 /*EMPTY*/, target: '1,2', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: 0 /*EMPTY*/, target: '1,4', exitX: 7, exitY: 1, implicit: true }] },
-                 '1,4': { name: "Far Shore", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 2, 1, 2, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 3, 1, 1, 1, 1, 1, 3, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 0 /*EMPTY*/, target: '1,3', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: 16 /*GREEN*/, target: '2,4', exitX: 1, exitY: 4 }], items: [14 /*KEY_RED*/] },
-                 '2,2': { name: "Hidden Shrine", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 16, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: 16 /*GREEN*/, target: '2,1', exitX: 7, exitY: 8 }], items: [12 /*KEY_BLUE*/] },
-                 '2,4': { name: "Ancient Vault", special: 'win_condition', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 3, 15, 3, 3, 3, 3, 3, 15, 3, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 4, tileType: 16 /*GREEN*/, target: '1,4', exitX: 7, exitY: 8 }], items: [] },
-            };
+             // --- World Data --- (Using static TILES constants)
+             static worldData = Object.freeze({
+                 '0,0': { name: "Crash Site Clearing", layout: [[20, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 20, 20], [20, 5, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 5, 20], [5, 0, 3, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5], [5, 0, 0, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 0, 5], [5, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 5], [5, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, GCMinigamSlovib.TILES.DOOR_YELLOW, 5], [5, 1, 1, 0, 3, 0, 0, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 13, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_YELLOW, target: '1,0', exitX: 1, exitY: 7 }, { x: 8, y: 8, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '0,1', exitX: 8, exitY: 1 }] },
+                 '1,0': { name: "Overgrown Path", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 20, 20, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, GCMinigamSlovib.TILES.KEY_YELLOW, 0, 2, 0, 0, 0, 2, 0, 0, 20, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, GCMinigamSlovib.TILES.DOOR_YELLOW, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, GCMinigamSlovib.TILES.DOOR_BLUE, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_YELLOW, target: '0,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_BLUE, target: '2,0', exitX: 1, exitY: 7 }, { x: 7, y: 5, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '1,1', exitX: 7, exitY: 1 }], items: [GCMinigamSlovib.TILES.KEY_YELLOW] },
+                 '2,0': { name: "Snake Pit", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 5], [5, 1, GCMinigamSlovib.TILES.LOCK_YELLOW, 1, 1, 1, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.LOCK_YELLOW, 1, 5], [5, 1, GCMinigamSlovib.TILES.LOCK_YELLOW, 1, 1, 1, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.LOCK_YELLOW, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, GCMinigamSlovib.TILES.KEY_GREEN, 1, 5], // Moved keys
+                 [5, GCMinigamSlovib.TILES.DOOR_BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, GCMinigamSlovib.TILES.DOOR_RED, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_BLUE, target: '1,0', exitX: 12, exitY: 7 }, { x: 13, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_RED, target: '2,1', exitX: 1, exitY: 1 }], enemies: [{ type: GCMinigamSlovib.EMOJI_SNAKE, x: 3, y: 6, speed: GCMinigamSlovib.ENEMY_SNAKE_SPEED, path: [{ x: 3, y: 6 }, { x: 11, y: 6 }] }], items: [GCMinigamSlovib.TILES.KEY_GREEN] },
+                 '2,1': { name: "Ancient Grove", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, GCMinigamSlovib.TILES.DOOR_RED, 0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 0, 3, 5], [5, 0, 0, 20, 1, 1, 1, 1, 1, 1, 1, 20, 0, 0, 5], [5, 20, 1, 1, 1, GCMinigamSlovib.TILES.TREE_TL, GCMinigamSlovib.TILES.TREE_TR, 1, 1, 1, 1, 1, 20, 5], [5, 20, 1, 1, 1, GCMinigamSlovib.TILES.TREE_BL, GCMinigamSlovib.TILES.TREE_BR, 1, 1, 1, 1, 1, 20, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, GCMinigamSlovib.TILES.LOCK_BLUE, 1, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.LOCK_BLUE, 1, 1, 5], [5, 1, 1, 0, 1, 1, 3, GCMinigamSlovib.TILES.DOOR_GREEN, 3, 1, 1, 0, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_RED, target: '2,0', exitX: 12, exitY: 7 }, { x: 7, y: 8, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '2,2', exitX: 7, exitY: 1 }], enemies: [{ type: GCMinigamSlovib.EMOJI_SNAKE, x: 2, y: 5, speed: GCMinigamSlovib.ENEMY_SNAKE_SPEED * 0.8, path: [{ x: 2, y: 5 }, { x: 12, y: 5 }] }] },
+                 '0,1': { name: "Dark Cave", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 0, 0, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 0, 5], [5, 0, 1, 1, 2, 1, 1, 1, 0, 1, 1, 2, 1, 0, 5], [5, 1, 1, 2, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 1, 2, 1, 1, 1, 2, 1, 0, 1, 1, 1, 2, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], [5, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5], [5, 0, 0, 0, 0, 0, 0, GCMinigamSlovib.TILES.DOOR_BLUE, 0, 0, 0, 0, 0, 0, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 8, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '0,0', exitX: 8, exitY: 8 }, { x: 7, y: 8, tileType: GCMinigamSlovib.TILES.DOOR_BLUE, target: '0,2', exitX: 7, exitY: 1 }] },
+                 '1,1': { name: "Control Room", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 0, GCMinigamSlovib.TILES.SWITCH_OFF, 0, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_RED, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '1,0', exitX: 7, exitY: 5 }, { x: 7, y: 7, tileType: GCMinigamSlovib.TILES.DOOR_RED, target: '1,2', exitX: 7, exitY: 1 }], items: [] },
+                 '0,2': { name: "Waterfall Base", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_BLUE, 1, 1, 1, 1, 1, 1, 5], [5, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 0, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 5], [5, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 0, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 5], [5, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 0, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_BLUE, target: '0,1', exitX: 7, exitY: 8 }] },
+                 '1,2': { name: "River Ledge", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_RED, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_RED, target: '1,1', exitX: 7, exitY: 7 }, { x: 7, y: 8, tileType: GCMinigamSlovib.TILES.EMPTY, target: '1,3', exitX: 7, exitY: 1, implicit: true }], items: [GCMinigamSlovib.TILES.GEM] },
+                 '1,3': { name: "River Crossing", special: 'river', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 1, 1, 1, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 0, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, GCMinigamSlovib.TILES.WATER, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.EMPTY, target: '1,2', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: GCMinigamSlovib.TILES.EMPTY, target: '1,4', exitX: 7, exitY: 1, implicit: true }] },
+                 '1,4': { name: "Far Shore", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 2, 1, 2, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 3, 1, 1, 1, 1, 1, 3, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, GCMinigamSlovib.TILES.KEY_RED, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.EMPTY, target: '1,3', exitX: 7, exitY: 8, implicit: true }, { x: 7, y: 8, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '2,4', exitX: 1, exitY: 4 }], items: [GCMinigamSlovib.TILES.KEY_RED] },
+                 '2,2': { name: "Hidden Shrine", layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 5], [5, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, GCMinigamSlovib.TILES.KEY_BLUE, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 5], [5, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 5], [5, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 7, y: 1, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '2,1', exitX: 7, exitY: 8 }], items: [GCMinigamSlovib.TILES.KEY_BLUE] },
+                 '2,4': { name: "Ancient Vault", special: 'win_condition', layout: [[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, GCMinigamSlovib.TILES.DOOR_GREEN, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 3, GCMinigamSlovib.TILES.LOCK_RED, 3, 3, 3, 3, 3, GCMinigamSlovib.TILES.LOCK_RED, 3, 1, 1, 5], [5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], portals: [{ x: 1, y: 4, tileType: GCMinigamSlovib.TILES.DOOR_GREEN, target: '1,4', exitX: 7, exitY: 8 }], items: [] },
+             });
 
             constructor() {
                 super();
                 this.attachShadow({ mode: 'open' });
 
-                // --- Game State Variables (Component Instance Properties) ---
-                // Avoid initializing complex objects here if they depend on static props not yet available
-                this.playerState = {}; // Initialized in _resetStateAndRestart
-                this.worldState = {}; // Persists between loads within instance
-                this.currentScreen = {}; // Initialized in _resetStateAndRestart
-                this.player = {}; // Initialized in _resetStateAndRestart
-                this.particles = [];
-                this.gemRotation = 0;
-                this.lastTime = 0;
-                this.gameOver = false;
-                this.gameWon = false;
-                this.isTransitioning = false;
-                this.animationFrameId = null;
-                this.isGameLoopRunning = false;
-                this.isActive = false; // Is the component visible and running?
-                this.audioContext = null;
-                this.audioInitialized = false;
-                this.tileSize = 30; // Initial value, recalculated on resize
-                this.debugLines = []; // Debug log buffer
-                this.roomNameOverlayTimeoutId = null;
+                // Game State Variables
+                this.playerState = {}; this.worldState = {}; this.currentScreen = {}; this.player = {};
+                this.particles = []; this.gemRotation = 0; this.lastTime = 0;
+                this.gameOver = false; this.gameWon = false; this.isTransitioning = false;
+                this.animationFrameId = null; this.isGameLoopRunning = false; this.isActive = false;
+                this.audioContext = null; this.audioInitialized = false; this.tileSize = 30;
+                this.debugLines = []; this.roomNameOverlayTimeoutId = null;
 
-                // Bound event listeners for internal/window listeners added by this component
+                // Bound event listeners
                 this._boundGameLoop = this._gameLoop.bind(this);
                 this._boundHandleKeyDown = this._handleKeyDown.bind(this);
                 this._boundHandleResize = this._resizeCanvas.bind(this);
                 this._boundHandleTouchStart = this._handleTouchStart.bind(this);
+                this._boundHandleFooterTabClick = this._handleFooterTabClick.bind(this);
+                this._boundHandleMapClick = this._handleMapClick.bind(this);
+                this._boundHandleVerboseLogToggle = this._handleVerboseLogToggle.bind(this);
             }
 
             connectedCallback() {
                 this._debugLog("Minigam component connected.", 'verbose');
-                this._render();
-                this._cacheDomReferences();
-                this._setupInternalEventListeners();
+                try {
+                    this._render(); // Create shadow DOM content
+                    this._cacheDomReferences(); // Get references to elements within shadow DOM
+                    this._setupInternalEventListeners(); // Add listeners to shadow DOM elements
+                    this._initAudio(); // Attempt audio setup
+                    this._setupFooterTabs(); // Initialize footer tab functionality
+                    this._resetStateAndRestart(); // Set initial game data
+                    this._generateMinimap(); // Create the minimap structure
+                    this._runUnitTests(); // Perform startup checks
 
-                // Initialize but don't start game loop yet
-                this._initAudio(); // Try to initialize audio context early
-                this._setupFooterTabs();
-                this._resetStateAndRestart(); // Set initial game state
-                this._generateMinimap();
-                this._runUnitTests(); // Run tests on init
+                    this.deactivate(); // Start inactive, parent component (gc-gamgam) will activate it
 
-                // Global listeners added only when component is active (see activate/deactivate)
-                // window.addEventListener('resize', this._boundHandleResize);
-                // window.addEventListener('keydown', this._boundHandleKeyDown);
+                    if (this.startOverlay && !this.gameOver && !this.gameWon) {
+                       this.startOverlay.style.display = 'flex'; // Show initially
+                    }
+                    if (!this.canvas || !this.ctx) {
+                        throw new Error("Canvas or rendering context is missing after setup.");
+                    }
+                    console.log("[gc-minigam-slovib] Connected and Initialized.");
 
-                 // Show start overlay initially by default via CSS/render
-                 // Ensure start overlay is shown if game isn't over/won yet
-                 if (this.startOverlay && !this.gameOver && !this.gameWon) {
-                     this.startOverlay.style.display = 'flex';
-                 }
+                } catch (error) {
+                     console.error("Error during Minigam connectedCallback:", error);
+                     this._debugLog(`Initialization Error: ${error.message}`, 'error');
+                     if(this.shadowRoot) this.shadowRoot.innerHTML = `<div style="color:red;padding:20px;border:1px solid red;">Minigame failed to initialize: ${error.message}<br>Check console.</div>`;
+                }
             }
 
             disconnectedCallback() {
                 this._debugLog("Minigam component disconnected.", 'verbose');
-                this._stopGameLoop(); // Ensure loop stops
-                // Remove global listeners if they were added
-                window.removeEventListener('resize', this._boundHandleResize);
-                window.removeEventListener('keydown', this._boundHandleKeyDown);
-                // Clean up audio context? Maybe not if shared globally
-                if (this.roomNameOverlayTimeoutId) {
-                     clearTimeout(this.roomNameOverlayTimeoutId);
-                }
-                // Detach touch listeners to prevent potential memory leaks
-                this.shadowRoot.getElementById('btn-left')?.removeEventListener('touchstart', this._boundHandleTouchStart);
-                this.shadowRoot.getElementById('btn-right')?.removeEventListener('touchstart', this._boundHandleTouchStart);
-                this.shadowRoot.getElementById('btn-up')?.removeEventListener('touchstart', this._boundHandleTouchStart);
-                this.shadowRoot.getElementById('btn-down')?.removeEventListener('touchstart', this._boundHandleTouchStart);
+                this.deactivate(); // Ensure loop stops & global listeners removed
+                 if (this.roomNameOverlayTimeoutId) { clearTimeout(this.roomNameOverlayTimeoutId); }
+                 // Remove internal listeners explicitly for safety
+                 this.shadowRoot.getElementById('tab-buttons')?.removeEventListener('click', this._boundHandleFooterTabClick);
+                 this.minimapElement?.removeEventListener('click', this._boundHandleMapClick);
+                 this.verboseCheckbox?.removeEventListener('change', this._boundHandleVerboseLogToggle);
+                 this.controlsElement?.removeEventListener('touchstart', this._boundHandleTouchStart);
+                 console.log("[gc-minigam-slovib] Disconnected and cleaned up.");
             }
 
             // --- Public API Methods ---
-            activate() {
+            activate() { /* ... (same as previous version) ... */
                 if (this.isActive) return; // Already active
                 this._debugLog("Activating Minigam...", 'info');
                 this.isActive = true;
+                this.classList.add('active'); // Use class for :host styling
+
                 // Add global listeners only when active
                 window.addEventListener('resize', this._boundHandleResize);
                 window.addEventListener('keydown', this._boundHandleKeyDown);
 
-                // Use rAF to ensure element is rendered before resizing
                 requestAnimationFrame(() => {
-                    this._resizeCanvas(); // Resize now that it's likely visible
+                    if (!this.isActive) return;
+                    this._resizeCanvas();
+
+                    if (this.startOverlay && !this.isGameLoopRunning && !this.gameOver && !this.gameWon) {
+                         this.startOverlay.style.display = 'flex';
+                         if(this.endOverlay) this.endOverlay.style.display = 'none';
+                    } else if (this.isGameLoopRunning === false && (this.gameOver || this.gameWon)) {
+                        if(this.endOverlay) this.endOverlay.style.display = 'flex';
+                        if(this.startOverlay) this.startOverlay.style.display = 'none';
+                    } else if (!this.gameOver && !this.gameWon && this.isGameLoopRunning === false) {
+                         this._debugLog("Resuming game loop on activate.", 'info');
+                         if(this.startOverlay) this.startOverlay.style.display = 'none';
+                         this._startGameLoop();
+                    }
+
+                     if (this.playerState?.currentScreenId && GCMinigamSlovib.worldData[this.playerState.currentScreenId]) {
+                          this._displayRoomNameOverlay(GCMinigamSlovib.worldData[this.playerState.currentScreenId].name);
+                     }
                 });
+             }
 
-                // Show start overlay if game not started/over/won
-                if (this.startOverlay && !this.isGameLoopRunning && !this.gameOver && !this.gameWon) {
-                     this.startOverlay.style.display = 'flex';
-                } else if (this.isGameLoopRunning === false && (this.gameOver || this.gameWon)) {
-                    // If returning to view after game over/won, keep overlay visible but don't restart loop
-                    if(this.endOverlay) this.endOverlay.style.display = 'flex';
-                } else if (!this.gameOver && !this.gameWon && this.isGameLoopRunning === false) {
-                     // If game was already started and is returning, resume loop
-                     this._debugLog("Resuming game loop on activate.", 'info');
-                     this._startGameLoop();
-                }
-                 // Re-display room name if needed
-                 if (this.playerState?.currentScreenId && GCMinigamSlovib.worldData[this.playerState.currentScreenId]) {
-                      this._displayRoomNameOverlay(GCMinigamSlovib.worldData[this.playerState.currentScreenId].name);
-                 }
-            }
-
-            deactivate() {
+            deactivate() { /* ... (same as previous version) ... */
                 if (!this.isActive) return; // Already inactive
                 this._debugLog("Deactivating Minigam...", 'info');
                 this.isActive = false;
+                this.classList.remove('active'); // Use class for :host styling
                 this._stopGameLoop();
-                // Remove global listeners when inactive
+
                 window.removeEventListener('resize', this._boundHandleResize);
                 window.removeEventListener('keydown', this._boundHandleKeyDown);
 
@@ -370,286 +276,1618 @@
                  }
             }
 
-            showGuideTab() {
-                this._debugLog("Request received to show Guide tab", 'info');
-                if (!this.isActive) {
+            showGuideTab() { /* ... (same as previous version) ... */
+                 this._debugLog("Request received to show Guide tab", 'info');
+                 if (!this.isActive) {
                     this._debugLog("Cannot show guide tab, component not active", 'warn');
+                     // Maybe dispatch event asking parent to activate first?
+                     // this.dispatchEvent(new CustomEvent('activation-requested', { bubbles: true, composed: true }));
                     return;
-                }
-                const guideButton = this.shadowRoot.querySelector('#footer-ui .tab-button[data-tab="guide-panel"]');
-                if (guideButton) {
-                    guideButton.click(); // Simulate click to switch tab via existing logic
-                } else {
-                    this._debugLog("Guide tab button not found", 'error');
-                }
-            }
+                 }
+                 const guideButton = this.shadowRoot.querySelector('#footer-ui .tab-button[data-tab="guide-panel"]');
+                 if (guideButton) {
+                     guideButton.click(); // Simulate click
+                 } else {
+                     this._debugLog("Guide tab button not found", 'error');
+                 }
+             }
 
             // --- Rendering and DOM ---
-            _render() {
-                 // Move HTML structure from original #minigam-view here
-                this.shadowRoot.innerHTML = `
+            _render() { /* ... (same as previous version, HTML structure) ... */
+                 this.shadowRoot.innerHTML = `
                     <style>
-                        /* --- ALL MINIGAM CSS from original <style> block goes here --- */
-                        /* Make sure selectors target elements within the Shadow DOM */
-                        /* e.g., #gameCanvas, .control-button */
-                        :host {
-                            display: flex; /* Host needs flex */
-                            flex-direction: column;
-                            width: 100%;
-                            height: 100%;
-                            background-color: #112211;
-                            overflow: hidden; /* Prevent content spilling */
-                        }
-
-                        /* --- MINIGAM View Specific Styles --- */
-                        #minigam-view-content { /* Added wrapper */
-                            display: flex;
-                            flex-direction: column;
-                            flex-grow: 1;
-                            width: 100%;
-                            height: 100%; /* Ensure it tries to fill space */
-                            overflow: hidden; /* Contain children */
-                        }
-
-                        #game-area {
-                            flex-grow: 1; /* Takes up most space */
-                            width: 100%;
-                            display: flex; /* Uses flexbox */
-                            justify-content: center; /* Center canvas horizontally */
-                            align-items: center; /* *** Vertically center canvas in game area *** */
-                            position: relative; /* For overlay positioning */
-                            background-color: #112211;
-                            overflow: hidden;
-                            padding: 5px; /* Add small padding around canvas */
-                            min-height: 100px; /* Ensure it doesn't collapse */
-                        }
-                        #gameCanvas {
-                             border: 2px solid #5a8a5a;
-                             background-color: #1a2e1a;
-                             display: block;
-                             /* Removed max-width/max-height, JS sets exact size */
-                             object-fit: contain; /* Still useful conceptually */
-                             image-rendering: pixelated;
-                             image-rendering: crisp-edges;
-                        }
-                        /* Room Name Overlay */
-                        #room-name-overlay {
-                            position: absolute;
-                            top: 15px; /* Position near top + padding */
-                            left: 50%;
-                            transform: translateX(-50%);
-                            background-color: rgba(0, 0, 0, 0.65); /* Slightly more opaque */
-                            color: white;
-                            padding: 8px 18px; /* More padding */
-                            border-radius: 8px;
-                            font-size: clamp(1.2em, 4vw, 1.8em); /* Responsive font size */
-                            font-weight: bold;
-                            text-align: center;
-                            z-index: 50;
-                            opacity: 0;
-                            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-                            pointer-events: none;
-                            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-                                         -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000;
-                            white-space: nowrap;
-                        }
-                        #room-name-overlay.visible {
-                            opacity: 1;
-                            transform: translateX(-50%) translateY(0px); /* Animate from slight offset if desired */
-                        }
-
-                        /* Footer UI (within MINIGAM view) */
-                        #footer-ui {
-                             width: 100%;
-                             min-height: 120px;
-                             max-height: 180px; /* Limit max height */
-                             background-color: #0f1a0f;
-                             border-top: 2px solid #5a8a5a;
-                             display: flex;
-                             flex-direction: column;
-                             flex-shrink: 0;
-                             overflow: hidden; /* Prevent footer content itself from overflowing */
-                        }
+                        :host { display: none; flex-direction: column; width: 100%; height: 100%; background-color: #112211; overflow: hidden; color: #e0e0e0; font-family: 'Arial', sans-serif; }
+                        :host(.active) { display: flex; }
+                        #minigam-view-content { display: flex; flex-direction: column; flex-grow: 1; width: 100%; height: 100%; overflow: hidden; position: relative; }
+                        #game-area { flex-grow: 1; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; background-color: #112211; overflow: hidden; padding: 5px; min-height: 100px; }
+                        #gameCanvas { border: 2px solid #5a8a5a; background-color: #1a2e1a; display: block; object-fit: contain; image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; max-height: 100%; }
+                        #room-name-overlay { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.65); color: white; padding: 8px 18px; border-radius: 8px; font-size: clamp(1.2em, 4vw, 1.8em); font-weight: bold; text-align: center; z-index: 50; opacity: 0; transition: opacity 0.5s ease-out, transform 0.5s ease-out; pointer-events: none; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000; white-space: nowrap; }
+                        #room-name-overlay.visible { opacity: 1; transform: translateX(-50%) translateY(0px); }
+                        #footer-ui { width: 100%; min-height: 120px; max-height: 180px; background-color: #0f1a0f; border-top: 2px solid #5a8a5a; display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
                         #tab-buttons { display: flex; width: 100%; background-color: #1a2e1a; border-bottom: 1px solid #5a8a5a; flex-shrink: 0; }
-                        .tab-button { padding: 8px 15px; border: none; background-color: transparent; color: #a0c0a0; font-size: 1em; cursor: pointer; border-right: 1px solid #5a8a5a; transition: background-color 0.2s ease; flex-grow: 1; text-align: center; white-space: nowrap;} /* Added nowrap */
-                        .tab-button:last-child { border-right: none; }
-                        .tab-button:hover { background-color: #2a4e2a; }
-                        .tab-button.active { background-color: #0f1a0f; color: #e0e0e0; font-weight: bold; border-bottom: 2px solid #e94560; margin-bottom: -1px; } /* Adjust margin */
-                        #tab-panels { flex-grow: 1; padding: 8px; position: relative; overflow-y: auto; min-height: 50px; /* Ensure some space */ }
-                        .tab-panel { display: none; width: 100%; height: 100%; align-items: flex-start; justify-content: space-around; flex-wrap: wrap; /* Allow wrapping */ }
-                        .tab-panel.active { display: flex; }
-                        .ui-section { margin: 5px 10px; text-align: center; flex-shrink: 0; flex-basis: auto; /* Allow natural sizing */}
-                        .ui-section h4 { color: #8ac08a; margin-bottom: 4px; font-size: 0.9em; text-transform: uppercase; }
-                        #info-panel { justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; /* Add gap */}
-                        #room-name { font-size: 1.1em; color: #e94560; flex-basis: auto; text-align: left; word-wrap: break-word; margin-right: 10px; /* flex-basis: 30%; order: 1; */ }
-                        #ui-info { /* order: 2; flex-basis: 30%;*/ }
-                        #ui-keys { /* order: 3; flex-basis: 30%; */}
+                        .tab-button { padding: 8px 15px; border: none; background-color: transparent; color: #a0c0a0; font-size: 1em; cursor: pointer; border-right: 1px solid #5a8a5a; transition: background-color 0.2s ease; flex-grow: 1; text-align: center; white-space: nowrap;}
+                        .tab-button:last-child { border-right: none; } .tab-button:hover { background-color: #2a4e2a; } .tab-button.active { background-color: #0f1a0f; color: #e0e0e0; font-weight: bold; border-bottom: 2px solid #e94560; margin-bottom: -1px; }
+                        #tab-panels { flex-grow: 1; padding: 8px; position: relative; overflow-y: auto; min-height: 50px; }
+                        .tab-panel { display: none; width: 100%; height: 100%; align-items: flex-start; justify-content: space-around; flex-wrap: wrap; gap: 10px; } .tab-panel.active { display: flex; }
+                        .ui-section { margin: 5px 10px; text-align: center; flex-shrink: 0; flex-basis: auto; } .ui-section h4 { color: #8ac08a; margin-bottom: 4px; font-size: 0.9em; text-transform: uppercase; }
+                        #info-panel { justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; }
+                        #room-name { font-size: 1.1em; color: #e94560; text-align: left; word-wrap: break-word; margin-right: 10px; }
                         #ui-info span { display: inline-block; margin: 0 6px; font-size: 1.3em; }
-                        #ui-keys span { display: inline-block; margin: 0 4px; font-size: 1.6em; opacity: 0.3; transition: opacity 0.3s ease; }
-                        #ui-keys span.has-key { opacity: 1.0; }
-                        #guide-panel { justify-content: space-around; align-items: flex-start; gap: 10px;} /* Add gap */
-                        #walkthrough { flex-basis: 45%; text-align: left; font-size: 0.8em; background-color: rgba(40, 60, 40, 0.3); padding: 8px; border-radius: 4px; max-height: 90px; overflow-y: auto; border: 1px solid #2a4e2a; min-width: 200px; }
-                        #walkthrough ul { list-style: disc; padding-left: 18px; }
-                        #walkthrough li { margin-bottom: 3px; }
+                        #ui-keys span { display: inline-block; margin: 0 4px; font-size: 1.6em; opacity: 0.3; transition: opacity 0.3s ease; } #ui-keys span.has-key { opacity: 1.0; }
+                        #guide-panel { justify-content: space-around; align-items: flex-start; gap: 10px;}
+                        #walkthrough { flex-basis: 45%; text-align: left; font-size: 0.8em; background-color: rgba(40, 60, 40, 0.3); padding: 8px; border-radius: 4px; max-height: 90px; overflow-y: auto; border: 1px solid #2a4e2a; min-width: 200px; } #walkthrough ul { list-style: disc; padding-left: 18px; } #walkthrough li { margin-bottom: 3px; }
                         #minimap-container { flex-basis: 45%; display: flex; flex-direction: column; align-items: center; min-width: 150px; }
                         #minimap { display: grid; gap: 2px; border: 1px solid #5a8a5a; margin-top: 5px; }
-                        .map-cell { width: 20px; height: 20px; background-color: #333; border: 1px solid #555; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; justify-content: center; align-items: center; font-size: 0.6em; } /* Smaller font */
-                        .map-cell:hover { background-color: #7aa07a; border-color: white; }
-                        .map-cell.visited { background-color: #5a8a5a; }
-                        .map-cell.current { background-color: #e94560; border: 1px solid white; }
-                        .map-cell[style*="opacity: 0.3"] { cursor: not-allowed; }
+                        .map-cell { width: 20px; height: 20px; background-color: #333; border: 1px solid #555; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; justify-content: center; align-items: center; font-size: 0.6em; } .map-cell:hover { background-color: #7aa07a; border-color: white; } .map-cell.visited { background-color: #5a8a5a; } .map-cell.current { background-color: #e94560; border: 1px solid white; } .map-cell[style*="opacity: 0.3"] { cursor: not-allowed; }
                         #dev-panel { justify-content: flex-start; align-items: stretch; height: 100%; }
-                        #debug-container { width: 100%; display: flex; align-items: stretch; padding: 5px; height: 100%; min-height: 50px; /* Ensure minimum height */}
-                        #debug-container label { margin-right: 10px; font-size: 0.9em; color: #ccc; flex-shrink: 0; display: flex; align-items: center; cursor: pointer; white-space: nowrap; }
-                        #debug-output { background-color: rgba(0, 0, 0, 0.7); color: #0f0; font-family: monospace; font-size: 0.8em; padding: 5px 8px; border: 1px solid #0f0; flex-grow: 1; height: 100%; overflow-y: scroll; white-space: pre-wrap; opacity: 0.9; margin-left: 0; max-height: 80px; /* Limit height */}
-
-                        /* Controls (within MINIGAM view) */
-                        #controls {
-                            width: 100%;
-                            height: 75px; /* Keep slightly taller */
-                            display: flex;
-                            justify-content: space-around;
-                            align-items: center;
-                            padding: 5px;
-                            background-color: rgba(0, 0, 0, 0.5);
-                            flex-shrink: 0;
-                            user-select: none;
-                        }
-                        .control-button {
-                             background-color: #5a8a5a;
-                             border: none;
-                             border-radius: 50%;
-                             width: 58px; /* Adjusted size */
-                             height: 58px; /* Adjusted size */
-                             font-size: 2.3em; /* Adjusted emoji size */
-                             color: white;
-                             display: flex;
-                             justify-content: center;
-                             align-items: center;
-                             cursor: pointer;
-                             transition: background-color 0.1s ease, transform 0.1s ease;
-                             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-                             -webkit-tap-highlight-color: transparent;
-                        }
-                        .control-button:active { background-color: #8ac08a; transform: scale(0.95); }
-
-                        /* Overlays */
+                        #debug-container { width: 100%; display: flex; align-items: stretch; padding: 5px; height: 100%; min-height: 50px; } #debug-container label { margin-right: 10px; font-size: 0.9em; color: #ccc; flex-shrink: 0; display: flex; align-items: center; cursor: pointer; white-space: nowrap; } #debug-output { background-color: rgba(0, 0, 0, 0.7); color: #0f0; font-family: monospace; font-size: 0.8em; padding: 5px 8px; border: 1px solid #0f0; flex-grow: 1; height: 100%; overflow-y: scroll; white-space: pre-wrap; opacity: 0.9; margin-left: 0; max-height: 80px; }
+                        #controls { width: 100%; height: 75px; display: flex; justify-content: space-around; align-items: center; padding: 5px; background-color: rgba(0, 0, 0, 0.5); flex-shrink: 0; user-select: none; }
+                        .control-button { background-color: #5a8a5a; border: none; border-radius: 50%; width: 58px; height: 58px; font-size: 2.3em; color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.1s ease, transform 0.1s ease; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3); -webkit-tap-highlight-color: transparent; } .control-button:active { background-color: #8ac08a; transform: scale(0.95); }
                         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); color: white; display: none; justify-content: center; align-items: center; text-align: center; z-index: 100; cursor: pointer; flex-direction: column; font-size: 1.2em; padding: 20px; }
-                        .overlay button { padding: 15px 30px; font-size: 1em; margin-top: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
-                        .overlay button:hover { background-color: #45a049; }
-                        #start-overlay { /* display: flex; /* Initially shown by logic in connectedCallback/activate */ }
-                        #end-overlay { /* Hidden by default */ }
-                        #end-overlay button#return-to-wrld-button { background-color: #5a8a5a; margin-left: 15px; }
-                        #end-overlay button#return-to-wrld-button:hover { background-color: #7aa07a; }
-
+                        #game-area .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; } /* Ensure overlays cover game area */
+                        .overlay button { padding: 15px 30px; font-size: 1em; margin-top: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; } .overlay button:hover { background-color: #45a049; }
+                        #end-overlay button#return-to-wrld-button { background-color: #5a8a5a; margin-left: 15px; } #end-overlay button#return-to-wrld-button:hover { background-color: #7aa07a; }
                     </style>
-
-                    <div id="minigam-view-content"> ${/* Wrap content */}
-                        <div id="game-area">
-                            <canvas id="gameCanvas"></canvas>
-                            <div id="room-name-overlay"></div>
-                            <div id="start-overlay" class="overlay">
-                                <div>Loading Minigame... <br> <button id="start-button-minigame">Ready?</button> </div>
-                            </div>
-                            <div id="end-overlay" class="overlay">
-                                <div id="end-message">Game Over / You Win!</div>
-                                <button id="restart-button">Play Minigame Again?</button>
-                                <button id="return-to-wrld-button">Return to WRLD</button>
-                            </div>
-                        </div>
-
-                        <div id="footer-ui">
-                            <div id="tab-buttons">
-                                <button class="tab-button active" data-tab="info-panel">Info</button>
-                                <button class="tab-button" data-tab="guide-panel">Guide</button>
-                                <button class="tab-button" data-tab="dev-panel">Dev</button>
-                            </div>
-                            <div id="tab-panels">
-                                <div id="info-panel" class="tab-panel active">
-                                    <div id="room-name" class="ui-section">Room Name</div>
-                                    <div id="ui-info" class="ui-section"> <span id="score">💎 0</span> <span id="lives">❤️ 3</span> </div>
-                                    <div id="ui-keys" class="ui-section"> <span id="key-yellow" data-key="yellow">🔑<span style="color:#ff0;">🟡</span></span> <span id="key-blue" data-key="blue">🔑<span style="color:#0cf;">🔵</span></span> <span id="key-red" data-key="red">🔑<span style="color:#f00;">🔴</span></span> <span id="key-green" data-key="green">🔑<span style="color:#0f0;">🟢</span></span> </div>
-                                </div>
-                                <div id="guide-panel" class="tab-panel">
-                                     <div id="walkthrough" class="ui-section">
-                                         <h4>Minigame Guide</h4>
-                                         <ul>
-                                             <li>Explore using controls or WASD/Arrows.</li>
-                                             <li>Keys 🔑 open Locks 🔒. Doors 🚪 are portals.</li>
-                                             <li>Collect gems 💎! Avoid snakes 🐍 & rocks 🪨!</li>
-                                             <li>River 🌊 is North of 'River Ledge'. Dangerous!</li>
-                                             <li>Use switch 🔘 in 'Control Room' to make river safe 🪵.</li>
-                                             <li>Get Red Key 🔑🔴 ('Far Shore') for Vault Locks 🔒🔴.</li>
-                                             <li>Reach Vault & unlock locks to win minigame!</li>
-                                             <li>Map: Click room below to teleport (debug).</li>
-                                         </ul>
-                                     </div>
-                                     <div id="minimap-container" class="ui-section">
-                                          <h4>Debug Map (Click to Teleport)</h4>
-                                         <div id="minimap"></div>
-                                     </div>
-                                </div>
-                                <div id="dev-panel" class="tab-panel">
-                                     <div id="debug-container">
-                                         <label><input type="checkbox" id="verbose-debug"> Verbose Log</label>
-                                         <div id="debug-output">Debug Initializing...</div>
-                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="controls">
-                            <button class="control-button" id="btn-left">⬅️</button>
-                            <button class="control-button" id="btn-up">⬆️</button>
-                            <button class="control-button" id="btn-down">⬇️</button>
-                            <button class="control-button" id="btn-right">➡️</button>
-                        </div>
-                    </div> ${/* End wrapper */}
-                `;
+                    <div id="minigam-view-content">
+                        <div id="game-area"><canvas id="gameCanvas"></canvas><div id="room-name-overlay"></div><div id="start-overlay" class="overlay"><div>Loading Minigame... <br> <button id="start-button-minigame">Ready?</button> </div></div><div id="end-overlay" class="overlay"><div id="end-message">Game Over / You Win!</div><button id="restart-button">Play Minigame Again?</button><button id="return-to-wrld-button">Return to WRLD</button></div></div>
+                        <div id="footer-ui"><div id="tab-buttons"><button class="tab-button active" data-tab="info-panel">Info</button><button class="tab-button" data-tab="guide-panel">Guide</button><button class="tab-button" data-tab="dev-panel">Dev</button></div><div id="tab-panels"><div id="info-panel" class="tab-panel active"><div id="room-name" class="ui-section">Room Name</div><div id="ui-info" class="ui-section"> <span id="score">💎 0</span> <span id="lives">❤️ 3</span> </div><div id="ui-keys" class="ui-section"><span id="key-yellow" data-key="yellow">🔑<span style="color:#ff0;">🟡</span></span><span id="key-blue" data-key="blue">🔑<span style="color:#0cf;">🔵</span></span><span id="key-red" data-key="red">🔑<span style="color:#f00;">🔴</span></span><span id="key-green" data-key="green">🔑<span style="color:#0f0;">🟢</span></span></div></div><div id="guide-panel" class="tab-panel"><div id="walkthrough" class="ui-section"><h4>Minigame Guide</h4><ul><li>Explore using controls or WASD/Arrows.</li><li>Keys 🔑 open Locks 🔒. Doors 🚪 are portals.</li><li>Collect gems 💎! Avoid snakes 🐍 & rocks 🪨!</li><li>River 🌊 is North of 'River Ledge'. Dangerous!</li><li>Use switch 🔘 in 'Control Room' to make river safe 🪵.</li><li>Get Red Key 🔑🔴 ('Far Shore') for Vault Locks 🔒🔴.</li><li>Reach Vault & unlock locks to win minigame!</li><li>Map: Click room below to teleport (debug).</li></ul></div><div id="minimap-container" class="ui-section"><h4>Debug Map (Click to Teleport)</h4><div id="minimap"></div></div></div><div id="dev-panel" class="tab-panel"><div id="debug-container"><label><input type="checkbox" id="verbose-debug"> Verbose Log</label><div id="debug-output">Debug Initializing...</div></div></div></div></div>
+                        <div id="controls"><button class="control-button" id="btn-left" data-dx="-1" data-dy="0">⬅️</button><button class="control-button" id="btn-up" data-dx="0" data-dy="-1">⬆️</button><button class="control-button" id="btn-down" data-dx="0" data-dy="1">⬇️</button><button class="control-button" id="btn-right" data-dx="1" data-dy="0">➡️</button></div>
+                    </div>`;
             }
 
-            _cacheDomReferences() {
-                // Use this.shadowRoot to find elements
-                this.canvas = this.shadowRoot.getElementById('gameCanvas');
-                this.ctx = this.canvas?.getContext('2d');
-                this.minimapElement = this.shadowRoot.getElementById('minimap');
-                this.roomNameElement = this.shadowRoot.getElementById('room-name'); // In footer
-                this.scoreElement = this.shadowRoot.getElementById('score');
-                this.livesElement = this.shadowRoot.getElementById('lives');
-                this.roomNameOverlayElement = this.shadowRoot.getElementById('room-name-overlay'); // In game area
-                this.startOverlay = this.shadowRoot.getElementById('start-overlay');
-                this.endOverlay = this.shadowRoot.getElementById('end-overlay');
-                this.endMessage = this.shadowRoot.getElementById('end-message');
-                this.debugOutputElement = this.shadowRoot.getElementById('debug-output');
-                this.verboseCheckbox = this.shadowRoot.getElementById('verbose-debug');
-                this.controlsElement = this.shadowRoot.getElementById('controls');
-                this.footerUiElement = this.shadowRoot.getElementById('footer-ui');
+            _cacheDomReferences() { /* ... (same as previous version) ... */
+                 const sRoot = this.shadowRoot;
+                 this.canvas = sRoot.getElementById('gameCanvas');
+                 this.ctx = this.canvas?.getContext('2d');
+                 this.minimapElement = sRoot.getElementById('minimap'); // Container
+                 this.roomNameElement = sRoot.getElementById('room-name');
+                 this.scoreElement = sRoot.getElementById('score');
+                 this.livesElement = sRoot.getElementById('lives');
+                 this.roomNameOverlayElement = sRoot.getElementById('room-name-overlay');
+                 this.startOverlay = sRoot.getElementById('start-overlay');
+                 this.endOverlay = sRoot.getElementById('end-overlay');
+                 this.endMessage = sRoot.getElementById('end-message');
+                 this.debugOutputElement = sRoot.getElementById('debug-output');
+                 this.verboseCheckbox = sRoot.getElementById('verbose-debug');
+                 this.controlsElement = sRoot.getElementById('controls');
+                 this.footerUiElement = sRoot.getElementById('footer-ui');
+                 this.gameAreaElement = sRoot.getElementById('game-area'); // Cache game area
 
-                 if (!this.canvas || !this.ctx || !this.minimapElement || !this.roomNameOverlayElement || !this.debugOutputElement) {
-                     console.error("[gc-minigam-slovib] Critical DOM elements missing in shadow DOM!");
-                     this._debugLog("Critical DOM elements missing!", 'error');
+                 if (!this.canvas || !this.ctx || !this.minimapElement || !this.roomNameOverlayElement || !this.debugOutputElement || !this.gameAreaElement) {
+                      console.error("[gc-minigam-slovib] Critical DOM elements missing!");
+                      this._debugLog("Critical DOM elements missing!", 'error');
+                 }
+             }
+
+            _setupInternalEventListeners() { /* ... (same as previous version) ... */
+                 // --- Overlays ---
+                 this.shadowRoot.getElementById('start-button-minigame')?.addEventListener('click', () => { this._playButtonClickSound(); if(this.startOverlay) this.startOverlay.style.display = 'none'; this._startGameLoop(); });
+                 this.shadowRoot.getElementById('restart-button')?.addEventListener('click', () => { this._playButtonClickSound(); this._resetStateAndRestart(); if(this.startOverlay) this.startOverlay.style.display = 'none'; if(this.endOverlay) this.endOverlay.style.display = 'none'; this._startGameLoop(); });
+                 this.shadowRoot.getElementById('return-to-wrld-button')?.addEventListener('click', () => { this._playButtonClickSound(); if(this.endOverlay) this.endOverlay.style.display = 'none'; this.dispatchEvent(new CustomEvent('return-to-wrld-requested', { bubbles: true, composed: true })); });
+                 // --- Controls (Touch) ---
+                 this.controlsElement?.addEventListener('touchstart', this._boundHandleTouchStart, { passive: false });
+                 // --- Footer UI ---
+                 this.shadowRoot.getElementById('tab-buttons')?.addEventListener('click', this._boundHandleFooterTabClick);
+                 this.minimapElement?.addEventListener('click', this._boundHandleMapClick); // Delegation target
+                 this.verboseCheckbox?.addEventListener('change', this._boundHandleVerboseLogToggle);
+             }
+
+            // --- Debugging ---
+            _debugLog(message, level = 'info') { /* ... (same as previous version) ... */
+                if (!this.debugOutputElement) { console.log(`[MINIGAME][${level}] ${message}`); return; }
+                const isVerbose = this.verboseCheckbox ? this.verboseCheckbox.checked : false;
+                let shouldDisplay = false;
+                if (level === 'error' || level === 'warn' || level === 'info') { shouldDisplay = true; }
+                else if (level === 'verbose' && isVerbose) { shouldDisplay = true; }
+                if (shouldDisplay) {
+                    const now = new Date(); const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+                    let prefix = ''; let color = '#eee';
+                    switch (level) { case 'error': prefix = '!! ERROR: '; color = '#f55'; break; case 'warn': prefix = '! WARN: '; color = '#ff5'; break; case 'verbose': prefix = 'V_ '; color = '#9f9'; break; case 'info': prefix = ''; color = '#eee'; break; }
+                    const logEntry = `[${timeString}] ${prefix}${message}`;
+                    this.debugLines.push({ text: logEntry, color: color, level: level });
+                    if (this.debugLines.length > GCMinigamSlovib.MAX_DEBUG_LINES) { this.debugLines.shift(); }
+                    this._updateDebugOutput();
+                }
+            }
+            _updateDebugOutput() { /* ... (same as previous version) ... */
+                 if (!this.debugOutputElement) return;
+                 const isVerbose = this.verboseCheckbox ? this.verboseCheckbox.checked : false;
+                 let logHTML = '';
+                 this.debugLines.forEach(line => { if (line.level !== 'verbose' || isVerbose) { logHTML += `<span style="color: ${line.color};">${line.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>\n`; } });
+                 this.debugOutputElement.innerHTML = logHTML;
+                 this.debugOutputElement.scrollTop = this.debugOutputElement.scrollHeight;
+            }
+            _handleVerboseLogToggle() { /* ... (same as previous version) ... */
+                 this._playButtonClickSound();
+                 this._debugLog(`Verbose logging ${this.verboseCheckbox.checked ? 'enabled' : 'disabled'}.`, 'info');
+                 this._updateDebugOutput();
+             }
+
+            // --- Audio ---
+            _initAudio() { /* ... (same as previous version, including gesture unlock) ... */
+                 if (this.audioInitialized || this.audioContext) return;
+                 try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                     const unlockAudio = () => {
+                         if (this.audioContext && this.audioContext.state === 'suspended') {
+                             this.audioContext.resume().then(() => { this._debugLog("Audio Context Resumed OK", 'info'); this.audioInitialized = true; document.removeEventListener('click', unlockAudio); document.removeEventListener('touchstart', unlockAudio); })
+                                .catch(e => this._debugLog(`Audio Context Resume FAILED: ${e.message}`, 'error'));
+                         } else if (this.audioContext && this.audioContext.state === 'running') { this._debugLog("Audio Context Already Running", 'verbose'); this.audioInitialized = true; document.removeEventListener('click', unlockAudio); document.removeEventListener('touchstart', unlockAudio); }
+                     };
+                     if (this.audioContext.state === 'suspended') { this._debugLog("Audio Context suspended, waiting for user gesture.", 'warn'); document.addEventListener('click', unlockAudio, { once: true }); document.addEventListener('touchstart', unlockAudio, { once: true }); }
+                     else { this.audioInitialized = true; this._debugLog("Audio Initialized OK (State: " + this.audioContext.state + ")", 'info'); }
+                 } catch (e) { this._debugLog(`Audio Init FAILED: ${e.message}`, 'error'); }
+            }
+            _playSound(type, f1, f2, dur=0.1, vol=0.3, atk=0.01, dcy=0.05) { /* ... (same as previous version) ... */
+                if (!this.audioInitialized || !this.audioContext || this.audioContext.state !== 'running') return;
+                try {
+                    const now = this.audioContext.currentTime; const osc = this.audioContext.createOscillator(); const gain = this.audioContext.createGain();
+                    osc.type = type; osc.frequency.setValueAtTime(f1, now); if (f1 !== f2) osc.frequency.linearRampToValueAtTime(f2, now + dur * 0.8);
+                    gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(vol, now + atk); gain.gain.linearRampToValueAtTime(0, now + dur + dcy);
+                    osc.connect(gain); gain.connect(this.audioContext.destination); osc.start(now); osc.stop(now + dur + dcy + 0.05);
+                } catch(e){ this._debugLog(`PlaySound Error: ${e.message}`, 'error'); }
+             }
+            _playDigSound = () => this._playSound('square', 100, 80, 0.05, 0.2, 0.005, 0.04); _playGemSound = () => this._playSound('triangle', 880, 1200, 0.15, 0.4, 0.01, 0.1); _playRockFallSound = () => this._playSound('sawtooth', 150, 50, 0.2, 0.5, 0.02, 0.15); _playPlayerDieSound = () => this._playSound('sawtooth', 440, 110, 0.5, 0.6, 0.01, 0.4); _playKeySound = () => this._playSound('sine', 600, 900, 0.2, 0.4, 0.01, 0.15); _playLockSound = (success) => success ? this._playSound('sine', 500, 700, 0.15, 0.3, 0.01, 0.1) : this._playSound('square', 150, 100, 0.1, 0.4, 0.01, 0.08); _playPortalSound = () => this._playSound('sawtooth', 200, 800, 0.3, 0.5, 0.05, 0.2); _playWinSound = () => this._playSound('sine', 523, 1046, 0.6, 0.5, 0.02, 0.4); _playEnemyHitSound = () => this._playSound('square', 300, 50, 0.2, 0.5, 0.01, 0.15); _playSwitchSound = () => this._playSound('triangle', 300, 600, 0.2, 0.4, 0.01, 0.15); _playRiverHitSound = () => this._playSound('sawtooth', 200, 50, 0.3, 0.6, 0.01, 0.2); _playButtonClickSound = () => this._playSound('sine', 440, 440, 0.05, 0.3);
+
+            // --- Particles ---
+            _createParticles(x, y, emoji, count) { /* ... (same as previous version) ... */
+                 if (!this.tileSize) return;
+                 const startX = x * this.tileSize + this.tileSize / 2; const startY = y * this.tileSize + this.tileSize / 2;
+                 const EMOJI_STAR = GCMinigamSlovib.EMOJI_STAR; const EMOJI_GEM = GCMinigamSlovib.EMOJI_GEM; const LIFESPAN = GCMinigamSlovib.PARTICLE_LIFESPAN;
+                 if (emoji === EMOJI_GEM) { this.particles.push({ x: startX, y: startY, emoji: emoji, vx: (Math.random()-0.5)*80, vy: -150 - Math.random()*50, rotation: 0, spin: (Math.random()-0.5)*10, scale: 1, scaleRate: -0.2, alpha: 1, fadeRate: 0.5, lifespan: LIFESPAN*0.8, gravityY: 100 }); }
+                 for (let i = 0; i < count; i++) { const angle = Math.random()*Math.PI*2; const speed = 80+Math.random()*50; this.particles.push({ x: startX, y: startY, emoji: EMOJI_STAR, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, rotation: Math.random()*Math.PI*2, spin: (Math.random()-0.5)*15, scale: 0.5+Math.random()*0.3, scaleRate: 0.8+Math.random()*0.5, alpha: 1, fadeRate: 1.0/(LIFESPAN/1000), lifespan: LIFESPAN*(0.7+Math.random()*0.6), gravityY: 150 }); }
+            }
+            _updateParticles(deltaTime) { /* ... (same as previous version) ... */
+                 if (this.particles.length === 0) return;
+                 try {
+                     const dtSeconds = deltaTime / 1000.0;
+                     for (let i = this.particles.length - 1; i >= 0; i--) {
+                         const p = this.particles[i]; p.lifespan -= deltaTime;
+                         if (p.lifespan <= 0 || p.alpha <= 0) { this.particles.splice(i, 1); continue; }
+                         p.x += p.vx * dtSeconds; p.y += p.vy * dtSeconds; if(p.gravityY) p.vy += p.gravityY * dtSeconds;
+                         p.rotation += p.spin * dtSeconds; p.scale += p.scaleRate * dtSeconds; if (p.scale < 0) p.scale = 0;
+                         p.alpha -= p.fadeRate * dtSeconds; if (p.alpha < 0) p.alpha = 0;
+                     }
+                 } catch (e) { this._debugLog(`Particle Update Error: ${e.message}`, 'error'); }
+            }
+            _drawParticles() { /* ... (same as previous version) ... */
+                if (!this.ctx || this.particles.length === 0 || !this.tileSize) return;
+                const baseFontSize = Math.floor(this.tileSize * 0.8); this.ctx.textBaseline = 'middle'; this.ctx.textAlign = 'center';
+                try {
+                    for (const p of this.particles) {
+                        this.ctx.save(); this.ctx.globalAlpha = p.alpha; this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rotation);
+                        const currentScale = Math.max(0.1, p.scale); this.ctx.scale(currentScale, currentScale); this.ctx.font = `${baseFontSize}px Arial`;
+                        this.ctx.fillText(p.emoji, 0, 0); this.ctx.restore();
+                    }
+                } catch (e) { this._debugLog(`Particle Draw Error: ${e.message}`, 'error'); }
+                finally { if(this.ctx) this.ctx.globalAlpha = 1.0; }
+            }
+
+            // --- Enemies ---
+            _initializeEnemyState(enemyData) { /* ... (same as previous version) ... */
+                 if(!enemyData) return [];
+                 try {
+                     const tileSize = this.tileSize; if (!tileSize) throw new Error("TileSize not available for enemy init.");
+                     return enemyData.map(data => ({ type: data.type, startX: data.x, startY: data.y, currentX: data.x * tileSize + tileSize / 2, currentY: data.y * tileSize + tileSize / 2, speed: data.speed, path: data.path.map(p => ({ x: p.x * tileSize + tileSize / 2, y: p.y * tileSize + tileSize / 2 })), targetPathIndex: 1, directionX: 0, directionY: 0 }));
+                 } catch(e) { this._debugLog(`Enemy Init Error: ${e.message}`, 'error'); return []; }
+            }
+            _updateEnemies(deltaTime) { /* ... (same as previous version) ... */
+                 if (!this.currentScreen.enemies || this.currentScreen.enemies.length === 0 || this.isTransitioning || !this.player.alive || !this.tileSize) return;
+                 try {
+                     const dtSeconds = deltaTime / 1000.0; let hitPlayerCheck = false; const tileSize = this.tileSize;
+                     for (const enemy of this.currentScreen.enemies) {
+                         if (!enemy.path || enemy.path.length < 2) continue;
+                         const target = enemy.path[enemy.targetPathIndex % enemy.path.length]; const dx = target.x - enemy.currentX; const dy = target.y - enemy.currentY; const dist = Math.sqrt(dx * dx + dy * dy);
+                         if (dist < enemy.speed * dtSeconds * 1.1 || dist < 2) {
+                             enemy.currentX = target.x; enemy.currentY = target.y; enemy.targetPathIndex = (enemy.targetPathIndex + 1) % enemy.path.length;
+                             const nextTarget = enemy.path[enemy.targetPathIndex]; const nextDx = nextTarget.x - enemy.currentX; const nextDy = nextTarget.y - enemy.currentY; const nextDist = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
+                             if (nextDist > 0.1) { enemy.directionX = nextDx / nextDist; enemy.directionY = nextDy / nextDist; } else { enemy.directionX = 0; enemy.directionY = 0; }
+                         } else {
+                             if (Math.abs(enemy.directionX) < 0.01 && Math.abs(enemy.directionY) < 0.01 && dist > 0.1) { enemy.directionX = dx / dist; enemy.directionY = dy / dist; }
+                             enemy.currentX += enemy.directionX * enemy.speed * dtSeconds; enemy.currentY += enemy.directionY * enemy.speed * dtSeconds;
+                         }
+                         const playerCenterX = this.player.x * tileSize + tileSize / 2; const playerCenterY = this.player.y * tileSize + tileSize / 2; const collisionDist = tileSize * 0.6;
+                         const enemyPlayerDx = playerCenterX - enemy.currentX; const enemyPlayerDy = playerCenterY - enemy.currentY;
+                         if (Math.sqrt(enemyPlayerDx*enemyPlayerDx + enemyPlayerDy*enemyPlayerDy) < collisionDist) { hitPlayerCheck = true; }
+                     }
+                     if (hitPlayerCheck) { this._triggerPlayerDeath("Enemy"); }
+                 } catch (e) { this._debugLog(`Enemy Update Error: ${e.message}`, 'error'); }
+            }
+            _drawEnemies() { /* ... (same as previous version) ... */
+                 if (!this.ctx || !this.currentScreen.enemies || this.currentScreen.enemies.length === 0 || !this.tileSize) return;
+                 const fontSize = Math.floor(this.tileSize * 0.8); this.ctx.font = `${fontSize}px Arial`; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+                 try { for (const enemy of this.currentScreen.enemies) { this.ctx.fillText(enemy.type, enemy.currentX, enemy.currentY); } }
+                 catch (e) { this._debugLog(`Enemy Draw Error: ${e.message}`, 'error'); }
+             }
+
+            // --- State Management ---
+            _saveCurrentScreenState() { /* ... (same as previous version) ... */
+                 try {
+                     if (!this.playerState.currentScreenId || !this.currentScreen.grid) return;
+                     const screenId = this.playerState.currentScreenId; const enemyList = this.currentScreen.enemies || [];
+                     const savedEnemies = enemyList.map(e => ({ type: e.type, startX: e.startX, startY: e.startY, speed: e.speed, path: GCMinigamSlovib.worldData[screenId]?.enemies?.find(ed => ed.x === e.startX && ed.y === e.startY)?.path || [], currentX: e.currentX, currentY: e.currentY, targetPathIndex: e.targetPathIndex, directionX: e.directionX, directionY: e.directionY }));
+                     this.worldState[screenId] = { grid: this.currentScreen.grid.map(row => [...row]), fallingObjects: JSON.parse(JSON.stringify(this.currentScreen.fallingObjects || [])), gemsLeft: this.currentScreen.gemsLeft || 0, enemies: savedEnemies, };
+                     this._debugLog(`Saved state OK for ${screenId}`, 'verbose');
+                 } catch(e) { this._debugLog(`Save State FAILED for ${this.playerState?.currentScreenId}: ${e.message}`, 'error'); }
+            }
+            _loadScreenState(screenId) { /* ... (same as previous version) ... */
+                 try {
+                     this._debugLog(`Loading screen: ${screenId}`, 'info'); const TILES = GCMinigamSlovib.TILES;
+                     const targetScreenId = GCMinigamSlovib.worldData[screenId] ? screenId : '0,0';
+                     if (screenId !== targetScreenId) { this._debugLog(`!! Screen data missing: ${screenId}, fallback to ${targetScreenId}`, 'warn'); }
+                     const data = GCMinigamSlovib.worldData[targetScreenId]; if (!data || !Array.isArray(data.layout)) { throw new Error(`Invalid worldData for ${targetScreenId}`); }
+                     this.currentScreen.fallingObjects = []; this.currentScreen.riverObstacles = []; this.currentScreen.lastRiverSpawnTime = 0; this.particles = [];
+
+                     if (this.worldState[targetScreenId]) { // Load saved state
+                         const state = this.worldState[targetScreenId]; this.currentScreen.grid = state.grid.map(row => [...row]);
+                         this.currentScreen.fallingObjects = JSON.parse(JSON.stringify(state.fallingObjects || [])); this.currentScreen.gemsLeft = state.gemsLeft || 0;
+                         this.currentScreen.enemies = (state.enemies || []).map(se => { const tileSize = this.tileSize; if (!tileSize) throw new Error("TileSize unavailable during enemy state load"); return { type: se.type, startX: se.startX, startY: se.startY, speed: se.speed, currentX: se.currentX, currentY: se.currentY, path: (se.path || []).map(p => ({ x: p.x * tileSize + tileSize / 2, y: p.y * tileSize + tileSize / 2 })), targetPathIndex: se.targetPathIndex || 1, directionX: se.directionX || 0, directionY: se.directionY || 0 }; });
+                         this._debugLog(`Loaded saved state OK for ${targetScreenId}`, 'info');
+                     } else { // Initialize new state
+                         this.currentScreen.grid = data.layout.map(row => [...row]); this.currentScreen.gemsLeft = 0;
+                         this.currentScreen.grid.forEach(row => row.forEach(tile => { if (tile === TILES.GEM) this.currentScreen.gemsLeft++; }));
+                         this.currentScreen.enemies = data.enemies ? this._initializeEnemyState(data.enemies) : [];
+                         this._debugLog(`Initialized new state OK for ${targetScreenId} (${this.currentScreen.gemsLeft} gems, ${this.currentScreen.enemies.length} enemies)`, 'info');
+                     }
+                     // Apply global flags
+                     if (targetScreenId === '1,3' && this.playerState.flags.riverFilled) { this._debugLog("Applying riverFilled state to grid on load.", 'verbose'); for (let y = 0; y < GCMinigamSlovib.GRID_ROWS; y++) for (let x = 0; x < GCMinigamSlovib.GRID_COLS; x++) if (this.currentScreen.grid[y]?.[x] === TILES.WATER) this.currentScreen.grid[y][x] = TILES.RIVER_WOOD; }
+                     if (targetScreenId === '1,1') { const switchX = 7, switchY = 4; const expectedSwitchTile = this.playerState.flags.riverFilled ? TILES.SWITCH_ON : TILES.SWITCH_OFF; if (this.currentScreen.grid[switchY]?.[switchX] !== expectedSwitchTile) { this._debugLog(`Correcting switch tile state on load to ${expectedSwitchTile === TILES.SWITCH_ON ? 'ON':'OFF'}.`, 'info'); if (this.currentScreen.grid[switchY]) this.currentScreen.grid[switchY][switchX] = expectedSwitchTile; } }
+                     // Finalize
+                     this.playerState.currentScreenId = targetScreenId; this.playerState.visited.add(targetScreenId);
+                     this._updateGlobalUI(); this._displayRoomNameOverlay(data.name);
+                     this._debugLog("Initial physics scan for new screen...", 'verbose'); this._scanForFallingObjects();
+                     this._debugLog("LoadScreen OK", 'info');
+                 } catch(e) { this._debugLog(`Load State FAILED for ${screenId}: ${e.message}`, 'error'); this.currentScreen.grid = null; this._stopGameLoop(); }
+            }
+            _modifyRoomGridState(roomId, modificationFunction) { /* ... (same as previous version) ... */
+                this._debugLog(`Attempting grid modification for room: ${roomId}`, 'info');
+                try {
+                    let gridToModify = null; let gridSource = null; const TILES = GCMinigamSlovib.TILES;
+                    if (this.worldState[roomId]?.grid) { gridToModify = this.worldState[roomId].grid; gridSource = 'worldState'; }
+                    else if (GCMinigamSlovib.worldData[roomId]?.layout) { gridToModify = GCMinigamSlovib.worldData[roomId].layout; gridSource = 'worldData (template)'; this._debugLog('Note: Modifying worldData template directly as room state was not saved.', 'warn'); }
+                    if (gridToModify) {
+                        this._debugLog(`Modifying grid from ${gridSource}...`, 'verbose'); modificationFunction(gridToModify); this._debugLog(`Grid modification applied to ${gridSource} for ${roomId}.`, 'info');
+                        if (this.playerState.currentScreenId === roomId && this.currentScreen.grid) {
+                            this._debugLog("Applying modification to currentScreen grid.", 'verbose');
+                            if (gridSource === 'worldState') { this.currentScreen.grid = this.worldState[roomId].grid.map(row => [...row]); }
+                            else { modificationFunction(this.currentScreen.grid); }
+                        }
+                    } else { this._debugLog(`Cannot find grid data for room ${roomId} to modify.`, 'error'); }
+                } catch (e) { this._debugLog(`Error in modifyRoomGridState for ${roomId}: ${e.message}`, 'error'); }
+             }
+
+            // --- UI Update Methods ---
+            _updateGlobalUI() { /* ... (same as previous version) ... */
+                 try {
+                     if (!this.playerState?.currentScreenId) return;
+                     const screenId = this.playerState.currentScreenId; const screenName = GCMinigamSlovib.worldData[screenId]?.name || "???";
+                     if (this.roomNameElement) this.roomNameElement.textContent = screenName;
+                     if (this.scoreElement) this.scoreElement.innerHTML = `${GCMinigamSlovib.EMOJI_GEM} ${this.playerState.score}`;
+                     if (this.livesElement) this.livesElement.innerHTML = `❤️ ${this.playerState.lives}`;
+                     for (const color in this.playerState.keys) { const keyElement = this.shadowRoot.getElementById(`key-${color}`); if (keyElement) { keyElement.classList.toggle('has-key', this.playerState.keys[color]); } }
+                     this._updateMinimap();
+                 } catch(e) { this._debugLog(`UI Update Error: ${e.message}`, 'error'); }
+             }
+            _generateMinimap() { /* ... (same as previous version) ... */
+                if (!this.minimapElement) { this._debugLog("Cannot generate minimap, element not found.", "error"); return; }
+                 this._debugLog("Generating minimap...", 'verbose');
+                try {
+                    this.minimapElement.innerHTML = ''; this.minimapElement.style.gridTemplateColumns = `repeat(${GCMinigamSlovib.WORLD_WIDTH}, 1fr)`;
+                    for (let y = 0; y < GCMinigamSlovib.WORLD_HEIGHT; y++) {
+                        for (let x = 0; x < GCMinigamSlovib.WORLD_WIDTH; x++) {
+                            const cell = document.createElement('div'); const screenId = `${x},${y}`;
+                            cell.classList.add('map-cell'); cell.id = `map-${x}-${y}`; cell.dataset.screenId = screenId;
+                            this.minimapElement.appendChild(cell);
+                        }
+                    } this._updateMinimap();
+                } catch(e) { this._debugLog(`Minimap Gen Error: ${e.message}`, 'error'); }
+            }
+            _updateMinimap() {
+                if (!this.minimapElement || !this.playerState?.currentScreenId) return;
+                 this._debugLog("Updating minimap display", 'verbose');
+                 try {
+                     const currentCoords = this.playerState.currentScreenId.split(',');
+                     const currentX = parseInt(currentCoords[0], 10);
+                     const currentY = parseInt(currentCoords[1], 10);
+
+                     for (let y = 0; y < GCMinigamSlovib.WORLD_HEIGHT; y++) {
+                         for (let x = 0; x < GCMinigamSlovib.WORLD_WIDTH; x++) {
+                             const cellId = `map-${x}-${y}`; // Use hyphenated ID
+                             const screenId = `${x},${y}`;
+                             const cell = this.shadowRoot.getElementById(cellId); // Use shadowRoot to find
+                             if (cell) {
+                                 cell.classList.remove('current', 'visited');
+                                 const roomExists = !!GCMinigamSlovib.worldData[screenId];
+                                 cell.style.opacity = roomExists ? '1' : '0.3';
+                                 cell.style.cursor = roomExists ? 'pointer' : 'not-allowed';
+                                 if (roomExists) {
+                                     if (this.playerState.visited.has(screenId)) cell.classList.add('visited');
+                                     if (x === currentX && y === currentY) cell.classList.add('current');
+                                     // Maybe add a small indicator icon/char if room exists?
+                                     // cell.textContent = '·';
+                                 } else {
+                                     // cell.textContent = '';
+                                 }
+                             } else {
+                                 // This might happen briefly during generation, less likely after
+                                 // this._debugLog(`Minimap cell not found: ${cellId}`, 'verbose');
+                             }
+                         }
+                     }
+                 } catch(e) {
+                     this._debugLog(`Minimap Update Error: ${e.message}`, 'error');
+                 }
+            }
+            _handleMapClick(event) {
+                const cell = event.target.closest('.map-cell'); // Find the cell clicked on
+                if (!cell) return; // Clicked outside a cell
+
+                if (this.isTransitioning) { this._debugLog("Map click ignored: Transitioning", 'verbose'); return; }
+
+                const screenId = cell.dataset.screenId;
+                if (screenId && GCMinigamSlovib.worldData[screenId]) {
+                    if (screenId === this.playerState.currentScreenId) {
+                        this._debugLog("Map click ignored: Already in target room.", 'verbose');
+                        return;
+                    }
+                    this._debugLog(`Map teleport requested to: ${screenId}`, 'info');
+                    this._playButtonClickSound();
+                    this.isTransitioning = true; // Start transition immediately
+                    this._saveCurrentScreenState(); // Save *before* loading new state
+                    this._loadScreenState(screenId); // Load the target screen
+
+                    // Find a safe spot in the newly loaded grid
+                    const spawnPos = this._findSafeSpawn(this.currentScreen.grid);
+                    this.player.x = spawnPos.x;
+                    this.player.y = spawnPos.y;
+                    this.player.dx = 0; // Reset movement intention
+                    this.player.dy = 0;
+                    this._debugLog(`Teleported player to ${this.player.x},${this.player.y} in ${screenId}`, 'info');
+
+                    // Short delay allows state to settle, might not be strictly necessary
+                    // but can prevent visual glitches if rendering happens too fast
+                    setTimeout(() => { this.isTransitioning = false; }, 50);
+
+                } else if (screenId) {
+                    this._debugLog(`Map click ignored: Room ${screenId} does not exist or has no data.`, 'warn');
+                } else {
+                    this._debugLog(`Map click error: Could not determine screenId from target.`, 'error');
+                }
+            }
+            _setupFooterTabs() {
+                // Listeners added via delegation in _setupInternalEventListeners
+                // Just ensure the initial state is correct
+                const initialTabButton = this.shadowRoot.querySelector('#footer-ui .tab-button[data-tab="info-panel"]');
+                const initialTabPanel = this.shadowRoot.getElementById('info-panel');
+                initialTabButton?.classList.add('active');
+                initialTabPanel?.classList.add('active');
+             }
+            _handleFooterTabClick(event) {
+                 const button = event.target.closest('.tab-button');
+                 if (!button) return; // Clicked outside a button
+
+                 const targetPanelId = button.dataset.tab;
+                 if (!targetPanelId) return;
+
+                 // Don't do anything if clicking the already active tab
+                 if (button.classList.contains('active')) return;
+
+                 this._playButtonClickSound();
+
+                 // Update button states
+                 this.shadowRoot.querySelectorAll('#footer-ui .tab-button').forEach(btn => btn.classList.remove('active'));
+                 button.classList.add('active');
+
+                 // Update panel visibility
+                 this.shadowRoot.querySelectorAll('#footer-ui .tab-panel').forEach(panel => panel.classList.remove('active'));
+                 const targetPanel = this.shadowRoot.getElementById(targetPanelId);
+                 if (targetPanel) {
+                     targetPanel.classList.add('active');
+                     this._debugLog(`Switched footer tab to: ${targetPanelId}`, 'verbose');
+                 } else {
+                     this._debugLog(`Footer tab panel not found: ${targetPanelId}`, 'error');
+                 }
+            }
+            _displayRoomNameOverlay(name) {
+                if (!this.roomNameOverlayElement) return;
+                // Clear previous timeout if it exists
+                if (this.roomNameOverlayTimeoutId) {
+                    clearTimeout(this.roomNameOverlayTimeoutId);
+                    this.roomNameOverlayTimeoutId = null;
+                    this.roomNameOverlayElement.classList.remove('visible');
+                    void this.roomNameOverlayElement.offsetWidth; // Force reflow
+                }
+                // Update text
+                this.roomNameOverlayElement.textContent = name || '???';
+                // Use rAF for applying class to ensure transition triggers
+                requestAnimationFrame(() => {
+                    if (!this.isActive) return; // Don't show if component deactivated before rAF
+                   this.roomNameOverlayElement.classList.add('visible');
+                   this.roomNameOverlayTimeoutId = setTimeout(() => {
+                       if(this.roomNameOverlayElement) this.roomNameOverlayElement.classList.remove('visible');
+                       this.roomNameOverlayTimeoutId = null;
+                   }, 1800); // Duration visible + fade out
+                });
+            }
+
+            // --- Core Game Logic ---
+            _resizeCanvas() {
+                if (!this.canvas || !this.gameAreaElement || !this.isActive) {
+                     // this._debugLog("Resize skipped: Canvas/Area missing or component inactive.", 'verbose');
+                     return;
+                }
+                 this._debugLog("Resizing canvas...", 'verbose');
+                 try {
+                    // Use clientWidth/Height of the container as they account for padding/borders
+                    const availableWidth = this.gameAreaElement.clientWidth;
+                    const availableHeight = this.gameAreaElement.clientHeight;
+
+                    if (availableWidth <= 0 || availableHeight <= 0) {
+                         this._debugLog(`Resize skipped: Invalid game area dimensions (${availableWidth}x${availableHeight})`, "warn");
+                         return;
+                    }
+                     const { GRID_COLS, GRID_ROWS } = GCMinigamSlovib;
+                     if (GRID_COLS <= 0 || GRID_ROWS <= 0) {
+                         this._debugLog("Resize skipped: Invalid grid dimensions in constants", "error");
+                         return;
+                     }
+
+                     const tileWidthBased = availableWidth / GRID_COLS;
+                     const tileHeightBased = availableHeight / GRID_ROWS;
+
+                     // Choose the smaller dimension to determine tile size, ensure minimum size
+                     this.tileSize = Math.max(8, Math.floor(Math.min(tileWidthBased, tileHeightBased)));
+
+                     const newWidth = GRID_COLS * this.tileSize;
+                     const newHeight = GRID_ROWS * this.tileSize;
+
+                     // Avoid unnecessary resize if dimensions are the same
+                     if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                         this.canvas.width = newWidth;
+                         this.canvas.height = newHeight;
+                         this._debugLog(`Canvas resized OK: ${this.canvas.width}x${this.canvas.height}, TileSize: ${this.tileSize}`, 'info');
+                         // Redraw immediately after resize if game loop is running
+                         if (this.isGameLoopRunning) {
+                              this._draw(); // Might cause flicker if update logic relies on old size briefly
+                         }
+                     } else {
+                          // this._debugLog("Resize skipped: Dimensions unchanged.", 'verbose');
+                     }
+
+                 } catch (e) {
+                     this._debugLog(`Resize FAILED: ${e.message}`, 'error');
+                 }
+            }
+            _triggerPlayerDeath(reason) {
+                if (!this.player.alive) return; // Already dead
+                this.player.alive = false;
+                this.playerState.lives--;
+                this._debugLog(`Player died! Reason: ${reason}. Lives left: ${this.playerState.lives}`, 'info');
+
+                // Play appropriate sound
+                if (reason === "Enemy") this._playEnemyHitSound();
+                else if (reason === "Rock") this._playRockFallSound();
+                else if (reason === "River Obstacle") this._playRiverHitSound();
+                else this._playPlayerDieSound(); // Generic death sound
+
+                // Show explosion briefly if player tile exists and isn't solid
+                 const { x, y } = this.player;
+                if (this.currentScreen.grid?.[y]?.[x] !== undefined && !GCMinigamSlovib.TILE_PROPERTIES[this.currentScreen.grid[y]?.[x]]?.isSolid) {
+                    if(this.currentScreen.grid[y]) this.currentScreen.grid[y][x] = GCMinigamSlovib.TILES.EXPLOSION;
+                }
+
+                this._updateGlobalUI(); // Update lives display
+
+                setTimeout(() => {
+                    if (!this.isActive) return; // Component might have been deactivated
+
+                    // Clear explosion tile if still present
+                    if (this.currentScreen.grid?.[y]?.[x] === GCMinigamSlovib.TILES.EXPLOSION) {
+                         if(this.currentScreen.grid[y]) this.currentScreen.grid[y][x] = GCMinigamSlovib.TILES.EMPTY;
+                    }
+
+                    if (this.playerState.lives > 0) {
+                        this._debugLog("Respawning player...", 'info');
+                        const startPos = this._findSafeSpawn(this.currentScreen.grid);
+                        this.player.x = startPos.x;
+                        this.player.y = startPos.y;
+                        this.player.dx = 0; // Reset intention
+                        this.player.dy = 0;
+                        this.player.alive = true;
+                        this._scanForFallingObjects(); // Rescan physics after respawn
+                        this._debugLog(`Player respawned at ${this.player.x},${this.player.y}`, 'info');
+                    } else {
+                        this._debugLog("Game Over condition met.", 'info');
+                        this.gameOver = true;
+                        this._stopGameLoop();
+                        if(this.endMessage) this.endMessage.textContent = "💥 GAME OVER 💥";
+                        if(this.endOverlay) this.endOverlay.style.display = 'flex';
+                        if(this.startOverlay) this.startOverlay.style.display = 'none'; // Hide start
+                        // Dispatch game lost event
+                         this.dispatchEvent(new CustomEvent('minigame-lost', {
+                             bubbles: true, composed: true,
+                             detail: { score: this.playerState.score } // Include final score
+                         }));
+                    }
+                }, 800); // Delay before respawn/game over screen
+            }
+            _handlePortalEntry(portal) {
+                if (this.isTransitioning || !portal || !portal.target) return;
+                this._debugLog(`Entering portal to ${portal.target} -> (${portal.exitX}, ${portal.exitY})`, 'info');
+                this._playPortalSound();
+                this.isTransitioning = true;
+
+                this._saveCurrentScreenState(); // Save before changing screen
+                this._loadScreenState(portal.target); // Load the destination
+
+                 // Check if load failed
+                 if (!this.currentScreen.grid) {
+                     this._debugLog("Portal failed: Could not load target screen state.", 'error');
+                     this.isTransitioning = false; // Allow trying again?
+                     // Maybe return to previous screen or show error?
+                     return;
+                 }
+
+                // Set player position in the new screen
+                this.player.x = portal.exitX;
+                this.player.y = portal.exitY;
+                this.player.dx = 0; // Reset movement intention
+                this.player.dy = 0;
+
+                // Clear the tile the player lands on if it's solid (e.g., landing on a wall tile due to bad map design)
+                // This prevents getting stuck immediately. Usually landing spots should be empty.
+                if(this.currentScreen.grid?.[this.player.y]?.[this.player.x] !== undefined) {
+                     const landingTile = this.currentScreen.grid[this.player.y][this.player.x];
+                     if (GCMinigamSlovib.TILE_PROPERTIES[landingTile]?.isSolid) {
+                         this._debugLog(`Warning: Player landed on solid tile (${landingTile}) at ${this.player.x},${this.player.y}. Clearing it.`, 'warn');
+                         this.currentScreen.grid[this.player.y][this.player.x] = GCMinigamSlovib.TILES.EMPTY;
+                     }
+                 }
+
+                // Short delay before ending transition
+                setTimeout(() => {
+                     this.isTransitioning = false;
+                     this._debugLog("Portal transition complete.", 'verbose');
+                 }, 50); // Small delay seems reasonable
+            }
+            _handleMove(dx, dy) {
+                if (!this.isGameLoopRunning || !this.isActive) return; // Only handle if active and running
+                this._debugLog(`Input received: dx=${dx}, dy=${dy}`, 'verbose');
+
+                // Attempt to initialize audio on first interaction if needed
+                if (!this.audioInitialized) {
+                    this._debugLog("Audio not init, trying now...", 'info');
+                    this._initAudio(); // This likely needs user gesture, but try anyway
+                }
+
+                // Ignore input if dead, won, transitioning, or already moving
+                if (!this.player.alive || this.gameOver || this.gameWon || this.isTransitioning) {
+                    return;
+                }
+                // Set movement intention only if not already moving
+                if (this.player.dx === 0 && this.player.dy === 0) {
+                    // this._debugLog("Setting movement intention.", 'verbose');
+                    this.player.dx = dx;
+                    this.player.dy = dy;
+                } else {
+                    // this._debugLog("Ignoring move input, already moving.", 'verbose');
+                }
+             }
+            _handleTouchStart(event) {
+                 const button = event.target.closest('.control-button');
+                 if (button) {
+                     event.preventDefault(); // Prevent screen scrolling/zooming
+                     const dx = parseInt(button.dataset.dx || '0', 10);
+                     const dy = parseInt(button.dataset.dy || '0', 10);
+                     if (dx !== 0 || dy !== 0) {
+                         this._handleMove(dx, dy);
+                     }
+                 }
+            }
+            _handleKeyDown(e) {
+                 // Ignore if focus is on an input field (like debug checkbox - though unlikely)
+                 if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+                 // Ignore if minigame component isn't the active one
+                 if (!this.isActive || !this.isGameLoopRunning) return;
+
+                 let dx = 0; let dy = 0;
+                 let moved = false;
+                 switch (e.key) {
+                     case 'ArrowLeft': case 'a': case 'A': dx = -1; moved = true; break;
+                     case 'ArrowRight': case 'd': case 'D': dx = 1; moved = true; break;
+                     case 'ArrowUp': case 'w': case 'W': dy = -1; moved = true; break;
+                     case 'ArrowDown': case 's': case 'S': dy = 1; moved = true; break;
+                 }
+                 if (moved) {
+                     e.preventDefault(); // Prevent arrow keys from scrolling the page
+                     this._handleMove(dx, dy);
+                 }
+            }
+            _activateSwitch(switchX, switchY, switchProps) {
+                if (!switchProps) { this._debugLog("Switch activation failed: Invalid properties.", 'error'); return; }
+                const stateVar = switchProps.stateVariable;
+                if (!stateVar) { this._debugLog("Switch activation failed: No state variable defined.", 'error'); return; }
+
+                if (this.playerState.flags[stateVar]) {
+                    this._debugLog(`Switch '${stateVar}' already activated.`, 'info');
+                    return; // Already active, do nothing
+                }
+
+                this._debugLog(`Activating switch for flag: ${stateVar}`, 'info');
+                this._playSwitchSound();
+                this.playerState.flags[stateVar] = true; // Set the flag
+
+                // Change the switch tile in the current grid immediately
+                const targetSwitchTile = switchProps.targetSwitchTile;
+                if (this.currentScreen.grid?.[switchY]?.[switchX] !== undefined && targetSwitchTile !== undefined) {
+                    this.currentScreen.grid[switchY][switchX] = targetSwitchTile;
+                }
+
+                // Modify the target room's grid (if defined)
+                const { targetRoom, targetTileFrom, targetTileTo } = switchProps;
+                if (targetRoom && targetTileFrom !== undefined && targetTileTo !== undefined) {
+                    this._modifyRoomGridState(targetRoom, (grid) => {
+                        for (let y = 0; y < grid.length; y++) {
+                            for (let x = 0; x < (grid[y]?.length || 0); x++) {
+                                if (grid[y]?.[x] === targetTileFrom) {
+                                    grid[y][x] = targetTileTo;
+                                }
+                            }
+                        }
+                    });
+                    const fromEmoji = GCMinigamSlovib.TILE_EMOJIS[targetTileFrom] || '?';
+                    const toEmoji = GCMinigamSlovib.TILE_EMOJIS[targetTileTo] || '?';
+                    this._debugLog(`Triggered state change in room ${targetRoom}. ${fromEmoji} -> ${toEmoji}`, 'info');
+                }
+
+                this._createParticles(switchX, switchY, GCMinigamSlovib.EMOJI_STAR, GCMinigamSlovib.PARTICLE_COUNT / 2);
+                this._updateGlobalUI(); // Update UI in case flags affect something visible
+             }
+            _movePlayer() { // Renamed from original movePlayer which handled input intent
+                // This method processes the player's movement intention (player.dx, player.dy)
+                if (this.gameOver || this.gameWon || !this.player.alive || this.isTransitioning || (this.player.dx === 0 && this.player.dy === 0)) {
+                    return; // No movement intention or cannot move
+                }
+
+                const dx = this.player.dx;
+                const dy = this.player.dy;
+                this.player.dx = 0; // Consume the movement intention
+                this.player.dy = 0;
+
+                 const TILES = GCMinigamSlovib.TILES; // Local alias
+                 const TILE_PROPS = GCMinigamSlovib.TILE_PROPERTIES;
+                 const TILE_EMOJIS = GCMinigamSlovib.TILE_EMOJIS;
+
+                let currentX = this.player.x;
+                let currentY = this.player.y;
+                let nextX = currentX + dx;
+                let nextY = currentY + dy;
+
+                this._debugLog(`Processing move: (${currentX},${currentY}) -> (${nextX},${nextY})`, 'verbose');
+
+                // Boundary Check
+                if (nextX < 0 || nextX >= GCMinigamSlovib.GRID_COLS || nextY < 0 || nextY >= GCMinigamSlovib.GRID_ROWS) {
+                    this._debugLog(" -> Blocked: Bounds", 'verbose'); return;
+                }
+
+                // Grid State Check
+                if (!this.currentScreen.grid || !this.currentScreen.grid[nextY]) {
+                    this._debugLog(`!! Move Error: Invalid grid state y=${nextY}`, 'error'); return;
+                }
+                const nextTile = this.currentScreen.grid[nextY]?.[nextX];
+                if (nextTile === undefined) {
+                    this._debugLog(`!! Move Error: Undefined tile at ${nextX},${nextY}`, 'error'); return;
+                }
+
+                const tileProps = TILE_PROPS[nextTile] || {};
+                // this._debugLog(` -> Target Tile: ${TILE_EMOJIS[nextTile]}(${nextTile}), Props: ${JSON.stringify(tileProps)}`, 'verbose');
+
+                const screenData = GCMinigamSlovib.worldData[this.playerState.currentScreenId];
+                const implicitPortal = screenData?.portals?.find(p => p.x === nextX && p.y === nextY && p.implicit);
+
+                // --- Handle Movement Based on Target Tile ---
+
+                 // 1. Implicit Portal (e.g., walking off edge)
+                if (implicitPortal) {
+                    this._debugLog(" -> Entering Implicit Portal.", 'info');
+                    this._handlePortalEntry(implicitPortal);
+                    return; // Portal handles transition, movement stops here
+                }
+
+                 // 2. Solid Tile (Wall, Rock, Lock, Tree part)
+                if (tileProps.isSolid) {
+                    // Check if it's an unlockable lock
+                    if (tileProps.isLock && tileProps.color && this.playerState.keys[tileProps.color]) {
+                        this._debugLog(` -> Unlock attempt (${tileProps.color})... SUCCESS`, 'info');
+                        this._playLockSound(true);
+                         const lockEmoji = TILE_EMOJIS[nextTile]?.charAt(0) || '🔓';
+                         this._createParticles(nextX, nextY, lockEmoji, 5);
+                        // Move player onto the now empty tile
+                        this.player.x = nextX; this.player.y = nextY;
+                        if(this.currentScreen.grid[nextY]) this.currentScreen.grid[nextY][nextX] = TILES.EMPTY; // Remove lock
+                        this._scanForFallingObjects(); // Check physics after change
+                    } else if (tileProps.isLock) {
+                        this._debugLog(" -> Blocked: Lock (No key or invalid color)", 'verbose');
+                        this._playLockSound(false);
+                    } else {
+                        this._debugLog(" -> Blocked: Solid tile", 'verbose');
+                        // Optionally play a 'thud' sound
+                    }
+                    return; // Movement blocked
+                }
+
+                 // 3. Switch
+                 if (tileProps.isSwitch) {
+                    this._debugLog(" -> Activating Switch.", 'info');
+                    // Move player onto the switch tile first
+                    this.player.x = nextX; this.player.y = nextY;
+                    // Activate the switch logic (changes its own tile, flags, maybe other rooms)
+                     this._activateSwitch(nextX, nextY, tileProps);
+                     // No physics scan needed usually, unless switch drops something
+                     // this._scanForFallingObjects();
+                     return;
+                 }
+
+                 // 4. Empty Space, Background, or Collectibles
+                 if (nextTile === TILES.EMPTY || nextTile === TILES.DIRT || tileProps.isBackground) {
+                     // this._debugLog(" -> Moving into Empty/Dirt/Background.", 'verbose');
+                     if (nextTile === TILES.DIRT) this._playDigSound();
+                     this.player.x = nextX; this.player.y = nextY;
+                     // Remove dirt after moving onto it
+                     if(nextTile === TILES.DIRT && this.currentScreen.grid[nextY]) this.currentScreen.grid[nextY][nextX] = TILES.EMPTY;
+                     this._scanForFallingObjects(); // Check physics after move
+                     return;
+                 }
+
+                 if (tileProps.isKey) {
+                     this._debugLog(` -> Collecting Key (${tileProps.color}).`, 'info');
+                     this._playKeySound();
+                     const keyEmoji = TILE_EMOJIS[nextTile]?.charAt(0) || '🔑';
+                     this._createParticles(nextX, nextY, keyEmoji, 5);
+                     this.playerState.keys[tileProps.color] = true; // Add key
+                     this.player.x = nextX; this.player.y = nextY;
+                     if(this.currentScreen.grid[nextY]) this.currentScreen.grid[nextY][nextX] = TILES.EMPTY; // Remove key tile
+                     this._updateGlobalUI(); // Update key display
+                     this._scanForFallingObjects(); // Check physics
+                     return;
+                 }
+
+                 if (nextTile === TILES.GEM) {
+                     this._debugLog(" -> Collecting Gem.", 'info');
+                     this._playGemSound();
+                     this._createParticles(nextX, nextY, GCMinigamSlovib.EMOJI_GEM, GCMinigamSlovib.PARTICLE_COUNT);
+                     this.player.x = nextX; this.player.y = nextY;
+                     if(this.currentScreen.grid[nextY]) this.currentScreen.grid[nextY][nextX] = TILES.EMPTY; // Remove gem
+                     this.playerState.score++;
+                     this.currentScreen.gemsLeft--; // Decrement screen-local count
+                     this._updateGlobalUI(); // Update score display
+                     this._scanForFallingObjects(); // Check physics
+                     return;
+                 }
+
+                 // 5. Explicit Portal (Door)
+                 if (tileProps.isPortal) {
+                     this._debugLog(" -> Entering Explicit Portal.", 'info');
+                     const portalData = screenData?.portals?.find(p => p.x === nextX && p.y === nextY && !p.implicit);
+                     if (portalData) {
+                         this._handlePortalEntry(portalData);
+                     } else {
+                         this._debugLog(`!! Explicit Portal data missing at ${nextX},${nextY}`, 'error');
+                         // Player doesn't move if portal data is bad
+                     }
+                     return; // Portal logic handles movement/transition
+                 }
+
+                // 6. Unhandled Tile Type
+                 this._debugLog(` -> Unhandled move onto tile type: ${nextTile}`, 'warn');
+                 // Default: Allow move, treat as empty? Or block? Let's block for safety.
+                 this._debugLog(" -> Blocked: Unhandled tile interaction", 'verbose');
+
+            }
+
+            // --- Physics (Falling Rocks/Gems) ---
+            _scanForFallingObjects() {
+                 if (!this.currentScreen.grid || !this.currentScreen.fallingObjects) { this._debugLog("Scan skipped: No grid/falling array", "verbose"); return; }
+                 const grid = this.currentScreen.grid;
+                 const fallingObjects = this.currentScreen.fallingObjects;
+                 const { ROCK, GEM, EMPTY } = GCMinigamSlovib.TILES; // Local alias
+
+                 // Filter out objects that have already landed or are no longer fallable
+                 this.currentScreen.fallingObjects = fallingObjects.filter(obj => obj.falling || grid[obj.y]?.[obj.x] === obj.type);
+
+                 for (let y = GCMinigamSlovib.GRID_ROWS - 2; y >= 0; y--) { // Iterate bottom-up, skip last row
+                     for (let x = 0; x < GCMinigamSlovib.GRID_COLS; x++) {
+                         const currentTile = grid[y]?.[x];
+                         if (currentTile === ROCK || currentTile === GEM) {
+                             // Check if already scheduled to fall/roll
+                             const isScheduled = this.currentScreen.fallingObjects.some(obj => obj.x === x && obj.y === y);
+                             if (isScheduled) continue;
+
+                             const belowTile = grid[y + 1]?.[x];
+                             const belowIsEmpty = (belowTile === EMPTY);
+
+                             if (belowIsEmpty) {
+                                 // Schedule to fall straight down
+                                 this.currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + GCMinigamSlovib.FALL_DELAY, falling: false, action: 'fall' });
+                             } else {
+                                 // Check if it can roll left or right
+                                 const belowIsFallable = (belowTile === ROCK || belowTile === GEM);
+                                 if (belowIsFallable) {
+                                      const canRollLeft = (grid[y]?.[x-1] === EMPTY && grid[y+1]?.[x-1] === EMPTY);
+                                      const canRollRight = (grid[y]?.[x+1] === EMPTY && grid[y+1]?.[x+1] === EMPTY);
+
+                                      if (canRollLeft && canRollRight) {
+                                           // Randomly pick a direction if both are possible
+                                           const rollDir = Math.random() < 0.5 ? 'roll-left' : 'roll-right';
+                                           this.currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + GCMinigamSlovib.FALL_DELAY, falling: false, action: rollDir });
+                                      } else if (canRollLeft) {
+                                           this.currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + GCMinigamSlovib.FALL_DELAY, falling: false, action: 'roll-left' });
+                                      } else if (canRollRight) {
+                                           this.currentScreen.fallingObjects.push({ x: x, y: y, type: currentTile, delay: Date.now() + GCMinigamSlovib.FALL_DELAY, falling: false, action: 'roll-right' });
+                                      }
+                                 }
+                             }
+                         }
+                     }
+                 }
+                 // this._debugLog(`Scan complete. ${this.currentScreen.fallingObjects.length} objects pending/falling.`, 'verbose');
+             }
+            _processFallingObjects() {
+                 if (!this.currentScreen.grid || !this.currentScreen.fallingObjects || this.currentScreen.fallingObjects.length === 0) return;
+                 const now = Date.now();
+                 const grid = this.currentScreen.grid;
+                 const fallingObjects = this.currentScreen.fallingObjects;
+                 let somethingMoved = false;
+                 let hitPlayerCheck = false;
+                 const { ROCK, GEM, EMPTY, PLAYER } = GCMinigamSlovib.TILES; // Local alias
+
+                 // Set to track where objects are trying to land in this frame to prevent collisions
+                 const targetPositions = new Set();
+
+                 for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                     const obj = fallingObjects[i];
+                     if (!obj || obj.falling || now < obj.delay) continue; // Skip if already processed or delay not met
+
+                     let targetX = obj.x;
+                     let targetY = obj.y;
+                     let canMove = false;
+                     let moveAction = obj.action; // fall, roll-left, roll-right
+
+                      // Determine target based on action
+                      if (moveAction === 'fall') { targetY++; }
+                      else if (moveAction === 'roll-left') { targetX--; targetY++; }
+                      else if (moveAction === 'roll-right') { targetX++; targetY++; }
+                      else { fallingObjects.splice(i, 1); continue; } // Invalid action
+
+                      // Check if target is valid and empty
+                      const targetValid = targetY < GCMinigamSlovib.GRID_ROWS && targetX >= 0 && targetX < GCMinigamSlovib.GRID_COLS;
+                      const targetTile = targetValid ? grid[targetY]?.[targetX] : GCMinigamSlovib.TILES.WALL; // Treat bounds as wall
+                      const targetIsEmpty = (targetTile === EMPTY);
+
+                      // Additional check for rolling: the space directly beside must also be empty
+                      const sideSpaceIsEmpty = moveAction.startsWith('roll') ? (grid[obj.y]?.[targetX] === EMPTY) : true;
+
+                      const targetKey = `${targetX},${targetY}`;
+
+                      if (targetValid && targetIsEmpty && sideSpaceIsEmpty && !targetPositions.has(targetKey)) {
+                           canMove = true;
+                           targetPositions.add(targetKey); // Reserve this target spot for this frame
+
+                           // Check for player collision *before* moving
+                           if (targetX === this.player.x && targetY === this.player.y && obj.type === ROCK) {
+                               hitPlayerCheck = true;
+                           }
+
+                           // Perform the move
+                           grid[targetY][targetX] = obj.type; // Place object in new spot
+                           grid[obj.y][obj.x] = EMPTY;      // Clear old spot
+
+                           // Play sound only if it actually moved (not just tested)
+                           if (obj.type === ROCK) this._playRockFallSound();
+
+                           // Remove the object from processing list for this frame
+                           fallingObjects.splice(i, 1);
+                           somethingMoved = true;
+
+                           // Check if the moved object needs to fall/roll *again* from its new position
+                           // Schedule a new check with minimal delay
+                           const landedObjectX = targetX;
+                           const landedObjectY = targetY;
+                           const belowLanded = grid[landedObjectY + 1]?.[landedObjectX];
+
+                           if (belowLanded === EMPTY) {
+                               fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, action: 'fall'});
+                           } else if (belowLanded === ROCK || belowLanded === GEM) {
+                               const canRollLeft = (grid[landedObjectY]?.[landedObjectX-1] === EMPTY && grid[landedObjectY+1]?.[landedObjectX-1] === EMPTY);
+                               const canRollRight = (grid[landedObjectY]?.[landedObjectX+1] === EMPTY && grid[landedObjectY+1]?.[landedObjectX+1] === EMPTY);
+                               if(canRollLeft && canRollRight) {
+                                   fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, action: Math.random() < 0.5 ? 'roll-left' : 'roll-right'});
+                               } else if(canRollLeft) {
+                                   fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, action: 'roll-left'});
+                               } else if (canRollRight) {
+                                   fallingObjects.push({ x: landedObjectX, y: landedObjectY, type: grid[landedObjectY][landedObjectX], delay: Date.now() + 50, falling: false, action: 'roll-right'});
+                               }
+                           }
+
+                      } else {
+                           // Cannot move to target (blocked, invalid, or occupied this frame)
+                           // Check if the reason it couldn't move was landing on the player
+                           if (targetValid && targetTile !== EMPTY && targetX === this.player.x && targetY === this.player.y && obj.type === ROCK) {
+                               hitPlayerCheck = true;
+                           }
+                           // Remove from processing list as it has settled (or tried to move and failed)
+                           fallingObjects.splice(i, 1);
+                      }
+                 }
+
+                 if (hitPlayerCheck) {
+                     this._triggerPlayerDeath("Rock");
+                 }
+
+                 // If anything moved, rescan *next* frame to catch chain reactions
+                 // Avoid infinite loops within a single frame by not calling _scan here directly if somethingMoved
+                 // Instead, _scanForFallingObjects should be called routinely in the main update loop.
+            }
+
+            // --- River Obstacle Logic ---
+            _updateRiverObstacles(deltaTime) {
+                 const screenData = GCMinigamSlovib.worldData[this.playerState.currentScreenId];
+                 // Only run on river screen, if river isn't filled, and player is alive
+                 if (!screenData || screenData.special !== 'river' || this.playerState.flags.riverFilled || this.isTransitioning || !this.player.alive) {
+                      if (this.currentScreen.riverObstacles?.length > 0) {
+                           this.currentScreen.riverObstacles = []; // Clear obstacles if conditions not met
+                      }
+                     return;
+                 }
+                 if (!this.canvas) return; // Need canvas dimensions
+
+                 const now = Date.now();
+                 const dtSeconds = deltaTime / 1000.0;
+                 const { RIVER_SPAWN_INTERVAL, RIVER_LOG_CHANCE, RIVER_BLOCK_CHANCE, EMOJI_RIVER_LOG, EMOJI_RIVER_BLOCK, RIVER_OBJECT_SPEED } = GCMinigamSlovib;
+
+                 // Spawn new obstacles
+                 if (now > (this.currentScreen.lastRiverSpawnTime || 0) + RIVER_SPAWN_INTERVAL) {
+                     this.currentScreen.lastRiverSpawnTime = now;
+                     const spawnRoll = Math.random();
+                     let spawnType = null;
+                     if (spawnRoll < RIVER_LOG_CHANCE) spawnType = EMOJI_RIVER_LOG;
+                     else if (spawnRoll < RIVER_LOG_CHANCE + RIVER_BLOCK_CHANCE) spawnType = EMOJI_RIVER_BLOCK;
+
+                     if (spawnType) {
+                          // Spawn only in the water columns (adjust indices as needed)
+                         const possibleCols = [4, 5, 6, 8, 9, 10]; // Example columns
+                         const spawnX = possibleCols[Math.floor(Math.random() * possibleCols.length)];
+                         const spawnPixelX = spawnX * this.tileSize + this.tileSize / 2;
+                         const spawnPixelY = -this.tileSize / 2; // Start just above screen
+                         this.currentScreen.riverObstacles.push({ type: spawnType, x: spawnPixelX, y: spawnPixelY });
+                         // this._debugLog(`Spawned river ${spawnType} at col ${spawnX}`, 'verbose');
+                     }
+                 }
+
+                 // Update existing obstacles & check collision
+                 let hitPlayerCheck = false;
+                 const playerCenterX = this.player.x * this.tileSize + this.tileSize / 2;
+                 const playerCenterY = this.player.y * this.tileSize + this.tileSize / 2;
+                 const collisionDist = this.tileSize * 0.7; // Collision radius
+
+                 for (let i = this.currentScreen.riverObstacles.length - 1; i >= 0; i--) {
+                     const obj = this.currentScreen.riverObstacles[i];
+                     obj.y += RIVER_OBJECT_SPEED * dtSeconds; // Move down
+
+                     // Remove if off-screen
+                     if (obj.y > this.canvas.height + this.tileSize) {
+                         this.currentScreen.riverObstacles.splice(i, 1);
+                         continue;
+                     }
+
+                     // Check collision with player (only if obstacle is a block)
+                     if (obj.type === EMOJI_RIVER_BLOCK) {
+                         const dx = playerCenterX - obj.x;
+                         const dy = playerCenterY - obj.y;
+                         if (Math.sqrt(dx*dx + dy*dy) < collisionDist) {
+                             hitPlayerCheck = true;
+                         }
+                     }
+                 }
+
+                 if (hitPlayerCheck) {
+                     this._triggerPlayerDeath("River Obstacle");
+                 }
+            }
+            _drawRiverObstacles() {
+                 if (!this.ctx || !this.currentScreen.riverObstacles || this.currentScreen.riverObstacles.length === 0 || this.playerState.flags.riverFilled || !this.tileSize) return;
+                 const fontSize = Math.floor(this.tileSize * 0.9);
+                 this.ctx.font = `${fontSize}px Arial`;
+                 this.ctx.textAlign = 'center';
+                 this.ctx.textBaseline = 'middle';
+                 try {
+                     for (const obj of this.currentScreen.riverObstacles) {
+                         this.ctx.fillText(obj.type, obj.x, obj.y);
+                     }
+                 } catch (e) {
+                     this._debugLog(`River Obstacle Draw Error: ${e.message}`, 'error');
                  }
             }
 
-            _setupInternalEventListeners() {
-                 // Setup Minigame specific buttons (overlays)
-                this.shadowRoot.getElementById('start-button-minigame')?.addEventListener('click', () => {
-                    this._playButtonClickSound();
-                    if(this.startOverlay) this.startOverlay.style.display = 'none';
-                     this._startGameLoop();
-                });
-                this.shadowRoot.getElementById('restart-button')?.addEventListener('click', () => {
-                    this._playButtonClickSound();
-                     this._resetStateAndRestart(); // Resets state
-                     if(this.startOverlay) this.startOverlay.style.display = 'none'; // Hide overlay
-                     if(this.endOverlay) this.endOverlay.style.display = 'none'; // Hide overlay
-                     this._startGameLoop(); // Start loop immediately after restart
-                });
-                this.shadowRoot.getElementById('return-to-wrld-button')?.addEventListener('click', () => {
-                     this._playButtonClickSound();
-                     if(this.endOverlay) this.endOverlay.style.display = 'none';
-                     // Signal parent (gc-gamgam) to switch back
-                     this.dispatchEvent(new CustomEvent('return-to-wrld-requested', { bubbles: true, composed: true }));
-                });
+            // --- Update Function ---
+            _update(deltaTime) {
+                 if (!this.isActive || this.gameOver || this.gameWon || !this.player.alive || !this.currentScreen.grid) return;
 
-                 // Setup Minigame control listeners (Touch) - Use bound listeners
+                 try {
+                     // Process player movement intention
+                     if (this.player.dx !== 0 || this.player.dy !== 0) {
+                         this._movePlayer(); // Handles movement logic based on player.dx/dy
+                     }
+
+                     // Process game physics and entities if not transitioning
+                     if (!this.isTransitioning) {
+                         this._processFallingObjects(); // Handle scheduled falls/rolls
+                         this._updateRiverObstacles(deltaTime); // Update river screen elements
+                         this._updateEnemies(deltaTime); // Move enemies and check collision
+                         this._scanForFallingObjects(); // Scan *after* updates to schedule for next frame
+                     }
+
+                     // Update visual effects
+                     this._updateParticles(deltaTime);
+                     this.gemRotation += (deltaTime / 1000.0) * 3; // Simple gem spin
+
+                     // Check Win Condition (specific to vault room)
+                     if (this.playerState.currentScreenId === '2,4' && !this.gameWon) {
+                         const lock1X=4, lock1Y=4, lock2X=10, lock2Y=4; // Vault lock coords
+                         const TILES = GCMinigamSlovib.TILES;
+                         // Check if both red locks are gone (i.e., not TILES.LOCK_RED)
+                         if (this.currentScreen.grid?.[lock1Y]?.[lock1X] !== TILES.LOCK_RED && this.currentScreen.grid?.[lock2Y]?.[lock2X] !== TILES.LOCK_RED) {
+                             this._debugLog("Win Condition Met! Vault Unlocked!", 'info');
+                             this.gameWon = true;
+                             this._stopGameLoop();
+                             this._playWinSound();
+                             if(this.endMessage) this.endMessage.textContent = "🏆 Vault Found! Minigame Complete! 🏆";
+                             if(this.endOverlay) this.endOverlay.style.display = 'flex';
+                             if(this.startOverlay) this.startOverlay.style.display = 'none';
+                             // Dispatch game won event
+                             this.dispatchEvent(new CustomEvent('minigame-won', {
+                                  bubbles: true, composed: true,
+                                 detail: { score: this.playerState.score, keys: { ...this.playerState.keys } } // Pass final state back
+                             }));
+                         }
+                     }
+
+                 } catch(e) {
+                     this._debugLog(`Update Error: ${e.message}`, 'error');
+                      this._stopGameLoop(); // Stop loop on critical error
+                 }
+            }
+
+            // --- Draw Function ---
+            _draw() {
+                if (!this.isActive || !this.ctx || !this.canvas) return; // Don't draw if inactive or canvas not ready
+                try {
+                    // Clear canvas
+                    this.ctx.fillStyle = '#1a2e1a'; // Background color
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    // Check if grid is valid before drawing
+                    if (!this.currentScreen.grid || !Array.isArray(this.currentScreen.grid)) {
+                         this._debugLog(`!! Draw skipped: Invalid grid state`, 'warn');
+                         this.ctx.fillStyle = "red"; this.ctx.font = "16px Arial"; this.ctx.textAlign = "center";
+                         this.ctx.fillText("Error: Grid not loaded!", this.canvas.width / 2, this.canvas.height / 2);
+                         return;
+                    }
+
+                    const grid = this.currentScreen.grid;
+                    const tileSize = this.tileSize;
+                    if (tileSize <= 0) { this._debugLog("Draw skipped: Invalid tileSize", "warn"); return;} // Sanity check tileSize
+
+                    const fontSize = Math.floor(tileSize * 0.8);
+                    const baseFont = `${fontSize}px Arial`; // Cache base font string
+                    this.ctx.font = baseFont;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+
+                    const { TILES, TILE_PROPERTIES, TILE_EMOJIS, EMOJI_EMPTY, EMOJI_PLAYER } = GCMinigamSlovib; // Local aliases
+
+                    // --- Draw Grid Tiles ---
+                    const drawnMultiTiles = new Set(); // Track drawn multi-tile origins
+                    try {
+                        for (let y = 0; y < GCMinigamSlovib.GRID_ROWS; y++) {
+                            for (let x = 0; x < GCMinigamSlovib.GRID_COLS; x++) {
+                                const tile = grid[y]?.[x];
+                                if (tile === undefined) continue; // Skip if row/col invalid
+
+                                const props = TILE_PROPERTIES[tile] || {};
+                                const emoji = TILE_EMOJIS[tile];
+                                const drawX = x * tileSize + tileSize / 2;
+                                const drawY = y * tileSize + tileSize / 2;
+
+                                // Handle Multi-Tile Objects (like Trees)
+                                if (props.isMultiTile) {
+                                    const originX = x - (props.multiTileOffsetX || 0);
+                                    const originY = y - (props.multiTileOffsetY || 0);
+                                    const originKey = `${originX},${originY}`;
+                                    // Find the top-left property definition
+                                    const originProps = TILE_PROPERTIES[grid[originY]?.[originX]] || {};
+
+                                    if (!drawnMultiTiles.has(originKey) && originProps.multiTileEmoji) {
+                                        const multiW = originProps.multiTileWidth || 1;
+                                        const multiH = originProps.multiTileHeight || 1;
+                                        const multiCenterX = (originX + multiW / 2) * tileSize;
+                                        const multiCenterY = (originY + multiH / 2) * tileSize;
+                                        // Adjust font size based on multi-tile dimensions
+                                        const multiFontSize = Math.floor(tileSize * Math.min(multiW, multiH) * 0.7);
+                                        this.ctx.font = `${multiFontSize}px Arial`;
+                                        this.ctx.fillText(originProps.multiTileEmoji, multiCenterX, multiCenterY);
+                                        this.ctx.font = baseFont; // Reset font
+                                        // Mark all cells covered by this multi-tile as drawn
+                                        for (let my = 0; my < multiH; my++) {
+                                             for (let mx = 0; mx < multiW; mx++) {
+                                                  drawnMultiTiles.add(`${originX + mx},${originY + my}`);
+                                             }
+                                        }
+                                    }
+                                    continue; // Skip drawing individual part if multi-tile handled
+                                }
+
+                                // Draw Regular Tiles
+                                if (emoji && emoji !== EMOJI_EMPTY) {
+                                    if (tile === TILES.GEM) { // Special rotation for gems
+                                        this.ctx.save();
+                                        this.ctx.translate(drawX, drawY);
+                                        this.ctx.rotate(this.gemRotation);
+                                        this.ctx.fillText(emoji, 0, 0);
+                                        this.ctx.restore();
+                                    } else {
+                                        this.ctx.fillText(emoji, drawX, drawY);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (gridError) {
+                        this._debugLog(`!! Grid Draw Loop Error: ${gridError.message}`, 'error');
+                        this.ctx.fillStyle = "orange"; this.ctx.font = "14px Arial"; this.ctx.textAlign = "left";
+                        this.ctx.fillText(`Grid Draw Error!`, 10, this.canvas.height - 10);
+                    }
+
+                    // --- Draw Dynamic Elements ---
+                    this._drawRiverObstacles();
+                    this._drawEnemies();
+                    if (this.player.alive) {
+                         this.ctx.font = baseFont; // Ensure correct font
+                         this.ctx.fillText(EMOJI_PLAYER, this.player.x * tileSize + tileSize / 2, this.player.y * tileSize + tileSize / 2);
+                    }
+                    this._drawParticles();
+
+                } catch (e) {
+                    this._debugLog(`!! Draw Function Error: ${e.message}`, 'error');
+                    // Attempt to draw an error message on canvas if possible
+                     if (this.ctx && this.canvas) {
+                        this.ctx.fillStyle = "darkred"; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        this.ctx.fillStyle = "white"; this.ctx.font = "16px Arial"; this.ctx.textAlign = "center";
+                        this.ctx.fillText("CRITICAL DRAW ERROR!", this.canvas.width / 2, this.canvas.height / 2);
+                    }
+                }
+            }
+
+            // --- Game Loop Control ---
+            _gameLoop(timestamp) {
+                if (!this.isGameLoopRunning || !this.isActive) {
+                    this.animationFrameId = null; // Ensure cleared if stopped mid-frame
+                    return;
+                }
+
+                if (!this.lastTime) this.lastTime = timestamp;
+                const deltaTime = Math.min(100, timestamp - this.lastTime); // Cap delta time to prevent large jumps
+                this.lastTime = timestamp;
+
+                try {
+                    // Only update and draw if the component is active and the page visible
+                    if (this.isActive && !document.hidden) {
+                         this._update(deltaTime);
+                         this._draw();
+                    }
+                } catch (e) {
+                    this._debugLog(`!! CRITICAL GAMELOOP ERROR: ${e.message}`, 'error');
+                    console.error("Game loop error:", e);
+                    this._stopGameLoop(); // Stop the loop on critical error
+                    // Optionally show an error overlay
+                }
+
+                // Request the next frame
+                this.animationFrameId = requestAnimationFrame(this._boundGameLoop);
+            }
+            _startGameLoop() {
+                if (!this.isGameLoopRunning && this.isActive) { // Only start if active
+                    this._debugLog("Starting game loop", "info");
+                    this.isGameLoopRunning = true;
+                    this.lastTime = performance.now(); // Use performance.now for higher precision
+                    // Clear any previous frame ID just in case
+                    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = requestAnimationFrame(this._boundGameLoop);
+                } else if (!this.isActive) {
+                    this._debugLog("Start loop skipped: Component not active.", 'warn');
+                } else {
+                     this._debugLog("Start loop skipped: Already running.", 'verbose');
+                }
+            }
+            _stopGameLoop() {
+                if (this.isGameLoopRunning) {
+                    this._debugLog("Stopping game loop", "info");
+                    this.isGameLoopRunning = false;
+                    if (this.animationFrameId) {
+                        cancelAnimationFrame(this.animationFrameId);
+                        this.animationFrameId = null;
+                    }
+                }
+            }
+
+            // --- Helper Methods ---
+            _findSafeSpawn(grid) {
+                 if(!grid || !Array.isArray(grid)) return {x:1, y:1}; // Default if grid invalid
+                 const { EMPTY } = GCMinigamSlovib.TILES;
+                 const { TILE_PROPERTIES } = GCMinigamSlovib;
+                 // Try to find an empty cell not directly above a solid block
+                 for(let y=1; y < GCMinigamSlovib.GRID_ROWS - 1; y++) {
+                     for(let x=1; x < GCMinigamSlovib.GRID_COLS - 1; x++) {
+                         if (grid[y]?.[x] === EMPTY) {
+                              const belowTile = grid[y+1]?.[x];
+                              // Check if tile below exists and is NOT solid
+                              if (belowTile !== undefined && !(TILE_PROPERTIES[belowTile]?.isSolid)) {
+                                   return {x, y};
+                              }
+                         }
+                     }
+                 }
+                 // Fallback: Find *any* empty cell
+                  for(let y=1; y < GCMinigamSlovib.GRID_ROWS - 1; y++) {
+                     for(let x=1; x < GCMinigamSlovib.GRID_COLS - 1; x++) {
+                          if (grid[y]?.[x] === EMPTY) return {x, y};
+                     }
+                  }
+                 this._debugLog("No ideal safe spawn found, using default 1,1", "warn");
+                 return {x: 1, y: 1}; // Absolute fallback
+             }
+            _resetStateAndRestart() {
+                this._debugLog("Resetting minigame state...", 'info');
+                try {
+                    // Reset Player State
+                    this.playerState = {
+                        currentScreenId: '0,0', // Start screen
+                        lives: 3,
+                        score: 0,
+                        keys: { yellow: false, blue: false, red: false, green: false },
+                        visited: new Set(['0,0']), // Track visited screens
+                        flags: { riverFilled: false } // Game flags
+                    };
+                    // Reset Player Position/Status
+                    this.player = {
+                        x: 1, y: 1, // Default, will be updated by loadScreen
+                        dx: 0, dy: 0, // Movement intention
+                        alive: true
+                    };
+                    // Reset World State (clear saved screen data)
+                    this.worldState = {};
+                    // Reset Current Screen dynamic data
+                    this.currentScreen = {
+                        grid: null,
+                        fallingObjects: [],
+                        riverObstacles: [],
+                        gemsLeft: 0,
+                        enemies: [],
+                        lastRiverSpawnTime: 0
+                    };
+                    this.particles = []; // Clear particles
+                    this.gameOver = false;
+                    this.gameWon = false;
+                    this.isTransitioning = false; // Ensure not stuck in transition
+
+                    // Load the starting screen
+                    this._loadScreenState('0,0'); // Load initial screen state
+
+                    // Find safe spawn *after* loading the grid
+                    if (this.currentScreen.grid) {
+                         const startPos = this._findSafeSpawn(this.currentScreen.grid);
+                         this.player.x = startPos.x;
+                         this.player.y = startPos.y;
+                    } else {
+                         this._debugLog("Cannot find safe spawn, grid failed to load.", 'error');
+                         this.player.x = 1; this.player.y = 1; // Fallback position
+                    }
+
+                    this._updateGlobalUI(); // Update display with initial values
+
+                    // Reset overlays
+                    if(this.endOverlay) this.endOverlay.style.display = 'none';
+                    // Start overlay visibility is handled by activate() or initial connectedCallback
+
+                    this._debugLog("Minigame state reset complete.", 'info');
+
+                } catch(e){
+                    this._debugLog(`Minigame Restart FAILED: ${e.message}`, 'error');
+                    console.error("Restart failed:", e);
+                    // Handle restart failure gracefully (e.g., show error)
+                }
+            }
+
+            // --- Unit Testing ---
+             _assert(condition, message) { // Simple internal assertion helper
+                 const level = condition ? 'verbose' : 'error';
+                 const prefix = condition ? 'PASS: ' : 'FAIL: ';
+                 this._debugLog(`${prefix}${message}`, level);
+                 return condition;
+             }
+            _runUnitTests() {
+                 this._debugLog("--- Running Startup Unit Tests ---", 'info');
+                 let pass = 0; let fail = 0;
+                 const runTest = (condition, message) => { if (this._assert(condition, message)) pass++; else fail++; };
+
+                 try {
+                     this._debugLog("Testing Data Integrity...", 'verbose');
+                     const { worldData, TILES } = GCMinigamSlovib;
+                     runTest(typeof worldData === 'object' && worldData !== null, "worldData object exists");
+                     runTest(!!worldData['0,0'], "worldData['0,0'] (Start Room) exists");
+                     runTest(!!worldData['1,1']?.layout, "worldData['1,1'] (Control Room) has layout");
+                     runTest(!!worldData['1,3']?.layout, "worldData['1,3'] (River Crossing) has layout");
+                     runTest(!!worldData['2,4']?.layout, "worldData['2,4'] (Vault Room) has layout");
+                     runTest(worldData['1,1']?.layout?.[4]?.[7] === TILES.SWITCH_OFF, "Switch tile present in Control Room layout");
+                     runTest(worldData['2,4']?.layout?.[4]?.[4] === TILES.LOCK_RED, "Vault lock tile (left) present");
+
+                     this._debugLog("Testing Core Function Existence...", 'verbose');
+                     runTest(typeof this._movePlayer === 'function', "_movePlayer function exists");
+                     runTest(typeof this._loadScreenState === 'function', "_loadScreenState function exists");
+                     runTest(typeof this._activateSwitch === 'function', "_activateSwitch function exists");
+                     runTest(typeof this._runUnitTests === 'function', "_runUnitTests function exists");
+
+                     this._debugLog("Testing Initial Player State (after reset)...", 'verbose');
+                      // Note: _resetStateAndRestart() is called before tests
+                     runTest(this.playerState.lives === 3, `Initial lives should be 3`);
+                     runTest(this.playerState.score === 0, `Initial score should be 0`);
+                     runTest(this.playerState.keys.red === false, "Initial red key state");
+                     runTest(this.playerState.flags.riverFilled === false, "Initial riverFilled flag");
+                     runTest(this.playerState.currentScreenId === '0,0', "Initial screen ID is 0,0");
+
+                     this._debugLog("Testing Constants...", 'verbose');
+                     runTest(TILES.WALL === 5, "TILES.WALL constant is correct");
+                     runTest(GCMinigamSlovib.TILE_EMOJIS[TILES.WALL] === GCMinigamSlovib.EMOJI_WALL, "Emoji for WALL exists");
+                     runTest(TILES.SWITCH_OFF === 42, "TILES.SWITCH_OFF constant is correct");
+                     runTest(!!GCMinigamSlovib.TILE_PROPERTIES[TILES.SWITCH_OFF]?.isSwitch, "Switch property exists");
+
+                     // Test DOM elements are cached
+                     this._debugLog("Testing DOM References...", 'verbose');
+                     runTest(!!this.canvas, "Canvas element is cached");
+                     runTest(!!this.ctx, "Canvas context is cached");
+                     runTest(!!this.debugOutputElement, "Debug output element is cached");
+
+                 } catch (e) {
+                     this._debugLog(`!! ERROR DURING TESTS: ${e.message}`, 'error');
+                     fail++;
+                 }
+                 const summaryLevel = fail > 0 ? 'error' : 'info';
+                 this._debugLog(`--- Test Summary: ${pass} Passed, ${fail} Failed ---`, summaryLevel);
+             }
+
+        } // End class GCMinigamSlovib
+        customElements.define('gc-minigam-slovib', GCMinigamSlovib);
+
+
+         // --- Component: gc-gamgam (Game Manager / Shell) ---
+         class GCGamGam extends HTMLElement {
+             constructor() {
+                 super();
+                 this.attachShadow({ mode: 'open' });
+
+                 this._boundHandleTopTabClick = this._handleTopTabClick.bind(this);
+                 this._boundPlayMinigameRequested = this._playMinigameRequested.bind(this);
+                 this._boundReturnToWrldRequested = this._returnToWrldRequested.bind(this);
+                 this._boundShowMinigameGuideRequested = this._showMinigameGuideRequested.bind(this);
+                 this._boundHandleMinigameWon = this._handleMinigameWon.bind(this);
+                 this._boundHandleMinigameLost = this._handleMinigameLost.bind(this);
+                 // Add bindings for other minigame events if needed
+
+                 // State to track the currently active view
+                 this.activeView = 'wrld'; // 'wrld' or 'minigam'
+             }
+
+             connectedCallback() {
+                 console.log("[gc-gamgam] Connected.");
+                 this._render();
+                 this._cacheChildReferences();
+                 this._setupEventListeners();
+                 // Set initial active view based on state
+                 this._switchView(this.activeView, true); // Force initial setup
+             }
+
+             disconnectedCallback() {
+                 console.log("[gc-gamgam] Disconnected.");
+                 const topTabs = this.shadowRoot.getElementById('top-tabs');
+                 if (topTabs) {
+                     topTabs.removeEventListener('click', this._boundHandleTopTabClick);
+                 }
+                 // Remove listeners for child events
+                 this.removeEventListener('play-minigame-requested', this._boundPlayMinigameRequested);
+                 this.removeEventListener('return-to-wrld-requested', this._boundReturnToWrldRequested);
+                 this.removeEventListener('show-minigame-guide-requested', this._boundShowMinigameGuideRequested);
+                 this.removeEventListener('minigame-won', this._boundHandleMinigameWon);
+                 this.removeEventListener('minigame-lost', this._boundHandleMinigameLost);
+             }
+
+             _render() {
+                 this.shadowRoot.innerHTML = `
+                    <style>
+                        :host {
+                            display: flex;
+                            flex-direction: column; /* Stack tabs above content */
+                            width: 100%;
+                            height: 100%;
+                            background-color: #0a140a; /* Darker background for the manager */
+                            overflow: hidden;
+                         }
+
+                        /* --- Top Level Tabs --- */
+                        #top-tabs {
+                            display: flex;
+                            width: 100%;
+                            background-color: #0a140a;
+                            flex-shrink: 0; /* Prevent tabs from shrinking */
+                            border-bottom: 2px solid #4a7a4a;
+                        }
+                        .top-tab-button {
+                            padding: 10px 20px;
+                            border: none;
+                            background-color: transparent;
+                            color: #a0c0a0;
+                            font-size: 1.1em;
+                            font-weight: bold;
+                            cursor: pointer;
+                            border-right: 1px solid #4a7a4a;
+                            transition: background-color 0.2s ease, color 0.2s ease;
+                            flex-grow: 1;
+                            text-align: center;
+                        }
+                        .top-tab-button:last-child { border-right: none; }
+                        .top-tab-button:hover { background-color: #2a4e2a; }
+                        .top-tab-button.active {
+                            background-color: #1a2e1a;
+                            color: #ffffff;
+                            border-bottom: 3px solid #e94560;
+                            margin-bottom: -2px; /* Overlap border */
+                        }
+
+                        /* --- Main Content Area --- */
+                        #main-content-wrapper {
+                             flex-grow: 1; /* Take remaining space */
+                             width: 100%;
+                             position: relative; /* For potential absolute positioning inside? */
+                             display: flex; /* Use flex for content */
+                             overflow: hidden; /* Prevent content overflow */
+                         }
+
+                         /* Children views will control their own display via :host(.active) */
+                         gc-inkblot, gc-minigam-slovib {
+                              width: 100%;
+                              height: 100%;
+                         }
+                    </style>
+
+                    <div id="top-tabs">
+                        <button class="top-tab-button" data-view="wrld">WRLD</button>
+                        <button class="top-tab-button" data-view="minigam">MINIGAM</button>
+                    </div>
+
+                    <div id="main-content-wrapper">
+                        <gc-inkblot></gc-inkblot>
+                        <gc-minigam-slovib></gc-minigam-slovib>
+                    </div>
+                 `;
+             }
+
+             _cacheChildReferences() {
+                 this.narrativeView = this.shadowRoot.querySelector('gc-inkblot');
+                 this.minigameView = this.shadowRoot.querySelector('gc-minigam-slovib');
+                 if (!this.narrativeView || !this.minigameView) {
+                     console.error("[gc-gamgam] Failed to find child view components!");
+                 }
+             }
+
+             _setupEventListeners() {
+                 const topTabs = this.shadowRoot.getElementById('top-tabs');
+                 if (topTabs) {
+                     topTabs.addEventListener('click', this._boundHandleTopTabClick);
+                 }
+                 // Listen for events bubbling up from children
+                 this.addEventListener('play-minigame-requested', this._boundPlayMinigameRequested);
+                 this.addEventListener('return-to-wrld-requested', this._boundReturnToWrldRequested);
+                 this.addEventListener('show-minigame-guide-requested', this._boundShowMinigameGuideRequested);
+
+                 // Listen for game outcome events
+                 this.addEventListener('minigame-won', this._boundHandleMinigameWon);
+                 this.addEventListener('minigame-lost', this._boundHandleMinigameLost);
+             }
+
+             _handleTopTabClick(e) {
+                  const button = e.target.closest('.top-tab-button');
+                  if (button) {
+                      const targetViewId = button.dataset.view; // 'wrld' or 'minigam'
+                      if (targetViewId && targetViewId !== this.activeView) {
+                          console.log(`[gc-gamgam] Tab clicked, switching to: ${targetViewId}`);
+                          // Maybe play sound here globally? this.minigameView?._playButtonClickSound();
+                          this._switchView(targetViewId);
+                      }
+                  }
+             }
+
+             _switchView(viewId, force = false) {
+                 if (!force && viewId === this.activeView) return; // No change needed
+
+                 console.log(`[gc-gamgam] Switching view to: ${viewId}`);
+                 this.activeView = viewId;
+
+                 // Update tab button active state
+                 this.shadowRoot.querySelectorAll('.top-tab-button').forEach(btn => {
+                     btn.classList.toggle('active', btn.dataset.view === viewId);
+                 });
+
+                 // Activate/Deactivate child components
+                 if (viewId === 'wrld') {
+                     this.narrativeView?.classList.add('active');
+                     this.minigameView?.classList.remove('active');
+                     this.minigameView?.deactivate(); // Tell minigame to pause/cleanup
+                     // TODO: Potentially activate narrative (e.g., resume Ink story)
+                 } else if (viewId === 'minigam') {
+                     this.narrativeView?.classList.remove('active');
+                     this.minigameView?.classList.add('active');
+                      // TODO: Potentially deactivate narrative (e.g., pause Ink story)
+                     this.minigameView?.activate(); // Tell minigame to start/resume
+                 }
+             }
+
+             // --- Event Handlers for Child Events ---
+             _playMinigameRequested(e) {
+                 console.log("[gc-gamgam] Event received: play-minigame-requested");
+                 // TODO: Potentially pass starting parameters from Ink/Narrative to minigame here
+                 // e.g., this.minigameView.startNewGame(e.detail.startParams);
+                 this._switchView('minigam');
+             }
+
+             _returnToWrldRequested(e) {
+                 console.log("[gc-gamgam] Event received: return-to-wrld-requested");
+                  // TODO: Process minigame results if needed (though win/loss events are better)
+                  // const results = e.detail;
+                 this._switchView('wrld');
+             }
+
+             _showMinigameGuideRequested(e) {
+                 console.log("[gc-gamgam] Event received: show-minigame-guide-requested");
+                 this._switchView('minigam');
+                 // Ensure the view switch completes and component is active before calling method
+                 requestAnimationFrame(() => {
+                      this.minigameView?.showGuideTab();
+                 });
+             }
+
+             _handleMinigameWon(e) {
+                 console.log("[gc-gamgam] Event received: minigame-won", e.detail);
+                 // TODO: Update Ink narrative state based on win and e.detail (score, keys etc.)
+                 // Example: inkStory.variablesState['minigame_slovib_won'] = true;
+                 // Example: inkStory.variablesState['minigame_slovib_score'] = e.detail.score;
+                 // Then, potentially switch back to narrative view automatically or wait for player
+                 // this._switchView('wrld');
+             }
+
+             _handleMinigameLost(e) {
+                 console.log("[gc-gamgam] Event received: minigame-lost", e.detail);
+                 // TODO: Update Ink narrative state based on loss
+                 // Example: inkStory.variablesState['minigame_slovib_won'] = false;
+                 // Example: inkStory.EvaluateFunction('handleMinigameLoss', [e.detail.score]);
+                 // Maybe switch back automatically?
+                 // this._switchView('wrld');
+             }
+
+         } // End class GCGamGam
+         customElements.define('gc-gamgam', GCGamGam);
+
+    </script>
+</head>
+<body>
+    <!-- The root component that manages the views -->
+    <gc-gamgam></gc-gamgam>
+</body>
+</html>
