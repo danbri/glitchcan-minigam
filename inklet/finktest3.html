@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>oooOO Processor</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; /* Expanded font stack */
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 10px;
+      color: #333;
+    }
+    header {
+      background-color: #000;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      margin: -10px -10px 10px -10px; /* Makes header span full width */
+    }
+    .logo {
+      font-weight: bold;
+      font-size: 20px;
+      margin-right: 10px;
+    }
+    .content-block {
+      background: #fff;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .content-type {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      border-bottom: 1px solid #eee; /* Added separator */
+      padding-bottom: 3px; /* Added padding */
+    }
+    button {
+      background-color: #0066ff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease; /* Smooth transition */
+    }
+    button:hover {
+      background-color: #0052cc; /* Darker on hover */
+    }
+    button:disabled { /* Style for disabled state */
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box; /* Added for better width calculation */
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 8px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      border: 1px solid #eee; /* Slight border for definition */
+    }
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0066ff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #debug-log-container { /* Added container for better layout */
+       margin-top: 20px;
+    }
+    #debug-log {
+      background: #fff;
+      border-radius: 5px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      border: 1px solid #ddd; /* Added border */
+      margin-top: 5px; /* Spacing from button/title */
+    }
+    .error-message { /* Style for errors in output */
+        color: red;
+        background: #fff;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid red;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">oooOO</div>
+    <div>Text Fetcher</div>
+  </header>
+
+  <div>
+    <input id="url-input" type="text" value="https://danbri.github.io/glitchcan-minigam/inklet/jungle2.fink.js" placeholder="Enter .fink.js URL">
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button id="load-url">Load URL</button>
+      <button id="process-example">Process Example</button>
+    </div>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Processing...</div>
+  </div>
+
+  <div id="output-container"></div>
+
+  <div id="debug-log-container"> <h3>Debug Log</h3>
+      <button id="clear-log">Clear Log</button>
+      <div id="debug-log"></div>
+  </div>
+
+  <script>
+    class FoafProcessor {
+      constructor() {
+        this.urlInput = document.getElementById('url-input');
+        this.loadBtn = document.getElementById('load-url');
+        this.exampleBtn = document.getElementById('process-example');
+        this.output = document.getElementById('output-container');
+        this.loading = document.getElementById('loading');
+        this.logBox = document.getElementById('debug-log');
+        this.clearLogBtn = document.getElementById('clear-log'); // Get clear button
+
+        // Bound message handler - store reference for removal
+        this.messageHandler = this.onMessage.bind(this);
+        this.currentURL = '';
+        this.activeSandbox = null; // Keep track of the active sandbox iframe
+
+        this.loadBtn.addEventListener('click', () => this.handleLoadRequest(this.urlInput.value));
+        this.exampleBtn.addEventListener('click', () => {
+          const example = 'https://danbri.github.io/glitchcan-minigam/inklet/jungle2.fink.js';
+          this.urlInput.value = example;
+          this.handleLoadRequest(example);
+        });
+        this.clearLogBtn.addEventListener('click', () => { // Add listener for clear
+            this.logBox.innerHTML = '';
+        });
+      }
+
+      log(level, message) {
+        const entry = document.createElement('div');
+        // Basic sanitization for log display
+        const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${safeMessage}`;
+        entry.style.color = {
+          error: 'red',
+          warn: 'orange',
+          info: 'black'
+        }[level] || 'black';
+        if (level === 'error') entry.style.fontWeight = 'bold';
+
+        this.logBox.appendChild(entry);
+        // Scroll to bottom
+        this.logBox.scrollTop = this.logBox.scrollHeight;
+        console[level === 'error' ? 'error' : 'log'](message); // Log original message to console
+      }
+
+      setLoading(isLoading) {
+          this.loading.style.display = isLoading ? 'block' : 'none';
+          this.loadBtn.disabled = isLoading;
+          this.exampleBtn.disabled = isLoading;
+      }
+
+      cleanupSandbox() {
+          if (this.activeSandbox) {
+              this.log('info', 'Removing previous sandbox iframe.');
+              this.activeSandbox.remove();
+              this.activeSandbox = null;
+          }
+          // Always try to remove the listener, in case cleanup failed previously
+          window.removeEventListener('message', this.messageHandler);
+      }
+
+      handleLoadRequest(url) {
+          const trimmedUrl = url.trim();
+          if (!trimmedUrl) {
+              this.log('warn', 'URL input is empty.');
+              // Optional: Show a message in the output area
+              // this.output.innerHTML = '<div class="error-message">Please enter a URL.</div>';
+              return;
+          }
+          this.loadViaSandbox(trimmedUrl);
+      }
+
+      loadViaSandbox(url) {
+        this.currentURL = url;
+        this.output.innerHTML = ''; // Clear previous output
+        this.setLoading(true); // Show loading indicator and disable buttons
+        this.cleanupSandbox(); // Remove any existing sandbox and listener first
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-scripts'); // Only allow scripts, no same-origin access
+        iframe.style.display = 'none';
+        iframe.id = 'ooo-sandbox'; // Consistent ID, but we manage via this.activeSandbox
+
+        // Store reference to the active iframe
+        this.activeSandbox = iframe;
+
+        // Add the message listener *before* appending/writing to iframe
+        window.addEventListener('message', this.messageHandler);
+        this.log('info', `Creating sandbox iframe for URL: ${url}`);
+
+        document.body.appendChild(iframe);
+
+        // Check if contentWindow is accessible (it should be, due to no 'allow-same-origin')
+        // Use try/catch for robustness when accessing iframe contentWindow/Document
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc) {
+                throw new Error("Could not access iframe document.");
+            }
+
+            const html = `
+              <!DOCTYPE html>
+              <html>
+              <head><title>Sandbox</title></head> <body>
+                <script>
+                  console.log('Sandbox: Initializing...'); // Sandbox logging
+                  window.finkData = [];
+                  function oooOO(strings) {
+                    try {
+                      // Prefer raw for template literals, fallback to toString
+                      const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
+                                        ? strings.raw.join('') // Join if multiple parts in raw
+                                        : String(strings); // Convert anything else to string
+                      console.log('Sandbox: oooOO captured:', content); // Sandbox logging
+                      window.finkData.push(content);
+                      return content; // Return the content as the spec implies
+                    } catch (e) {
+                      console.error('Sandbox: Error in oooOO:', e); // Sandbox logging
+                      // Attempt to post error back? Could be noisy.
+                      return ''; // Return empty string on error
+                    }
+                  }
+                  // Prevent script from easily overriding oooOO
+                  Object.defineProperty(window, 'oooOO', { value: oooOO, writable: false, configurable: false });
+
+                  // Use setTimeout to ensure script context is stable before posting 'ready'
+                  setTimeout(() => {
+                    console.log('Sandbox: Ready, posting message to parent.'); // Sandbox logging
+                    parent.postMessage({ type: 'sandbox-ready' }, '*'); // '*' is okay for targetOrigin here
+                  }, 0);
+
+                  window.addEventListener('message', function(event) {
+                    // Basic check for event origin if needed, but parent is posting '*'
+                    // if (event.origin !== window.location.origin) return;
+
+                    if (event.data && event.data.type === 'load-script') {
+                      console.log('Sandbox: Received load-script command for:', event.data.url); // Sandbox logging
+                      const script = document.createElement('script');
+                      script.onload = () => {
+                        console.log('Sandbox: Script loaded successfully. Posting fink-loaded.'); // Sandbox logging
+                        parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
+                      };
+                      script.onerror = (errorEvent) => {
+                        console.error('Sandbox: Script load failed.', errorEvent); // Sandbox logging
+                        // Provide a more generic error message back
+                        parent.postMessage({ type: 'fink-error', error: 'Failed to load or execute script in sandbox.' }, '*');
+                      };
+                      script.src = event.data.url;
+                      // Append to head or body, head is generally preferred for scripts
+                      (document.head || document.body).appendChild(script);
+                    }
+                  });
+                <\/script> </body>
+              </html>
+            `;
+
+            doc.open();
+            doc.write(html);
+            doc.close();
+            this.log('info', 'Sandbox iframe content written.');
+
+        } catch (error) {
+            this.log('error', `Failed to initialize sandbox: ${error.message}`);
+            this.setLoading(false); // Hide loading
+            this.cleanupSandbox(); // Clean up potentially broken iframe
+            this.output.innerHTML = `<div class="error-message">Error: Could not create or access the sandbox environment.</div>`;
+        }
+      }
+
+      onMessage(event) {
+        // Basic security check: ensure the message is from our active sandbox
+        // Note: If the sandbox navigates, event.source might change. This check is
+        // mostly useful to prevent messages from other potential sources (like browser extensions).
+        if (!this.activeSandbox || event.source !== this.activeSandbox.contentWindow) {
+             // Optional: Log unexpected messages, but ignore them otherwise
+             // console.warn('Ignoring message from unexpected source:', event.origin, event.source);
+             return;
+        }
+
+        const data = event.data;
+        this.log('info', `Received message from sandbox: ${JSON.stringify(data)}`);
+        if (!data || !data.type) return; // Ignore messages without type
+
+        switch (data.type) {
+            case 'sandbox-ready':
+                if (this.activeSandbox) {
+                    this.log('info', 'Sandbox is ready. Sending load-script message.');
+                    // Post message to the specific iframe window
+                    this.activeSandbox.contentWindow.postMessage({ type: 'load-script', url: this.currentURL }, '*');
+                } else {
+                     this.log('warn', 'Received sandbox-ready but no active sandbox found.');
+                }
+                break;
+
+            case 'fink-loaded':
+                this.setLoading(false); // Hide loading, enable buttons
+                if (data.data && data.data.length > 0) {
+                    this.renderBlocks(data.data);
+                    this.log('info', `Successfully loaded and processed ${data.data.length} block(s).`);
+                } else {
+                    this.output.innerHTML = `<div class="content-block"><div class="content-type"><span>Info</span><span>-</span></div><pre>No oooOO content found in the script.</pre></div>`;
+                    this.log('info', 'Script loaded, but no oooOO content was captured.');
+                }
+                this.cleanupSandbox(); // Clean up after success
+                break;
+
+            case 'fink-error':
+                this.setLoading(false); // Hide loading, enable buttons
+                // Display a user-friendly error
+                this.output.innerHTML = `<div class="error-message">Error: ${this.sanitize(data.error || 'Unknown error in sandbox.')}</div>`;
+                this.log('error', `Sandbox reported an error: ${data.error}`);
+                this.cleanupSandbox(); // Clean up after error
+                break;
+
+            // Default case to handle unexpected message types
+            default:
+                this.log('warn', `Received unknown message type from sandbox: ${data.type}`);
+                break;
+        }
+      }
+
+      renderBlocks(blocks) {
+        this.output.innerHTML = ''; // Clear previous results before rendering new ones
+        blocks.forEach((text, i) => {
+          const div = document.createElement('div');
+          div.className = 'content-block';
+          // Ensure text is treated as a string before sanitizing
+          const sanitizedText = this.sanitize(String(text));
+          div.innerHTML = `
+            <div class="content-type"><span>Text Block</span><span>${i + 1}</span></div>
+            <pre>${sanitizedText}</pre>
+          `;
+          this.output.appendChild(div);
+        });
+      }
+
+      // Simple HTML sanitizer
+      sanitize(str) {
+        if (typeof str !== 'string') {
+            str = String(str); // Ensure it's a string
+        }
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+      }
+    }
+
+    // Initialize the processor after the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      new FoafProcessor();
+    });
+  </script>
+</body>
+</html>
