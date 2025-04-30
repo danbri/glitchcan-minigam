@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>oooOO Processor</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 10px;
+      color: #333;
+    }
+    header {
+      background-color: #000;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      margin: -10px -10px 10px -10px;
+    }
+    .logo {
+      font-weight: bold;
+      font-size: 20px;
+      margin-right: 10px;
+    }
+    .content-block {
+      background: #fff;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .content-type {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    button {
+      background-color: #0066ff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 8px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+    }
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0066ff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #debug-log {
+      background: #fff;
+      border-radius: 5px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">oooOO</div>
+    <div>Dan Brickley</div>
+  </header>
+
+  <div>
+    <input id="url-input" type="text" value="https://danbri.github.io/glitchcan-minigam/inklet/jungle2.fink.js" placeholder="Enter .fink.js URL">
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button id="load-url">Load URL</button>
+      <button id="process-example">Process Example</button>
+    </div>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Processing...</div>
+  </div>
+
+  <div id="output-container"></div>
+
+  <h3>Debug Log</h3>
+  <button onclick="document.getElementById('debug-log').innerHTML = ''">Clear Log</button>
+  <div id="debug-log"></div>
+
+  <script>
+    class FoafProcessor {
+      constructor() {
+        this.urlInput = document.getElementById('url-input');
+        this.loadBtn = document.getElementById('load-url');
+        this.exampleBtn = document.getElementById('process-example');
+        this.output = document.getElementById('output-container');
+        this.loading = document.getElementById('loading');
+        this.logBox = document.getElementById('debug-log');
+        this.messageHandler = this.onMessage.bind(this);
+        this.currentURL = '';
+
+        this.loadBtn.addEventListener('click', () => {
+          const url = this.urlInput.value.trim();
+          if (url) this.loadViaSandbox(url);
+        });
+
+        this.exampleBtn.addEventListener('click', () => {
+          const example = 'https://danbri.github.io/glitchcan-minigam/inklet/jungle2.fink.js';
+          this.urlInput.value = example;
+          this.loadViaSandbox(example);
+        });
+      }
+
+      log(level, message) {
+        const entry = document.createElement('div');
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        entry.style.color = {
+          error: 'red',
+          warn: 'orange',
+          info: 'black'
+        }[level] || 'black';
+
+        this.logBox.appendChild(entry);
+        this.logBox.scrollTop = this.logBox.scrollHeight;
+        console[level === 'error' ? 'error' : 'log'](message);
+      }
+
+      loadViaSandbox(url) {
+        this.currentURL = url;
+        this.output.innerHTML = '';
+        this.loading.style.display = 'block';
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-scripts');
+        iframe.style.display = 'none';
+        iframe.id = 'ooo-sandbox';
+
+        window.addEventListener('message', this.messageHandler);
+        this.log('info', 'Sandbox iframe created');
+
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+
+        const html = `
+          <!DOCTYPE html>
+          <html>
+          <body>
+            <script>
+              window.finkData = [];
+              function oooOO(strings) {
+                try {
+                  const content = typeof strings === 'object' && strings.raw ? strings.raw[0] : strings.toString();
+                  window.finkData.push(content);
+                  return content;
+                } catch (_) { return ''; }
+              }
+              Object.defineProperty(window, 'oooOO', { value: oooOO, writable: false, configurable: false });
+
+              setTimeout(() => {
+                parent.postMessage({ type: 'sandbox-ready' }, '*');
+              }, 0);
+
+              window.addEventListener('message', function(event) {
+                if (event.data?.type === 'load-script') {
+                  const script = document.createElement('script');
+                  script.onload = () => {
+                    parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
+                  };
+                  script.onerror = () => {
+                    parent.postMessage({ type: 'fink-error', error: 'Script load failed' }, '*');
+                  };
+                  script.src = event.data.url;
+                  document.head.appendChild(script);
+                }
+              });
+            <\/script>
+          </body>
+          </html>
+        `;
+
+        doc.open();
+        doc.write(html);
+        doc.close();
+        this.log('info', 'Sandbox iframe injected and written');
+      }
+
+      onMessage(event) {
+        const data = event.data;
+        this.log('info', 'Received message: ' + JSON.stringify(data));
+        if (!data || !data.type) return;
+
+        if (data.type === 'sandbox-ready') {
+          const iframe = document.getElementById('ooo-sandbox');
+          iframe.contentWindow.postMessage({ type: 'load-script', url: this.currentURL }, '*');
+          this.log('info', 'Sent load-script message to sandbox');
+        }
+
+        if (data.type === 'fink-loaded') {
+          window.removeEventListener('message', this.messageHandler);
+          this.loading.style.display = 'none';
+          this.renderBlocks(data.data);
+          this.log('info', `Loaded ${data.data.length} block(s)`);
+          const iframe = document.getElementById('ooo-sandbox');
+          if (iframe) iframe.remove();
+        }
+
+        if (data.type === 'fink-error') {
+          window.removeEventListener('message', this.messageHandler);
+          this.loading.style.display = 'none';
+          this.output.innerHTML = `<div style="color: red;">Error: ${data.error}</div>`;
+          this.log('error', `Sandbox error: ${data.error}`);
+          const iframe = document.getElementById('ooo-sandbox');
+          if (iframe) iframe.remove();
+        }
+      }
+
+      renderBlocks(blocks) {
+        blocks.forEach((text, i) => {
+          const div = document.createElement('div');
+          div.className = 'content-block';
+          div.innerHTML = `
+            <div class="content-type"><span>Text Block</span><span>${i + 1}</span></div>
+            <pre>${this.sanitize(text)}</pre>
+          `;
+          this.output.appendChild(div);
+        });
+      }
+
+      sanitize(str) {
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      new FoafProcessor();
+    });
+  </script>
+</body>
+</html>
