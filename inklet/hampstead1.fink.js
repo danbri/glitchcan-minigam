@@ -1,3 +1,5 @@
+oooOO`
+
 // --- Variables ---
 VAR score = 0
 VAR jeans_worn = false
@@ -233,3 +235,4 @@ Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
 Final Score: {score}/8 — you truly embody Hampstead!
 
 -> END
+`
