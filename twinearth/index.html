@@ -10,22 +10,192 @@
             overflow: hidden;
             background-color: #000;
             font-family: Arial, sans-serif;
-        }
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
             color: white;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 10px;
+        }
+        
+        .controls-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 15px;
+            width: 250px;
+            transition: transform 0.3s ease;
+            transform: translateX(0);
+            z-index: 1000;
+        }
+        
+        .controls-panel.collapsed {
+            transform: translateX(calc(100% - 40px));
+        }
+        
+        .controls-toggle {
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+        }
+        
+        .controls-content {
+            margin-left: 25px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .control-label {
+            flex: 1;
+        }
+        
+        .control-value {
+            width: 40px;
+            text-align: right;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
             border-radius: 5px;
+            background: #444;
+            outline: none;
+            margin: 5px 0;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #6ab0ff;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #6ab0ff;
+            cursor: pointer;
+        }
+        
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .checkbox-control input {
+            margin-right: 8px;
+        }
+        
+        button {
+            background: #2a5a9e;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #3a6db1;
+        }
+        
+        .info-footer {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 15px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <label for="twin-toggle">Twin Earth Mode: </label>
-        <input type="checkbox" id="twin-toggle">
+    <div class="controls-panel" id="controls-panel">
+        <div class="controls-toggle" id="controls-toggle">◀</div>
+        <div class="controls-content">
+            <div class="control-group">
+                <h3>Earth Options</h3>
+                <div class="checkbox-control">
+                    <input type="checkbox" id="twin-toggle">
+                    <label for="twin-toggle">Twin Earth Mode</label>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">Rotation Speed</span>
+                    <span class="control-value" id="rotation-value">0.5</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="0.5" class="slider" id="rotation-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Bump Strength</span>
+                    <span class="control-value" id="bump-value">0.05</span>
+                </div>
+                <input type="range" min="0" max="0.2" step="0.01" value="0.05" class="slider" id="bump-slider">
+            </div>
+            
+            <div class="control-group">
+                <h3>Cloud Options</h3>
+                <div class="control-row">
+                    <span class="control-label">Cloud Opacity</span>
+                    <span class="control-value" id="cloud-opacity-value">0.5</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value="0.5" class="slider" id="cloud-opacity-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Cloud Speed</span>
+                    <span class="control-value" id="cloud-speed-value">0.7</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="0.7" class="slider" id="cloud-speed-slider">
+            </div>
+            
+            <div class="control-group">
+                <h3>Lighting</h3>
+                <div class="control-row">
+                    <span class="control-label">Light Intensity</span>
+                    <span class="control-value" id="light-value">1.0</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="1.0" class="slider" id="light-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Night Light Glow</span>
+                    <span class="control-value" id="night-value">0.7</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value="0.7" class="slider" id="night-slider">
+            </div>
+            
+            <button id="reset-button">Reset to Defaults</button>
+            
+            <div class="info-footer">
+                Twin Earth Visualization v1.0
+            </div>
+        </div>
     </div>
 
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
@@ -53,8 +223,19 @@
                 this.earth = null;
                 this.clouds = null;
                 this.night = null;
+                this.sunLight = null;
                 this.textures = {};
                 this.controls = null;
+                
+                // Default values for controls
+                this.settings = {
+                    rotationSpeed: 0.5,
+                    bumpStrength: 0.05,
+                    cloudOpacity: 0.5,
+                    cloudSpeed: 0.7,
+                    lightIntensity: 1.0,
+                    nightGlow: 0.7
+                };
                 
                 // Bind methods to maintain this context
                 this.onWindowResizeBound = this.onWindowResize.bind(this);
@@ -66,6 +247,7 @@
                 this.init();
                 this.setupEventListeners();
                 this.loadTextures();
+                this.setupControlPanel();
             }
 
             disconnectedCallback() {
@@ -93,14 +275,14 @@
                 this.renderer.setPixelRatio(window.devicePixelRatio);
                 this.appendChild(this.renderer.domElement);
 
-                // Add ambient light
-                const ambientLight = new THREE.AmbientLight(0x333333);
+                // Add ambient light - slightly brighter for better visibility
+                const ambientLight = new THREE.AmbientLight(0x555555);
                 this.scene.add(ambientLight);
 
                 // Add directional light (sun)
-                const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-                sunLight.position.set(5, 3, 5);
-                this.scene.add(sunLight);
+                this.sunLight = new THREE.DirectionalLight(0xffffff, this.settings.lightIntensity);
+                this.sunLight.position.set(5, 3, 5);
+                this.scene.add(this.sunLight);
 
                 // Add orbit controls - using imported OrbitControls
                 this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -137,6 +319,114 @@
                 
                 const toggle = document.getElementById('twin-toggle');
                 toggle.addEventListener('change', this.toggleTwinModeBound);
+            }
+            
+            setupControlPanel() {
+                // Toggle control panel
+                const controlsPanel = document.getElementById('controls-panel');
+                const controlsToggle = document.getElementById('controls-toggle');
+                
+                controlsToggle.addEventListener('click', () => {
+                    controlsPanel.classList.toggle('collapsed');
+                    controlsToggle.textContent = controlsPanel.classList.contains('collapsed') ? '▶' : '◀';
+                });
+                
+                // Connect sliders to settings
+                this.connectSlider('rotation-slider', 'rotation-value', 'rotationSpeed');
+                this.connectSlider('bump-slider', 'bump-value', 'bumpStrength', this.updateBumpScale.bind(this));
+                this.connectSlider('cloud-opacity-slider', 'cloud-opacity-value', 'cloudOpacity', this.updateCloudOpacity.bind(this));
+                this.connectSlider('cloud-speed-slider', 'cloud-speed-value', 'cloudSpeed');
+                this.connectSlider('light-slider', 'light-value', 'lightIntensity', this.updateLightIntensity.bind(this));
+                this.connectSlider('night-slider', 'night-value', 'nightGlow', this.updateNightGlow.bind(this));
+                
+                // Reset button
+                const resetButton = document.getElementById('reset-button');
+                resetButton.addEventListener('click', this.resetToDefaults.bind(this));
+            }
+            
+            connectSlider(sliderId, valueId, settingKey, callback = null) {
+                const slider = document.getElementById(sliderId);
+                const valueDisplay = document.getElementById(valueId);
+                
+                if (slider && valueDisplay) {
+                    // Initialize with current setting value
+                    slider.value = this.settings[settingKey];
+                    valueDisplay.textContent = this.settings[settingKey].toFixed(2);
+                    
+                    // Update on change
+                    slider.addEventListener('input', () => {
+                        const value = parseFloat(slider.value);
+                        this.settings[settingKey] = value;
+                        valueDisplay.textContent = value.toFixed(2);
+                        
+                        // Call the callback if provided
+                        if (callback) callback(value);
+                    });
+                }
+            }
+            
+            resetToDefaults() {
+                // Default values
+                const defaults = {
+                    rotationSpeed: 0.5,
+                    bumpStrength: 0.05,
+                    cloudOpacity: 0.5,
+                    cloudSpeed: 0.7,
+                    lightIntensity: 1.0,
+                    nightGlow: 0.7
+                };
+                
+                // Reset each setting
+                Object.keys(defaults).forEach(key => {
+                    this.settings[key] = defaults[key];
+                });
+                
+                // Update UI
+                document.getElementById('rotation-slider').value = defaults.rotationSpeed;
+                document.getElementById('rotation-value').textContent = defaults.rotationSpeed.toFixed(2);
+                
+                document.getElementById('bump-slider').value = defaults.bumpStrength;
+                document.getElementById('bump-value').textContent = defaults.bumpStrength.toFixed(2);
+                this.updateBumpScale(defaults.bumpStrength);
+                
+                document.getElementById('cloud-opacity-slider').value = defaults.cloudOpacity;
+                document.getElementById('cloud-opacity-value').textContent = defaults.cloudOpacity.toFixed(2);
+                this.updateCloudOpacity(defaults.cloudOpacity);
+                
+                document.getElementById('cloud-speed-slider').value = defaults.cloudSpeed;
+                document.getElementById('cloud-speed-value').textContent = defaults.cloudSpeed.toFixed(2);
+                
+                document.getElementById('light-slider').value = defaults.lightIntensity;
+                document.getElementById('light-value').textContent = defaults.lightIntensity.toFixed(2);
+                this.updateLightIntensity(defaults.lightIntensity);
+                
+                document.getElementById('night-slider').value = defaults.nightGlow;
+                document.getElementById('night-value').textContent = defaults.nightGlow.toFixed(2);
+                this.updateNightGlow(defaults.nightGlow);
+            }
+            
+            updateBumpScale(value) {
+                if (this.earth && this.earth.material) {
+                    this.earth.material.bumpScale = value;
+                }
+            }
+            
+            updateCloudOpacity(value) {
+                if (this.clouds && this.clouds.material) {
+                    this.clouds.material.opacity = value;
+                }
+            }
+            
+            updateLightIntensity(value) {
+                if (this.sunLight) {
+                    this.sunLight.intensity = value;
+                }
+            }
+            
+            updateNightGlow(value) {
+                if (this.night && this.night.material) {
+                    this.night.material.opacity = value;
+                }
             }
 
             onWindowResize() {
@@ -191,13 +481,13 @@
                 // Create Earth sphere
                 const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
                 
-                // Create Earth material with textures
+                // Create Earth material with textures, enhanced color saturation
                 const earthMaterial = new THREE.MeshPhongMaterial({
                     map: this.textures.colorMap,
                     bumpMap: this.textures.bumpMap,
-                    bumpScale: 0.05,
+                    bumpScale: this.settings.bumpStrength,
                     specularMap: this.textures.specMap,
-                    specular: new THREE.Color(0x333333),
+                    specular: new THREE.Color(0x444444),
                     shininess: 15
                 });
 
@@ -205,12 +495,12 @@
                 this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
                 this.scene.add(this.earth);
 
-                // Create clouds layer
+                // Create clouds layer with reduced opacity for better earth visibility
                 const cloudsGeometry = new THREE.SphereGeometry(1.02, 64, 64);
                 const cloudsMaterial = new THREE.MeshPhongMaterial({
                     map: this.textures.cloudsMap,
                     transparent: true,
-                    opacity: 0.8
+                    opacity: this.settings.cloudOpacity
                 });
 
                 this.clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
@@ -221,7 +511,7 @@
                 const nightMaterial = new THREE.MeshBasicMaterial({
                     map: this.textures.nightMap,
                     blending: THREE.AdditiveBlending,
-                    opacity: 0.7,
+                    opacity: this.settings.nightGlow,
                     transparent: true
                 });
                 
@@ -286,17 +576,20 @@
             animate() {
                 this.animationId = requestAnimationFrame(this.animateBound);
                 
+                // Apply rotation based on control settings
+                const baseSpeed = 0.001;
+                
                 // Rotate earth and clouds slowly
                 if (this.earth) {
-                    this.earth.rotation.y += 0.0005;
+                    this.earth.rotation.y += baseSpeed * this.settings.rotationSpeed;
                 }
                 
                 if (this.clouds) {
-                    this.clouds.rotation.y += 0.0007; // Slightly faster than Earth
+                    this.clouds.rotation.y += baseSpeed * this.settings.cloudSpeed; // Clouds rotate at separate speed
                 }
                 
                 if (this.night) {
-                    this.night.rotation.y += 0.0005; // Same as Earth
+                    this.night.rotation.y += baseSpeed * this.settings.rotationSpeed; // Same as Earth
                 }
                 
                 // Update controls
