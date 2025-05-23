@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖼️ Media Gallery</title>
+    <title>🖼️ Enhanced Media Gallery</title>
     <style>
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -57,15 +57,15 @@
         
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            max-width: 1400px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         
         .media-item {
             background: #2c3e50;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             border: 2px solid transparent;
             transition: all 0.3s;
@@ -75,13 +75,13 @@
         
         .media-item:hover {
             border-color: #3498db;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
         }
         
         .media-preview {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: cover;
             display: block;
             background: #34495e;
@@ -96,29 +96,40 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
+            padding: 10px 15px;
+            border-radius: 6px;
             font-size: 14px;
             pointer-events: none;
+            backdrop-filter: blur(4px);
         }
         
         .media-info {
-            padding: 10px;
+            padding: 15px;
+        }
+        
+        .media-description {
+            font-size: 13px;
+            color: #bdc3c7;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            min-height: 40px;
         }
         
         .media-name {
-            font-size: 12px;
+            font-size: 11px;
             word-break: break-all;
             margin-bottom: 5px;
-            line-height: 1.3;
+            line-height: 1.2;
+            color: #95a5a6;
         }
         
         .media-type {
             font-size: 10px;
-            color: #95a5a6;
+            color: #7f8c8d;
             text-transform: uppercase;
+            font-weight: bold;
         }
         
         .modal {
@@ -128,15 +139,15 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             z-index: 1000;
             padding: 20px;
             box-sizing: border-box;
         }
         
         .modal-content {
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 95vw;
+            max-height: 95vh;
             margin: auto;
             position: relative;
             top: 50%;
@@ -146,16 +157,24 @@
         
         .modal img, .modal video {
             max-width: 100%;
-            max-height: 80vh;
+            max-height: 75vh;
             object-fit: contain;
+            border-radius: 8px;
         }
         
         .modal-info {
-            background: rgba(44, 62, 80, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
+            background: rgba(44, 62, 80, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
             display: inline-block;
+            max-width: 600px;
+            text-align: left;
+        }
+        
+        .modal-description {
+            margin-bottom: 10px;
+            line-height: 1.5;
         }
         
         .close-modal {
@@ -167,6 +186,7 @@
             font-weight: bold;
             cursor: pointer;
             z-index: 1001;
+            transition: color 0.3s;
         }
         
         .close-modal:hover {
@@ -188,8 +208,8 @@
         
         @media (max-width: 600px) {
             .gallery {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 10px;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
             }
             
             .controls {
@@ -204,15 +224,15 @@
 </head>
 <body>
     <div class="header">
-        <h1>🖼️ Media Gallery</h1>
-        <p>Browse images and videos with dynamic thumbnails</p>
+        <h1>🖼️ Enhanced Media Gallery</h1>
+        <p>Browse images and videos with AI-generated descriptions and enhanced accessibility</p>
     </div>
     
     <div class="controls">
         <button class="filter-btn active" data-filter="all">All</button>
         <button class="filter-btn" data-filter="image">Images</button>
         <button class="filter-btn" data-filter="video">Videos</button>
-        <input type="text" class="search-box" placeholder="Search filenames..." id="searchBox">
+        <input type="text" class="search-box" placeholder="Search descriptions or filenames..." id="searchBox">
     </div>
     
     <div class="stats" id="stats">Loading...</div>
@@ -228,35 +248,68 @@
     </div>
     
     <script>
+        // Media files with AI-generated descriptions
         const mediaFiles = [
+            {
+                filename: "IMG_0290.jpeg",
+                description: "Stunning 360° urban panorama transformed into a 'tiny planet' effect, showing modern architecture, bridges, and city streets warped into a spherical view",
+                alt: "Tiny planet effect panorama of urban architecture with buildings and bridges in spherical distortion"
+            },
+            {
+                filename: "12E67B94-4352-4F5F-BCA7-0DB27A471ED9.png",
+                description: "Isometric pixel art dungeon scene featuring a character near treasure chests, glowing gems, and atmospheric dungeon lighting",
+                alt: "Isometric pixel art game scene with character, treasure chests, and glowing blue gems in a dungeon setting"
+            },
+            {
+                filename: "EA969AD0-24EE-4A5D-99F1-3A576217C355.png",
+                description: "Atmospheric isometric castle or dungeon interior with stone architecture, warm torch lighting, and mysterious pathways",
+                alt: "Isometric castle interior with stone walls, torches, and shadowy pathways creating atmospheric dungeon scene"
+            },
+            {
+                filename: "237A2C79-5EDE-407D-A699-B0A3CF1C4567.png",
+                description: "Mystical forest scene with a glowing cyan waterfall, magical lighting, and a character exploring an enchanted environment",
+                alt: "Magical forest scene with luminous waterfall, mystical blue lighting, and character in enchanted woodland setting"
+            }
+        ];
+        
+        // Add all other existing files with generic descriptions
+        const otherFiles = [
             "03F3BBED-CFD8-446A-AEA8-E17D9CF566F3.png",
             "1CD7A2F8-C207-4420-9C60-60C77DA70516.png",
             "1F5FFF26-F815-478F-AD62-522CB011CDE5.JPEG",
             "1F5FFF26-F815-478F-AD62-522CB011CDE5.png",
+            "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png",
             "37ECA225-5A36-4B04-AF40-4D11B78FE16C.png",
             "383B165C-8F26-44A8-96B2-2E62A9645BB6.png",
+            "3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png",
             "49259C34-ED3E-43FD-AD0D-11F7CBF4E8B2.png",
             "4CB33058-288A-4F93-BDBE-9CCCF4A0DCAA.png",
             "5437e4f1_e62e_4211_a301_9306d1ca3c9c.mp4",
             "546ADC22-C6F0-4BA0-BA19-EFAE18E93E29.png",
             "590C2081-0A9F-42B5-9128-909E629BBAD0.png",
+            "596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png",
             "5AE4093E-F93B-4CCD-8E70-6BB8F3D54E19.png",
             "603BC341-4AFD-4E35-A4AE-77BE7C564303.png",
+            "6055F905-B41A-4D17-80F9-76F45CC522C3.png",
             "616991D1-18B1-4E73-A61A-C44D76023CAB.png",
             "68DCC484-0992-4E9B-8543-B7C5F29F729A-1.png",
             "68DCC484-0992-4E9B-8543-B7C5F29F729A.png",
             "6D27939D-8543-4A73-8F65-81D9F8C2E0DE.png",
+            "6E992CE5-A92F-45EE-A94C-9336B63513DE.png",
             "6dc70b36-91a2-42fd-b6fd-5f3e7c1169eb.mp4",
             "72acd4ca_14be_4769_9224_215099a3504b.mp4",
             "827115E8-9A15-401B-A429-381A25325101.png",
+            "8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png",
             "95E0F783-0B0A-403E-8AF7-02404221FA0E.png",
             "97EA1FC7-CA24-4F34-A425-305242ED3949.png",
             "9C2A6066-A174-4C64-A0B2-D0BE87B23792_2025-03-07T09-02-01_upscaled.mp4",
             "A4F6EB35-0334-4E3E-9B5F-5DD4D0FF403A.png",
             "A6ECE166-CA68-47FC-8D41-815EB95F5FEF.png",
             "AFC4774C-5ABB-434B-B45C-89CB4BB1A36F.png",
+            "B266C9A3-9402-4622-962E-129F6921D855.png",
             "B6343CE4-917A-49CB-BF67-32F517B5BE1A.png",
             "B803ED86-A395-429E-ABC1-6E3DDC4AFE0E.png",
+            "BE621CCB-627A-4D51-B894-884685EE2607.png",
             "BF0B4114-C919-455B-950D-D6332CBCA095.png",
             "C1130841-8AD0-4FD0-B5B6-E3E22514F3F9.png",
             "C431EB91-07CC-44C9-A24E-3976C64158EB.png",
@@ -268,6 +321,7 @@
             "DE3FFCDF-527B-4247-86E1-F0FB73BDBAC3.png",
             "E1E8E642-0058-4D3A-A168-FC3DC001A322-1.png",
             "E1E8E642-0058-4D3A-A168-FC3DC001A322.png",
+            "E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png",
             "E52C8509-E3BB-4177-957F-80E4E11D2119.png",
             "E70260A2-3326-46B9-B5A6-AE31C68FB5C5.png",
             "EA0E5AC2-4D25-403B-B098-5D793721513A.png",
@@ -300,6 +354,26 @@
             "d94a6357-1549-44a1-9173-ce2a9a51d556.mp4"
         ];
         
+        // Add generic descriptions for other files
+        otherFiles.forEach(filename => {
+            const type = getFileType(filename);
+            const isIMG = filename.startsWith('IMG_');
+            
+            mediaFiles.push({
+                filename: filename,
+                description: isIMG ? 
+                    "Screenshot or photo captured on mobile device - may contain interface elements, artwork, or personal content" :
+                    type === 'video' ? 
+                        "Video content - may include gameplay footage, demonstrations, or multimedia experiments" :
+                        "Digital image or artwork - creative content with unique visual elements and design",
+                alt: isIMG ?
+                    "Mobile screenshot or photo with interface or content elements" :
+                    type === 'video' ?
+                        "Video file containing multimedia content" :
+                        "Digital image with creative visual content"
+            });
+        });
+        
         let currentFilter = 'all';
         let currentSearch = '';
         
@@ -313,21 +387,22 @@
             return 'other';
         }
         
-        function createMediaItem(filename) {
-            const type = getFileType(filename);
+        function createMediaItem(fileData) {
+            const type = getFileType(fileData.filename);
             const item = document.createElement('div');
             item.className = 'media-item';
             item.setAttribute('data-type', type);
-            item.setAttribute('data-name', filename.toLowerCase());
+            item.setAttribute('data-name', fileData.filename.toLowerCase());
+            item.setAttribute('data-description', fileData.description.toLowerCase());
             
             let previewElement;
             if (type === 'image') {
-                previewElement = `<img class="media-preview" src="${filename}" alt="${filename}" loading="lazy" onerror="this.style.display='none'">`;
+                previewElement = `<img class="media-preview" src="${fileData.filename}" alt="${fileData.alt}" loading="lazy" onerror="this.style.display='none'">`;
             } else if (type === 'video') {
                 previewElement = `
                     <div class="video-preview">
                         <video class="media-preview" poster="" preload="metadata" muted>
-                            <source src="${filename}" type="video/mp4">
+                            <source src="${fileData.filename}" type="video/mp4">
                         </video>
                         <div class="video-overlay">▶️ Video</div>
                     </div>
@@ -339,24 +414,26 @@
             item.innerHTML = `
                 ${previewElement}
                 <div class="media-info">
-                    <div class="media-name">${filename}</div>
+                    <div class="media-description">${fileData.description}</div>
+                    <div class="media-name">${fileData.filename}</div>
                     <div class="media-type">${type}</div>
                 </div>
             `;
             
-            item.onclick = () => openModal(filename, type);
+            item.onclick = () => openModal(fileData);
             return item;
         }
         
-        function openModal(filename, type) {
+        function openModal(fileData) {
             const modal = document.getElementById('modal');
             const content = document.getElementById('modalContent');
+            const type = getFileType(fileData.filename);
             
             let mediaElement;
             if (type === 'image') {
-                mediaElement = `<img src="${filename}" alt="${filename}">`;
+                mediaElement = `<img src="${fileData.filename}" alt="${fileData.alt}">`;
             } else if (type === 'video') {
-                mediaElement = `<video controls autoplay><source src="${filename}" type="video/mp4"></video>`;
+                mediaElement = `<video controls autoplay><source src="${fileData.filename}" type="video/mp4"></video>`;
             } else {
                 mediaElement = `<p>File type not supported for preview</p>`;
             }
@@ -364,9 +441,11 @@
             content.innerHTML = `
                 ${mediaElement}
                 <div class="modal-info">
-                    <strong>Filename:</strong> ${filename}<br>
+                    <div class="modal-description"><strong>Description:</strong> ${fileData.description}</div>
+                    <strong>Filename:</strong> ${fileData.filename}<br>
                     <strong>Type:</strong> ${type.toUpperCase()}<br>
-                    <a href="${filename}" download style="color: #3498db; text-decoration: none;">📥 Download</a>
+                    <strong>Alt Text:</strong> ${fileData.alt}<br>
+                    <a href="${fileData.filename}" download style="color: #3498db; text-decoration: none; margin-top: 10px; display: inline-block;">📥 Download</a>
                 </div>
             `;
             
@@ -395,9 +474,12 @@
             items.forEach(item => {
                 const type = item.getAttribute('data-type');
                 const name = item.getAttribute('data-name');
+                const description = item.getAttribute('data-description');
                 
                 const typeMatch = currentFilter === 'all' || type === currentFilter;
-                const searchMatch = currentSearch === '' || name.includes(currentSearch.toLowerCase());
+                const searchMatch = currentSearch === '' || 
+                    name.includes(currentSearch.toLowerCase()) || 
+                    description.includes(currentSearch.toLowerCase());
                 
                 if (typeMatch && searchMatch) {
                     item.style.display = 'block';
@@ -412,18 +494,18 @@
         
         function updateStats(visibleCount) {
             const stats = document.getElementById('stats');
-            const totalImages = mediaFiles.filter(f => getFileType(f) === 'image').length;
-            const totalVideos = mediaFiles.filter(f => getFileType(f) === 'video').length;
+            const totalImages = mediaFiles.filter(f => getFileType(f.filename) === 'image').length;
+            const totalVideos = mediaFiles.filter(f => getFileType(f.filename) === 'video').length;
             
-            stats.textContent = `Showing ${visibleCount} of ${mediaFiles.length} files (${totalImages} images, ${totalVideos} videos)`;
+            stats.textContent = `Showing ${visibleCount} of ${mediaFiles.length} files (${totalImages} images, ${totalVideos} videos) • Enhanced with AI descriptions`;
         }
         
         function loadGallery() {
             const gallery = document.getElementById('gallery');
             gallery.innerHTML = '';
             
-            mediaFiles.forEach(filename => {
-                gallery.appendChild(createMediaItem(filename));
+            mediaFiles.forEach(fileData => {
+                gallery.appendChild(createMediaItem(fileData));
             });
             
             updateStats(mediaFiles.length);
