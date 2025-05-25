@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html><head><meta charset=utf-8><title>Infinite Pac-Man V9</title>
+<style>body{margin:0;overflow:hidden;background:#000;color:#0f0;font:16px monospace}
+#teleportBtn, #zoomBtn {
+    padding: 8px 12px; background: #222; color: #0f0; border: 1px solid #050;
+    cursor: pointer; font-family: monospace; font-size: 14px; margin: 5px;
+}
+#teleportBtn:hover, #zoomBtn:hover { background: #333; border-color: #080; }
+#controlsDiv { position:fixed; bottom:10px; left:10px; display: flex; z-index: 50; }
+</style>
+</head>
+<body>
+<canvas id=game></canvas>
+<div id=ui style="position:fixed;top:0;left:0;padding:4px; z-index:50;"></div>
+<div id="controlsDiv">
+    <button id="teleportBtn">Teleport (T)</button>
+    <button id="zoomBtn">Hold Zoom (Z)</button>
+</div>
+
+<div id="gameOverScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); color:#ff0; font-family:monospace; font-size:28px; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; z-index:1000;">
+    <p id="gameOverMessageText" style="margin-bottom:20px;">GAME OVER</p>
+    <button id="playAgainBtn" style="padding:12px 25px; font-size:22px; background: #ff0; color:#000; border:2px solid #ff0; border-radius: 5px; cursor:pointer; font-family:monospace;">Play Again</button>
+</div>
+
+<script type=module>
+class Vec2D {
+    constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+    add(v) { return new Vec2D(this.x + v.x, this.y + v.y); }
+    sub(v) { return new Vec2D(this.x - v.x, this.y - v.y); }
+    mult(s) { return new Vec2D(this.x * s, this.y * s); }
+    div(s) { return s === 0 ? new Vec2D() : new Vec2D(this.x / s, this.y / s); }
+    mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+    normalize() { const m = this.mag(); return m === 0 ? new Vec2D() : this.div(m); }
+    limit(max) { if (this.mag() > max) return this.normalize().mult(max); return this; }
+    setMag(m) { return this.normalize().mult(m); }
+    static dist(v1, v2) { return v1.sub(v2).mag(); }
+    static random2D() { const angle = Math.random() * Math.PI * 2; return new Vec2D(Math.cos(angle), Math.sin(angle));}
+}
+
+class Boid {
+    constructor(x, y, zonePixelBounds, emojis = ['🐦'], size = 10) {
+        this.pos = new Vec2D(x, y);
+        this.vel = Vec2D.random2D().mult(Math.random() * 1.5 + 0.5);
+        this.acc = new Vec2D();
+        this.maxSpeed = 2.2;
+        this.maxForce = 0.12;
+        this.perceptionRadius = 45;
+        this.separationRadius = 18;
+        this.zoneBounds = zonePixelBounds;
+        this.emojis = Array.isArray(emojis) ? emojis : [emojis];
+        this.currentEmoji = this.emojis[Math.floor(Math.random() * this.emojis.length)];
+        this.emojiChangeTimer = Math.random() * 5000 + 3000; // Change emoji every 3-8s
+        this.size = size;
+        this.type = 'boid';
+    }
+    applyForce(force) { this.acc = this.acc.add(force); }
+    flock(boids) {
+        let separation = new Vec2D(); let alignment = new Vec2D(); let cohesion = new Vec2D();
+        let separationCount = 0; let neighborCount = 0;
+        for (let other of boids) {
+            if (other === this || other.type !== 'boid') continue;
+            let d = Vec2D.dist(this.pos, other.pos);
+            if (d > 0 && d < this.perceptionRadius) {
+                alignment = alignment.add(other.vel); cohesion = cohesion.add(other.pos); neighborCount++;
+                if (d < this.separationRadius) {
+                    let diff = this.pos.sub(other.pos); diff = diff.normalize().div(d); separation = separation.add(diff); separationCount++;
+                }
+            }
+        }
+        if (neighborCount > 0) {
+            alignment = alignment.div(neighborCount).setMag(this.maxSpeed).sub(this.vel).limit(this.maxForce);
+            cohesion = cohesion.div(neighborCount).sub(this.pos).setMag(this.maxSpeed).sub(this.vel).limit(this.maxForce);
+        }
+        if (separationCount > 0) separation = separation.div(separationCount).setMag(this.maxSpeed).sub(this.vel).limit(this.maxForce*1.5);
+        this.applyForce(alignment.mult(1.0)); this.applyForce(cohesion.mult(0.9)); this.applyForce(separation.mult(1.6));
+    }
+    wrap() {
+        if (this.pos.x < this.zoneBounds.x) this.pos.x = this.zoneBounds.x + this.zoneBounds.width;
+        if (this.pos.x > this.zoneBounds.x + this.zoneBounds.width) this.pos.x = this.zoneBounds.x;
+        if (this.pos.y < this.zoneBounds.y) this.pos.y = this.zoneBounds.y + this.zoneBounds.height;
+        if (this.pos.y > this.zoneBounds.y + this.zoneBounds.height) this.pos.y = this.zoneBounds.y;
+    }
+    update(dt_ms) {
+        this.emojiChangeTimer -= dt_ms;
+        if (this.emojiChangeTimer <= 0 && this.emojis.length > 1) {
+            this.currentEmoji = this.emojis[Math.floor(Math.random() * this.emojis.length)];
+            this.emojiChangeTimer = Math.random() * 5000 + 3000;
+        }
+        this.vel = this.vel.add(this.acc); this.vel = this.vel.limit(this.maxSpeed);
+        this.pos = this.pos.add(this.vel); this.acc = new Vec2D(); this.wrap();
+    }
+    draw(ctx) {
+        ctx.font = `${this.size}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.save(); ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(Math.atan2(this.vel.y, this.vel.x) + Math.PI/2);
+        ctx.fillText(this.currentEmoji, 0, 0); ctx.restore();
+    }
+}
+
+class Asteroid {
+    constructor(x, y, zonePixelBounds, sizeFactor = 1) {
+        this.pos = new Vec2D(x, y);
+        this.vel = Vec2D.random2D().mult(Math.random() * 0.8 + 0.15);
+        this.zoneBounds = zonePixelBounds;
+        this.size = (Math.random() * 8 + 4) * sizeFactor;
+        this.angle = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.025;
+        this.numSides = Math.floor(Math.random() * 3) + 3;
+        this.color = `rgb(${Math.floor(Math.random()*60+90)}, ${Math.floor(Math.random()*60+90)}, ${Math.floor(Math.random()*60+90)})`;
+        this.type = 'asteroid';
+        this.offsets = Array.from({length: this.numSides}, () => Math.random()*0.3 + 0.85);
+    }
+    wrap() {
+        const margin = this.size;
+        if (this.pos.x < this.zoneBounds.x - margin) this.pos.x = this.zoneBounds.x + this.zoneBounds.width + margin;
+        if (this.pos.x > this.zoneBounds.x + this.zoneBounds.width + margin) this.pos.x = this.zoneBounds.x - margin;
+        if (this.pos.y < this.zoneBounds.y - margin) this.pos.y = this.zoneBounds.y + this.zoneBounds.height + margin;
+        if (this.pos.y > this.zoneBounds.y + this.zoneBounds.height + margin) this.pos.y = this.zoneBounds.y - margin;
+    }
+    update(dt_ms) {
+        this.pos = this.pos.add(this.vel);
+        this.angle += this.rotationSpeed;
+        this.wrap();
+    }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.pos.x, this.pos.y); ctx.rotate(this.angle);
+        ctx.strokeStyle = this.color; ctx.lineWidth = Math.max(1, this.size * 0.1); ctx.beginPath();
+        for (let i = 0; i < this.numSides; i++) {
+            const angle = (i / this.numSides) * Math.PI * 2; const r = this.size * this.offsets[i];
+            const x = r * Math.cos(angle); const y = r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath(); ctx.stroke(); ctx.restore();
+    }
+}
+
+class DecorativeShip {
+    constructor(x, y, zonePixelBounds, size = 15) {
+        this.pos = new Vec2D(x, y);
+        this.vel = Vec2D.random2D().mult(0.25);
+        this.angle = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.008;
+        this.zoneBounds = zonePixelBounds;
+        this.size = size;
+        this.color = '#b0b0b0';
+        this.type = 'decorShip';
+    }
+    wrap() {
+        const margin = this.size;
+        if (this.pos.x < this.zoneBounds.x - margin) this.pos.x = this.zoneBounds.x + this.zoneBounds.width + margin;
+        if (this.pos.x > this.zoneBounds.x + this.zoneBounds.width + margin) this.pos.x = this.zoneBounds.x - margin;
+        if (this.pos.y < this.zoneBounds.y - margin) this.pos.y = this.zoneBounds.y + this.zoneBounds.height + margin;
+        if (this.pos.y > this.zoneBounds.y + this.zoneBounds.height + margin) this.pos.y = this.zoneBounds.y - margin;
+    }
+    update(dt_ms) { this.pos = this.pos.add(this.vel); this.angle += this.rotationSpeed; this.wrap(); }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.pos.x, this.pos.y); ctx.rotate(this.angle);
+        ctx.fillStyle = this.color; ctx.beginPath();
+        ctx.moveTo(0, -this.size * 0.6); ctx.lineTo(-this.size * 0.4, this.size * 0.4);
+        ctx.lineTo(this.size * 0.4, this.size * 0.4); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+}
+
+class SlimeMold {
+    constructor(gx, gy, zonePixelBounds, gameRef) {
+        this.gx = gx; this.gy = gy; // Game grid cell position
+        this.zoneBounds = zonePixelBounds; // Pixel bounds of the module it lives in
+        this.gameRef = gameRef; // Reference to the Game instance for canMove
+        this.type = 'slimeMold';
+        this.subGridSize = 4;
+        this.cells = Array(this.subGridSize * this.subGridSize).fill(0);
+        for(let i=0; i<5; i++) this.cells[Math.floor(Math.random()*this.cells.length)] = 1; // Initial random live cells
+        this.pulseTimer = 0;
+        this.moveTimer = Math.random() * 4000 + 3000; // Move every 3-7 seconds
+        this.color = "rgba(100, 200, 100, "; // Base color, alpha will change
+    }
+
+    update(dt_ms) {
+        this.pulseTimer += dt_ms;
+        this.moveTimer -= dt_ms;
+
+        if (Math.floor(this.pulseTimer / 300) % 2 === 0) { // Update slime every ~300ms
+            const nextCells = Array(this.cells.length).fill(0);
+            for (let i = 0; i < this.cells.length; i++) {
+                const x = i % this.subGridSize;
+                const y = Math.floor(i / this.subGridSize);
+                let liveNeighbors = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < this.subGridSize && ny >= 0 && ny < this.subGridSize) {
+                            if (this.cells[ny * this.subGridSize + nx] === 1) liveNeighbors++;
+                        }
+                    }
+                }
+                if (this.cells[i] === 1 && (liveNeighbors === 2 || liveNeighbors === 3)) nextCells[i] = 1;
+                else if (this.cells[i] === 0 && liveNeighbors === 3) nextCells[i] = 1;
+            }
+            this.cells = nextCells;
+        }
+        
+        if (this.moveTimer <= 0) {
+            const dirs = ['U','D','L','R'].sort(()=>Math.random()-0.5);
+            let moved = false;
+            for(const dir of dirs){
+                const [vx,vy] = this.gameRef.VEC[dir];
+                const nextGx = this.gx + vx;
+                const nextGy = this.gy + vy;
+                const wrappedNextGx = this.gameRef._wrapCoord(nextGx, this.gameRef.totalWorldWidthCells);
+                const wrappedNextGy = this.gameRef._wrapCoord(nextGy, this.gameRef.totalWorldHeightCells);
+
+                if (this.gameRef.maze.get(wrappedNextGx + ',' + wrappedNextGy) === ' ') { // Check if target cell is empty path
+                    this.gx = wrappedNextGx;
+                    this.gy = wrappedNextGy;
+                    moved = true;
+                    break;
+                }
+            }
+            this.moveTimer = Math.random() * 4000 + 3000;
+        }
+    }
+
+    draw(ctx, cs) {
+        const subCellSize = cs / this.subGridSize;
+        const alpha = 0.5 + Math.sin(this.pulseTimer / 500) * 0.4; // Pulsating alpha
+        ctx.fillStyle = this.color + alpha + ")";
+
+        for (let i = 0; i < this.cells.length; i++) {
+            if (this.cells[i] === 1) {
+                const x = i % this.subGridSize;
+                const y = Math.floor(i / this.subGridSize);
+                ctx.fillRect(this.gx * cs + x * subCellSize, this.gy * cs + y * subCellSize, subCellSize, subCellSize);
+            }
+        }
+    }
+}
+
+
+class Game{
+  audioCtx = null; ctx;w;h;
+  cam={x:0,y:0, isFullyZoomedOut: false};
+  ply={gx:9,gy:15,x:9,y:15,dir:'L',next:null,t:0,lives:3};
+  ghosts=[]; maze=new Map(); dots=new Set();
+  score=0;power=false;pTimer=0; gameOverFlag = false;
+  gameOverScreen; gameOverMessageText; lastTime = 0; 
+
+  MOVE=170; GSPD=[175, 180, 185, 190];
+  PAT=[ 
+"WWWWWWWWWWWWWWWWWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.......W.......PW",
+"W.WW.W.WWWWW.W.WW.W", "W....W...W...W....W", "WWWW.WWW.W.WWW.WWWW", "O....W...^...W....O", 
+"WWWW.W.WSSS.W.WWWW", "W......WSSS.W......W", "WWWW.W.WSSS.W.WWWW", "O....W.......W....O", 
+"WWWW.W.WWWWW.W.WWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.W.....W.....W.PW",
+"WW.W.W.WWWWW.W.W.WW", "W....W...W...W....W", "WWWWWWWWWWWWWWWWWWW"];
+  VEC={U:[0,-1],D:[0,1],L:[-1,0],R:[1,0]};
+  OPPOSITE_DIR = { U: 'D', D: 'U', L: 'R', R: 'L' };
+  fruit = {
+    gx: 9, gy: 11, type: 'cherry', value: 100, active: false, timer: 0, spawnCooldown: 0,
+    LIFETIME: 10000, SPAWN_INTERVAL: 20000, dotsEatenForSpawn: 0, DOTS_THRESHOLD: 30
+  };
+  originalCSize = 0; cSize = 0; targetCSize = 0;   
+  ghostHouseExitCoord; ghostDoorCoord;
+
+  WORLD_MODULE_DIM = 7; 
+  totalWorldWidthCells; totalWorldHeightCells;
+
+  themes = [
+    { name: "Classic", bgColor: '#000', fillEmojis:[], largeDecorativeEmojis: ['👻'], entityTypes: [] },
+    { name: "Forest",  bgColor: '#131', fillEmojis:['🌿', '🍃'], largeDecorativeEmojis: ['🌳','🦉'], entityTypes: [{type: 'boids', count: 5, emojis:['🦋','🐦']}, {type: 'slimeMold', count:1}] },
+    { name: "Ocean",   bgColor: '#013', fillEmojis:['🐙', '🐠'], largeDecorativeEmojis: ['⚓','🐳'], entityTypes: [{type: 'boids', count: 6, emojis:['🐟','🦐']}] },
+    { name: "Desert",  bgColor: '#542', fillEmojis:['🌵', '🦴'], largeDecorativeEmojis: ['🏜️','🐍'], entityTypes: [] },
+    { name: "Space",   bgColor: '#001', fillEmojis:['✨', '💫'], largeDecorativeEmojis: ['🪐','🚀'], entityTypes: [{type: 'asteroids', count: 8}, {type: 'decorShip', count: 2}] }
+  ];
+  PAT_C = this.PAT[0].length; PAT_R = this.PAT.length;
+  specialDecorRenderList = []; 
+  wallFillDecorations = new Map();
+  zoneEntities = [];
+
+  constructor(){
+    this.c=document.getElementById('game'); this.ctx=this.c.getContext('2d');
+    this.totalWorldWidthCells = this.WORLD_MODULE_DIM * this.PAT_C;
+    this.totalWorldHeightCells = this.WORLD_MODULE_DIM * this.PAT_R;
+
+    this.gameOverScreen = document.getElementById('gameOverScreen'); this.gameOverMessageText = document.getElementById('gameOverMessageText');
+    document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
+    this.ghostHouseExitCoord = { gx: Math.floor(this.PAT_C/2), gy: Math.floor(this.PAT_R/2) - 2 }; 
+    this.ghostDoorCoord = { gx: Math.floor(this.PAT_C/2), gy: Math.floor(this.PAT_R/2) - 1 };     
+    try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.audioCtx = null; }
+    addEventListener('resize',()=>this.setupCanvas()); this.setupCanvas(); 
+    this.resetGame(); 
+    this.input(); this.setupExtraInputs();
+    this.gameLoop = this.gameLoop.bind(this); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop);
+  }
+
+  resetGame() {
+    this.gameOverFlag = false; this.gameOverScreen.style.display = 'none';
+    this.ply = {gx:9,gy:15,x:9,y:15,dir:'L',next:null,t:0,lives:3};
+    this.score = 0; this.power = false; this.pTimer = 0;
+    this.fruit = { ...this.fruit, active: false, timer: 0, spawnCooldown: this.fruit.SPAWN_INTERVAL / 2, dotsEatenForSpawn: 0};
+    this.zoneEntities = []; this.wallFillDecorations.clear();
+    this.buildWorld(); this.spawnGhosts();
+    if (this.lastTime === 0) { this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop); }
+  }
+
+  gameLoop(timestamp){
+      if (this.gameOverFlag) { this.lastTime = 0; return; }
+      const dt = Math.min(100, timestamp - this.lastTime); this.lastTime = timestamp;
+      this.update(dt); this.draw(timestamp); 
+      requestAnimationFrame(this.gameLoop);
+  }
+
+  setupCanvas(){
+    this.w=innerWidth;this.h=innerHeight; this.c.width=this.w;this.c.height=this.h;
+    const baseScreenDimForNormalZoom = Math.min(this.w, this.h); 
+    const newOriginalCSize = Math.floor(baseScreenDimForNormalZoom / 15); // Slightly smaller normal view
+
+    if (this.originalCSize === 0) { 
+        this.originalCSize = newOriginalCSize; this.cSize = this.originalCSize; this.targetCSize = this.originalCSize;
+    } else {
+        this.originalCSize = newOriginalCSize;
+        if(this.cam.isFullyZoomedOut){
+            this.targetCSize = Math.max(0.5, Math.min(this.w / this.totalWorldWidthCells, this.h / this.totalWorldHeightCells));
+        } else {
+            this.targetCSize = this.originalCSize;
+        }
+    }
+    if (this.cSize < 0.1) this.cSize = 0.1;
+  }
+
+  buildWorld() {
+    this.maze.clear(); this.dots.clear(); this.specialDecorRenderList = []; this.zoneEntities = []; this.wallFillDecorations.clear();
+    const R_PAT = this.PAT_R, C_PAT = this.PAT_C;
+
+    const baseSpecialDecorBlocks = [];
+    let visitedForDecor = new Array(R_PAT*C_PAT).fill(false);
+    for (let y = 0; y < R_PAT; y++) { for (let x = 0; x < C_PAT; x++) { if (this.PAT[y][x] === 'S' && !visitedForDecor[y*C_PAT + x]) {
+        let blockWidth = 0, blockHeight = 0; while (x + blockWidth < C_PAT && this.PAT[y][x + blockWidth] === 'S') blockWidth++; let currentHeight = 0;
+        while(y + currentHeight < R_PAT) { let rowMatch = true; for(let i=0; i<blockWidth; i++) if (this.PAT[y+currentHeight][x+i] !== 'S') rowMatch = false; if(rowMatch) currentHeight++; else break; } blockHeight = currentHeight;
+        if (blockWidth > 0 && blockHeight > 0) { baseSpecialDecorBlocks.push({ x, y, w: blockWidth, h: blockHeight }); for (let by = 0; by < blockHeight; by++) for (let bx = 0; bx < blockWidth; bx++) visitedForDecor[(y + by) * C_PAT + (x + bx)] = true; } } } }
+    
+    for (let smy = 0; smy < this.WORLD_MODULE_DIM; smy++) {
+        for (let smx = 0; smx < this.WORLD_MODULE_DIM; smx++) {
+            const currentTheme = this.getThemeForCell(smx * C_PAT, smy * R_PAT);
+            
+            baseSpecialDecorBlocks.forEach(decorBlock => {
+                this.specialDecorRenderList.push({ gx: smx * C_PAT + decorBlock.x, gy: smy * R_PAT + decorBlock.y, w_cells: decorBlock.w, h_cells: decorBlock.h,
+                    emoji: currentTheme.largeDecorativeEmojis[ (Math.abs(smx*7 + smy*13 + decorBlock.x + decorBlock.y) % currentTheme.largeDecorativeEmojis.length) ] || '❓' });
+            });
+
+            if (currentTheme.entityTypes && this.cSize > 0.1) {
+                const zonePixelX = smx * C_PAT * this.cSize; 
+                const zonePixelY = smy * R_PAT * this.cSize;
+                const zonePixelW = C_PAT * this.cSize;
+                const zonePixelH = R_PAT * this.cSize;
+                const zonePixelBounds = { x: zonePixelX, y: zonePixelY, width: zonePixelW, height: zonePixelH };
+
+                currentTheme.entityTypes.forEach(entityDef => {
+                    for (let i = 0; i < entityDef.count; i++) {
+                        const entityX = zonePixelBounds.x + Math.random() * zonePixelBounds.width;
+                        const entityY = zonePixelBounds.y + Math.random() * zonePixelBounds.height;
+                        let newEntity = null;
+                        if (entityDef.type === 'boids') {
+                            newEntity = new Boid(entityX, entityY, zonePixelBounds, entityDef.emojis, this.cSize * 0.3);
+                        } else if (entityDef.type === 'asteroids') {
+                            newEntity = new Asteroid(entityX, entityY, zonePixelBounds, this.cSize * 0.07);
+                        } else if (entityDef.type === 'decorShip') {
+                            newEntity = new DecorativeShip(entityX, entityY, zonePixelBounds, this.cSize * 0.35);
+                        } else if (entityDef.type === 'slimeMold') {
+                            // Find a valid empty game cell to spawn slime mold
+                            let spawnGx = -1, spawnGy = -1;
+                            for(let attempts = 0; attempts < 10; attempts++){ // Try a few times
+                                const rdx = Math.floor(Math.random() * C_PAT);
+                                const rdy = Math.floor(Math.random() * R_PAT);
+                                if(this.PAT[rdy][rdx] === ' '){
+                                    spawnGx = smx * C_PAT + rdx;
+                                    spawnGy = smy * R_PAT + rdy;
+                                    break;
+                                }
+                            }
+                            if(spawnGx !== -1) newEntity = new SlimeMold(spawnGx, spawnGy, zonePixelBounds, this);
+                        }
+                        if(newEntity) this.zoneEntities.push(newEntity);
+                    }
+                });
+            }
+
+            for (let y_pat = 0; y_pat < R_PAT; y_pat++) {
+                for (let x_pat = 0; x_pat < C_PAT; x_pat++) {
+                    const ch = this.PAT[y_pat][x_pat]; 
+                    const gx = x_pat + smx * C_PAT; 
+                    const gy = y_pat + smy * R_PAT; 
+                    const k = gx + ',' + gy;
+                    let tileType = ' '; 
+                    if (ch === 'W') tileType = 'W'; else if (ch === '-') tileType = '-'; else if (ch === '^') tileType = '^'; 
+                    else if (ch === 'O') tileType = 'T'; else if (ch === '.') tileType = '.'; else if (ch === 'P') tileType = 'P'; 
+                    else if (ch === 'S') tileType = 'S'; 
+                    this.maze.set(k, tileType); 
+                    if (tileType === '.' || tileType === 'P') this.dots.add(k);
+
+                    if(tileType === 'W' && currentTheme.fillEmojis && currentTheme.fillEmojis.length > 0){
+                        const fills = [];
+                        for(let i=0; i<1; i++){ // Reduced to 1 for less clutter
+                            fills.push({
+                                emoji: currentTheme.fillEmojis[Math.floor(Math.random()*currentTheme.fillEmojis.length)],
+                                xOff: Math.random()*0.5 + 0.25, yOff: Math.random()*0.5 + 0.25,
+                                sizeFactor: Math.random()*0.2 + 0.7
+                            });
+                        }
+                        this.wallFillDecorations.set(k, fills);
+                    }
+                }
+            }
+        }
+    }
+  }
+
+  getThemeForCell(gx, gy) {
+    const wrappedGx = this._wrapCoord(gx, this.totalWorldWidthCells);
+    const wrappedGy = this._wrapCoord(gy, this.totalWorldHeightCells);
+    const sectionX = Math.floor(wrappedGx / this.PAT_C); 
+    const sectionY = Math.floor(wrappedGy / this.PAT_R);
+    let hash = Math.abs(sectionX * 7 + sectionY * 13 + sectionX + sectionY);
+    return this.themes[hash % this.themes.length];
+  }
+
+  spawnGhosts(){
+    this.ghosts = []; 
+    const classicGhostSetup = [
+      { color: '#f00', name: 'Blinky', initialPos: { gx: this.ghostHouseExitCoord.gx, gy: this.ghostHouseExitCoord.gy}, inHouse: false },
+      { color: '#fbf', name: 'Pinky',  initialPos: { gx: Math.floor(this.PAT_C/2), gy: Math.floor(this.PAT_R/2)},     inHouse: true },
+      { color: '#0ff', name: 'Inky',   initialPos: { gx: Math.floor(this.PAT_C/2) - 1, gy: Math.floor(this.PAT_R/2)}, inHouse: true },
+      { color: '#fb4', name: 'Clyde',  initialPos: { gx: Math.floor(this.PAT_C/2) + 1, gy: Math.floor(this.PAT_R/2)}, inHouse: true }
+    ];
+    classicGhostSetup.forEach((setup, i) => {
+      this.ghosts.push({
+        id: setup.name, originalColor: setup.color, color: setup.color,
+        gx: setup.initialPos.gx, gy: setup.initialPos.gy, x: setup.initialPos.gx, y: setup.initialPos.gy,
+        dir: 'U', t: 0, speed: this.GSPD[i], inHouse: setup.inHouse,
+        homePos: { gx: setup.initialPos.gx, gy: setup.initialPos.gy }, isEaten: false
+      });
+    });
+  }
+  
+  input(){
+    const setD=d=>{ if(this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume(); this.ply.next=d; };
+    addEventListener('keydown',e=>{ if (this.gameOverFlag) return; const k={ArrowUp:'U',ArrowLeft:'L',ArrowDown:'D',ArrowRight:'R',w:'U',a:'L',s:'D',d:'R'}[e.key]; if(k)setD(k); });
+    let sx,sy; 
+    const touchStart = e => { if (this.gameOverFlag) return; if(this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume(); if(e.touches.length === 1){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } };
+    const touchEnd = e => { if (this.gameOverFlag) return; if(sx==null || !e.changedTouches[0])return; const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy; const absDx = Math.abs(dx), absDy = Math.abs(dy); if(absDx > 20 || absDy > 20){ if(absDx > absDy) setD(dx>0?'R':'L'); else setD(dy>0?'D':'U'); } sx=sy=null; };
+    this.c.addEventListener('touchstart',touchStart,{passive:true}); this.c.addEventListener('touchend',touchEnd,{passive:true});
+  }
+
+  setupExtraInputs() {
+    const teleportBtn = document.getElementById('teleportBtn'); const zoomBtn = document.getElementById('zoomBtn');
+    teleportBtn.addEventListener('click', () => {if (!this.gameOverFlag) this.activateTeleport()});
+    const handleZoomPress = () => { 
+        if (!this.gameOverFlag) {
+            this.cam.isFullyZoomedOut = true;
+            this.targetCSize = Math.max(0.5, Math.min(this.w / this.totalWorldWidthCells, this.h / this.totalWorldHeightCells));
+        }
+    };
+    const handleZoomRelease = () => { 
+        if (!this.gameOverFlag) {
+            this.cam.isFullyZoomedOut = false;
+            this.targetCSize = this.originalCSize;
+        }
+    };
+    zoomBtn.addEventListener('mousedown', handleZoomPress); zoomBtn.addEventListener('mouseup', handleZoomRelease);
+    zoomBtn.addEventListener('mouseleave', () => { if (this.cam.isFullyZoomedOut) handleZoomRelease();});
+    zoomBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleZoomPress(); }, {passive:false});
+    zoomBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleZoomRelease(); }, {passive:false});
+    addEventListener('keydown', e => { if (this.gameOverFlag) return; if (e.key.toLowerCase() === 't') this.activateTeleport(); if (e.key.toLowerCase() === 'z' && !e.repeat) handleZoomPress(); });
+    addEventListener('keyup', e => { if (e.key.toLowerCase() === 'z') handleZoomRelease(); });
+  }
+
+  _wrapCoord(val, max) { return (val % max + max) % max; }
+
+  canMove(nx,ny, isGhost = false){
+    const wrappedNx = this._wrapCoord(nx, this.totalWorldWidthCells);
+    const wrappedNy = this._wrapCoord(ny, this.totalWorldHeightCells);
+    const tile = this.maze.get(wrappedNx+','+wrappedNy);
+    if (tile === 'W' || tile === 'S') return false; 
+    if (!isGhost && tile === '-') return false; 
+    return true; 
+  }
+
+  step(ent,spd){
+    if(ent.t>0)return; let newDir = ent.dir;
+    if(ent===this.ply){ if(this.ply.next){ const [nextVx,nextVy]=this.VEC[this.ply.next]; if(this.canMove(ent.gx+nextVx,ent.gy+nextVy)) newDir = this.ply.next; }
+    }else{ const availableMoves = []; for(const d of ['U','D','L','R']){ const [vx,vy]=this.VEC[d]; if(this.canMove(ent.gx+vx,ent.gy+vy, true)) availableMoves.push({dir:d,gx:ent.gx+vx,gy:ent.gy+vy}); } if(availableMoves.length===0) return;
+      if(this.power && !ent.isEaten){ const nonReverseMoves = availableMoves.filter(m=>m.dir!==this.OPPOSITE_DIR[ent.dir]); if(nonReverseMoves.length>0) newDir = nonReverseMoves[Math.floor(Math.random()*nonReverseMoves.length)].dir; else newDir = availableMoves[0].dir; 
+      } else { let targetGx, targetGy;
+        if (ent.isEaten) { targetGx = ent.homePos.gx; targetGy = ent.homePos.gy; if (ent.gx === targetGx && ent.gy === targetGy) { ent.isEaten = false; ent.inHouse = (ent.id !== 'Blinky'); ent.color = ent.originalColor;}
+        } else if(ent.inHouse){ targetGx = this.ghostDoorCoord.gx; targetGy = this.ghostDoorCoord.gy; if(ent.gx === this.ghostDoorCoord.gx && ent.gy === this.ghostDoorCoord.gy){ targetGx = this.ghostHouseExitCoord.gx; targetGy = this.ghostHouseExitCoord.gy;} if(ent.gx === this.ghostHouseExitCoord.gx && ent.gy === this.ghostHouseExitCoord.gy) ent.inHouse = false; 
+        } if (!ent.inHouse && !ent.isEaten) { targetGx = this.ply.gx; targetGy = this.ply.gy; }
+        let minDistance = Infinity; const preferredDirs = []; const filterableMoves = availableMoves.filter(m => m.dir !== this.OPPOSITE_DIR[ent.dir]); const movesToConsider = filterableMoves.length > 0 ? filterableMoves : availableMoves;
+        if (targetGx !== undefined && targetGy !== undefined) { for(const move of movesToConsider){ 
+            const dx = Math.abs(this._wrapCoord(move.gx, this.totalWorldWidthCells) - this._wrapCoord(targetGx, this.totalWorldWidthCells)); 
+            const dy = Math.abs(this._wrapCoord(move.gy, this.totalWorldHeightCells) - this._wrapCoord(targetGy, this.totalWorldHeightCells));
+            const dist = Math.min(dx, this.totalWorldWidthCells - dx) + Math.min(dy, this.totalWorldHeightCells - dy);
+            if(dist < minDistance){ minDistance = dist; preferredDirs.length=0; preferredDirs.push(move.dir); }else if(dist === minDistance) preferredDirs.push(move.dir); } }
+        if(preferredDirs.length>0){ const order = ['U','L','D','R']; if (preferredDirs.includes(ent.dir) && movesToConsider.some(m => m.dir === ent.dir)) newDir = ent.dir; else for(const d of order) if(preferredDirs.includes(d)){newDir=d;break;}
+        } else if (movesToConsider.length > 0) newDir = movesToConsider[Math.floor(Math.random()*movesToConsider.length)].dir; else if (availableMoves.length > 0) newDir = availableMoves[0].dir;
+      }
+    }
+    ent.dir = newDir; 
+    const [vx,vy]=this.VEC[ent.dir]; 
+    const nextRawGx = ent.gx + vx;
+    const nextRawGy = ent.gy + vy;
+    if(this.canMove(nextRawGx, nextRawGy, ent !== this.ply)){ 
+        ent.gx = this._wrapCoord(nextRawGx, this.totalWorldWidthCells);
+        ent.gy = this._wrapCoord(nextRawGy, this.totalWorldHeightCells);
+        ent.t=spd; 
+    }
+  }
+
+  interp(ent,spd,dt){
+    let dx = ent.gx - ent.x;
+    let dy = ent.gy - ent.y;
+
+    if (Math.abs(dx) > this.totalWorldWidthCells / 2) dx = dx > 0 ? dx - this.totalWorldWidthCells : dx + this.totalWorldWidthCells;
+    if (Math.abs(dy) > this.totalWorldHeightCells / 2) dy = dy > 0 ? dy - this.totalWorldHeightCells : dy + this.totalWorldHeightCells;
+    
+    if( (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) && ent.t > 0 ){ 
+        const r=Math.min(1,dt/(spd || this.MOVE)); 
+        ent.x += dx * r;
+        ent.y += dy * r;
+        ent.x = this._wrapCoord(ent.x, this.totalWorldWidthCells + 0); // Add 0 to ensure float wrap
+        ent.y = this._wrapCoord(ent.y, this.totalWorldHeightCells + 0);
+        ent.t = Math.max(0, ent.t-dt); 
+    } else {
+        ent.t=0;
+        ent.x = ent.gx; 
+        ent.y = ent.gy;
+    }
+  }
+
+  update(dt_ms){
+    const zoomAnimationSpeed = 0.1; 
+    if (Math.abs(this.cSize - this.targetCSize) > 0.01 * (this.cam.isFullyZoomedOut ? 0.1 : this.originalCSize) ) {
+         this.cSize += (this.targetCSize - this.cSize) * zoomAnimationSpeed;
+    } else if (this.cSize !== this.targetCSize) {
+        this.cSize = this.targetCSize;
+    }
+
+    this.step(this.ply,this.MOVE); this.ghosts.forEach(g=>this.step(g,g.speed));
+    this.interp(this.ply,this.MOVE,dt_ms); this.ghosts.forEach(g=>this.interp(g,g.speed,dt_ms));
+    
+    this.zoneEntities.forEach(entity => {
+        if (entity.type === 'boid' || entity.type === 'asteroid' || entity.type === 'decorShip' || entity.type === 'slimeMold') {
+            const moduleGx = Math.floor(this._wrapCoord(entity.type === 'slimeMold' ? entity.gx : entity.pos.x / this.cSize, this.totalWorldWidthCells) / this.PAT_C);
+            const moduleGy = Math.floor(this._wrapCoord(entity.type === 'slimeMold' ? entity.gy : entity.pos.y / this.cSize, this.totalWorldHeightCells) / this.PAT_R);
+            
+            if(entity.type !== 'slimeMold'){ // Slime mold gx,gy are grid cells, others are pixel positions
+                 entity.zoneBounds = {
+                    x: this._wrapCoord(moduleGx, this.WORLD_MODULE_DIM) * this.PAT_C * this.cSize,
+                    y: this._wrapCoord(moduleGy, this.WORLD_MODULE_DIM) * this.PAT_R * this.cSize,
+                    width: this.PAT_C * this.cSize, height: this.PAT_R * this.cSize
+                };
+            }
+            if(entity.type === 'boid') entity.flock(this.zoneEntities);
+            entity.update(dt_ms);
+        }
+    });
+
+    const pk_wrapped_x = this._wrapCoord(this.ply.gx, this.totalWorldWidthCells);
+    const pk_wrapped_y = this._wrapCoord(this.ply.gy, this.totalWorldHeightCells);
+    const pk_key = pk_wrapped_x + ',' + pk_wrapped_y;
+
+    const currentTileType = this.maze.get(pk_key);
+    if(this.dots.has(pk_key)){ this.dots.delete(pk_key); this.fruit.dotsEatenForSpawn++;
+      if(currentTileType ==='P'){ this.power=true;this.pTimer=9000;this.score+=50; this.playSound('powerPellet'); this.ghosts.forEach(g => { if (!g.inHouse && !g.isEaten) g.dir = this.OPPOSITE_DIR[g.dir] || g.dir; });
+      } else { this.score+=10; this.playSound('chomp', 200); }
+    }
+    if(this.power){ this.pTimer-=dt_ms; if(this.pTimer<=0) this.power=false; }
+
+    this.ghosts.forEach(g=>{ if (g.isEaten) return; 
+        let dx = g.x - this.ply.x; let dy = g.y - this.ply.y;
+        if (Math.abs(dx) > this.totalWorldWidthCells / 2) dx = dx > 0 ? dx - this.totalWorldWidthCells : dx + this.totalWorldWidthCells;
+        if (Math.abs(dy) > this.totalWorldHeightCells / 2) dy = dy > 0 ? dy - this.totalWorldHeightCells : dy + this.totalWorldHeightCells;
+
+      if(dx*dx+dy*dy<0.35){ 
+        if(this.power){ this.playSound('eatGhost'); this.score+=200; g.isEaten = true; g.color = '#888'; g.inHouse = false; 
+        } else { this.ply.lives--;
+          if(this.ply.lives < 0 && !this.gameOverFlag) { this.gameOverFlag = true; this.playSound('death'); this.gameOverMessageText.textContent = 'GAME OVER! Final Score: ' + this.score; this.gameOverScreen.style.display = 'flex';
+          } else if (this.ply.lives >=0) { this.playSound('death'); 
+            Object.assign(this.ply,{gx:9,gy:15,x:9,y:15,t:0, dir: 'L', next:null}); 
+            this.spawnGhosts(); 
+          }
+        }
+      }
+    });
+
+    const plyModuleGx = Math.floor(this._wrapCoord(this.ply.gx, this.totalWorldWidthCells) / this.PAT_C);
+    const plyModuleGy = Math.floor(this._wrapCoord(this.ply.gy, this.totalWorldHeightCells) / this.PAT_R);
+    const fruitSpawnGx = plyModuleGx * this.PAT_C + Math.floor(this.PAT_C/2); 
+    const fruitSpawnGy = plyModuleGy * this.PAT_R + 11; 
+    
+    if(this.fruit.active){
+      this.fruit.timer-=dt_ms; if(this.fruit.timer<=0) this.fruit.active=false;
+      else if(this.ply.gx===this.fruit.gx && this.ply.gy===this.fruit.gy){
+        this.score+=this.fruit.value; this.playSound('fruit'); this.fruit.active=false;
+      }
+    }else{ 
+      this.fruit.spawnCooldown-=dt_ms;
+      if(this.fruit.spawnCooldown<=0 && this.fruit.dotsEatenForSpawn >= this.fruit.DOTS_THRESHOLD){
+        const fruitKey = this._wrapCoord(fruitSpawnGx, this.totalWorldWidthCells) +','+ this._wrapCoord(fruitSpawnGy, this.totalWorldHeightCells); 
+        const fTile = this.maze.get(fruitKey);
+        if(fTile !=='W' && fTile !=='-' && fTile !== 'S'){
+          this.fruit.gx=fruitSpawnGx; this.fruit.gy=fruitSpawnGy;
+          this.fruit.active=true; this.fruit.timer=this.fruit.LIFETIME;
+          this.fruit.dotsEatenForSpawn=0; 
+        }
+        this.fruit.spawnCooldown=this.fruit.SPAWN_INTERVAL; 
+      }
+    }
+    
+    if (this.cam.isFullyZoomedOut) {
+        const worldPixelWidth = this.totalWorldWidthCells * this.cSize;
+        const worldPixelHeight = this.totalWorldHeightCells * this.cSize;
+        this.cam.x = (worldPixelWidth - this.w) / 2;
+        this.cam.y = (worldPixelHeight - this.h) / 2;
+    } else {
+        this.cam.x=this.ply.x*this.cSize-this.w/2 + this.cSize/2; 
+        this.cam.y=this.ply.y*this.cSize-this.h/2 + this.cSize/2;
+    }
+    document.getElementById('ui').textContent='Score '+this.score+' Lives '+this.ply.lives + (this.power ? ' POWER ('+Math.ceil(this.pTimer/1000)+'s)':'');
+  }
+  
+  isWallOrDecor(gx, gy) {
+    const wrappedGx = this._wrapCoord(gx, this.totalWorldWidthCells);
+    const wrappedGy = this._wrapCoord(gy, this.totalWorldHeightCells);
+    const type = this.maze.get(wrappedGx + ',' + wrappedGy);
+    return type === 'W' || type === 'S';
+  }
+
+  draw(t_timestamp){ 
+    const cs=this.cSize; if (cs < 0.1) return;
+    const ctx=this.ctx; 
+    ctx.save();ctx.translate(-Math.floor(this.cam.x),-Math.floor(this.cam.y)); 
+    
+    const viewX = Math.floor(this.cam.x); const viewY = Math.floor(this.cam.y);
+    ctx.fillStyle='#000'; ctx.fillRect(viewX, viewY, this.w, this.h);
+
+    const startGx_view = Math.floor(this.cam.x / cs) -1; 
+    const endGx_view = Math.ceil((this.cam.x + this.w) / cs) +1;
+    const startGy_view = Math.floor(this.cam.y / cs) -1; 
+    const endGy_view = Math.ceil((this.cam.y + this.h) / cs) +1;
+    
+    const originalFont = ctx.font;
+    const wallFillEmojiBaseSize = Math.max(3, Math.floor(cs * 0.25));
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
+        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
+            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
+            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
+            const k = a_world + ',' + b_world;
+            const tileType = this.maze.get(k);
+            if (!tileType && tileType !== ' ') continue;
+            
+            const theme = this.getThemeForCell(a_world, b_world);
+            const drawX = a_draw * cs; 
+            const drawY = b_draw * cs;
+
+            if (tileType === 'W' || tileType === 'S') {
+                ctx.fillStyle = theme.bgColor || '#111';
+            } else {
+                ctx.fillStyle = '#060606'; 
+            }
+            ctx.fillRect(drawX, drawY, cs, cs);
+        }
+    }
+    
+    ctx.strokeStyle = '#18189F'; ctx.lineWidth = Math.max(0.5, cs * 0.06);
+    const BORDER_OFFSET = ctx.lineWidth / 2;
+    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
+        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
+            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
+            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
+            const tileType = this.maze.get(a_world + ',' + b_world);
+            if (tileType === 'W' || tileType === 'S' || !tileType) continue;
+            
+            const x_screen = a_draw * cs; const y_screen = b_draw * cs;
+            if (this.isWallOrDecor(a_world, b_world - 1)) { ctx.beginPath(); ctx.moveTo(x_screen - BORDER_OFFSET, y_screen); ctx.lineTo(x_screen + cs + BORDER_OFFSET, y_screen); ctx.stroke(); }
+            if (this.isWallOrDecor(a_world, b_world + 1)) { ctx.beginPath(); ctx.moveTo(x_screen - BORDER_OFFSET, y_screen + cs); ctx.lineTo(x_screen + cs + BORDER_OFFSET, y_screen + cs); ctx.stroke(); }
+            if (this.isWallOrDecor(a_world - 1, b_world)) { ctx.beginPath(); ctx.moveTo(x_screen, y_screen - BORDER_OFFSET); ctx.lineTo(x_screen, y_screen + cs + BORDER_OFFSET); ctx.stroke(); }
+            if (this.isWallOrDecor(a_world + 1, b_world)) { ctx.beginPath(); ctx.moveTo(x_screen + cs, y_screen - BORDER_OFFSET); ctx.lineTo(x_screen + cs, y_screen + cs + BORDER_OFFSET); ctx.stroke(); }
+        }
+    }
+    const cornerRadius = cs * 0.25;
+    ctx.fillStyle = '#18189F';
+    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
+        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
+            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
+            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
+            const tileType = this.maze.get(a_world + ',' + b_world);
+            if (tileType === 'W' || tileType === 'S' || !tileType) continue;
+            const x_screen = a_draw * cs; const y_screen = b_draw * cs;
+            if (this.isWallOrDecor(a_world - 1, b_world) && this.isWallOrDecor(a_world, b_world - 1) && !this.isWallOrDecor(a_world-1,b_world-1)) { ctx.beginPath(); ctx.arc(x_screen, y_screen, cornerRadius, Math.PI, Math.PI * 1.5); ctx.lineTo(x_screen,y_screen); ctx.fill(); }
+            if (this.isWallOrDecor(a_world + 1, b_world) && this.isWallOrDecor(a_world, b_world - 1) && !this.isWallOrDecor(a_world+1,b_world-1)) { ctx.beginPath(); ctx.arc(x_screen + cs, y_screen, cornerRadius, Math.PI * 1.5, 0); ctx.lineTo(x_screen+cs,y_screen); ctx.fill(); }
+            if (this.isWallOrDecor(a_world - 1, b_world) && this.isWallOrDecor(a_world, b_world + 1) && !this.isWallOrDecor(a_world-1,b_world+1)) { ctx.beginPath(); ctx.arc(x_screen, y_screen + cs, cornerRadius, Math.PI * 0.5, Math.PI); ctx.lineTo(x_screen,y_screen+cs); ctx.fill(); }
+            if (this.isWallOrDecor(a_world + 1, b_world) && this.isWallOrDecor(a_world, b_world + 1) && !this.isWallOrDecor(a_world+1,b_world+1)) { ctx.beginPath(); ctx.arc(x_screen + cs, y_screen + cs, cornerRadius, 0, Math.PI * 0.5); ctx.lineTo(x_screen+cs,y_screen+cs); ctx.fill(); }
+        }
+    }
+
+    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
+        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
+            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
+            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
+            const k = a_world + ',' + b_world;
+            const tileType = this.maze.get(k);
+            if (!tileType) continue;
+            const drawX = a_draw * cs; const drawY = b_draw * cs;
+
+            if (tileType === 'W') {
+                const fills = this.wallFillDecorations.get(k);
+                if (fills) {
+                    fills.forEach(fill => {
+                        ctx.font = `${Math.floor(wallFillEmojiBaseSize * fill.sizeFactor)}px monospace`;
+                        ctx.fillText(fill.emoji, drawX + cs * fill.xOff, drawY + cs * fill.yOff);
+                    });
+                }
+            } else if (tileType === 'T') {
+                ctx.fillStyle = '#101010'; ctx.fillRect(drawX, drawY, cs, cs);
+                ctx.fillStyle = '#1C1C1C'; ctx.fillRect(drawX + cs * 0.1, drawY + cs * 0.1, cs * 0.8, cs * 0.8);
+            } else if (tileType === '-') {
+                ctx.fillStyle = '#f55'; ctx.fillRect(drawX, drawY + cs * 0.4, cs, cs * 0.2);
+            }
+        }
+    }
+    ctx.font = originalFont;
+
+    const largeEmojiBaseSize = Math.max(8, cs*0.9); 
+    this.specialDecorRenderList.forEach(decor => {
+        let decorDrawGx = decor.gx; let decorDrawGy = decor.gy;
+        // Check if decor needs to be drawn wrapped relative to camera view
+        if (this.cam.x > decor.gx * cs + (decor.w_cells * cs) / 2  + this.totalWorldWidthCells * cs / 2 ) decorDrawGx += this.totalWorldWidthCells;
+        else if (this.cam.x < decor.gx * cs + (decor.w_cells * cs) / 2 - this.totalWorldWidthCells * cs / 2) decorDrawGx -= this.totalWorldWidthCells;
+        // Similar for Y if world height is also wrapped across view significantly
+
+        if (decorDrawGx + decor.w_cells < startGx_view || decorDrawGx > endGx_view || decorDrawGy + decor.h_cells < startGy_view || decorDrawGy > endGy_view) return; 
+        
+        const decorCenterX = (decorDrawGx + decor.w_cells / 2) * cs; 
+        const decorCenterY = (decorDrawGy + decor.h_cells / 2) * cs;
+        const decorEmojiActualSize = Math.min(decor.w_cells, decor.h_cells) * largeEmojiBaseSize * 0.8;
+        ctx.font = `${decorEmojiActualSize}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(decor.emoji, decorCenterX, decorCenterY + decorEmojiActualSize * 0.05); 
+    });
+    ctx.font = originalFont;
+
+    ctx.fillStyle='#ffb'; 
+    this.dots.forEach(k=>{ 
+        const[xStr,yStr]=k.split(','); let a_world = parseInt(xStr), b_world = parseInt(yStr); 
+        let a_draw = a_world; let b_draw = b_world;
+        if(this.ply.x < this.totalWorldWidthCells/3 && a_world > this.totalWorldWidthCells*2/3) a_draw -= this.totalWorldWidthCells;
+        else if(this.ply.x > this.totalWorldWidthCells*2/3 && a_world < this.totalWorldWidthCells/3) a_draw += this.totalWorldWidthCells;
+        if(this.ply.y < this.totalWorldHeightCells/3 && b_world > this.totalWorldHeightCells*2/3) b_draw -= this.totalWorldHeightCells;
+        else if(this.ply.y > this.totalWorldHeightCells*2/3 && b_world < this.totalWorldHeightCells/3) b_draw += this.totalWorldHeightCells;
+
+        if (a_draw < startGx_view || a_draw > endGx_view || b_draw < startGy_view || b_draw > endGy_view) return;
+        const tileTypeAtDot = this.maze.get(k); const r = tileTypeAtDot ==='P'? cs*0.3*(1+Math.sin(t_timestamp/150)*0.15) : cs*0.1;
+        ctx.beginPath();ctx.arc(a_draw*cs+cs/2,b_draw*cs+cs/2,r,0,Math.PI*2);ctx.fill(); 
+    });
+
+    if(this.fruit.active){ 
+        let fruitDrawX = this.fruit.gx; let fruitDrawY = this.fruit.gy;
+        if(this.ply.x < this.totalWorldWidthCells/3 && this.fruit.gx > this.totalWorldWidthCells*2/3) fruitDrawX -= this.totalWorldWidthCells;
+        else if(this.ply.x > this.totalWorldWidthCells*2/3 && this.fruit.gx < this.totalWorldWidthCells/3) fruitDrawX += this.totalWorldWidthCells;
+        if(this.ply.y < this.totalWorldHeightCells/3 && this.fruit.gy > this.totalWorldHeightCells*2/3) fruitDrawY -= this.totalWorldHeightCells;
+        else if(this.ply.y > this.totalWorldHeightCells*2/3 && this.fruit.gy < this.totalWorldHeightCells/3) fruitDrawY += this.totalWorldHeightCells;
+
+        ctx.fillStyle = '#f0f'; const fruitCenterX = fruitDrawX*cs+cs/2; const fruitCenterY = fruitDrawY*cs+cs/2;
+        const r = cs*0.2; ctx.beginPath(); ctx.arc(fruitCenterX - r*0.7, fruitCenterY - r*0.3, r, 0, Math.PI*2); ctx.arc(fruitCenterX + r*0.7, fruitCenterY - r*0.3, r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#0a0'; ctx.lineWidth = Math.max(1, cs*0.05); ctx.beginPath(); ctx.moveTo(fruitCenterX, fruitCenterY - r*0.6); ctx.quadraticCurveTo(fruitCenterX + r*0.5, fruitCenterY - r*2, fruitCenterX + r, fruitCenterY - r*1.8); ctx.stroke(); 
+    }
+
+    this.zoneEntities.forEach(entity => {
+        let entityDrawX = entity.type === 'slimeMold' ? entity.gx * cs : entity.pos.x;
+        let entityDrawY = entity.type === 'slimeMold' ? entity.gy * cs : entity.pos.y;
+        
+        const camCenterX = this.cam.x + this.w / 2;
+        const camCenterY = this.cam.y + this.h / 2;
+        const worldPixelW = this.totalWorldWidthCells * cs;
+        const worldPixelH = this.totalWorldHeightCells * cs;
+
+        if (Math.abs(entityDrawX - camCenterX) > worldPixelW / 2) {
+            entityDrawX += (entityDrawX < camCenterX ? worldPixelW : -worldPixelW);
+        }
+        if (Math.abs(entityDrawY - camCenterY) > worldPixelH / 2) {
+            entityDrawY += (entityDrawY < camCenterY ? worldPixelH : -worldPixelH);
+        }
+
+        const screenX = entityDrawX - this.cam.x;
+        const screenY = entityDrawY - this.cam.y;
+        const renderMargin = entity.size ? entity.size * 2 : cs * 2; 
+
+        if (screenX > -renderMargin && screenX < this.w + renderMargin &&
+            screenY > -renderMargin && screenY < this.h + renderMargin) {
+            
+            if(entity.type === 'slimeMold'){
+                 entity.draw(ctx, cs, entityDrawX/cs, entityDrawY/cs); // Slime needs its draw gx,gy
+            } else {
+                const tempPos = entity.pos; 
+                entity.pos = new Vec2D(entityDrawX, entityDrawY); 
+                entity.draw(ctx);
+                entity.pos = tempPos; 
+            }
+        }
+    });
+
+    this.ghosts.forEach(g=>{
+      let ghostDrawX = g.x; let ghostDrawY = g.y;
+      if(Math.abs(g.x - this.ply.x) > this.totalWorldWidthCells/2) ghostDrawX += (g.x < this.ply.x ? this.totalWorldWidthCells : -this.totalWorldWidthCells);
+      if(Math.abs(g.y - this.ply.y) > this.totalWorldHeightCells/2) ghostDrawY += (g.y < this.ply.y ? this.totalWorldHeightCells : -this.totalWorldHeightCells);
+
+      let ghostFillColor = g.color; 
+      if (!g.isEaten && this.power){ if(this.pTimer > 2000 || Math.floor(this.pTimer/200)%2 !==0) ghostFillColor = '#22f'; else ghostFillColor = '#eef'; }
+      ctx.fillStyle=ghostFillColor;
+      const gxPos = ghostDrawX*cs, gyPos = ghostDrawY*cs; 
+      ctx.beginPath(); ctx.arc(gxPos+cs/2,gyPos+cs/2,cs*0.45,Math.PI,0); 
+      ctx.lineTo(gxPos+cs*0.95,gyPos+cs*0.85); 
+      const humps = 3; const skirtBaseY = gyPos+cs*0.85;
+      for(let i=0; i<humps; i++){ const x1 = gxPos + cs*(0.95 - (i+0.25)*(0.9/humps)); const y1 = skirtBaseY + cs*0.1; const x2 = gxPos + cs*(0.95 - (i+0.5)*(0.9/humps)); const y2 = skirtBaseY; if (i < humps -1) ctx.quadraticCurveTo(x1, y1, x2, y2); else ctx.quadraticCurveTo(x1, y1, gxPos+cs*0.05, skirtBaseY); }
+      ctx.closePath();ctx.fill();
+      if (!g.isEaten && this.power && ghostFillColor === '#eef') {}
+      else { ctx.fillStyle = '#fff'; const eyeBaseX = gxPos+cs/2; const eyeBaseY = gyPos+cs*0.4; const eyeOuterRad = cs*0.12; const eyePupilRad = cs*0.06; let eyeOffsetX = cs*0.15; let pupilOffsetX = 0; let pupilOffsetY = 0; const pupilDist = eyeOuterRad - eyePupilRad - cs*0.01; if (g.dir === 'L') pupilOffsetX = -pupilDist; else if (g.dir === 'R') pupilOffsetX = pupilDist; else if (g.dir === 'U') pupilOffsetY = -pupilDist; else if (g.dir === 'D') pupilOffsetY = pupilDist; ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX, eyeBaseY, eyeOuterRad, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX, eyeBaseY, eyeOuterRad, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = g.isEaten ? '#555' : '#00f'; ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX + pupilOffsetX, eyeBaseY + pupilOffsetY, eyePupilRad, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX + pupilOffsetX, eyeBaseY + pupilOffsetY, eyePupilRad, 0, Math.PI*2); ctx.fill(); }
+    });
+
+    let playerDrawX = this.ply.x; let playerDrawY = this.ply.y;
+    ctx.fillStyle='#ff0'; const mouthAngle=0.35+Math.sin(t_timestamp/90)/4.5; const rot={R:0,D:Math.PI/2,L:Math.PI,U:-Math.PI/2}[this.ply.dir];
+    ctx.beginPath(); ctx.moveTo(playerDrawX*cs+cs/2,playerDrawY*cs+cs/2); ctx.arc(playerDrawX*cs+cs/2,playerDrawY*cs+cs/2,cs*0.45,rot+mouthAngle,rot-mouthAngle); ctx.fill();
+    
+    ctx.restore();
+  }
+
+  playSound(type, ...args) {
+    if (!this.audioCtx) return; if (this.audioCtx.state === 'suspended') this.audioCtx.resume().catch(e => {});
+    const now = this.audioCtx.currentTime; let osc, gain;
+    const createOscGain = () => { osc = this.audioCtx.createOscillator(); gain = this.audioCtx.createGain(); osc.connect(gain); gain.connect(this.audioCtx.destination); return {osc, gain}; }
+    switch (type) {
+      case 'chomp': ({osc,gain} = createOscGain()); osc.type = 'square'; osc.frequency.setValueAtTime(args[0] || 150, now); gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08); osc.start(now); osc.stop(now + 0.08); break;
+      case 'powerPellet': ({osc,gain} = createOscGain()); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.4); gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.001, now + 0.4); osc.start(now); osc.stop(now + 0.4); break;
+      case 'eatGhost': ({osc,gain} = createOscGain()); osc.type = 'noise'; gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5); osc.start(now); osc.stop(now + 0.5); break;
+      case 'death': ({osc,gain} = createOscGain()); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(40, now + (this.ply.lives < 0 ? 1.0 : 0.7) ); gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.001, now + (this.ply.lives < 0 ? 1.0 : 0.7) ); osc.start(now); osc.stop(now + (this.ply.lives < 0 ? 1.0 : 0.7)); break;
+      case 'fruit': ({osc,gain} = createOscGain()); osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25); osc.start(now); osc.stop(now + 0.25); break;
+    }
+  }
+
+  activateTeleport() {
+    this.playSound('powerPellet'); 
+    const currentModuleX = Math.floor(this._wrapCoord(this.ply.gx, this.totalWorldWidthCells) / this.PAT_C);
+    const currentModuleY = Math.floor(this._wrapCoord(this.ply.gy, this.totalWorldHeightCells) / this.PAT_R);
+    const emptySpots = [];
+    for (let modYOffset = -1; modYOffset <= 1; modYOffset++) { 
+        for (let modXOffset = -1; modXOffset <= 1; modXOffset++) {
+            const smx = this._wrapCoord(currentModuleX + modXOffset, this.WORLD_MODULE_DIM); 
+            const smy = this._wrapCoord(currentModuleY + modYOffset, this.WORLD_MODULE_DIM);
+            for (let y_pat = 0; y_pat < this.PAT_R; y_pat++) { 
+                for (let x_pat = 0; x_pat < this.PAT_C; x_pat++) {
+                    const patChar = this.PAT[y_pat][x_pat]; 
+                    if (patChar === '.' || patChar === 'P' || patChar === ' ' || patChar === 'O') { 
+                        const gx = x_pat + smx * this.PAT_C; 
+                        const gy = y_pat + smy * this.PAT_R;
+                        let isSafe = true;
+                        for(const ghost of this.ghosts) {
+                           if(this._wrapCoord(ghost.gx, this.totalWorldWidthCells) === gx && this._wrapCoord(ghost.gy, this.totalWorldHeightCells) === gy) {isSafe=false; break;}
+                        }
+                        if(isSafe && !(this.ply.gx === gx && this.ply.gy === gy)) emptySpots.push({ gx, gy }); 
+                    } 
+                } 
+            } 
+        } 
+    }
+    if (emptySpots.length > 0) { const spot = emptySpots[Math.floor(Math.random() * emptySpots.length)]; Object.assign(this.ply, {gx:spot.gx, gy:spot.gy, x:spot.gx, y:spot.gy, t:0}); }
+  }
+}
+addEventListener('DOMContentLoaded',()=> new Game());
+</script>
+</body></html>
