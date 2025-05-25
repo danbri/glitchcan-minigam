@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Boidwars</title>
+    <style>
+        :root {
+            --vh: 1vh; /* Fallback unit */
+        }
+        html, body { 
+            height: 100%; /* For older browsers */
+            height: calc(var(--vh, 1vh) * 100); /* Dynamic viewport height */
+            margin: 0; 
+            background-color: #0A0F28; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            font-family: 'Courier New', Courier, monospace; 
+            color: white; 
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            overflow: hidden;
+        }
+        #splashOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: calc(var(--vh, 1vh) * 100);
+            background-color: #0A0F28;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+            text-align: center;
+        }
+        #splashTitle {
+            font-size: calc(2.5em + 10vw); 
+            color: #FF3030; 
+            margin: 0;
+            font-weight: bold;
+            text-shadow: 2px 2px #000000, -2px -2px #000000, 2px -2px #000000, -2px 2px #000000;
+        }
+        #splashStartMessage {
+            font-size: calc(0.8em + 1.5vw);
+            color: #FFFAA0; 
+            margin-top: 20px;
+            animation: blink 1.5s linear infinite;
+        }
+        @keyframes blink { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.3; } 
+        }
+
+        #gameContainer {
+            display: none; 
+            width: 100vw; height: calc(var(--vh, 1vh) * 100);
+            padding: 0;
+            flex-direction: column; align-items: center; justify-content: center;
+            position: relative; 
+        }
+
+        canvas { 
+            border: none; 
+            max-width: 100%; 
+            max-height: 100%;
+            aspect-ratio: 384 / 256; 
+            object-fit: contain; 
+            background-color: transparent; 
+            touch-action: none; 
+        }
+        #uiMessages { 
+            position: absolute;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 480px; 
+            font-size: calc(0.55em + 1vw); 
+            min-height: 18px; 
+            color: #FFF0E0; 
+            text-align: center; 
+            padding: 2px 4px;
+            background-color: rgba(10, 15, 40, 0.3); 
+            border-radius: 3px;
+            z-index: 20;
+            text-shadow: 
+                -1px -1px 0 #0A0F28,  1px -1px 0 #0A0F28,
+                -1px  1px 0 #0A0F28,  1px  1px 0 #0A0F28,
+                 0px  0px 2px #000000; 
+            pointer-events: none; 
+        }
+        #restartButton { 
+            position: absolute;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); 
+            left: 50%;
+            transform: translateX(-50%);
+            padding: calc(5px + 0.3vw) calc(9px + 0.7vw); 
+            background-color: #FF8C00; color: #0A0F28; border: 2px solid #000000; 
+            font-size: calc(0.65em + 0.7vw); font-weight: bold; cursor: pointer; 
+            display: none; border-radius: 4px; min-width: 110px;
+            z-index: 20;
+        }
+        #restartButton:hover, #restartButton:active { background-color: #FFD700; }
+
+        @media (max-width: 400px) { 
+            #uiMessages { font-size: 0.8em; bottom: calc(env(safe-area-inset-bottom, 0px) + 30px); }
+            #restartButton { font-size: 0.9em; padding: 6px 9px; bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);}
+            #splashTitle { font-size: 3.5em; }
+            #splashStartMessage { font-size: 1.1em; }
+        }
+         @media (min-width: 769px) { 
+            #uiMessages { font-size: 1em; max-width: 600px; }
+            #restartButton { font-size: 0.9em; }
+            #splashTitle { font-size: 8em; }
+            #splashStartMessage { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="splashOverlay">
+        <h1 id="splashTitle">Boidwars</h1>
+        <p id="splashStartMessage">Click anywhere to start</p>
+    </div>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="uiMessages"></div>
+        <button id="restartButton">Restart Battle (R)</button>
+    </div>
+<script>
+    // --- CHUNK 1: Game Constants & Setup Variables ---
+    const NATIVE_WIDTH = 384;
+    const NATIVE_HEIGHT = 256;
+
+    const PALETTE = { 
+        DEEP_SPACE_BLUE: '#0A0F28', MIDNIGHT_BLUE: '#17234D', DEEP_PURPLE: '#301A4B', FOREST_SHADOW: '#1E3A2B',
+        STONE_GRAY_DARK: '#4B4955', STONE_GRAY_LIGHT: '#777582', MOUNTAIN_GREEN_DARK: '#3A6947', MOUNTAIN_GREEN_LIGHT: '#5A8F67',
+        MOUNTAIN_BROWN_DARK: '#7A4F3A', MOUNTAIN_BROWN_LIGHT: '#9E6F54', DRY_EARTH: '#B88A5B',
+        SKY_DAWN_BLUE: '#3A5988', SKY_MID_BLUE: '#6685C2', SKY_LIGHT_BLUE: '#90B8E0',
+        WIZARD_1_BODY: '#2E4375', WIZARD_1_ACCENT: '#5070B0', BOID_1_CORE: '#70A0FF', BOID_1_SPARKLE: '#A0D0FF',
+        WIZARD_2_BODY: '#6A2A70', WIZARD_2_ACCENT: '#8F409F', BOID_2_CORE: '#E050A0', BOID_2_SPARKLE: '#FF80C0',
+        ICE_EFFECT: '#D0E8FF', FIRE_EFFECT: '#FFB070',
+        CREAM_WHITE: '#FFF0E0', LIGHT_YELLOW: '#FFFAA0', GOLD_ACCENT: '#FFD700', WARM_ORANGE: '#FF8C00', BRIGHT_RED_DAMAGE: '#FF3030',
+        SKIN_TONE: '#E0B080', BLACK: '#000000', DEBUG_PINK: '#FF00FF'
+    };
+
+    const SKY_GRADIENT_TOP = PALETTE.SKY_DAWN_BLUE;
+    const SKY_GRADIENT_BOTTOM = PALETTE.SKY_LIGHT_BLUE;
+    
+    const TERRAIN_BLOCK_SIZE = 6; 
+    const GRID_WIDTH = Math.floor(NATIVE_WIDTH / TERRAIN_BLOCK_SIZE);
+    const GRID_HEIGHT = Math.floor(NATIVE_HEIGHT / TERRAIN_BLOCK_SIZE);
+
+    const WIZARD_MAX_HEALTH = 7;
+    const BOID_CLOUD_SIZE = 30; 
+
+    const BOID_PARAMETERS = {
+        PERCEPTION_RADIUS_SQ_MULTIPLIER: 5, SEPARATION_RADIUS_SQ_MULTIPLIER: 1.3, 
+        SEPARATION_WEIGHT: 1.8, ALIGNMENT_WEIGHT: 1.0, COHESION_WEIGHT: 0.7, 
+        TARGET_SEEK_WEIGHT: 1.5, DEBRIS_SEEK_WEIGHT: 1.2, HOME_SEEK_WEIGHT: 1.3,   
+        MAX_SPEED_BASE: 2.6, MAX_SPEED_VARIATION: 0.4, MAX_FORCE_BASE: 0.16, MAX_FORCE_VARIATION: 0.03,
+        INITIAL_LIFESPAN_BASE: 220, INITIAL_LIFESPAN_VARIATION: 60, 
+        WORKER_LIFESPAN_BASE: 2500, WORKER_LIFESPAN_VARIATION: 500, 
+        ATTACK_TO_WORKER_THRESHOLD_SQ: (TERRAIN_BLOCK_SIZE * 4)**2, 
+        DEBRIS_SCAN_RADIUS_SQ: (TERRAIN_BLOCK_SIZE * 12)**2, 
+        REPAIR_DROP_CHANCE: 0.12, 
+        MAX_WORKER_BOIDS_PER_PLAYER: BOID_CLOUD_SIZE * 1.5, 
+        TURN_TRANSITION_DELAY_BASE: 2000, 
+        MIN_AIM_DISTANCE: TERRAIN_BLOCK_SIZE * 5,
+        MAX_AIM_DISTANCE: NATIVE_WIDTH * 0.6,    
+        BASE_SPREAD_ANGLE: Math.PI / 4,          
+        BASE_INITIAL_SPEED_BOOST: 0.5,         
+        AIM_PARTICLE_SPAWN_RATE: 2,            
+    };
+    const BOID_STATE_ATTACKING = 'attacking'; const BOID_STATE_IDLE_WORKER = 'idle_worker';
+    const BOID_STATE_SEEKING_DEBRIS = 'seeking_debris'; const BOID_STATE_RETURNING_HOME = 'returning_home';
+    const BOID_STATE_REPAIRING = 'repairing';
+
+    const FALLING_BLOCK_DROP_CHANCE = 0.5; 
+    const EROSION_CHECK_INTERVAL_FRAMES = 150;
+    const EROSION_DETACH_CHANCE = 0.0025; 
+    const EROSION_SIDE_SUPPORT_NEEDED = 1; 
+
+    let canvas, ctx, uiMessages, restartButton, gameContainer, splashOverlay, splashTitleElement;
+    let terrain = []; let terrainColors = []; let wizards = []; let allBoids = [];
+    let particles = []; 
+    let stars = []; let distantMountains = [];
+    let currentPlayerIndex = 0; let humanAimTarget = { x: 0, y: 0 };
+    let currentAimDistanceFactor = 0; 
+    let aimParticleTimer = 0;
+    let erosionCheckTimer = 0;
+    let erosionGridScanOffset = 0; 
+    
+    let gameState = 'splash_html'; 
+    let shotFiredThisTurn = false;
+    let aiThinkTimer = null; let turnTransitionTimer = null;
+    let screenShakeMagnitude = 0; let screenShakeDuration = 0;
+    let currentShakeX = 0; let currentShakeY = 0;
+    let audioCtx = null; let effectsRackGain = null;
+    let gameAudioInitialized = false; let isAimingWithInput = false;
+    let gameStats = {
+        player1: { attackers: 0, workers: 0, mountainBlocks: 0, health: WIZARD_MAX_HEALTH },
+        player2: { attackers: 0, workers: 0, mountainBlocks: 0, health: WIZARD_MAX_HEALTH }
+    };
+    let isStatusPanelExpanded = false;
+    let statusPanelRect = { x: 0, y: 0, width: 0, height: 0 };
+    let splashAnimationTimer = 0;
+    const SPLASH_ANIMATION_DURATION = 90; 
+    let aimingLinePulseTime = 0;
+    let aiThinkingPulseTime = 0;
+
+    // --- CHUNK 2: Vector2D Class ---
+    class Vector2D {
+        constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+        add(v) { this.x += v.x; this.y += v.y; return this; }
+        subtract(v) { this.x -= v.x; this.y -= v.y; return this; }
+        multiplyScalar(s) { this.x *= s; this.y *= s; return this; }
+        divideScalar(s) { if (s !== 0) { this.x /= s; this.y /= s; } return this; }
+        magnitude() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+        magnitudeSq() { return this.x * this.x + this.y * this.y; }
+        normalize() { const m = this.magnitude(); if (m > 0) { this.divideScalar(m); } return this; }
+        limit(max) { const mSq = this.magnitudeSq(); if (mSq > max * max) { this.normalize().multiplyScalar(max); } return this; }
+        clone() { return new Vector2D(this.x, this.y); }
+        static distanceSq(v1, v2) { const dx = v1.x - v2.x; const dy = v1.y - v2.y; return dx * dx + dy * dy; }
+        static distance(v1, v2) { const dx = v1.x - v2.x; const dy = v1.y - v2.y; return Math.sqrt(dx*dx + dy*dy); }
+        static lerp(v1, v2, amount) { return new Vector2D(v1.x + (v2.x - v1.x) * amount, v1.y + (v2.y - v1.y) * amount); }
+        angle() { return Math.atan2(this.y, this.x); }
+    }
+
+    // --- CHUNK 3: Audio Functions ---
+    function initAudio() { 
+        if (gameAudioInitialized || audioCtx) {
+            if(audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(e => console.warn("Audio resume failed in initAudio:", e));
+            }
+            return;
+        }
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(e => console.warn("Audio initial resume failed:", e));
+            }
+            effectsRackGain = audioCtx.createGain();
+            effectsRackGain.gain.value = 0.35;
+            effectsRackGain.connect(audioCtx.destination);
+            gameAudioInitialized = true;
+        } catch (e) { console.warn("Web Audio API not supported."); }
+    }
+    
+    function playPrimeSound() {
+        if (!audioCtx || !gameAudioInitialized || audioCtx.state === 'suspended') {
+             if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    if (audioCtx.state === 'running') actuallyPlayPrimeSound();
+                }).catch(e => console.warn("Audio resume for prime sound failed:", e));
+            }
+            return;
+        }
+        actuallyPlayPrimeSound();
+    }
+
+    function actuallyPlayPrimeSound() {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        gainNode.connect(effectsRackGain);
+        osc.connect(gainNode);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        gainNode.gain.setValueAtTime(0.001, now); 
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.01);
+        osc.start(now);
+        osc.stop(now + 0.01);
+    }
+
+    function playSound(type, options = {}) { 
+        if (!audioCtx || !gameAudioInitialized ) {
+            console.warn(`Sound queue fail: ${type}. Audio not ready.`);
+            return;
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(e => console.warn(`Audio resume failed in playSound for ${type}:`, e));
+            if (audioCtx.state === 'suspended') {
+                 console.warn(`Sound ${type} skipped, audio suspended.`);
+                 return;
+            }
+        }
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        gainNode.connect(effectsRackGain);
+        osc.connect(gainNode);
+
+        switch (type) {
+            case 'cast': osc.type = options.isHeavy ? 'sawtooth' : 'square'; osc.frequency.setValueAtTime(options.isHeavy ? 120 : 200, now); osc.frequency.linearRampToValueAtTime(options.isHeavy ? 350 : 650, now + (options.isHeavy ? 0.22 : 0.18)); gainNode.gain.setValueAtTime(options.isHeavy ? 0.25 : 0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + (options.isHeavy ? 0.28 : 0.22)); osc.start(now); osc.stop(now + (options.isHeavy ? 0.28 : 0.22)); break;
+            case 'boidImpactTerrain': playNoiseBurst(0.12, 0.1, options.isHeavy ? 700 : 1400, options.isHeavy ? 0.25 : 0.12, 'bandpass', {q: 3}); break;
+            case 'boidImpactWizard': osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(250, now + 0.18); gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.22); osc.start(now); osc.stop(now + 0.22); break;
+            case 'wizardFall': osc.type = 'sawtooth'; osc.frequency.setValueAtTime(350, now); osc.frequency.exponentialRampToValueAtTime(70, now + 0.8); gainNode.gain.setValueAtTime(0.28, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.85); osc.start(now); osc.stop(now + 0.85); break;
+            case 'gameOver': ['C4', 'G3', 'Eb3'].forEach((noteStr, i) => { const freq = {C4: 261.63, G3: 196.00, Eb3: 155.56}[noteStr]; const noteOsc = audioCtx.createOscillator(); const noteGain = audioCtx.createGain(); noteOsc.type = 'sine';  noteOsc.frequency.setValueAtTime(freq, now + i * 0.25); noteGain.gain.setValueAtTime(0.2, now + i * 0.25); noteGain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.25 + 0.3); noteOsc.connect(noteGain); noteGain.connect(effectsRackGain); noteOsc.start(now + i * 0.25); noteOsc.stop(now + i * 0.25 + 0.3); }); break;
+            case 'boidFizzle': playNoiseBurst(0.06, 0.06, 3500, options.volume || 0.08, 'highpass', {q: 2}); break;
+            case 'pickupDebris': playNoiseBurst(0.07, 0.04, 1600, 0.09, 'bandpass', { q: 6 }); break;
+            case 'placeBlock': const placeOsc = audioCtx.createOscillator(); const placeGain = audioCtx.createGain(); placeOsc.type = 'triangle'; placeOsc.frequency.setValueAtTime(220, now); placeOsc.frequency.exponentialRampToValueAtTime(130, now + 0.1); placeGain.gain.setValueAtTime(0.11, now); placeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15); placeOsc.connect(placeGain); placeGain.connect(effectsRackGain); placeOsc.start(now); placeOsc.stop(now + 0.15); break;
+            case 'blockThud': playNoiseBurst(0.15, 0.05, 300, 0.15, 'lowpass', {q: 1}); const thudOsc = audioCtx.createOscillator(); const thudGain = audioCtx.createGain(); thudOsc.type = 'sine'; thudOsc.frequency.setValueAtTime(100, now); thudOsc.frequency.exponentialRampToValueAtTime(40, now + 0.1); thudGain.gain.setValueAtTime(0.2, now); thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15); thudOsc.connect(thudGain); thudGain.connect(effectsRackGain); thudOsc.start(now); thudOsc.stop(now + 0.15); break;
+            case 'crumble': 
+                playNoiseBurst(0.2, 0.08, 200, 0.07, 'lowpass', {q:0.5}); 
+                const cOsc = audioCtx.createOscillator(); 
+                const cGain = audioCtx.createGain(); 
+                cOsc.type='sawtooth'; 
+                cOsc.frequency.setValueAtTime(80, now); 
+                cOsc.frequency.exponentialRampToValueAtTime(50, now+0.15); 
+                cGain.gain.setValueAtTime(0.05, now); 
+                cGain.gain.linearRampToValueAtTime(0.001, now+0.2);
+                cOsc.connect(cGain); cGain.connect(effectsRackGain); 
+                cOsc.start(now); cOsc.stop(now+0.2); 
+                break;
+        }
+    }
+    function playNoiseBurst(duration, attackReleaseTime, filterFreq = 2000, volume = 0.1, filterType = 'lowpass', filterOptions = {}) { 
+        if (!audioCtx || !gameAudioInitialized || audioCtx.state === 'suspended') return;
+        const now = audioCtx.currentTime;
+        const bufferSize = Math.max(4096, audioCtx.sampleRate * duration);
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+        const noiseSource = audioCtx.createBufferSource(); noiseSource.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter(); filter.type = filterType; filter.frequency.setValueAtTime(filterFreq, now);
+        if (filterType === 'bandpass' || filterType === 'notch' || filterType === 'peaking') { filter.Q.setValueAtTime(filterOptions.q || 1, now); }
+        const noiseGain = audioCtx.createGain(); noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(volume, now + attackReleaseTime * 0.3); noiseGain.gain.linearRampToValueAtTime(0, now + duration);
+        noiseSource.connect(filter); filter.connect(noiseGain); noiseGain.connect(effectsRackGain);
+        noiseSource.start(now); noiseSource.stop(now + duration);
+    }
+
+    // --- CHUNK 4: Background & Terrain Functions ---
+    function initBackgroundElements() { 
+        stars = [];
+        for (let i = 0; i < 100; i++) { stars.push({ x: Math.random() * NATIVE_WIDTH, y: Math.random() * NATIVE_HEIGHT * 0.7, radius: Math.random() * 0.8 + 0.2, alpha: 0.5 + Math.random() * 0.5, parallax: 0.1 + Math.random() * 0.2 }); }
+        distantMountains = []; let currentX = -NATIVE_WIDTH * 0.2;
+        while(currentX < NATIVE_WIDTH * 1.2) {
+            const peakHeight = NATIVE_HEIGHT * (0.3 + Math.random() * 0.25); const baseWidth = NATIVE_WIDTH * (0.15 + Math.random() * 0.3);
+            distantMountains.push({ x: currentX, y: NATIVE_HEIGHT - peakHeight * 0.3, baseWidth: baseWidth, peakHeight: peakHeight, shapePoints: [] });
+            const m = distantMountains[distantMountains.length-1]; m.shapePoints.push({x: m.x, y: NATIVE_HEIGHT});
+            let segments = 5 + Math.floor(Math.random()*3);
+            for(let i=1; i<=segments; i++) { let px = m.x + (m.baseWidth / segments) * i; let py = NATIVE_HEIGHT - (Math.sin((i/segments)*Math.PI) * m.peakHeight * (0.8 + Math.random()*0.4) ); m.shapePoints.push({x: px, y: py}); }
+            m.shapePoints.push({x: m.x + m.baseWidth, y: NATIVE_HEIGHT}); currentX += baseWidth * (0.7 + Math.random() * 0.3);
+        }
+    }
+    function drawBackground(shakeX, shakeY) { 
+         let skyGrad = ctx.createLinearGradient(0, 0, 0, NATIVE_HEIGHT * 0.85); skyGrad.addColorStop(0, SKY_GRADIENT_TOP); skyGrad.addColorStop(1, SKY_GRADIENT_BOTTOM);
+        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, NATIVE_WIDTH, NATIVE_HEIGHT);
+        stars.forEach(star => { ctx.fillStyle = PALETTE.CREAM_WHITE; ctx.globalAlpha = star.alpha; ctx.beginPath(); ctx.arc(star.x - shakeX * star.parallax, star.y - shakeY * star.parallax, star.radius, 0, Math.PI * 2); ctx.fill(); });
+        ctx.globalAlpha = 1;
+        distantMountains.forEach(mt => {
+            ctx.fillStyle = PALETTE.DEEP_PURPLE; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(mt.shapePoints[0].x - shakeX * 0.3, mt.shapePoints[0].y - shakeY * 0.3);
+            for(let i=1; i < mt.shapePoints.length; i++) { ctx.lineTo(mt.shapePoints[i].x - shakeX * 0.3, mt.shapePoints[i].y - shakeY * 0.3); }
+            ctx.closePath(); ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+    }
+    function initTerrain() { 
+        terrain = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(0));
+        terrainColors = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null).map(() => Math.random()));
+        generateMountain(Math.floor(GRID_WIDTH * 0.28), GRID_WIDTH * 0.25, 1); generateMountain(Math.floor(GRID_WIDTH * 0.72), GRID_WIDTH * 0.25, 2);
+        for (let r = GRID_HEIGHT - 5; r < GRID_HEIGHT; r++) { for (let c = 0; c < GRID_WIDTH; c++) { if(terrain[r][c] === 0 && Math.random() > ( (r-(GRID_HEIGHT-5))/5 )*0.8 ) { terrain[r][c] = 3; if(!terrainColors[r] || terrainColors[r][c] === null) terrainColors[r][c] = Math.random(); } } }
+        for(let i=0; i<2; i++){ let tempTerrain = terrain.map(arr => arr.slice());
+            for (let r = 1; r < GRID_HEIGHT - 1; r++) { for (let c = 1; c < GRID_WIDTH - 1; c++) {
+                let neighbors = 0; for(let y = -1; y <= 1; y++) for(let x = -1; x <= 1; x++) if(x!==0 || y!==0) if(r+y >=0 && r+y < GRID_HEIGHT && c+x >=0 && c+x < GRID_WIDTH && terrain[r+y][c+x] !== 0) neighbors++;
+                if(terrain[r][c] === 0 && neighbors >=5 && Math.random() < 0.7) { tempTerrain[r][c] = 3; if(!terrainColors[r] || terrainColors[r][c] === null) terrainColors[r][c] = Math.random(); }
+                if(terrain[r][c] !== 0 && neighbors <=2 && Math.random() < 0.7) tempTerrain[r][c] = 0;
+            } } terrain = tempTerrain;
+        }
+    }
+    function generateMountain(peakCenterX, baseWidth, type) { 
+        const maxHeight = GRID_HEIGHT * 0.7; const mountainBaseY = GRID_HEIGHT - 6;
+        for (let c = 0; c < GRID_WIDTH; c++) {
+            const distFromPeak = Math.abs(c - peakCenterX); if (distFromPeak > baseWidth / 2  + Math.random() * (baseWidth * 0.2) ) continue;
+            const normalizedDist = distFromPeak / (baseWidth / 2); let heightAtCol = maxHeight * (1 - Math.pow(normalizedDist, 1.5 + Math.random()*0.5) ); heightAtCol *= (0.75 + Math.random() * 0.5);
+            for (let r = mountainBaseY; r > mountainBaseY - heightAtCol; r--) { if (r >= 0 && r < GRID_HEIGHT) {
+                if(terrain[r][c] === 0) { terrain[r][c] = type; if(!terrainColors[r] || terrainColors[r][c] === null) terrainColors[r][c] = Math.random(); }
+                if (Math.random() < 0.03 && r < mountainBaseY - 2) terrain[r][c] = 0; 
+                else if (Math.random() < 0.08 && r < mountainBaseY - 1) { terrain[r][c] = (type === 1 || type === 2) ? 3 : type; if(!terrainColors[r] || terrainColors[r][c] === null) terrainColors[r][c] = Math.random(); }
+            } }
+        }
+    }
+    function getTerrainColor(type, r, c, variation = 0) {
+        let baseColorHex;
+        const randSeed = (r < 0 || r >= GRID_HEIGHT || c < 0 || c >= GRID_WIDTH || !terrainColors || !terrainColors[r] || terrainColors[r][c] === undefined || terrainColors[r][c] === null) ? Math.random() : terrainColors[r][c];
+        
+        switch(type) { 
+            case 1: baseColorHex = randSeed < 0.5 ? PALETTE.MOUNTAIN_GREEN_DARK : PALETTE.MOUNTAIN_GREEN_LIGHT; break;
+            case 2: baseColorHex = randSeed < 0.5 ? PALETTE.MOUNTAIN_BROWN_DARK : PALETTE.MOUNTAIN_BROWN_LIGHT; break;
+            case 3: baseColorHex = randSeed < 0.5 ? PALETTE.STONE_GRAY_DARK : PALETTE.STONE_GRAY_LIGHT; break;
+            default: return PALETTE.DEBUG_PINK; 
+        }
+        if (variation !== 0) {
+            let R = parseInt(baseColorHex.slice(1,3), 16);
+            let G = parseInt(baseColorHex.slice(3,5), 16);
+            let B = parseInt(baseColorHex.slice(5,7), 16);
+            R = Math.max(0, Math.min(255, Math.floor(R * (1 + variation))));
+            G = Math.max(0, Math.min(255, Math.floor(G * (1 + variation))));
+            B = Math.max(0, Math.min(255, Math.floor(B * (1 + variation))));
+            return `rgb(${R},${G},${B})`;
+        }
+        return baseColorHex;
+    }
+    function getTerrainShadowColor(type) { 
+        switch(type) { case 1: return PALETTE.FOREST_SHADOW; case 2: return PALETTE.MOUNTAIN_BROWN_DARK; case 3: return PALETTE.STONE_GRAY_DARK; default: return PALETTE.DEEP_SPACE_BLUE; }
+    }
+    function drawTerrain() {
+        const shadowOffset = Math.max(1, TERRAIN_BLOCK_SIZE / 6);
+        const bevelOffset = 0.5; 
+
+        for (let r = 0; r < GRID_HEIGHT; r++) { 
+            for (let c = 0; c < GRID_WIDTH; c++) { 
+                const type = terrain[r][c];
+                if (type !== 0) { 
+                    const color = getTerrainColor(type, r, c); 
+                    const shadowColor = getTerrainShadowColor(type);
+                    const x = c * TERRAIN_BLOCK_SIZE;
+                    const y = r * TERRAIN_BLOCK_SIZE;
+
+                    ctx.fillStyle = color; 
+                    ctx.fillRect(x, y, TERRAIN_BLOCK_SIZE, TERRAIN_BLOCK_SIZE);
+
+                    const darkerBevelColor = getTerrainColor(type, r, c, -0.12); 
+                    ctx.fillStyle = darkerBevelColor;
+                    if (r === 0 || terrain[r-1][c] === 0 || (terrain[r-1][c] !== type && terrain[r-1][c] !== 0) ) {
+                         ctx.fillRect(x, y, TERRAIN_BLOCK_SIZE, bevelOffset);
+                    }
+                    if (c === 0 || terrain[r][c-1] === 0 || (terrain[r][c-1] !== type && terrain[r][c-1] !== 0) ) {
+                        ctx.fillRect(x, y + bevelOffset, bevelOffset, TERRAIN_BLOCK_SIZE - bevelOffset); 
+                    }
+                    
+                    ctx.fillStyle = shadowColor; 
+                    ctx.globalAlpha = 0.7;
+                    if (r + 1 >= GRID_HEIGHT || terrain[r+1][c] === 0) { 
+                        ctx.fillRect(x, y + TERRAIN_BLOCK_SIZE - shadowOffset, TERRAIN_BLOCK_SIZE, shadowOffset); 
+                    }
+                    if (c + 1 >= GRID_WIDTH || terrain[r][c+1] === 0) { 
+                        ctx.fillRect(x + TERRAIN_BLOCK_SIZE - shadowOffset, y, shadowOffset, TERRAIN_BLOCK_SIZE - ( (r + 1 >= GRID_HEIGHT || terrain[r+1][c] === 0) ? shadowOffset : 0 ) );
+                    }
+                    ctx.globalAlpha = 1; 
+                } 
+            } 
+        }
+    }
+    function destroyTerrain(worldX, worldY, radius = 12) { 
+        const gridX = Math.floor(worldX / TERRAIN_BLOCK_SIZE); const gridY = Math.floor(worldY / TERRAIN_BLOCK_SIZE);
+        const gridRadius = Math.ceil(radius / TERRAIN_BLOCK_SIZE); let destroyedBlock = false;
+        for (let rOffset = -gridRadius; rOffset <= gridRadius; rOffset++) { for (let cOffset = -gridRadius; cOffset <= gridRadius; cOffset++) {
+            const currentGridR = gridY + rOffset; const currentGridC = gridX + cOffset;
+            if (currentGridR >= 0 && currentGridR < GRID_HEIGHT && currentGridC >= 0 && currentGridC < GRID_WIDTH) {
+                const distSq = (rOffset * rOffset) + (cOffset * cOffset); if (distSq <= gridRadius * gridRadius) { 
+                    const originalBlockType = terrain[currentGridR][currentGridC];
+                    if (originalBlockType !== 0) {
+                        const blockColor = getTerrainColor(originalBlockType, currentGridR, currentGridC);
+                        const originalColorSeed = terrainColors[currentGridR] ? terrainColors[currentGridR][currentGridC] : Math.random(); 
+                        terrain[currentGridR][currentGridC] = 0; destroyedBlock = true;
+                        
+                        if (originalBlockType === 1 || originalBlockType === 2 || originalBlockType === 3) { 
+                            if (Math.random() < FALLING_BLOCK_DROP_CHANCE) {
+                                particles.push(new FallingBlockParticle(
+                                    (currentGridC + 0.5) * TERRAIN_BLOCK_SIZE, 
+                                    (currentGridR + 0.5) * TERRAIN_BLOCK_SIZE, 
+                                    blockColor, 
+                                    originalBlockType,
+                                    originalColorSeed
+                                ));
+                            } else {
+                                const numDebris = 2 + Math.floor(Math.random() * 2);
+                                for (let i = 0; i < numDebris; i++) { particles.push(new DebrisParticle( (currentGridC + Math.random()) * TERRAIN_BLOCK_SIZE, (currentGridR + Math.random()) * TERRAIN_BLOCK_SIZE, blockColor )); }
+                            }
+                        } else { 
+                             const numDebris = 4 + Math.floor(Math.random() * 4);
+                             for (let i = 0; i < numDebris; i++) { particles.push(new DebrisParticle( (currentGridC + Math.random()) * TERRAIN_BLOCK_SIZE, (currentGridR + Math.random()) * TERRAIN_BLOCK_SIZE, blockColor )); }
+                        }
+                    } } } } }
+        if (destroyedBlock) { playSound('boidImpactTerrain', {isHeavy: radius > TERRAIN_BLOCK_SIZE * 1.8}); triggerScreenShake(radius > TERRAIN_BLOCK_SIZE * 1.8 ? 4: 2, 12); }
+        return destroyedBlock;
+    }
+    function isSolidTerrainAtWorld(worldX, worldY, includeFloor = true) { 
+         const gridX = Math.floor(worldX / TERRAIN_BLOCK_SIZE); const gridY = Math.floor(worldY / TERRAIN_BLOCK_SIZE);
+        if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) { return terrain[gridY][gridX] !== 0; }
+        if (includeFloor && worldY >= NATIVE_HEIGHT - TERRAIN_BLOCK_SIZE/2) return true; 
+        return worldY < 0 || worldX < 0 || worldX >= NATIVE_WIDTH; 
+    }
+
+    // --- CHUNK 5: Particle Classes ---
+    class DebrisParticle { 
+        constructor(x,y,color, scale = 1){ this.position=new Vector2D(x,y); this.velocity=new Vector2D((Math.random()-.5)*3.5,(Math.random()-.5)*2.5-1.5); this.color=color||PALETTE.STONE_GRAY_DARK; this.baseLifespan = 40+Math.random()*40; this.lifespan = this.baseLifespan * scale; this.size=(TERRAIN_BLOCK_SIZE/2.5+Math.random()*(TERRAIN_BLOCK_SIZE/3)) * scale; this.initialSize = this.size; this.gravity=.12; this.rotation=Math.random()*Math.PI*2; this.rotationSpeed=(Math.random()-.5)*.1; this.subParticles = []; for(let i=0; i<2; i++) {this.subParticles.push({ox: (Math.random()-0.5)*this.size*0.4, oy: (Math.random()-0.5)*this.size*0.4, s: this.size * (0.4 + Math.random()*0.3) });} } 
+        update(){ this.velocity.y+=this.gravity;this.position.add(this.velocity);this.rotation+=this.rotationSpeed;this.lifespan--; this.size = this.initialSize * (this.lifespan / this.baseLifespan); if (this.size < 0.5) this.size = 0.5; } 
+        draw(){ if(this.lifespan<=0||this.size<.5)return; ctx.save();ctx.translate(this.position.x,this.position.y);ctx.rotate(this.rotation); ctx.fillStyle=this.color;ctx.globalAlpha=Math.max(0, (this.lifespan / this.baseLifespan) * 0.8 ); this.subParticles.forEach(sp => { const currentSubSize = sp.s * (this.size / this.initialSize); ctx.fillRect(sp.ox - currentSubSize/2, sp.oy - currentSubSize/2, currentSubSize, currentSubSize); }); ctx.restore();ctx.globalAlpha=1; }
+    }
+    class TrailParticle extends DebrisParticle { constructor(x,y,color){super(x,y,color);this.size=TERRAIN_BLOCK_SIZE/4+Math.random()*(TERRAIN_BLOCK_SIZE/5);this.lifespan=10+Math.random()*15;this.baseLifespan=this.lifespan;this.velocity=new Vector2D((Math.random()-.5)*.3,(Math.random()-.5)*.3);this.gravity=.01}draw(){if(this.lifespan<=0||this.size<.2)return;ctx.fillStyle=this.color;ctx.globalAlpha=Math.max(0,(this.lifespan/this.baseLifespan)*.4);ctx.beginPath();ctx.arc(this.position.x,this.position.y,this.size,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1} }
+    class FizzleParticle extends DebrisParticle { constructor(x,y,color,scale=1, lifespanOverride = null){ super(x,y,color, scale); this.lifespan= lifespanOverride !== null ? lifespanOverride : (18+Math.random()*12); this.baseLifespan = this.lifespan; this.velocity=new Vector2D((Math.random()-.5)*2,(Math.random()-.5)*2); this.gravity=.03; } }
+    class FallingBlockParticle { constructor(x, y, color, originalTerrainType, originalColorSeed) { this.position = new Vector2D(x, y); this.velocity = new Vector2D((Math.random() - 0.5) * 1.5, (Math.random() * -1.0) - 0.5);  this.size = TERRAIN_BLOCK_SIZE; this.color = color; this.originalTerrainType = originalTerrainType; this.originalColorSeed = originalColorSeed;  this.rotation = Math.random() * Math.PI * 2; this.rotationSpeed = (Math.random() - 0.5) * 0.15; this.gravity = 0.15; this.lifespan = 600;  this.bounciness = 0.1; this.canSettle = true; } update() {  if (!this.canSettle) { this.lifespan--; this.velocity.y += this.gravity; this.position.add(this.velocity); this.rotation += this.rotationSpeed; return null; } this.velocity.y += this.gravity; this.position.add(this.velocity); this.rotation += this.rotationSpeed; this.lifespan--; const bottomY = this.position.y + this.size / 2; const currentGridX = Math.floor(this.position.x / TERRAIN_BLOCK_SIZE); const currentGridY = Math.floor(bottomY / TERRAIN_BLOCK_SIZE); if (bottomY >= NATIVE_HEIGHT || (currentGridX >= 0 && currentGridX < GRID_WIDTH && currentGridY >= 0 && currentGridY < GRID_HEIGHT && terrain[currentGridY][currentGridX] !== 0) ) { let settleR = Math.floor((this.position.y - this.size * 0.1) / TERRAIN_BLOCK_SIZE);  let settleC = Math.floor(this.position.x / TERRAIN_BLOCK_SIZE); settleR = Math.max(0, Math.min(GRID_HEIGHT - 1, settleR)); settleC = Math.max(0, Math.min(GRID_WIDTH - 1, settleC)); if (terrain[settleR][settleC] === 0) { this.canSettle = false;  return { settled: true, r: settleR, c: settleC, type: this.originalTerrainType, colorSeed: this.originalColorSeed }; } else {  if (this.velocity.y > 0.1) {  this.position.y -= this.velocity.y * 1.1;  this.velocity.y *= -this.bounciness; this.velocity.x *= 0.8;  if (Math.abs(this.velocity.y) < 0.2) {  this.velocity.y = 0; this.canSettle = false;  } } else {  this.canSettle = false;  } } } return null;  } draw() { if (this.lifespan <= 0) return; ctx.save(); ctx.translate(this.position.x, this.position.y); ctx.rotate(this.rotation); ctx.fillStyle = this.color; ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size); ctx.strokeStyle = PALETTE.BLACK; ctx.lineWidth = 0.5; ctx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size); ctx.restore(); } }
+
+    // --- CHUNK 6: Wizard Class ---
+    class Wizard {
+        constructor(id, x, y, bodyColor, accentColor, boidBaseColor, boidEffectColor, isAI = false) {
+            this.id = id; this.position = new Vector2D(x, y); this.baseY = y; 
+            this.width = TERRAIN_BLOCK_SIZE * 2.2; this.height = TERRAIN_BLOCK_SIZE * 3.2;
+            this.bodyColor = bodyColor; this.accentColor = accentColor; 
+            this.boidBaseColor = boidBaseColor; this.boidEffectColor = boidEffectColor;
+            this.health = WIZARD_MAX_HEALTH; this.isAI = isAI;
+            this.aimAngle = isAI ? Math.PI : 0; 
+            this.castPower = 1.0; this.hitFlashTimer = 0; this.currentFrame = 0;
+            this.animTimer = 0; this.animSpeed = 12; this.state = 'idle'; 
+            this.staffAngle = isAI ? Math.PI : 0; this.bobOffset = 0;
+            this.aiThinkingPulse = 0; 
+        }
+        updateAnimation() {
+            this.animTimer++;
+            if (this.animTimer >= this.animSpeed) { this.animTimer = 0; this.currentFrame = (this.currentFrame + 1) % 2; if(this.state === 'idle') this.bobOffset = (this.currentFrame === 0) ? 0 : 1; else this.bobOffset = 0; }
+            const staffHandX = this.position.x + (this.id === 0 ? 1 : -1) * (this.width*0.05);
+            const staffHandY = (this.position.y - this.height + this.bobOffset) + this.height * 0.4;
+            if ((this.state === 'aiming' || this.state === 'casting') && !this.isAI) { this.staffAngle = Math.atan2(humanAimTarget.y - staffHandY, humanAimTarget.x - staffHandX); }
+            else if (this.isAI && (this.state === 'aiming' || this.state === 'casting' || gameState === 'ai_thinking' && this.id === currentPlayerIndex)) { this.staffAngle = this.aimAngle; }
+            else { this.staffAngle = this.id === 0 ? -Math.PI / 4 - 0.3 : Math.PI + Math.PI / 4 + 0.3; }
+
+            if (this.isAI && gameState === 'ai_thinking' && this.id === currentPlayerIndex) {
+                this.aiThinkingPulse += 0.2;
+            } else {
+                this.aiThinkingPulse = 0;
+            }
+        }
+        setState(newState) { if (this.state !== newState) { this.state = newState; this.currentFrame = 0; this.animTimer = 0; this.animSpeed = (newState === 'casting' || newState === 'hit') ? 7 : 12; } }
+        getFirePos() { 
+            const staffLength = this.width * 0.8;
+            const handBaseX = this.position.x + (this.id === 0 ? 1 : -1) * (this.width*0.05);
+            const handBaseY = (this.position.y - this.height + this.bobOffset) + this.height * 0.4;                                                                                
+            const fireX = handBaseX + Math.cos(this.staffAngle) * staffLength;
+            const fireY = handBaseY + Math.sin(this.staffAngle) * staffLength;
+            return new Vector2D(fireX, fireY);
+        }
+        draw() { 
+            this.updateAnimation();
+            let wizColor = (this.hitFlashTimer > 0 && Math.floor(this.hitFlashTimer / 2) % 2 === 0) ? PALETTE.CREAM_WHITE : this.bodyColor;
+            if (this.hitFlashTimer > 0) this.hitFlashTimer--;
+            const bodyY = this.position.y - this.height + this.bobOffset; const headRadius = this.width * 0.2; const hatHeight = this.height * 0.4;
+            
+            ctx.save(); ctx.translate(this.position.x, bodyY);
+            
+            const staffLength = this.width * 0.8; 
+            const staffHandOffsetX = (this.id === 0 ? 1 : -1) * (this.width*0.05); 
+            const staffHandOffsetY = this.height * 0.4;
+            const staffTipX = staffHandOffsetX + Math.cos(this.staffAngle) * staffLength;
+            const staffTipY = staffHandOffsetY + Math.sin(this.staffAngle) * staffLength;
+
+            ctx.strokeStyle = PALETTE.MOUNTAIN_BROWN_DARK; ctx.lineWidth = TERRAIN_BLOCK_SIZE * 0.5;
+            ctx.beginPath(); ctx.moveTo(staffHandOffsetX, staffHandOffsetY); ctx.lineTo(staffTipX, staffTipY); ctx.stroke();
+            
+            let staffCrystalColor = this.boidEffectColor;
+            if (this.isAI && gameState === 'ai_thinking' && this.id === currentPlayerIndex) {
+                const pulseFactor = 0.6 + Math.sin(this.aiThinkingPulse) * 0.4; 
+                const r = parseInt(this.boidEffectColor.slice(1,3), 16);
+                const g = parseInt(this.boidEffectColor.slice(3,5), 16);
+                const b = parseInt(this.boidEffectColor.slice(5,7), 16);
+                staffCrystalColor = `rgb(${Math.floor(r + (255-r)* (1-pulseFactor) )}, ${Math.floor(g + (255-g)* (1-pulseFactor) )}, ${Math.floor(b + (255-b)* (1-pulseFactor) )})`;
+            }
+            ctx.fillStyle = staffCrystalColor; 
+            ctx.beginPath(); ctx.arc(staffTipX, staffTipY, TERRAIN_BLOCK_SIZE * 0.35, 0, Math.PI*2); ctx.fill();
+
+            const bodyPath = new Path2D();
+            bodyPath.moveTo(-this.width / 2, this.height); bodyPath.lineTo(-this.width / 2 * 0.7, this.height * 0.5); bodyPath.lineTo(-this.width * 0.3, this.height * 0.2); 
+            bodyPath.lineTo(this.width * 0.3, this.height * 0.2);  bodyPath.lineTo(this.width / 2 * 0.7, this.height * 0.5); bodyPath.lineTo(this.width / 2, this.height); bodyPath.closePath(); 
+            ctx.fillStyle = wizColor; ctx.fill(bodyPath);
+            ctx.strokeStyle = PALETTE.BLACK; ctx.lineWidth = 1; ctx.stroke(bodyPath);
+
+            const accentPath = new Path2D();
+            accentPath.moveTo(-this.width/2, this.height); accentPath.lineTo(-this.width/2 + TERRAIN_BLOCK_SIZE*0.4, this.height - TERRAIN_BLOCK_SIZE*0.4); accentPath.lineTo(this.width/2 - TERRAIN_BLOCK_SIZE*0.4, this.height - TERRAIN_BLOCK_SIZE*0.4);
+            accentPath.lineTo(this.width/2, this.height); accentPath.lineTo(this.width/2 - TERRAIN_BLOCK_SIZE*0.2, this.height); accentPath.lineTo(this.width/2 - TERRAIN_BLOCK_SIZE*0.4, this.height - TERRAIN_BLOCK_SIZE*0.2);
+            accentPath.lineTo(-this.width/2 + TERRAIN_BLOCK_SIZE*0.4, this.height - TERRAIN_BLOCK_SIZE*0.2); accentPath.lineTo(-this.width/2 + TERRAIN_BLOCK_SIZE*0.2, this.height); accentPath.closePath(); 
+            ctx.fillStyle = this.accentColor; ctx.fill(accentPath);
+
+            const headPath = new Path2D();
+            headPath.arc(0, headRadius * 0.9, headRadius, 0, Math.PI * 2);
+            ctx.fillStyle = PALETTE.SKIN_TONE; ctx.fill(headPath);
+            ctx.strokeStyle = PALETTE.BLACK; ctx.lineWidth = 1; ctx.stroke(headPath);
+            
+            let hatBaseY = headRadius * 0.2; if(this.state === 'casting' && this.currentFrame === 1) hatBaseY -=2; 
+            const hatPath = new Path2D();
+            hatPath.moveTo(0, hatBaseY - hatHeight); hatPath.lineTo(-this.width * 0.35, hatBaseY); hatPath.lineTo(this.width * 0.35, hatBaseY); hatPath.closePath(); 
+            ctx.fillStyle = this.accentColor; ctx.fill(hatPath);
+            ctx.strokeStyle = PALETTE.BLACK; ctx.lineWidth = 1; ctx.stroke(hatPath);
+            
+            ctx.restore();
+
+            const barWidth = this.width * 1.2; const barHeight = TERRAIN_BLOCK_SIZE * 0.6; 
+            const barX = this.position.x - barWidth / 2; 
+            const barY = this.position.y - this.height - TERRAIN_BLOCK_SIZE * 1.8;
+            ctx.fillStyle = PALETTE.DEEP_SPACE_BLUE; ctx.fillRect(barX -1, barY-1, barWidth+2, barHeight+2); 
+            ctx.fillStyle = PALETTE.STONE_GRAY_DARK; ctx.fillRect(barX, barY, barWidth, barHeight);
+            const currentHealthWidth = (this.health / WIZARD_MAX_HEALTH) * barWidth;
+            ctx.fillStyle = this.health > WIZARD_MAX_HEALTH * 0.6 ? PALETTE.MOUNTAIN_GREEN_LIGHT : this.health > WIZARD_MAX_HEALTH * 0.3 ? PALETTE.LIGHT_YELLOW : PALETTE.BRIGHT_RED_DAMAGE;
+            if (this.health > 0) ctx.fillRect(barX, barY, currentHealthWidth, barHeight);
+        }
+        takeDamage(amount) {  if (this.health <= 0) return; this.health -= amount; this.hitFlashTimer = 18; this.setState('hit'); setTimeout(() => { if(this.state === 'hit') this.setState('idle');}, this.animSpeed * 3); playSound('boidImpactWizard'); triggerScreenShake(4, 18); if (this.health <= 0) { this.health = 0; gameState = 'gameOver'; playSound('gameOver'); const winnerIndex = 1 - this.id; updateUIMessage(`Wizard ${wizards[winnerIndex].isAI ? "(Purple)" : "(Blue)"} is Victorious!`); restartButton.style.display = 'block'; }}
+        checkFalling() {  if (gameState === 'gameOver' || gameState === 'splash_html' || gameState === 'splash_animating' || gameState === 'game_loading') return; const supportPoints = [ this.position.x, this.position.x - this.width * 0.35, this.position.x + this.width * 0.35 ]; let supported = false; for (const sx of supportPoints) { if (isSolidTerrainAtWorld(sx, this.position.y + TERRAIN_BLOCK_SIZE *0.1)) { supported = true; break; } } if (!supported) { this.position.y += TERRAIN_BLOCK_SIZE / 1.5; } else { let groundCheckY = Math.floor((this.position.y)/TERRAIN_BLOCK_SIZE) * TERRAIN_BLOCK_SIZE; while(isSolidTerrainAtWorld(this.position.x, groundCheckY)){ groundCheckY -= TERRAIN_BLOCK_SIZE*0.5; } this.position.y = groundCheckY + TERRAIN_BLOCK_SIZE*0.1; this.baseY = this.position.y; } if (this.position.y > NATIVE_HEIGHT + this.height && this.health > 0) { this.health = 0; gameState = 'gameOver'; playSound('wizardFall'); playSound('gameOver'); const winnerIndex = 1 - this.id; updateUIMessage(`Wizard ${this.isAI ? "(Purple)" : "(Blue)"} Plummeted! Wizard ${wizards[winnerIndex].isAI ? "(Purple)" : "(Blue)"} Wins!`); restartButton.style.display = 'block'; }}
+    }
+    function initWizards() { wizards = []; const wiz1X = NATIVE_WIDTH * 0.12; const wiz2X = NATIVE_WIDTH * 0.88; let wiz1Y = findPerchY(wiz1X, Math.floor(GRID_HEIGHT * 0.65)); let wiz2Y = findPerchY(wiz2X, Math.floor(GRID_HEIGHT * 0.65)); wizards.push(new Wizard(0, wiz1X, wiz1Y, PALETTE.WIZARD_1_BODY, PALETTE.WIZARD_1_ACCENT, PALETTE.BOID_1_CORE, PALETTE.BOID_1_SPARKLE, false)); wizards.push(new Wizard(1, wiz2X, wiz2Y, PALETTE.WIZARD_2_BODY, PALETTE.WIZARD_2_ACCENT, PALETTE.BOID_2_CORE, PALETTE.BOID_2_SPARKLE, true)); gameStats.player1.health = WIZARD_MAX_HEALTH; gameStats.player2.health = WIZARD_MAX_HEALTH; }
+    function findPerchY(worldX, startScanGridY) { const gridX = Math.floor(worldX / TERRAIN_BLOCK_SIZE); for (let r = startScanGridY; r >= 0; r--) { if (r + 1 < GRID_HEIGHT && terrain[r][gridX] === 0 && terrain[r+1][gridX] !== 0) { let stable = true; for(let offset = -1; offset <=1; offset++){  let checkC = gridX + offset; if(checkC < 0 || checkC >= GRID_WIDTH || terrain[r+1][checkC] === 0){ stable = false; break; } } if(stable) return r * TERRAIN_BLOCK_SIZE + TERRAIN_BLOCK_SIZE * 0.9; } } return (GRID_HEIGHT - 7) * TERRAIN_BLOCK_SIZE;  }
+
+    // --- CHUNK 7: Boid Class ---
+    class Boid {
+        constructor(castContext) {
+            this.ownerId = castContext.ownerId;
+            this.homeMountainType = this.ownerId === 0 ? 1 : 2;
+            this.enemyMountainType = this.ownerId === 0 ? 2 : 1;
+            const spawnAngleOffset = (Math.random() - 0.5) * castContext.initialSpreadAngle;
+            const baseAngle = castContext.targetDirectionAngle;
+            const spawnAngle = baseAngle + spawnAngleOffset;
+            const spawnRadius = Math.random() * TERRAIN_BLOCK_SIZE * 1.5; 
+            this.position = new Vector2D( 
+                castContext.position.x + Math.cos(spawnAngle) * spawnRadius, 
+                castContext.position.y + Math.sin(spawnAngle) * spawnRadius 
+            );
+            this.velocity = new Vector2D(Math.cos(baseAngle) * castContext.initialSpeedBoost, Math.sin(baseAngle) * castContext.initialSpeedBoost);
+            this.velocity.add(new Vector2D((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5)); 
+            this.acceleration = new Vector2D();
+            this.maxSpeed = BOID_PARAMETERS.MAX_SPEED_BASE + (Math.random() - 0.5) * BOID_PARAMETERS.MAX_SPEED_VARIATION;
+            this.maxForce = BOID_PARAMETERS.MAX_FORCE_BASE + (Math.random() - 0.5) * BOID_PARAMETERS.MAX_FORCE_VARIATION + castContext.maxForceBonus;
+            this.radius = TERRAIN_BLOCK_SIZE * (0.25 + Math.random()*0.15);
+            this.lifespan = BOID_PARAMETERS.INITIAL_LIFESPAN_BASE + Math.random() * BOID_PARAMETERS.INITIAL_LIFESPAN_VARIATION;
+            this.baseColor = Math.random() < 0.6 ? castContext.baseColor : castContext.effectColor;
+            this.effectColor = castContext.effectColor; this.active = true;
+            this.state = BOID_STATE_ATTACKING; this.attackTargetPosition = castContext.targetPosition.clone();
+            this.isCarryingBlock = false; this.carriedBlockType = 0; this.carriedBlockColor = null;
+            this.perceptionRadiusSq = (TERRAIN_BLOCK_SIZE * BOID_PARAMETERS.PERCEPTION_RADIUS_SQ_MULTIPLIER)**2;
+            this.separationRadiusSq = (TERRAIN_BLOCK_SIZE * BOID_PARAMETERS.SEPARATION_RADIUS_SQ_MULTIPLIER)**2;
+            this.trailTimer = 0; this.trailInterval = 3 + Math.floor(Math.random()*3);
+            this.currentDebrisTarget = null; this.homeRepairTargetCell = null; this.potentialMineType = 0;
+            this.potentialMineCell = null; 
+        }
+        applyForce(force) { this.acceleration.add(force); }
+        seek(target) { let desired = target.clone().subtract(this.position); desired.normalize().multiplyScalar(this.maxSpeed); let steer = desired.subtract(this.velocity); steer.limit(this.maxForce); return steer; }
+        separate(boids) { let steer = new Vector2D(); let count = 0; for (let other of boids) { if (other === this || !other.active) continue; let dSq = Vector2D.distanceSq(this.position, other.position); if (dSq > 0 && dSq < this.separationRadiusSq) { let diff = this.position.clone().subtract(other.position); diff.normalize().divideScalar(Math.sqrt(dSq)); steer.add(diff); count++; } } if (count > 0) steer.divideScalar(count); if (steer.magnitudeSq() > 0) { steer.normalize().multiplyScalar(this.maxSpeed); steer.subtract(this.velocity).limit(this.maxForce); } return steer; }
+        align(boids) { let sum = new Vector2D(); let count = 0; for (let other of boids) { if (other === this || !other.active) continue; let dSq = Vector2D.distanceSq(this.position, other.position); if (dSq > 0 && dSq < this.perceptionRadiusSq) { sum.add(other.velocity); count++; } } if (count > 0) { sum.divideScalar(count).normalize().multiplyScalar(this.maxSpeed); return sum.subtract(this.velocity).limit(this.maxForce); } return new Vector2D(); }
+        cohesion(boids) { let sum = new Vector2D(); let count = 0; for (let other of boids) { if (other === this || !other.active) continue; let dSq = Vector2D.distanceSq(this.position, other.position); if (dSq > 0 && dSq < this.perceptionRadiusSq) { sum.add(other.position); count++; } } if (count > 0) { sum.divideScalar(count); return this.seek(sum); } return new Vector2D(); }
+        updateBehaviors() { let forces = { sep: null, ali: null, coh: null, primary: null }; const flockmates = allBoids.filter(b => b.ownerId === this.ownerId && b.active && b !== this); forces.sep = this.separate(flockmates).multiplyScalar(BOID_PARAMETERS.SEPARATION_WEIGHT); forces.ali = this.align(flockmates).multiplyScalar(BOID_PARAMETERS.ALIGNMENT_WEIGHT); forces.coh = this.cohesion(flockmates).multiplyScalar(BOID_PARAMETERS.COHESION_WEIGHT); switch (this.state) { case BOID_STATE_ATTACKING: forces.primary = this.seek(this.attackTargetPosition).multiplyScalar(BOID_PARAMETERS.TARGET_SEEK_WEIGHT); if (Vector2D.distanceSq(this.position, this.attackTargetPosition) < BOID_PARAMETERS.ATTACK_TO_WORKER_THRESHOLD_SQ || (this.lifespan < BOID_PARAMETERS.INITIAL_LIFESPAN_BASE * 0.15 && this.lifespan > 0) ) { this.convertToWorker(); } break; case BOID_STATE_IDLE_WORKER: forces.primary = new Vector2D(Math.random()-0.5, Math.random()-0.5).normalize().multiplyScalar(this.maxForce * 0.3);  if (Math.random() < 0.05) this.findWork(); break; case BOID_STATE_SEEKING_DEBRIS: if (this.currentDebrisTarget) { forces.primary = this.seek(this.currentDebrisTarget).multiplyScalar(BOID_PARAMETERS.DEBRIS_SEEK_WEIGHT); if (Vector2D.distanceSq(this.position, this.currentDebrisTarget) < (TERRAIN_BLOCK_SIZE * 1.8)**2) { this.pickupDebris(); } } else this.state = BOID_STATE_IDLE_WORKER; break; case BOID_STATE_RETURNING_HOME: const homeBaseApprox = wizards[this.ownerId].position.clone(); forces.primary = this.seek(homeBaseApprox).multiplyScalar(BOID_PARAMETERS.HOME_SEEK_WEIGHT); if (Vector2D.distanceSq(this.position, homeBaseApprox) < (TERRAIN_BLOCK_SIZE * 12)**2) { this.state = BOID_STATE_REPAIRING; this.homeRepairTargetCell = null; } break; case BOID_STATE_REPAIRING: if (!this.homeRepairTargetCell || terrain[this.homeRepairTargetCell.r][this.homeRepairTargetCell.c] !== 0) { this.findRepairSpot(); } if (this.homeRepairTargetCell) { const targetPos = new Vector2D((this.homeRepairTargetCell.c + 0.5) * TERRAIN_BLOCK_SIZE, (this.homeRepairTargetCell.r + 0.5) * TERRAIN_BLOCK_SIZE); forces.primary = this.seek(targetPos).multiplyScalar(BOID_PARAMETERS.HOME_SEEK_WEIGHT); if (Vector2D.distanceSq(this.position, targetPos) < (TERRAIN_BLOCK_SIZE * 2.2)**2 && Math.random() < BOID_PARAMETERS.REPAIR_DROP_CHANCE) { this.dropBlockForRepair(); } } else this.state = BOID_STATE_IDLE_WORKER; break; } this.applyForce(forces.sep); this.applyForce(forces.ali); this.applyForce(forces.coh); if (forces.primary) this.applyForce(forces.primary); }
+        convertToWorker() { if (this.state !== BOID_STATE_ATTACKING) return; const currentWorkers = allBoids.filter(b => b.ownerId === this.ownerId && b.state !== BOID_STATE_ATTACKING && b.active).length; if (currentWorkers >= BOID_PARAMETERS.MAX_WORKER_BOIDS_PER_PLAYER) { this.active = false; particles.push(new FizzleParticle(this.position.x, this.position.y, this.baseColor, 0.7)); return; } this.state = BOID_STATE_IDLE_WORKER; this.lifespan = BOID_PARAMETERS.WORKER_LIFESPAN_BASE + Math.random() * BOID_PARAMETERS.WORKER_LIFESPAN_VARIATION; this.maxSpeed *= 0.75; }
+        findWork() { if (this.isCarryingBlock) { this.state = BOID_STATE_RETURNING_HOME; return; } this.findDebrisToPickup(); }
+        findDebrisToPickup() { let closestDebrisDistSq = BOID_PARAMETERS.DEBRIS_SCAN_RADIUS_SQ;  let foundTargetPos = null;  let minedType = 0; let minedCell = null; const scanRadiusGrid = Math.ceil(Math.sqrt(BOID_PARAMETERS.DEBRIS_SCAN_RADIUS_SQ) / TERRAIN_BLOCK_SIZE); const boidGridX = Math.floor(this.position.x / TERRAIN_BLOCK_SIZE);  const boidGridY = Math.floor(this.position.y / TERRAIN_BLOCK_SIZE); for (let rOffset = -scanRadiusGrid; rOffset <= scanRadiusGrid; rOffset++) {  for (let cOffset = -scanRadiusGrid; cOffset <= scanRadiusGrid; cOffset++) { const r = boidGridY + rOffset;  const c = boidGridX + cOffset; if (r >= 0 && r < GRID_HEIGHT && c >= 0 && c < GRID_WIDTH && (terrain[r][c] === this.enemyMountainType || terrain[r][c] === 3)) { const blockPos = new Vector2D((c + 0.5) * TERRAIN_BLOCK_SIZE, (r + 0.5) * TERRAIN_BLOCK_SIZE);  const distSq = Vector2D.distanceSq(this.position, blockPos); if (distSq < closestDebrisDistSq) {  closestDebrisDistSq = distSq;  foundTargetPos = blockPos;  minedType = terrain[r][c];  minedCell = {r, c}; }  }  } } if (foundTargetPos) {  this.currentDebrisTarget = foundTargetPos;  this.potentialMineType = minedType;  this.potentialMineCell = minedCell;  this.state = BOID_STATE_SEEKING_DEBRIS;  } }
+        pickupDebris() {  if (this.potentialMineType && this.potentialMineCell) { const {r, c} = this.potentialMineCell; if (r >=0 && r < GRID_HEIGHT && c >= 0 && c < GRID_WIDTH && terrain[r][c] === this.potentialMineType) { this.isCarryingBlock = true;  this.carriedBlockType = this.homeMountainType;  this.carriedBlockColor = getTerrainColor(this.homeMountainType, r, c);  terrain[r][c] = 0;  for(let i=0; i < 2; i++) particles.push(new DebrisParticle((c+0.5)*TERRAIN_BLOCK_SIZE, (r+0.5)*TERRAIN_BLOCK_SIZE, getTerrainColor(this.potentialMineType, r,c) , 0.3)); playSound('pickupDebris'); this.state = BOID_STATE_RETURNING_HOME;  } else {  this.state = BOID_STATE_IDLE_WORKER; } } else {  this.state = BOID_STATE_IDLE_WORKER;  } this.currentDebrisTarget = null;  this.potentialMineType = 0; this.potentialMineCell = null; }
+        findRepairSpot() { const scanRadiusGrid = 4; const boidGridX = Math.floor(this.position.x / TERRAIN_BLOCK_SIZE); const boidGridY = Math.floor(this.position.y / TERRAIN_BLOCK_SIZE); let bestSpot = null; let bestSpotDistSq = Infinity; for (let rOffset = -scanRadiusGrid; rOffset <= scanRadiusGrid; rOffset++) { for (let cOffset = -scanRadiusGrid; cOffset <= scanRadiusGrid; cOffset++) { const r = boidGridY + rOffset; const c = boidGridX + cOffset; if (r >= 0 && r < GRID_HEIGHT && c >= 0 && c < GRID_WIDTH && terrain[r][c] === 0) { let hasSupport = (r + 1 < GRID_HEIGHT && terrain[r+1][c] !== 0) || r === GRID_HEIGHT -1 ; if (!hasSupport) continue; let adjacentToHomeBlock = false; for(let dy = -1; dy <= 1; dy++) { for(let dx = -1; dx <= 1; dx++) { if (dx === 0 && dy === 0) continue; const nr = r + dy; const nc = c + dx; if (nr >= 0 && nr < GRID_HEIGHT && nc >= 0 && nc < GRID_WIDTH && terrain[nr][nc] === this.homeMountainType) { adjacentToHomeBlock = true; break; } } if(adjacentToHomeBlock) break; } if(adjacentToHomeBlock){ const spotPos = new Vector2D((c + 0.5) * TERRAIN_BLOCK_SIZE, (r + 0.5) * TERRAIN_BLOCK_SIZE); const distSq = Vector2D.distanceSq(this.position, spotPos); if (distSq < bestSpotDistSq) { bestSpotDistSq = distSq; bestSpot = { r, c }; } } } } } this.homeRepairTargetCell = bestSpot; }
+        dropBlockForRepair() { if (this.homeRepairTargetCell && this.isCarryingBlock && terrain[this.homeRepairTargetCell.r][this.homeRepairTargetCell.c] === 0) { const {r, c} = this.homeRepairTargetCell;  const blockWorldX = (c + 0.5) * TERRAIN_BLOCK_SIZE; const blockWorldY = (r + 0.5) * TERRAIN_BLOCK_SIZE; terrain[r][c] = this.carriedBlockType;  if (!terrainColors[r] || terrainColors[r][c] === null) terrainColors[r][c] = Math.random();  this.isCarryingBlock = false; this.carriedBlockType = 0; this.carriedBlockColor = null;  this.state = BOID_STATE_IDLE_WORKER; this.homeRepairTargetCell = null; playSound('placeBlock'); particles.push(new FizzleParticle(blockWorldX, blockWorldY, PALETTE.GOLD_ACCENT, 0.9, 20)); particles.push(new FizzleParticle(blockWorldX, blockWorldY, getTerrainColor(terrain[r][c], r, c), 0.7, 30)); } else {  this.homeRepairTargetCell = null;  this.state = this.isCarryingBlock ? BOID_STATE_REPAIRING : BOID_STATE_IDLE_WORKER;  } }
+        update() { if (!this.active) return; this.lifespan--; if (this.lifespan <= 0) { this.active = false; particles.push(new FizzleParticle(this.position.x, this.position.y, this.baseColor, 0.7)); if(this.isCarryingBlock){ const gx = Math.floor(this.position.x / TERRAIN_BLOCK_SIZE), gy = Math.floor(this.position.y / TERRAIN_BLOCK_SIZE); if(gy>=0 && gy<GRID_HEIGHT && gx>=0 && gx<GRID_WIDTH && terrain[gy][gx]===0 && this.carriedBlockType !== 0){ terrain[gy][gx] = this.carriedBlockType; if(!terrainColors[gy] || terrainColors[gy][gx] === null) terrainColors[gy][gx] = Math.random(); } } return; } this.updateBehaviors(); this.velocity.add(this.acceleration); this.velocity.limit(this.maxSpeed); this.position.add(this.velocity); this.acceleration.multiplyScalar(0); this.trailTimer++; if(this.trailTimer >= this.trailInterval) { particles.push(new TrailParticle(this.position.x, this.position.y, this.effectColor)); this.trailTimer = 0; } if (this.state === BOID_STATE_ATTACKING) this.checkAttackCollisions(); else this.checkWorkerBounds(); }
+        checkWorkerBounds() { let desired = null; if (this.position.x < this.radius) desired = new Vector2D(this.maxSpeed, this.velocity.y); else if (this.position.x > NATIVE_WIDTH - this.radius) desired = new Vector2D(-this.maxSpeed, this.velocity.y); if (this.position.y < this.radius) desired = new Vector2D(this.velocity.x, this.maxSpeed); else if (this.position.y > NATIVE_HEIGHT - this.radius) desired = new Vector2D(this.velocity.x, -this.maxSpeed); if (desired) { let steer = desired.subtract(this.velocity).limit(this.maxForce * 1.5); this.applyForce(steer); } }
+        checkAttackCollisions() { if (isSolidTerrainAtWorld(this.position.x, this.position.y, false)) {  destroyTerrain(this.position.x, this.position.y, TERRAIN_BLOCK_SIZE * 1.1);  this.active = false; particles.push(new FizzleParticle(this.position.x, this.position.y, this.baseColor, 1.2)); return;  } const enemyWizard = wizards[1 - this.ownerId]; if (enemyWizard && enemyWizard.health > 0) { if (Vector2D.distanceSq(this.position, enemyWizard.position) < (enemyWizard.width * 0.5)**2) {  enemyWizard.takeDamage(1); this.active = false; particles.push(new FizzleParticle(this.position.x, this.position.y, this.baseColor, 1.8)); triggerScreenShake(1, 8); return; } } for (const enemyBoid of allBoids) { if (enemyBoid.ownerId !== this.ownerId && enemyBoid.active && enemyBoid.state === BOID_STATE_ATTACKING) { if (Vector2D.distanceSq(this.position, enemyBoid.position) < (this.radius + enemyBoid.radius)**2 * 2.5) { this.active = false; enemyBoid.active = false; playSound('boidFizzle'); particles.push(new FizzleParticle(this.position.x, this.position.y, this.baseColor, 1)); particles.push(new FizzleParticle(enemyBoid.position.x, enemyBoid.position.y, enemyBoid.baseColor, 1)); return; } } } if (this.position.x < -this.radius*5 || this.position.x > NATIVE_WIDTH + this.radius*5 ||  this.position.y < -this.radius*5 || this.position.y > NATIVE_HEIGHT + this.radius*5) this.active = false; } 
+        draw() { 
+            if (!this.active) return; 
+            const currentMaxLifespan = (this.state === BOID_STATE_ATTACKING || this.state === undefined) ? BOID_PARAMETERS.INITIAL_LIFESPAN_BASE : BOID_PARAMETERS.WORKER_LIFESPAN_BASE;
+            const alpha = Math.min(1, (this.lifespan / currentMaxLifespan) * 0.8 + 0.2); 
+            ctx.globalAlpha = alpha; 
+            const angle = this.velocity.magnitudeSq() > 0.01 ? this.velocity.angle() : (this.ownerId === 0 ? 0 : Math.PI);
+            const tailLength = this.radius * 1.5; 
+            
+            const path = new Path2D();
+            path.arc(this.position.x, this.position.y, this.radius, angle + Math.PI/2, angle - Math.PI/2); 
+            path.lineTo(this.position.x - Math.cos(angle) * tailLength, this.position.y - Math.sin(angle) * tailLength); 
+            path.closePath(); 
+            
+            ctx.fillStyle = this.baseColor; 
+            ctx.fill(path);
+            ctx.strokeStyle = PALETTE.BLACK;
+            ctx.lineWidth = 0.75; // Slightly thicker outline for boids
+            ctx.stroke(path);
+            
+            if(this.isCarryingBlock && this.carriedBlockColor) {  ctx.fillStyle = this.carriedBlockColor;  ctx.globalAlpha = Math.min(alpha, 0.95);  const blockSize = TERRAIN_BLOCK_SIZE * 0.8;  const blockOffsetX = Math.cos(angle + Math.PI/2) * (this.radius + blockSize*0.1);  const blockOffsetY = Math.sin(angle + Math.PI/2) * (this.radius + blockSize*0.1); ctx.fillRect(this.position.x + blockOffsetX - blockSize/2, this.position.y + blockOffsetY - blockSize/2, blockSize, blockSize); ctx.strokeStyle = PALETTE.BLACK;  ctx.lineWidth = 0.5; ctx.strokeRect(this.position.x + blockOffsetX - blockSize/2, this.position.y + blockOffsetY - blockSize/2, blockSize, blockSize); } 
+            if(Math.random() < 0.15 && this.state === BOID_STATE_ATTACKING) { 
+                ctx.fillStyle = this.effectColor; 
+                ctx.beginPath(); 
+                const sparkleX = this.position.x + (Math.random()-0.5)*this.radius*0.5;
+                const sparkleY = this.position.y + (Math.random()-0.5)*this.radius*0.5;
+                const sparkleRadius = this.radius*0.4;
+                ctx.arc(sparkleX, sparkleY, sparkleRadius, 0, Math.PI * 2); 
+                // Simple 4-point star for sparkle
+                // const sr = sparkleRadius * 0.6;
+                // ctx.moveTo(sparkleX, sparkleY - sr); ctx.lineTo(sparkleX, sparkleY + sr);
+                // ctx.moveTo(sparkleX - sr, sparkleY); ctx.lineTo(sparkleX + sr, sparkleY);
+                // ctx.strokeStyle = this.effectColor; ctx.lineWidth=0.5; ctx.stroke();
+                ctx.fill(); 
+            }  
+            ctx.globalAlpha = 1; 
+        } 
+    }
+
+    // --- CHUNK 8: Game Logic & Update Functions ---
+    function castSpell(wizard, targetX, targetY) { wizard.setState('casting'); setTimeout(() => {if(wizard.state === 'casting') wizard.setState('idle');}, wizard.animSpeed * 4); const firePos = wizard.getFirePos(); const targetDirection = new Vector2D(targetX - firePos.x, targetY - firePos.y); const targetDist = targetDirection.magnitude(); targetDirection.normalize(); let aimFactor = 0; if (targetDist <= BOID_PARAMETERS.MIN_AIM_DISTANCE) { aimFactor = 0; } else if (targetDist >= BOID_PARAMETERS.MAX_AIM_DISTANCE) { aimFactor = 1; } else { aimFactor = (targetDist - BOID_PARAMETERS.MIN_AIM_DISTANCE) / (BOID_PARAMETERS.MAX_AIM_DISTANCE - BOID_PARAMETERS.MIN_AIM_DISTANCE); } currentAimDistanceFactor = aimFactor; const initialSpreadAngle = BOID_PARAMETERS.BASE_SPREAD_ANGLE * (1 - aimFactor * 0.8); const initialSpeedBoost = BOID_PARAMETERS.BASE_INITIAL_SPEED_BOOST * aimFactor * 1.5; const maxForceBonus = (BOID_PARAMETERS.MAX_FORCE_BASE * 0.2) * (1 - aimFactor); const castContext = { ownerId: wizard.id, position: firePos, targetPosition: new Vector2D(targetX, targetY), baseColor: wizard.boidBaseColor, effectColor: wizard.boidEffectColor, initialSpreadAngle: initialSpreadAngle, targetDirectionAngle: targetDirection.angle(), initialSpeedBoost: initialSpeedBoost, maxForceBonus: maxForceBonus }; for (let i = 0; i < BOID_CLOUD_SIZE; i++) { allBoids.push(new Boid(castContext)); } for (let i=0; i < 10; i++) { particles.push(new FizzleParticle(firePos.x, firePos.y, wizard.boidEffectColor, 0.8 + Math.random()*0.5, 15 + Math.random()*10)); } playSound('cast', {isHeavy: aimFactor > 0.6}); shotFiredThisTurn = true; updateUIMessage(`${wizard.isAI ? "Purple" : "Blue"} Wizard unleashes energies!`); triggerScreenShake(1 + Math.floor(aimFactor*2), 10 + Math.floor(aimFactor*5) ); if (turnTransitionTimer) clearTimeout(turnTransitionTimer); gameState = 'playing_phase'; const estimatedAttackPhaseEndMs = (BOID_PARAMETERS.INITIAL_LIFESPAN_BASE + BOID_PARAMETERS.INITIAL_LIFESPAN_VARIATION / 2) * (1000/60); turnTransitionTimer = setTimeout(() => { if ((gameState === 'playing_phase' || gameState === 'playing') && currentPlayerIndex === wizard.id && shotFiredThisTurn) { handleTurnTransition(); } }, BOID_PARAMETERS.TURN_TRANSITION_DELAY_BASE + estimatedAttackPhaseEndMs); }
+    function aiTakeTurn() { if (gameState !== 'playing' || currentPlayerIndex !== 1 || !wizards[1].isAI) return; gameState = 'ai_thinking'; updateUIMessage("AI Turn..."); const aiWizard = wizards[1]; const humanWizard = wizards[0]; aiWizard.setState('aiming'); aiThinkTimer = setTimeout(() => { if (gameState !== 'ai_thinking') return;  let targetX = humanWizard.position.x + (Math.random() - 0.5) * (NATIVE_WIDTH * 0.15); let targetY = humanWizard.position.y - humanWizard.height * 0.3 + (Math.random() - 0.5) * (NATIVE_HEIGHT * 0.1); if (Math.random() < 0.4) { targetY = humanWizard.position.y + humanWizard.height * (0.2 + Math.random()*0.5); targetX += (Math.random() - 0.5) * TERRAIN_BLOCK_SIZE * 5; } const staffHandX = aiWizard.position.x + (aiWizard.id === 0 ? 1 : -1) * (aiWizard.width*0.05); const staffHandY = (aiWizard.position.y - aiWizard.height) + aiWizard.height * 0.4 + aiWizard.bobOffset; aiWizard.aimAngle = Math.atan2(targetY - staffHandY, targetX - staffHandX); setTimeout(() => { if(gameState !== 'ai_thinking') return; castSpell(aiWizard, targetX, targetY); gameState = 'playing_phase'; }, 300 + Math.random()*200); }, 1200 + Math.random() * 800);  }
+    function updateUIMessage(message) { if (gameState === 'gameOver' && (uiMessages.textContent.includes("Victorious!") || uiMessages.textContent.includes("Plummeted!"))) {} else { uiMessages.textContent = message; } }
+    function handleTurnTransition() { if(turnTransitionTimer) clearTimeout(turnTransitionTimer); turnTransitionTimer = null; currentPlayerIndex = 1 - currentPlayerIndex; shotFiredThisTurn = false; gameState = 'playing'; isAimingWithInput = false; if (wizards[currentPlayerIndex].isAI) { updateUIMessage("AI Turn..."); aiTakeTurn(); } else { updateUIMessage("Blue Wizard's Turn! Aim."); wizards[currentPlayerIndex].setState('aiming'); humanAimTarget.x = wizards[1-currentPlayerIndex].position.x; humanAimTarget.y = wizards[1-currentPlayerIndex].position.y - wizards[1-currentPlayerIndex].height/2; } }
+    function countMountainBlocks(mountainType) { let count = 0; for (let r = 0; r < GRID_HEIGHT; r++) { for (let c = 0; c < GRID_WIDTH; c++) { if (terrain[r][c] === mountainType) { count++; } } } return count; }
+    function updateGameStats() { gameStats.player1 = { attackers: 0, workers: 0, mountainBlocks: countMountainBlocks(1), health: wizards[0] ? wizards[0].health : 0 }; gameStats.player2 = { attackers: 0, workers: 0, mountainBlocks: countMountainBlocks(2), health: wizards[1] ? wizards[1].health : 0 }; allBoids.forEach(boid => { const targetPlayerStats = boid.ownerId === 0 ? gameStats.player1 : gameStats.player2; if (boid.state === BOID_STATE_ATTACKING) { targetPlayerStats.attackers++; } else { targetPlayerStats.workers++; }}); }
+    function update() { 
+        if (gameState === 'splash_html' || gameState === 'game_loading') return; 
+        if (gameState === 'splash_animating') { splashAnimationTimer--; for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); if (particles[i].lifespan <= 0 ) particles.splice(i,1); } if (splashAnimationTimer <=0 && particles.length === 0) { gameState = 'game_loading'; setTimeout(() => { resetGameInternal(); gameState = 'playing'; if (wizards[currentPlayerIndex].isAI) { updateUIMessage("AI Turn..."); aiTakeTurn(); } else { updateUIMessage("Blue Wizard's Turn! Aim."); wizards[currentPlayerIndex].setState('aiming');} }, 50); } return; } 
+        if (gameState === 'gameOver' || gameState === 'turn_transition') return;  
+        
+        wizards.forEach(wiz => wiz.checkFalling()); if (gameState === 'gameOver') return; 
+        for (let i = allBoids.length - 1; i >= 0; i--) { allBoids[i].update(); if (!allBoids[i].active) allBoids.splice(i, 1); } 
+        for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; if (p instanceof FallingBlockParticle) { const settlement = p.update(); if (settlement) { terrain[settlement.r][settlement.c] = settlement.type; terrainColors[settlement.r][settlement.c] = settlement.colorSeed; playSound('blockThud'); particles.splice(i, 1); } else if (p.lifespan <= 0) { particles.splice(i, 1); } } else { p.update(); if (p.lifespan <= 0 || p.size < (p instanceof TrailParticle ? 0.2 : 0.5) ) { particles.splice(i, 1); } } } 
+        
+        if (gameState === 'playing' || gameState === 'playing_phase') {
+            erosionCheckTimer++;
+            if (erosionCheckTimer >= EROSION_CHECK_INTERVAL_FRAMES) {
+                erosionCheckTimer = 0;
+                const blocksToScanPerInterval = Math.ceil(GRID_WIDTH * GRID_HEIGHT / 4); 
+                for(let i=0; i < blocksToScanPerInterval; i++) {
+                    const c = erosionGridScanOffset % GRID_WIDTH;
+                    const r = Math.floor(erosionGridScanOffset / GRID_WIDTH) % GRID_HEIGHT;
+                    erosionGridScanOffset = (erosionGridScanOffset + 1) % (GRID_WIDTH * GRID_HEIGHT) ; // Cycle through grid
+
+                    if (terrain[r][c] !== 0 && r < GRID_HEIGHT - 1 && terrain[r+1][c] === 0) { 
+                        let sideSupports = 0;
+                        if (c > 0 && terrain[r][c-1] !== 0) sideSupports++;
+                        if (c < GRID_WIDTH - 1 && terrain[r][c+1] !== 0) sideSupports++;
+                        if (c > 0 && r < GRID_HEIGHT -1 && terrain[r+1][c-1] !== 0) sideSupports++; // Check diag-below-left
+                        if (c < GRID_WIDTH -1 && r < GRID_HEIGHT -1 && terrain[r+1][c+1] !== 0) sideSupports++; // Check diag-below-right
+
+                        if (sideSupports < EROSION_SIDE_SUPPORT_NEEDED && Math.random() < EROSION_DETACH_CHANCE) {
+                            const blockType = terrain[r][c];
+                            const blockColor = getTerrainColor(blockType, r, c);
+                            const colorSeed = terrainColors[r] ? terrainColors[r][c] : Math.random();
+                            terrain[r][c] = 0;
+                            particles.push(new FallingBlockParticle((c + 0.5) * TERRAIN_BLOCK_SIZE, (r + 0.5) * TERRAIN_BLOCK_SIZE, blockColor, blockType, colorSeed));
+                            playSound('crumble');
+                        }
+                    }
+                }
+            }
+        }
+
+        if (currentPlayerIndex === 0 && wizards[0] && (wizards[0].state === 'aiming' || isAimingWithInput) && !shotFiredThisTurn) { aimParticleTimer--; if (aimParticleTimer <= 0) { const firePos = wizards[0].getFirePos(); particles.push(new FizzleParticle(firePos.x, firePos.y, wizards[0].boidEffectColor, 0.3 + Math.random()*0.3, 10 + Math.random()*5)); aimParticleTimer = BOID_PARAMETERS.AIM_PARTICLE_SPAWN_RATE; } } 
+        if (screenShakeDuration > 0) { currentShakeX = (Math.random() - 0.5) * screenShakeMagnitude * 2; currentShakeY = (Math.random() - 0.5) * screenShakeMagnitude * 2; screenShakeDuration--; if (screenShakeDuration === 0) { screenShakeMagnitude = 0; currentShakeX = 0; currentShakeY = 0; } } else { currentShakeX = 0; currentShakeY = 0; } 
+        updateGameStats();  
+    }
+    function triggerScreenShake(magnitude, duration) { screenShakeMagnitude = Math.max(screenShakeMagnitude, magnitude); screenShakeDuration = Math.max(screenShakeDuration, duration); }
+    
+    // --- CHUNK 9: UI Rendering & Main Render Loop ---
+    function drawOutlinedText(text, x, y, fontSize, fillColor, outlineColor, outlineWidth = 0.5, textAlign = "left") { ctx.font = `bold ${fontSize}px 'Courier New', Courier, monospace`; ctx.textAlign = textAlign; ctx.strokeStyle = outlineColor; ctx.lineWidth = outlineWidth * 2; ctx.strokeText(text, x, y); ctx.fillStyle = fillColor; ctx.fillText(text, x, y); ctx.textAlign = "left"; }
+    function drawStatusPanel(ctx, stats) {
+        const barHeight = 16; const expandedHeight = 55; 
+        const panelWidth = NATIVE_WIDTH * 0.95; 
+        const panelX = (NATIVE_WIDTH - panelWidth) / 2; 
+        const panelY = 2 + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0px'); // Use CSS var if available for top inset
+        const padding = 4; const lineHeight = 11; const statBarHeight = 6; const barMaxWidth = 40; const healthBarWidth = 35; const healthBarHeight = 7; const columnSpacing = 8; const teamColumnWidth = (panelWidth - padding * 2) / 2; const fontSize = lineHeight - 1.5; 
+        statusPanelRect = {x: panelX, y: panelY, width: panelWidth, height: isStatusPanelExpanded ? expandedHeight : barHeight}; 
+        ctx.globalAlpha = 0.65; ctx.fillStyle = PALETTE.DEEP_SPACE_BLUE; ctx.fillRect(statusPanelRect.x, statusPanelRect.y, statusPanelRect.width, statusPanelRect.height); 
+        ctx.globalAlpha = 1; ctx.strokeStyle = PALETTE.MIDNIGHT_BLUE; ctx.lineWidth = 1; ctx.strokeRect(statusPanelRect.x, statusPanelRect.y, statusPanelRect.width, statusPanelRect.height); 
+        let minimizedTextY = panelY + barHeight / 2 + fontSize/2 -1; let currentDrawX = panelX + padding; 
+        ctx.fillStyle = PALETTE.STONE_GRAY_DARK; ctx.fillRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, healthBarWidth, healthBarHeight); 
+        const p1HealthW = (stats.player1.health / WIZARD_MAX_HEALTH) * healthBarWidth; 
+        ctx.fillStyle = stats.player1.health > WIZARD_MAX_HEALTH * 0.6 ? PALETTE.MOUNTAIN_GREEN_LIGHT : stats.player1.health > WIZARD_MAX_HEALTH * 0.3 ? PALETTE.LIGHT_YELLOW : PALETTE.BRIGHT_RED_DAMAGE; 
+        if (p1HealthW > 0) ctx.fillRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, p1HealthW, healthBarHeight); 
+        ctx.strokeStyle = PALETTE.WIZARD_1_BODY; ctx.lineWidth = 0.5; ctx.strokeRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, healthBarWidth, healthBarHeight); 
+        currentDrawX += healthBarWidth + padding; 
+        const p1MtnText = `Mtn: ${stats.player1.mountainBlocks.toString().padStart(3, ' ')}`; 
+        drawOutlinedText(p1MtnText, currentDrawX, minimizedTextY, fontSize, PALETTE.BOID_1_CORE, PALETTE.DEEP_SPACE_BLUE); 
+        currentDrawX += ctx.measureText(p1MtnText).width + padding * 2; 
+        const expandHint = isStatusPanelExpanded ? "[-]" : "[+]"; 
+        drawOutlinedText(expandHint, panelX + panelWidth/2 , minimizedTextY, fontSize + 1, PALETTE.CREAM_WHITE, PALETTE.DEEP_SPACE_BLUE, 0.5, "center"); 
+        const p2MtnText = `Mtn: ${stats.player2.mountainBlocks.toString().padStart(3, ' ')}`; 
+        const p2MtnTextMetrics = ctx.measureText(p2MtnText); currentDrawX = panelX + panelWidth - padding - healthBarWidth - padding - p2MtnTextMetrics.width; 
+        drawOutlinedText(p2MtnText, currentDrawX, minimizedTextY, fontSize, PALETTE.BOID_2_CORE, PALETTE.DEEP_SPACE_BLUE, 0.5, "right"); // Align right
+        currentDrawX = panelX + panelWidth - padding - healthBarWidth; 
+        ctx.fillStyle = PALETTE.STONE_GRAY_DARK; ctx.fillRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, healthBarWidth, healthBarHeight); 
+        const p2HealthW = (stats.player2.health / WIZARD_MAX_HEALTH) * healthBarWidth; 
+        ctx.fillStyle = stats.player2.health > WIZARD_MAX_HEALTH * 0.6 ? PALETTE.MOUNTAIN_GREEN_LIGHT : stats.player2.health > WIZARD_MAX_HEALTH * 0.3 ? PALETTE.LIGHT_YELLOW : PALETTE.BRIGHT_RED_DAMAGE; 
+        if (p2HealthW > 0) ctx.fillRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, p2HealthW, healthBarHeight); 
+        ctx.strokeStyle = PALETTE.WIZARD_2_BODY; ctx.lineWidth = 0.5; ctx.strokeRect(currentDrawX, minimizedTextY - healthBarHeight/2 -1, healthBarWidth, healthBarHeight); 
+        if (isStatusPanelExpanded) { let expandedContentY = panelY + padding + fontSize + barHeight + 3; currentDrawX = panelX + padding; drawOutlinedText("Blue Team", currentDrawX, expandedContentY, fontSize, PALETTE.BOID_1_CORE, PALETTE.DEEP_SPACE_BLUE); expandedContentY += lineHeight * 1.1; const p1AtkText = `Atk: ${stats.player1.attackers.toString().padStart(2, ' ')}`; drawOutlinedText(p1AtkText, currentDrawX, expandedContentY, fontSize, PALETTE.CREAM_WHITE, PALETTE.DEEP_SPACE_BLUE); const p1AttackBarWidth = Math.min(barMaxWidth, (stats.player1.attackers / BOID_CLOUD_SIZE) * barMaxWidth); ctx.fillStyle = PALETTE.BOID_1_SPARKLE; ctx.fillRect(currentDrawX + ctx.measureText(p1AtkText).width + columnSpacing, expandedContentY - statBarHeight + 1, p1AttackBarWidth, statBarHeight); ctx.strokeStyle = PALETTE.WIZARD_1_BODY; ctx.lineWidth = 1; ctx.strokeRect(currentDrawX + ctx.measureText(p1AtkText).width + columnSpacing, expandedContentY - statBarHeight + 1, barMaxWidth, statBarHeight); expandedContentY += lineHeight; const p1WrkText = `Wrk: ${stats.player1.workers.toString().padStart(2, ' ')}`; drawOutlinedText(p1WrkText, currentDrawX, expandedContentY, fontSize, PALETTE.CREAM_WHITE, PALETTE.DEEP_SPACE_BLUE); const p1WorkerBarWidth = Math.min(barMaxWidth, (stats.player1.workers / BOID_PARAMETERS.MAX_WORKER_BOIDS_PER_PLAYER) * barMaxWidth); ctx.fillStyle = PALETTE.BOID_1_CORE; ctx.fillRect(currentDrawX + ctx.measureText(p1WrkText).width + columnSpacing, expandedContentY - statBarHeight + 1, p1WorkerBarWidth, statBarHeight); ctx.strokeStyle = PALETTE.WIZARD_1_BODY; ctx.lineWidth = 1; ctx.strokeRect(currentDrawX + ctx.measureText(p1WrkText).width + columnSpacing, expandedContentY - statBarHeight + 1, barMaxWidth, statBarHeight); currentDrawX = panelX + padding + teamColumnWidth; expandedContentY = panelY + padding + fontSize + barHeight + 3;  drawOutlinedText("Purple Team", currentDrawX, expandedContentY, fontSize, PALETTE.BOID_2_CORE, PALETTE.DEEP_SPACE_BLUE); expandedContentY += lineHeight * 1.1; const p2AtkTextExpanded = `Atk: ${stats.player2.attackers.toString().padStart(2, ' ')}`; drawOutlinedText(p2AtkTextExpanded, currentDrawX, expandedContentY, fontSize, PALETTE.CREAM_WHITE, PALETTE.DEEP_SPACE_BLUE); const p2AttackBarWidth = Math.min(barMaxWidth, (stats.player2.attackers / BOID_CLOUD_SIZE) * barMaxWidth); ctx.fillStyle = PALETTE.BOID_2_SPARKLE; ctx.fillRect(currentDrawX + ctx.measureText(p2AtkTextExpanded).width + columnSpacing, expandedContentY - statBarHeight + 1, p2AttackBarWidth, statBarHeight); ctx.strokeStyle = PALETTE.WIZARD_2_BODY; ctx.lineWidth = 1; ctx.strokeRect(currentDrawX + ctx.measureText(p2AtkTextExpanded).width + columnSpacing, expandedContentY - statBarHeight + 1, barMaxWidth, statBarHeight); expandedContentY += lineHeight; const p2WrkTextExpanded = `Wrk: ${stats.player2.workers.toString().padStart(2, ' ')}`; drawOutlinedText(p2WrkTextExpanded, currentDrawX, expandedContentY, fontSize, PALETTE.CREAM_WHITE, PALETTE.DEEP_SPACE_BLUE); const p2WorkerBarWidth = Math.min(barMaxWidth, (stats.player2.workers / BOID_PARAMETERS.MAX_WORKER_BOIDS_PER_PLAYER) * barMaxWidth); ctx.fillStyle = PALETTE.BOID_2_CORE; ctx.fillRect(currentDrawX + ctx.measureText(p2WrkTextExpanded).width + columnSpacing, expandedContentY - statBarHeight + 1, p2WorkerBarWidth, statBarHeight); ctx.strokeStyle = PALETTE.WIZARD_2_BODY; ctx.lineWidth = 1; ctx.strokeRect(currentDrawX + ctx.measureText(p2WrkTextExpanded).width + columnSpacing, expandedContentY - statBarHeight + 1, barMaxWidth, statBarHeight); } 
+        ctx.lineWidth = 1;  
+    }
+    function render() { 
+        ctx.clearRect(0,0, NATIVE_WIDTH, NATIVE_HEIGHT);  
+        if (gameState === 'splash_animating') { ctx.fillStyle = PALETTE.DEEP_SPACE_BLUE;  ctx.fillRect(0, 0, NATIVE_WIDTH, NATIVE_HEIGHT); particles.forEach(p => p.draw()); return;  } 
+        if (gameState === 'splash_html' || gameState === 'game_loading') { return; } 
+        ctx.save();  ctx.translate(currentShakeX, currentShakeY);  
+        drawBackground(currentShakeX, currentShakeY);  drawTerrain(); 
+        particles.forEach(p => p.draw());  allBoids.forEach(boid => boid.draw());  wizards.forEach(wizard => wizard.draw()); 
+        if (gameState === 'playing' && currentPlayerIndex === 0 && (isAimingWithInput || (wizards[0] && wizards[0].state === 'aiming')) && !shotFiredThisTurn ) { 
+            const playerWizard = wizards[0];  const firePos = playerWizard.getFirePos(); 
+            aimingLinePulseTime += 0.1; const pulseAlpha = 0.5 + Math.sin(aimingLinePulseTime) * 0.2;  
+            const aimLineColor = playerWizard.boidEffectColor; 
+            ctx.globalAlpha = pulseAlpha * 0.2; // Aura alpha
+            ctx.strokeStyle = aimLineColor; 
+            ctx.lineWidth = 4 + Math.sin(aimingLinePulseTime * 1.5) * 1; // Aura width
+            ctx.beginPath(); ctx.moveTo(firePos.x, firePos.y); ctx.lineTo(humanAimTarget.x, humanAimTarget.y); ctx.stroke(); 
+            ctx.globalAlpha = pulseAlpha; // Main line alpha
+            ctx.lineWidth = 1.5 + Math.sin(aimingLinePulseTime * 1.5) * 0.5;  // Main line width
+            ctx.beginPath(); ctx.moveTo(firePos.x, firePos.y); ctx.lineTo(humanAimTarget.x, humanAimTarget.y); ctx.stroke(); 
+            ctx.globalAlpha = 0.8; ctx.fillStyle = aimLineColor; 
+            ctx.beginPath(); ctx.arc(humanAimTarget.x, humanAimTarget.y, 3 + Math.sin(aimingLinePulseTime) * 1, 0, Math.PI * 2); ctx.fill(); 
+            ctx.globalAlpha = 1;  
+        } else if (currentPlayerIndex === 0 && wizards[0] && wizards[0].state === 'aiming' && shotFiredThisTurn) {  
+            if(wizards[0].state !== 'casting') wizards[0].setState('idle');  
+        } 
+        ctx.restore();  
+        drawStatusPanel(ctx, gameStats); 
+    }
+
+    // --- CHUNK 10: Event Handlers, Reset, and Init ---
+    function gameLoop() { update(); render(); requestAnimationFrame(gameLoop); }
+    function getInteractionPosOnCanvas(event) { const rect = canvas.getBoundingClientRect(); const scaleX = NATIVE_WIDTH / rect.width; const scaleY = NATIVE_HEIGHT / rect.height; let clientX, clientY; if (event.touches && event.touches.length > 0) { clientX = event.touches[0].clientX; clientY = event.touches[0].clientY; } else { clientX = event.clientX; clientY = event.clientY; } return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; }
+    function handleSplashStart() { if (gameState !== 'splash_html') return; initAudio(); playPrimeSound(); splashOverlay.style.display = 'none'; gameContainer.style.display = 'flex'; startSplashAnimation(); gameState = 'splash_animating'; }
+    function startSplashAnimation() { particles = [];  splashAnimationTimer = SPLASH_ANIMATION_DURATION; const titleCenterXOnCanvas = NATIVE_WIDTH / 2;  const titleCenterYOnCanvas = NATIVE_HEIGHT / 2; const numSplashParticles = 150; for(let i=0; i < numSplashParticles; i++) { const angle = Math.random() * Math.PI * 2; const speed = 2 + Math.random() * 4; const p = new DebrisParticle( titleCenterXOnCanvas, titleCenterYOnCanvas, PALETTE.BRIGHT_RED_DAMAGE, 0.8 + Math.random() * 0.7 ); p.velocity = new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed); p.lifespan = SPLASH_ANIMATION_DURATION * (0.6 + Math.random() * 0.4);  p.gravity = 0.03;  particles.push(p); } }
+    function handleCanvasInteraction(event) { if (gameState === 'splash_html' || gameState === 'splash_animating' || gameState === 'game_loading') return; initAudio();  if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on canvas interaction:", e)); } if (event.type.startsWith('touch')) { event.preventDefault(); } const pos = getInteractionPosOnCanvas(event); if (event.type === 'mousedown' || event.type === 'touchstart') { if (pos.x >= statusPanelRect.x && pos.x <= statusPanelRect.x + statusPanelRect.width && pos.y >= statusPanelRect.y && pos.y <= statusPanelRect.y + statusPanelRect.height) { isStatusPanelExpanded = !isStatusPanelExpanded; playSound('boidFizzle', {volume: 0.05}); return;  } } if (currentPlayerIndex === 0 && !shotFiredThisTurn && (gameState === 'playing' || gameState === 'playing_phase')) { const playerWizard = wizards[0]; if (!playerWizard) return; const firePos = playerWizard.getFirePos(); const distToTarget = Vector2D.distance(firePos, pos); if (distToTarget <= BOID_PARAMETERS.MIN_AIM_DISTANCE) currentAimDistanceFactor = 0; else if (distToTarget >= BOID_PARAMETERS.MAX_AIM_DISTANCE) currentAimDistanceFactor = 1; else currentAimDistanceFactor = (distToTarget - BOID_PARAMETERS.MIN_AIM_DISTANCE) / (BOID_PARAMETERS.MAX_AIM_DISTANCE - BOID_PARAMETERS.MIN_AIM_DISTANCE); switch (event.type) { case 'mousedown': case 'touchstart': isAimingWithInput = true; humanAimTarget.x = pos.x; humanAimTarget.y = pos.y; if (playerWizard.state !== 'casting' && playerWizard.state !== 'hit') playerWizard.setState('aiming'); break; case 'mousemove': case 'touchmove': if (isAimingWithInput) { humanAimTarget.x = pos.x; humanAimTarget.y = pos.y; } else if (event.type === 'mousemove' && !event.buttons) { humanAimTarget.x = pos.x; humanAimTarget.y = pos.y; if (playerWizard.state !== 'casting' && playerWizard.state !== 'hit' && playerWizard.state !== 'idle') playerWizard.setState('aiming'); } break; case 'mouseup': case 'touchend': if (isAimingWithInput) { castSpell(playerWizard, humanAimTarget.x, humanAimTarget.y); isAimingWithInput = false; } break; } } if (event.type === 'click' && shotFiredThisTurn && (gameState === 'playing' || gameState === 'playing_phase')) { event.preventDefault(); } }
+    function resetGameInternal() { if (aiThinkTimer) clearTimeout(aiThinkTimer); if (turnTransitionTimer) { clearTimeout(turnTransitionTimer); turnTransitionTimer = null; } terrain = []; terrainColors = []; wizards = []; allBoids = []; particles = [];  currentPlayerIndex = 0;  shotFiredThisTurn = false; screenShakeDuration = 0; screenShakeMagnitude = 0; currentShakeX = 0; currentShakeY = 0; isAimingWithInput = false; isStatusPanelExpanded = false; erosionCheckTimer = 0; erosionGridScanOffset = 0; gameStats = { player1: { attackers: 0, workers: 0, mountainBlocks: 0, health: WIZARD_MAX_HEALTH }, player2: { attackers: 0, workers: 0, mountainBlocks: 0, health: WIZARD_MAX_HEALTH }}; initBackgroundElements(); initTerrain(); initWizards(); if (!wizards || wizards.length < 2) { console.error("CRITICAL: Not enough wizards initialized!"); if (!wizards) wizards = []; if (wizards.length < 1 || !wizards[0]) { wizards[0] = new Wizard(0, NATIVE_WIDTH * 0.15, NATIVE_HEIGHT * 0.6, PALETTE.WIZARD_1_BODY, PALETTE.WIZARD_1_ACCENT, PALETTE.BOID_1_CORE, PALETTE.BOID_1_SPARKLE, false);}if (wizards.length < 2 || !wizards[1]) { wizards[1] = new Wizard(1, NATIVE_WIDTH * 0.85, NATIVE_HEIGHT * 0.6, PALETTE.WIZARD_2_BODY, PALETTE.WIZARD_2_ACCENT, PALETTE.BOID_2_CORE, PALETTE.BOID_2_SPARKLE, true);}} const firstPlayer = wizards[0]; if (wizards[1] && wizards[1].position) { humanAimTarget.x = wizards[1].position.x; humanAimTarget.y = wizards[1].position.y - wizards[1].height/2; } else { humanAimTarget.x = NATIVE_WIDTH * 0.75; humanAimTarget.y = NATIVE_HEIGHT * 0.5; } restartButton.style.display = 'none';  if(firstPlayer && typeof firstPlayer.setState === 'function') { } else { console.error("No valid first player or setState method found in resetGameInternal."); } updateGameStats();  }
+    function fullGameReset() { initAudio(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on full reset:", e)); } gameState = 'game_loading';  resetGameInternal(); gameState = 'playing'; if (wizards[currentPlayerIndex].isAI) { updateUIMessage("AI Turn..."); aiTakeTurn(); } else { updateUIMessage("Blue Wizard's Turn! Aim."); wizards[currentPlayerIndex].setState('aiming');} }
+    
+    function setViewportHeightUnit() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        // Ensure status panel Y position is updated if safe-area-inset-top changes
+        // This is a bit hacky, direct DOM read is slow. Ideally status panel Y is also CSS driven by --vh or similar if needed.
+        // For now, the current drawStatusPanel will re-read the CSS var when game is running.
+    }
+
+    function init() { 
+        setViewportHeightUnit(); 
+        window.addEventListener('resize', setViewportHeightUnit);
+        window.addEventListener('orientationchange', setViewportHeightUnit);
+
+        canvas = document.getElementById('gameCanvas'); ctx = canvas.getContext('2d'); canvas.width = NATIVE_WIDTH; canvas.height = NATIVE_HEIGHT; uiMessages = document.getElementById('uiMessages');  restartButton = document.getElementById('restartButton'); gameContainer = document.getElementById('gameContainer'); splashOverlay = document.getElementById('splashOverlay'); splashTitleElement = document.getElementById('splashTitle'); splashOverlay.addEventListener('click', handleSplashStart); splashOverlay.addEventListener('touchstart', handleSplashStart, {passive: false}); canvas.addEventListener('mousedown', handleCanvasInteraction);  canvas.addEventListener('mousemove', handleCanvasInteraction); canvas.addEventListener('mouseup', handleCanvasInteraction); canvas.addEventListener('mouseleave', () => { if (gameState !== 'playing' && gameState !== 'playing_phase') return; if (isAimingWithInput) { isAimingWithInput = false; if (wizards[0] && wizards[0].state === 'aiming' && wizards[0].state !== 'casting') wizards[0].setState('idle'); } }); canvas.addEventListener('touchstart', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchmove', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchend', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchcancel', () => { if (gameState !== 'playing' && gameState !== 'playing_phase') return; if (isAimingWithInput) { isAimingWithInput = false; if (wizards[0] && wizards[0].state === 'aiming' && wizards[0].state !== 'casting') wizards[0].setState('idle'); } }); document.addEventListener('keydown', (event) => { if (gameState === 'splash_html') { handleSplashStart(); return; } initAudio(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on keydown:", e));} if (event.key.toLowerCase() === 'r' && (gameState === 'gameOver' || (event.ctrlKey && event.shiftKey))) { fullGameReset(); } }); restartButton.addEventListener('click', () => { initAudio(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on restart click:", e));} fullGameReset(); }); gameLoop(); 
+    }
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>
