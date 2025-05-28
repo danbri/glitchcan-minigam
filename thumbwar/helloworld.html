@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World - Thumbwar Hub</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        hello-world {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .game-arena {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border: 3px solid #fff;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+        
+        .emoji-sprite {
+            position: absolute;
+            font-size: 3em;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6));
+            user-select: none;
+        }
+        
+        .emoji-sprite:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9));
+        }
+        
+        .emoji-sprite:active {
+            transform: scale(0.9);
+        }
+        
+        .trail {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: trailFade 0.5s ease-out forwards;
+        }
+        
+        @keyframes trailFade {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            font-size: 1.2em;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <hello-world></hello-world>
+    
+    <script>
+        class HelloWorld extends HTMLElement {
+            constructor() {
+                super();
+                this.sprites = [
+                    { emoji: '👻', link: 'gridluck.html', x: 0, y: 0, vx: 0, vy: 0 },
+                    { emoji: '⚡', link: 'thumbwar.html', x: 0, y: 0, vx: 0, vy: 0 },
+                    { emoji: '🐥', link: 'battleboids.html', x: 0, y: 0, vx: 0, vy: 0 }
+                ];
+                this.arena = null;
+                this.animationId = null;
+            }
+            
+            connectedCallback() {
+                this.innerHTML = `
+                    <div class="instructions">
+                        Click the bouncing emojis to play games!
+                    </div>
+                    <a href="index.html" class="back-btn">← Hub</a>
+                    <div class="game-arena" id="arena">
+                        <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none;">
+                            <defs>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                    <feMerge> 
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                        </svg>
+                    </div>
+                `;
+                
+                this.arena = this.querySelector('#arena');
+                this.initSprites();
+                this.startAnimation();
+            }
+            
+            disconnectedCallback() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+            
+            initSprites() {
+                const arena = this.arena;
+                const arenaRect = arena.getBoundingClientRect();
+                
+                this.sprites.forEach((sprite, index) => {
+                    // Random starting position (away from edges)
+                    sprite.x = 100 + Math.random() * (arenaRect.width - 200);
+                    sprite.y = 100 + Math.random() * (arenaRect.height - 200);
+                    
+                    // Random initial velocity
+                    sprite.vx = (Math.random() - 0.5) * 8;
+                    sprite.vy = (Math.random() - 0.5) * 8;
+                    
+                    // Create DOM element
+                    sprite.element = document.createElement('div');
+                    sprite.element.className = 'emoji-sprite';
+                    sprite.element.textContent = sprite.emoji;
+                    sprite.element.style.left = sprite.x + 'px';
+                    sprite.element.style.top = sprite.y + 'px';
+                    
+                    // Add click handler
+                    sprite.element.addEventListener('click', () => {
+                        window.location.href = sprite.link;
+                    });
+                    
+                    arena.appendChild(sprite.element);
+                });
+            }
+            
+            createTrail(x, y) {
+                const trail = document.createElement('div');
+                trail.className = 'trail';
+                trail.style.left = (x + 30) + 'px';
+                trail.style.top = (y + 30) + 'px';
+                this.arena.appendChild(trail);
+                
+                setTimeout(() => {
+                    if (trail.parentNode) {
+                        trail.parentNode.removeChild(trail);
+                    }
+                }, 500);
+            }
+            
+            updatePhysics() {
+                const arenaRect = this.arena.getBoundingClientRect();
+                const spriteSize = 60; // Approximate emoji size
+                
+                this.sprites.forEach((sprite, index) => {
+                    // Update position
+                    sprite.x += sprite.vx;
+                    sprite.y += sprite.vy;
+                    
+                    // Bounce off walls with slight randomness
+                    if (sprite.x <= 0 || sprite.x >= arenaRect.width - spriteSize) {
+                        sprite.vx = -sprite.vx * (0.8 + Math.random() * 0.2);
+                        sprite.x = Math.max(0, Math.min(arenaRect.width - spriteSize, sprite.x));
+                        this.createTrail(sprite.x, sprite.y);
+                    }
+                    
+                    if (sprite.y <= 0 || sprite.y >= arenaRect.height - spriteSize) {
+                        sprite.vy = -sprite.vy * (0.8 + Math.random() * 0.2);
+                        sprite.y = Math.max(0, Math.min(arenaRect.height - spriteSize, sprite.y));
+                        this.createTrail(sprite.x, sprite.y);
+                    }
+                    
+                    // Sprite-to-sprite collision
+                    this.sprites.forEach((other, otherIndex) => {
+                        if (index !== otherIndex) {
+                            const dx = sprite.x - other.x;
+                            const dy = sprite.y - other.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < spriteSize) {
+                                // Simple collision response
+                                const angle = Math.atan2(dy, dx);
+                                const targetX = other.x + Math.cos(angle) * spriteSize;
+                                const targetY = other.y + Math.sin(angle) * spriteSize;
+                                
+                                sprite.x = targetX;
+                                sprite.y = targetY;
+                                
+                                // Exchange velocities with damping
+                                const tempVx = sprite.vx;
+                                const tempVy = sprite.vy;
+                                sprite.vx = other.vx * 0.9;
+                                sprite.vy = other.vy * 0.9;
+                                other.vx = tempVx * 0.9;
+                                other.vy = tempVy * 0.9;
+                                
+                                this.createTrail(sprite.x, sprite.y);
+                                this.createTrail(other.x, other.y);
+                            }
+                        }
+                    });
+                    
+                    // Apply slight friction
+                    sprite.vx *= 0.999;
+                    sprite.vy *= 0.999;
+                    
+                    // Add tiny random forces (brownian motion)
+                    sprite.vx += (Math.random() - 0.5) * 0.1;
+                    sprite.vy += (Math.random() - 0.5) * 0.1;
+                    
+                    // Limit velocity
+                    const maxSpeed = 6;
+                    const speed = Math.sqrt(sprite.vx * sprite.vx + sprite.vy * sprite.vy);
+                    if (speed > maxSpeed) {
+                        sprite.vx = (sprite.vx / speed) * maxSpeed;
+                        sprite.vy = (sprite.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update DOM position
+                    sprite.element.style.left = sprite.x + 'px';
+                    sprite.element.style.top = sprite.y + 'px';
+                });
+            }
+            
+            startAnimation() {
+                const animate = () => {
+                    this.updatePhysics();
+                    this.animationId = requestAnimationFrame(animate);
+                };
+                animate();
+            }
+        }
+        
+        customElements.define('hello-world', HelloWorld);
+    </script>
+</body>
+</html>
