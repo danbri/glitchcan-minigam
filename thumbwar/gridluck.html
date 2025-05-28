@@ -38,7 +38,7 @@ class Vec2D {
 }
 
 class Boid {
-    constructor(x, y, zonePixelBounds, emojis = ['🐦'], size = 10) {
+    constructor(x, y, zonePixelBounds, emojis = ['🐦'], baseCellSize = 10, gameRef = null) {
         this.pos = new Vec2D(x, y);
         this.vel = Vec2D.random2D().mult(Math.random() * 1.5 + 0.5);
         this.acc = new Vec2D();
@@ -50,7 +50,8 @@ class Boid {
         this.emojis = Array.isArray(emojis) ? emojis : [emojis];
         this.currentEmoji = this.emojis[Math.floor(Math.random() * this.emojis.length)];
         this.emojiChangeTimer = Math.random() * 5000 + 3000; // Change emoji every 3-8s
-        this.size = size;
+        this.baseCellSize = baseCellSize;
+        this.gameRef = gameRef;
         this.type = 'boid';
     }
     applyForce(force) { this.acc = this.acc.add(force); }
@@ -75,6 +76,34 @@ class Boid {
         this.applyForce(alignment.mult(1.0)); this.applyForce(cohesion.mult(0.9)); this.applyForce(separation.mult(1.6));
     }
     wrap() {
+        // Constrain to paths only
+        if (this.gameRef) {
+            const gx = Math.floor(this.pos.x / this.gameRef.cSize);
+            const gy = Math.floor(this.pos.y / this.gameRef.cSize);
+            const wrappedGx = this.gameRef._wrapCoord(gx, this.gameRef.totalWorldWidthCells);
+            const wrappedGy = this.gameRef._wrapCoord(gy, this.gameRef.totalWorldHeightCells);
+            const tile = this.gameRef.maze.get(wrappedGx + ',' + wrappedGy);
+            
+            if (tile === 'W' || tile === 'S' || tile === '-') {
+                // Find nearest path
+                for (let radius = 1; radius <= 3; radius++) {
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const testGx = this.gameRef._wrapCoord(gx + dx, this.gameRef.totalWorldWidthCells);
+                            const testGy = this.gameRef._wrapCoord(gy + dy, this.gameRef.totalWorldHeightCells);
+                            const testTile = this.gameRef.maze.get(testGx + ',' + testGy);
+                            if (testTile === ' ' || testTile === '.' || testTile === 'P' || testTile === 'O' || testTile === 'T') {
+                                this.pos.x = testGx * this.gameRef.cSize + this.gameRef.cSize * 0.5;
+                                this.pos.y = testGy * this.gameRef.cSize + this.gameRef.cSize * 0.5;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Regular zone wrapping
         if (this.pos.x < this.zoneBounds.x) this.pos.x = this.zoneBounds.x + this.zoneBounds.width;
         if (this.pos.x > this.zoneBounds.x + this.zoneBounds.width) this.pos.x = this.zoneBounds.x;
         if (this.pos.y < this.zoneBounds.y) this.pos.y = this.zoneBounds.y + this.zoneBounds.height;
@@ -90,7 +119,8 @@ class Boid {
         this.pos = this.pos.add(this.vel); this.acc = new Vec2D(); this.wrap();
     }
     draw(ctx) {
-        ctx.font = `${this.size}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const currentSize = this.gameRef ? this.baseCellSize * (this.gameRef.cSize / this.gameRef.originalCSize) : this.baseCellSize;
+        ctx.font = `${currentSize}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.save(); ctx.translate(this.pos.x, this.pos.y);
         ctx.rotate(Math.atan2(this.vel.y, this.vel.x) + Math.PI/2);
         ctx.fillText(this.currentEmoji, 0, 0); ctx.restore();
@@ -98,20 +128,50 @@ class Boid {
 }
 
 class Asteroid {
-    constructor(x, y, zonePixelBounds, sizeFactor = 1) {
+    constructor(x, y, zonePixelBounds, baseCellSize = 1, gameRef = null) {
         this.pos = new Vec2D(x, y);
         this.vel = Vec2D.random2D().mult(Math.random() * 0.8 + 0.15);
         this.zoneBounds = zonePixelBounds;
-        this.size = (Math.random() * 8 + 4) * sizeFactor;
+        this.baseCellSize = baseCellSize;
+        this.baseSize = Math.random() * 8 + 4;
         this.angle = Math.random() * Math.PI * 2;
         this.rotationSpeed = (Math.random() - 0.5) * 0.025;
         this.numSides = Math.floor(Math.random() * 3) + 3;
         this.color = `rgb(${Math.floor(Math.random()*60+90)}, ${Math.floor(Math.random()*60+90)}, ${Math.floor(Math.random()*60+90)})`;
         this.type = 'asteroid';
+        this.gameRef = gameRef;
         this.offsets = Array.from({length: this.numSides}, () => Math.random()*0.3 + 0.85);
     }
     wrap() {
-        const margin = this.size;
+        // Constrain to paths only
+        if (this.gameRef) {
+            const gx = Math.floor(this.pos.x / this.gameRef.cSize);
+            const gy = Math.floor(this.pos.y / this.gameRef.cSize);
+            const wrappedGx = this.gameRef._wrapCoord(gx, this.gameRef.totalWorldWidthCells);
+            const wrappedGy = this.gameRef._wrapCoord(gy, this.gameRef.totalWorldHeightCells);
+            const tile = this.gameRef.maze.get(wrappedGx + ',' + wrappedGy);
+            
+            if (tile === 'W' || tile === 'S' || tile === '-') {
+                // Find nearest path
+                for (let radius = 1; radius <= 3; radius++) {
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const testGx = this.gameRef._wrapCoord(gx + dx, this.gameRef.totalWorldWidthCells);
+                            const testGy = this.gameRef._wrapCoord(gy + dy, this.gameRef.totalWorldHeightCells);
+                            const testTile = this.gameRef.maze.get(testGx + ',' + testGy);
+                            if (testTile === ' ' || testTile === '.' || testTile === 'P' || testTile === 'O' || testTile === 'T') {
+                                this.pos.x = testGx * this.gameRef.cSize + this.gameRef.cSize * 0.5;
+                                this.pos.y = testGy * this.gameRef.cSize + this.gameRef.cSize * 0.5;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        const currentSize = this.gameRef ? this.baseSize * this.baseCellSize * (this.gameRef.cSize / this.gameRef.originalCSize) : this.baseSize;
+        const margin = currentSize;
         if (this.pos.x < this.zoneBounds.x - margin) this.pos.x = this.zoneBounds.x + this.zoneBounds.width + margin;
         if (this.pos.x > this.zoneBounds.x + this.zoneBounds.width + margin) this.pos.x = this.zoneBounds.x - margin;
         if (this.pos.y < this.zoneBounds.y - margin) this.pos.y = this.zoneBounds.y + this.zoneBounds.height + margin;
@@ -123,10 +183,11 @@ class Asteroid {
         this.wrap();
     }
     draw(ctx) {
+        const currentSize = this.gameRef ? this.baseSize * this.baseCellSize * (this.gameRef.cSize / this.gameRef.originalCSize) : this.baseSize;
         ctx.save(); ctx.translate(this.pos.x, this.pos.y); ctx.rotate(this.angle);
-        ctx.strokeStyle = this.color; ctx.lineWidth = Math.max(1, this.size * 0.1); ctx.beginPath();
+        ctx.strokeStyle = this.color; ctx.lineWidth = Math.max(1, currentSize * 0.1); ctx.beginPath();
         for (let i = 0; i < this.numSides; i++) {
-            const angle = (i / this.numSides) * Math.PI * 2; const r = this.size * this.offsets[i];
+            const angle = (i / this.numSides) * Math.PI * 2; const r = currentSize * this.offsets[i];
             const x = r * Math.cos(angle); const y = r * Math.sin(angle);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
@@ -266,11 +327,11 @@ class Game{
   totalWorldWidthCells; totalWorldHeightCells;
 
   themes = [
-    { name: "Classic", bgColor: '#000', fillEmojis:[], largeDecorativeEmojis: ['👻'], entityTypes: [] },
-    { name: "Forest",  bgColor: '#131', fillEmojis:['🌿', '🍃'], largeDecorativeEmojis: ['🌳','🦉'], entityTypes: [{type: 'boids', count: 5, emojis:['🦋','🐦']}, {type: 'slimeMold', count:1}] },
-    { name: "Ocean",   bgColor: '#013', fillEmojis:['🐙', '🐠'], largeDecorativeEmojis: ['⚓','🐳'], entityTypes: [{type: 'boids', count: 6, emojis:['🐟','🦐']}] },
-    { name: "Desert",  bgColor: '#542', fillEmojis:['🌵', '🦴'], largeDecorativeEmojis: ['🏜️','🐍'], entityTypes: [] },
-    { name: "Space",   bgColor: '#001', fillEmojis:['✨', '💫'], largeDecorativeEmojis: ['🪐','🚀'], entityTypes: [{type: 'asteroids', count: 8}, {type: 'decorShip', count: 2}] }
+    { name: "Classic", bgColor: '#000', wallPattern: '█', wallColor: '#0000ff', largeDecorativeEmojis: ['👻'], entityTypes: [] },
+    { name: "Forest",  bgColor: '#131', wallPattern: '🌲🌿🍃🌱', wallColor: '#0f5f0f', largeDecorativeEmojis: ['🌳','🦉'], entityTypes: [{type: 'boids', count: 5, emojis:['🦋','🐦']}, {type: 'slimeMold', count:1}] },
+    { name: "Ocean",   bgColor: '#013', wallPattern: '🪸🐚🌊💎', wallColor: '#0080ff', largeDecorativeEmojis: ['⚓','🐳'], entityTypes: [{type: 'boids', count: 6, emojis:['🐟','🦐']}] },
+    { name: "Desert",  bgColor: '#542', wallPattern: '🏺⚱️🪨🧱', wallColor: '#8b4513', largeDecorativeEmojis: ['🏜️','🐍'], entityTypes: [] },
+    { name: "Space",   bgColor: '#001', wallPattern: '⭐🌌💫🔆', wallColor: '#4b0082', largeDecorativeEmojis: ['🪐','🚀'], entityTypes: [{type: 'asteroids', count: 8}, {type: 'decorShip', count: 2}] }
   ];
   PAT_C = this.PAT[0].length; PAT_R = this.PAT.length;
   specialDecorRenderList = []; 
@@ -361,9 +422,9 @@ class Game{
                         const entityY = zonePixelBounds.y + Math.random() * zonePixelBounds.height;
                         let newEntity = null;
                         if (entityDef.type === 'boids') {
-                            newEntity = new Boid(entityX, entityY, zonePixelBounds, entityDef.emojis, this.cSize * 0.3);
+                            newEntity = new Boid(entityX, entityY, zonePixelBounds, entityDef.emojis, 10, this);
                         } else if (entityDef.type === 'asteroids') {
-                            newEntity = new Asteroid(entityX, entityY, zonePixelBounds, this.cSize * 0.07);
+                            newEntity = new Asteroid(entityX, entityY, zonePixelBounds, 0.07, this);
                         } else if (entityDef.type === 'decorShip') {
                             newEntity = new DecorativeShip(entityX, entityY, zonePixelBounds, this.cSize * 0.35);
                         } else if (entityDef.type === 'slimeMold') {
@@ -398,16 +459,13 @@ class Game{
                     this.maze.set(k, tileType); 
                     if (tileType === '.' || tileType === 'P') this.dots.add(k);
 
-                    if(tileType === 'W' && currentTheme.fillEmojis && currentTheme.fillEmojis.length > 0){
-                        const fills = [];
-                        for(let i=0; i<1; i++){ // Reduced to 1 for less clutter
-                            fills.push({
-                                emoji: currentTheme.fillEmojis[Math.floor(Math.random()*currentTheme.fillEmojis.length)],
-                                xOff: Math.random()*0.5 + 0.25, yOff: Math.random()*0.5 + 0.25,
-                                sizeFactor: Math.random()*0.2 + 0.7
-                            });
-                        }
-                        this.wallFillDecorations.set(k, fills);
+                    if(tileType === 'W' && currentTheme.wallPattern && currentTheme.wallPattern.length > 0){
+                        // Create a consistent wallpaper pattern based on position
+                        const patternChar = currentTheme.wallPattern[(gx + gy * 3) % currentTheme.wallPattern.length];
+                        this.wallFillDecorations.set(k, {
+                            emoji: patternChar,
+                            color: currentTheme.wallColor || '#666'
+                        });
                     }
                 }
             }
@@ -665,7 +723,12 @@ class Game{
             const drawY = b_draw * cs;
 
             if (tileType === 'W' || tileType === 'S') {
-                ctx.fillStyle = theme.bgColor || '#111';
+                const wallDecor = this.wallFillDecorations.get(k);
+                if (wallDecor && wallDecor.color) {
+                    ctx.fillStyle = wallDecor.color;
+                } else {
+                    ctx.fillStyle = theme.bgColor || '#111';
+                }
             } else {
                 ctx.fillStyle = '#060606'; 
             }
@@ -673,7 +736,9 @@ class Game{
         }
     }
     
-    ctx.strokeStyle = '#18189F'; ctx.lineWidth = Math.max(0.5, cs * 0.06);
+    // Enhanced border system with glow effect
+    ctx.shadowColor = '#00bfff'; ctx.shadowBlur = cs * 0.1;
+    ctx.strokeStyle = '#00bfff'; ctx.lineWidth = Math.max(1, cs * 0.08);
     const BORDER_OFFSET = ctx.lineWidth / 2;
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
         for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
@@ -689,8 +754,10 @@ class Game{
             if (this.isWallOrDecor(a_world + 1, b_world)) { ctx.beginPath(); ctx.moveTo(x_screen + cs, y_screen - BORDER_OFFSET); ctx.lineTo(x_screen + cs, y_screen + cs + BORDER_OFFSET); ctx.stroke(); }
         }
     }
-    const cornerRadius = cs * 0.25;
-    ctx.fillStyle = '#18189F';
+    
+    // Enhanced corner curves with larger radius and glow
+    const cornerRadius = cs * 0.35;
+    ctx.fillStyle = '#00bfff'; ctx.shadowColor = '#00bfff'; ctx.shadowBlur = cs * 0.15;
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
         for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
             const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
@@ -704,6 +771,7 @@ class Game{
             if (this.isWallOrDecor(a_world + 1, b_world) && this.isWallOrDecor(a_world, b_world + 1) && !this.isWallOrDecor(a_world+1,b_world+1)) { ctx.beginPath(); ctx.arc(x_screen + cs, y_screen + cs, cornerRadius, 0, Math.PI * 0.5); ctx.lineTo(x_screen+cs,y_screen+cs); ctx.fill(); }
         }
     }
+    ctx.shadowBlur = 0; // Reset shadow
 
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
         for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
@@ -715,12 +783,11 @@ class Game{
             const drawX = a_draw * cs; const drawY = b_draw * cs;
 
             if (tileType === 'W') {
-                const fills = this.wallFillDecorations.get(k);
-                if (fills) {
-                    fills.forEach(fill => {
-                        ctx.font = `${Math.floor(wallFillEmojiBaseSize * fill.sizeFactor)}px monospace`;
-                        ctx.fillText(fill.emoji, drawX + cs * fill.xOff, drawY + cs * fill.yOff);
-                    });
+                const wallDecor = this.wallFillDecorations.get(k);
+                if (wallDecor && wallDecor.emoji !== '█') {
+                    ctx.font = `${Math.floor(cs * 0.8)}px monospace`;
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(wallDecor.emoji, drawX + cs/2, drawY + cs/2);
                 }
             } else if (tileType === 'T') {
                 ctx.fillStyle = '#101010'; ctx.fillRect(drawX, drawY, cs, cs);
