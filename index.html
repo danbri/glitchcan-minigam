@@ -195,303 +195,250 @@
             z-index: 10;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
+        .top-nav {
+            background: rgba(52, 73, 94, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            margin: -20px -20px 30px -20px;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .top-nav a {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        .top-nav a:hover {
+            background: rgba(52, 152, 219, 0.2);
+            color: #e74c3c;
+        }
     </style>
 </head>
 <body>
+    <div class="top-nav">
+        <a href="media/gallery.html">📁 Media Gallery</a>
+        <a href="thumbwar/helloworld.html">🎮 Game Hub</a>
+        <a href="thumbwar/index.html">⚡ Thumbwar Collection</a>
+        <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">📦 Source Code</a>
+    </div>
+
     <h1><span class="heartbeat-duck">🐥</span><span class="glitch-emoji" style="position:absolute; left: 20px; opacity: 0.001;">🐥</span>Browser Experiments</h1>
     
-    <div class="game-container">
-        <h2 class="game-title">Growing Circles</h2>
-        <div class="game-description">
-            <p>A simple visualization showing how a circle's area relates to its radius, with step-by-step explanations.</p>
-            <p><strong>Best played on:</strong> Any device</p>
-            <p><strong>How to play:</strong> Navigate through the steps using buttons or arrow keys.</p>
-        </div>
-        <a href="growcircle/growcircle.html" class="play-button">Play Growing Circles</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/growcircle/growcircle.html" target="_blank">View Source on GitHub</a>
-        </div>
-    </div>
-    
-    <div class="game-container">
-        <h2 class="game-title">Thumbwar</h2>
-        <div class="game-description">
-            <p>A basic fluid dynamics simulation where you can manipulate streams with touch input.</p>
-            <p><strong>Best played on:</strong> Mobile devices with touch screens</p>
-            <p><strong>How to play:</strong> Use your thumbs to interact with the fluid simulation.</p>
-        </div>
-        <a href="thumbwar/thumbwar.html" class="play-button">Play Thumbwar</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/thumbwar/thumbwar.html" target="_blank">View Source on GitHub</a>
-        </div>
-    </div>
+    <h2 class="section-header">✨ Featured Interactive Experiences</h2>
     
     <div class="game-container" style="background: #1e293b; border: 1px solid #8b5cf6; box-shadow: 0 4px 15px rgba(133, 92, 246, 0.4);">
         <h2 class="game-title" style="color: #8b5cf6;">Inklet Story Player</h2>
         <div class="game-description">
-            <p>A simple interactive fiction player featuring the "Riverbend" mystery story with basic image support.</p>
-            <p><strong>Best played on:</strong> Any device - works on mobile, tablets, and desktop</p>
-            <p><strong>How to play:</strong> Read the story, view scene images, and make choices to influence the narrative.</p>
+            <p>Interactive fiction player with "Riverbend" mystery story and images.</p>
+            <p><strong>Best on:</strong> Any device</p>
         </div>
-        <a href="inklet/inklet2.html" class="play-button" style="background-color: #6d28d9;">Play Inklet Story Player</a>
+        <a href="inklet/inklet2.html" class="play-button" style="background-color: #6d28d9;">Play Story</a>
         <div class="source-link" style="margin-top: 15px;">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/inklet/inklet2.html" target="_blank">View Player Source</a> | 
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/inklet/riverbend.ink" target="_blank">View Story Source (.ink)</a> | 
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet/villaged" target="_blank">View Media Assets</a> | 
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View Inklet Directory</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View Directory</a>
         </div>
     </div>
-
+    
     <div class="game-container">
-        <h2 class="game-title">Toki Toki Pona</h2>
+        <h2 class="game-title">Interactive Fiction Tests</h2>
         <div class="game-description">
-            <p>A simple flashcard tool for Toki Pona vocabulary with emoji hints.</p>
-            <p><strong>Best played on:</strong> Mobile or desktop</p>
-            <p><strong>How to play:</strong> Match Toki Pona words with their meanings.</p>
+            <p>Story format experiments: Fink tests, GamGam stories with web components.</p>
+            <p><strong>Best on:</strong> Any device</p>
         </div>
-        <a href="tokitokipona/tokitokipona.html" class="play-button">Play Toki Toki Pona</a>
+        <a href="inklet/gamgam.html" class="play-button">GamGam</a>
+        <a href="inklet/gamgam-wc.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">GamGam WC</a>
+        <a href="inklet/finktest1.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Fink Test 1</a>
+        <a href="inklet/finktest2.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Fink Test 2</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/tokitokipona/tokitokipona.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View All Inklet Files</a>
         </div>
     </div>
-
+    
+    <div class="game-container">
+        <h2 class="game-title">Thumbwar Game Collection</h2>
+        <div class="game-description">
+            <p>Touch-based experiments with physics: fluid simulation, space combat, grid strategy.</p>
+            <p><strong>Best on:</strong> Mobile/touch or desktop</p>
+        </div>
+        <a href="thumbwar/helloworld.html" class="play-button">🎮 Game Hub</a>
+        <a href="thumbwar/thumbwar.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Thumbwar</a>
+        <a href="thumbwar/battleboids.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Battleboids</a>
+        <a href="thumbwar/gridluck.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Grid Luck</a>
+        <div class="source-link">
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/thumbwar" target="_blank">View Source Directory</a>
+        </div>
+    </div>
+    
+    <h2 class="section-header">🎮 Classic Arcade Style</h2>
+    
     <div class="game-container">
         <h2 class="game-title">Schemoids</h2>
         <div class="game-description">
-            <p>A basic Asteroids-inspired experiment using Schema.org type names.</p>
-            <p><strong>Best played on:</strong> Desktop (keyboard) or mobile (touch controls)</p>
-            <p><strong>How to play:</strong> Use arrow keys to move and spacebar to shoot.</p>
+            <p>Asteroids variant using Schema.org type names.</p>
+            <p><strong>Best on:</strong> Desktop or mobile</p>
         </div>
         <a href="schemoids/schemoids.html" class="play-button">Play Schemoids</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/schemoids/schemoids.html" target="_blank">View Source on GitHub</a>
-        </div>
-    </div>
-
-    <div class="game-container">
-        <h2 class="game-title">Bookshelf Lights</h2>
-        <div class="game-description">
-            <p>Simple LED light strip simulators with a few preset patterns.</p>
-            <p><strong>Best played on:</strong> Desktop or tablet</p>
-            <p><strong>How to play:</strong> Select from the preset lighting patterns.</p>
-        </div>
-        <a href="lightshow/bookshelf-a.html" class="play-button">Play Bookshelf A</a>
-        <a href="lightshow/bookshelf-b.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Play Bookshelf B</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/lightshow/bookshelf-a.html" target="_blank">View Source A on GitHub</a> | 
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/lightshow/bookshelf-b.html" target="_blank">View Source B on GitHub</a>
-        </div>
-    </div>
-
-    <div class="game-container">
-        <h2 class="game-title">Sandpit</h2>
-        <div class="game-description">
-            <p>A simple code editor for testing small code snippets.</p>
-            <p><strong>Best played on:</strong> Desktop</p>
-            <p><strong>How to play:</strong> Write and run basic code examples.</p>
-        </div>
-        <a href="sandpit/sandpit.html" class="play-button">Play Sandpit</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/sandpit/sandpit.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/schemoids/schemoids.html" target="_blank">View Source</a>
         </div>
     </div>
     
     <div class="game-container">
-        <h2 class="game-title">Speccy Games</h2>
+        <h2 class="game-title">Retro Collection</h2>
         <div class="game-description">
-            <p>Minimal ZX Spectrum-inspired experiments.</p>
-            <p><strong>Best played on:</strong> Desktop or mobile</p>
-            <p><strong>How to play:</strong> Use arrow keys or on-screen controls.</p>
+            <p>ZX Spectrum-inspired experiments and platformers.</p>
+            <p><strong>Best on:</strong> Desktop or mobile</p>
         </div>
-        <a href="speccy/jsw1.html" class="play-button">Play Jet Set Willy</a>
-        <a href="speccy/retrospec1.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Play Retrospec</a>
+        <a href="speccy/jsw1.html" class="play-button">Jet Set Willy</a>
+        <a href="speccy/retrospec1.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Retrospec</a>
+        <a href="spectro/index.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Spectro</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/speccy/jsw1.html" target="_blank">View Source JSW</a> | 
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/speccy/retrospec1.html" target="_blank">View Source Retrospec</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/speccy" target="_blank">Speccy Source</a> | 
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/spectro" target="_blank">Spectro Source</a>
+        </div>
+    </div>
+    
+    <h2 class="section-header">🎵 Audio & Visual</h2>
+    
+    <div class="game-container">
+        <h2 class="game-title">BlipBlop Audio</h2>
+        <div class="game-description">
+            <p>Audio sequencer with sound synthesis variants.</p>
+            <p><strong>Best on:</strong> Any device with audio</p>
+        </div>
+        <a href="blipblop/blipblop.html" class="play-button">BlipBlop</a>
+        <a href="blipblop/grid-alt.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Dual Pattern</a>
+        <a href="blipblop/grid2.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Chromatic</a>
+        <a href="blipblop/srt-mp3-webaudio.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">MP3+SRT Player</a>
+        <div class="source-link">
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/blipblop" target="_blank">View Directory</a>
         </div>
     </div>
     
     <div class="game-container">
-        <h2 class="game-title">Spectro</h2>
+        <h2 class="game-title">Light Patterns</h2>
         <div class="game-description">
-            <p>ZX Spectrum-inspired platformer with retro aesthetic.</p>
-            <p><strong>Best played on:</strong> Desktop or mobile</p>
-            <p><strong>How to play:</strong> Use keyboard or touch controls to navigate.</p>
+            <p>LED strip simulators with preset patterns.</p>
+            <p><strong>Best on:</strong> Desktop or tablet</p>
         </div>
-        <a href="spectro/index.html" class="play-button">Play Spectro</a>
+        <a href="lightshow/bookshelf-a.html" class="play-button">Bookshelf A</a>
+        <a href="lightshow/bookshelf-b.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Bookshelf B</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/spectro" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/lightshow" target="_blank">View Directory</a>
         </div>
     </div>
-
+    
+    <h2 class="section-header">🌍 Simulations & Visualizations</h2>
+    
     <div class="game-container">
-        <h2 class="game-title">Thought Graph</h2>
+        <h2 class="game-title">Twin Earth</h2>
         <div class="game-description">
-            <p>Simple diagram tool for organizing ideas.</p>
-            <p><strong>Best played on:</strong> Desktop</p>
-            <p><strong>How to play:</strong> Create nodes and connect related concepts.</p>
+            <p>3D Earth visualization with planetary texture variants using Three.js.</p>
+            <p><strong>Best on:</strong> Desktop or tablet</p>
         </div>
-        <a href="thoughtgraph/toc-mapper.html" class="play-button">Play Thought Graph</a>
+        <a href="twinearth/index.html" class="play-button">Explore Twin Earth</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/thoughtgraph/toc-mapper.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/twinearth" target="_blank">View Source</a>
         </div>
     </div>
-
+    
     <div class="game-container">
-        <h2 class="game-title">FatNet Simulator</h2>
+        <h2 class="game-title">Growing Circles</h2>
         <div class="game-description">
-            <p>Very basic network visualization concept.</p>
-            <p><strong>Best played on:</strong> Desktop</p>
-            <p><strong>How to play:</strong> Observe the simulated network traffic.</p>
+            <p>Visualization showing circle area vs radius relationship.</p>
+            <p><strong>Best on:</strong> Any device</p>
         </div>
-        <a href="fatnet/fatnet-sim1.html" class="play-button">Play FatNet Simulator</a>
+        <a href="growcircle/growcircle.html" class="play-button">View Circles</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/fatnet/fatnet-sim1.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/growcircle/growcircle.html" target="_blank">View Source</a>
         </div>
     </div>
     
     <div class="game-container">
         <h2 class="game-title">Building Generator</h2>
         <div class="game-description">
-            <p>Simple procedural wireframe building generator concept.</p>
-            <p><strong>Best played on:</strong> Desktop</p>
-            <p><strong>How to play:</strong> Adjust grid size and observe the generated buildings.</p>
+            <p>Procedural wireframe building generator.</p>
+            <p><strong>Best on:</strong> Desktop</p>
         </div>
-        <a href="gencity/gencity.html" class="play-button">Play Building Generator</a>
+        <a href="gencity/gencity.html" class="play-button">Generate Buildings</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/gencity/gencity.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/gencity/gencity.html" target="_blank">View Source</a>
         </div>
     </div>
     
     <div class="game-container">
         <h2 class="game-title">ED-209 Parkbot</h2>
         <div class="game-description">
-            <p>Simple 3D experiment with ED-209 parking enforcement robots.</p>
-            <p><strong>Best played on:</strong> Desktop or mobile</p>
-            <p><strong>How to play:</strong> Click robots and assign them to parking violators.</p>
+            <p>3D parking enforcement robots experiment.</p>
+            <p><strong>Best on:</strong> Desktop or mobile</p>
         </div>
-        <a href="gencity/ed209-parkbot.html" class="play-button">Play ED-209 Parkbot</a>
+        <a href="gencity/ed209-parkbot.html" class="play-button">Play ED-209</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/gencity/ed209-parkbot.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/gencity/ed209-parkbot.html" target="_blank">View Source</a>
         </div>
     </div>
     
-    <div class="game-container">
-        <h2 class="game-title">BlipBlop</h2>
-        <div class="game-description">
-            <p>Simple audio sequencer prototype with basic sound synthesis.</p>
-            <p><strong>Best played on:</strong> Any device with audio capabilities</p>
-            <p><strong>How to play:</strong> Tap keys to play notes and experiment with sequences.</p>
-        </div>
-        <a href="blipblop/blipblop.html" class="play-button">Play BlipBlop</a>
-        <a href="blipblop/grid-alt.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Dual Pattern</a>
-        <a href="blipblop/grid2.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Chromatic</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/blipblop/blipblop.html" target="_blank">View Source on GitHub</a>
-        </div>
-    </div>
-    
-    <div class="game-container">
-        <h2 class="game-title">MP3+SRT Player</h2>
-        <div class="game-description">
-            <p>Audio player with subtitle/lyric display and visualization.</p>
-            <p><strong>Best played on:</strong> Desktop or tablet</p>
-            <p><strong>How to play:</strong> Load an MP3 file and matching SRT subtitles file.</p>
-        </div>
-        <a href="blipblop/srt-mp3-webaudio.html" class="play-button">Play MP3+SRT Player</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/blipblop/srt-mp3-webaudio.html" target="_blank">View Source on GitHub</a>
-        </div>
-    </div>
+    <h2 class="section-header">🛠️ Tools & Tech Experiments</h2>
     
     <div class="game-container">
         <h2 class="game-title">Plot Graph</h2>
         <div class="game-description">
-            <p>Basic visualization of character relationships in literature.</p>
-            <p><strong>Best played on:</strong> Desktop</p>
-            <p><strong>How to play:</strong> View the basic network graph showing "Strange and Norrell" connections.</p>
+            <p>Character relationship visualization for "Strange and Norrell" - mini knowledge graph.</p>
+            <p><strong>Best on:</strong> Desktop</p>
         </div>
-        <a href="plotgraph/strange_and_norrell.html" class="play-button">Play Plot Graph</a>
+        <a href="plotgraph/strange_and_norrell.html" class="play-button">View Graph</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/plotgraph/strange_and_norrell.html" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/plotgraph/strange_and_norrell.html" target="_blank">View Source</a>
         </div>
     </div>
     
     <div class="game-container">
-        <h2 class="game-title">Inklet Prototypes</h2>
+        <h2 class="game-title">FatNet Simulator</h2>
         <div class="game-description">
-            <p>Rough prototypes of earlier interactive fiction experiments.</p>
-            <p><strong>Best played on:</strong> Any device</p>
-            <p><strong>How to use:</strong> These are mostly non-functional test versions.</p>
+            <p>Network visualization concept with basic traffic simulation.</p>
+            <p><strong>Best on:</strong> Desktop</p>
         </div>
-        <a href="inklet/inklet.html" class="play-button" style="background-color: #64748b;">Original Inklet</a>
-        <a href="inklet/hhg-test.html" class="play-button" style="margin-left: 10px; background-color: #64748b;">HHG Test</a>
-        <a href="inklet/thinkle.html" class="play-button" style="margin-left: 10px; background-color: #64748b;">Thinkle</a>
+        <a href="fatnet/fatnet-sim1.html" class="play-button">View Network</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View All Inklet Files</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/fatnet/fatnet-sim1.html" target="_blank">View Source</a>
         </div>
     </div>
-
+    
     <div class="game-container">
-        <h2 class="game-title">Twin Earth</h2>
+        <h2 class="game-title">Toki Toki Pona</h2>
         <div class="game-description">
-            <p>3D Earth visualization with "Twin Earth" mode - exploring different planetary textures using Three.js.</p>
-            <p><strong>Best played on:</strong> Desktop or tablet</p>
-            <p><strong>How to play:</strong> Toggle Twin Earth mode, adjust controls, and explore the 3D planet.</p>
+            <p>Flashcard tool for Toki Pona vocabulary with emoji hints.</p>
+            <p><strong>Best on:</strong> Mobile or desktop</p>
         </div>
-        <a href="twinearth/index.html" class="play-button">Explore Twin Earth</a>
+        <a href="tokitokipona/tokitokipona.html" class="play-button">Study Toki Pona</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/twinearth" target="_blank">View Source on GitHub</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/tokitokipona/tokitokipona.html" target="_blank">View Source</a>
         </div>
     </div>
-
+    
     <div class="game-container">
-        <h2 class="game-title">Fink Tests</h2>
+        <h2 class="game-title">Development Tools</h2>
         <div class="game-description">
-            <p>New interactive fiction experiments using a custom story format called "fink".</p>
-            <p><strong>Best played on:</strong> Any device</p>
-            <p><strong>How to play:</strong> Read and interact with experimental story prototypes.</p>
+            <p>Code editor and idea mapping tools.</p>
+            <p><strong>Best on:</strong> Desktop</p>
         </div>
-        <a href="inklet/finktest1.html" class="play-button">Fink Test 1</a>
-        <a href="inklet/finktest2.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Fink Test 2</a>
-        <a href="inklet/finktest3.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Fink Test 3</a>
-        <a href="inklet/finktest4.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Fink Test 4</a>
+        <a href="sandpit/sandpit.html" class="play-button">Sandpit Editor</a>
+        <a href="thoughtgraph/toc-mapper.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">Thought Graph</a>
         <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View Inklet Directory</a>
-        </div>
-    </div>
-
-    <div class="game-container">
-        <h2 class="game-title">GamGam Stories</h2>
-        <div class="game-description">
-            <p>Additional experimental interactive fiction using web components.</p>
-            <p><strong>Best played on:</strong> Any device</p>
-            <p><strong>How to play:</strong> Experience experimental narrative formats.</p>
-        </div>
-        <a href="inklet/gamgam.html" class="play-button">GamGam</a>
-        <a href="inklet/gamgam-wc.html" class="play-button" style="margin-left: 10px; background-color: #9b59b6;">GamGam WC</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/inklet" target="_blank">View Inklet Directory</a>
-        </div>
-    </div>
-
-    <div class="game-container">
-        <h2 class="game-title">Media Gallery</h2>
-        <div class="game-description">
-            <p>Browse the collection of images and videos with efficient dynamic thumbnails.</p>
-            <p><strong>Best played on:</strong> Any device</p>
-            <p><strong>How to use:</strong> Filter by media type, search filenames, click to view full-size.</p>
-        </div>
-        <a href="media/gallery.html" class="play-button">Browse Media Gallery</a>
-        <div class="source-link">
-            <a href="https://github.com/danbri/glitchcan-minigam/tree/master/media" target="_blank">View Media Directory</a>
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/sandpit/sandpit.html" target="_blank">Sandpit Source</a> | 
+            <a href="https://github.com/danbri/glitchcan-minigam/blob/master/thoughtgraph/toc-mapper.html" target="_blank">Thought Graph Source</a>
         </div>
     </div>
 
     <div class="repo-info">
         <h3>About This Collection</h3>
-        <p>These are experimental prototypes and sketches, not finished games. Code available at <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">GitHub</a>.</p>
-        <p><em>Note: All known demos are listed above. Browse the GitHub repository for any additional development files or experiments.</em></p>
+        <p>Experimental prototypes and sketches. Code at <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">GitHub</a>.</p>
     </div>
     
     <footer>
