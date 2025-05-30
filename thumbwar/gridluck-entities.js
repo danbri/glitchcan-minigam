@@ -303,8 +303,7 @@ export class Collectible {
         } else if (rand < 0.25) { // 17% - Uncommon
             const uncommon = [
                 { emoji: '💎', name: 'Crystal', category: 'treasure', value: 200, rarity: 'uncommon' },
-                { emoji: '📜', name: 'Scroll', category: 'literature', value: 150, rarity: 'uncommon',
-                  content: this.generateScrollContent() },
+                { emoji: '📜', name: 'Scroll', category: 'literature', value: 150, rarity: 'uncommon' },
                 { emoji: '🗝️', name: 'Key', category: 'key', value: 100, rarity: 'uncommon',
                   color: ['red', 'blue', 'green', 'yellow'][Math.floor(Math.random() * 4)] },
                 { emoji: '🧭', name: 'Compass', category: 'tool', value: 120, rarity: 'uncommon',
@@ -313,8 +312,7 @@ export class Collectible {
             chosen = uncommon[Math.floor(Math.random() * uncommon.length)];
         } else { // 75% - Common
             const common = [
-                { emoji: '📚', name: 'Book', category: 'literature', value: 50, rarity: 'common',
-                  content: this.generateBookContent() },
+                { emoji: '📚', name: 'Book', category: 'literature', value: 50, rarity: 'common' },
                 { emoji: '💾', name: 'Floppy Disk', category: 'software', value: 30, rarity: 'common',
                   content: 'LOAD "MYSTERY.EXE"\nRUN\n> Hello, traveler...' },
                 { emoji: '🪙', name: 'Coin', category: 'treasure', value: 25, rarity: 'common' },
@@ -327,6 +325,15 @@ export class Collectible {
         
         if (this.category === 'key') {
             this.name = `${this.color} Key`;
+        }
+        
+        // Generate content after object creation to avoid 'this' issues
+        if (this.category === 'literature') {
+            if (this.name === 'Book') {
+                this.content = this.generateBookContent();
+            } else if (this.name === 'Scroll') {
+                this.content = this.generateScrollContent();
+            }
         }
     }
     

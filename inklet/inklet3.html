@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Riverbend - Immersive FINK Stories</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --primary-dark: #5b21b6;
+            --primary-light: #8b5cf6;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-red: #f43f5e;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --choice-left: #f43f5e;
+            --choice-middle: #10b981;
+            --choice-right: #3b82f6;
+            --choice-height: 25vh;
+            --transition-time: 0.5s;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Literata', serif;
+            background-color: var(--background);
+            color: var(--text);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            background-color: var(--surface);
+            padding: 12px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .title-bar.visible {
+            transform: translateY(0);
+        }
+        
+        .app-container.show-menu .title-bar {
+            transform: translateY(0);
+        }
+
+        .title-bar h1 {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .url-form {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            background-color: var(--surface);
+            padding: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .url-form.active {
+            transform: translateY(0);
+        }
+
+        #fink-url-input, #media-path-input {
+            flex-grow: 1;
+            padding: 10px 16px;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-right: 2px;
+        }
+        
+        #fink-url-input {
+            border-radius: 8px 0 0 8px;
+        }
+        
+        #media-path-input {
+            border-radius: 0;
+        }
+
+        #fink-url-input:focus, #media-path-input:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        #load-fink-button {
+            padding: 10px 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        #load-fink-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .story-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 38vh;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: height 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        #story-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 1s ease, transform 1.5s ease;
+            transform-origin: center;
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        #story-image.hidden {
+            opacity: 0;
+        }
+        
+        .image-container.hidden {
+            height: 0;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+
+        #story-image.zoom-in {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(to top, var(--background), transparent);
+            z-index: 1;
+        }
+        
+        .image-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 15px;
+            background-color: rgba(15, 23, 42, 0.75);
+            color: var(--text);
+            font-size: 0.9rem;
+            text-align: center;
+            z-index: 2;
+            font-family: 'Montserrat', sans-serif;
+            backdrop-filter: blur(2px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .image-caption.expanded {
+            padding: 15px;
+            font-size: 1rem;
+            background-color: rgba(15, 23, 42, 0.9);
+        }
+        
+        .image-container:hover .image-caption:not(.expanded) {
+            opacity: 0.2;
+        }
+        
+        .image-caption::after {
+            content: "👆 tap for details";
+            display: block;
+            font-size: 0.7rem;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+        
+        .image-caption.expanded::after {
+            content: "👆 tap to minimize";
+        }
+
+        .story-content {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        #story {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            font-size: 1.2rem;
+            line-height: 1.7;
+            transition: opacity 0.5s ease;
+            padding-bottom: 30vh;
+        }
+
+        #story p {
+            margin-bottom: 1rem;
+        }
+
+        #story.fading {
+            opacity: 0;
+        }
+
+        .status-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #status {
+            background-color: var(--surface);
+            padding: 20px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .status-spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .choices-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--choice-height);
+            display: flex;
+            z-index: 5;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 40vh;
+        }
+
+        .choices-container.hidden {
+            transform: translateY(100%);
+        }
+
+        .choice {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: bottom center;
+            min-height: 0;
+        }
+
+        .choice-1 { background-color: var(--choice-left); }
+        .choice-2 { background-color: var(--choice-middle); }
+        .choice-3 { background-color: var(--choice-right); }
+
+        .choice-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            transition: all var(--transition-time) cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: grayscale(30%) opacity(0.8);
+            transform-origin: center;
+        }
+
+        .choice:hover .choice-emoji {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.1);
+        }
+
+        .choice-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            opacity: 0.9;
+            transition: all var(--transition-time) ease;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 8px;
+            max-width: 100%;
+            z-index: 5;
+        }
+
+        .choice:hover .choice-label {
+            opacity: 1;
+        }
+
+        .expanding-choice {
+            position: fixed;
+            bottom: 0;
+            height: var(--choice-height);
+            transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .expanding-choice .choice-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            transition: all var(--transition-time) cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .expanding-choice .choice-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 8px;
+            max-width: 100%;
+            z-index: 5;
+        }
+
+        .menu-button, .fullscreen-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .menu-button:hover, .fullscreen-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        :fullscreen .app-container, 
+        :-webkit-full-screen .app-container, 
+        :-moz-full-screen .app-container {
+            background-color: var(--background);
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .menu-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 15px;
+            z-index: 5;
+        }
+
+        .restart-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateX(-50%) translateY(0px); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+            100% { transform: translateX(-50%) translateY(0px); }
+        }
+
+        .loading-animation {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        .loading-animation div {
+            position: absolute;
+            top: 33px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .loading-animation div:nth-child(1) {
+            left: 8px;
+            animation: loading1 0.6s infinite;
+        }
+        .loading-animation div:nth-child(2) {
+            left: 8px;
+            animation: loading2 0.6s infinite;
+        }
+        .loading-animation div:nth-child(3) {
+            left: 32px;
+            animation: loading2 0.6s infinite;
+        }
+        .loading-animation div:nth-child(4) {
+            left: 56px;
+            animation: loading3 0.6s infinite;
+        }
+        @keyframes loading1 {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        @keyframes loading2 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(24px, 0); }
+        }
+        @keyframes loading3 {
+            0% { transform: scale(1); }
+            100% { transform: scale(0); }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        .slide-up {
+            animation: slide-up 0.5s ease forwards;
+        }
+
+        @media (min-width: 769px) {
+            .choices-container {
+                --choice-height: 20vh;
+                height: var(--choice-height);
+            }
+            
+            .choice-emoji {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+            }
+            
+            #story {
+                padding-bottom: 25vh;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .story-content {
+                padding: 16px;
+            }
+            
+            #story {
+                font-size: 1.1rem;
+                line-height: 1.6;
+            }
+            
+            .title-bar h1 {
+                font-size: 1.2rem;
+            }
+            
+            .choice-label {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+            
+            .choice-emoji {
+                font-size: 3rem;
+            }
+        }
+        
+        @media (max-height: 700px) {
+            .choices-container {
+                --choice-height: 100px;
+                height: var(--choice-height);
+            }
+            
+            .image-container {
+                height: 42vh;
+            }
+            
+            .choice-emoji {
+                font-size: 1.8rem;
+                margin-bottom: 5px;
+            }
+        }
+
+        .end-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--background);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .end-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .end-screen h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .end-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        /* Sandbox iframe (hidden) */
+        #fink-sandbox {
+            display: none;
+        }
+
+        /* Debug console */
+        #debug-console {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 400px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            border: 1px solid #333;
+            display: none;
+        }
+
+        #debug-console.active {
+            display: block;
+        }
+
+        #debug-toggle {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            border: 1px solid #333;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 1001;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app-container">
+        <div class="menu-trigger" id="menu-trigger"></div>
+        <div class="title-bar" id="title-bar">
+            <h1 id="story-title">Riverbend</h1>
+            <div class="controls">
+                <button class="fullscreen-button" id="fullscreen-button">📺</button>
+                <button class="menu-button" id="menu-button">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="url-form" id="url-form">
+            <input type="text" id="fink-url-input" value="toc.fink.js" placeholder="Enter URL of .fink.js file">
+            <input type="text" id="media-path-input" value="villaged/" placeholder="Media assets directory">
+            <button id="load-fink-button">Load Story</button>
+        </div>
+        
+        <div class="story-container">
+            <div class="image-container">
+                <img id="story-image" alt="Story scene" class="hidden">
+                <div class="image-overlay"></div>
+            </div>
+            
+            <div class="story-content">
+                <div id="story"></div>
+            </div>
+        </div>
+        
+        <div class="choices-container" id="choices-container">
+            <!-- Choices will be added here dynamically -->
+        </div>
+        
+        <div class="status-overlay" id="status-overlay">
+            <div id="status">
+                <div class="loading-animation"><div></div><div></div><div></div><div></div></div>
+                <div id="status-text">Loading story...</div>
+            </div>
+        </div>
+        
+        <div class="end-screen" id="end-screen">
+            <h2>The End</h2>
+            <p>Your journey through this story has concluded. What mysteries remain undiscovered?</p>
+            <button class="restart-button" id="end-restart-button">Begin Again</button>
+        </div>
+    </div>
+
+    <!-- Hidden sandbox iframe for loading fink.js files -->
+    <iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
+
+    <!-- Debug console -->
+    <div id="debug-console"></div>
+    <button id="debug-toggle">DEBUG</button>
+
+    <script>
+        // Main state variables
+        let finkStoryContent = '';
+        let storyKnots = {};
+        let currentKnot = '';
+        let mediaBasePath = 'villaged/';
+        let animationInProgress = false;
+        let expandingElement = null;
+        let isNavigatingFromHistory = false;
+        let pendingFinkFile = null; // For handling FINK: references
+        
+        // Sandbox communication
+        let activeSandbox = null;
+        let sandboxTimeout = null;
+        const SANDBOX_TIMEOUT_MS = 15000;
+        
+        // DOM elements
+        const appContainer = document.getElementById('app-container');
+        const menuTrigger = document.getElementById('menu-trigger');
+        const titleBar = document.getElementById('title-bar');
+        const storyElement = document.getElementById('story');
+        const choicesContainer = document.getElementById('choices-container');
+        const statusOverlay = document.getElementById('status-overlay');
+        const statusText = document.getElementById('status-text');
+        const finkUrlInput = document.getElementById('fink-url-input');
+        const mediaPathInput = document.getElementById('media-path-input');
+        const loadFinkButton = document.getElementById('load-fink-button');
+        const storyImage = document.getElementById('story-image');
+        const menuButton = document.getElementById('menu-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const urlForm = document.getElementById('url-form');
+        const endScreen = document.getElementById('end-screen');
+        const endRestartButton = document.getElementById('end-restart-button');
+        const finkSandbox = document.getElementById('fink-sandbox');
+        
+        // State for fullscreen
+        let isFullscreen = false;
+        
+        // Debug console (will be initialized after DOM loads)
+        let debugConsole = null;
+        let debugToggle = null;
+        let debugMessages = [];
+        
+        function debugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            debugMessages.push(logEntry);
+            if (debugMessages.length > 100) {
+                debugMessages = debugMessages.slice(-50); // Keep last 50 messages
+            }
+            if (debugConsole.classList.contains('active')) {
+                updateDebugDisplay();
+            }
+            console.log(logEntry);
+        }
+        
+        function updateDebugDisplay() {
+            if (debugConsole) {
+                debugConsole.innerHTML = debugMessages.join('<br>');
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            }
+        }
+        
+        function toggleDebugConsole() {
+            if (debugConsole) {
+                debugConsole.classList.toggle('active');
+                if (debugConsole.classList.contains('active')) {
+                    updateDebugDisplay();
+                }
+            }
+        }
+        
+        // Emoji mapping for common themes in choices
+        const emojiMap = {
+            'go': '🚶', 'walk': '🚶‍♂️', 'run': '🏃‍♀️', 'look': '👀', 'search': '🔍',
+            'take': '🤲', 'grab': '✊', 'hold': '👐', 'find': '🔎',
+            'talk': '💬', 'ask': '❓', 'tell': '🗣️', 'speak': '🗯️',
+            'listen': '👂', 'hear': '🔊', 'watch': '👁️', 'observe': '🧐',
+            'wait': '⏳', 'stay': '⌛', 'hide': '🙈', 'escape': '🏃‍♂️',
+            'open': '🔓', 'close': '🔒', 'climb': '🧗‍♀️', 'jump': '⏫',
+            'drink': '🥤', 'eat': '🍽️', 'sleep': '😴', 'wake': '⏰',
+            'use': '🔧', 'call': '📞', 'push': '👉', 'pull': '👈',
+            'read': '📚', 'write': '✍️', 'follow': '🦮', 'lead': '🧭',
+            'right': '➡️', 'left': '⬅️', 'up': '⬆️', 'down': '⬇️',
+            'forward': '⏩', 'back': '⏪', 'north': '🧭', 'south': '🧭',
+            'east': '🧭', 'west': '🧭', 'inside': '🚪', 'outside': '🌳',
+            'happy': '😊', 'sad': '😢', 'angry': '😠', 'afraid': '😨',
+            'confused': '😕', 'surprised': '😲', 'excited': '🤩', 'calm': '😌',
+            'suspicious': '🤨', 'curious': '🧐', 'worried': '😟', 'annoyed': '😒',
+            'door': '🚪', 'key': '🔑', 'book': '📕', 'letter': '✉️',
+            'light': '💡', 'dark': '🌑', 'water': '💧', 'fire': '🔥',
+            'phone': '📱', 'money': '💰', 'clock': '🕰️', 'picture': '🖼️',
+            'weapon': '🗡️', 'sword': '⚔️', 'gun': '🔫', 'shield': '🛡️',
+            'house': '🏠', 'room': '🏘️', 'cave': '🕳️', 'forest': '🌲',
+            'mountain': '⛰️', 'river': '🏞️', 'lake': '🌊', 'beach': '🏖️',
+            'city': '🏙️', 'village': '🏘️', 'castle': '🏰', 'tower': '🗼',
+            'yes': '✅', 'no': '❌', 'maybe': '❓', 'help': '🆘',
+            'danger': '⚠️', 'safe': '🛡️', 'secret': '🤫', 'trap': '⚡',
+            'accept': '👍', 'refuse': '👎', 'ignore': '🙄', 'question': '❓',
+            'restart': '🔄'
+        };
+        
+        const defaultEmojis = ['🚀', '🧩', '🎯'];
+        
+        // Initialize the story player
+        function init() {
+            // Initialize debug elements first
+            debugConsole = document.getElementById('debug-console');
+            debugToggle = document.getElementById('debug-toggle');
+            
+            debugLog('Initializing FINK player...');
+            loadFinkButton.addEventListener('click', loadFinkStory);
+            menuButton.addEventListener('click', toggleUrlForm);
+            endRestartButton.addEventListener('click', restartStory);
+            fullscreenButton.addEventListener('click', toggleFullscreen);
+            
+            if (debugToggle) {
+                debugToggle.addEventListener('click', toggleDebugConsole);
+            }
+            
+            // Setup menu trigger
+            menuTrigger.addEventListener('mouseenter', () => {
+                appContainer.classList.add('show-menu');
+            });
+            
+            titleBar.addEventListener('mouseleave', () => {
+                if (!urlForm.classList.contains('active')) {
+                    appContainer.classList.remove('show-menu');
+                }
+            });
+            
+            menuTrigger.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                titleBar.classList.toggle('visible');
+            });
+            
+            // History navigation
+            window.addEventListener('popstate', handleHistoryNavigation);
+            
+            // Touch handling
+            document.addEventListener('touchstart', handleTouchStart);
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+            
+            // Choice click handling
+            document.addEventListener('click', (e) => {
+                const choiceEl = e.target.closest('.choice');
+                if (choiceEl && !animationInProgress) {
+                    const index = parseInt(choiceEl.dataset.index);
+                    const target = choiceEl.dataset.target;
+                    handleChoiceClick({currentTarget: choiceEl}, index, target);
+                }
+            });
+            
+            debugLog('FINK player initialized');
+            
+            // Check for hash fragment
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#js-')) {
+                const knotFromHash = hash.substring(4);
+                debugLog('Found knot in URL hash: ' + knotFromHash);
+                
+                // Clean up the URL hash after reading it (without page reload)
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                debugLog('Cleaned URL hash to prevent accidental deep-link bookmarking');
+                
+                if (finkUrlInput.value) {
+                    loadFinkStory(knotFromHash);
+                } else {
+                    showStatus('Enter a URL to load a FINK story');
+                }
+            } else if (finkUrlInput.value) {
+                debugLog('Auto-loading default FINK URL: ' + finkUrlInput.value);
+                // Add a small delay to ensure everything is ready
+                setTimeout(() => {
+                    loadFinkStory();
+                }, 100);
+            } else {
+                debugLog('No default URL, waiting for user input');
+                showStatus('Enter a URL to load a FINK story');
+            }
+        }
+        
+        // Toggle fullscreen mode
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                }
+                fullscreenButton.textContent = '❌';
+                fullscreenButton.title = 'Exit fullscreen';
+                isFullscreen = true;
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+                fullscreenButton.textContent = '📺';
+                fullscreenButton.title = 'Enter fullscreen';
+                isFullscreen = false;
+            }
+        }
+        
+        // Toggle the URL form
+        function toggleUrlForm() {
+            titleBar.classList.add('visible');
+            urlForm.classList.toggle('active');
+        }
+        
+        // Load the FINK story from the provided URL using sandboxed iframe
+        async function loadFinkStory(targetKnot = null) {
+            debugLog('loadFinkStory called with targetKnot: ' + targetKnot);
+            urlForm.classList.remove('active');
+            
+            setTimeout(() => {
+                appContainer.classList.remove('show-menu');
+                titleBar.classList.remove('visible');
+            }, 1000);
+            
+            const finkUrl = finkUrlInput.value.trim();
+            debugLog('FINK URL: ' + finkUrl);
+            if (!finkUrl) {
+                debugLog('No URL provided');
+                showStatus('Please enter a URL to a FINK file');
+                return;
+            }
+            
+            // Update media assets path
+            const newMediaPath = mediaPathInput.value.trim();
+            if (newMediaPath) {
+                mediaBasePath = newMediaPath.endsWith('/') ? newMediaPath : newMediaPath + '/';
+                debugLog('Media assets path set to: ' + mediaBasePath);
+            }
+            
+            showStatus('Loading story...', true);
+            
+            const fullUrl = new URL(finkUrl, window.location.href).href;
+            debugLog('📖 Loading FINK story from: ' + fullUrl);
+            
+            try {
+                await loadViaSandbox(fullUrl, targetKnot);
+            } catch (error) {
+                debugLog('Error loading story: ' + error.message);
+                showStatus(`Error: ${error.message}`);
+            }
+        }
+        
+        // Load FINK file via sandboxed iframe
+        function loadViaSandbox(url, targetKnot = null) {
+            debugLog('loadViaSandbox called for: ' + url);
+            return new Promise((resolve, reject) => {
+                cleanupSandbox();
+                
+                // Create fresh iframe with blob URL to avoid cross-origin issues
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('sandbox', 'allow-scripts');
+                iframe.style.display = 'none';
+                iframe.id = 'fink-sandbox-active';
+                
+                activeSandbox = iframe;
+                
+                // Message handler
+                const messageHandler = (event) => {
+                    if (event.source !== iframe.contentWindow) return;
+                    
+                    const data = event.data;
+                    if (!data || !data.type) return;
+                    
+                    switch (data.type) {
+                        case 'sandbox-ready':
+                            debugLog('Sandbox ready, sending load command');
+                            startSandboxTimeout();
+                            iframe.contentWindow.postMessage({ type: 'load-script', url: url }, '*');
+                            break;
+                            
+                        case 'fink-loaded':
+                            debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
+                            clearTimeout(sandboxTimeout);
+                            if (data.data && data.data.length > 0) {
+                                finkStoryContent = data.data.join('\n');
+                                debugLog('✅ FINK story loaded: ' + finkStoryContent.length + ' characters');
+                                debugLog('Raw content preview: ' + finkStoryContent.substring(0, 200) + '...');
+                                parseInkStory(finkStoryContent);
+                                
+                                // Navigate to target or start knot
+                                let startKnot = targetKnot;
+                                if (!startKnot || !storyKnots[startKnot]) {
+                                    // Try common starting knots
+                                    if (storyKnots['Bag_End']) {
+                                        startKnot = 'Bag_End';
+                                    } else if (storyKnots['intro']) {
+                                        startKnot = 'intro';
+                                    } else {
+                                        startKnot = Object.keys(storyKnots)[0];
+                                    }
+                                }
+                                console.log('Starting story at knot:', startKnot, 'Available knots:', Object.keys(storyKnots));
+                                
+                                setTimeout(() => {
+                                    hideStatus();
+                                    showKnot(startKnot, !!targetKnot);
+                                    resolve();
+                                }, 1000);
+                            } else {
+                                showStatus('No FINK content found in file');
+                                reject(new Error('No FINK content found'));
+                            }
+                            cleanupSandbox();
+                            window.removeEventListener('message', messageHandler);
+                            break;
+                            
+                        case 'fink-error':
+                            clearTimeout(sandboxTimeout);
+                            const errorMsg = data.error || 'Unknown error in sandbox';
+                            console.error('Sandbox error:', errorMsg);
+                            showStatus(`Error: ${errorMsg}`);
+                            cleanupSandbox();
+                            window.removeEventListener('message', messageHandler);
+                            reject(new Error(errorMsg));
+                            break;
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                
+                // Create sandbox HTML as blob URL to avoid cross-origin document access
+                const sandboxHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>FINK Sandbox</title></head>
+                <body>
+                    <script>
+                        window.finkData = [];
+                        
+                        function oooOO(strings) {
+                            try {
+                                const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
+                                    ? strings.raw.join('')
+                                    : String(strings);
+                                window.finkData.push(content);
+                                return content;
+                            } catch (e) {
+                                return '';
+                            }
+                        }
+                        
+                        Object.defineProperty(window, 'oooOO', { value: oooOO, writable: false, configurable: false });
+                        
+                        setTimeout(() => {
+                            parent.postMessage({ type: 'sandbox-ready' }, '*');
+                        }, 0);
+                        
+                        window.addEventListener('message', function(event) {
+                            if (event.data && event.data.type === 'load-script') {
+                                const scriptUrl = event.data.url;
+                                const script = document.createElement('script');
+                                
+                                script.onload = () => {
+                                    parent.postMessage({ type: 'fink-loaded', data: window.finkData, url: scriptUrl }, '*');
+                                };
+                                
+                                script.onerror = () => {
+                                    parent.postMessage({ type: 'fink-error', error: 'Failed to load script', url: scriptUrl }, '*');
+                                };
+                                
+                                script.src = scriptUrl;
+                                (document.head || document.body).appendChild(script);
+                            }
+                        });
+                    <\/script>
+                </body>
+                </html>
+                `;
+                
+                // Create blob URL and set as iframe source
+                const blob = new Blob([sandboxHtml], { type: 'text/html' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                iframe.onload = () => {
+                    // Clean up blob URL after iframe loads
+                    URL.revokeObjectURL(blobUrl);
+                };
+                
+                iframe.src = blobUrl;
+                document.body.appendChild(iframe);
+            });
+        }
+        
+        function startSandboxTimeout() {
+            if (sandboxTimeout) clearTimeout(sandboxTimeout);
+            sandboxTimeout = setTimeout(() => {
+                console.error('Sandbox timeout');
+                showStatus('Error: Timeout loading story');
+                cleanupSandbox();
+            }, SANDBOX_TIMEOUT_MS);
+        }
+        
+        function cleanupSandbox() {
+            if (sandboxTimeout) {
+                clearTimeout(sandboxTimeout);
+                sandboxTimeout = null;
+            }
+            if (activeSandbox) {
+                activeSandbox.remove();
+                activeSandbox = null;
+            }
+        }
+        
+        // Parse the FINK content into our internal format (same as inklet2.html)
+        function parseInkStory(content) {
+            storyKnots = {};
+            
+            debugLog('Starting to parse FINK story content');
+            debugLog('Content length: ' + content.length);
+            
+            const lines = content.split(/\r?\n/);
+            let currentKnotName = '';
+            let currentKnotContent = [];
+            
+            for (const line of lines) {
+                if (line.trim().startsWith('===')) {
+                    if (currentKnotName) {
+                        console.log(`Parsing knot: ${currentKnotName} with ${currentKnotContent.length} lines`);
+                        
+                        if (currentKnotName === 'intro' && storyKnots['intro']) {
+                            console.log('Found duplicate intro knot, merging content');
+                            const parsedContent = parseKnotContent(currentKnotContent);
+                            if (parsedContent.text.length > 0) {
+                                storyKnots['intro'].text = parsedContent.text;
+                            }
+                            if (parsedContent.choices.length > 0) {
+                                storyKnots['intro'].choices = parsedContent.choices;
+                            }
+                            if (parsedContent.image) {
+                                storyKnots['intro'].image = parsedContent.image;
+                            }
+                            console.log('Merged intro knot:', storyKnots['intro']);
+                        } else if (!storyKnots[currentKnotName] || (storyKnots[currentKnotName].text.length === 0 && storyKnots[currentKnotName].choices.length === 0)) {
+                            // Create new knot or overwrite empty knot
+                            storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                        } else {
+                            debugLog(`Duplicate knot definition found for: ${currentKnotName} - skipping`);
+                        }
+                        
+                        currentKnotContent = [];
+                    }
+                    
+                    let knotNameRaw = line.trim();
+                    knotNameRaw = knotNameRaw.replace(/^===\s*/, '').replace(/\s*===$/, '').trim();
+                    
+                    if (knotNameRaw.includes("===")) {
+                        knotNameRaw = knotNameRaw.split("===")[0].trim();
+                    }
+                    
+                    currentKnotName = knotNameRaw;
+                    console.log(`Found knot definition: '${currentKnotName}'`);
+                } else if (line.trim().startsWith('->') && !currentKnotName) {
+                    // This is the entry point directive - just note it, don't create an empty knot
+                    const startKnot = line.trim().replace('->', '').trim();
+                    debugLog(`Found story entry point: ${startKnot} (will start there after parsing)`);
+                    // Don't set currentKnotName here - let the actual knot definition handle it
+                } else if (currentKnotName) {
+                    currentKnotContent.push(line);
+                }
+            }
+            
+            if (currentKnotName && currentKnotContent.length > 0) {
+                if (!storyKnots[currentKnotName] || (storyKnots[currentKnotName].text.length === 0 && storyKnots[currentKnotName].choices.length === 0)) {
+                    debugLog(`Parsing final knot: ${currentKnotName} with ${currentKnotContent.length} lines`);
+                    storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                } else {
+                    debugLog(`Duplicate knot definition found for final knot: ${currentKnotName} - skipping`);
+                }
+            }
+            
+            debugLog(`Finished parsing story. Found ${Object.keys(storyKnots).length} unique knots: ${Object.keys(storyKnots).join(', ')}`);
+            
+            // Debug: Show first knot details
+            if (Object.keys(storyKnots).length > 0) {
+                const firstKnot = Object.keys(storyKnots)[0];
+                const knot = storyKnots[firstKnot];
+                debugLog(`First knot "${firstKnot}": ${knot.text.length} text lines, ${knot.choices.length} choices, image: ${knot.image || 'none'}`);
+            }
+        }
+        
+        // Parse the content of a single knot (same as inklet2.html)
+        function parseKnotContent(lines) {
+            const knot = {
+                text: [],
+                choices: [],
+                image: null,
+                finkFile: null // For FINK: references
+            };
+            
+            console.log("Processing knot with lines:", lines);
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                console.log("Processing line:", trimmedLine);
+                
+                if (trimmedLine.startsWith("IMAGE:")) {
+                    const imageMatch = trimmedLine.match(/IMAGE:\s*(.*)/);
+                    if (imageMatch) {
+                        const imagePath = imageMatch[1].trim();
+                        knot.image = imagePath;
+                        console.log("Found image:", imagePath);
+                    }
+                } else if (trimmedLine.startsWith("FINK:")) {
+                    const finkMatch = trimmedLine.match(/FINK:\s*(.*)/);
+                    if (finkMatch) {
+                        const finkPath = finkMatch[1].trim();
+                        knot.finkFile = finkPath;
+                        console.log("Found FINK reference:", finkPath);
+                    }
+                } else if (trimmedLine.includes("[[Image:")) {
+                    const imageMatch = trimmedLine.match(/\[\[Image:\s*(.*?)\s*\]\]/);
+                    if (imageMatch) {
+                        const imagePath = imageMatch[1];
+                        knot.image = imagePath;
+                        console.log("Found image:", imagePath);
+                    }
+                } else if (trimmedLine.startsWith('+') || trimmedLine.startsWith('*')) {
+                    // Parse INK choice syntax: + [choice text] -> target or + [choice text]
+                    let choiceText = trimmedLine.substring(1).trim();
+                    let target = '';
+                    
+                    // Handle choice with immediate target: + [text] -> target
+                    if (choiceText.includes('->')) {
+                        const parts = choiceText.split('->');
+                        choiceText = parts[0].trim();
+                        target = parts[1].trim();
+                        
+                        // Remove brackets if present
+                        if (choiceText.startsWith('[') && choiceText.endsWith(']')) {
+                            choiceText = choiceText.slice(1, -1);
+                        }
+                        
+                        if (choiceText && target) {
+                            knot.choices.push({ text: choiceText, target: target });
+                            console.log("Found choice with immediate target:", choiceText, "->", target);
+                        }
+                    } else {
+                        // Choice without immediate target - we need to look for target on following lines
+                        // Remove brackets if present
+                        if (choiceText.startsWith('[') && choiceText.endsWith(']')) {
+                            choiceText = choiceText.slice(1, -1);
+                        }
+                        
+                        if (choiceText) {
+                            // This is a multi-line choice, we'll handle the target later
+                            knot.pendingChoice = { text: choiceText, startIndex: knot.text.length };
+                            console.log("Found choice without immediate target:", choiceText);
+                        }
+                    }
+                } else if (trimmedLine.includes("[[") && trimmedLine.includes("]]") && trimmedLine.includes("->")) {
+                    const choiceMatch = trimmedLine.match(/\[\[(.*?)\]\]\s*->\s*(.*)/);
+                    if (choiceMatch) {
+                        const choiceText = choiceMatch[1];
+                        const target = choiceMatch[2].trim();
+                        knot.choices.push({ text: choiceText, target: target });
+                        console.log("Found choice:", choiceText, "->", target);
+                    }
+                } else if (trimmedLine.startsWith('->') && knot.pendingChoice) {
+                    // This is a target for the pending choice
+                    const target = trimmedLine.replace('->', '').trim();
+                    knot.choices.push({ text: knot.pendingChoice.text, target: target });
+                    console.log("Resolved pending choice:", knot.pendingChoice.text, "->", target);
+                    delete knot.pendingChoice;
+                } else if (trimmedLine && !trimmedLine.startsWith('->') && !trimmedLine.startsWith('===') && !trimmedLine.startsWith('//') && !trimmedLine.startsWith('VAR') && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('+') && !trimmedLine.startsWith('*')) {
+                    // Regular text line
+                    if (knot.pendingChoice) {
+                        // This is choice description text, not story text
+                        console.log("Found choice description:", trimmedLine);
+                    } else {
+                        knot.text.push(trimmedLine);
+                        console.log("Found text:", trimmedLine);
+                    }
+                }
+            }
+            
+            console.log("Final knot content:", knot);
+            return knot;
+        }
+        
+        // All other functions remain the same as inklet2.html
+        function chooseEmoji(choiceText) {
+            const text = choiceText.toLowerCase();
+            
+            for (const [keyword, emoji] of Object.entries(emojiMap)) {
+                if (text.includes(keyword)) {
+                    return emoji;
+                }
+            }
+            
+            const index = Math.floor(Math.random() * defaultEmojis.length);
+            return defaultEmojis[index];
+        }
+        
+        function showKnot(knotName, fromHistory = false) {
+            currentKnot = knotName;
+            debugLog('showKnot called: ' + knotName + (fromHistory ? ' (from history)' : ''));
+            
+            // Only update URL hash for browser history, but don't create bookmarkable deep links
+            if (!fromHistory && !isNavigatingFromHistory) {
+                // Use replaceState instead of pushState to avoid creating browser history entries
+                // and don't include hash fragments to prevent accidental bookmarking
+                const stateObj = { knotName: knotName };
+                window.history.replaceState(stateObj, '', window.location.pathname + window.location.search);
+                debugLog('Updated history state without hash fragment');
+            }
+            
+            if (knotName === 'END') {
+                console.log('End of story reached');
+                showEndScreen();
+                return;
+            }
+            
+            const knot = storyKnots[knotName];
+            if (!knot) {
+                debugLog('ERROR: Knot not found: ' + knotName);
+                debugLog('Available knots: ' + Object.keys(storyKnots).join(', '));
+                storyElement.innerHTML = `<p>Error: Knot "${knotName}" not found!</p>`;
+                return;
+            }
+            
+            debugLog('Knot data - text lines: ' + knot.text.length + ', choices: ' + knot.choices.length + ', image: ' + (knot.image || 'none'));
+            
+            storyElement.classList.add('fading');
+            
+            setTimeout(() => {
+                try {
+                    console.log('Rendering knot text:', knot.text);
+                    console.log('Rendering knot choices:', knot.choices);
+                    console.log('Rendering knot image:', knot.image);
+                    
+                    if (knot.text && knot.text.length > 0) {
+                        const paragraphs = knot.text
+                            .filter(line => line && line.trim())
+                            .map(line => `<p class="slide-up" style="opacity: 0;">${line}</p>`);
+                        
+                        storyElement.innerHTML = paragraphs.join('');
+                        console.log('Updated story text with', paragraphs.length, 'paragraphs');
+                    } else {
+                        console.warn('No text content found for knot:', knotName);
+                        storyElement.innerHTML = '<p class="slide-up" style="opacity: 0;">No story text available for this section.</p>';
+                    }
+                    
+                    storyElement.classList.remove('fading');
+                    
+                    const storyParagraphs = storyElement.querySelectorAll('p');
+                    storyParagraphs.forEach((p, index) => {
+                        setTimeout(() => {
+                            p.style.opacity = '1';
+                        }, 100 * index);
+                    });
+                    
+                    updateImage(knot.image);
+                    updateChoices(knot.choices);
+                } catch (error) {
+                    console.error('Error rendering knot:', error);
+                    storyElement.innerHTML = '<p>Error rendering story content.</p>';
+                    storyElement.classList.remove('fading');
+                }
+            }, 300);
+        }
+        
+        function updateImage(imagePath) {
+            debugLog('Updating image: ' + (imagePath || 'none'));
+            const imageContainer = document.querySelector('.image-container');
+            
+            // Always start by clearing the current image
+            storyImage.classList.add('hidden');
+            const existingCaption = document.querySelector('.image-caption');
+            if (existingCaption) {
+                existingCaption.remove();
+            }
+            
+            if (imagePath) {
+                storyImage.classList.add('hidden');
+                imageContainer.classList.remove('hidden');
+                
+                showDescriptiveText(imagePath);
+                
+                const windowHeight = window.innerHeight;
+                if (windowHeight > 700) {
+                    const choicesCount = document.querySelectorAll('.choice').length;
+                    const newHeight = Math.min(45, Math.max(38, 50 - (choicesCount * 3 || 0))) + 'vh';
+                    imageContainer.style.height = newHeight;
+                    console.log('Adjusted image container height to', newHeight);
+                }
+                
+                setTimeout(() => {
+                    const actualImage = mediaBasePath + imagePath;
+                    
+                    const img = new Image();
+                    img.onload = function() {
+                        const imgRatio = img.width / img.height;
+                        
+                        if (imgRatio > 2) {
+                            storyImage.style.padding = '0 15%';
+                        } else {
+                            storyImage.style.padding = '0';
+                        }
+                        
+                        storyImage.src = actualImage;
+                        storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+                        storyImage.classList.remove('hidden');
+                        storyImage.classList.add('zoom-in');
+                        console.log('Image displayed:', storyImage.src, 'ratio:', imgRatio);
+                        
+                        setTimeout(() => {
+                            storyImage.classList.remove('zoom-in');
+                        }, 1500);
+                    };
+                    
+                    img.onerror = function() {
+                        console.warn('Image not found:', actualImage);
+                        storyImage.classList.add('hidden');
+                        imageContainer.classList.add('hidden');
+                        
+                        const existingCaption = document.querySelector('.image-caption');
+                        if (existingCaption) {
+                            existingCaption.remove();
+                        }
+                    };
+                    
+                    img.src = actualImage;
+                }, 300);
+            } else {
+                debugLog('No image to display - hiding image container');
+                storyImage.classList.add('hidden');
+                imageContainer.classList.add('hidden');
+                storyImage.src = ''; // Clear the src to prevent cached images
+            }
+        }
+        
+        function showDescriptiveText(imagePath) {
+            if (!imagePath) return;
+            
+            let descriptiveText = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+            
+            descriptiveText = descriptiveText
+                .split(' ')
+                .map((word, i) => {
+                    const minorWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from', 'by', 'with'];
+                    if (i === 0 || !minorWords.includes(word.toLowerCase())) {
+                        return word.charAt(0).toUpperCase() + word.slice(1);
+                    }
+                    return word;
+                })
+                .join(' ');
+            
+            const caption = document.createElement('div');
+            caption.className = 'image-caption';
+            caption.textContent = descriptiveText;
+            
+            caption.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.classList.toggle('expanded');
+            });
+            
+            const existingCaption = document.querySelector('.image-caption');
+            if (existingCaption) {
+                existingCaption.remove();
+            }
+            
+            const imageContainer = document.querySelector('.image-container');
+            imageContainer.appendChild(caption);
+        }
+        
+        function updateChoices(choices) {
+            console.log('Updating choices:', choices);
+            choicesContainer.innerHTML = '';
+            choicesContainer.classList.add('hidden');
+            
+            if (!choices || choices.length === 0) {
+                console.log('No choices to display');
+                return;
+            }
+            
+            choices.forEach((choice, index) => {
+                const emoji = chooseEmoji(choice.text);
+                const choiceEl = document.createElement('div');
+                const choiceNumber = Math.min(index + 1, 3);
+                choiceEl.className = `choice choice-${choiceNumber}`;
+                choiceEl.dataset.target = choice.target;
+                choiceEl.dataset.index = index;
+                
+                choiceEl.innerHTML = `
+                    <div class="choice-emoji">${emoji}</div>
+                    <div class="choice-label">${choice.text}</div>
+                `;
+                
+                choiceEl.addEventListener('touchstart', (e) => {
+                    choiceEl.dataset.touched = 'true';
+                });
+                
+                choicesContainer.appendChild(choiceEl);
+                console.log(`Added choice ${index + 1}:`, choice.text, '→', choice.target);
+            });
+            
+            setTimeout(() => {
+                choicesContainer.classList.remove('hidden');
+                console.log('Choices displayed');
+            }, 500);
+        }
+        
+        function handleChoiceClick(event, index, target) {
+            if (animationInProgress) return;
+            animationInProgress = true;
+            
+            const choiceElement = event.currentTarget;
+            const rect = choiceElement.getBoundingClientRect();
+            
+            // Check if this choice should load an external FINK file
+            const currentKnotData = storyKnots[currentKnot];
+            if (target === 'EXTERNAL_STORY' && currentKnotData && currentKnotData.finkFile) {
+                // Load the external FINK file
+                debugLog('Loading external FINK file: ' + currentKnotData.finkFile);
+                finkUrlInput.value = currentKnotData.finkFile;
+                loadFinkStory();
+                animationInProgress = false;
+                return;
+            }
+            
+            expandingElement = document.createElement('div');
+            expandingElement.className = 'expanding-choice';
+            expandingElement.style.backgroundColor = getComputedStyle(choiceElement).backgroundColor;
+            expandingElement.style.left = `${rect.left}px`;
+            expandingElement.style.width = `${rect.width}px`;
+            expandingElement.innerHTML = choiceElement.innerHTML;
+            document.body.appendChild(expandingElement);
+            
+            requestAnimationFrame(() => {
+                expandingElement.style.height = '100%';
+                expandingElement.style.left = '0';
+                expandingElement.style.width = '100%';
+                
+                choicesContainer.style.opacity = '0';
+                
+                const emoji = expandingElement.querySelector('.choice-emoji');
+                emoji.style.fontSize = '8rem';
+                emoji.style.filter = 'grayscale(0%) opacity(1)';
+                
+                setTimeout(() => {
+                    expandingElement.style.backgroundColor = 'rgba(0,0,0,0)';
+                    storyElement.classList.add('fading');
+                }, 500);
+                
+                setTimeout(() => {
+                    expandingElement.remove();
+                    expandingElement = null;
+                    showKnot(target, false);
+                    choicesContainer.style.opacity = '1';
+                    animationInProgress = false;
+                }, 1000);
+            });
+        }
+        
+        function showEndScreen() {
+            endScreen.classList.add('active');
+        }
+        
+        function hideEndScreen() {
+            endScreen.classList.remove('active');
+        }
+        
+        function restartStory() {
+            hideEndScreen();
+            const startKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+            const hashFragment = `#js-${startKnot}`;
+            window.history.pushState({ knotName: startKnot }, '', hashFragment);
+            showKnot(startKnot, true);
+        }
+        
+        function showStatus(message, showLoader = false) {
+            statusText.textContent = message;
+            statusOverlay.classList.add('active');
+            
+            const loader = statusOverlay.querySelector('.loading-animation');
+            if (showLoader) {
+                loader.style.display = 'inline-block';
+            } else {
+                loader.style.display = 'none';
+            }
+        }
+        
+        function hideStatus() {
+            statusOverlay.classList.remove('active');
+        }
+        
+        // Touch handling
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let choiceIndex = -1;
+        let touchStartTime = 0;
+        
+        function handleTouchStart(event) {
+            if (animationInProgress || !event.touches[0]) return;
+            
+            touchStartY = event.touches[0].clientY;
+            touchStartX = event.touches[0].clientX;
+            touchStartTime = Date.now();
+            
+            const choice = document.elementFromPoint(touchStartX, touchStartY);
+            const choiceEl = choice ? choice.closest('.choice') : null;
+            
+            if (choiceEl) {
+                choiceIndex = parseInt(choiceEl.dataset.index);
+            }
+        }
+        
+        function handleTouchMove(event) {
+            if (choiceIndex === -1 || !event.touches[0]) return;
+            
+            const touchY = event.touches[0].clientY;
+            const touchX = event.touches[0].clientX;
+            
+            const deltaY = touchStartY - touchY;
+            
+            if (deltaY > 50) {
+                if (!expandingElement && !animationInProgress) {
+                    const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
+                    if (choiceEl) {
+                        handleChoiceClick({currentTarget: choiceEl}, choiceIndex, choiceEl.dataset.target);
+                    }
+                }
+            }
+        }
+        
+        function handleTouchEnd(event) {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            const touchedElement = document.querySelector('.choice[data-touched="true"]');
+            
+            if (touchDuration < 300 && touchedElement && !animationInProgress) {
+                const index = parseInt(touchedElement.dataset.index);
+                const target = touchedElement.dataset.target;
+                handleChoiceClick({currentTarget: touchedElement}, index, target);
+            }
+            
+            document.querySelectorAll('.choice[data-touched="true"]').forEach(el => {
+                delete el.dataset.touched;
+            });
+            
+            choiceIndex = -1;
+        }
+        
+        function handleHistoryNavigation(event) {
+            console.log('History navigation event:', event);
+            
+            isNavigatingFromHistory = true;
+            
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#js-')) {
+                const knotName = hash.substring(4);
+                
+                console.log('Navigating to knot from history:', knotName);
+                
+                if (storyKnots[knotName]) {
+                    showKnot(knotName, true);
+                } else {
+                    console.warn(`Knot ${knotName} from history not found in current story`);
+                }
+            } else {
+                const defaultKnot = storyKnots.intro ? 'intro' : Object.keys(storyKnots)[0];
+                console.log('No valid knot in history, defaulting to:', defaultKnot);
+                
+                if (defaultKnot) {
+                    showKnot(defaultKnot, true);
+                }
+            }
+            
+            setTimeout(() => {
+                isNavigatingFromHistory = false;
+            }, 100);
+        }
+        
+        // Initialize when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+        
+        // Resize handler
+        window.addEventListener('resize', () => {
+            console.log('Window resized to', window.innerWidth, 'x', window.innerHeight);
+            
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer && !imageContainer.classList.contains('hidden')) {
+                const windowHeight = window.innerHeight;
+                
+                if (windowHeight <= 700) {
+                    imageContainer.style.height = '42vh';
+                } else {
+                    const choicesCount = document.querySelectorAll('.choice').length;
+                    const newHeight = Math.min(45, Math.max(38, 50 - (choicesCount * 3 || 0))) + 'vh';
+                    imageContainer.style.height = newHeight;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

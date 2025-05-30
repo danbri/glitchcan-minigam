@@ -6,6 +6,7 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 ## Development Commands
 - **Run local server:** `python -m http.server 8000` (or `npx serve`)
 - **Open game in browser:** http://localhost:8000/glitchcan-minigam/thumbwar/thumbwar.html
+- **Hard reload (bust cache):** `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac)
 - **Validate HTML:** `npx html-validate glitchcan-minigam/**/*.html`
 - **JS Linting:** `npx eslint glitchcan-minigam/**/*.html --ext .html`
 - **Spectro-specific commands:** `cd spectro && npm install && npm start` (runs http-server)
@@ -72,3 +73,25 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
   - Collision detection (`Deadly collision with:...`)
   - Player deaths (`PLAYER DEATH:...`)
   - Jumping state (`Jump key pressed:...`)
+
+## GridLuck Development State (v1.2.0)
+### Current Session Progress:
+- **COMPLETED**: Treasure hunting system with rarity tiers and special effects
+- **COMPLETED**: Key-lock system for unlocking special areas with colored keys
+- **COMPLETED**: Collectible synergies that grant powerful temporary abilities
+- **COMPLETED**: Progression system with levels, XP, achievements, persistent upgrades
+- **COMPLETED**: Enhanced UI showing level, XP progress, active effects, synergies
+
+### Recent Fixes (v1.2.0):
+- **FIXED**: Collectible crash bug with scroll/book content generation
+- **FIXED**: Missing createCollectionEffect method crash on item collection
+
+### Remaining Tasks:
+- **PENDING**: Create special zones requiring keys/items to access
+- **PENDING**: Allow combining items for special effects
+
+### Technical Notes:
+- Game URL: http://localhost:8080/thumbwar/gridluck.html
+- Version display: v1.2.0 in top-left UI
+- Audio issues fixed: replaced 'noise' oscillator with 'sawtooth'
+- Context binding fixed: gameLoop.bind(this) prevents undefined errors

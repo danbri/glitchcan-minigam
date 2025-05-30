@@ -2,6 +2,8 @@
 // Extracted from gridluck.html for better modularity
 
 import { Vec2D, Boid, Asteroid, DecorativeShip, Collectible, SlimeMold } from './gridluck-entities.js';
+import { GridLuckRenderer } from './gridluck-renderer.js';
+import { GridLuckAudio } from './gridluck-audio.js';
 
 export class Game{
   audioCtx = null; ctx;w;h;
@@ -23,8 +25,9 @@ export class Game{
   OPPOSITE_DIR = { U: 'D', D: 'U', L: 'R', R: 'L' };
   fruit = {
     gx: 9, gy: 11, type: 'cherry', value: 100, active: false, timer: 0, spawnCooldown: 0,
-    LIFETIME: 10000, SPAWN_INTERVAL: 20000, dotsEatenForSpawn: 0, DOTS_THRESHOLD: 30
+    LIFETIME: 15000, SPAWN_INTERVAL: 12000, dotsEatenForSpawn: 0, DOTS_THRESHOLD: 15
   };
+  frenziedGhosts = []; // Extra ghosts spawned by apple
   originalCSize = 0; cSize = 0; targetCSize = 0;   
   ghostHouseExitCoord; ghostDoorCoord;
 
@@ -47,6 +50,8 @@ export class Game{
 
   constructor(){
     this.c=document.getElementById('game'); this.ctx=this.c.getContext('2d');
+    this.renderer = new GridLuckRenderer(this);
+    this.audio = new GridLuckAudio(this);
     this.wallPatterns = new Map(); // Cache canvas patterns
     this.lastPatternCSize = 0; // Track when to regenerate patterns
     this.collectibles = []; // World collectibles
@@ -186,14 +191,14 @@ export class Game{
                     const gy = y_pat + smy * R_PAT; 
                     const k = gx + ',' + gy;
                     let tileType = ' '; 
-                    if (ch === 'W') tileType = 'W'; else if (ch === '-') tileType = '-'; else if (ch === '^') tileType = '^'; 
+                    if (ch === 'W') tileType = 'W'; else if (ch === '-') tileType = '-'; else if (ch === '^') tileType = ' '; // Ghost house exit - open path
                     else if (ch === 'O') tileType = 'T'; else if (ch === '.') tileType = '.'; else if (ch === 'P') tileType = 'P'; 
                     else if (ch === 'S') tileType = 'S'; 
                     this.maze.set(k, tileType); 
                     if (tileType === '.' || tileType === 'P') this.dots.add(k);
                     
-                    // Add locked doors to some zones (rare)
-                    if (tileType === ' ' && Math.random() < 0.003) { // 0.3% chance for locked door
+                    // Add locked doors to some zones (much more frequent)
+                    if (tileType === ' ' && Math.random() < 0.02) { // 2% chance for locked door
                       const colors = ['red', 'blue', 'green', 'yellow'];
                       const doorColor = colors[Math.floor(Math.random() * colors.length)];
                       this.maze.set(k, 'L'); // L = Locked door
@@ -274,7 +279,7 @@ export class Game{
 
   spawnCollectibles() {
     this.collectibles = [];
-    const targetCount = Math.floor(this.totalWorldWidthCells * this.totalWorldHeightCells / 200); // Density control
+    const targetCount = Math.floor(this.totalWorldWidthCells * this.totalWorldHeightCells / 50); // Much higher density
     
     for (let i = 0; i < targetCount; i++) {
       // Find valid spawn location
@@ -551,8 +556,18 @@ export class Game{
       this.interp(this.ply, playerSpeed, dt_ms);
     }
     
-    this.ghosts.forEach(g=>this.step(g,g.speed));
-    this.ghosts.forEach(g=>this.interp(g,g.speed,dt_ms));
+    // Update all ghosts (normal + frenzied)
+    [...this.ghosts, ...this.frenziedGhosts].forEach(g=>this.step(g,g.speed));
+    [...this.ghosts, ...this.frenziedGhosts].forEach(g=>this.interp(g,g.speed,dt_ms));
+    
+    // Remove expired frenzied ghosts
+    this.frenziedGhosts = this.frenziedGhosts.filter(g => {
+      if (g.frenzyTimer > 0) {
+        g.frenzyTimer -= dt_ms;
+        return true;
+      }
+      return false;
+    });
     
     this.zoneEntities.forEach(entity => {
         if (entity.type === 'boid' || entity.type === 'asteroid' || entity.type === 'decorShip' || entity.type === 'slimeMold') {
@@ -656,7 +671,7 @@ export class Game{
 
     // Skip ghost collisions if player is dying or ghost immune
     if (!this.ply.dying && !this.ply.ghostImmune) {
-      this.ghosts.forEach(g=>{ if (g.isEaten) return; 
+      [...this.ghosts, ...this.frenziedGhosts].forEach(g=>{ if (g.isEaten) return; 
           let dx = g.x - this.ply.x; let dy = g.y - this.ply.y;
           if (Math.abs(dx) > this.totalWorldWidthCells / 2) dx = dx > 0 ? dx - this.totalWorldWidthCells : dx + this.totalWorldWidthCells;
           if (Math.abs(dy) > this.totalWorldHeightCells / 2) dy = dy > 0 ? dy - this.totalWorldHeightCells : dy + this.totalWorldHeightCells;
@@ -687,7 +702,22 @@ export class Game{
     if(this.fruit.active){
       this.fruit.timer-=dt_ms; if(this.fruit.timer<=0) this.fruit.active=false;
       else if(this.ply.gx===this.fruit.gx && this.ply.gy===this.fruit.gy){
-        this.score+=this.fruit.value; this.playSound('fruit'); this.fruit.active=false;
+        this.score+=this.fruit.value; 
+        this.playSound('fruit'); 
+        
+        // Handle special fruit effects
+        if (this.fruit.special === 'ghost_frenzy') {
+          this.triggerAppleGhostFrenzy();
+          console.log('🍎 APPLE EATEN! 8 frenzied ghosts appear!');
+        } else if (this.fruit.special === 'super_power') {
+          this.power = true;
+          this.pTimer = 15000; // Extra long power mode
+          console.log('🍍 PINEAPPLE POWER! Super long power mode!');
+        }
+        
+        // Create fruit collection effect
+        this.createFruitEffect(this.fruit.gx, this.fruit.gy, this.fruit.color);
+        this.fruit.active=false;
       }
     }else{ 
       this.fruit.spawnCooldown-=dt_ms;
@@ -695,9 +725,24 @@ export class Game{
         const fruitKey = this._wrapCoord(fruitSpawnGx, this.totalWorldWidthCells) +','+ this._wrapCoord(fruitSpawnGy, this.totalWorldHeightCells); 
         const fTile = this.maze.get(fruitKey);
         if(fTile !=='W' && fTile !=='-' && fTile !== 'S'){
+          // Random fruit types with different effects
+          const fruits = [
+            { type: 'cherry', value: 100, color: '#ff1493', emoji: '🍒' },
+            { type: 'strawberry', value: 300, color: '#ff6347', emoji: '🍓' },
+            { type: 'orange', value: 500, color: '#ffa500', emoji: '🍊' },
+            { type: 'banana', value: 800, color: '#ffff00', emoji: '🍌' },
+            { type: 'apple', value: 1500, color: '#ff0000', emoji: '🍎', special: 'ghost_frenzy' },
+            { type: 'grapes', value: 2000, color: '#9932cc', emoji: '🍇' },
+            { type: 'pineapple', value: 5000, color: '#ffd700', emoji: '🍍', special: 'super_power' }
+          ];
+          
+          const chosenFruit = fruits[Math.floor(Math.random() * fruits.length)];
+          Object.assign(this.fruit, chosenFruit);
           this.fruit.gx=fruitSpawnGx; this.fruit.gy=fruitSpawnGy;
           this.fruit.active=true; this.fruit.timer=this.fruit.LIFETIME;
-          this.fruit.dotsEatenForSpawn=0; 
+          this.fruit.dotsEatenForSpawn=0;
+          
+          console.log(`🍎 ${chosenFruit.emoji} ${chosenFruit.type} spawned! Worth ${chosenFruit.value} points`);
         }
         this.fruit.spawnCooldown=this.fruit.SPAWN_INTERVAL; 
       }
@@ -730,7 +775,11 @@ export class Game{
     const xpTowardNext = this.totalExperience - ((this.playerLevel - 1) * (this.playerLevel - 1) * 100);
     const xpNeededForNext = xpForNext - this.totalExperience;
     
-    let uiText = `v52 Lv.${this.playerLevel} Score ${this.score} Treasures ${this.treasureScore} Lives ${this.ply.lives}`;
+    // VERSION CONTROL: Always bump this when making changes!
+    // Major.Minor.Patch (semver) - Update for: major features, new features, bug fixes
+    // Remember to update after: refactoring, new systems, bug fixes, feature additions
+    const version = '1.2.0'; // Updated: Fixed critical crash bugs in collectible system
+    let uiText = `v${version} Lv.${this.playerLevel} Score ${this.score} Treasures ${this.treasureScore} Lives ${this.ply.lives}`;
     uiText += ` XP: ${xpTowardNext}/${xpTowardNext + xpNeededForNext} (+${xpNeededForNext})`;
     if (this.power) uiText += ` POWER (${Math.ceil(this.pTimer/1000)}s)`;
     uiText += ` Items: ${this.inventory.length}`;
@@ -894,614 +943,12 @@ export class Game{
     }
   }
 
-  draw(t_timestamp){ 
-    const cs=this.cSize; if (cs < 0.1) return;
-    const ctx=this.ctx; 
-    ctx.save();ctx.translate(-Math.floor(this.cam.x),-Math.floor(this.cam.y)); 
-    
-    const viewX = Math.floor(this.cam.x); const viewY = Math.floor(this.cam.y);
-    ctx.fillStyle='#000'; ctx.fillRect(viewX, viewY, this.w, this.h);
-
-    const startGx_view = Math.floor(this.cam.x / cs) -1; 
-    const endGx_view = Math.ceil((this.cam.x + this.w) / cs) +1;
-    const startGy_view = Math.floor(this.cam.y / cs) -1; 
-    const endGy_view = Math.ceil((this.cam.y + this.h) / cs) +1;
-    
-    const originalFont = ctx.font;
-    const wallFillEmojiBaseSize = Math.max(3, Math.floor(cs * 0.25));
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-
-    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
-        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
-            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
-            const k = a_world + ',' + b_world;
-            const tileType = this.maze.get(k);
-            if (!tileType && tileType !== ' ') continue;
-            
-            const theme = this.getThemeForCell(a_world, b_world);
-            const drawX = a_draw * cs; 
-            const drawY = b_draw * cs;
-
-            if (tileType === 'W' || tileType === 'S') {
-                ctx.fillStyle = theme.wallColor || '#333';
-            } else {
-                ctx.fillStyle = theme.pathColor || '#060606'; 
-            }
-            ctx.fillRect(drawX, drawY, cs, cs);
-        }
-    }
-    
-    // Zone transition glows will be drawn later on top
-    
-    ctx.strokeStyle = '#18189F'; ctx.lineWidth = Math.max(0.5, cs * 0.06);
-    const BORDER_OFFSET = ctx.lineWidth / 2;
-    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
-        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
-            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
-            const tileType = this.maze.get(a_world + ',' + b_world);
-            if (tileType === 'W' || tileType === 'S' || !tileType) continue;
-            
-            const x_screen = a_draw * cs; const y_screen = b_draw * cs;
-            if (this.isWallOrDecor(a_world, b_world - 1)) { ctx.beginPath(); ctx.moveTo(x_screen - BORDER_OFFSET, y_screen); ctx.lineTo(x_screen + cs + BORDER_OFFSET, y_screen); ctx.stroke(); }
-            if (this.isWallOrDecor(a_world, b_world + 1)) { ctx.beginPath(); ctx.moveTo(x_screen - BORDER_OFFSET, y_screen + cs); ctx.lineTo(x_screen + cs + BORDER_OFFSET, y_screen + cs); ctx.stroke(); }
-            if (this.isWallOrDecor(a_world - 1, b_world)) { ctx.beginPath(); ctx.moveTo(x_screen, y_screen - BORDER_OFFSET); ctx.lineTo(x_screen, y_screen + cs + BORDER_OFFSET); ctx.stroke(); }
-            if (this.isWallOrDecor(a_world + 1, b_world)) { ctx.beginPath(); ctx.moveTo(x_screen + cs, y_screen - BORDER_OFFSET); ctx.lineTo(x_screen + cs, y_screen + cs + BORDER_OFFSET); ctx.stroke(); }
-        }
-    }
-    const cornerRadius = cs * 0.25;
-    ctx.fillStyle = '#18189F';
-    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
-        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
-            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
-            const tileType = this.maze.get(a_world + ',' + b_world);
-            if (tileType === 'W' || tileType === 'S' || !tileType) continue;
-            const x_screen = a_draw * cs; const y_screen = b_draw * cs;
-            if (this.isWallOrDecor(a_world - 1, b_world) && this.isWallOrDecor(a_world, b_world - 1) && !this.isWallOrDecor(a_world-1,b_world-1)) { ctx.beginPath(); ctx.arc(x_screen, y_screen, cornerRadius, Math.PI, Math.PI * 1.5); ctx.lineTo(x_screen,y_screen); ctx.fill(); }
-            if (this.isWallOrDecor(a_world + 1, b_world) && this.isWallOrDecor(a_world, b_world - 1) && !this.isWallOrDecor(a_world+1,b_world-1)) { ctx.beginPath(); ctx.arc(x_screen + cs, y_screen, cornerRadius, Math.PI * 1.5, 0); ctx.lineTo(x_screen+cs,y_screen); ctx.fill(); }
-            if (this.isWallOrDecor(a_world - 1, b_world) && this.isWallOrDecor(a_world, b_world + 1) && !this.isWallOrDecor(a_world-1,b_world+1)) { ctx.beginPath(); ctx.arc(x_screen, y_screen + cs, cornerRadius, Math.PI * 0.5, Math.PI); ctx.lineTo(x_screen,y_screen+cs); ctx.fill(); }
-            if (this.isWallOrDecor(a_world + 1, b_world) && this.isWallOrDecor(a_world, b_world + 1) && !this.isWallOrDecor(a_world+1,b_world+1)) { ctx.beginPath(); ctx.arc(x_screen + cs, y_screen + cs, cornerRadius, 0, Math.PI * 0.5); ctx.lineTo(x_screen+cs,y_screen+cs); ctx.fill(); }
-        }
-    }
-
-    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
-        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
-            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
-            const k = a_world + ',' + b_world;
-            const tileType = this.maze.get(k);
-            if (!tileType) continue;
-            const drawX = a_draw * cs; const drawY = b_draw * cs;
-
-            if (tileType === 'L') {
-                // Render locked door
-                const lockedArea = this.lockedAreas.get(k);
-                if (lockedArea && !lockedArea.unlocked) {
-                    const doorColors = {
-                        red: '#ff3333', blue: '#3366ff', green: '#33cc33', yellow: '#ffcc33'
-                    };
-                    const doorColor = doorColors[lockedArea.color] || '#ff3333';
-                    
-                    // Draw door background
-                    ctx.fillStyle = doorColor;
-                    ctx.fillRect(drawX, drawY, cs, cs);
-                    
-                    // Draw lock symbol
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = `${cs * 0.6}px sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('🔒', drawX + cs/2, drawY + cs/2);
-                    
-                    // Add pulsing glow effect
-                    const pulsePhase = (t_timestamp / 1000) + (a_world + b_world) * 0.1;
-                    const pulseIntensity = (Math.sin(pulsePhase) + 1) * 0.3 + 0.4;
-                    ctx.save();
-                    ctx.globalAlpha = pulseIntensity;
-                    ctx.shadowColor = doorColor;
-                    ctx.shadowBlur = cs * 0.3;
-                    ctx.fillStyle = doorColor;
-                    ctx.fillRect(drawX, drawY, cs, cs);
-                    ctx.restore();
-                }
-            } else if (tileType === 'W') {
-                // Use pattern fill for walls
-                const theme = this.getThemeForCell(a_world, b_world);
-                const pattern = this.createWallPattern(theme, cs);
-                ctx.fillStyle = pattern;
-                ctx.fillRect(drawX, drawY, cs, cs);
-            } else if (tileType === 'T') {
-                ctx.fillStyle = '#101010'; ctx.fillRect(drawX, drawY, cs, cs);
-                ctx.fillStyle = '#1C1C1C'; ctx.fillRect(drawX + cs * 0.1, drawY + cs * 0.1, cs * 0.8, cs * 0.8);
-            } else if (tileType === '-') {
-                ctx.fillStyle = '#f55'; ctx.fillRect(drawX, drawY + cs * 0.4, cs, cs * 0.2);
-            }
-        }
-    }
-    ctx.font = originalFont;
-
-    const largeEmojiBaseSize = Math.max(8, cs*0.9); 
-    this.specialDecorRenderList.forEach(decor => {
-        let decorDrawGx = decor.gx; let decorDrawGy = decor.gy;
-        // Check if decor needs to be drawn wrapped relative to camera view
-        if (this.cam.x > decor.gx * cs + (decor.w_cells * cs) / 2  + this.totalWorldWidthCells * cs / 2 ) decorDrawGx += this.totalWorldWidthCells;
-        else if (this.cam.x < decor.gx * cs + (decor.w_cells * cs) / 2 - this.totalWorldWidthCells * cs / 2) decorDrawGx -= this.totalWorldWidthCells;
-        // Similar for Y if world height is also wrapped across view significantly
-
-        if (decorDrawGx + decor.w_cells < startGx_view || decorDrawGx > endGx_view || decorDrawGy + decor.h_cells < startGy_view || decorDrawGy > endGy_view) return; 
-        
-        const decorCenterX = (decorDrawGx + decor.w_cells / 2) * cs; 
-        const decorCenterY = (decorDrawGy + decor.h_cells / 2) * cs;
-        const decorEmojiActualSize = Math.min(decor.w_cells, decor.h_cells) * largeEmojiBaseSize * 0.8;
-        ctx.font = `${decorEmojiActualSize}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(decor.emoji, decorCenterX, decorCenterY + decorEmojiActualSize * 0.05); 
-    });
-    ctx.font = originalFont;
-
-    ctx.fillStyle='#ffb'; 
-    this.dots.forEach(k=>{ 
-        const[xStr,yStr]=k.split(','); let a_world = parseInt(xStr), b_world = parseInt(yStr); 
-        let a_draw = a_world; let b_draw = b_world;
-        if(this.ply.x < this.totalWorldWidthCells/3 && a_world > this.totalWorldWidthCells*2/3) a_draw -= this.totalWorldWidthCells;
-        else if(this.ply.x > this.totalWorldWidthCells*2/3 && a_world < this.totalWorldWidthCells/3) a_draw += this.totalWorldWidthCells;
-        if(this.ply.y < this.totalWorldHeightCells/3 && b_world > this.totalWorldHeightCells*2/3) b_draw -= this.totalWorldHeightCells;
-        else if(this.ply.y > this.totalWorldHeightCells*2/3 && b_world < this.totalWorldHeightCells/3) b_draw += this.totalWorldHeightCells;
-
-        if (a_draw < startGx_view || a_draw > endGx_view || b_draw < startGy_view || b_draw > endGy_view) return;
-        const tileTypeAtDot = this.maze.get(k); const r = tileTypeAtDot ==='P'? cs*0.3*(1+Math.sin(t_timestamp/150)*0.15) : cs*0.1;
-        ctx.beginPath();ctx.arc(a_draw*cs+cs/2,b_draw*cs+cs/2,r,0,Math.PI*2);ctx.fill(); 
-    });
-
-    if(this.fruit.active){ 
-        let fruitDrawX = this.fruit.gx; let fruitDrawY = this.fruit.gy;
-        if(this.ply.x < this.totalWorldWidthCells/3 && this.fruit.gx > this.totalWorldWidthCells*2/3) fruitDrawX -= this.totalWorldWidthCells;
-        else if(this.ply.x > this.totalWorldWidthCells*2/3 && this.fruit.gx < this.totalWorldWidthCells/3) fruitDrawX += this.totalWorldWidthCells;
-        if(this.ply.y < this.totalWorldHeightCells/3 && this.fruit.gy > this.totalWorldHeightCells*2/3) fruitDrawY -= this.totalWorldHeightCells;
-        else if(this.ply.y > this.totalWorldHeightCells*2/3 && this.fruit.gy < this.totalWorldHeightCells/3) fruitDrawY += this.totalWorldHeightCells;
-
-        ctx.fillStyle = '#f0f'; const fruitCenterX = fruitDrawX*cs+cs/2; const fruitCenterY = fruitDrawY*cs+cs/2;
-        const r = cs*0.2; ctx.beginPath(); ctx.arc(fruitCenterX - r*0.7, fruitCenterY - r*0.3, r, 0, Math.PI*2); ctx.arc(fruitCenterX + r*0.7, fruitCenterY - r*0.3, r, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#0a0'; ctx.lineWidth = Math.max(1, cs*0.05); ctx.beginPath(); ctx.moveTo(fruitCenterX, fruitCenterY - r*0.6); ctx.quadraticCurveTo(fruitCenterX + r*0.5, fruitCenterY - r*2, fruitCenterX + r, fruitCenterY - r*1.8); ctx.stroke(); 
-    }
-
-    this.zoneEntities.forEach(entity => {
-        let entityDrawX = entity.type === 'slimeMold' ? entity.gx * cs : entity.pos.x;
-        let entityDrawY = entity.type === 'slimeMold' ? entity.gy * cs : entity.pos.y;
-        
-        const camCenterX = this.cam.x + this.w / 2;
-        const camCenterY = this.cam.y + this.h / 2;
-        const worldPixelW = this.totalWorldWidthCells * cs;
-        const worldPixelH = this.totalWorldHeightCells * cs;
-
-        if (Math.abs(entityDrawX - camCenterX) > worldPixelW / 2) {
-            entityDrawX += (entityDrawX < camCenterX ? worldPixelW : -worldPixelW);
-        }
-        if (Math.abs(entityDrawY - camCenterY) > worldPixelH / 2) {
-            entityDrawY += (entityDrawY < camCenterY ? worldPixelH : -worldPixelH);
-        }
-
-        const screenX = entityDrawX - this.cam.x;
-        const screenY = entityDrawY - this.cam.y;
-        const renderMargin = entity.size ? entity.size * 2 : cs * 2; 
-
-        if (screenX > -renderMargin && screenX < this.w + renderMargin &&
-            screenY > -renderMargin && screenY < this.h + renderMargin) {
-            
-            if(entity.type === 'slimeMold'){
-                 entity.draw(ctx, cs, entityDrawX/cs, entityDrawY/cs); // Slime needs its draw gx,gy
-            } else {
-                const tempPos = entity.pos; 
-                entity.pos = new Vec2D(entityDrawX, entityDrawY); 
-                entity.draw(ctx);
-                entity.pos = tempPos; 
-            }
-        }
-    });
-
-    this.ghosts.forEach(g=>{
-      let ghostDrawX = g.x; let ghostDrawY = g.y;
-      if(Math.abs(g.x - this.ply.x) > this.totalWorldWidthCells/2) ghostDrawX += (g.x < this.ply.x ? this.totalWorldWidthCells : -this.totalWorldWidthCells);
-      if(Math.abs(g.y - this.ply.y) > this.totalWorldHeightCells/2) ghostDrawY += (g.y < this.ply.y ? this.totalWorldHeightCells : -this.totalWorldHeightCells);
-
-      let ghostFillColor = g.color; 
-      if (!g.isEaten && this.power){ if(this.pTimer > 2000 || Math.floor(this.pTimer/200)%2 !==0) ghostFillColor = '#22f'; else ghostFillColor = '#eef'; }
-      ctx.fillStyle=ghostFillColor;
-      const gxPos = ghostDrawX*cs, gyPos = ghostDrawY*cs; 
-      ctx.beginPath(); ctx.arc(gxPos+cs/2,gyPos+cs/2,cs*0.45,Math.PI,0); 
-      ctx.lineTo(gxPos+cs*0.95,gyPos+cs*0.85); 
-      const humps = 3; const skirtBaseY = gyPos+cs*0.85;
-      for(let i=0; i<humps; i++){ const x1 = gxPos + cs*(0.95 - (i+0.25)*(0.9/humps)); const y1 = skirtBaseY + cs*0.1; const x2 = gxPos + cs*(0.95 - (i+0.5)*(0.9/humps)); const y2 = skirtBaseY; if (i < humps -1) ctx.quadraticCurveTo(x1, y1, x2, y2); else ctx.quadraticCurveTo(x1, y1, gxPos+cs*0.05, skirtBaseY); }
-      ctx.closePath();ctx.fill();
-      if (!g.isEaten && this.power && ghostFillColor === '#eef') {}
-      else { ctx.fillStyle = '#fff'; const eyeBaseX = gxPos+cs/2; const eyeBaseY = gyPos+cs*0.4; const eyeOuterRad = cs*0.12; const eyePupilRad = cs*0.06; let eyeOffsetX = cs*0.15; let pupilOffsetX = 0; let pupilOffsetY = 0; const pupilDist = eyeOuterRad - eyePupilRad - cs*0.01; if (g.dir === 'L') pupilOffsetX = -pupilDist; else if (g.dir === 'R') pupilOffsetX = pupilDist; else if (g.dir === 'U') pupilOffsetY = -pupilDist; else if (g.dir === 'D') pupilOffsetY = pupilDist; ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX, eyeBaseY, eyeOuterRad, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX, eyeBaseY, eyeOuterRad, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = g.isEaten ? '#555' : '#00f'; ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX + pupilOffsetX, eyeBaseY + pupilOffsetY, eyePupilRad, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX + pupilOffsetX, eyeBaseY + pupilOffsetY, eyePupilRad, 0, Math.PI*2); ctx.fill(); }
-    });
-
-    // Draw collectibles
-    this.collectibles.forEach(collectible => {
-        if (!collectible.collected) {
-            // Check if in view
-            const screenGx = collectible.gx;
-            const screenGy = collectible.gy;
-            
-            if (screenGx >= startGx_view && screenGx <= endGx_view && 
-                screenGy >= startGy_view && screenGy <= endGy_view) {
-                collectible.draw(ctx, cs);
-            }
-        }
-    });
-
-    let playerDrawX = this.ply.x; let playerDrawY = this.ply.y;
-    
-    if (this.ply.dying) {
-      // Glitchy mysterious death animation inspired by original
-      const centerX = playerDrawX*cs+cs/2;
-      const centerY = playerDrawY*cs+cs/2;
-      const phase = this.ply.deathPhase;
-      
-      ctx.save();
-      
-      if (phase < 8) {
-        // Phase 1-8: Pacman opening sequence (like original death)
-        const openness = (phase + 1) / 8; // 0 to 1
-        const mouthAngle = 0.1 + openness * (Math.PI - 0.2); // Open wider
-        const rot = {R:0,D:Math.PI/2,L:Math.PI,U:-Math.PI/2}[this.ply.dir];
-        
-        // Glitchy color effects
-        const glitchColors = ['#ff0', '#f80', '#f40', '#f00', '#800', '#400', '#200', '#000'];
-        ctx.fillStyle = glitchColors[phase] || '#000';
-        
-        ctx.beginPath(); 
-        ctx.moveTo(centerX, centerY); 
-        ctx.arc(centerX, centerY, cs*0.45, rot-mouthAngle, rot+mouthAngle); 
-        ctx.fill();
-        
-        // Add glitch effect 
-        if (phase > 3) {
-          ctx.globalAlpha = 0.6;
-          ctx.fillStyle = '#fff';
-          for (let i = 0; i < 3; i++) {
-            const glitchX = centerX + (Math.random() - 0.5) * cs * 0.3;
-            const glitchY = centerY + (Math.random() - 0.5) * cs * 0.3;
-            ctx.fillRect(glitchX, glitchY, 2, 1);
-          }
-        }
-      } else {
-        // Phase 9+: Digital dissolution effect
-        const dissolve = Math.min(1, (phase - 8) / 5);
-        ctx.globalAlpha = 1 - dissolve;
-        
-        // Fragmented pixels
-        const fragments = 20;
-        for (let i = 0; i < fragments; i++) {
-          const angle = (i / fragments) * Math.PI * 2;
-          const dist = dissolve * cs * 0.8;
-          const x = centerX + Math.cos(angle) * dist;
-          const y = centerY + Math.sin(angle) * dist;
-          
-          ctx.fillStyle = i % 2 ? '#ff0' : '#f80';
-          ctx.fillRect(x - 1, y - 1, 2, 2);
-        }
-      }
-      
-      ctx.restore();
-    } else {
-      // Normal pacman
-      ctx.fillStyle='#ff0'; 
-      const mouthAngle=0.35+Math.sin(t_timestamp/90)/4.5; 
-      const rot={R:0,D:Math.PI/2,L:Math.PI,U:-Math.PI/2}[this.ply.dir];
-      ctx.beginPath(); 
-      ctx.moveTo(playerDrawX*cs+cs/2,playerDrawY*cs+cs/2); 
-      ctx.arc(playerDrawX*cs+cs/2,playerDrawY*cs+cs/2,cs*0.45,rot+mouthAngle,rot-mouthAngle); 
-      ctx.fill();
-    }
-    
-    // Draw striking swirly zone transition effects ON TOP of everything
-    let glowsRendered = 0;
-    for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
-        for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-            const a_world = this._wrapCoord(a_draw, this.totalWorldWidthCells);
-            const b_world = this._wrapCoord(b_draw, this.totalWorldHeightCells);
-            const k = a_world + ',' + b_world;
-            const transition = this.zoneTransitions.get(k);
-            
-            if (transition) {
-                glowsRendered++;
-                const centerX = a_draw * cs + cs/2; 
-                const centerY = b_draw * cs + cs/2;
-                
-                // Swirling particle vortex effect
-                const time = t_timestamp * 0.003 + (a_world + b_world) * 0.1;
-                const intensity = (Math.sin(time * 2) + 1) * 0.5; // 0 to 1
-                
-                ctx.save();
-                
-                // Draw swirling particles
-                const particleCount = 12;
-                const radius = cs * (0.8 + intensity * 0.4);
-                
-                for (let p = 0; p < particleCount; p++) {
-                    const angle = (p / particleCount) * Math.PI * 2 + time * 3;
-                    const spiralRadius = radius * (0.3 + (p / particleCount) * 0.7);
-                    const x = centerX + Math.cos(angle) * spiralRadius;
-                    const y = centerY + Math.sin(angle) * spiralRadius;
-                    
-                    // Particle trail with decreasing alpha
-                    const alpha = (1 - p / particleCount) * 0.8 * intensity;
-                    const size = cs * (0.15 + p / particleCount * 0.1);
-                    
-                    // Create single striking color based on themes
-                    const hue = (transition.fromTheme.name.length * 60 + transition.toTheme.name.length * 40) % 360;
-                    
-                    ctx.globalAlpha = alpha;
-                    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
-                    ctx.shadowBlur = size;
-                    ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
-                    
-                    ctx.beginPath();
-                    ctx.arc(x, y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                ctx.restore();
-            }
-        }
-    }
-    
-    // Draw collection particle effects
-    this.collectionEffects.forEach(effect => {
-        ctx.save();
-        ctx.globalAlpha = effect.life;
-        ctx.fillStyle = effect.color;
-        ctx.shadowColor = effect.color;
-        ctx.shadowBlur = effect.size;
-        ctx.beginPath();
-        ctx.arc(effect.x - this.cam.x, effect.y - this.cam.y, effect.size * effect.life, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    });
-    
-    ctx.restore();
+  draw(t_timestamp) {
+    this.renderer.draw(t_timestamp);
   }
 
   playSound(type, ...args) {
-    if (!this.audioCtx) return; if (this.audioCtx.state === 'suspended') this.audioCtx.resume().catch(e => {});
-    const now = this.audioCtx.currentTime; let osc, gain;
-    const createOscGain = () => { 
-      const newOsc = this.audioCtx.createOscillator(); 
-      const newGain = this.audioCtx.createGain(); 
-      newOsc.connect(newGain); 
-      newGain.connect(this.audioCtx.destination); 
-      return {osc: newOsc, gain: newGain}; 
-    };
-    switch (type) {
-      case 'chomp': ({osc,gain} = createOscGain()); osc.type = 'square'; osc.frequency.setValueAtTime(args[0] || 150, now); gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08); osc.start(now); osc.stop(now + 0.08); break;
-      case 'powerPellet': ({osc,gain} = createOscGain()); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.4); gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.001, now + 0.4); osc.start(now); osc.stop(now + 0.4); break;
-      case 'eatGhost': ({osc,gain} = createOscGain()); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.5); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5); osc.start(now); osc.stop(now + 0.5); break;
-      case 'death': 
-        // Much shorter, quieter death sound
-        const deathDuration = 0.8; // Short duration
-        
-        // Simple descending tone with subtle glitch
-        ({osc,gain} = createOscGain());
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + deathDuration);
-        
-        // Just two small glitches
-        osc.frequency.setValueAtTime(160, now + 0.2);
-        osc.frequency.setValueAtTime(90, now + 0.22);
-        osc.frequency.setValueAtTime(120, now + 0.5);
-        osc.frequency.setValueAtTime(70, now + 0.52);
-        
-        gain.gain.setValueAtTime(0.08, now); // Much quieter
-        gain.gain.exponentialRampToValueAtTime(0.001, now + deathDuration);
-        osc.start(now); osc.stop(now + deathDuration);
-        break;
-      case 'fruit': ({osc,gain} = createOscGain()); osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25); osc.start(now); osc.stop(now + 0.25); break;
-      case 'collectBook': 
-        ({osc,gain} = createOscGain()); 
-        osc.type = 'triangle'; 
-        osc.frequency.setValueAtTime(600, now); 
-        osc.frequency.linearRampToValueAtTime(800, now + 0.15); 
-        osc.frequency.linearRampToValueAtTime(1000, now + 0.3); 
-        gain.gain.setValueAtTime(0.15, now); 
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3); 
-        osc.start(now); osc.stop(now + 0.3); 
-        break;
-      case 'collectSoftware': 
-        // Digital beeping sound
-        for (let i = 0; i < 3; i++) {
-          setTimeout(() => {
-            ({osc, gain} = createOscGain());
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(800 + i * 200, this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.1);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 0.1);
-          }, i * 80);
-        }
-        break;
-      case 'collectKey': 
-        ({osc,gain} = createOscGain()); 
-        osc.type = 'sawtooth'; 
-        osc.frequency.setValueAtTime(400, now); 
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4); 
-        gain.gain.setValueAtTime(0.2, now); 
-        gain.gain.linearRampToValueAtTime(0.001, now + 0.4); 
-        osc.start(now); osc.stop(now + 0.4); 
-        break;
-      case 'collectTreasure': 
-        ({osc,gain} = createOscGain()); 
-        osc.type = 'sine'; 
-        osc.frequency.setValueAtTime(523, now); // C5
-        osc.frequency.setValueAtTime(659, now + 0.1); // E5
-        osc.frequency.setValueAtTime(784, now + 0.2); // G5
-        gain.gain.setValueAtTime(0.2, now); 
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4); 
-        osc.start(now); osc.stop(now + 0.4); 
-        break;
-      case 'collectRare':
-        // Epic ascending chord
-        for (let i = 0; i < 4; i++) {
-          setTimeout(() => {
-            ({osc, gain} = createOscGain());
-            osc.type = 'triangle';
-            const freqs = [523, 659, 784, 1047]; // C-E-G-C octave
-            osc.frequency.setValueAtTime(freqs[i], this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.6);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 0.6);
-          }, i * 100);
-        }
-        break;
-      case 'collectLegendary':
-        // Magical shimmer cascade
-        for (let i = 0; i < 8; i++) {
-          setTimeout(() => {
-            ({osc, gain} = createOscGain());
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1000 + i * 200, this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.8);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 0.8);
-          }, i * 50);
-        }
-        // Add bell tone
-        setTimeout(() => {
-          ({osc, gain} = createOscGain());
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(1568, this.audioCtx.currentTime); // High C
-          gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 1.2);
-          osc.start(); osc.stop(this.audioCtx.currentTime + 1.2);
-        }, 200);
-        break;
-      case 'zoneTransition':
-        // Cool swirling transition sound
-        ({osc,gain} = createOscGain());
-        osc.type = 'sine';
-        
-        // Create sweeping frequency effect
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
-        
-        // Add tremolo effect for swirling feel
-        const tremolo = this.audioCtx.createOscillator();
-        const tremoloGain = this.audioCtx.createGain();
-        tremolo.frequency.setValueAtTime(8, now); // 8Hz tremolo
-        tremolo.connect(tremoloGain);
-        tremoloGain.connect(gain.gain);
-        tremoloGain.gain.setValueAtTime(0.03, now);
-        
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-        
-        osc.start(now); osc.stop(now + 0.6);
-        tremolo.start(now); tremolo.stop(now + 0.6);
-        break;
-      case 'unlockArea':
-        // Magical unlocking sound
-        ({osc,gain} = createOscGain());
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.6);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-        osc.start(now); osc.stop(now + 0.8);
-        
-        // Add sparkle effect
-        setTimeout(() => {
-          for (let i = 0; i < 3; i++) {
-            setTimeout(() => {
-              ({osc, gain} = createOscGain());
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(1500 + i * 300, this.audioCtx.currentTime);
-              gain.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.4);
-              osc.start(); osc.stop(this.audioCtx.currentTime + 0.4);
-            }, i * 100);
-          }
-        }, 200);
-        break;
-      case 'synergyActivated':
-        // Epic synergy activation sound
-        for (let i = 0; i < 5; i++) {
-          setTimeout(() => {
-            ({osc, gain} = createOscGain());
-            osc.type = 'sawtooth';
-            const baseFreq = 200 + i * 150;
-            osc.frequency.setValueAtTime(baseFreq, this.audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(baseFreq * 2, this.audioCtx.currentTime + 0.4);
-            gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.6);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 0.6);
-          }, i * 80);
-        }
-        
-        // Add harmonic overtones
-        setTimeout(() => {
-          ({osc, gain} = createOscGain());
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1600, this.audioCtx.currentTime + 1);
-          gain.gain.setValueAtTime(0.12, this.audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 1.2);
-          osc.start(); osc.stop(this.audioCtx.currentTime + 1.2);
-        }, 400);
-        break;
-      case 'levelUp':
-        // Epic level up fanfare
-        for (let i = 0; i < 7; i++) {
-          setTimeout(() => {
-            ({osc, gain} = createOscGain());
-            osc.type = 'triangle';
-            const notes = [261, 329, 392, 523, 659, 784, 1047]; // C major scale
-            osc.frequency.setValueAtTime(notes[i], this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.12, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.8);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 0.8);
-          }, i * 100);
-        }
-        
-        // Add triumphant chord
-        setTimeout(() => {
-          for (let freq of [523, 659, 784]) { // C major chord
-            ({osc, gain} = createOscGain());
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 1.5);
-            osc.start(); osc.stop(this.audioCtx.currentTime + 1.5);
-          }
-        }, 700);
-        break;
-      case 'achievementUnlocked':
-        // Achievement unlock chime
-        ({osc,gain} = createOscGain());
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.setValueAtTime(1200, now + 0.1);
-        osc.frequency.setValueAtTime(1600, now + 0.2);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-        osc.start(now); osc.stop(now + 0.5);
-        
-        // Add bell overtone
-        setTimeout(() => {
-          ({osc, gain} = createOscGain());
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(2400, this.audioCtx.currentTime);
-          gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.8);
-          osc.start(); osc.stop(this.audioCtx.currentTime + 0.8);
-        }, 100);
-        break;
-    }
+    this.audio.playSound(type, ...args);
   }
 
   loadProgress(key) {
@@ -2172,5 +1619,125 @@ export class Game{
         } 
     }
     if (emptySpots.length > 0) { const spot = emptySpots[Math.floor(Math.random() * emptySpots.length)]; Object.assign(this.ply, {gx:spot.gx, gy:spot.gy, x:spot.gx, y:spot.gy, t:0}); }
+  }
+
+  triggerAppleGhostFrenzy() {
+    // Spawn 8 red frenzied ghosts near the player
+    this.frenziedGhosts = [];
+    const playerGx = this.ply.gx;
+    const playerGy = this.ply.gy;
+    
+    for (let i = 0; i < 8; i++) {
+      // Find valid spawn locations around the player
+      let spawnGx, spawnGy;
+      let attempts = 0;
+      
+      do {
+        const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+        const distance = 3 + Math.random() * 5; // 3-8 cells away
+        spawnGx = Math.floor(playerGx + Math.cos(angle) * distance);
+        spawnGy = Math.floor(playerGy + Math.sin(angle) * distance);
+        spawnGx = this._wrapCoord(spawnGx, this.totalWorldWidthCells);
+        spawnGy = this._wrapCoord(spawnGy, this.totalWorldHeightCells);
+        attempts++;
+      } while (this.maze.get(spawnGx + ',' + spawnGy) === 'W' && attempts < 20);
+      
+      // Create frenzied ghost with aggressive properties
+      const frenziedGhost = {
+        id: `Frenzy${i}`,
+        originalColor: '#ff0000',
+        color: '#ff0000',
+        gx: spawnGx,
+        gy: spawnGy,
+        x: spawnGx,
+        y: spawnGy,
+        dir: ['U','D','L','R'][Math.floor(Math.random() * 4)],
+        t: 0,
+        speed: this.GSPD[0] - 20, // Faster than normal ghosts
+        inHouse: false,
+        homePos: { gx: spawnGx, gy: spawnGy },
+        isEaten: false,
+        frenzyTimer: 20000, // 20 seconds of frenzy
+        frenzied: true
+      };
+      
+      this.frenziedGhosts.push(frenziedGhost);
+    }
+    
+    // Play scary sound effect
+    this.playSound('appleFrenzy');
+    
+    // Create dramatic visual effect
+    this.createAppleFrenzyEffect();
+  }
+
+  createFruitEffect(gx, gy, color) {
+    // Create fruit collection particle burst
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2;
+      const speed = 2 + Math.random() * 3;
+      
+      this.collectionEffects.push({
+        x: gx * this.cSize + this.cSize/2,
+        y: gy * this.cSize + this.cSize/2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: color,
+        life: 1.5,
+        decay: 0.015,
+        size: 4 + Math.random() * 3
+      });
+    }
+  }
+
+  createCollectionEffect(gx, gy, rarity) {
+    // Create collectible collection particle burst with rarity-based colors
+    const colors = {
+      common: '#00ff00',
+      uncommon: '#0088ff', 
+      rare: '#ff8800',
+      legendary: '#ff00ff',
+      treasure: '#ffff00',
+      key: '#ff0000',
+      literature: '#ffffff',
+      software: '#00ffff'
+    };
+    const color = colors[rarity] || '#00ff00';
+    const particleCount = rarity === 'legendary' ? 25 : rarity === 'rare' ? 20 : 15;
+    
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 2;
+      const speed = 2 + Math.random() * 3;
+      
+      this.collectionEffects.push({
+        x: gx * this.cSize + this.cSize/2,
+        y: gy * this.cSize + this.cSize/2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: color,
+        life: 1.5,
+        decay: 0.015,
+        size: 4 + Math.random() * 3
+      });
+    }
+  }
+
+  createAppleFrenzyEffect() {
+    // Dramatic red explosion effect
+    for (let i = 0; i < 50; i++) {
+      const angle = (i / 50) * Math.PI * 2;
+      const speed = 5 + Math.random() * 8;
+      
+      this.collectionEffects.push({
+        x: this.ply.x * this.cSize + this.cSize/2,
+        y: this.ply.y * this.cSize + this.cSize/2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: ['#ff0000', '#ff4444', '#cc0000', '#880000'][i % 4],
+        life: 3.0,
+        decay: 0.008,
+        size: 6 + Math.random() * 4
+      });
+    }
   }
 }
