@@ -1,0 +1,352 @@
+{
+  "@vocab": "https://schema.org/",
+  "@type": "ImageCollection",
+  "name": "Glitchcan Minigames Image Assets",
+  "description": "Collection of all image assets from the glitchcan-minigam project",
+  "image": [
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/search_mill_interior.png",
+      "name": "search_mill_interior.png",
+      "description": "Female character in blue dress exploring interior of dilapidated mill with wooden beams and cobwebs",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/village_overview.png",
+      "name": "village_overview.png",
+      "description": "Cartoon village scene with Tudor-style houses with orange thatched roofs and green countryside",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/roman_numerals.png",
+      "name": "roman_numerals.png",
+      "description": "Close-up of carved Roman numerals on dark stone surface",
+      "genre": "story detail element",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/peaceful_sunset.png",
+      "name": "peaceful_sunset.png",
+      "description": "Stone cottage with orange thatched roof at sunset with purple sky and flower garden",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/old_mill.png",
+      "name": "old_mill.png",
+      "description": "Traditional watermill with wooden wheel beside stream in forest setting",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/neighbor_gardening.png",
+      "name": "neighbor_gardening.png",
+      "description": "Elderly woman in glasses with woman in lab coat standing in rose garden",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/mrs_gable_wary.png",
+      "name": "mrs_gable_wary.png",
+      "description": "Close-up portrait of elderly woman with gray hair and concerned expression",
+      "genre": "character portrait",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/metal_door.png",
+      "name": "metal_door.png",
+      "description": "Dark metal door with rivets set in stone wall",
+      "genre": "story detail element",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/look_for_clues.png",
+      "name": "look_for_clues.png",
+      "description": "Hand reaching toward dark metal door with rivets",
+      "genre": "story interaction element",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/inside_dilapidated_mill.png",
+      "name": "inside_dilapidated_mill.png",
+      "description": "Interior of abandoned mill with wooden beams and warm sunlight streaming through windows",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/hidden_inscription.png",
+      "name": "hidden_inscription.png",
+      "description": "Ancient carved inscription on dark stone with mysterious symbols and Roman numerals",
+      "genre": "story detail element",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_thinking.png",
+      "name": "elara_thinking.png",
+      "description": "Young woman with brown hair in blue shirt sitting at desk with books and lamp",
+      "genre": "character scene",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_searching_details.png",
+      "name": "elara_searching_details.png",
+      "description": "Hands feeling along dark metal surface looking for hidden details",
+      "genre": "story interaction element",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_reading_inscription.png",
+      "name": "elara_reading_inscription.png",
+      "description": "Close-up of young woman's face next to carved stone inscription",
+      "genre": "character interaction",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_metal_door.png",
+      "name": "elara_metal_door.png",
+      "description": "Woman in blue shirt kneeling and examining stone wall next to metal door",
+      "genre": "character interaction",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_looking_for_clues.png",
+      "name": "elara_looking_for_clues.png",
+      "description": "Young woman with dark hair placing hand on stone wall searching for clues",
+      "genre": "character interaction",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_cottage.png",
+      "name": "elara_cottage.png",
+      "description": "Stone cottage with orange thatched roof in daylight with flower garden",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/elara_approaching_mill_day.png",
+      "name": "elara_approaching_mill_day.png",
+      "description": "Female character walking toward watermill through forest path during daytime",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "inklet/villaged/children_playing.png",
+      "name": "children_playing.png",
+      "description": "Village scene with elderly women and young girl playing cricket in Tudor village square",
+      "genre": "story scene asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_0290.jpeg",
+      "name": "IMG_0290.jpeg",
+      "description": "360-degree panoramic photograph transformed into 'tiny planet' effect showing urban architecture, bridges, and buildings warped into spherical distortion with blue sky visible around the edges",
+      "genre": "photographic artwork",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7048.PNG",
+      "name": "IMG_7048.PNG",
+      "description": "Mobile app screenshot showing interactive story interface with forest scene featuring character approaching old mill, with story text about exploring nature and multiple choice buttons for different actions",
+      "genre": "mobile interface screenshot",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/03F3BBED-CFD8-446A-AEA8-E17D9CF566F3.png",
+      "name": "03F3BBED-CFD8-446A-AEA8-E17D9CF566F3.png",
+      "description": "Nine armored robot characters arranged in a 3x3 grid on green background, each wearing metallic silver/bronze armor with visible faces showing different expressions from stern to menacing",
+      "genre": "character sprite sheet",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/383B165C-8F26-44A8-96B2-2E62A9645BB6.png",
+      "name": "383B165C-8F26-44A8-96B2-2E62A9645BB6.png",
+      "description": "Stylized isometric cityscape in warm orange sunset tones featuring modern skyscrapers, 'CANARY WHARF' text prominently displayed, with elevated transit trains and flying vehicles including buses navigating between buildings",
+      "genre": "game environment art",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/1F5FFF26-F815-478F-AD62-522CB011CDE5.png",
+      "name": "1F5FFF26-F815-478F-AD62-522CB011CDE5.png",
+      "description": "Low-polygon 3D portrait of stern man with dark hair, angular facial features, wearing dark clothing against brown background with Latin inscription 'VIGINTI SECVNDIS AD COMPLENDVM' on yellow banner below",
+      "genre": "digital artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/49259C34-ED3E-43FD-AD0D-11F7CBF4E8B2.png",
+      "name": "49259C34-ED3E-43FD-AD0D-11F7CBF4E8B2.png",
+      "description": "Aerial view of city buildings with a large bird rendered in vibrant rainbow psychedelic colors (yellow, orange, red, green, blue) appearing to perch on or fly over a tall concrete building, creating surreal digital art effect",
+      "genre": "artistic effect image",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/546ADC22-C6F0-4BA0-BA19-EFAE18E93E29.png",
+      "name": "546ADC22-C6F0-4BA0-BA19-EFAE18E93E29.png",
+      "description": "Six realistic 3D rendered robotic or cyborg soldiers arranged in 2x3 grid on green background, each figure wearing metallic armor and showing different facial expressions and head positions, with weathered human-like faces visible through helmets",
+      "genre": "character sprite sheet",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/4CB33058-288A-4F93-BDBE-9CCCF4A0DCAA.png",
+      "name": "4CB33058-288A-4F93-BDBE-9CCCF4A0DCAA.png",
+      "description": "Apocalyptic landscape painting with small silhouetted figure walking toward burning windmill, dominated by intense red and orange fire lighting, dark smoky sky, and shadowy foreground creating dramatic contrast",
+      "genre": "digital artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/37ECA225-5A36-4B04-AF40-4D11B78FE16C.png",
+      "name": "37ECA225-5A36-4B04-AF40-4D11B78FE16C.png",
+      "description": "Collage of aged paper documents including newspaper headlines about 'The League Returns', 'Traitors Spotted', handwritten notes, AD PORTAS text, and various clippings with mysterious references to societies and secret groups",
+      "genre": "texture/background asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png",
+      "name": "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png",
+      "description": "Isometric dungeon room with brown checkered stone floor, small character figure near glowing blue portal/doorway, surrounded by dark green jungle vines and vegetation, with key icon visible",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "twinearth/color_map.jpg",
+      "name": "color_map.jpg",
+      "description": "Global Earth texture map showing continents and oceans in natural colors for 3D planet rendering",
+      "genre": "3D texture asset",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "twinearth/bump.jpg",
+      "name": "bump.jpg",
+      "description": "Grayscale height map of Earth showing elevation data for 3D displacement mapping",
+      "genre": "3D texture asset",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "twinearth/spec_mask.jpg",
+      "name": "spec_mask.jpg",
+      "description": "Black and white specular map showing land and water surfaces for 3D material rendering",
+      "genre": "3D texture asset",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "twinearth/clouds.png",
+      "name": "clouds.png",
+      "description": "Grayscale cloud pattern texture map for atmospheric effects on 3D planet",
+      "genre": "3D texture asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/C69EC766-9D12-4686-BD3D-B3F9AD356C41.png",
+      "name": "C69EC766-9D12-4686-BD3D-B3F9AD356C41.png",
+      "description": "Person with orange curly hair and glasses wearing dark futuristic power armor suit, standing in modern office environment with city skyline visible through windows",
+      "genre": "character artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/1CD7A2F8-C207-4420-9C60-60C77DA70516.png",
+      "name": "1CD7A2F8-C207-4420-9C60-60C77DA70516.png",
+      "description": "Six-panel comic strip featuring elderly character with gray hair and red nose teaching Toki Pona phrases: 'mi ken ala', 'sona ike lon', 'mi pilin ike', 'mi open e nasin sin', 'mi lukin e pona', 'jan pona li kama'",
+      "genre": "educational comic",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png",
+      "name": "3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png",
+      "description": "Isometric dungeon room labeled 'Hidden Shrine' with stone altar structure, glowing cyan waterfalls, blue gem scattered on checkered floor, surrounded by dark green vegetation",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/12E67B94-4352-4F5F-BCA7-0DB27A471ED9.png",
+      "name": "12E67B94-4352-4F5F-BCA7-0DB27A471ED9.png",
+      "description": "Isometric treasure room with massive pile of gold coins and blue gems, small character silhouette, red chest boxes, checkered stone floor, surrounded by dark green jungle atmosphere",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/237A2C79-5EDE-407D-A699-B0A3CF1C4567.png",
+      "name": "237A2C79-5EDE-407D-A699-B0A3CF1C4567.png",
+      "description": "Isometric jungle temple scene with luminous cyan waterfall cascading down, character figure exploring checkered stone platform, scattered blue gems, lush tropical vegetation and mystical atmosphere",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/EA969AD0-24EE-4A5D-99F1-3A576217C355.png",
+      "name": "EA969AD0-24EE-4A5D-99F1-3A576217C355.png",
+      "description": "Isometric medieval dungeon scene with stone bridge crossing dark water, torches providing warm orange lighting, character figure navigating the atmospheric underground passage",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/590C2081-0A9F-42B5-9128-909E629BBAD0.png",
+      "name": "590C2081-0A9F-42B5-9128-909E629BBAD0.png",
+      "description": "Young woman with blonde 1960s hairstyle wearing Union Jack flag t-shirt, sitting on subway train with other passengers, vintage color photography style",
+      "genre": "portrait photography",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/B266C9A3-9402-4622-962E-129F6921D855.png",
+      "name": "B266C9A3-9402-4622-962E-129F6921D855.png",
+      "description": "Isometric dungeon scene with golden snake-like creatures winding across checkered stone floor, warm orange torch lighting creating atmospheric shadows",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/F73167DB-36FF-4C78-8801-9F9CC68A3F89.png",
+      "name": "F73167DB-36FF-4C78-8801-9F9CC68A3F89.png",
+      "description": "Pastoral countryside scene with young girl in blue dress walking toward moss-covered watermill, rabbits in flowering meadow, large tree and peaceful rural landscape in painterly style",
+      "genre": "storybook illustration",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7049.PNG",
+      "name": "IMG_7049.PNG",
+      "description": "Mobile app screenshot showing animated forest scene with character in blue dress approaching watermill through woodland path, featuring story interface with path selection options",
+      "genre": "mobile interface screenshot",
+      "encodingFormat": "image/png"
+    }
+  ]
+}
