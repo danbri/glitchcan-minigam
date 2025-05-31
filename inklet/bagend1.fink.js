@@ -6,7 +6,7 @@ oooOO`
 -> Bag_End
 
 === Bag_End ===
-IMAGE: bag_end_exterior.png
+IMAGE: bag_end_exterior.svg
 You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. Gandalf the wizard sits smoking a pipe.
 + [Talk to Gandalf]
     "My dear Bilbo," says Gandalf, "I am looking for someone to share in an adventure."
@@ -17,14 +17,14 @@ You are in a comfortable hobbit-hole with a round green door. The hole is Bag En
 + [Go to the kitchen] -> Kitchen
 
 === Outside_Bag_End ===
-IMAGE: adventure_path.png
+IMAGE: adventure_path.svg
 You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.
 + [Return inside] -> Bag_End
 + [Go East to the village] -> Hobbiton_Village
 + [Go North into the wilderness] -> Trollshaws
 
 === Kitchen ===
-IMAGE: hobbit_pantry.png
+IMAGE: hobbit_pantry.svg
 This is a well-stocked hobbit kitchen with pantries full of food. A small window looks out onto the garden. Thorin Oakenshield sits at your table, looking impatient.
 + [Talk to Thorin]
     "Hmm, burglar?" Thorin examines you skeptically. "You don't look like much of a thief to me."
@@ -37,7 +37,7 @@ This is a well-stocked hobbit kitchen with pantries full of food. A small window
     -> Kitchen
 
 === Hobbiton_Village ===
-IMAGE: gandalf_at_door.png
+IMAGE: gandalf_at_door.svg
 The cheerful village of Hobbiton bustles with activity. Hobbits go about their business, some giving you curious looks. The Green Dragon Inn stands invitingly nearby.
 + [Return West to Bag End] -> Outside_Bag_End
 + [Enter the Green Dragon Inn] -> Green_Dragon
