@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Riverbend v4 - Real INK Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Real INK compiler integration -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+    
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --primary-dark: #5b21b6;
+            --primary-light: #8b5cf6;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-red: #f43f5e;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --choice-left: #f1c2c7;
+            --choice-middle: #c7e6d6;
+            --choice-right: #c7dff7;
+            --choice-height: 12vh;
+            --transition-time: 0.5s;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Literata', serif;
+            background-color: var(--background);
+            color: var(--text);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            background-color: var(--surface);
+            padding: 12px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .title-bar.visible {
+            transform: translateY(0);
+        }
+        
+        .app-container.show-menu .title-bar {
+            transform: translateY(0);
+        }
+
+        .title-bar h1 {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .url-form {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            background-color: var(--surface);
+            padding: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .url-form.active {
+            transform: translateY(0);
+        }
+
+        #fink-url-input, #media-path-input {
+            flex-grow: 1;
+            padding: 10px 16px;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-right: 2px;
+        }
+        
+        #fink-url-input {
+            border-radius: 8px 0 0 8px;
+        }
+        
+        #media-path-input {
+            border-radius: 0;
+        }
+
+        #fink-url-input:focus, #media-path-input:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        #load-fink-button {
+            padding: 10px 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        #load-fink-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .story-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 78vh;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: height 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-container.fullscreen {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+        }
+
+        #story-image, #story-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 1s ease, transform 1.5s ease;
+            transform-origin: center;
+            max-height: 100%;
+            max-width: 100%;
+        }
+        
+        #story-video {
+            display: none;
+        }
+
+        #story-image.hidden {
+            opacity: 0;
+        }
+        
+        .image-container.hidden {
+            height: 0;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+
+        #story-image.zoom-in {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(to top, var(--background), transparent);
+            z-index: 1;
+        }
+        
+        .choice-toggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.6);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            opacity: 0.6;
+        }
+        
+        .choice-toggle:hover {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        .fullscreen-toggle {
+            position: absolute;
+            top: 57px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.6);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            opacity: 0.6;
+        }
+        
+        .fullscreen-toggle:hover {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .story-content {
+            position: absolute;
+            bottom: 22vh;
+            left: 0;
+            right: 0;
+            padding: 20px 24px;
+            max-height: 40vh;
+            overflow-y: auto;
+            z-index: 3;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85), transparent);
+            transition: all 0.3s ease;
+        }
+        
+        .story-content.choices-hidden {
+            bottom: 0;
+            max-height: 25vh;
+        }
+
+        #story {
+            max-width: 900px;
+            margin: 0 auto 1rem;
+            font-size: 1.4rem;
+            line-height: 1.8;
+            transition: opacity 0.5s ease;
+            padding-bottom: 28vh;
+            font-weight: 400;
+        }
+
+        #story p {
+            margin-bottom: 1rem;
+            animation: slide-up 0.5s ease forwards;
+        }
+
+        #story.fading {
+            opacity: 0;
+        }
+
+        .status-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #status {
+            background-color: var(--surface);
+            padding: 20px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .status-spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .choices-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--choice-height);
+            display: flex;
+            z-index: 4;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 22vh;
+        }
+
+        .choices-container.hidden {
+            transform: translateY(100%);
+        }
+
+        .choice {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: bottom center;
+            min-height: 0;
+        }
+
+        .choice-1 { background-color: var(--choice-left); }
+        .choice-2 { background-color: var(--choice-middle); }
+        .choice-3 { background-color: var(--choice-right); }
+
+        .choice-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            transition: all var(--transition-time) cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: grayscale(30%) opacity(0.8);
+            transform-origin: center;
+        }
+
+        .choice:hover .choice-emoji {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.1);
+        }
+
+        .choice-label-svg {
+            max-width: 100%;
+            height: 40px;
+            z-index: 5;
+        }
+        
+        .choice-label-text {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all var(--transition-time) ease;
+        }
+
+        .choice:hover .choice-label {
+            opacity: 1;
+        }
+
+        .menu-button, .fullscreen-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .menu-button:hover, .fullscreen-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        .menu-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 15px;
+            z-index: 5;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        .slide-up {
+            animation: slide-up 0.5s ease forwards;
+        }
+
+        /* Sandbox iframe (hidden) */
+        #fink-sandbox {
+            display: none;
+        }
+
+        /* Debug console */
+        #debug-console {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 400px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            border: 1px solid #333;
+            display: none;
+        }
+
+        #debug-console.active {
+            display: block;
+        }
+
+        #debug-toggle {
+            position: fixed;
+            top: 12px;
+            right: 60px;
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 1001;
+            border-radius: 4px;
+            font-family: monospace;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+        
+        #debug-toggle:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.5);
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app-container">
+        <div class="menu-trigger" id="menu-trigger"></div>
+        <div class="title-bar" id="title-bar">
+            <h1 id="story-title">Riverbend v4</h1>
+            <div class="controls">
+                <button class="fullscreen-button" id="fullscreen-button">📺</button>
+                <button class="menu-button" id="menu-button">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="url-form" id="url-form">
+            <input type="text" id="fink-url-input" value="toc.fink.js" placeholder="Enter URL of .fink.js file">
+            <input type="text" id="media-path-input" value="villaged/" placeholder="Media assets directory">
+            <button id="load-fink-button">Load Story</button>
+        </div>
+        
+        <div class="story-container">
+            <div class="image-container" id="image-container">
+                <img id="story-image" alt="Story scene" class="hidden">
+                <video id="story-video" loop muted playsinline class="hidden"></video>
+                <div class="image-overlay"></div>
+                <button class="choice-toggle" id="choice-toggle" title="Toggle choices">👁️</button>
+                <button class="fullscreen-toggle" id="fullscreen-toggle" title="Fullscreen">⛶</button>
+            </div>
+            
+            <div class="story-content" id="story-content-container">
+                <div id="story"></div>
+            </div>
+        </div>
+        
+        <div class="choices-container" id="choices-container">
+            <!-- Choices will be added here dynamically -->
+        </div>
+        
+        <div class="status-overlay" id="status-overlay">
+            <div id="status">
+                <div class="status-spinner"></div>
+                <div id="status-text">Loading story...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden sandbox iframe for loading fink.js files -->
+    <iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
+
+    <!-- Debug console -->
+    <div id="debug-console"></div>
+    <button id="debug-toggle">DEBUG</button>
+
+    <script>
+        // Main state variables
+        let finkStoryContent = '';
+        let story = null; // Real INK Story instance
+        let mediaBasePath = 'villaged/';
+        let currentStoryTags = {}; // Store story-level tags (MENU:, IMAGE:, BASEHREF:)
+        let animationInProgress = false;
+        let expandingElement = null;
+        let isNavigatingFromHistory = false;
+        let pendingFinkFile = null;
+        
+        // Sandbox communication
+        let activeSandbox = null;
+        let sandboxTimeout = null;
+        const SANDBOX_TIMEOUT_MS = 15000;
+        
+        // DOM elements
+        const appContainer = document.getElementById('app-container');
+        const menuTrigger = document.getElementById('menu-trigger');
+        const titleBar = document.getElementById('title-bar');
+        const storyElement = document.getElementById('story');
+        const choicesContainer = document.getElementById('choices-container');
+        const statusOverlay = document.getElementById('status-overlay');
+        const statusText = document.getElementById('status-text');
+        const finkUrlInput = document.getElementById('fink-url-input');
+        const mediaPathInput = document.getElementById('media-path-input');
+        const loadFinkButton = document.getElementById('load-fink-button');
+        const storyImage = document.getElementById('story-image');
+        const storyVideo = document.getElementById('story-video');
+        const imageContainer = document.getElementById('image-container');
+        const storyContentContainer = document.getElementById('story-content-container');
+        const choiceToggle = document.getElementById('choice-toggle');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+        const menuButton = document.getElementById('menu-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const urlForm = document.getElementById('url-form');
+        const finkSandbox = document.getElementById('fink-sandbox');
+        const storyTitle = document.getElementById('story-title');
+        
+        // State for fullscreen and choices
+        let isFullscreen = false;
+        let choicesVisible = true;
+        let isImageFullscreen = false;
+        
+        // Debug console
+        let debugConsole = null;
+        let debugToggle = null;
+        let debugMessages = [];
+        
+        function debugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            debugMessages.push(logEntry);
+            if (debugMessages.length > 100) {
+                debugMessages = debugMessages.slice(-50);
+            }
+            if (debugConsole && debugConsole.classList.contains('active')) {
+                updateDebugDisplay();
+            }
+            console.log(logEntry);
+        }
+        
+        function updateDebugDisplay() {
+            if (debugConsole) {
+                debugConsole.innerHTML = debugMessages.join('<br>');
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            }
+        }
+        
+        function toggleDebugConsole() {
+            if (debugConsole) {
+                debugConsole.classList.toggle('active');
+                if (debugConsole.classList.contains('active')) {
+                    updateDebugDisplay();
+                }
+            }
+        }
+        
+        // Emoji mapping for choices
+        const emojiMap = {
+            'go': '🚶', 'walk': '🚶‍♂️', 'run': '🏃‍♀️', 'look': '👀', 'search': '🔍',
+            'take': '🤲', 'grab': '✊', 'hold': '👐', 'find': '🔎',
+            'talk': '💬', 'ask': '❓', 'tell': '🗣️', 'speak': '🗯️',
+            'listen': '👂', 'hear': '🔊', 'watch': '👁️', 'observe': '🧐',
+            'wait': '⏳', 'stay': '⌛', 'hide': '🙈', 'escape': '🏃‍♂️',
+            'open': '🔓', 'close': '🔒', 'climb': '🧗‍♀️', 'jump': '⏫',
+            'drink': '🥤', 'eat': '🍽️', 'sleep': '😴', 'wake': '⏰',
+            'use': '🔧', 'call': '📞', 'push': '👉', 'pull': '👈',
+            'read': '📚', 'write': '✍️', 'follow': '🦮', 'lead': '🧭',
+            'right': '➡️', 'left': '⬅️', 'up': '⬆️', 'down': '⬇️',
+            'yes': '✅', 'no': '❌', 'maybe': '❓', 'help': '🆘',
+            'restart': '🔄'
+        };
+        
+        const defaultEmojis = ['🚀', '🧩', '🎯'];
+        
+        // Initialize the story player
+        function init() {
+            debugConsole = document.getElementById('debug-console');
+            debugToggle = document.getElementById('debug-toggle');
+            
+            debugLog('Initializing FINK v4 with real INK engine...');
+            
+            loadFinkButton.addEventListener('click', loadFinkStory);
+            menuButton.addEventListener('click', toggleUrlForm);
+            fullscreenButton.addEventListener('click', toggleFullscreen);
+            choiceToggle.addEventListener('click', toggleChoices);
+            fullscreenToggle.addEventListener('click', toggleImageFullscreen);
+            
+            if (debugToggle) {
+                debugToggle.addEventListener('click', toggleDebugConsole);
+            }
+            
+            // Setup menu trigger
+            menuTrigger.addEventListener('mouseenter', () => {
+                appContainer.classList.add('show-menu');
+            });
+            
+            titleBar.addEventListener('mouseleave', () => {
+                if (!urlForm.classList.contains('active')) {
+                    appContainer.classList.remove('show-menu');
+                }
+            });
+            
+            menuTrigger.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                titleBar.classList.toggle('visible');
+            });
+            
+            // Touch handling
+            document.addEventListener('touchstart', handleTouchStart);
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+            
+            // Choice click handling
+            document.addEventListener('click', (e) => {
+                const choiceEl = e.target.closest('.choice');
+                if (choiceEl && !animationInProgress) {
+                    const index = parseInt(choiceEl.dataset.index);
+                    handleChoiceClick({currentTarget: choiceEl}, index);
+                }
+            });
+            
+            debugLog('FINK v4 player initialized');
+            
+            if (finkUrlInput.value) {
+                debugLog('Auto-loading default FINK URL: ' + finkUrlInput.value);
+                setTimeout(() => {
+                    loadFinkStory();
+                }, 100);
+            } else {
+                showStatus('Enter a URL to load a FINK story');
+            }
+        }
+        
+        // Toggle functions (same as inklet3)
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                }
+                fullscreenButton.textContent = '❌';
+                isFullscreen = true;
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+                fullscreenButton.textContent = '📺';
+                isFullscreen = false;
+            }
+        }
+        
+        function toggleChoices() {
+            choicesVisible = !choicesVisible;
+            
+            if (choicesVisible) {
+                choicesContainer.style.transform = 'translateY(0)';
+                storyContentContainer.classList.remove('choices-hidden');
+                choiceToggle.textContent = '👁️';
+            } else {
+                choicesContainer.style.transform = 'translateY(100%)';
+                storyContentContainer.classList.add('choices-hidden');
+                choiceToggle.textContent = '🙈';
+            }
+        }
+        
+        function toggleImageFullscreen() {
+            isImageFullscreen = !isImageFullscreen;
+            
+            if (isImageFullscreen) {
+                imageContainer.classList.add('fullscreen');
+                choiceToggle.style.display = 'none';
+                fullscreenToggle.textContent = '❌';
+                choicesContainer.style.transform = 'translateY(100%)';
+                storyContentContainer.style.display = 'none';
+            } else {
+                imageContainer.classList.remove('fullscreen');
+                choiceToggle.style.display = 'block';
+                fullscreenToggle.textContent = '⛶';
+                if (choicesVisible) {
+                    choicesContainer.style.transform = 'translateY(0)';
+                }
+                storyContentContainer.style.display = 'block';
+            }
+        }
+        
+        function toggleUrlForm() {
+            titleBar.classList.add('visible');
+            urlForm.classList.toggle('active');
+        }
+        
+        // REAL INK STORY HANDLING (following hamfinkdemo pattern)
+        
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return "";
+            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                         .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function clearChoices() {
+            choicesContainer.innerHTML = '';
+        }
+
+        function extractStoryTags(finkContent) {
+            // Extract MENU:, IMAGE:, BASEHREF: tags from FINK content
+            const tags = {
+                menu: [],
+                images: [],
+                basehref: null
+            };
+            
+            const lines = finkContent.split(/\r?\n/);
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('MENU:')) {
+                    const menuMatch = trimmed.match(/MENU:\s*(.+?)\s*->\s*(.+)/);
+                    if (menuMatch) {
+                        tags.menu.push({ label: menuMatch[1], target: menuMatch[2] });
+                    }
+                } else if (trimmed.startsWith('BASEHREF:')) {
+                    const basehrefMatch = trimmed.match(/BASEHREF:\s*(.*)/);
+                    if (basehrefMatch) {
+                        tags.basehref = basehrefMatch[1].trim();
+                        tags.basehref = tags.basehref.endsWith('/') ? tags.basehref : tags.basehref + '/';
+                    }
+                }
+            }
+            
+            return tags;
+        }
+
+        function continueStory(choiceIndex = null) {
+            if (!story) {
+                debugLog('ERROR: Cannot continue - no story instance');
+                showStatus('Error: No story loaded');
+                return;
+            }
+            
+            debugLog('continueStory called with choiceIndex: ' + choiceIndex);
+            
+            try {
+                if (choiceIndex !== null && typeof choiceIndex === 'number') {
+                    debugLog('Making choice: ' + choiceIndex);
+                    story.ChooseChoiceIndex(choiceIndex);
+                }
+
+                clearChoices();
+                let storyFragment = document.createDocumentFragment();
+
+                while (story.canContinue) {
+                    const p = document.createElement('p');
+                    let rawText = story.Continue();
+                    debugLog('Story.Continue() output: "' + rawText + '"');
+                    
+                    let currentTags = story.currentTags || [];
+                    debugLog('Current tags: [' + currentTags.join(', ') + ']');
+
+                    let escapedText = escapeHtml(rawText.trim());
+                    let formattedText = escapedText
+                        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                        .replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+                    p.innerHTML = formattedText;
+                    
+                    // Handle INK tags (like #BG:#0050e0, #CLASS:info)
+                    currentTags.forEach(tag => {
+                        const parts = tag.split(':');
+                        const key = parts[0]?.trim().toUpperCase();
+                        const value = parts[1]?.trim();
+                        
+                        if (key === 'BG' && value) {
+                            document.body.style.background = value;
+                        } else if (key === 'CLASS' && value) {
+                            p.classList.add(value);
+                        }
+                    });
+                    
+                    storyFragment.appendChild(p);
+                }
+
+                storyElement.appendChild(storyFragment);
+
+                // Handle current images from story tags
+                updateImageFromStoryTags();
+
+                // Generate choices
+                if (story.currentChoices.length > 0) {
+                    debugLog('Displaying ' + story.currentChoices.length + ' choices');
+                    story.currentChoices.forEach((choice, i) => {
+                        const emoji = chooseEmoji(choice.text);
+                        const cleanText = choice.text.replace(/[🎮📚❓🚀📖🌿🇺🇦🎭🔧📱⚙️🎨]/gu, '').trim();
+                        
+                        const choiceEl = document.createElement('div');
+                        const choiceNumber = Math.min(i + 1, 3);
+                        choiceEl.className = `choice choice-${choiceNumber}`;
+                        choiceEl.dataset.index = i;
+                        
+                        choiceEl.innerHTML = 
+                            '<div class="choice-emoji">' + emoji + '</div>' +
+                            '<svg class="choice-label-svg" width="100%" height="40">' +
+                                '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
+                                      'class="choice-label-text" stroke="black" stroke-width="3" fill="black">' + escapeHtml(cleanText) + '</text>' +
+                                '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
+                                      'class="choice-label-text" fill="white">' + escapeHtml(cleanText) + '</text>' +
+                            '</svg>';
+                        
+                        choicesContainer.appendChild(choiceEl);
+                    });
+                    
+                    setTimeout(() => {
+                        choicesContainer.classList.remove('hidden');
+                    }, 500);
+                    
+                    hideStatus();
+                } else {
+                    debugLog('Reached end of story');
+                    const pEnd = document.createElement('p');
+                    pEnd.style.opacity = 0.6;
+                    pEnd.textContent = '— THE END —';
+                    storyElement.appendChild(pEnd);
+                    hideStatus();
+                }
+
+                storyElement.scrollTop = storyElement.scrollHeight;
+
+            } catch (e) {
+                debugLog('ERROR during story continuation: ' + e.message);
+                showStatus('Runtime Error: ' + e.message);
+            }
+        }
+
+        function updateImageFromStoryTags() {
+            // Check for IMAGE: tags in current story position
+            // This is simplified - in a full implementation you'd track images per knot
+            if (currentStoryTags.basehref) {
+                mediaBasePath = currentStoryTags.basehref;
+                debugLog('Using BASEHREF: ' + mediaBasePath);
+            }
+        }
+
+        function chooseEmoji(choiceText) {
+            // Extract emoji from choice text if present
+            const emojiMatch = choiceText.match(/[🎮📚❓🚀📖🌿🇺🇦🎭🔧📱⚙️🎨]/u);
+            if (emojiMatch) {
+                return emojiMatch[0];
+            }
+            
+            // Fallback to keyword mapping
+            const text = choiceText.toLowerCase();
+            for (const [keyword, emoji] of Object.entries(emojiMap)) {
+                if (text.includes(keyword)) {
+                    return emoji;
+                }
+            }
+            
+            const index = Math.floor(Math.random() * defaultEmojis.length);
+            return defaultEmojis[index];
+        }
+
+        function handleChoiceClick(event, index) {
+            if (animationInProgress) return;
+            animationInProgress = true;
+            
+            const choiceElement = event.currentTarget;
+            
+            // Create expanding animation (same as inklet3)
+            expandingElement = document.createElement('div');
+            expandingElement.className = 'expanding-choice';
+            expandingElement.style.backgroundColor = getComputedStyle(choiceElement).backgroundColor;
+            const rect = choiceElement.getBoundingClientRect();
+            expandingElement.style.left = `${rect.left}px`;
+            expandingElement.style.width = `${rect.width}px`;
+            expandingElement.innerHTML = choiceElement.innerHTML;
+            document.body.appendChild(expandingElement);
+            
+            requestAnimationFrame(() => {
+                expandingElement.style.height = '100%';
+                expandingElement.style.left = '0';
+                expandingElement.style.width = '100%';
+                
+                choicesContainer.style.opacity = '0';
+                
+                setTimeout(() => {
+                    expandingElement.style.backgroundColor = 'rgba(0,0,0,0)';
+                    storyElement.classList.add('fading');
+                }, 500);
+                
+                setTimeout(() => {
+                    expandingElement.remove();
+                    expandingElement = null;
+                    continueStory(index);
+                    choicesContainer.style.opacity = '1';
+                    animationInProgress = false;
+                }, 1000);
+            });
+        }
+        
+        // Load FINK story using real INK compiler
+        async function loadFinkStory() {
+            debugLog('loadFinkStory called');
+            urlForm.classList.remove('active');
+            
+            setTimeout(() => {
+                appContainer.classList.remove('show-menu');
+                titleBar.classList.remove('visible');
+            }, 1000);
+            
+            const finkUrl = finkUrlInput.value.trim();
+            if (!finkUrl) {
+                showStatus('Please enter a URL to a FINK file');
+                return;
+            }
+            
+            // Update media path
+            const newMediaPath = mediaPathInput.value.trim();
+            if (newMediaPath) {
+                mediaBasePath = newMediaPath.endsWith('/') ? newMediaPath : newMediaPath + '/';
+            }
+            
+            showStatus('Loading story...', true);
+            
+            try {
+                await loadViaSandbox(new URL(finkUrl, window.location.href).href);
+            } catch (error) {
+                debugLog('Error loading story: ' + error.message);
+                showStatus(`Error: ${error.message}`);
+            }
+        }
+        
+        // Sandbox loading (same pattern as inklet3 but simplified)
+        function loadViaSandbox(url) {
+            debugLog('loadViaSandbox called for: ' + url);
+            return new Promise((resolve, reject) => {
+                cleanupSandbox();
+                
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('sandbox', 'allow-scripts');
+                iframe.style.display = 'none';
+                
+                activeSandbox = iframe;
+                
+                const messageHandler = (event) => {
+                    if (event.source !== iframe.contentWindow) return;
+                    
+                    const data = event.data;
+                    if (!data || !data.type) return;
+                    
+                    switch (data.type) {
+                        case 'sandbox-ready':
+                            debugLog('Sandbox ready, sending load command');
+                            startSandboxTimeout();
+                            iframe.contentWindow.postMessage({ type: 'load-script', url: url }, '*');
+                            break;
+                            
+                        case 'fink-loaded':
+                            debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
+                            clearTimeout(sandboxTimeout);
+                            if (data.data && data.data.length > 0) {
+                                finkStoryContent = data.data.join('\n');
+                                debugLog('FINK story loaded: ' + finkStoryContent.length + ' characters');
+                                compileAndRunStory(finkStoryContent);
+                                resolve();
+                            } else {
+                                showStatus('No FINK content found in file');
+                                reject(new Error('No FINK content found'));
+                            }
+                            cleanupSandbox();
+                            window.removeEventListener('message', messageHandler);
+                            break;
+                            
+                        case 'fink-error':
+                            clearTimeout(sandboxTimeout);
+                            const errorMsg = data.error || 'Unknown error in sandbox';
+                            debugLog('Sandbox error: ' + errorMsg);
+                            showStatus(`Error: ${errorMsg}`);
+                            cleanupSandbox();
+                            window.removeEventListener('message', messageHandler);
+                            reject(new Error(errorMsg));
+                            break;
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                
+                const sandboxHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"><title>FINK Sandbox</title></head>
+                <body>
+                    <script>
+                        window.finkData = [];
+                        
+                        function oooOO(strings) {
+                            try {
+                                const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
+                                    ? strings.raw.join('')
+                                    : String(strings);
+                                window.finkData.push(content);
+                                return content;
+                            } catch (e) {
+                                return '';
+                            }
+                        }
+                        
+                        setTimeout(() => {
+                            parent.postMessage({ type: 'sandbox-ready' }, '*');
+                        }, 0);
+                        
+                        window.addEventListener('message', function(event) {
+                            if (event.data && event.data.type === 'load-script') {
+                                const scriptUrl = event.data.url;
+                                const script = document.createElement('script');
+                                
+                                script.onload = () => {
+                                    // Convert any non-string items to strings and ensure we have content
+                                    const dataStrings = window.finkData.map(item => 
+                                        typeof item === 'string' ? item : String(item)
+                                    ).filter(item => item && item.trim().length > 0);
+                                    parent.postMessage({ type: 'fink-loaded', data: dataStrings, url: scriptUrl }, '*');
+                                };
+                                
+                                script.onerror = () => {
+                                    parent.postMessage({ type: 'fink-error', error: 'Failed to load script', url: scriptUrl }, '*');
+                                };
+                                
+                                script.src = scriptUrl;
+                                (document.head || document.body).appendChild(script);
+                            }
+                        });
+                    <\/script>
+                </body>
+                </html>
+                `;
+                
+                const blob = new Blob([sandboxHtml], { type: 'text/html; charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                iframe.onload = () => {
+                    URL.revokeObjectURL(blobUrl);
+                };
+                
+                iframe.src = blobUrl;
+                document.body.appendChild(iframe);
+            });
+        }
+        
+        // ROBUST FINK PROCESSING with INK compiler fallback
+        function compileAndRunStory(finkContent) {
+            debugLog('Processing FINK content with robust error handling');
+            debugLog('Raw FINK content length: ' + finkContent.length);
+            
+            try {
+                // Extract story-level tags first
+                currentStoryTags = extractStoryTags(finkContent);
+                debugLog('Extracted story tags: ' + JSON.stringify(currentStoryTags));
+                
+                // Set base path from BASEHREF if found
+                if (currentStoryTags.basehref) {
+                    mediaBasePath = currentStoryTags.basehref;
+                    debugLog('Using BASEHREF: ' + mediaBasePath);
+                }
+                
+                // Try INK compilation first
+                const inkSuccess = tryInkCompilation(finkContent);
+                
+                if (!inkSuccess) {
+                    debugLog('INK compilation failed, falling back to manual parsing');
+                    parseManualFinkStory(finkContent);
+                }
+                
+            } catch (error) {
+                debugLog('FATAL error processing FINK: ' + error.message);
+                showStatus('Fatal Error: ' + error.message);
+                console.error('FINK processing error:', error);
+            }
+        }
+        
+        // Real INK compilation using properly extracted FINK content
+        function tryInkCompilation(finkContent) {
+            if (typeof inkjs === 'undefined') {
+                debugLog('INK library not available, skipping compilation');
+                return false;
+            }
+            
+            debugLog('Attempting INK compilation with extracted FINK content...');
+            debugLog('FINK content length: ' + finkContent.length);
+            debugLog('Content preview (first 300 chars):');
+            debugLog(finkContent.substring(0, 300));
+            
+            try {
+                // Use the content directly as extracted by the sandbox - it's already clean INK with FINK tags
+                
+                // Create compiler instance with the extracted FINK content
+                debugLog('Creating INK compiler instance...');
+                const compiler = new inkjs.Compiler(finkContent);
+                
+                // Check for immediate constructor errors
+                if (compiler.errors && compiler.errors.length > 0) {
+                    debugLog('Constructor errors detected:');
+                    compiler.errors.forEach((error, i) => {
+                        debugLog(`  Constructor Error ${i+1}: ${error}`);
+                    });
+                    return false;
+                }
+                
+                // Attempt compilation
+                let compiledStory = null;
+                
+                try {
+                    debugLog('Calling compiler.Compile()...');
+                    compiledStory = compiler.Compile();
+                    debugLog('Compile() returned: ' + (compiledStory ? 'Story object' : 'null'));
+                    
+                } catch (compileException) {
+                    debugLog('Compile() threw exception: ' + compileException.message);
+                    debugLog('Exception stack: ' + compileException.stack);
+                    
+                    // Investigate compiler state after exception
+                    if (compiler.errors && compiler.errors.length > 0) {
+                        debugLog('Compiler errors after exception:');
+                        compiler.errors.forEach((error, i) => {
+                            debugLog(`  Compile Error ${i+1}: ${error}`);
+                        });
+                    }
+                    
+                    if (compiler.warnings && compiler.warnings.length > 0) {
+                        debugLog('Compiler warnings after exception:');
+                        compiler.warnings.forEach((warning, i) => {
+                            debugLog(`  Compile Warning ${i+1}: ${warning}`);
+                        });
+                    }
+                    
+                    // Try to extract more info about what failed
+                    debugLog('Attempting to analyze compilation failure...');
+                    
+                    // Check if it's a syntax issue
+                    if (compileException.message.includes('Compilation failed')) {
+                        debugLog('Generic compilation failure - checking content structure...');
+                        
+                        // Look for common issues
+                        const hasKnots = finkContent.includes('===');
+                        const hasChoices = finkContent.includes('+') || finkContent.includes('*');
+                        const hasFlow = finkContent.includes('->');
+                        
+                        debugLog(`Content analysis: knots=${hasKnots}, choices=${hasChoices}, flow=${hasFlow}`);
+                        
+                        if (!hasKnots) {
+                            debugLog('No knots found in content - this may be the issue');
+                        }
+                        
+                        // Check for problematic lines
+                        const lines = finkContent.split('\n');
+                        lines.forEach((line, i) => {
+                            const trimmed = line.trim();
+                            if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('VAR') && 
+                                !trimmed.startsWith('===') && !trimmed.startsWith('->') && 
+                                !trimmed.startsWith('+') && !trimmed.startsWith('*') &&
+                                !trimmed.startsWith('MENU:') && !trimmed.startsWith('IMAGE:') && !trimmed.startsWith('BASEHREF:') &&
+                                !trimmed.match(/^[A-Za-z0-9\s\.,!?'"]+$/)) {
+                                debugLog(`Suspicious line ${i+1}: "${trimmed}"`);
+                            }
+                        });
+                    }
+                    
+                    return false;
+                }
+                
+                // Check post-compilation errors
+                if (compiler.errors && compiler.errors.length > 0) {
+                    debugLog('Post-compilation errors detected:');
+                    compiler.errors.forEach((error, i) => {
+                        debugLog(`  Post-Compile Error ${i+1}: ${error}`);
+                    });
+                    return false;
+                }
+                
+                // Check for warnings
+                if (compiler.warnings && compiler.warnings.length > 0) {
+                    debugLog('Compilation warnings (continuing):');
+                    compiler.warnings.forEach((warning, i) => {
+                        debugLog(`  Warning ${i+1}: ${warning}`);
+                    });
+                }
+                
+                // Validate compiled story
+                if (!compiledStory) {
+                    debugLog('Compilation succeeded but returned null story');
+                    return false;
+                }
+                
+                // Test story instance
+                try {
+                    story = compiledStory;
+                    debugLog('Testing story instance...');
+                    
+                    const canContinue = story.canContinue;
+                    const currentChoices = story.currentChoices ? story.currentChoices.length : 0;
+                    
+                    debugLog(`Story state: canContinue=${canContinue}, choices=${currentChoices}`);
+                    
+                    // Start the story with INK engine
+                    debugLog('✅ INK compilation successful! Starting with real engine...');
+                    storyElement.innerHTML = '';
+                    hideStatus();
+                    continueStory();
+                    
+                    return true;
+                    
+                } catch (storyError) {
+                    debugLog('Story instance test failed: ' + storyError.message);
+                    return false;
+                }
+                
+            } catch (outerError) {
+                debugLog('Outer compilation error: ' + outerError.message);
+                debugLog('Outer error stack: ' + outerError.stack);
+                return false;
+            }
+        }
+        
+        // Manual FINK parsing (temporary fallback)
+        function parseManualFinkStory(content) {
+            debugLog('Using manual FINK parsing (temporary)');
+            
+            // We need to use the original content with tags for manual parsing
+            // since we stripped the IMAGE: tags for INK compilation
+            const originalContent = finkStoryContent; // Use the original loaded content
+            
+            const storyKnots = {};
+            const lines = originalContent.split(/\r?\n/);
+            let currentKnotName = '';
+            let currentKnotContent = [];
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                if (line.trim().startsWith('===')) {
+                    if (currentKnotName) {
+                        storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                        currentKnotContent = [];
+                    }
+                    
+                    let knotNameRaw = line.trim();
+                    knotNameRaw = knotNameRaw.replace(/^===\s*/, '').replace(/\s*===$/, '').trim();
+                    
+                    if (knotNameRaw.includes("===")) {
+                        knotNameRaw = knotNameRaw.split("===")[0].trim();
+                    }
+                    
+                    currentKnotName = knotNameRaw;
+                    debugLog('Found knot: ' + currentKnotName);
+                } else if (line.trim().startsWith('->') && !currentKnotName) {
+                    const startKnot = line.trim().replace('->', '').trim();
+                    debugLog('Found entry point: ' + startKnot);
+                } else if (currentKnotName) {
+                    currentKnotContent.push(line);
+                }
+            }
+            
+            if (currentKnotName && currentKnotContent.length > 0) {
+                storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+            }
+            
+            debugLog('Parsed ' + Object.keys(storyKnots).length + ' knots: ' + Object.keys(storyKnots).join(', '));
+            
+            // Start story with manual navigation
+            const startKnot = storyKnots['main_menu'] ? 'main_menu' : Object.keys(storyKnots)[0];
+            if (startKnot) {
+                showKnotManual(startKnot, storyKnots);
+                hideStatus();
+            }
+        }
+        
+        // Parse individual knot content
+        function parseKnotContent(lines) {
+            const knot = {
+                text: [],
+                choices: [],
+                image: null
+            };
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                if (trimmedLine.startsWith("IMAGE:")) {
+                    const imageMatch = trimmedLine.match(/IMAGE:\s*(.*)/);
+                    if (imageMatch) {
+                        knot.image = imageMatch[1].trim();
+                    }
+                } else if (trimmedLine.startsWith('+') || trimmedLine.startsWith('*')) {
+                    let choiceText = trimmedLine.substring(1).trim();
+                    let target = '';
+                    
+                    if (choiceText.includes('->')) {
+                        const parts = choiceText.split('->');
+                        choiceText = parts[0].trim();
+                        target = parts[1].trim();
+                        
+                        if (choiceText.startsWith('[') && choiceText.endsWith(']')) {
+                            choiceText = choiceText.slice(1, -1);
+                        }
+                        
+                        if (choiceText && target) {
+                            knot.choices.push({ text: choiceText, target: target });
+                        }
+                    }
+                } else if (trimmedLine && !trimmedLine.startsWith('->') && !trimmedLine.startsWith('===') && !trimmedLine.startsWith('//') && !trimmedLine.startsWith('MENU:') && !trimmedLine.startsWith('BASEHREF:') && !trimmedLine.startsWith('FINK:')) {
+                    knot.text.push(trimmedLine);
+                }
+            }
+            
+            return knot;
+        }
+        
+        // Show knot using manual parsing (temporary)
+        function showKnotManual(knotName, storyKnots) {
+            debugLog('Showing knot manually: ' + knotName);
+            
+            const knot = storyKnots[knotName];
+            if (!knot) {
+                debugLog('ERROR: Knot not found: ' + knotName);
+                showStatus('Error: Knot not found');
+                return;
+            }
+            
+            // Display text
+            storyElement.innerHTML = '';
+            if (knot.text && knot.text.length > 0) {
+                knot.text.forEach(line => {
+                    const p = document.createElement('p');
+                    p.innerHTML = escapeHtml(line);
+                    storyElement.appendChild(p);
+                });
+            }
+            
+            // Display image
+            if (knot.image) {
+                updateImage(knot.image);
+            }
+            
+            // Display choices
+            clearChoices();
+            if (knot.choices && knot.choices.length > 0) {
+                knot.choices.forEach((choice, i) => {
+                    const emoji = chooseEmoji(choice.text);
+                    const cleanText = choice.text.replace(/[🎮📚❓🚀📖🌿🇺🇦🎭🔧📱⚙️🎨]/gu, '').trim();
+                    
+                    const choiceEl = document.createElement('div');
+                    const choiceNumber = Math.min(i + 1, 3);
+                    choiceEl.className = `choice choice-${choiceNumber}`;
+                    choiceEl.dataset.index = i;
+                    choiceEl.dataset.target = choice.target;
+                    
+                    choiceEl.innerHTML = 
+                        '<div class="choice-emoji">' + emoji + '</div>' +
+                        '<svg class="choice-label-svg" width="100%" height="40">' +
+                            '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
+                                  'class="choice-label-text" stroke="black" stroke-width="3" fill="black">' + escapeHtml(cleanText) + '</text>' +
+                            '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
+                                  'class="choice-label-text" fill="white">' + escapeHtml(cleanText) + '</text>' +
+                        '</svg>';
+                    
+                    choiceEl.addEventListener('click', () => {
+                        if (!animationInProgress) {
+                            showKnotManual(choice.target, storyKnots);
+                        }
+                    });
+                    
+                    choicesContainer.appendChild(choiceEl);
+                });
+                
+                setTimeout(() => {
+                    choicesContainer.classList.remove('hidden');
+                }, 500);
+            }
+        }
+        
+        // Update image display
+        function updateImage(imagePath) {
+            if (!imagePath) return;
+            
+            storyImage.classList.add('hidden');
+            imageContainer.classList.remove('hidden');
+            
+            const actualImagePath = mediaBasePath + imagePath;
+            debugLog('Loading image: ' + actualImagePath);
+            
+            const img = new Image();
+            img.onload = function() {
+                storyImage.src = actualImagePath;
+                storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+                storyImage.classList.remove('hidden');
+            };
+            
+            img.onerror = function() {
+                debugLog('Image failed to load: ' + actualImagePath);
+                imageContainer.classList.add('hidden');
+            };
+            
+            img.src = actualImagePath;
+        }
+        
+        function startSandboxTimeout() {
+            if (sandboxTimeout) clearTimeout(sandboxTimeout);
+            sandboxTimeout = setTimeout(() => {
+                debugLog('Sandbox timeout');
+                showStatus('Error: Timeout loading story');
+                cleanupSandbox();
+            }, SANDBOX_TIMEOUT_MS);
+        }
+        
+        function cleanupSandbox() {
+            if (sandboxTimeout) {
+                clearTimeout(sandboxTimeout);
+                sandboxTimeout = null;
+            }
+            if (activeSandbox) {
+                activeSandbox.remove();
+                activeSandbox = null;
+            }
+        }
+        
+        function showStatus(message, showLoader = false) {
+            statusText.textContent = message;
+            statusOverlay.classList.add('active');
+            
+            const loader = statusOverlay.querySelector('.status-spinner');
+            if (showLoader) {
+                loader.style.display = 'inline-block';
+            } else {
+                loader.style.display = 'none';
+            }
+        }
+        
+        function hideStatus() {
+            statusOverlay.classList.remove('active');
+        }
+        
+        // Touch handling (simplified)
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let choiceIndex = -1;
+        let touchStartTime = 0;
+        
+        function handleTouchStart(event) {
+            if (animationInProgress || !event.touches[0]) return;
+            
+            touchStartY = event.touches[0].clientY;
+            touchStartX = event.touches[0].clientX;
+            touchStartTime = Date.now();
+            
+            const choice = document.elementFromPoint(touchStartX, touchStartY);
+            const choiceEl = choice ? choice.closest('.choice') : null;
+            
+            if (choiceEl) {
+                choiceIndex = parseInt(choiceEl.dataset.index);
+            }
+        }
+        
+        function handleTouchMove(event) {
+            if (choiceIndex === -1 || !event.touches[0]) return;
+            
+            const touchY = event.touches[0].clientY;
+            const deltaY = touchStartY - touchY;
+            
+            if (deltaY > 50) {
+                if (!expandingElement && !animationInProgress) {
+                    const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
+                    if (choiceEl) {
+                        handleChoiceClick({currentTarget: choiceEl}, choiceIndex);
+                    }
+                }
+            }
+        }
+        
+        function handleTouchEnd(event) {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            if (touchDuration < 300 && choiceIndex !== -1 && !animationInProgress) {
+                const choiceEl = document.querySelector(`.choice[data-index="${choiceIndex}"]`);
+                if (choiceEl) {
+                    handleChoiceClick({currentTarget: choiceEl}, choiceIndex);
+                }
+            }
+            
+            choiceIndex = -1;
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', init);
+        
+    </script>
+</body>
+</html>
