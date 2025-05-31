@@ -1200,7 +1200,10 @@
                 const sandboxHtml = `
                 <!DOCTYPE html>
                 <html>
-                <head><title>FINK Sandbox</title></head>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>FINK Sandbox</title>
+                </head>
                 <body>
                     <script>
                         window.finkData = [];
@@ -1245,8 +1248,8 @@
                 </html>
                 `;
                 
-                // Create blob URL and set as iframe source
-                const blob = new Blob([sandboxHtml], { type: 'text/html' });
+                // Create blob URL and set as iframe source with UTF-8 encoding
+                const blob = new Blob([sandboxHtml], { type: 'text/html; charset=utf-8' });
                 const blobUrl = URL.createObjectURL(blob);
                 
                 iframe.onload = () => {
