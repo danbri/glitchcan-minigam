@@ -451,17 +451,41 @@ export class Game{
   isInTVZone(gx, gy) {
     const zoneX = Math.floor(gx / this.PAT_C);
     const zoneY = Math.floor(gy / this.PAT_R);
-    return zoneX === 0 && zoneY === 4; // Southwest corner
+    const inTVZone = zoneX === 0 && zoneY === 4; // Southwest corner
+    
+    // Debug logging for TV zone detection
+    if (inTVZone && Math.random() < 0.01) {
+      console.log(`TV Zone detected at global (${gx},${gy}) -> zone (${zoneX},${zoneY}), PAT_C=${this.PAT_C}, PAT_R=${this.PAT_R}`);
+    }
+    
+    return inTVZone;
   }
 
   spawnGhosts(){
     this.ghosts = []; 
+    
+    // TV zone coordinates (southwest corner = zone 0,4)
+    const tvZoneOriginGx = 0 * this.PAT_C;
+    const tvZoneOriginGy = 4 * this.PAT_R;
+    const tvZoneHouseGx = tvZoneOriginGx + 9;  // Center of TV zone house
+    const tvZoneHouseGy = tvZoneOriginGy + 9;
+    
     const classicGhostSetup = [
       { color: '#f00', name: 'Blinky', initialPos: { gx: this.ghostHouseExitCoord.gx, gy: this.ghostHouseExitCoord.gy}, inHouse: false },
       { color: '#fbf', name: 'Pinky',  initialPos: { gx: Math.floor(this.PAT_C/2), gy: Math.floor(this.PAT_R/2)},     inHouse: true },
       { color: '#0ff', name: 'Inky',   initialPos: { gx: Math.floor(this.PAT_C/2) - 1, gy: Math.floor(this.PAT_R/2)}, inHouse: true },
       { color: '#fb4', name: 'Clyde',  initialPos: { gx: Math.floor(this.PAT_C/2) + 1, gy: Math.floor(this.PAT_R/2)}, inHouse: true }
     ];
+    
+    // Add some TV zone ghosts to demonstrate the peaceful behavior
+    const tvZoneGhosts = [
+      { color: '#9f9', name: 'Pacey', initialPos: { gx: tvZoneHouseGx, gy: tvZoneHouseGy}, inHouse: false },
+      { color: '#f9f', name: 'Chill', initialPos: { gx: tvZoneHouseGx + 1, gy: tvZoneHouseGy}, inHouse: false },
+      { color: '#ff6600', name: 'Foafy', initialPos: { gx: tvZoneHouseGx - 1, gy: tvZoneHouseGy}, inHouse: false },
+      { color: '#3366cc', name: 'RDFie', initialPos: { gx: tvZoneHouseGx + 2, gy: tvZoneHouseGy}, inHouse: false }
+    ];
+    
+    // Spawn classic ghosts
     classicGhostSetup.forEach((setup, i) => {
       this.ghosts.push({
         id: setup.name, originalColor: setup.color, color: setup.color,
@@ -470,6 +494,18 @@ export class Game{
         homePos: { gx: setup.initialPos.gx, gy: setup.initialPos.gy }, isEaten: false
       });
     });
+    
+    // Spawn TV zone ghosts
+    tvZoneGhosts.forEach((setup, i) => {
+      this.ghosts.push({
+        id: setup.name, originalColor: setup.color, color: setup.color,
+        gx: setup.initialPos.gx, gy: setup.initialPos.gy, x: setup.initialPos.gx, y: setup.initialPos.gy,
+        dir: 'U', t: 0, speed: this.GSPD[i % this.GSPD.length], inHouse: false,
+        homePos: { gx: setup.initialPos.gx, gy: setup.initialPos.gy }, isEaten: false
+      });
+    });
+    
+    console.log(`🎮 Spawned ${this.ghosts.length} ghosts (including ${tvZoneGhosts.length} in TV zone)`);
   }
   
   input(){
@@ -567,7 +603,8 @@ export class Game{
       return true; // Door is unlocked
     }
     
-    if (tile === 'W' || tile === 'S') return false; 
+    if (tile === 'W') return false;
+    if (tile === 'S' && !isGhost) return false; // Only ghosts can enter ghost house areas 
     if (!isGhost && tile === '-') return false; 
     return true; 
   }
@@ -584,25 +621,35 @@ export class Game{
           // In TV zone, ghosts are completely peaceful - no chasing even angry reds
           if (this.isInTVZone(ent.gx, ent.gy)) {
             // 100% peaceful behavior in TV zone
-            const houseGx = Math.floor(this.PAT_C/2);
-            const houseGy = Math.floor(this.PAT_R/2);
-            const tvGx = houseGx + 2; // TV is to the right of house center
-            const tvGy = houseGy;
+            // Calculate global coordinates for TV zone (southwest corner = zone 0,4)
+            const tvZoneOriginGx = 0 * this.PAT_C;
+            const tvZoneOriginGy = 4 * this.PAT_R;
+            
+            const houseGx = tvZoneOriginGx + Math.floor(this.PAT_C/2);
+            const houseGy = tvZoneOriginGy + Math.floor(this.PAT_R/2);
+            const tvGx = tvZoneOriginGx + 11; // TV location in TV_PAT (middle of TV)
+            const tvGy = tvZoneOriginGy + 9;  // TV location in TV_PAT (row with 'SSTTV')
+            
+            // Debug logging to understand what's happening
+            if (Math.random() < 0.1) { // Only log occasionally to avoid spam
+              console.log(`Ghost ${ent.id} in TV zone at (${ent.gx},${ent.gy}), TV at (${tvGx},${tvGy}), house at (${houseGx},${houseGy})`);
+            }
             
             // Peaceful behavior: either watch TV, hang around house, or slowly leave zone
             const behavior = Math.random();
-            if (behavior < 0.4) {
-              // Watch TV
+            if (behavior < 0.6) {
+              // Watch TV - increased chance to make it more visible
               targetGx = tvGx; 
               targetGy = tvGy;
+              if (Math.random() < 0.02) console.log(`👻 Ghost ${ent.id} watching TV at (${tvGx},${tvGy})`);
             } else if (behavior < 0.7) {
               // Wander around house peacefully
-              targetGx = houseGx + (Math.random() - 0.5) * 3;
-              targetGy = houseGy + (Math.random() - 0.5) * 3;
+              targetGx = houseGx + Math.floor((Math.random() - 0.5) * 6);
+              targetGy = houseGy + Math.floor((Math.random() - 0.5) * 4);
             } else {
               // Slowly bimble towards zone exit (right side to leave TV zone)
-              targetGx = this.PAT_C - 2; // Near right edge of zone
-              targetGy = Math.floor(this.PAT_R / 2); // Middle height
+              targetGx = tvZoneOriginGx + this.PAT_C - 2; // Near right edge of TV zone
+              targetGy = tvZoneOriginGy + Math.floor(this.PAT_R / 2); // Middle height
             }
           } else {
             targetGx = this.ply.gx; targetGy = this.ply.gy; // Normal behavior outside TV zone
@@ -908,7 +955,7 @@ export class Game{
       if(this.fruit.spawnCooldown<=0 && this.fruit.dotsEatenForSpawn >= this.fruit.DOTS_THRESHOLD){
         const fruitKey = fruitSpawnGx +','+ fruitSpawnGy; 
         const fTile = this.maze.get(fruitKey);
-        if(fTile !=='W' && fTile !=='-' && fTile !== 'S'){
+        if(fTile !=='W' && fTile !=='-'){
           // Random fruit types with different effects
           const fruits = [
             { type: 'cherry', value: 100, color: '#ff1493', emoji: '🍒' },
@@ -993,7 +1040,7 @@ export class Game{
       return true; // Treat out-of-bounds as walls
     }
     const type = this.maze.get(gx + ',' + gy);
-    return type === 'W' || type === 'S';
+    return type === 'W'; // 'S' areas are ghost house (accessible to ghosts)
   }
 
   createWallPattern(theme, cellSize) {
