@@ -44,7 +44,7 @@ The cheerful village of Hobbiton bustles with activity. Hobbits go about their b
 + [Go North toward the wilderness] -> Trollshaws
 
 === Green_Dragon ===
-IMAGE: green_dragon.jpg
+IMAGE: green_dragon.svg
 The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale and telling stories. The innkeeper nods to you from behind the bar.
 + [Talk to the innkeeper]
     "Heading out on an adventure, are you, Mr. Bilbo?" asks the innkeeper with a wink.
@@ -54,22 +54,23 @@ The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale an
 + [Leave the inn] -> Hobbiton_Village
 
 === Trollshaws ===
-IMAGE: trollshaws.jpg
+IMAGE: trollshaws.svg
 The path leads into a dark wooded area. Massive boulders dot the landscape. You can hear strange grunting noises ahead. A cave entrance is visible to the East.
 + [Go South back to Hobbiton] -> Hobbiton_Village
 + [Go East to the cave] -> Troll_Cave
 + [Investigate the noises] -> Troll_Clearing
 
 === Troll_Clearing ===
-IMAGE: troll_clearing.jpg
+IMAGE: troll_clearing.svg
 You enter a clearing where three enormous trolls sit around a fire. They appear to be arguing about how to cook you! The sun is starting to rise.
 + [Hide and wait]
     You hide behind a tree. As the trolls continue to argue, the first rays of dawn strike them. With horrified expressions, they freeze and turn to stone!
+    ~ troll_status = "stone"
     -> Troll_Clearing_Dawn
 + [Run back to the path] -> Trollshaws
 
 === Troll_Clearing_Dawn ===
-IMAGE: troll_statues.jpg
+IMAGE: troll_statues.svg
 The clearing is quiet now. Three troll statues stand in comical poses, frozen in sunlight. A gleam of metal catches your eye near the largest troll.
 + [Examine the gleam]
     You discover a key and a short sword. The sword glows faintly blue.
@@ -79,13 +80,47 @@ The clearing is quiet now. Three troll statues stand in comical poses, frozen in
 + [Go to the cave] -> Troll_Cave
 
 === Troll_Cave ===
-IMAGE: troll_cave.jpg
+IMAGE: troll_cave.svg
 The cave is dark and smells terrible. Piles of bones litter the floor. A chest sits in the corner. If the trolls are still active, this is extremely dangerous.
 + [Open the chest]
-    {troll_status: You carefully open the chest. Inside you find a small hoard of gold coins and a curious map.}
-    // Add inventory logic later
-    -> Troll_Cave
+    {troll_status == "stone": You carefully open the chest. Inside you find a small hoard of gold coins and a curious map showing the path to the Lonely Mountain. The adventure truly begins!}
+    {troll_status == "alive": The chest is locked tight, and you can hear the trolls arguing nearby. Too dangerous to investigate while they're still active!}
+    -> Troll_Cave_Explored
 + [Leave the cave] -> Trollshaws
+
+=== Troll_Cave_Explored ===
+IMAGE: troll_cave.svg
+{troll_status == "stone": With treasure in your pockets and a map to guide you, you've proven yourself a true burglar. The cave no longer seems so frightening.}
+{troll_status == "alive": The cave remains dangerous while the trolls are active. Best to leave quickly.}
++ [Return to the trolls] -> {troll_status == "stone": Troll_Clearing_Dawn | Troll_Clearing}
++ [Head back to Hobbiton with your treasure] -> Victorious_Return
+
+=== Victorious_Return ===
+IMAGE: bag_end_exterior.svg
+You return to Bag End as the sun sets, your pockets heavy with troll gold and your mind filled with the wonders you've seen. Gandalf sits on your doorstep, smoking his pipe with a knowing smile.
+
+"So, Bilbo," he says, "still think you want no part in adventures?"
+
+You pat the treasure in your pocket and gaze toward the horizon. "Perhaps... there are greater adventures yet to come."
+
++ [Begin planning the journey to the Lonely Mountain] -> The_Adventure_Begins
++ [Stay content with your small victory] -> Peaceful_Retirement
+
+=== The_Adventure_Begins ===
+IMAGE: adventure_path.svg
+With Gandalf's guidance and the treasure map as your guide, you set off toward greater adventures. The path to the Lonely Mountain stretches before you, filled with dangers and wonders beyond imagination.
+
+Your story as a burglar has only just begun...
+
+-> END
+
+=== Peaceful_Retirement ===
+IMAGE: hobbit_pantry.svg
+You decide that one adventure is quite enough for a respectable hobbit. You hide the troll treasure in your pantry and return to your quiet life of gardening and meals.
+
+Sometimes, on clear evenings, you look toward the mountains and wonder what might have been...
+
+-> END
 
 // Extra variables for tracking states
 VAR troll_status = "alive" // Changes to "stone" after dawn

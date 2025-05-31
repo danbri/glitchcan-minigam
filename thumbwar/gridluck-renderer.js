@@ -76,8 +76,13 @@ export class GridLuckRenderer {
   drawBaseTiles(ctx, cs, startGx_view, endGx_view, startGy_view, endGy_view) {
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
       for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-        const a_world = this.game._wrapCoord(a_draw, this.game.totalWorldWidthCells);
-        const b_world = this.game._wrapCoord(b_draw, this.game.totalWorldHeightCells);
+        const a_world = a_draw;
+        const b_world = b_draw;
+        
+        // Skip tiles outside world boundaries
+        if (a_world < 0 || a_world >= this.game.totalWorldWidthCells || b_world < 0 || b_world >= this.game.totalWorldHeightCells) {
+          continue;
+        }
         const k = a_world + ',' + b_world;
         const tileType = this.game.maze.get(k);
         if (!tileType && tileType !== ' ') continue;
@@ -103,8 +108,13 @@ export class GridLuckRenderer {
     
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
       for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-        const a_world = this.game._wrapCoord(a_draw, this.game.totalWorldWidthCells);
-        const b_world = this.game._wrapCoord(b_draw, this.game.totalWorldHeightCells);
+        const a_world = a_draw;
+        const b_world = b_draw;
+        
+        // Skip tiles outside world boundaries
+        if (a_world < 0 || a_world >= this.game.totalWorldWidthCells || b_world < 0 || b_world >= this.game.totalWorldHeightCells) {
+          continue;
+        }
         const tileType = this.game.maze.get(a_world + ',' + b_world);
         if (tileType === 'W' || tileType === 'S' || !tileType) continue;
         
@@ -144,8 +154,13 @@ export class GridLuckRenderer {
     
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
       for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-        const a_world = this.game._wrapCoord(a_draw, this.game.totalWorldWidthCells);
-        const b_world = this.game._wrapCoord(b_draw, this.game.totalWorldHeightCells);
+        const a_world = a_draw;
+        const b_world = b_draw;
+        
+        // Skip tiles outside world boundaries
+        if (a_world < 0 || a_world >= this.game.totalWorldWidthCells || b_world < 0 || b_world >= this.game.totalWorldHeightCells) {
+          continue;
+        }
         const tileType = this.game.maze.get(a_world + ',' + b_world);
         if (tileType === 'W' || tileType === 'S' || !tileType) continue;
         
@@ -183,8 +198,13 @@ export class GridLuckRenderer {
   drawSpecialTiles(ctx, cs, startGx_view, endGx_view, startGy_view, endGy_view, t_timestamp, originalFont) {
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
       for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-        const a_world = this.game._wrapCoord(a_draw, this.game.totalWorldWidthCells);
-        const b_world = this.game._wrapCoord(b_draw, this.game.totalWorldHeightCells);
+        const a_world = a_draw;
+        const b_world = b_draw;
+        
+        // Skip tiles outside world boundaries
+        if (a_world < 0 || a_world >= this.game.totalWorldWidthCells || b_world < 0 || b_world >= this.game.totalWorldHeightCells) {
+          continue;
+        }
         const k = a_world + ',' + b_world;
         const tileType = this.game.maze.get(k);
         if (!tileType) continue;
@@ -548,8 +568,13 @@ export class GridLuckRenderer {
     let glowsRendered = 0;
     for (let b_draw = startGy_view; b_draw <= endGy_view; b_draw++) {
       for (let a_draw = startGx_view; a_draw <= endGx_view; a_draw++) {
-        const a_world = this.game._wrapCoord(a_draw, this.game.totalWorldWidthCells);
-        const b_world = this.game._wrapCoord(b_draw, this.game.totalWorldHeightCells);
+        const a_world = a_draw;
+        const b_world = b_draw;
+        
+        // Skip tiles outside world boundaries
+        if (a_world < 0 || a_world >= this.game.totalWorldWidthCells || b_world < 0 || b_world >= this.game.totalWorldHeightCells) {
+          continue;
+        }
         const k = a_world + ',' + b_world;
         const transition = this.game.zoneTransitions.get(k);
         

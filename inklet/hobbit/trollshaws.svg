@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2F4F4F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F6F4F;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="moonGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" style="stop-color:#F0F8FF;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#2F4F4F;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Dark sky -->
+  <rect width="400" height="200" fill="url(#skyGrad)"/>
+  
+  <!-- Moon -->
+  <circle cx="80" cy="60" r="25" fill="#F0F8FF" opacity="0.9"/>
+  <circle cx="80" cy="60" r="30" fill="url(#moonGlow)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="200" width="400" height="100" fill="#2F4F2F"/>
+  
+  <!-- Path -->
+  <path d="M 0 250 Q 100 240 200 245 Q 300 250 400 240" stroke="#4F4F3F" stroke-width="25" fill="none"/>
+  <path d="M 0 250 Q 100 240 200 245 Q 300 250 400 240" stroke="#6F6F5F" stroke-width="15" fill="none"/>
+  
+  <!-- Large boulders -->
+  <ellipse cx="120" cy="220" rx="25" ry="15" fill="#696969"/>
+  <ellipse cx="120" cy="215" rx="20" ry="10" fill="#808080"/>
+  
+  <ellipse cx="300" cy="210" rx="30" ry="18" fill="#696969"/>
+  <ellipse cx="300" cy="205" rx="25" ry="12" fill="#808080"/>
+  
+  <ellipse cx="350" cy="230" rx="20" ry="12" fill="#696969"/>
+  <ellipse cx="350" cy="227" rx="15" ry="8" fill="#808080"/>
+  
+  <!-- Dark forest trees -->
+  <rect x="40" y="140" width="8" height="60" fill="#2F2F1F"/>
+  <path d="M 44 140 L 30 100 L 35 85 L 44 90 L 53 85 L 58 100 Z" fill="#1F3F1F"/>
+  <path d="M 44 120 L 32 90 L 56 90 Z" fill="#0F2F0F"/>
+  
+  <rect x="180" y="130" width="10" height="70" fill="#2F2F1F"/>
+  <path d="M 185 130 L 170 90 L 175 75 L 185 80 L 195 75 L 200 90 Z" fill="#1F3F1F"/>
+  <path d="M 185 110 L 172 85 L 198 85 Z" fill="#0F2F0F"/>
+  
+  <rect x="320" y="135" width="8" height="65" fill="#2F2F1F"/>
+  <path d="M 324 135 L 310 95 L 315 80 L 324 85 L 333 80 L 338 95 Z" fill="#1F3F1F"/>
+  <path d="M 324 115 L 312 90 L 336 90 Z" fill="#0F2F0F"/>
+  
+  <!-- Ominous cave entrance -->
+  <ellipse cx="380" cy="180" rx="15" ry="20" fill="#000000"/>
+  <ellipse cx="380" cy="175" rx="12" ry="15" fill="#1F1F1F"/>
+  
+  <!-- Mysterious mist -->
+  <ellipse cx="150" cy="180" rx="40" ry="8" fill="#D3D3D3" opacity="0.3"/>
+  <ellipse cx="280" cy="175" rx="35" ry="6" fill="#D3D3D3" opacity="0.25"/>
+  <ellipse cx="220" cy="190" rx="30" ry="5" fill="#D3D3D3" opacity="0.2"/>
+  
+  <!-- Gnarled branches -->
+  <path d="M 60 120 Q 80 110 75 90 Q 70 85 65 90" stroke="#2F2F1F" stroke-width="3" fill="none"/>
+  <path d="M 200 100 Q 220 90 215 75 Q 210 70 205 75" stroke="#2F2F1F" stroke-width="3" fill="none"/>
+  
+  <!-- Small rocks scattered -->
+  <ellipse cx="80" cy="240" rx="6" ry="4" fill="#696969"/>
+  <ellipse cx="160" cy="235" rx="8" ry="5" fill="#696969"/>
+  <ellipse cx="250" cy="245" rx="5" ry="3" fill="#696969"/>
+  
+  <!-- Owl eyes in tree -->
+  <circle cx="50" cy="95" r="3" fill="#FFD700" opacity="0.8"/>
+  <circle cx="58" cy="95" r="3" fill="#FFD700" opacity="0.8"/>
+  
+  <!-- Distant growling suggestion (dark shapes) -->
+  <ellipse cx="360" cy="195" rx="8" ry="4" fill="#1F1F1F" opacity="0.6"/>
+  <ellipse cx="370" cy="200" rx="6" ry="3" fill="#1F1F1F" opacity="0.5"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="monospace" font-size="14" fill="#D3D3D3" font-weight="bold">THE TROLLSHAWS</text>
+</svg>
