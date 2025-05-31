@@ -347,6 +347,350 @@
       "description": "Mobile app screenshot showing animated forest scene with character in blue dress approaching watermill through woodland path, featuring story interface with path selection options",
       "genre": "mobile interface screenshot",
       "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/1F5FFF26-F815-478F-AD62-522CB011CDE5.JPEG",
+      "name": "1F5FFF26-F815-478F-AD62-522CB011CDE5.JPEG",
+      "description": "Low-polygon geometric portrait of fierce man with spiky dark hair, angular facial features, intense expression, rendered in warm orange and brown tones",
+      "genre": "digital artwork",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png",
+      "name": "596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png",
+      "description": "Isometric jungle temple structure with red stone architecture, character figure, scattered blue gems, surrounded by lush green vegetation",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/5AE4093E-F93B-4CCD-8E70-6BB8F3D54E19.png",
+      "name": "5AE4093E-F93B-4CCD-8E70-6BB8F3D54E19.png",
+      "description": "Dramatic golden oil lamp or genie lamp glowing against dark atmospheric background with radiating light beams",
+      "genre": "mystical artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/603BC341-4AFD-4E35-A4AE-77BE7C564303.png",
+      "name": "603BC341-4AFD-4E35-A4AE-77BE7C564303.png",
+      "description": "Collection of aged paper documents and clippings with text about 'LIARS', 'Surrey Commercial Docks', 'Baltic pine', and various conspiracy-themed notes and headlines",
+      "genre": "texture/background asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/6055F905-B41A-4D17-80F9-76F45CC522C3.png",
+      "name": "6055F905-B41A-4D17-80F9-76F45CC522C3.png",
+      "description": "Isometric jungle temple ruins with red wooden shipwreck structure, character figure exploring, blue gems scattered on stone platform, tropical vegetation",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/616991D1-18B1-4E73-A61A-C44D76023CAB.png",
+      "name": "616991D1-18B1-4E73-A61A-C44D76023CAB.png",
+      "description": "Aged maritime research document titled 'GREENLAND DOCK EMPIRE'S THRESHOLD' with nautical maps, sailing ship illustrations, and notes about undocumented trade routes and treasures",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/68DCC484-0992-4E9B-8543-B7C5F29F729A.png",
+      "name": "68DCC484-0992-4E9B-8543-B7C5F29F729A.png",
+      "description": "Dark atmospheric scene with silhouetted figure approaching dilapidated wooden structure through misty forest, creating eerie gothic horror mood",
+      "genre": "atmospheric artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/6D27939D-8543-4A73-8F65-81D9F8C2E0DE.png",
+      "name": "6D27939D-8543-4A73-8F65-81D9F8C2E0DE.png",
+      "description": "Fantasy steampunk cityscape with floating castle on clouds, airships, suspension bridge over river, combining medieval architecture with modern urban elements in golden lighting",
+      "genre": "fantasy environment art",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/6E992CE5-A92F-45EE-A94C-9336B63513DE.png",
+      "name": "6E992CE5-A92F-45EE-A94C-9336B63513DE.png",
+      "description": "Isometric platform game scene at sunset with character figure, glowing portal, blue gems, stone pathways extending over cliff edge with orange sky",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png",
+      "name": "8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png",
+      "description": "Isometric dungeon scene with character figure near glowing blue skull portal, torch lighting, stone walls creating mysterious underground atmosphere",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/95E0F783-0B0A-403E-8AF7-02404221FA0E.png",
+      "name": "95E0F783-0B0A-403E-8AF7-02404221FA0E.png",
+      "description": "Elderly man with glasses in futuristic space helmet and armor suit, city skyline visible through window, combining retro sci-fi with modern urban setting",
+      "genre": "character artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/97EA1FC7-CA24-4F34-A425-305242ED3949.png",
+      "name": "97EA1FC7-CA24-4F34-A425-305242ED3949.png",
+      "description": "Maritime mystery document about 'GHOST WHALE' with nautical charts, compass, and historical notes about 1762 whale sightings, carcass discoveries, and ship incidents",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/A4F6EB35-0334-4E3E-9B5F-5DD4D0FF403A.png",
+      "name": "A4F6EB35-0334-4E3E-9B5F-5DD4D0FF403A.png",
+      "description": "Detailed maritime research compilation about 'GHOST WHALE' with multiple historical documents, ship logs, whale illustrations, and mysterious sighting reports from 1762",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/68DCC484-0992-4E9B-8543-B7C5F29F729A-1.png",
+      "name": "68DCC484-0992-4E9B-8543-B7C5F29F729A-1.png",
+      "description": "Identical atmospheric scene with silhouetted figure approaching dilapidated wooden structure through misty forest, creating eerie gothic horror mood (duplicate version)",
+      "genre": "atmospheric artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/827115E8-9A15-401B-A429-381A25325101.png",
+      "name": "827115E8-9A15-401B-A429-381A25325101.png",
+      "description": "Variant of dark atmospheric forest scene with silhouetted figure approaching mysterious wooden structure, single warm light visible through window, creating ominous mood",
+      "genre": "atmospheric artwork",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/A6ECE166-CA68-47FC-8D41-815EB95F5FEF.png",
+      "name": "A6ECE166-CA68-47FC-8D41-815EB95F5FEF.png",
+      "description": "Comprehensive maritime research board about 'GHOST WHALE' featuring historical whale illustration, 1762 expedition notes, depth measurements, and mysterious oceanic phenomena documentation",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/AFC4774C-5ABB-434B-B45C-89CB4BB1A36F.png",
+      "name": "AFC4774C-5ABB-434B-B45C-89CB4BB1A36F.png",
+      "description": "Detailed maritime mystery investigation board featuring 'GREENLAND DOCK EMPIRE'S THRESHOLD' with sailing ship illustrations, secret routes documentation, and treasure hunting clues",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/B6343CE4-917A-49CB-BF67-32F517B5BE1A.png",
+      "name": "B6343CE4-917A-49CB-BF67-32F517B5BE1A.png",
+      "description": "Mobile screenshot of Google Earth app showing aerial view of Canary Wharf business district in London with modern skyscrapers and urban layout",
+      "genre": "mobile app screenshot",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/B803ED86-A395-429E-ABC1-6E3DDC4AFE0E.png",
+      "name": "B803ED86-A395-429E-ABC1-6E3DDC4AFE0E.png",
+      "description": "Four-panel sequence showing young girl in blue dress walking toward moss-covered watermill in pastoral countryside setting with rabbits and flowering meadow",
+      "genre": "storybook illustration sequence",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/BE621CCB-627A-4D51-B894-884685EE2607.png",
+      "name": "BE621CCB-627A-4D51-B894-884685EE2607.png",
+      "description": "Isometric cyberpunk dungeon scene with character figure, glowing neon pink and cyan lighting effects, futuristic technology elements, dark sci-fi atmosphere",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/BF0B4114-C919-455B-950D-D6332CBCA095.png",
+      "name": "BF0B4114-C919-455B-950D-D6332CBCA095.png",
+      "description": "Four-panel retro video game screenshot grid showing 'JET SET WILLY' from 1984, featuring isometric room layouts, character sprites, and classic ZX Spectrum graphics style",
+      "genre": "retro game screenshot",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/C1130841-8AD0-4FD0-B5B6-E3E22514F3F9.png",
+      "name": "C1130841-8AD0-4FD0-B5B6-E3E22514F3F9.png",
+      "description": "Grid of black and white icons and silhouettes featuring various symbols including trains, documents, people, houses, animals, communication elements, and UI icons",
+      "genre": "icon collection",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/C431EB91-07CC-44C9-A24E-3976C64158EB.png",
+      "name": "C431EB91-07CC-44C9-A24E-3976C64158EB.png",
+      "description": "Low-poly 3D aerial view of Canary Wharf financial district with modern skyscrapers, geometric buildings, and stylized urban architecture in soft natural lighting",
+      "genre": "3D architectural visualization",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/CA45D43C-8DB4-4214-A574-5BFC424D9136.png",
+      "name": "CA45D43C-8DB4-4214-A574-5BFC424D9136.png",
+      "description": "Vibrant isometric city view of Canary Wharf with colorful geometric buildings in green, yellow, and orange tones, creating artistic low-poly urban landscape",
+      "genre": "stylized architectural art",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/D26D98D2-F85F-483A-84E0-F21CD1EA7AC4.png",
+      "name": "D26D98D2-F85F-483A-84E0-F21CD1EA7AC4.png",
+      "description": "Another pastoral countryside scene with young girl in blue dress walking toward moss-covered watermill, rabbits in flowering meadow, blue bird flying overhead",
+      "genre": "storybook illustration",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/D78E805C-A5F4-4CCE-ABAD-F60A6296ABC4.png",
+      "name": "D78E805C-A5F4-4CCE-ABAD-F60A6296ABC4.png",
+      "description": "Historical maritime research document about 'GHOST WHALE' with aged paper texture, featuring sonar pings, danger warnings, underwater obstructions, and mysterious whale sighting reports",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/DE351903-562D-4CE8-91C9-00B9FA4E21BB.png",
+      "name": "DE351903-562D-4CE8-91C9-00B9FA4E21BB.png",
+      "description": "Maritime mystery investigation document featuring whale illustration, 'GHOST WHALE' research with 1762 carcass discovery details, danger warnings about underwater obstructions",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/DE3FFCDF-527B-4247-86E1-F0FB73BDBAC3.png",
+      "name": "DE3FFCDF-527B-4247-86E1-F0FB73BDBAC3.png",
+      "description": "Comprehensive maritime investigation board about 'GREENLAND DOCK EMPIRE'S THRESHOLD' and 'GHOST WHALE' combining historical documents, nautical charts, and mysterious phenomena research",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/E1E8E642-0058-4D3A-A168-FC3DC001A322.png",
+      "name": "E1E8E642-0058-4D3A-A168-FC3DC001A322.png",
+      "description": "Pastoral countryside scene with young girl in blue dress walking toward moss-covered watermill, rabbits in flowering meadow, blue bird flying overhead in peaceful spring setting",
+      "genre": "storybook illustration",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/E1E8E642-0058-4D3A-A168-FC3DC001A322-1.png",
+      "name": "E1E8E642-0058-4D3A-A168-FC3DC001A322-1.png",
+      "description": "Identical pastoral countryside scene with young girl in blue dress walking toward moss-covered watermill, rabbits in flowering meadow, blue bird flying overhead (duplicate version)",
+      "genre": "storybook illustration",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png",
+      "name": "E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png",
+      "description": "Isometric moonlit jungle temple scene with character figure exploring blue stone platform, glowing cyan gem, surrounded by tropical vegetation under full moon",
+      "genre": "game level asset",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/E52C8509-E3BB-4177-957F-80E4E11D2119.png",
+      "name": "E52C8509-E3BB-4177-957F-80E4E11D2119.png",
+      "description": "Nine robotic soldiers in dark military armor arranged in 3x3 grid on green background, each showing different facial expressions and head positions with weathered human features",
+      "genre": "character sprite sheet",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/E70260A2-3326-46B9-B5A6-AE31C68FB5C5.png",
+      "name": "E70260A2-3326-46B9-B5A6-AE31C68FB5C5.png",
+      "description": "Detailed 3D mech suit with elderly man's face visible in cockpit window, featuring military-grade armor, weapons systems, and weathered metallic surfaces",
+      "genre": "mech character design",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/EA0E5AC2-4D25-403B-B098-5D793721513A.png",
+      "name": "EA0E5AC2-4D25-403B-B098-5D793721513A.png",
+      "description": "Another vibrant isometric city view of Canary Wharf with geometric buildings in green and gold tones, creating artistic low-poly urban landscape with stylized architecture",
+      "genre": "stylized architectural art",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/F025B9B6-5A9C-47F5-8FE8-2AB91C603C4E.png",
+      "name": "F025B9B6-5A9C-47F5-8FE8-2AB91C603C4E.png",
+      "description": "Collection of aged warning notices and documents featuring 'WORKERS BE WARNED', 'SWEDISH OAK', Baltic pine references, and various construction safety notices",
+      "genre": "historical document texture",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/F1643523-32EF-4852-B9DC-B356A4E018AC.png",
+      "name": "F1643523-32EF-4852-B9DC-B356A4E018AC.png",
+      "description": "Psychedelic rainbow bird with vibrant multicolored feathers (yellow, red, green, blue) perched on modern office building against urban cityscape background",
+      "genre": "surreal digital art",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/F9BE0838-3B35-4968-8897-8E37BDF3AA76.png",
+      "name": "F9BE0838-3B35-4968-8897-8E37BDF3AA76.png",
+      "description": "Simple signal testing interface with 'WIGGLE' text and cyan audio waveform pattern on dark blue background, appearing to be a diagnostic or testing tool",
+      "genre": "UI interface design",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/FF1B25CD-52E5-4C8A-9D7D-5DEA2A4298AA.png",
+      "name": "FF1B25CD-52E5-4C8A-9D7D-5DEA2A4298AA.png",
+      "description": "Humorous portrait of person wearing Muppet-style puppet head with orange nose, glasses, and grey hair, dressed in plaid shirt, creating whimsical character mashup",
+      "genre": "comedy character portrait",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7068.PNG",
+      "name": "IMG_7068.PNG",
+      "description": "Mobile screenshot of Google Earth app showing black and white aerial view of One Canada Square and surrounding Canary Wharf business district skyscrapers",
+      "genre": "mobile app screenshot",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7072.JPEG",
+      "name": "IMG_7072.JPEG",
+      "description": "3D rendered pool table scene with yellow umbrella, red table surface, orange starry night sky background, and cylindrical objects creating surreal atmospheric lighting",
+      "genre": "3D scene render",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7093.JPEG",
+      "name": "IMG_7093.JPEG",
+      "description": "Dramatic apocalyptic scene with woman in blue dress silhouetted against burning watermill with large wooden wheel, intense orange fire lighting, creating cinematic disaster imagery",
+      "genre": "dramatic artwork",
+      "encodingFormat": "image/jpeg"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7095.PNG",
+      "name": "IMG_7095.PNG",
+      "description": "Mobile ChatGPT interface screenshot showing image transformation request, with before image of burning mill and after image of moss-covered mill in peaceful spring setting",
+      "genre": "mobile AI interface screenshot",
+      "encodingFormat": "image/png"
+    },
+    {
+      "@type": "ImageObject",
+      "contentUrl": "media/IMG_7102.PNG",
+      "name": "IMG_7102.PNG",
+      "description": "Mobile app interface for 'Animated Image Quadrants' showing moss-covered watermill image with animation controls and 'Reply to Claude' messaging options",
+      "genre": "mobile app interface screenshot",
+      "encodingFormat": "image/png"
     }
   ]
 }
