@@ -478,11 +478,12 @@ export class Game{
     ];
     
     // Add some TV zone ghosts to demonstrate the peaceful behavior
+    // Using FOAF colors: Periwinkle, Salmon, Mint, Pale lemon yellow
     const tvZoneGhosts = [
-      { color: '#9f9', name: 'Pacey', initialPos: { gx: tvZoneHouseGx, gy: tvZoneHouseGy}, inHouse: false },
-      { color: '#f9f', name: 'Chill', initialPos: { gx: tvZoneHouseGx + 1, gy: tvZoneHouseGy}, inHouse: false },
-      { color: '#ff6600', name: 'Foafy', initialPos: { gx: tvZoneHouseGx - 1, gy: tvZoneHouseGy}, inHouse: false },
-      { color: '#3366cc', name: 'RDFie', initialPos: { gx: tvZoneHouseGx + 2, gy: tvZoneHouseGy}, inHouse: false }
+      { color: '#9999CB', name: 'Pacey', initialPos: { gx: tvZoneHouseGx, gy: tvZoneHouseGy}, inHouse: false, isTVZoneGhost: true },
+      { color: '#FC6866', name: 'Chill', initialPos: { gx: tvZoneHouseGx + 1, gy: tvZoneHouseGy}, inHouse: false, isTVZoneGhost: true },
+      { color: '#9ECD9A', name: 'Foafy', initialPos: { gx: tvZoneHouseGx - 1, gy: tvZoneHouseGy}, inHouse: false, isTVZoneGhost: true },
+      { color: '#FCFE9B', name: 'RDFie', initialPos: { gx: tvZoneHouseGx + 2, gy: tvZoneHouseGy}, inHouse: false, isTVZoneGhost: true }
     ];
     
     // Spawn classic ghosts
@@ -501,7 +502,8 @@ export class Game{
         id: setup.name, originalColor: setup.color, color: setup.color,
         gx: setup.initialPos.gx, gy: setup.initialPos.gy, x: setup.initialPos.gx, y: setup.initialPos.gy,
         dir: 'U', t: 0, speed: this.GSPD[i % this.GSPD.length], inHouse: false,
-        homePos: { gx: setup.initialPos.gx, gy: setup.initialPos.gy }, isEaten: false
+        homePos: { gx: setup.initialPos.gx, gy: setup.initialPos.gy }, isEaten: false,
+        isTVZoneGhost: setup.isTVZoneGhost || false
       });
     });
     
@@ -569,13 +571,26 @@ export class Game{
   // No more wrapping - clamp to boundaries instead
   _clampCoord(val, max) { return Math.max(0, Math.min(val, max - 1)); }
 
-  canMove(nx,ny, isGhost = false){
+  canMove(nx,ny, isGhost = false, ghostEntity = null){
     // Check boundaries - no wrapping
     if (nx < 0 || nx >= this.totalWorldWidthCells || ny < 0 || ny >= this.totalWorldHeightCells) {
       return false;
     }
     const tile = this.maze.get(nx+','+ny);
     const key = nx + ',' + ny;
+    
+    // TV Zone protection: prevent non-TV-zone ghosts from entering
+    if (isGhost && ghostEntity && this.isInTVZone(nx, ny)) {
+      // Only TV zone ghosts can enter the TV zone
+      if (!ghostEntity.isTVZoneGhost) {
+        return false;
+      }
+    }
+    
+    // Prevent TV zone ghosts from leaving their zone
+    if (isGhost && ghostEntity && ghostEntity.isTVZoneGhost && !this.isInTVZone(nx, ny)) {
+      return false;
+    }
     
     // Player can phase through walls with special effect
     if (!isGhost && this.ply.canPhaseWalls && (tile === 'W' || tile === 'S')) return true;
@@ -612,7 +627,7 @@ export class Game{
   step(ent,spd){
     if(ent.t>0)return; let newDir = ent.dir;
     if(ent===this.ply){ if(this.ply.next){ const [nextVx,nextVy]=this.VEC[this.ply.next]; if(this.canMove(ent.gx+nextVx,ent.gy+nextVy)) newDir = this.ply.next; }
-    }else{ const availableMoves = []; for(const d of ['U','D','L','R']){ const [vx,vy]=this.VEC[d]; if(this.canMove(ent.gx+vx,ent.gy+vy, true)) availableMoves.push({dir:d,gx:ent.gx+vx,gy:ent.gy+vy}); } if(availableMoves.length===0) return;
+    }else{ const availableMoves = []; for(const d of ['U','D','L','R']){ const [vx,vy]=this.VEC[d]; if(this.canMove(ent.gx+vx,ent.gy+vy, true, ent)) availableMoves.push({dir:d,gx:ent.gx+vx,gy:ent.gy+vy}); } if(availableMoves.length===0) return;
       if(this.power && !ent.isEaten){ const nonReverseMoves = availableMoves.filter(m=>m.dir!==this.OPPOSITE_DIR[ent.dir]); if(nonReverseMoves.length>0) newDir = nonReverseMoves[Math.floor(Math.random()*nonReverseMoves.length)].dir; else newDir = availableMoves[0].dir; 
       } else { let targetGx, targetGy;
         if (ent.isEaten) { targetGx = ent.homePos.gx; targetGy = ent.homePos.gy; if (ent.gx === targetGx && ent.gy === targetGy) { ent.isEaten = false; ent.inHouse = (ent.id !== 'Blinky'); ent.color = ent.originalColor;}
@@ -669,7 +684,7 @@ export class Game{
     const [vx,vy]=this.VEC[ent.dir]; 
     const nextRawGx = ent.gx + vx;
     const nextRawGy = ent.gy + vy;
-    if(this.canMove(nextRawGx, nextRawGy, ent !== this.ply)){ 
+    if(this.canMove(nextRawGx, nextRawGy, ent !== this.ply, ent !== this.ply ? ent : null)){ 
         ent.gx = nextRawGx;
         ent.gy = nextRawGy;
         ent.t=spd; 
@@ -901,6 +916,9 @@ export class Game{
     // Skip ghost collisions if player is dying or ghost immune
     if (!this.ply.dying && !this.ply.ghostImmune) {
       [...this.ghosts, ...this.frenziedGhosts].forEach(g=>{ if (g.isEaten) return; 
+          // TV zone ghosts are harmless - they never hurt the player
+          if (g.isTVZoneGhost) return;
+          
           let dx = g.x - this.ply.x; let dy = g.y - this.ply.y;
           if (Math.abs(dx) > this.totalWorldWidthCells / 2) dx = dx > 0 ? dx - this.totalWorldWidthCells : dx + this.totalWorldWidthCells;
           if (Math.abs(dy) > this.totalWorldHeightCells / 2) dy = dy > 0 ? dy - this.totalWorldHeightCells : dy + this.totalWorldHeightCells;
