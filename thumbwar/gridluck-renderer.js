@@ -234,6 +234,30 @@ export class GridLuckRenderer {
           ctx.fillRect(drawX, drawY, cs, cs);
           ctx.fillStyle = '#1C1C1C'; 
           ctx.fillRect(drawX + cs * 0.1, drawY + cs * 0.1, cs * 0.8, cs * 0.8);
+        } else if (tileType === 'TV') {
+          // Draw TV screen with flickering effect
+          ctx.fillStyle = '#222'; 
+          ctx.fillRect(drawX, drawY, cs, cs);
+          
+          // TV screen
+          const flickerIntensity = 0.3 + Math.sin(t_timestamp * 0.01) * 0.2 + Math.random() * 0.1;
+          const screenColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, ${Math.floor(30 + flickerIntensity * 40)}%)`;
+          ctx.fillStyle = screenColor;
+          ctx.fillRect(drawX + cs * 0.1, drawY + cs * 0.1, cs * 0.8, cs * 0.7);
+          
+          // TV base
+          ctx.fillStyle = '#111';
+          ctx.fillRect(drawX + cs * 0.2, drawY + cs * 0.8, cs * 0.6, cs * 0.2);
+          
+          // Flickering emoji on screen
+          if (Math.random() < 0.8) {
+            const tvEmojis = ['📺', '🎮', '🕹️', '👾', '🎬'];
+            const emoji = tvEmojis[Math.floor(t_timestamp * 0.003) % tvEmojis.length];
+            ctx.font = `${cs * 0.4}px Arial`;
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.fillText(emoji, drawX + cs * 0.5, drawY + cs * 0.5);
+          }
         } else if (tileType === '-') {
           ctx.fillStyle = '#f55'; 
           ctx.fillRect(drawX, drawY + cs * 0.4, cs, cs * 0.2);

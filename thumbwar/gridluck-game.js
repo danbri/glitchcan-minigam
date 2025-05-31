@@ -16,11 +16,19 @@ export class Game{
 
   MOVE=170; GSPD=[175, 180, 185, 190];
   PAT=[ 
-"WWWWWWWWWWWWWWWWWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.......W.......PW",
+"WWWWWWWWWOWWWWWWWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.......W.......PW",
 "W.WW.W.WWWWW.W.WW.W", "W....W...W...W....W", "WWWW.WWW.W.WWW.WWWW", "O....W...^...W....O", 
-"WWWW.W.WSSS.W.WWWW", "W......WSSS.W......W", "WWWW.W.WSSS.W.WWWW", "O....W.......W....O", 
+"WWWW.W.WSSS.W.WWWW", "W....W.WSS..W....W", "WWWW.W.WSSS.W.WWWW", "O....W.......W....O", 
 "WWWW.W.WWWWW.W.WWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.W.....W.....W.PW",
-"WW.W.W.WWWWW.W.W.WW", "W....W...W...W....W", "WWWWWWWWWWWWWWWWWWW"];
+"WW.W.W.WWWWW.W.W.WW", "W....W...W...W....W", "WWWWWWWWWOWWWWWWWWW"];
+  
+  // Special TV zone pattern with snack trails to ghost house
+  TV_PAT=[ 
+"WWWWWWWWWOWWWWWWWWW", "W.....P..W..P.....W", "W.WW.P...W...P.WW.W", "WP...P...W...P...PW",
+"W.WW.P.WWWWW.P.WW.W", "W....P...W...P....W", "WWWW.PPP.W.PPP.WWWW", "O....P...^...P....O", 
+"WWWW.P.WSTV.P.WWWW", "W....P.WST..P....W", "WWWW.P.WSSS.P.WWWW", "O....P.......P....O", 
+"WWWW.P.WWWWW.P.WWWW", "W....P...W...P....W", "W.WW.PPP.W.PPP.WW.W", "WP...P...W...P...PW",
+"WW.W.P.WWWWW.P.W.WW", "W....P...W...P....W", "WWWWWWWWWOWWWWWWWWW"];
   VEC={U:[0,-1],D:[0,1],L:[-1,0],R:[1,0]};
   OPPOSITE_DIR = { U: 'D', D: 'U', L: 'R', R: 'L' };
   fruit = {
@@ -31,7 +39,8 @@ export class Game{
   originalCSize = 0; cSize = 0; targetCSize = 0;   
   ghostHouseExitCoord; ghostDoorCoord;
 
-  WORLD_MODULE_DIM = 7; 
+  WORLD_ZONES_X = 5; // 5x5 grid of zones
+  WORLD_ZONES_Y = 5;
   totalWorldWidthCells; totalWorldHeightCells;
   lockedAreas = new Map(); // Track locked doors/areas
   keyUsageLog = []; // Track which keys unlock what
@@ -41,7 +50,17 @@ export class Game{
     { name: "Forest",  pathColor: '#0a1a0a', wallColor: '#1a4a1a', wallPattern: ['🌲', '🌿', '🍃', '🌱', '🌴'], largeDecorativeEmojis: ['🌳','🦉'], entityTypes: [{type: 'boids', count: 5, emojis:['🦋','🐦']}, {type: 'slimeMold', count:1}] },
     { name: "Ocean",   pathColor: '#001122', wallColor: '#004466', wallPattern: ['🌊', '🐚', '⚓', '🫧'], largeDecorativeEmojis: ['⚓','🐳'], entityTypes: [{type: 'boids', count: 6, emojis:['🐟','🦐']}] },
     { name: "Desert",  pathColor: '#2a1a0a', wallColor: '#6b4423', wallPattern: ['🧱', '🏺', '🪨', '🌵'], largeDecorativeEmojis: ['🏜️','🐍'], entityTypes: [] },
-    { name: "Space",   pathColor: '#0a0015', wallColor: '#2a0845', wallPattern: ['✨', '⭐', '🌌', '💫'], largeDecorativeEmojis: ['🪐','🚀'], entityTypes: [{type: 'asteroids', count: 8}, {type: 'decorShip', count: 2}] }
+    { name: "Space",   pathColor: '#0a0015', wallColor: '#2a0845', wallPattern: ['✨', '⭐', '🌌', '💫'], largeDecorativeEmojis: ['🪐','🚀'], entityTypes: [{type: 'asteroids', count: 8}, {type: 'decorShip', count: 2}] },
+    { name: "TVRoom",  pathColor: '#1a0a1a', wallColor: '#3a2a3a', wallPattern: ['📺', '🍿', '🥨', '🍕'], largeDecorativeEmojis: ['📺','🛋️'], entityTypes: [], special: 'tvzone' }
+  ];
+  
+  // 5x5 Zone layout - each zone has a theme and special properties
+  zoneLayout = [
+    ['Forest', 'Classic', 'Ocean',   'Desert', 'Space'],   // Row 0 (North)
+    ['Ocean',  'Forest', 'Classic', 'Space',  'Desert'],  // Row 1  
+    ['Desert', 'Space',  'Forest',  'Ocean',  'Classic'], // Row 2 (Middle)
+    ['Space',  'Desert', 'Ocean',   'Forest', 'Classic'], // Row 3
+    ['TVRoom', 'Classic', 'Desert',  'Space',  'Forest']  // Row 4 (South) - SW corner has TV zone
   ];
   PAT_C = this.PAT[0].length; PAT_R = this.PAT.length;
   specialDecorRenderList = []; 
@@ -75,8 +94,8 @@ export class Game{
       zonesExplored: new Set(),
       startTime: Date.now()
     };
-    this.totalWorldWidthCells = this.WORLD_MODULE_DIM * this.PAT_C;
-    this.totalWorldHeightCells = this.WORLD_MODULE_DIM * this.PAT_R;
+    this.totalWorldWidthCells = this.WORLD_ZONES_X * this.PAT_C;
+    this.totalWorldHeightCells = this.WORLD_ZONES_Y * this.PAT_R;
 
     this.gameOverScreen = document.getElementById('gameOverScreen'); this.gameOverMessageText = document.getElementById('gameOverMessageText');
     document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
@@ -184,16 +203,21 @@ export class Game{
                 });
             }
 
+            // Choose pattern based on zone type
+            const currentPattern = (smx === 0 && smy === 4) ? this.TV_PAT : this.PAT; // SW corner uses TV pattern
+            
             for (let y_pat = 0; y_pat < R_PAT; y_pat++) {
                 for (let x_pat = 0; x_pat < C_PAT; x_pat++) {
-                    const ch = this.PAT[y_pat][x_pat]; 
+                    const ch = currentPattern[y_pat][x_pat]; 
                     const gx = x_pat + smx * C_PAT; 
                     const gy = y_pat + smy * R_PAT; 
                     const k = gx + ',' + gy;
                     let tileType = ' '; 
                     if (ch === 'W') tileType = 'W'; else if (ch === '-') tileType = '-'; else if (ch === '^') tileType = ' '; // Ghost house exit - open path
                     else if (ch === 'O') tileType = 'T'; else if (ch === '.') tileType = '.'; else if (ch === 'P') tileType = 'P'; 
-                    else if (ch === 'S') tileType = 'S'; 
+                    else if (ch === 'S') tileType = 'S';
+                    else if (ch === 'T') tileType = 'TV'; // TV screen
+                    else if (ch === 'V') tileType = ' '; // Special TV area marker (converted to empty space) 
                     this.maze.set(k, tileType); 
                     if (tileType === '.' || tileType === 'P') this.dots.add(k);
                     
@@ -249,8 +273,13 @@ export class Game{
           ];
           
           for (const dir of directions) {
-            const adjGx = this._wrapCoord(gx + dir.dx, this.totalWorldWidthCells);
-            const adjGy = this._wrapCoord(gy + dir.dy, this.totalWorldHeightCells);
+            const adjGx = gx + dir.dx;
+            const adjGy = gy + dir.dy;
+            
+            // Skip if adjacent cell is outside world boundaries
+            if (adjGx < 0 || adjGx >= this.totalWorldWidthCells || adjGy < 0 || adjGy >= this.totalWorldHeightCells) {
+              continue;
+            }
             const adjKey = adjGx + ',' + adjGy;
             const adjTileType = this.maze.get(adjKey);
             
@@ -306,12 +335,22 @@ export class Game{
   }
 
   getThemeForCell(gx, gy) {
-    const wrappedGx = this._wrapCoord(gx, this.totalWorldWidthCells);
-    const wrappedGy = this._wrapCoord(gy, this.totalWorldHeightCells);
-    const sectionX = Math.floor(wrappedGx / this.PAT_C); 
-    const sectionY = Math.floor(wrappedGy / this.PAT_R);
-    let hash = Math.abs(sectionX * 7 + sectionY * 13 + sectionX + sectionY);
-    return this.themes[hash % this.themes.length];
+    // No wrapping - use actual coordinates for 5x5 grid
+    const zoneX = Math.floor(gx / this.PAT_C); 
+    const zoneY = Math.floor(gy / this.PAT_R);
+    
+    // Clamp to valid zone boundaries (no wraparound)
+    const clampedZoneX = Math.max(0, Math.min(zoneX, this.WORLD_ZONES_X - 1));
+    const clampedZoneY = Math.max(0, Math.min(zoneY, this.WORLD_ZONES_Y - 1));
+    
+    const themeName = this.zoneLayout[clampedZoneY][clampedZoneX];
+    return this.themes.find(theme => theme.name === themeName) || this.themes[0];
+  }
+  
+  isInTVZone(gx, gy) {
+    const zoneX = Math.floor(gx / this.PAT_C);
+    const zoneY = Math.floor(gy / this.PAT_R);
+    return zoneX === 0 && zoneY === 4; // Southwest corner
   }
 
   spawnGhosts(){
@@ -390,13 +429,16 @@ export class Game{
     }, { passive: false });
   }
 
-  _wrapCoord(val, max) { return (val % max + max) % max; }
+  // No more wrapping - clamp to boundaries instead
+  _clampCoord(val, max) { return Math.max(0, Math.min(val, max - 1)); }
 
   canMove(nx,ny, isGhost = false){
-    const wrappedNx = this._wrapCoord(nx, this.totalWorldWidthCells);
-    const wrappedNy = this._wrapCoord(ny, this.totalWorldHeightCells);
-    const tile = this.maze.get(wrappedNx+','+wrappedNy);
-    const key = wrappedNx + ',' + wrappedNy;
+    // Check boundaries - no wrapping
+    if (nx < 0 || nx >= this.totalWorldWidthCells || ny < 0 || ny >= this.totalWorldHeightCells) {
+      return false;
+    }
+    const tile = this.maze.get(nx+','+ny);
+    const key = nx + ',' + ny;
     
     // Player can phase through walls with special effect
     if (!isGhost && this.ply.canPhaseWalls && (tile === 'W' || tile === 'S')) return true;
@@ -437,12 +479,19 @@ export class Game{
       } else { let targetGx, targetGy;
         if (ent.isEaten) { targetGx = ent.homePos.gx; targetGy = ent.homePos.gy; if (ent.gx === targetGx && ent.gy === targetGy) { ent.isEaten = false; ent.inHouse = (ent.id !== 'Blinky'); ent.color = ent.originalColor;}
         } else if(ent.inHouse){ targetGx = this.ghostDoorCoord.gx; targetGy = this.ghostDoorCoord.gy; if(ent.gx === this.ghostDoorCoord.gx && ent.gy === this.ghostDoorCoord.gy){ targetGx = this.ghostHouseExitCoord.gx; targetGy = this.ghostHouseExitCoord.gy;} if(ent.gx === this.ghostHouseExitCoord.gx && ent.gy === this.ghostHouseExitCoord.gy) ent.inHouse = false; 
-        } if (!ent.inHouse && !ent.isEaten) { targetGx = this.ply.gx; targetGy = this.ply.gy; }
+        } if (!ent.inHouse && !ent.isEaten) { 
+          // In TV zone, ghosts prefer to return to house to watch TV
+          if (this.isInTVZone(ent.gx, ent.gy) && Math.random() < 0.7) {
+            targetGx = this.ghostDoorCoord.gx; targetGy = this.ghostDoorCoord.gy;
+          } else {
+            targetGx = this.ply.gx; targetGy = this.ply.gy; 
+          }
+        }
         let minDistance = Infinity; const preferredDirs = []; const filterableMoves = availableMoves.filter(m => m.dir !== this.OPPOSITE_DIR[ent.dir]); const movesToConsider = filterableMoves.length > 0 ? filterableMoves : availableMoves;
         if (targetGx !== undefined && targetGy !== undefined) { for(const move of movesToConsider){ 
-            const dx = Math.abs(this._wrapCoord(move.gx, this.totalWorldWidthCells) - this._wrapCoord(targetGx, this.totalWorldWidthCells)); 
-            const dy = Math.abs(this._wrapCoord(move.gy, this.totalWorldHeightCells) - this._wrapCoord(targetGy, this.totalWorldHeightCells));
-            const dist = Math.min(dx, this.totalWorldWidthCells - dx) + Math.min(dy, this.totalWorldHeightCells - dy);
+            const dx = Math.abs(move.gx - targetGx); 
+            const dy = Math.abs(move.gy - targetGy);
+            const dist = dx + dy; // Simple Manhattan distance, no wrapping
             if(dist < minDistance){ minDistance = dist; preferredDirs.length=0; preferredDirs.push(move.dir); }else if(dist === minDistance) preferredDirs.push(move.dir); } }
         if(preferredDirs.length>0){ const order = ['U','L','D','R']; if (preferredDirs.includes(ent.dir) && movesToConsider.some(m => m.dir === ent.dir)) newDir = ent.dir; else for(const d of order) if(preferredDirs.includes(d)){newDir=d;break;}
         } else if (movesToConsider.length > 0) newDir = movesToConsider[Math.floor(Math.random()*movesToConsider.length)].dir; else if (availableMoves.length > 0) newDir = availableMoves[0].dir;
@@ -453,8 +502,8 @@ export class Game{
     const nextRawGx = ent.gx + vx;
     const nextRawGy = ent.gy + vy;
     if(this.canMove(nextRawGx, nextRawGy, ent !== this.ply)){ 
-        ent.gx = this._wrapCoord(nextRawGx, this.totalWorldWidthCells);
-        ent.gy = this._wrapCoord(nextRawGy, this.totalWorldHeightCells);
+        ent.gx = nextRawGx;
+        ent.gy = nextRawGy;
         ent.t=spd; 
     }
   }
@@ -463,15 +512,14 @@ export class Game{
     let dx = ent.gx - ent.x;
     let dy = ent.gy - ent.y;
 
-    if (Math.abs(dx) > this.totalWorldWidthCells / 2) dx = dx > 0 ? dx - this.totalWorldWidthCells : dx + this.totalWorldWidthCells;
-    if (Math.abs(dy) > this.totalWorldHeightCells / 2) dy = dy > 0 ? dy - this.totalWorldHeightCells : dy + this.totalWorldHeightCells;
-    
+    // No wrapping behavior - direct movement
     if( (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) && ent.t > 0 ){ 
         const r=Math.min(1,dt/(spd || this.MOVE)); 
         ent.x += dx * r;
         ent.y += dy * r;
-        ent.x = this._wrapCoord(ent.x, this.totalWorldWidthCells + 0); // Add 0 to ensure float wrap
-        ent.y = this._wrapCoord(ent.y, this.totalWorldHeightCells + 0);
+        // Clamp positions to world boundaries instead of wrapping
+        ent.x = Math.max(0, Math.min(ent.x, this.totalWorldWidthCells - 1));
+        ent.y = Math.max(0, Math.min(ent.y, this.totalWorldHeightCells - 1));
         ent.t = Math.max(0, ent.t-dt); 
     } else {
         ent.t=0;
@@ -629,9 +677,9 @@ export class Game{
         return effect.life > 0;
     });
 
-    const pk_wrapped_x = this._wrapCoord(this.ply.gx, this.totalWorldWidthCells);
-    const pk_wrapped_y = this._wrapCoord(this.ply.gy, this.totalWorldHeightCells);
-    const pk_key = pk_wrapped_x + ',' + pk_wrapped_y;
+    const pk_x = this.ply.gx;
+    const pk_y = this.ply.gy;
+    const pk_key = pk_x + ',' + pk_y;
 
     const currentTileType = this.maze.get(pk_key);
     if(this.dots.has(pk_key)){ this.dots.delete(pk_key); this.fruit.dotsEatenForSpawn++;
@@ -651,7 +699,7 @@ export class Game{
     }
     
     // Check for zone transitions
-    const currentTheme = this.getThemeForCell(pk_wrapped_x, pk_wrapped_y);
+    const currentTheme = this.getThemeForCell(pk_x, pk_y);
     if (this.ply.lastZoneTheme && this.ply.lastZoneTheme.name !== currentTheme.name) {
       this.playSound('zoneTransition');
       this.playSession.zonesExplored.add(currentTheme.name);
@@ -778,7 +826,7 @@ export class Game{
     // VERSION CONTROL: Always bump this when making changes!
     // Major.Minor.Patch (semver) - Update for: major features, new features, bug fixes
     // Remember to update after: refactoring, new systems, bug fixes, feature additions
-    const version = '1.2.0'; // Updated: Fixed critical crash bugs in collectible system
+    const version = '1.3.0'; // Updated: Replaced infinite wraparound world with 5x5 zone grid
     let uiText = `v${version} Lv.${this.playerLevel} Score ${this.score} Treasures ${this.treasureScore} Lives ${this.ply.lives}`;
     uiText += ` XP: ${xpTowardNext}/${xpTowardNext + xpNeededForNext} (+${xpNeededForNext})`;
     if (this.power) uiText += ` POWER (${Math.ceil(this.pTimer/1000)}s)`;
