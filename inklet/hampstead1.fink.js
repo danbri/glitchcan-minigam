@@ -15,7 +15,7 @@ VAR debug_message = "" // <<<< NEW: Debug variable
 
 -> splash
 
-== splash ==
+=== splash ===
 #BG:#0050e0
 #CLASS:info
 ZX-Spectrum ready. 48 K RAM found.
@@ -24,7 +24,7 @@ ZX-Spectrum ready. 48 K RAM found.
 
 + Continue -> intro
 
-== intro ==
+=== intro ===
 #BG:#000
 You eye a cassette: Hampstead.
 
@@ -36,7 +36,7 @@ You eye a cassette: Hampstead.
     VR devours your soul. _GAME OVER_. #CLASS:danger
     -> END
 
-== bedsit ==
+=== bedsit ===
 ~ debug_message = "Hampstead: Entered bedsit knot" // <<<< NEW: Set debug message
 #BG:#0a0a0a
 Grotty bedsit. 3-2-1 blares on TV.
@@ -46,7 +46,7 @@ Grotty bedsit. 3-2-1 blares on TV.
     You step into the neon drizzle. #CLASS:info
     -> street
 
-== wardrobe ==
+=== wardrobe ===
 #CLASS:gritty
 Inside the wardrobe you see frayed jeans and a cheap tie.
 
@@ -67,7 +67,7 @@ Inside the wardrobe you see frayed jeans and a cheap tie.
 
 + Close wardrobe -> bedsit
 
-== street ==
+=== street ===
 #BG:#001515
 Neon rain slicks binbags and chip wrappers.
 Signposts glisten:
@@ -87,7 +87,7 @@ EAST → Job Centre WEST → Oxfam SOUTH → Duke Pub NORTH → Gallery Di
     ~ debug_message = "Hampstead: Examined inactive rift"
     -> street
 
-== jobcentre ==
+=== jobcentre ===
 Fluorescent lights buzz; forms flutter.
 
 { giro_collected == false:
@@ -99,7 +99,7 @@ Fluorescent lights buzz; forms flutter.
 
 + Return to street -> street
 
-== postoffice ==
+=== postoffice ===
 #BG:#031
 Queues coil like serpents.
 
@@ -113,7 +113,7 @@ Queues coil like serpents.
 
 + Leave → street -> street
 
-== oxfam ==
+=== oxfam ===
 Musk and mothballs swirl.
 
 { tweed_taken == false:
@@ -134,7 +134,7 @@ Musk and mothballs swirl.
 
 + Return to street -> street
 
-== pub ==
+=== pub ===
 #BG:#210
 The Duke of Cumberland’s ale-stench clings.
 
@@ -151,7 +151,7 @@ The Duke of Cumberland’s ale-stench clings.
     -> pub
 + Return to street -> street
 
-== gallery_pass ==
+=== gallery_pass ===
 #BG:#021
 The Avant-Garden Gallery casts long reflections in the rain.
 
@@ -172,14 +172,14 @@ The Avant-Garden Gallery casts long reflections in the rain.
 
 + Return to street -> street
 
-== mansion_tip ==
+=== mansion_tip ===
 #BG:#002
 You spot a wrought-iron gate up the hill.
 
 + Visit Sir Lionel’s mansion -> mansion
 + Return to street -> street
 
-== mansion ==
+=== mansion ===
 Stained-glass windows glow; Afghan hounds slumber.
 
 { key_2cv == false and playwright_card:
@@ -192,7 +192,7 @@ Stained-glass windows glow; Afghan hounds slumber.
 
 + Return to street -> street
 
-== car ==
+=== car ===
 #BG:#112233
 You steer the 2CV toward greener postcodes.
 
@@ -203,7 +203,7 @@ You steer the 2CV toward greener postcodes.
     -> street
 }
 
-== estate ==
+=== estate ===
 Blueprints hang on walls.
 
 { mortgage_signed == false:
@@ -216,7 +216,7 @@ Blueprints hang on walls.
 
 + Return to street -> street
 
-== housewarming ==
+=== housewarming ===
 #BG:#041
 Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
 
@@ -227,7 +227,7 @@ Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
     -> street
 }
 
-== victory ==
+=== victory ===
 #BG:#041
 #CLASS:success
 # HAMPSTEAD ACHIEVED #

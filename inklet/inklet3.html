@@ -22,7 +22,7 @@
             --choice-left: #f43f5e;
             --choice-middle: #10b981;
             --choice-right: #3b82f6;
-            --choice-height: 25vh;
+            --choice-height: 18vh;
             --transition-time: 0.5s;
         }
 
@@ -157,7 +157,7 @@
         .image-container {
             position: relative;
             width: 100%;
-            height: 38vh;
+            height: 78vh;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: height 0.5s ease;
@@ -166,15 +166,29 @@
             justify-content: center;
             background-color: rgba(0, 0, 0, 0.1);
         }
+        
+        .image-container.fullscreen {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+        }
 
-        #story-image {
+        #story-image, #story-video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
             transition: opacity 1s ease, transform 1.5s ease;
             transform-origin: center;
             max-height: 100%;
             max-width: 100%;
+        }
+        
+        #story-video {
+            display: none;
         }
 
         #story-image.hidden {
@@ -202,60 +216,76 @@
             z-index: 1;
         }
         
-        .image-caption {
+        .choice-toggle {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 8px 15px;
-            background-color: rgba(15, 23, 42, 0.75);
-            color: var(--text);
-            font-size: 0.9rem;
-            text-align: center;
-            z-index: 2;
-            font-family: 'Montserrat', sans-serif;
-            backdrop-filter: blur(2px);
-            transition: all 0.3s ease;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
             cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
         }
         
-        .image-caption.expanded {
-            padding: 15px;
-            font-size: 1rem;
-            background-color: rgba(15, 23, 42, 0.9);
+        .choice-toggle:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
         }
         
-        .image-container:hover .image-caption:not(.expanded) {
-            opacity: 0.2;
+        .fullscreen-toggle {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
         }
         
-        .image-caption::after {
-            content: "👆 tap for details";
-            display: block;
-            font-size: 0.7rem;
-            margin-top: 4px;
-            opacity: 0.7;
-        }
-        
-        .image-caption.expanded::after {
-            content: "👆 tap to minimize";
+        .fullscreen-toggle:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
         }
 
         .story-content {
-            flex-grow: 1;
-            padding: 24px;
+            position: absolute;
+            bottom: 22vh;
+            left: 0;
+            right: 0;
+            padding: 20px 24px;
+            max-height: 40vh;
             overflow-y: auto;
-            position: relative;
-            z-index: 2;
+            z-index: 3;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85), transparent);
+            transition: all 0.3s ease;
+        }
+        
+        .story-content.choices-hidden {
+            bottom: 0;
+            max-height: 25vh;
         }
 
         #story {
-            max-width: 800px;
-            margin: 0 auto 2rem;
-            font-size: 1.2rem;
-            line-height: 1.7;
+            max-width: 900px;
+            margin: 0 auto 1rem;
+            font-size: 1.4rem;
+            line-height: 1.8;
             transition: opacity 0.5s ease;
-            padding-bottom: 30vh;
+            padding-bottom: 28vh;
+            font-weight: 400;
         }
 
         #story p {
@@ -322,9 +352,9 @@
             right: 0;
             height: var(--choice-height);
             display: flex;
-            z-index: 5;
+            z-index: 4;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 40vh;
+            max-height: 22vh;
         }
 
         .choices-container.hidden {
@@ -535,8 +565,12 @@
         }
 
         @media (min-width: 769px) {
+            .image-container {
+                height: 82vh;
+            }
+            
             .choices-container {
-                --choice-height: 20vh;
+                --choice-height: 16vh;
                 height: var(--choice-height);
             }
             
@@ -546,18 +580,39 @@
             }
             
             #story {
-                padding-bottom: 25vh;
+                font-size: 1.5rem;
+                line-height: 1.9;
+            }
+            
+            .story-content {
+                bottom: 16vh;
+            }
+            
+            .story-content.choices-hidden {
+                bottom: 0;
+                max-height: 20vh;
             }
         }
         
         @media (max-width: 768px) {
+            .image-container {
+                height: 75vh;
+            }
+            
             .story-content {
-                padding: 16px;
+                padding: 16px 20px;
+                bottom: 18vh;
+            }
+            
+            .story-content.choices-hidden {
+                bottom: 0;
+                max-height: 22vh;
             }
             
             #story {
-                font-size: 1.1rem;
-                line-height: 1.6;
+                font-size: 1.3rem;
+                line-height: 1.7;
+                max-width: 100%;
             }
             
             .title-bar h1 {
@@ -576,17 +631,31 @@
         
         @media (max-height: 700px) {
             .choices-container {
-                --choice-height: 100px;
+                --choice-height: 110px;
                 height: var(--choice-height);
             }
             
             .image-container {
-                height: 42vh;
+                height: 70vh;
+            }
+            
+            .story-content {
+                bottom: 110px;
+                max-height: 30vh;
+            }
+            
+            .story-content.choices-hidden {
+                bottom: 0;
+                max-height: 25vh;
             }
             
             .choice-emoji {
                 font-size: 1.8rem;
                 margin-bottom: 5px;
+            }
+            
+            #story {
+                font-size: 1.2rem;
             }
         }
 
@@ -689,12 +758,15 @@
         </div>
         
         <div class="story-container">
-            <div class="image-container">
+            <div class="image-container" id="image-container">
                 <img id="story-image" alt="Story scene" class="hidden">
+                <video id="story-video" loop muted playsinline class="hidden"></video>
                 <div class="image-overlay"></div>
+                <button class="choice-toggle" id="choice-toggle" title="Toggle choices">👁️</button>
+                <button class="fullscreen-toggle" id="fullscreen-toggle" title="Fullscreen">⛶</button>
             </div>
             
-            <div class="story-content">
+            <div class="story-content" id="story-content-container">
                 <div id="story"></div>
             </div>
         </div>
@@ -752,6 +824,11 @@
         const mediaPathInput = document.getElementById('media-path-input');
         const loadFinkButton = document.getElementById('load-fink-button');
         const storyImage = document.getElementById('story-image');
+        const storyVideo = document.getElementById('story-video');
+        const imageContainer = document.getElementById('image-container');
+        const storyContentContainer = document.getElementById('story-content-container');
+        const choiceToggle = document.getElementById('choice-toggle');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
         const menuButton = document.getElementById('menu-button');
         const fullscreenButton = document.getElementById('fullscreen-button');
         const urlForm = document.getElementById('url-form');
@@ -759,8 +836,10 @@
         const endRestartButton = document.getElementById('end-restart-button');
         const finkSandbox = document.getElementById('fink-sandbox');
         
-        // State for fullscreen
+        // State for fullscreen and choices
         let isFullscreen = false;
+        let choicesVisible = true;
+        let isImageFullscreen = false;
         
         // Debug console (will be initialized after DOM loads)
         let debugConsole = null;
@@ -839,6 +918,8 @@
             menuButton.addEventListener('click', toggleUrlForm);
             endRestartButton.addEventListener('click', restartStory);
             fullscreenButton.addEventListener('click', toggleFullscreen);
+            choiceToggle.addEventListener('click', toggleChoices);
+            fullscreenToggle.addEventListener('click', toggleImageFullscreen);
             
             if (debugToggle) {
                 debugToggle.addEventListener('click', toggleDebugConsole);
@@ -935,6 +1016,52 @@
                 fullscreenButton.textContent = '📺';
                 fullscreenButton.title = 'Enter fullscreen';
                 isFullscreen = false;
+            }
+        }
+        
+        // Toggle choice visibility (Instagram-style)
+        function toggleChoices() {
+            choicesVisible = !choicesVisible;
+            
+            if (choicesVisible) {
+                choicesContainer.style.transform = 'translateY(0)';
+                storyContentContainer.classList.remove('choices-hidden');
+                choiceToggle.textContent = '👁️';
+                choiceToggle.title = 'Hide choices';
+            } else {
+                choicesContainer.style.transform = 'translateY(100%)';
+                storyContentContainer.classList.add('choices-hidden');
+                choiceToggle.textContent = '🙈';
+                choiceToggle.title = 'Show choices';
+            }
+        }
+        
+        // Toggle image fullscreen (for maximum immersion)
+        function toggleImageFullscreen() {
+            isImageFullscreen = !isImageFullscreen;
+            
+            if (isImageFullscreen) {
+                imageContainer.classList.add('fullscreen');
+                choiceToggle.style.display = 'none';
+                fullscreenToggle.textContent = '❌';
+                fullscreenToggle.title = 'Exit fullscreen';
+                fullscreenToggle.style.top = '20px';
+                
+                // Auto-hide choices in fullscreen
+                choicesContainer.style.transform = 'translateY(100%)';
+                storyContentContainer.style.display = 'none';
+            } else {
+                imageContainer.classList.remove('fullscreen');
+                choiceToggle.style.display = 'block';
+                fullscreenToggle.textContent = '⛶';
+                fullscreenToggle.title = 'Fullscreen';
+                fullscreenToggle.style.top = '80px';
+                
+                // Restore choices if they were visible
+                if (choicesVisible) {
+                    choicesContainer.style.transform = 'translateY(0)';
+                }
+                storyContentContainer.style.display = 'block';
             }
         }
         
@@ -1410,49 +1537,54 @@
             }, 300);
         }
         
-        function updateImage(imagePath) {
-            debugLog('Updating image: ' + (imagePath || 'none'));
-            const imageContainer = document.querySelector('.image-container');
+        function updateImage(mediaPath) {
+            debugLog('Updating media: ' + (mediaPath || 'none'));
             
-            // Always start by clearing the current image
+            // Always start by clearing current media
             storyImage.classList.add('hidden');
-            const existingCaption = document.querySelector('.image-caption');
-            if (existingCaption) {
-                existingCaption.remove();
-            }
+            storyVideo.classList.add('hidden');
             
-            if (imagePath) {
-                storyImage.classList.add('hidden');
+            if (mediaPath) {
                 imageContainer.classList.remove('hidden');
                 
-                showDescriptiveText(imagePath);
+                const actualMediaPath = mediaBasePath + mediaPath;
+                const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(mediaPath);
                 
-                const windowHeight = window.innerHeight;
-                if (windowHeight > 700) {
-                    const choicesCount = document.querySelectorAll('.choice').length;
-                    const newHeight = Math.min(45, Math.max(38, 50 - (choicesCount * 3 || 0))) + 'vh';
-                    imageContainer.style.height = newHeight;
-                    console.log('Adjusted image container height to', newHeight);
-                }
-                
-                setTimeout(() => {
-                    const actualImage = mediaBasePath + imagePath;
+                if (isVideo) {
+                    // Handle video content
+                    debugLog('Loading video: ' + actualMediaPath);
+                    
+                    storyVideo.src = actualMediaPath;
+                    storyVideo.alt = mediaPath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+                    
+                    storyVideo.onloadeddata = function() {
+                        storyVideo.classList.remove('hidden');
+                        storyVideo.classList.add('zoom-in');
+                        storyVideo.play().catch(e => {
+                            debugLog('Video autoplay failed: ' + e.message);
+                            // Show play button overlay if autoplay fails
+                        });
+                        
+                        setTimeout(() => {
+                            storyVideo.classList.remove('zoom-in');
+                        }, 1500);
+                    };
+                    
+                    storyVideo.onerror = function() {
+                        debugLog('Video failed to load: ' + actualMediaPath);
+                        // Fallback to image if video fails
+                        loadImageFallback(actualMediaPath.replace(/\.(mp4|webm|ogg|mov)$/i, '.jpg'));
+                    };
+                } else {
+                    // Handle image content
+                    debugLog('Loading image: ' + actualMediaPath);
                     
                     const img = new Image();
                     img.onload = function() {
-                        const imgRatio = img.width / img.height;
-                        
-                        if (imgRatio > 2) {
-                            storyImage.style.padding = '0 15%';
-                        } else {
-                            storyImage.style.padding = '0';
-                        }
-                        
-                        storyImage.src = actualImage;
-                        storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+                        storyImage.src = actualMediaPath;
+                        storyImage.alt = mediaPath.replace(/\.\w+$/, '').replace(/_/g, ' ');
                         storyImage.classList.remove('hidden');
                         storyImage.classList.add('zoom-in');
-                        console.log('Image displayed:', storyImage.src, 'ratio:', imgRatio);
                         
                         setTimeout(() => {
                             storyImage.classList.remove('zoom-in');
@@ -1460,58 +1592,37 @@
                     };
                     
                     img.onerror = function() {
-                        console.warn('Image not found:', actualImage);
-                        storyImage.classList.add('hidden');
-                        imageContainer.classList.add('hidden');
-                        
-                        const existingCaption = document.querySelector('.image-caption');
-                        if (existingCaption) {
-                            existingCaption.remove();
-                        }
+                        debugLog('Image not found: ' + actualMediaPath);
+                        hideImageContainer();
                     };
                     
-                    img.src = actualImage;
-                }, 300);
+                    img.src = actualMediaPath;
+                }
             } else {
-                debugLog('No image to display - hiding image container');
-                storyImage.classList.add('hidden');
-                imageContainer.classList.add('hidden');
-                storyImage.src = ''; // Clear the src to prevent cached images
+                debugLog('No media to display');
+                hideImageContainer();
             }
         }
         
-        function showDescriptiveText(imagePath) {
-            if (!imagePath) return;
-            
-            let descriptiveText = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
-            
-            descriptiveText = descriptiveText
-                .split(' ')
-                .map((word, i) => {
-                    const minorWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from', 'by', 'with'];
-                    if (i === 0 || !minorWords.includes(word.toLowerCase())) {
-                        return word.charAt(0).toUpperCase() + word.slice(1);
-                    }
-                    return word;
-                })
-                .join(' ');
-            
-            const caption = document.createElement('div');
-            caption.className = 'image-caption';
-            caption.textContent = descriptiveText;
-            
-            caption.addEventListener('click', function(e) {
-                e.stopPropagation();
-                this.classList.toggle('expanded');
-            });
-            
-            const existingCaption = document.querySelector('.image-caption');
-            if (existingCaption) {
-                existingCaption.remove();
-            }
-            
-            const imageContainer = document.querySelector('.image-container');
-            imageContainer.appendChild(caption);
+        function loadImageFallback(imagePath) {
+            debugLog('Trying image fallback: ' + imagePath);
+            const img = new Image();
+            img.onload = function() {
+                storyImage.src = imagePath;
+                storyImage.classList.remove('hidden');
+            };
+            img.onerror = function() {
+                hideImageContainer();
+            };
+            img.src = imagePath;
+        }
+        
+        function hideImageContainer() {
+            storyImage.classList.add('hidden');
+            storyVideo.classList.add('hidden');
+            imageContainer.classList.add('hidden');
+            storyImage.src = '';
+            storyVideo.src = '';
         }
         
         function updateChoices(choices) {

@@ -8,11 +8,7 @@ oooOO`
 === Bag_End ===
 IMAGE: bag_end_exterior.svg
 You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. Gandalf the wizard sits smoking a pipe.
-+ [Talk to Gandalf]
-    "My dear Bilbo," says Gandalf, "I am looking for someone to share in an adventure."
-    "No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today."
-    Gandalf looks at you with raised eyebrows. "We shall see..."
-    -> Bag_End
++ [Talk to Gandalf] -> Talk_To_Gandalf
 + [Leave through the front door] -> Outside_Bag_End
 + [Go to the kitchen] -> Kitchen
 
@@ -26,10 +22,7 @@ You stand on the path outside your hobbit-hole. The green hills of Hobbiton stre
 === Kitchen ===
 IMAGE: hobbit_pantry.svg
 This is a well-stocked hobbit kitchen with pantries full of food. A small window looks out onto the garden. Thorin Oakenshield sits at your table, looking impatient.
-+ [Talk to Thorin]
-    "Hmm, burglar?" Thorin examines you skeptically. "You don't look like much of a thief to me."
-    "I'm not a burglar!" you protest. "I'm a respectable hobbit!"
-    -> Kitchen
++ [Talk to Thorin] -> Talk_To_Thorin
 + [Return to the main room] -> Bag_End
 + [Take some food]
     You put some cheese, bread, and apples in your pocket.
@@ -121,6 +114,45 @@ You decide that one adventure is quite enough for a respectable hobbit. You hide
 Sometimes, on clear evenings, you look toward the mountains and wonder what might have been...
 
 -> END
+
+=== Talk_To_Gandalf ===
+IMAGE: gandalf_at_door.svg
+"My dear Bilbo," says Gandalf, "I am looking for someone to share in an adventure."
+
+"No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today."
+
+Gandalf looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door.
+
++ [Ask about the mark on the door]
+    "Oh, that's just a burglar mark," Gandalf says casually. "It means this is a good house to burgle."
+    "BURGLE?!" you splutter. "I'll have you know this is a respectable household!"
+    -> Bag_End
++ [Return to your comfortable armchair] -> Bag_End
++ [Ask about the adventure]
+    "Ah, now that's more like it!" Gandalf's eyes twinkle. "There's a dragon needs dealing with, and a treasure to be recovered. Perfectly straightforward."
+    "A DRAGON?!" you exclaim, nearly dropping your tea.
+    -> Bag_End
+
+=== Talk_To_Thorin ===
+IMAGE: hobbit_pantry.svg
+"Hmm, burglar?" Thorin examines you skeptically. "You don't look like much of a thief to me."
+
+"I'm not a burglar!" you protest. "I'm a respectable hobbit!"
+
+Thorin strokes his magnificent beard thoughtfully. "Perhaps... but Gandalf speaks highly of your people. He says you move quietly and have quick fingers."
+
++ [Show you can be stealthy]
+    You creep around the kitchen as quietly as possible, managing to pocket a small cake without making a sound.
+    "Impressive," admits Thorin. "Perhaps you'll do after all."
+    -> Kitchen
++ [Insist you're not burglar material]
+    "I'm perfectly respectable!" you declare. "I pay my taxes, tend my garden, and have never been on an adventure in my life!"
+    Thorin nods grimly. "Exactly what we need. Someone unexpected."
+    -> Kitchen
++ [Ask about the treasure]
+    Thorin's eyes gleam. "The treasure of Erebor, stolen by the dragon Smaug. Gold beyond counting, and the Arkenstone - the Heart of the Mountain."
+    Your own eyes widen despite yourself. That does sound rather exciting...
+    -> Kitchen
 
 // Extra variables for tracking states
 VAR troll_status = "alive" // Changes to "stone" after dawn
