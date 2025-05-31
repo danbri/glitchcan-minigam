@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="lampGlow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" style="stop-color:#FFE4B5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B4513;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Background walls -->
+  <rect width="400" height="300" fill="#CD853F"/>
+  
+  <!-- Floor -->
+  <rect x="0" y="250" width="400" height="50" fill="#8B4513"/>
+  
+  <!-- Floor planks -->
+  <line x1="0" y1="260" x2="400" y2="260" stroke="#654321" stroke-width="1"/>
+  <line x1="0" y1="270" x2="400" y2="270" stroke="#654321" stroke-width="1"/>
+  <line x1="0" y1="280" x2="400" y2="280" stroke="#654321" stroke-width="1"/>
+  <line x1="0" y1="290" x2="400" y2="290" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Ceiling -->
+  <rect x="0" y="0" width="400" height="30" fill="#8B4513"/>
+  
+  <!-- Ceiling beams -->
+  <rect x="80" y="0" width="8" height="30" fill="#654321"/>
+  <rect x="160" y="0" width="8" height="30" fill="#654321"/>
+  <rect x="240" y="0" width="8" height="30" fill="#654321"/>
+  <rect x="320" y="0" width="8" height="30" fill="#654321"/>
+  
+  <!-- Shelving left wall -->
+  <rect x="20" y="50" width="15" height="180" fill="#DEB887"/>
+  <rect x="15" y="80" width="25" height="4" fill="#D2B48C"/>
+  <rect x="15" y="120" width="25" height="4" fill="#D2B48C"/>
+  <rect x="15" y="160" width="25" height="4" fill="#D2B48C"/>
+  <rect x="15" y="200" width="25" height="4" fill="#D2B48C"/>
+  
+  <!-- Shelving right wall -->
+  <rect x="365" y="50" width="15" height="180" fill="#DEB887"/>
+  <rect x="360" y="80" width="25" height="4" fill="#D2B48C"/>
+  <rect x="360" y="120" width="25" height="4" fill="#D2B48C"/>
+  <rect x="360" y="160" width="25" height="4" fill="#D2B48C"/>
+  <rect x="360" y="200" width="25" height="4" fill="#D2B48C"/>
+  
+  <!-- Barrels -->
+  <ellipse cx="70" cy="230" rx="20" ry="15" fill="#8B4513"/>
+  <ellipse cx="70" cy="220" rx="20" ry="8" fill="#A0522D"/>
+  <rect x="68" y="215" width="4" height="30" fill="#654321"/>
+  <rect x="65" y="220" width="10" height="2" fill="#654321"/>
+  <rect x="65" y="235" width="10" height="2" fill="#654321"/>
+  
+  <ellipse cx="340" cy="235" rx="18" ry="12" fill="#8B4513"/>
+  <ellipse cx="340" cy="227" rx="18" ry="6" fill="#A0522D"/>
+  
+  <!-- Hanging lamp -->
+  <line x1="200" y1="30" x2="200" y2="60" stroke="#654321" stroke-width="2"/>
+  <rect x="190" y="60" width="20" height="15" fill="#FFD700" stroke="#8B4513" stroke-width="2"/>
+  <ellipse cx="200" cy="50" rx="25" ry="15" fill="url(#lampGlow)" opacity="0.6"/>
+  
+  <!-- Sacks of flour/grain -->
+  <path d="M 120 220 Q 110 200 120 180 Q 140 185 145 200 Q 140 220 120 220" fill="#F5DEB3"/>
+  <path d="M 280 225 Q 270 205 280 185 Q 300 190 305 205 Q 300 225 280 225" fill="#DEB887"/>
+  
+  <!-- Cheese wheels -->
+  <circle cx="25" cy="100" r="8" fill="#FFE4B5"/>
+  <circle cx="25" cy="140" r="6" fill="#FFFF99"/>
+  <circle cx="375" cy="105" r="7" fill="#FFE4B5"/>
+  <circle cx="375" cy="145" r="9" fill="#F0E68C"/>
+  
+  <!-- Hanging herbs -->
+  <path d="M 150 50 Q 145 65 150 70" stroke="#228B22" stroke-width="3" fill="none"/>
+  <path d="M 170 52 Q 165 67 170 72" stroke="#228B22" stroke-width="3" fill="none"/>
+  <path d="M 230 51 Q 225 66 230 71" stroke="#228B22" stroke-width="3" fill="none"/>
+  <path d="M 250 53 Q 245 68 250 73" stroke="#228B22" stroke-width="3" fill="none"/>
+  
+  <!-- Small circles for herbs -->
+  <circle cx="148" cy="70" r="2" fill="#32CD32"/>
+  <circle cx="152" cy="69" r="2" fill="#32CD32"/>
+  <circle cx="168" cy="72" r="2" fill="#9370DB"/>
+  <circle cx="172" cy="71" r="2" fill="#9370DB"/>
+  <circle cx="228" cy="71" r="2" fill="#FF6347"/>
+  <circle cx="232" cy="70" r="2" fill="#FF6347"/>
+  <circle cx="248" cy="73" r="2" fill="#228B22"/>
+  <circle cx="252" cy="72" r="2" fill="#228B22"/>
+  
+  <!-- Bread loaves -->
+  <ellipse cx="25" cy="180" rx="12" ry="6" fill="#D2B48C"/>
+  <ellipse cx="375" cy="185" rx="10" ry="5" fill="#DEB887"/>
+  
+  <!-- Wooden crates -->
+  <rect x="50" y="190" width="30" height="20" fill="#D2B48C" stroke="#8B4513" stroke-width="2"/>
+  <rect x="320" y="195" width="25" height="18" fill="#D2B48C" stroke="#8B4513" stroke-width="2"/>
+  
+  <!-- Crate slats -->
+  <line x1="55" y1="190" x2="55" y2="210" stroke="#8B4513" stroke-width="1"/>
+  <line x1="65" y1="190" x2="65" y2="210" stroke="#8B4513" stroke-width="1"/>
+  <line x1="75" y1="190" x2="75" y2="210" stroke="#8B4513" stroke-width="1"/>
+  <line x1="325" y1="195" x2="325" y2="213" stroke="#8B4513" stroke-width="1"/>
+  <line x1="335" y1="195" x2="335" y2="213" stroke="#8B4513" stroke-width="1"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#2F4F4F" font-weight="bold">THE WELL-STOCKED PANTRY</text>
+</svg>

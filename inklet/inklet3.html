@@ -962,6 +962,15 @@
                 return;
             }
             
+            // Auto-set media path based on FINK file
+            if (finkUrl.includes('bagend1.fink.js')) {
+                mediaPathInput.value = 'hobbit/';
+                debugLog('Auto-set media path to hobbit/ for Hobbit story');
+            } else if (finkUrl.includes('riverbend') || finkUrl.includes('villaged')) {
+                mediaPathInput.value = 'villaged/';
+                debugLog('Auto-set media path to villaged/ for Riverbend story');
+            }
+            
             // Update media assets path
             const newMediaPath = mediaPathInput.value.trim();
             if (newMediaPath) {
