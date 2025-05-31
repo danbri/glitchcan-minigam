@@ -41,6 +41,8 @@ There's also a simpler [gamgam](https://danbri.github.io/glitchcan-minigam/inkle
 
 For interactive fiction with imagery, there's also the [Riverbend mystery](https://danbri.github.io/glitchcan-minigam/inklet/inklet2.html) which demonstrates how Ink stories can be enhanced with illustrations.
 
+**IMPORTANT**: For a working example of proper INK engine integration (not manual parsing), see [hamfinkdemo.html](https://danbri.github.io/glitchcan-minigam/inklet/hamfinkdemo.html) which correctly uses `inkjs.Compiler()` and handles conditional syntax like `{variable: text}` properly.
+
 Beyond the Ink experiments, there are also standalone retro game prototypes including [Spectro](https://danbri.github.io/glitchcan-minigam/spectro/), a more developed ZX Spectrum-inspired platformer with proper collision detection and multiple rooms. 
 
 There is an example in which a remote Fink URL mentioned in the game code is fetched at runtime and the two Ink files are compiled together. We do not yet have any discipline, rules, best practices etc for doing this. One obvious idea is to distinguish between Ink scenes that are intended to work together and which endorse each other with reciprocal links/mentions, vs those that are independent or one-sided. This roughly echoes ideas like fanfic vs canon, multiverse MCU and so on.

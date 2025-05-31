@@ -106,3 +106,45 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 - TV zone (southwest corner) features peaceful ghosts and fruit trails
 - Audio issues fixed: replaced 'noise' oscillator with 'sawtooth'
 - Context binding fixed: gameLoop.bind(this) prevents undefined errors
+
+## FINK Interactive Fiction System Status
+
+### Current State (CRITICAL ISSUE)
+- **PROBLEM**: Still using manual parsing instead of real INK engine despite promises
+- **SYMPTOM**: Conditional INK markup (`{variable: text}`) appears as visible text in stories
+- **IMPACT**: Stories display broken syntax instead of proper conditional content
+
+### CRITICAL UNDERSTANDING: INK Tags Are LEGITIMATE Extensions
+**INK was designed for extensibility via tags** - this is the official mechanism, not a hack:
+- `MENU:`, `IMAGE:`, `BASEHREF:` are proper INK tags, similar to Unity/Unreal integrations
+- Tags can be at story level or knot level to integrate with game engines
+- See /glitchcanary.md for full explanation and /inklet/gamgam-wc.html for 2-engine prototype
+- INK's extensibility via tags is used by Inkle Studios and the broader community
+
+### What Needs to be Done (HIGH PRIORITY)
+1. **Use real INK compiler**: Compile FINK content with all tags intact using ink-full.js
+2. **Process conditional syntax**: Use INK runtime to handle `{variable: text}` properly
+3. **Keep tag system**: MENU:, IMAGE:, BASEHREF: are legitimate INK extensions, not FINK hacks
+4. **Enable INK engine**: Currently loads ink-full.js but ignores it in favor of manual parsing
+
+### Files Affected
+- `inklet3.html`: Lines 1509-1552 contain INK extraction logic but it's bypassed
+- All .fink.js files contain proper INK syntax with extension tags
+- Manual parser shows raw conditional syntax instead of processing it
+
+### Technical Requirements
+- ink-full.js CDN: https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js (already loaded)
+- Compile entire FINK content including tags: `new inkjs.Compiler(finkContent).Compile()`
+- Use INK Story runtime: `new inkjs.Story(compiledStory)` for conditional processing
+- Process tags separately after compilation for MENU:, IMAGE:, BASEHREF: integration
+
+### Working Example for Reference
+**PERFECT IMPLEMENTATION**: See [hamfinkdemo.html](inklet/hamfinkdemo.html) for working INK engine integration
+- Uses real `inkjs.Compiler()` and `story.Continue()` properly  
+- Handles conditional syntax like `{variable: text}` correctly
+- Demonstrates proper FINK loading with sandbox pattern
+- Shows how to merge external FINK content with local INK source
+
+### Implementation Priority
+**URGENT**: Users see broken syntax in stories. This breaks immersion completely.
+**NEXT SESSION**: Must implement real INK compilation or disable conditional content entirely.
