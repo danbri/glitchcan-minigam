@@ -2,6 +2,10 @@ oooOO`
 // Table of Contents - FINK Story Collection
 // Main menu for navigating between different FINK stories
 
+MENU: 🏠 Main Menu -> main_menu
+MENU: 🎮 Game Selection -> games_menu
+MENU: 📚 Learning Hub -> learn_menu
+
 -> main_menu
 
 === main_menu ===
@@ -49,6 +53,8 @@ Educational interactive content designed to teach through engaging, story-driven
     Additional educational experiences are being developed. Check back for language lessons, history, and skills training.
     -> learn_menu
 
++ [🎮 Return to Games] -> games_menu
+
 
 === help_menu ===
 IMAGE: hobbit_pantry.png
@@ -78,7 +84,7 @@ Welcome to the FINK Interactive Fiction System! Here's everything you need to kn
     FINK Interactive Fiction System v3.0. Supports images, videos, Unicode text, and dynamic story navigation. Built for immersive storytelling experiences.
     -> help_menu
 
-+ [🏠 Return to Main Menu] -> main_menu
++ [🎮 Return to Games] -> games_menu
 
 
 === hobbit_selected ===
