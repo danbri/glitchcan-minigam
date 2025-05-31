@@ -31,11 +31,12 @@
         
         .emoji-sprite {
             position: absolute;
-            font-size: 3em;
+            font-size: 15vw;
             cursor: pointer;
             transition: transform 0.1s ease;
             filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6));
             user-select: none;
+            line-height: 1;
         }
         
         .emoji-sprite:hover {
@@ -146,15 +147,16 @@
             initSprites() {
                 const arena = this.arena;
                 const arenaRect = arena.getBoundingClientRect();
+                const spriteSize = Math.min(arenaRect.width, arenaRect.height) * 0.15;
                 
                 this.sprites.forEach((sprite, index) => {
-                    // Random starting position (away from edges)
-                    sprite.x = 100 + Math.random() * (arenaRect.width - 200);
-                    sprite.y = 100 + Math.random() * (arenaRect.height - 200);
+                    // Random starting position (away from edges for huge sprites)
+                    sprite.x = spriteSize + Math.random() * (arenaRect.width - spriteSize * 2);
+                    sprite.y = spriteSize + Math.random() * (arenaRect.height - spriteSize * 2);
                     
-                    // Random initial velocity
-                    sprite.vx = (Math.random() - 0.5) * 8;
-                    sprite.vy = (Math.random() - 0.5) * 8;
+                    // Random initial velocity (slower for big sprites)
+                    sprite.vx = (Math.random() - 0.5) * 4;
+                    sprite.vy = (Math.random() - 0.5) * 4;
                     
                     // Create DOM element
                     sprite.element = document.createElement('div');
@@ -173,10 +175,12 @@
             }
             
             createTrail(x, y) {
+                const arenaRect = this.arena.getBoundingClientRect();
+                const spriteSize = Math.min(arenaRect.width, arenaRect.height) * 0.15;
                 const trail = document.createElement('div');
                 trail.className = 'trail';
-                trail.style.left = (x + 30) + 'px';
-                trail.style.top = (y + 30) + 'px';
+                trail.style.left = (x + spriteSize / 2) + 'px';
+                trail.style.top = (y + spriteSize / 2) + 'px';
                 this.arena.appendChild(trail);
                 
                 setTimeout(() => {
@@ -188,23 +192,27 @@
             
             updatePhysics() {
                 const arenaRect = this.arena.getBoundingClientRect();
-                const spriteSize = 60; // Approximate emoji size
+                const spriteSize = Math.min(arenaRect.width, arenaRect.height) * 0.15; // 15% of smallest dimension
                 
                 this.sprites.forEach((sprite, index) => {
                     // Update position
                     sprite.x += sprite.vx;
                     sprite.y += sprite.vy;
                     
-                    // Bounce off walls with slight randomness
-                    if (sprite.x <= 0 || sprite.x >= arenaRect.width - spriteSize) {
-                        sprite.vx = -sprite.vx * (0.8 + Math.random() * 0.2);
-                        sprite.x = Math.max(0, Math.min(arenaRect.width - spriteSize, sprite.x));
+                    // Wraparound behavior
+                    if (sprite.x <= -spriteSize) {
+                        sprite.x = arenaRect.width;
+                        this.createTrail(sprite.x, sprite.y);
+                    } else if (sprite.x >= arenaRect.width) {
+                        sprite.x = -spriteSize;
                         this.createTrail(sprite.x, sprite.y);
                     }
                     
-                    if (sprite.y <= 0 || sprite.y >= arenaRect.height - spriteSize) {
-                        sprite.vy = -sprite.vy * (0.8 + Math.random() * 0.2);
-                        sprite.y = Math.max(0, Math.min(arenaRect.height - spriteSize, sprite.y));
+                    if (sprite.y <= -spriteSize) {
+                        sprite.y = arenaRect.height;
+                        this.createTrail(sprite.x, sprite.y);
+                    } else if (sprite.y >= arenaRect.height) {
+                        sprite.y = -spriteSize;
                         this.createTrail(sprite.x, sprite.y);
                     }
                     
@@ -246,8 +254,8 @@
                     sprite.vx += (Math.random() - 0.5) * 0.1;
                     sprite.vy += (Math.random() - 0.5) * 0.1;
                     
-                    // Limit velocity
-                    const maxSpeed = 6;
+                    // Limit velocity (slower for big sprites)
+                    const maxSpeed = 3;
                     const speed = Math.sqrt(sprite.vx * sprite.vx + sprite.vy * sprite.vy);
                     if (speed > maxSpeed) {
                         sprite.vx = (sprite.vx / speed) * maxSpeed;
