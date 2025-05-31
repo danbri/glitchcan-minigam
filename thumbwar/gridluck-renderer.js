@@ -49,6 +49,9 @@ export class GridLuckRenderer {
     // Draw dots
     this.drawDots(ctx, cs, startGx_view, endGx_view, startGy_view, endGy_view, t_timestamp);
 
+    // Draw fruit trails (TV zone)
+    this.drawFruitTrails(ctx, cs, startGx_view, endGx_view, startGy_view, endGy_view, t_timestamp);
+
     // Draw fruit
     this.drawFruit(ctx, cs);
 
@@ -88,6 +91,8 @@ export class GridLuckRenderer {
         if (!tileType && tileType !== ' ') continue;
         
         const theme = this.game.getThemeForCell(a_world, b_world);
+        if (!theme) continue; // Skip rendering outside world boundaries
+        
         const drawX = a_draw * cs; 
         const drawY = b_draw * cs;
 
@@ -246,9 +251,11 @@ export class GridLuckRenderer {
         } else if (tileType === 'W') {
           // Use pattern fill for walls
           const theme = this.game.getThemeForCell(a_world, b_world);
-          const pattern = this.game.createWallPattern(theme, cs);
-          ctx.fillStyle = pattern;
-          ctx.fillRect(drawX, drawY, cs, cs);
+          if (theme) { // Only render if within world boundaries
+            const pattern = this.game.createWallPattern(theme, cs);
+            ctx.fillStyle = pattern;
+            ctx.fillRect(drawX, drawY, cs, cs);
+          }
         } else if (tileType === 'T') {
           ctx.fillStyle = '#101010'; 
           ctx.fillRect(drawX, drawY, cs, cs);
@@ -338,6 +345,38 @@ export class GridLuckRenderer {
       ctx.arc(a_draw*cs+cs/2,b_draw*cs+cs/2,r,0,Math.PI*2);
       ctx.fill(); 
     });
+  }
+
+  drawFruitTrails(ctx, cs, startGx_view, endGx_view, startGy_view, endGy_view, t_timestamp) {
+    // Draw fruit trail tiles (F) in TV zone as small fruit emojis
+    for (let gy = 0; gy < this.game.totalWorldHeightCells; gy++) {
+      for (let gx = 0; gx < this.game.totalWorldWidthCells; gx++) {
+        const k = gx + ',' + gy;
+        const tileType = this.game.maze.get(k);
+        
+        if (tileType === 'F') {
+          // Check if in view
+          if (gx >= startGx_view && gx <= endGx_view && gy >= startGy_view && gy <= endGy_view) {
+            const centerX = gx * cs + cs/2;
+            const centerY = gy * cs + cs/2;
+            
+            // Rotate through different small fruits
+            const fruits = ['🍒', '🍓', '🍊', '🍌'];
+            const fruitIndex = (gx + gy) % fruits.length;
+            const fruit = fruits[fruitIndex];
+            
+            // Small size and slight animation
+            const size = cs * 0.4;
+            const bounce = Math.sin((t_timestamp + gx * 100 + gy * 200) / 300) * 2;
+            
+            ctx.font = `${size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(fruit, centerX, centerY + bounce);
+          }
+        }
+      }
+    }
   }
 
   drawFruit(ctx, cs) {

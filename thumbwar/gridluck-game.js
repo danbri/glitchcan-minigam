@@ -22,12 +22,12 @@ export class Game{
 "WWWW.W.WWWWW.W.WWWW", "W........W........W", "W.WW.WWW.W.WWW.WW.W", "WP.W.....W.....W.PW",
 "WW.W.W.WWWWW.W.W.WW", "W....W...W...W....W", "WWWWWWWWWOWWWWWWWWW"];
   
-  // Special TV zone pattern with snack trails to ghost house
+  // Special TV zone pattern with snack trails to expanded ghost house
   TV_PAT=[ 
 "WWWWWWWWWOWWWWWWWWW", "W.....P..W..P.....W", "W.WW.P...W...P.WW.W", "WP...P...W...P...PW",
 "W.WW.P.WWWWW.P.WW.W", "W....P...W...P....W", "WWWW.PPP.W.PPP.WWWW", "O....P...^...P....O", 
-"WWWW.P.WSTV.P.WWWW", "W....P.WST..P....W", "WWWW.P.WSSS.P.WWWW", "O....P.......P....O", 
-"WWWW.P.WWWWW.P.WWWW", "W....P...W...P....W", "W.WW.PPP.W.PPP.WW.W", "WP...P...W...P...PW",
+"WWWW.P.WSSSSSP.WWWW", "W....P.WSSTTVP....W", "WWWW.P.WSSSSSP.WWWW", "O....P.WSSSSSP....O", 
+"WWWW.P.WWWWWW.P.WWWW", "W....P...W...P....W", "W.WW.PPP.W.PPP.WW.W", "WP...P...W...P...PW",
 "WW.W.P.WWWWW.P.W.WW", "W....P...W...P....W", "WWWWWWWWWOWWWWWWWWW"];
   VEC={U:[0,-1],D:[0,1],L:[-1,0],R:[1,0]};
   OPPOSITE_DIR = { U: 'D', D: 'U', L: 'R', R: 'L' };
@@ -110,10 +110,11 @@ export class Game{
 
   resetGame() {
     this.gameOverFlag = false; this.gameOverScreen.style.display = 'none';
-    this.ply = {gx:9,gy:15,x:9,y:15,dir:'L',next:null,t:0,lives:3,activeEffects:new Map()};
+    this.ply = {gx:9,gy:15,x:9,y:15,dir:'L',next:null,t:0,lives:3,activeEffects:new Map(), dying:false,deathTimer:0,deathPhase:0,lastZoneTheme:null, speedMultiplier:1, ghostImmune:false, canPhaseWalls:false, scoreMultiplier:1};
     this.score = 0; this.power = false; this.pTimer = 0;
     this.fruit = { ...this.fruit, active: false, timer: 0, spawnCooldown: this.fruit.SPAWN_INTERVAL / 2, dotsEatenForSpawn: 0};
     this.zoneEntities = []; this.wallFillDecorations.clear();
+    this.frenziedGhosts = []; // Clear frenzied ghosts on reset
     this.buildWorld(); this.spawnGhosts();
     if (this.lastTime === 0) { this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); }
   }
@@ -137,7 +138,7 @@ export class Game{
         if(this.cam.isFullyZoomedOut){
             // More conservative zoom out to maintain visual clarity
             const maxZoomOut = Math.min(this.w / this.totalWorldWidthCells, this.h / this.totalWorldHeightCells);
-            this.targetCSize = Math.max(4, maxZoomOut * 0.7); // Keep more padding for clarity
+            this.targetCSize = Math.max(8, maxZoomOut * 0.9); // Keep more padding for clarity
         } else {
             this.targetCSize = this.originalCSize;
         }
@@ -157,8 +158,8 @@ export class Game{
         while(y + currentHeight < R_PAT) { let rowMatch = true; for(let i=0; i<blockWidth; i++) if (this.PAT[y+currentHeight][x+i] !== 'S') rowMatch = false; if(rowMatch) currentHeight++; else break; } blockHeight = currentHeight;
         if (blockWidth > 0 && blockHeight > 0) { baseSpecialDecorBlocks.push({ x, y, w: blockWidth, h: blockHeight }); for (let by = 0; by < blockHeight; by++) for (let bx = 0; bx < blockWidth; bx++) visitedForDecor[(y + by) * C_PAT + (x + bx)] = true; } } } }
     
-    for (let smy = 0; smy < this.WORLD_MODULE_DIM; smy++) {
-        for (let smx = 0; smx < this.WORLD_MODULE_DIM; smx++) {
+    for (let smy = 0; smy < this.WORLD_ZONES_Y; smy++) {
+        for (let smx = 0; smx < this.WORLD_ZONES_X; smx++) {
             const currentTheme = this.getThemeForCell(smx * C_PAT, smy * R_PAT);
             
             baseSpecialDecorBlocks.forEach(decorBlock => {
@@ -214,12 +215,22 @@ export class Game{
                     const k = gx + ',' + gy;
                     let tileType = ' '; 
                     if (ch === 'W') tileType = 'W'; else if (ch === '-') tileType = '-'; else if (ch === '^') tileType = ' '; // Ghost house exit - open path
-                    else if (ch === 'O') tileType = 'T'; else if (ch === '.') tileType = '.'; else if (ch === 'P') tileType = 'P'; 
+                    else if (ch === 'O') tileType = ' '; // All O characters become open paths for zone transitions
+                    else if (ch === '.') tileType = '.'; 
+                    else if (ch === 'P') {
+                        // In TV zone, convert P to fruit trail instead of power pellets
+                        if (smx === 0 && smy === 4) { // TV zone is at (0,4) - southwest corner
+                            tileType = 'F'; // Fruit trail marker
+                        } else {
+                            tileType = 'P'; // Regular power pellet
+                        }
+                    } 
                     else if (ch === 'S') tileType = 'S';
                     else if (ch === 'T') tileType = 'TV'; // TV screen
                     else if (ch === 'V') tileType = ' '; // Special TV area marker (converted to empty space) 
                     this.maze.set(k, tileType); 
                     if (tileType === '.' || tileType === 'P') this.dots.add(k);
+                    // Don't add F (fruit trail) tiles to dots - they'll be rendered differently
                     
                     // Add locked doors to some zones (much more frequent)
                     if (tileType === ' ' && Math.random() < 0.02) { // 2% chance for locked door
@@ -248,6 +259,26 @@ export class Game{
         }
     }
     
+    // Debug: Log some exit information
+    console.log(`World size: ${this.totalWorldWidthCells}x${this.totalWorldHeightCells}`);
+    console.log(`Pattern size: ${C_PAT}x${R_PAT}`);
+    console.log(`Player start: (${this.ply.gx},${this.ply.gy})`);
+    console.log(`Zone grid: ${this.WORLD_ZONES_X}x${this.WORLD_ZONES_Y}`);
+    
+    // Check specific exit cells
+    const playerZoneX = Math.floor(this.ply.gx / C_PAT);
+    const playerZoneY = Math.floor(this.ply.gy / R_PAT);
+    console.log(`Player in zone: (${playerZoneX},${playerZoneY})`);
+    
+    // Check west exit from player zone
+    const westExitGx = playerZoneX * C_PAT - 1;
+    const westExitGy = this.ply.gy;
+    const westExitTile = this.maze.get(westExitGx + ',' + westExitGy);
+    console.log(`West exit at (${westExitGx},${westExitGy}): ${westExitTile}`);
+    
+    // Create systematic zone exits after basic world is built
+    this.createSystematicZoneExits();
+    
     // Detect zone transitions after building the world
     this.detectZoneTransitions();
     
@@ -266,6 +297,7 @@ export class Game{
         // Only check path cells
         if (tileType === ' ' || tileType === '.' || tileType === 'P' || tileType === 'O' || tileType === 'T') {
           const currentTheme = this.getThemeForCell(gx, gy);
+          if (!currentTheme) continue; // Skip cells outside world boundaries
           
           // Check adjacent cells for different themes
           const directions = [
@@ -286,6 +318,7 @@ export class Game{
             // If adjacent is also a path and has different theme
             if ((adjTileType === ' ' || adjTileType === '.' || adjTileType === 'P' || adjTileType === 'O' || adjTileType === 'T')) {
               const adjTheme = this.getThemeForCell(adjGx, adjGy);
+              if (!adjTheme) continue; // Skip if adjacent is outside world boundaries
               
               if (currentTheme.name !== adjTheme.name) {
                 // This is a zone transition cell
@@ -306,9 +339,76 @@ export class Game{
     console.log(`Total detected ${transitionCount} zone transition cells`);
   }
 
+  createSystematicZoneExits() {
+    const R_PAT = this.PAT_R;
+    const C_PAT = this.PAT_C;
+    
+    // Create exits at middle positions between zones
+    for (let zoneY = 0; zoneY < this.WORLD_ZONES_Y; zoneY++) {
+      for (let zoneX = 0; zoneX < this.WORLD_ZONES_X; zoneX++) {
+        
+        // Horizontal exits (east-west connections)
+        if (zoneX < this.WORLD_ZONES_X - 1) {
+          const exitY = Math.floor(R_PAT / 2); // Middle of zone height
+          const leftZoneExitGx = (zoneX + 1) * C_PAT - 1; // Right edge of left zone
+          const leftZoneExitGy = zoneY * R_PAT + exitY;
+          const rightZoneExitGx = (zoneX + 1) * C_PAT; // Left edge of right zone
+          const rightZoneExitGy = zoneY * R_PAT + exitY;
+          
+          // Force these cells to be open paths
+          this.maze.set(leftZoneExitGx + ',' + leftZoneExitGy, ' ');
+          this.maze.set(rightZoneExitGx + ',' + rightZoneExitGy, ' ');
+          
+          // Clear approach paths (2 cells in each direction)
+          for (let i = 1; i <= 3; i++) {
+            const leftApproachGx = leftZoneExitGx - i;
+            const rightApproachGx = rightZoneExitGx + i;
+            
+            if (leftApproachGx >= zoneX * C_PAT) {
+              this.maze.set(leftApproachGx + ',' + leftZoneExitGy, ' ');
+            }
+            if (rightApproachGx < (zoneX + 2) * C_PAT) {
+              this.maze.set(rightApproachGx + ',' + rightZoneExitGy, ' ');
+            }
+          }
+          
+          console.log(`Created horizontal exit: (${leftZoneExitGx},${leftZoneExitGy}) <-> (${rightZoneExitGx},${rightZoneExitGy})`);
+        }
+        
+        // Vertical exits (north-south connections)
+        if (zoneY < this.WORLD_ZONES_Y - 1) {
+          const exitX = Math.floor(C_PAT / 2); // Middle of zone width
+          const topZoneExitGx = zoneX * C_PAT + exitX;
+          const topZoneExitGy = (zoneY + 1) * R_PAT - 1; // Bottom edge of top zone
+          const bottomZoneExitGx = zoneX * C_PAT + exitX;
+          const bottomZoneExitGy = (zoneY + 1) * R_PAT; // Top edge of bottom zone
+          
+          // Force these cells to be open paths
+          this.maze.set(topZoneExitGx + ',' + topZoneExitGy, ' ');
+          this.maze.set(bottomZoneExitGx + ',' + bottomZoneExitGy, ' ');
+          
+          // Clear approach paths (2 cells in each direction)
+          for (let i = 1; i <= 3; i++) {
+            const topApproachGy = topZoneExitGy - i;
+            const bottomApproachGy = bottomZoneExitGy + i;
+            
+            if (topApproachGy >= zoneY * R_PAT) {
+              this.maze.set(topZoneExitGx + ',' + topApproachGy, ' ');
+            }
+            if (bottomApproachGy < (zoneY + 2) * R_PAT) {
+              this.maze.set(bottomZoneExitGx + ',' + bottomApproachGy, ' ');
+            }
+          }
+          
+          console.log(`Created vertical exit: (${topZoneExitGx},${topZoneExitGy}) <-> (${bottomZoneExitGx},${bottomZoneExitGy})`);
+        }
+      }
+    }
+  }
+
   spawnCollectibles() {
     this.collectibles = [];
-    const targetCount = Math.floor(this.totalWorldWidthCells * this.totalWorldHeightCells / 50); // Much higher density
+    const targetCount = Math.floor(this.totalWorldWidthCells * this.totalWorldHeightCells / 30); // Higher treasure density for better gameplay
     
     for (let i = 0; i < targetCount; i++) {
       // Find valid spawn location
@@ -339,11 +439,12 @@ export class Game{
     const zoneX = Math.floor(gx / this.PAT_C); 
     const zoneY = Math.floor(gy / this.PAT_R);
     
-    // Clamp to valid zone boundaries (no wraparound)
-    const clampedZoneX = Math.max(0, Math.min(zoneX, this.WORLD_ZONES_X - 1));
-    const clampedZoneY = Math.max(0, Math.min(zoneY, this.WORLD_ZONES_Y - 1));
+    // Return null for coordinates outside the 5x5 world
+    if (zoneX < 0 || zoneX >= this.WORLD_ZONES_X || zoneY < 0 || zoneY >= this.WORLD_ZONES_Y) {
+      return null; // Outside world boundaries
+    }
     
-    const themeName = this.zoneLayout[clampedZoneY][clampedZoneX];
+    const themeName = this.zoneLayout[zoneY][zoneX];
     return this.themes.find(theme => theme.name === themeName) || this.themes[0];
   }
   
@@ -398,7 +499,7 @@ export class Game{
         if (!this.gameOverFlag) {
             this.cam.isFullyZoomedOut = true;
             const maxZoomOut = Math.min(this.w / this.totalWorldWidthCells, this.h / this.totalWorldHeightCells);
-            this.targetCSize = Math.max(4, maxZoomOut * 0.7); // More conservative zoom out to maintain clarity
+            this.targetCSize = Math.max(8, maxZoomOut * 0.9); // Less aggressive zoom out
         }
     };
     const handleZoomRelease = () => { 
@@ -480,11 +581,31 @@ export class Game{
         if (ent.isEaten) { targetGx = ent.homePos.gx; targetGy = ent.homePos.gy; if (ent.gx === targetGx && ent.gy === targetGy) { ent.isEaten = false; ent.inHouse = (ent.id !== 'Blinky'); ent.color = ent.originalColor;}
         } else if(ent.inHouse){ targetGx = this.ghostDoorCoord.gx; targetGy = this.ghostDoorCoord.gy; if(ent.gx === this.ghostDoorCoord.gx && ent.gy === this.ghostDoorCoord.gy){ targetGx = this.ghostHouseExitCoord.gx; targetGy = this.ghostHouseExitCoord.gy;} if(ent.gx === this.ghostHouseExitCoord.gx && ent.gy === this.ghostHouseExitCoord.gy) ent.inHouse = false; 
         } if (!ent.inHouse && !ent.isEaten) { 
-          // In TV zone, ghosts prefer to return to house to watch TV
-          if (this.isInTVZone(ent.gx, ent.gy) && Math.random() < 0.7) {
-            targetGx = this.ghostDoorCoord.gx; targetGy = this.ghostDoorCoord.gy;
+          // In TV zone, ghosts are completely peaceful - no chasing even angry reds
+          if (this.isInTVZone(ent.gx, ent.gy)) {
+            // 100% peaceful behavior in TV zone
+            const houseGx = Math.floor(this.PAT_C/2);
+            const houseGy = Math.floor(this.PAT_R/2);
+            const tvGx = houseGx + 2; // TV is to the right of house center
+            const tvGy = houseGy;
+            
+            // Peaceful behavior: either watch TV, hang around house, or slowly leave zone
+            const behavior = Math.random();
+            if (behavior < 0.4) {
+              // Watch TV
+              targetGx = tvGx; 
+              targetGy = tvGy;
+            } else if (behavior < 0.7) {
+              // Wander around house peacefully
+              targetGx = houseGx + (Math.random() - 0.5) * 3;
+              targetGy = houseGy + (Math.random() - 0.5) * 3;
+            } else {
+              // Slowly bimble towards zone exit (right side to leave TV zone)
+              targetGx = this.PAT_C - 2; // Near right edge of zone
+              targetGy = Math.floor(this.PAT_R / 2); // Middle height
+            }
           } else {
-            targetGx = this.ply.gx; targetGy = this.ply.gy; 
+            targetGx = this.ply.gx; targetGy = this.ply.gy; // Normal behavior outside TV zone
           }
         }
         let minDistance = Infinity; const preferredDirs = []; const filterableMoves = availableMoves.filter(m => m.dir !== this.OPPOSITE_DIR[ent.dir]); const movesToConsider = filterableMoves.length > 0 ? filterableMoves : availableMoves;
@@ -529,8 +650,8 @@ export class Game{
   }
 
   update(dt_ms){
-    // Ultra-fast zoom interpolation for responsiveness
-    const zoomAnimationSpeed = 0.6; 
+    // Spring-like zoom interpolation for smoother feel
+    const zoomAnimationSpeed = 0.15; 
     const threshold = 0.02; // Very small threshold
     
     if (Math.abs(this.cSize - this.targetCSize) > threshold) {
@@ -570,6 +691,7 @@ export class Game{
           this.gameOverScreen.style.display = 'flex';
         } else if (this.ply.lives >= 0) { 
           Object.assign(this.ply,{gx:9,gy:15,x:9,y:15,t:0, dir: 'L', next:null, deathTimer:0, deathPhase:0}); 
+          this.frenziedGhosts = []; // Clear frenzied ghosts on player death
           this.spawnGhosts(); 
         }
       }
@@ -698,6 +820,18 @@ export class Game{
       }
     }
     
+    // Check for fruit trail collection (TV zone)
+    if (currentTileType === 'F') {
+      // Remove the fruit trail tile
+      this.maze.set(pk_key, ' '); // Convert to empty space
+      this.score += 25; // Worth more than regular dots
+      this.playSound('fruit'); 
+      this.addExperience(3, 'fruit trail');
+      
+      // Create small collection effect
+      this.createFruitEffect(pk_x, pk_y, '#ff6600');
+    }
+    
     // Check for zone transitions
     const currentTheme = this.getThemeForCell(pk_x, pk_y);
     if (this.ply.lastZoneTheme && this.ply.lastZoneTheme.name !== currentTheme.name) {
@@ -756,6 +890,8 @@ export class Game{
         // Handle special fruit effects
         if (this.fruit.special === 'ghost_frenzy') {
           this.triggerAppleGhostFrenzy();
+          // Create dramatic explosion effect for apple
+          this.createAppleExplosionEffect(this.fruit.gx, this.fruit.gy);
           console.log('🍎 APPLE EATEN! 8 frenzied ghosts appear!');
         } else if (this.fruit.special === 'super_power') {
           this.power = true;
@@ -763,7 +899,7 @@ export class Game{
           console.log('🍍 PINEAPPLE POWER! Super long power mode!');
         }
         
-        // Create fruit collection effect
+        // Create fruit collection effect (normal burst for most fruits)
         this.createFruitEffect(this.fruit.gx, this.fruit.gy, this.fruit.color);
         this.fruit.active=false;
       }
@@ -797,23 +933,13 @@ export class Game{
     }
     
     if (this.cam.isFullyZoomedOut) {
-        // Center on player but allow smooth movement in endless world
-        const worldPixelWidth = this.totalWorldWidthCells * this.cSize;
-        const worldPixelHeight = this.totalWorldHeightCells * this.cSize;
+        // Always center on player position, not world center
+        const targetX = this.ply.x * this.cSize - this.w / 2 + this.cSize / 2;
+        const targetY = this.ply.y * this.cSize - this.h / 2 + this.cSize / 2;
         
-        // If world fits on screen, center it
-        if (worldPixelWidth <= this.w && worldPixelHeight <= this.h) {
-            this.cam.x = (worldPixelWidth - this.w) / 2;
-            this.cam.y = (worldPixelHeight - this.h) / 2;
-        } else {
-            // Allow smooth camera movement for endless appearance
-            const targetX = this.ply.x * this.cSize - this.w / 2;
-            const targetY = this.ply.y * this.cSize - this.h / 2;
-            
-            // Smooth camera interpolation for zoom-out view
-            this.cam.x += (targetX - this.cam.x) * 0.05;
-            this.cam.y += (targetY - this.cam.y) * 0.05;
-        }
+        // Smooth camera interpolation for zoom-out view
+        this.cam.x += (targetX - this.cam.x) * 0.1; // Slightly faster interpolation
+        this.cam.y += (targetY - this.cam.y) * 0.1;
     } else {
         this.cam.x=this.ply.x*this.cSize-this.w/2 + this.cSize/2; 
         this.cam.y=this.ply.y*this.cSize-this.h/2 + this.cSize/2;
@@ -1734,6 +1860,26 @@ export class Game{
         life: 1.5,
         decay: 0.015,
         size: 4 + Math.random() * 3
+      });
+    }
+  }
+
+  createAppleExplosionEffect(gx, gy) {
+    // Create dramatic explosion effect for apple consumption
+    for (let i = 0; i < 40; i++) {
+      const angle = (i / 40) * Math.PI * 2;
+      const speed = 4 + Math.random() * 6; // Faster and more dramatic
+      const colors = ['#ff0000', '#ff4444', '#ff8888', '#ffaa00', '#ff6600'];
+      
+      this.collectionEffects.push({
+        x: gx * this.cSize + this.cSize/2,
+        y: gy * this.cSize + this.cSize/2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 2.0, // Longer lasting
+        decay: 0.01, // Slower decay for dramatic effect
+        size: 6 + Math.random() * 6 // Larger particles
       });
     }
   }

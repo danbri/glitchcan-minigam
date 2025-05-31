@@ -80,8 +80,8 @@ export class Boid {
         if (this.gameRef) {
             const gx = Math.floor(this.pos.x / this.gameRef.cSize);
             const gy = Math.floor(this.pos.y / this.gameRef.cSize);
-            const wrappedGx = this.gameRef._wrapCoord(gx, this.gameRef.totalWorldWidthCells);
-            const wrappedGy = this.gameRef._wrapCoord(gy, this.gameRef.totalWorldHeightCells);
+            const wrappedGx = Math.max(0, Math.min(gx, this.gameRef.totalWorldWidthCells - 1));
+            const wrappedGy = Math.max(0, Math.min(gy, this.gameRef.totalWorldHeightCells - 1));
             const tile = this.gameRef.maze.get(wrappedGx + ',' + wrappedGy);
             
             // Only redirect if clearly in wall center (not near edges)
@@ -99,8 +99,8 @@ export class Boid {
                 let pathFound = false;
                 
                 for (const dir of directions) {
-                    const testGx = this.gameRef._wrapCoord(gx + dir.dx, this.gameRef.totalWorldWidthCells);
-                    const testGy = this.gameRef._wrapCoord(gy + dir.dy, this.gameRef.totalWorldHeightCells);
+                    const testGx = Math.max(0, Math.min(gx + dir.dx, this.gameRef.totalWorldWidthCells - 1));
+                    const testGy = Math.max(0, Math.min(gy + dir.dy, this.gameRef.totalWorldHeightCells - 1));
                     const testTile = this.gameRef.maze.get(testGx + ',' + testGy);
                     if (testTile === ' ' || testTile === '.' || testTile === 'P' || testTile === 'O' || testTile === 'T') {
                         // Gently push towards this direction
@@ -114,8 +114,8 @@ export class Boid {
                 // If truly cornered, eat through the maze!
                 if (!pathFound && Math.random() < 0.02) { // 2% chance per frame when cornered
                     const eatDir = directions[Math.floor(Math.random() * directions.length)];
-                    const eatGx = this.gameRef._wrapCoord(gx + eatDir.dx, this.gameRef.totalWorldWidthCells);
-                    const eatGy = this.gameRef._wrapCoord(gy + eatDir.dy, this.gameRef.totalWorldHeightCells);
+                    const eatGx = Math.max(0, Math.min(gx + eatDir.dx, this.gameRef.totalWorldWidthCells - 1));
+                    const eatGy = Math.max(0, Math.min(gy + eatDir.dy, this.gameRef.totalWorldHeightCells - 1));
                     const eatKey = eatGx + ',' + eatGy;
                     const eatTile = this.gameRef.maze.get(eatKey);
                     
@@ -176,8 +176,8 @@ export class Asteroid {
         if (this.gameRef) {
             const gx = Math.floor(this.pos.x / this.gameRef.cSize);
             const gy = Math.floor(this.pos.y / this.gameRef.cSize);
-            const wrappedGx = this.gameRef._wrapCoord(gx, this.gameRef.totalWorldWidthCells);
-            const wrappedGy = this.gameRef._wrapCoord(gy, this.gameRef.totalWorldHeightCells);
+            const wrappedGx = Math.max(0, Math.min(gx, this.gameRef.totalWorldWidthCells - 1));
+            const wrappedGy = Math.max(0, Math.min(gy, this.gameRef.totalWorldHeightCells - 1));
             const tile = this.gameRef.maze.get(wrappedGx + ',' + wrappedGy);
             
             const cellX = this.pos.x % this.gameRef.cSize;
@@ -191,8 +191,8 @@ export class Asteroid {
                     { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, { dx: 0, dy: -1 }, { dx: 0, dy: 1 }
                 ];
                 for (const dir of directions) {
-                    const testGx = this.gameRef._wrapCoord(gx + dir.dx, this.gameRef.totalWorldWidthCells);
-                    const testGy = this.gameRef._wrapCoord(gy + dir.dy, this.gameRef.totalWorldHeightCells);
+                    const testGx = Math.max(0, Math.min(gx + dir.dx, this.gameRef.totalWorldWidthCells - 1));
+                    const testGy = Math.max(0, Math.min(gy + dir.dy, this.gameRef.totalWorldHeightCells - 1));
                     const testTile = this.gameRef.maze.get(testGx + ',' + testGy);
                     if (testTile === ' ' || testTile === '.' || testTile === 'P' || testTile === 'O' || testTile === 'T') {
                         this.vel.x += dir.dx * 0.05;
@@ -428,8 +428,8 @@ export class SlimeMold {
                 const [vx,vy] = this.gameRef.VEC[dir];
                 const nextGx = this.gx + vx;
                 const nextGy = this.gy + vy;
-                const wrappedNextGx = this.gameRef._wrapCoord(nextGx, this.gameRef.totalWorldWidthCells);
-                const wrappedNextGy = this.gameRef._wrapCoord(nextGy, this.gameRef.totalWorldHeightCells);
+                const wrappedNextGx = Math.max(0, Math.min(nextGx, this.gameRef.totalWorldWidthCells - 1));
+                const wrappedNextGy = Math.max(0, Math.min(nextGy, this.gameRef.totalWorldHeightCells - 1));
 
                 if (this.gameRef.maze.get(wrappedNextGx + ',' + wrappedNextGy) === ' ') { // Check if target cell is empty path
                     this.gx = wrappedNextGx;
