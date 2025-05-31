@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Hobbit SVG to PNG Converter</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c1810, #4a3520);
+            color: #f4e4bc;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #d4af37;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+        
+        .artwork-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .artwork-card {
+            background: rgba(0,0,0,0.3);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .artwork-title {
+            color: #d4af37;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .svg-container {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .svg-container svg {
+            max-width: 100%;
+            max-height: 280px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: #8b4513;
+            color: #f4e4bc;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #a0522d;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border-left: 4px solid #d4af37;
+        }
+        
+        .instructions {
+            background: rgba(139, 69, 19, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #8b4513;
+        }
+        
+        .instructions h3 {
+            color: #d4af37;
+            margin-top: 0;
+        }
+        
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Classic 80s Hobbit Adventure Art</h1>
+        
+        <div class="instructions">
+            <h3>📋 How to Convert SVG to PNG:</h3>
+            <ol>
+                <li>Click "Convert to PNG" under any artwork below</li>
+                <li>The PNG will automatically download to your computer</li>
+                <li>Replace the placeholder PNGs in the hobbit/ directory with these high-quality versions</li>
+                <li>Refresh the FINK story to see the detailed artwork</li>
+            </ol>
+            <p><strong>Note:</strong> The SVGs contain the full artistic detail in classic 80s text adventure style!</p>
+        </div>
+        
+        <div class="artwork-grid" id="artworkGrid">
+            <!-- Artwork cards will be populated by JavaScript -->
+        </div>
+        
+        <div class="status" id="status">
+            Loading artwork...
+        </div>
+    </div>
+    
+    <canvas id="canvas" width="400" height="300"></canvas>
+    
+    <script>
+        const artworks = [
+            {
+                file: 'bag_end_exterior.svg',
+                title: '🏠 Bag End Exterior',
+                description: 'The iconic round green door of Bilbo\'s hobbit-hole'
+            },
+            {
+                file: 'gandalf_at_door.svg', 
+                title: '🧙‍♂️ Gandalf at the Door',
+                description: 'The wizard arrives with "Good morning!" speech bubble'
+            },
+            {
+                file: 'hobbit_pantry.svg',
+                title: '🍯 The Well-Stocked Pantry', 
+                description: 'Interior with hanging lamp, barrels, and provisions'
+            },
+            {
+                file: 'adventure_path.svg',
+                title: '🛤️ The Road Goes Ever On',
+                description: 'Winding path through hills toward distant mountains'
+            }
+        ];
+        
+        async function loadSVG(filename) {
+            try {
+                const response = await fetch(filename);
+                if (!response.ok) throw new Error('SVG not found');
+                return await response.text();
+            } catch (error) {
+                console.error('Error loading SVG:', error);
+                return null;
+            }
+        }
+        
+        function convertSVGToPNG(svgText, filename) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                img.onload = function() {
+                    // Clear canvas with white background
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw SVG
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convert to PNG and download
+                    canvas.toBlob(function(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = filename.replace('.svg', '.png');
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    }, 'image/png');
+                };
+                
+                img.onerror = function() {
+                    console.error('Failed to load SVG image');
+                    resolve();
+                };
+                
+                // Create blob URL from SVG text
+                const blob = new Blob([svgText], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            });
+        }
+        
+        async function convertToPNG(filename) {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Converting...';
+            button.disabled = true;
+            
+            try {
+                const svgText = await loadSVG(filename);
+                if (svgText) {
+                    await convertSVGToPNG(svgText, filename);
+                    updateStatus(`✅ Converted ${filename} to PNG successfully!`);
+                } else {
+                    updateStatus(`❌ Failed to load ${filename}`);
+                }
+            } catch (error) {
+                updateStatus(`❌ Error converting ${filename}: ${error.message}`);
+            }
+            
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+        
+        async function convertAll() {
+            updateStatus('🔄 Converting all artworks...');
+            for (const artwork of artworks) {
+                await convertToPNG(artwork.file);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between conversions
+            }
+            updateStatus('✅ All artworks converted! Check your downloads folder.');
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+        
+        async function initializeArtwork() {
+            const grid = document.getElementById('artworkGrid');
+            
+            for (const artwork of artworks) {
+                const svgText = await loadSVG(artwork.file);
+                
+                const card = document.createElement('div');
+                card.className = 'artwork-card';
+                
+                card.innerHTML = `
+                    <div class="artwork-title">${artwork.title}</div>
+                    <div class="svg-container">
+                        ${svgText || '<p style="color: #666;">SVG not found</p>'}
+                    </div>
+                    <p style="font-size: 0.9em; margin: 10px 0;">${artwork.description}</p>
+                    <div class="controls">
+                        <button onclick="convertToPNG('${artwork.file}')">Convert to PNG</button>
+                        <button onclick="window.open('${artwork.file}', '_blank')">View SVG</button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            }
+            
+            // Add master control
+            const masterCard = document.createElement('div');
+            masterCard.className = 'artwork-card';
+            masterCard.style.gridColumn = '1 / -1';
+            masterCard.innerHTML = `
+                <div class="artwork-title">🎯 Master Controls</div>
+                <div class="controls">
+                    <button onclick="convertAll()" style="background: #2e7d32; font-size: 1.1em; padding: 15px 30px;">Convert All to PNG</button>
+                </div>
+                <p style="margin-top: 15px; font-size: 0.9em;">Convert all four artworks at once for easy setup!</p>
+            `;
+            grid.appendChild(masterCard);
+            
+            updateStatus('🎨 Hobbit artwork loaded! Click any "Convert to PNG" button to download.');
+        }
+        
+        // Make function globally available
+        window.convertToPNG = convertToPNG;
+        
+        // Initialize when page loads
+        window.addEventListener('load', initializeArtwork);
+    </script>
+</body>
+</html>

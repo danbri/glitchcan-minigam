@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; padding: 0; background: white; }
+        svg { display: block; }
+    </style>
+</head>
+<body>
+    <?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4682B4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2F4F4F;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="skyGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFE4B5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky with sunset colors -->
+  <rect width="400" height="180" fill="url(#skyGrad2)"/>
+  
+  <!-- Mountains in distance -->
+  <path d="M 0 120 L 80 80 L 150 100 L 220 70 L 300 90 L 400 60 L 400 180 L 0 180 Z" fill="url(#mountainGrad)"/>
+  
+  <!-- Closer hills -->
+  <path d="M 0 150 Q 100 130 200 140 Q 300 150 400 135 L 400 180 L 0 180 Z" fill="#228B22"/>
+  
+  <!-- Ground/foreground -->
+  <rect x="0" y="180" width="400" height="120" fill="#32CD32"/>
+  
+  <!-- Winding path -->
+  <path d="M 50 300 Q 150 250 200 220 Q 250 190 300 160 Q 350 130 400 100" 
+        stroke="#8B4513" stroke-width="20" fill="none"/>
+  <path d="M 50 300 Q 150 250 200 220 Q 250 190 300 160 Q 350 130 400 100" 
+        stroke="#D2B48C" stroke-width="12" fill="none"/>
+  
+  <!-- Trees along the path -->
+  <!-- Tree 1 -->
+  <rect x="120" y="200" width="6" height="25" fill="#8B4513"/>
+  <circle cx="123" cy="195" r="15" fill="#228B22"/>
+  
+  <!-- Tree 2 -->
+  <rect x="180" y="180" width="5" height="20" fill="#8B4513"/>
+  <circle cx="182" cy="175" r="12" fill="#32CD32"/>
+  
+  <!-- Tree 3 -->
+  <rect x="260" y="160" width="4" height="18" fill="#8B4513"/>
+  <circle cx="262" cy="155" r="10" fill="#228B22"/>
+  
+  <!-- Tree 4 -->
+  <rect x="320" y="140" width="4" height="15" fill="#8B4513"/>
+  <circle cx="322" cy="135" r="8" fill="#32CD32"/>
+  
+  <!-- Distant pine trees -->
+  <path d="M 100 120 L 105 100 L 110 120 Z" fill="#2F4F4F"/>
+  <path d="M 280 110 L 285 90 L 290 110 Z" fill="#2F4F4F"/>
+  <path d="M 350 100 L 355 80 L 360 100 Z" fill="#2F4F4F"/>
+  
+  <!-- Rocks along path -->
+  <ellipse cx="90" cy="270" rx="8" ry="5" fill="#696969"/>
+  <ellipse cx="170" cy="240" rx="6" ry="4" fill="#808080"/>
+  <ellipse cx="240" cy="200" rx="5" ry="3" fill="#696969"/>
+  
+  <!-- Grass tufts -->
+  <path d="M 80 280 Q 75 275 80 270 Q 85 275 80 280" fill="#228B22"/>
+  <path d="M 140 260 Q 135 255 140 250 Q 145 255 140 260" fill="#32CD32"/>
+  <path d="M 200 230 Q 195 225 200 220 Q 205 225 200 230" fill="#228B22"/>
+  <path d="M 280 190 Q 275 185 280 180 Q 285 185 280 190" fill="#32CD32"/>
+  
+  <!-- Flowers -->
+  <circle cx="110" cy="285" r="2" fill="#FF69B4"/>
+  <circle cx="160" cy="255" r="2" fill="#FFD700"/>
+  <circle cx="220" cy="225" r="2" fill="#9370DB"/>
+  <circle cx="300" cy="175" r="2" fill="#FF6347"/>
+  
+  <!-- Birds in sky -->
+  <path d="M 100 60 Q 95 55 100 50 Q 105 55 100 60" fill="#000000"/>
+  <path d="M 250 70 Q 245 65 250 60 Q 255 65 250 70" fill="#000000"/>
+  <path d="M 320 50 Q 315 45 320 40 Q 325 45 320 50" fill="#000000"/>
+  
+  <!-- Sun setting behind mountains -->
+  <circle cx="350" cy="90" r="25" fill="#FFA500" opacity="0.8"/>
+  <circle cx="350" cy="90" r="20" fill="#FFD700" opacity="0.6"/>
+  
+  <!-- Cloud -->
+  <ellipse cx="80" cy="50" rx="15" ry="8" fill="#FFFFFF" opacity="0.8"/>
+  <ellipse cx="90" cy="48" rx="12" ry="6" fill="#FFFFFF" opacity="0.8"/>
+  <ellipse cx="70" cy="48" rx="10" ry="5" fill="#FFFFFF" opacity="0.8"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="monospace" font-size="14" fill="#2F4F4F" font-weight="bold">THE ROAD GOES EVER ON</text>
+</svg>
+    <script>
+        // Auto-convert when loaded in browser
+        setTimeout(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            const svg = document.querySelector('svg');
+            if (svg) {
+                const data = new XMLSerializer().serializeToString(svg);
+                const img = new Image();
+                img.onload = function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Download the PNG
+                    const link = document.createElement('a');
+                    link.download = 'adventure_path.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+                const blob = new Blob([data], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            }
+        }, 100);
+    </script>
+</body>
+</html>
