@@ -738,13 +738,133 @@
             z-index: 1001;
             font-family: monospace;
         }
+
+        /* Story menu dropdown */
+        .story-menu {
+            position: relative;
+            display: inline-block;
+        }
+
+        .story-title {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            user-select: none;
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--accent-red), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .story-title:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+
+        .story-title::after {
+            content: ' ▼';
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+
+        .story-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 200px;
+            background-color: var(--surface);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .story-menu:hover .story-dropdown,
+        .story-dropdown:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-section {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .dropdown-section:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-header {
+            padding: 5px 15px;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 8px 15px;
+            color: var(--text);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+
+        .dropdown-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dropdown-item:disabled:hover {
+            background-color: transparent;
+        }
     </style>
 </head>
 <body>
     <div class="app-container" id="app-container">
         <div class="menu-trigger" id="menu-trigger"></div>
         <div class="title-bar" id="title-bar">
-            <h1 id="story-title">Riverbend</h1>
+            <div class="story-menu">
+                <h1 class="story-title" id="story-title">Riverbend</h1>
+                <div class="story-dropdown" id="story-dropdown">
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Story</div>
+                        <button class="dropdown-item" id="story-restart">🔄 Restart Story</button>
+                        <button class="dropdown-item" id="story-bookmark">🔖 Bookmark Current</button>
+                        <button class="dropdown-item" id="story-goto-bookmark">📍 Go to Bookmark</button>
+                    </div>
+                    <div class="dropdown-section" id="dynamic-menu-section" style="display: none;">
+                        <div class="dropdown-header">Navigation</div>
+                        <!-- Dynamic menu items from MENU: tags will be added here -->
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Tools</div>
+                        <button class="dropdown-item" id="open-devtools">🤖 Open DevTools</button>
+                    </div>
+                </div>
+            </div>
             <div class="controls">
                 <button class="fullscreen-button" id="fullscreen-button">📺</button>
                 <button class="menu-button" id="menu-button">⚙️</button>
@@ -836,10 +956,20 @@
         const endRestartButton = document.getElementById('end-restart-button');
         const finkSandbox = document.getElementById('fink-sandbox');
         
+        // Story menu elements
+        const storyTitle = document.getElementById('story-title');
+        const storyDropdown = document.getElementById('story-dropdown');
+        const storyRestart = document.getElementById('story-restart');
+        const storyBookmark = document.getElementById('story-bookmark');
+        const storyGotoBookmark = document.getElementById('story-goto-bookmark');
+        const openDevtools = document.getElementById('open-devtools');
+        const dynamicMenuSection = document.getElementById('dynamic-menu-section');
+        
         // State for fullscreen and choices
         let isFullscreen = false;
         let choicesVisible = true;
         let isImageFullscreen = false;
+        let bookmarkedKnot = null;
         
         // Debug console (will be initialized after DOM loads)
         let debugConsole = null;
@@ -925,6 +1055,12 @@
                 debugToggle.addEventListener('click', toggleDebugConsole);
             }
             
+            // Story menu controls
+            storyRestart.addEventListener('click', () => restartStory());
+            storyBookmark.addEventListener('click', () => bookmarkCurrentKnot());
+            storyGotoBookmark.addEventListener('click', () => gotoBookmarkedKnot());
+            openDevtools.addEventListener('click', () => toggleDebugConsole());
+            
             // Setup menu trigger
             menuTrigger.addEventListener('mouseenter', () => {
                 appContainer.classList.add('show-menu');
@@ -986,6 +1122,9 @@
                 debugLog('No default URL, waiting for user input');
                 showStatus('Enter a URL to load a FINK story');
             }
+            
+            // Initialize story menu state
+            updateStoryMenuState();
         }
         
         // Toggle fullscreen mode
@@ -1532,6 +1671,9 @@
                     
                     updateImage(knot.image);
                     updateChoices(knot.choices);
+                    
+                    // Update story menu state when knot changes
+                    updateStoryMenuState();
                 } catch (error) {
                     console.error('Error rendering knot:', error);
                     storyElement.innerHTML = '<p>Error rendering story content.</p>';
@@ -1836,6 +1978,93 @@
             }, 100);
         }
         
+        // Story menu functions
+        function extractMenuItemsFromStory() {
+            // Look for special menu comments in the FINK content
+            // Format: MENU: icon label -> target_knot
+            const menuItems = [];
+            const menuRegex = /MENU:\s*(\S+)\s+(.+?)\s*->\s*(\w+)/g;
+            
+            let match;
+            while ((match = menuRegex.exec(finkStoryContent)) !== null) {
+                const [, icon, label, target] = match;
+                menuItems.push({ icon, label, target });
+            }
+            
+            return menuItems;
+        }
+
+        function populateDynamicMenu() {
+            const menuItems = extractMenuItemsFromStory();
+            
+            // Clear existing dynamic items
+            const existingItems = dynamicMenuSection.querySelectorAll('.dropdown-item');
+            existingItems.forEach(item => item.remove());
+            
+            if (menuItems.length > 0) {
+                dynamicMenuSection.style.display = 'block';
+                
+                menuItems.forEach(item => {
+                    const button = document.createElement('button');
+                    button.className = 'dropdown-item';
+                    button.textContent = `${item.icon} ${item.label}`;
+                    button.onclick = () => {
+                        if (storyKnots[item.target]) {
+                            showKnot(item.target);
+                        } else {
+                            debugLog('Menu target knot not found: ' + item.target);
+                        }
+                    };
+                    dynamicMenuSection.appendChild(button);
+                });
+            } else {
+                dynamicMenuSection.style.display = 'none';
+            }
+        }
+
+        function updateStoryMenuState() {
+            // Enable/disable menu items based on current state
+            const hasStory = Object.keys(storyKnots).length > 0;
+            const hasBookmark = bookmarkedKnot !== null;
+
+            storyRestart.disabled = !hasStory;
+            storyBookmark.disabled = !hasStory || !currentKnot;
+            storyGotoBookmark.disabled = !hasBookmark;
+            
+            // Update dynamic menu items
+            if (hasStory) {
+                populateDynamicMenu();
+            }
+        }
+
+        function bookmarkCurrentKnot() {
+            if (!currentKnot) {
+                debugLog('No current knot to bookmark');
+                return;
+            }
+            bookmarkedKnot = currentKnot;
+            debugLog('🔖 Bookmarked knot: ' + bookmarkedKnot);
+            updateStoryMenuState();
+            
+            // Visual feedback
+            storyBookmark.textContent = '✅ Bookmarked!';
+            setTimeout(() => {
+                storyBookmark.textContent = '🔖 Bookmark Current';
+            }, 1500);
+        }
+
+        function gotoBookmarkedKnot() {
+            if (!bookmarkedKnot) {
+                debugLog('No bookmark set');
+                return;
+            }
+            if (!storyKnots[bookmarkedKnot]) {
+                debugLog('Bookmarked knot no longer exists in current story');
+                return;
+            }
+            showKnot(bookmarkedKnot);
+        }
+
         // Initialize when the page loads
         window.addEventListener('DOMContentLoaded', init);
         

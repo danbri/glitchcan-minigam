@@ -36,7 +36,6 @@ Choose your adventure! Each game offers a unique interactive experience with ric
     Journey deep into the Amazon rainforest where ancient civilizations left behind mysterious artifacts.
     -> jungle_selected
 
-+ [⬅️ Back to Main Menu] -> main_menu
 
 === learn_menu ===
 IMAGE: village_overview.png
@@ -50,7 +49,6 @@ Educational interactive content designed to teach through engaging, story-driven
     Additional educational experiences are being developed. Check back for language lessons, history, and skills training.
     -> learn_menu
 
-+ [⬅️ Back to Main Menu] -> main_menu
 
 === help_menu ===
 IMAGE: hobbit_pantry.png
@@ -76,7 +74,12 @@ Welcome to the FINK Interactive Fiction System! Here's everything you need to kn
     Touch the top of the screen to access the menu. Use the eye button to hide choices when enjoying images or videos.
     -> help_menu
 
-+ [⬅️ Back to Main Menu] -> main_menu
++ [🔧 System Info]
+    FINK Interactive Fiction System v3.0. Supports images, videos, Unicode text, and dynamic story navigation. Built for immersive storytelling experiences.
+    -> help_menu
+
++ [🏠 Return to Main Menu] -> main_menu
+
 
 === hobbit_selected ===
 IMAGE: bag_end_exterior.png
@@ -87,7 +90,6 @@ A tribute to the classic 1982 text adventure. Follow Bilbo Baggins as he encount
 
 + [🚀 Begin the Adventure]
     -> EXTERNAL_STORY
-+ [⬅️ Back to Games] -> games_menu
 + [📖 More Details]
     Based on the classic Melbourne House adventure game, this adaptation captures the whimsical spirit of Tolkien's world while adding modern interactive storytelling elements. Features the original's charm with enhanced narrative depth.
     -> hobbit_selected
@@ -101,7 +103,6 @@ A gritty social climbing simulator set in 1980s London. Start in a bedsit and wo
 
 + [🚀 Begin the Adventure] 
     -> EXTERNAL_STORY
-+ [⬅️ Back to Games] -> games_menu
 + [📖 More Details]
     This story explores themes of class, ambition, and social mobility in 1980s Britain. Multiple paths and endings based on your choices and social connections. Features authentic period atmosphere and challenging moral decisions.
     -> hampstead_selected
@@ -115,7 +116,6 @@ Journey deep into the Amazon rainforest where ancient civilizations left behind 
 
 + [🚀 Begin the Adventure]
     -> EXTERNAL_STORY
-+ [⬅️ Back to Games] -> games_menu
 + [📖 More Details]
     Based on isometric jungle exploration. Navigate through dangerous snake pits, solve ancient puzzles, and discover treasure vaults guarded by mysterious forces. Features atmospheric environments and challenging exploration.
     -> jungle_selected
@@ -129,7 +129,6 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons. M
 
 + [🚀 Begin Learning]
     -> EXTERNAL_STORY
-+ [⬅️ Back to Learning] -> learn_menu
 + [📖 More Details]
     An educational interactive story focusing on Ukrainian language fundamentals. Perfect for beginners learning food vocabulary and case grammar. Features practical examples and immediate feedback.
     -> ukrainian_selected
