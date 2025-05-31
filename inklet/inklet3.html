@@ -920,6 +920,7 @@
         // Main state variables
         let finkStoryContent = '';
         let storyKnots = {};
+        let storyVariables = {}; // For tracking story state
         let currentKnot = '';
         let mediaBasePath = 'villaged/';
         let animationInProgress = false;
@@ -1036,6 +1037,59 @@
         };
         
         const defaultEmojis = ['🚀', '🧩', '🎯'];
+        
+        // Variable system functions
+        function applyVariableModification(varMod) {
+            const { variable, operation, value } = varMod;
+            let newValue = value;
+            
+            // Parse the value
+            if (value === 'true' || value === 'false') {
+                newValue = value === 'true';
+            } else if (!isNaN(value)) {
+                newValue = parseInt(value);
+            } else if (value.startsWith('"') && value.endsWith('"')) {
+                newValue = value.slice(1, -1);
+            }
+            
+            // Apply the operation
+            switch (operation) {
+                case '=':
+                    storyVariables[variable] = newValue;
+                    break;
+                case '+':
+                    storyVariables[variable] = (storyVariables[variable] || 0) + newValue;
+                    break;
+                case '-':
+                    storyVariables[variable] = (storyVariables[variable] || 0) - newValue;
+                    break;
+                case '*':
+                    storyVariables[variable] = (storyVariables[variable] || 0) * newValue;
+                    break;
+                case '/':
+                    storyVariables[variable] = Math.floor((storyVariables[variable] || 0) / newValue);
+                    break;
+                default:
+                    if (operation === '++') {
+                        storyVariables[variable] = (storyVariables[variable] || 0) + 1;
+                    } else if (operation === '--') {
+                        storyVariables[variable] = (storyVariables[variable] || 0) - 1;
+                    }
+            }
+            
+            debugLog(`Variable ${variable} ${operation} ${value} = ${storyVariables[variable]}`);
+        }
+        
+        function processTextWithVariables(text) {
+            // Replace {variable_name: conditional_text} patterns
+            return text.replace(/\{(\w+):\s*(.*?)\}/g, (match, varName, conditionalText) => {
+                const varValue = storyVariables[varName];
+                if (varValue) {
+                    return conditionalText;
+                }
+                return '';
+            });
+        }
         
         // Initialize the story player
         function init() {
@@ -1424,6 +1478,7 @@
         // Parse the FINK content into our internal format (same as inklet2.html)
         function parseInkStory(content) {
             storyKnots = {};
+            storyVariables = {}; // Reset variables for new story
             
             debugLog('Starting to parse FINK story content');
             debugLog('Content length: ' + content.length);
@@ -1433,6 +1488,30 @@
             let currentKnotContent = [];
             
             for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                // Parse variable declarations
+                if (trimmedLine.startsWith('VAR ')) {
+                    const varMatch = trimmedLine.match(/VAR\s+(\w+)\s*=\s*(.+)/);
+                    if (varMatch) {
+                        const varName = varMatch[1];
+                        let varValue = varMatch[2].trim();
+                        
+                        // Parse different value types
+                        if (varValue === 'true' || varValue === 'false') {
+                            varValue = varValue === 'true';
+                        } else if (!isNaN(varValue)) {
+                            varValue = parseInt(varValue);
+                        } else if (varValue.startsWith('"') && varValue.endsWith('"')) {
+                            varValue = varValue.slice(1, -1); // Remove quotes
+                        }
+                        
+                        storyVariables[varName] = varValue;
+                        debugLog(`Set variable ${varName} = ${varValue}`);
+                    }
+                    continue;
+                }
+                
                 if (line.trim().startsWith('===')) {
                     if (currentKnotName) {
                         console.log(`Parsing knot: ${currentKnotName} with ${currentKnotContent.length} lines`);
@@ -1504,7 +1583,8 @@
                 text: [],
                 choices: [],
                 image: null,
-                finkFile: null // For FINK: references
+                finkFile: null, // For FINK: references
+                variables: [] // For variable modifications in this knot
             };
             
             console.log("Processing knot with lines:", lines);
@@ -1526,6 +1606,13 @@
                         const finkPath = finkMatch[1].trim();
                         knot.finkFile = finkPath;
                         console.log("Found FINK reference:", finkPath);
+                    }
+                } else if (trimmedLine.startsWith("BASEHREF:")) {
+                    const basehrefMatch = trimmedLine.match(/BASEHREF:\s*(.*)/);
+                    if (basehrefMatch) {
+                        const newBasePath = basehrefMatch[1].trim();
+                        mediaBasePath = newBasePath.endsWith('/') ? newBasePath : newBasePath + '/';
+                        debugLog('Media base path set from BASEHREF to: ' + mediaBasePath);
                     }
                 } else if (trimmedLine.includes("[[Image:")) {
                     const imageMatch = trimmedLine.match(/\[\[Image:\s*(.*?)\s*\]\]/);
@@ -1551,8 +1638,22 @@
                         }
                         
                         if (choiceText && target) {
-                            knot.choices.push({ text: choiceText, target: target });
-                            console.log("Found choice with immediate target:", choiceText, "->", target);
+                            const choice = { text: choiceText, target: target };
+                            
+                            // Check for variable modifications in choice text (~ syntax)
+                            const varModMatch = choiceText.match(/~\s*(\w+)\s*([\+\-\*\/]?)=?\s*(.*)$/);
+                            if (varModMatch) {
+                                choice.variableModification = {
+                                    variable: varModMatch[1],
+                                    operation: varModMatch[2] || '=',
+                                    value: varModMatch[3].trim()
+                                };
+                                // Clean the choice text
+                                choice.text = choiceText.replace(/~.*$/, '').trim();
+                            }
+                            
+                            knot.choices.push(choice);
+                            console.log("Found choice with immediate target:", choice.text, "->", target);
                         }
                     } else {
                         // Choice without immediate target - we need to look for target on following lines
@@ -1651,6 +1752,7 @@
                     if (knot.text && knot.text.length > 0) {
                         const paragraphs = knot.text
                             .filter(line => line && line.trim())
+                            .map(line => processTextWithVariables(line))
                             .map(line => `<p class="slide-up" style="opacity: 0;">${line}</p>`);
                         
                         storyElement.innerHTML = paragraphs.join('');
@@ -1692,7 +1794,10 @@
             if (mediaPath) {
                 imageContainer.classList.remove('hidden');
                 
-                const actualMediaPath = mediaBasePath + mediaPath;
+                // Check if mediaPath is an absolute URL (starts with http/https)
+                const actualMediaPath = (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) 
+                    ? mediaPath 
+                    : mediaBasePath + mediaPath;
                 const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(mediaPath);
                 
                 if (isVideo) {
@@ -1814,8 +1919,14 @@
             const choiceElement = event.currentTarget;
             const rect = choiceElement.getBoundingClientRect();
             
-            // Check if this choice should load an external FINK file
+            // Handle variable modifications from choice
             const currentKnotData = storyKnots[currentKnot];
+            if (currentKnotData && currentKnotData.choices[index] && currentKnotData.choices[index].variableModification) {
+                const varMod = currentKnotData.choices[index].variableModification;
+                applyVariableModification(varMod);
+            }
+            
+            // Check if this choice should load an external FINK file
             if (target === 'EXTERNAL_STORY' && currentKnotData && currentKnotData.finkFile) {
                 // Load the external FINK file
                 debugLog('Loading external FINK file: ' + currentKnotData.finkFile);
