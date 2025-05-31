@@ -74,17 +74,26 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
   - Player deaths (`PLAYER DEATH:...`)
   - Jumping state (`Jump key pressed:...`)
 
-## GridLuck Development State (v1.2.0)
+## GridLuck Development State (v1.3.0)
 ### Current Session Progress:
 - **COMPLETED**: Treasure hunting system with rarity tiers and special effects
 - **COMPLETED**: Key-lock system for unlocking special areas with colored keys
 - **COMPLETED**: Collectible synergies that grant powerful temporary abilities
 - **COMPLETED**: Progression system with levels, XP, achievements, persistent upgrades
 - **COMPLETED**: Enhanced UI showing level, XP progress, active effects, synergies
+- **COMPLETED**: 5x5 zone grid world system replacing infinite wraparound
+- **COMPLETED**: TV zone with peaceful ghost behavior and expanded ghost house
+- **COMPLETED**: Systematic zone exit system for proper navigation
+- **COMPLETED**: Increased treasure spawn density (67% more treasures)
 
-### Recent Fixes (v1.2.0):
-- **FIXED**: Collectible crash bug with scroll/book content generation
-- **FIXED**: Missing createCollectionEffect method crash on item collection
+### Recent Fixes (v1.3.0):
+- **FIXED**: Speed calculation bug (player moving too fast)
+- **FIXED**: Zone boundary rendering - nothing displays outside 5x5 world grid
+- **FIXED**: Zone navigation bugs (can't go west, broken north-south movement)
+- **FIXED**: Black walls appearing in neighboring zones
+- **FIXED**: Apple explosion effects added (matching cherry behavior)
+- **FIXED**: TV zone ghost house made bigger for better visibility
+- **FIXED**: Complete peaceful ghost behavior in TV zone (including frenzied ghosts)
 
 ### Remaining Tasks:
 - **PENDING**: Create special zones requiring keys/items to access
@@ -92,6 +101,8 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 
 ### Technical Notes:
 - Game URL: http://localhost:8080/thumbwar/gridluck.html
-- Version display: v1.2.0 in top-left UI
+- Version display: v1.3.0 in top-left UI
+- 5x5 zone grid system with proper boundary enforcement
+- TV zone (southwest corner) features peaceful ghosts and fruit trails
 - Audio issues fixed: replaced 'noise' oscillator with 'sawtooth'
 - Context binding fixed: gameLoop.bind(this) prevents undefined errors

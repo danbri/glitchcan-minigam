@@ -28,15 +28,15 @@ Welcome to the FINK Collection! Choose your path to discover interactive stories
 IMAGE: adventure_path.png
 Choose your adventure! Each game offers a unique interactive experience with rich storytelling and meaningful choices.
 
-+ [🧙‍♂️ The Hobbit - Bag End Adventure]
++ [📖 Hobbit]
     A tribute to the classic 1982 adventure game. Begin your journey as Bilbo Baggins in the comfort of Bag End.
     -> hobbit_selected
 
-+ [🏙️ Hampstead - Urban Adventure]
++ [🏙️ Hampstead]
     Navigate the gritty streets of 1980s London. Can you climb from a grotty bedsit to the heights of Hampstead?
     -> hampstead_selected
 
-+ [🌿 Jungle Mystery - Amazon Adventure]
++ [🌿 Jungle]
     Journey deep into the Amazon rainforest where ancient civilizations left behind mysterious artifacts.
     -> jungle_selected
 
@@ -45,36 +45,38 @@ Choose your adventure! Each game offers a unique interactive experience with ric
 IMAGE: village_overview.png
 Educational interactive content designed to teach through engaging, story-driven experiences.
 
-+ [🇺🇦 Ukrainian Language Learning]
++ [🇺🇦 Ukrainian]
     Learn Ukrainian food vocabulary and basic grammar through interactive lessons and practice exercises.
     -> ukrainian_selected
 
-+ [📖 More Learning Content Coming Soon]
++ [📖 Coming Soon]
     Additional educational experiences are being developed. Check back for language lessons, history, and skills training.
     -> learn_menu
 
-+ [🎮 Return to Games] -> games_menu
++ [🎭 Fiction Primer]
+    Learn about interactive fiction, storytelling techniques, and how to create your own FINK adventures.
+    -> fiction_primer_selected
 
 
 === help_menu ===
 IMAGE: hobbit_pantry.png
 Welcome to the FINK Interactive Fiction System! Here's everything you need to know.
 
-**Navigation:**
-- 👁️ **Eye button** - Hide/show choices for immersive viewing
-- ⛶ **Fullscreen button** - Enter fullscreen mode for maximum immersion
-- ⚙️ **Settings** - Load different stories and adjust media paths
+NAVIGATION:
+👁️ Eye button - Hide/show choices for immersive viewing
+⛶ Fullscreen button - Enter fullscreen mode for maximum immersion  
+⚙️ Settings - Load different stories and adjust media paths
 
-**Story Features:**
-- Stories support both images and videos
-- Tap choices to navigate through the story
-- Use browser back/forward buttons to navigate history
-- Stories automatically save your progress
+STORY FEATURES:
+Stories support both images and videos
+Tap choices to navigate through the story
+Use browser back/forward buttons to navigate history
+Stories automatically save your progress
 
-**Technical Notes:**
-- FINK stories are JavaScript-based interactive fiction
-- Media assets load from configurable directories
-- Debug console available for troubleshooting
+TECHNICAL NOTES:
+FINK stories are JavaScript-based interactive fiction
+Media assets load from configurable directories
+Debug console available for troubleshooting
 
 + [📱 Mobile Tips]
     Touch the top of the screen to access the menu. Use the eye button to hide choices when enjoying images or videos.
@@ -84,7 +86,9 @@ Welcome to the FINK Interactive Fiction System! Here's everything you need to kn
     FINK Interactive Fiction System v3.0. Supports images, videos, Unicode text, and dynamic story navigation. Built for immersive storytelling experiences.
     -> help_menu
 
-+ [🎮 Return to Games] -> games_menu
++ [🔧 Developer Guide]
+    Learn about FINK development, creating interactive stories, and advanced features for content creators.
+    -> dev_guide_selected
 
 
 === hobbit_selected ===
@@ -138,4 +142,36 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons. M
 + [📖 More Details]
     An educational interactive story focusing on Ukrainian language fundamentals. Perfect for beginners learning food vocabulary and case grammar. Features practical examples and immediate feedback.
     -> ukrainian_selected
+
+=== fiction_primer_selected ===
+IMAGE: hobbit_pantry.png
+Interactive Fiction Primer
+
+Learn the fundamentals of interactive storytelling, narrative design, and FINK authoring. Explore branching narratives, character development, and world-building techniques used in modern interactive fiction.
+
++ [📚 Coming Soon]
+    This educational content is in development. Check back for comprehensive lessons on interactive fiction creation.
+    -> learn_menu
++ [🎯 Quick Tutorial]
+    Basic introduction to interactive fiction concepts and FINK story structure fundamentals.
+    -> learn_menu
++ [📝 Story Examples]
+    Examine successful interactive fiction examples and analyze their narrative techniques and choice structures.
+    -> learn_menu
+
+=== dev_guide_selected ===
+IMAGE: adventure_path.png
+FINK Developer Guide
+
+Learn how to create your own FINK interactive stories, integrate media assets, and build engaging narrative experiences. Perfect for developers and content creators.
+
++ [⚙️ Technical Documentation]
+    Detailed guide to FINK syntax, JavaScript integration, and advanced features for interactive story development.
+    -> help_menu
++ [🎨 Asset Integration]
+    Learn how to integrate images, videos, and other media assets into your FINK stories for immersive experiences.
+    -> help_menu
++ [📖 Story Structure Guide]
+    Best practices for narrative design, choice architecture, and creating compelling interactive fiction experiences.
+    -> help_menu
 `
