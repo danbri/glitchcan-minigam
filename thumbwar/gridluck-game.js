@@ -619,13 +619,13 @@ export class Game{
     
     this.zoneEntities.forEach(entity => {
         if (entity.type === 'boid' || entity.type === 'asteroid' || entity.type === 'decorShip' || entity.type === 'slimeMold') {
-            const moduleGx = Math.floor(this._wrapCoord(entity.type === 'slimeMold' ? entity.gx : entity.pos.x / this.cSize, this.totalWorldWidthCells) / this.PAT_C);
-            const moduleGy = Math.floor(this._wrapCoord(entity.type === 'slimeMold' ? entity.gy : entity.pos.y / this.cSize, this.totalWorldHeightCells) / this.PAT_R);
+            const moduleGx = Math.floor((entity.type === 'slimeMold' ? entity.gx : entity.pos.x / this.cSize) / this.PAT_C);
+            const moduleGy = Math.floor((entity.type === 'slimeMold' ? entity.gy : entity.pos.y / this.cSize) / this.PAT_R);
             
             if(entity.type !== 'slimeMold'){ // Slime mold gx,gy are grid cells, others are pixel positions
                  entity.zoneBounds = {
-                    x: this._wrapCoord(moduleGx, this.WORLD_MODULE_DIM) * this.PAT_C * this.cSize,
-                    y: this._wrapCoord(moduleGy, this.WORLD_MODULE_DIM) * this.PAT_R * this.cSize,
+                    x: moduleGx * this.PAT_C * this.cSize,
+                    y: moduleGy * this.PAT_R * this.cSize,
                     width: this.PAT_C * this.cSize, height: this.PAT_R * this.cSize
                 };
             }
@@ -742,8 +742,8 @@ export class Game{
       });
     }
 
-    const plyModuleGx = Math.floor(this._wrapCoord(this.ply.gx, this.totalWorldWidthCells) / this.PAT_C);
-    const plyModuleGy = Math.floor(this._wrapCoord(this.ply.gy, this.totalWorldHeightCells) / this.PAT_R);
+    const plyModuleGx = Math.floor(this.ply.gx / this.PAT_C);
+    const plyModuleGy = Math.floor(this.ply.gy / this.PAT_R);
     const fruitSpawnGx = plyModuleGx * this.PAT_C + Math.floor(this.PAT_C/2); 
     const fruitSpawnGy = plyModuleGy * this.PAT_R + 11; 
     
@@ -770,7 +770,7 @@ export class Game{
     }else{ 
       this.fruit.spawnCooldown-=dt_ms;
       if(this.fruit.spawnCooldown<=0 && this.fruit.dotsEatenForSpawn >= this.fruit.DOTS_THRESHOLD){
-        const fruitKey = this._wrapCoord(fruitSpawnGx, this.totalWorldWidthCells) +','+ this._wrapCoord(fruitSpawnGy, this.totalWorldHeightCells); 
+        const fruitKey = fruitSpawnGx +','+ fruitSpawnGy; 
         const fTile = this.maze.get(fruitKey);
         if(fTile !=='W' && fTile !=='-' && fTile !== 'S'){
           // Random fruit types with different effects
@@ -862,9 +862,11 @@ export class Game{
   }
   
   isWallOrDecor(gx, gy) {
-    const wrappedGx = this._wrapCoord(gx, this.totalWorldWidthCells);
-    const wrappedGy = this._wrapCoord(gy, this.totalWorldHeightCells);
-    const type = this.maze.get(wrappedGx + ',' + wrappedGy);
+    // Check boundaries instead of wrapping
+    if (gx < 0 || gx >= this.totalWorldWidthCells || gy < 0 || gy >= this.totalWorldHeightCells) {
+      return true; // Treat out-of-bounds as walls
+    }
+    const type = this.maze.get(gx + ',' + gy);
     return type === 'W' || type === 'S';
   }
 
@@ -1601,8 +1603,12 @@ export class Game{
     // Mark area around the unlocked door as bonus zone
     for (let dx = -2; dx <= 2; dx++) {
       for (let dy = -2; dy <= 2; dy++) {
-        const newGx = this._wrapCoord(gx + dx, this.totalWorldWidthCells);
-        const newGy = this._wrapCoord(gy + dy, this.totalWorldHeightCells);
+        const newGx = gx + dx;
+        const newGy = gy + dy;
+        // Skip if out of bounds
+        if (newGx < 0 || newGx >= this.totalWorldWidthCells || newGy < 0 || newGy >= this.totalWorldHeightCells) {
+          continue;
+        }
         const key = newGx + ',' + newGy;
         const tile = this.maze.get(key);
         if (tile === ' ' || tile === '.' || tile === 'P') {
@@ -1643,28 +1649,22 @@ export class Game{
 
   activateTeleport() {
     this.playSound('powerPellet'); 
-    const currentModuleX = Math.floor(this._wrapCoord(this.ply.gx, this.totalWorldWidthCells) / this.PAT_C);
-    const currentModuleY = Math.floor(this._wrapCoord(this.ply.gy, this.totalWorldHeightCells) / this.PAT_R);
     const emptySpots = [];
-    for (let modYOffset = -1; modYOffset <= 1; modYOffset++) { 
-        for (let modXOffset = -1; modXOffset <= 1; modXOffset++) {
-            const smx = this._wrapCoord(currentModuleX + modXOffset, this.WORLD_MODULE_DIM); 
-            const smy = this._wrapCoord(currentModuleY + modYOffset, this.WORLD_MODULE_DIM);
-            for (let y_pat = 0; y_pat < this.PAT_R; y_pat++) { 
-                for (let x_pat = 0; x_pat < this.PAT_C; x_pat++) {
-                    const patChar = this.PAT[y_pat][x_pat]; 
-                    if (patChar === '.' || patChar === 'P' || patChar === ' ' || patChar === 'O') { 
-                        const gx = x_pat + smx * this.PAT_C; 
-                        const gy = y_pat + smy * this.PAT_R;
-                        let isSafe = true;
-                        for(const ghost of this.ghosts) {
-                           if(this._wrapCoord(ghost.gx, this.totalWorldWidthCells) === gx && this._wrapCoord(ghost.gy, this.totalWorldHeightCells) === gy) {isSafe=false; break;}
-                        }
-                        if(isSafe && !(this.ply.gx === gx && this.ply.gy === gy)) emptySpots.push({ gx, gy }); 
-                    } 
-                } 
-            } 
-        } 
+    
+    // Find all empty spots in the bounded world
+    for (let gy = 0; gy < this.totalWorldHeightCells; gy++) {
+        for (let gx = 0; gx < this.totalWorldWidthCells; gx++) {
+            const key = gx + ',' + gy;
+            const tileType = this.maze.get(key);
+            
+            if (tileType === '.' || tileType === 'P' || tileType === ' ' || tileType === 'T') {
+                let isSafe = true;
+                for(const ghost of this.ghosts) {
+                   if(ghost.gx === gx && ghost.gy === gy) {isSafe=false; break;}
+                }
+                if(isSafe && !(this.ply.gx === gx && this.ply.gy === gy)) emptySpots.push({ gx, gy }); 
+            }
+        }
     }
     if (emptySpots.length > 0) { const spot = emptySpots[Math.floor(Math.random() * emptySpots.length)]; Object.assign(this.ply, {gx:spot.gx, gy:spot.gy, x:spot.gx, y:spot.gy, t:0}); }
   }
@@ -1685,8 +1685,8 @@ export class Game{
         const distance = 3 + Math.random() * 5; // 3-8 cells away
         spawnGx = Math.floor(playerGx + Math.cos(angle) * distance);
         spawnGy = Math.floor(playerGy + Math.sin(angle) * distance);
-        spawnGx = this._wrapCoord(spawnGx, this.totalWorldWidthCells);
-        spawnGy = this._wrapCoord(spawnGy, this.totalWorldHeightCells);
+        spawnGx = Math.max(0, Math.min(spawnGx, this.totalWorldWidthCells - 1));
+        spawnGy = Math.max(0, Math.min(spawnGy, this.totalWorldHeightCells - 1));
         attempts++;
       } while (this.maze.get(spawnGx + ',' + spawnGy) === 'W' && attempts < 20);
       
