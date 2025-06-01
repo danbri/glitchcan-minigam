@@ -1,5 +1,13 @@
 # CLAUDE.md - Guide for 🐥 Minigames
 
+## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
+**ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
+**ONLY ALLOWED:** Real ink-full.js compiler and Story API
+**VIOLATION COST:** Real money wasted, development time lost, 2am debugging sessions
+**ENFORCEMENT:** Any hackparsing implementation must be immediately deleted and rebuilt with real INK engine
+**EXCEPTION:** Only if User explicitly demands hackparsing for specific use case
+**REMINDER:** We spent an entire evening until 2am purging hackparsing - NEVER AGAIN
+
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.
 
@@ -73,6 +81,91 @@ After ANY UI change, verify:
 - **Work incrementally** on inklet6.html
 - **Commit frequently** with detailed descriptions
 - **Test on both local and GitHub Pages** before proceeding
+
+## FINK Validation Strategy
+
+### Command-line Validation Tool
+**Usage:** `node validate-fink.js my-episode.fink.js`
+
+**Features:**
+- Extracts INK content from current version and last committed git version
+- Compiles both versions using real ink-full.js to catch syntax errors
+- Reports diff on key metrics (knot count, choice count, tag usage)
+- Identifies regressions where compilation breaks
+- For new files: reports basic stats only
+- Validates proper FINK structure and INK tag syntax
+
+### Legacy Pseudo-Ink Problem
+**Issue:** Many FINK files contain AI-generated "Pseudo-Ink" that looks like INK but doesn't compile with real ink-full.js
+
+**Solution Path:**
+1. Use validation tool to identify problematic files
+2. Gradually rebuild legacy files with proper INK syntax
+3. Follow "commit if it looks ok" validation workflow
+4. Maintain compatibility with real INK engine throughout
+
+**Priority:** Focus on actively used FINK files first (TOC, Hampstead, Jungle)
+
+## FINK Validator Specification
+
+### Requirements
+**Usage:** `node validate-fink.js my-episode.fink.js`
+
+**Core Functionality:**
+1. **Extract INK content** from current version and last committed git version using template literal execution (oooOO function)
+2. **Compile both versions** using real ink-full.js compiler to catch syntax errors
+3. **Report diff on basic metrics** like knot count, choice count, tag usage between versions
+4. **Detect regressions** where compilation breaks (was working in git, now fails)
+5. **For new files:** report basic stats only (no git comparison)
+6. **Validate proper FINK structure** and INK tag syntax
+
+### Technical Implementation
+- **MUST use real ink-full.js** loaded from CDN cache in vendor/ directory
+- **MUST use template literal execution** to extract INK from FINK (no string manipulation)
+- **MUST use ink-full.js Compiler()** for validation (no hackparsing)
+- **MUST use Story API** for tag extraction and analysis
+- **Exit code 1** when compilation regressions detected
+- **No npm packages** - pure Node.js with vendored ink-full.js
+
+### Purpose
+- **Identify legacy pseudo-INK files** that need rebuilding with real INK syntax
+- **Follow "commit if it looks ok" validation workflow**
+- **Catch compilation failures** before they reach production
+- **Track structural improvements** when converting legacy files
+
+### Absolutely Forbidden
+- Manual parsing of INK content with regex
+- String manipulation instead of proper INK compilation
+- Any approach that doesn't use real ink-full.js Compiler
+
+## FINK Player v6 TODO List
+
+### High Priority Issues
+- **Top menus don't work yet** - Navigation items in story dropdown need implementation
+- **Reset story functionality** - Should provide way back to top-level TOC menus
+- **Default image needs updating** - Replace placeholder village image with appropriate default
+- **Hobbit adventure needs fixing/validating** - Currently fails to load, requires INK syntax fixes
+- **Ukrainian tutorial needs fixing/validating** - Verify proper INK compilation and functionality
+
+### Content Issues
+- **Writing course mention in menus** - Remove or implement actual content (currently vapourware)
+- **Other vapourware in menus** - Audit all menu items and remove non-functional placeholders
+- **Content validation pass** - Use FINK validator on all menu items to identify broken stories
+
+### UI/UX Improvements
+- **Choices section eats vertical space needlessly** - Optimize layout to reclaim screen real estate
+- **Debug button needs redesign** - Should be real tab interface with copy-pastable output
+- **Better responsive design** - Ensure optimal use of available screen space
+
+### Major Features
+- **In-app history system** - Implement navigation history so back/forward buttons work without destructive page reload
+- **State preservation** - Maintain story progress and position across navigation
+- **Deep linking** - Allow URLs to reference specific story positions
+
+### Testing Requirements
+- **Cross-device compatibility** - Test on mobile, tablet, desktop
+- **Performance optimization** - Ensure smooth operation on lower-end devices
+- **Accessibility improvements** - Screen reader support, keyboard navigation
 
 ## Development Commands (Suggested)
 These are suggestions - you may prefer to run servers in your own tab/process:

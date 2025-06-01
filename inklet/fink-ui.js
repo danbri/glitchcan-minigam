@@ -205,9 +205,9 @@ window.FinkUI = {
         this.elements.storyElement.innerHTML = '';
     },
     
-    appendStoryContent(fragment) {
+    replaceStoryContent(fragment) {
+        this.elements.storyElement.innerHTML = '';
         this.elements.storyElement.appendChild(fragment);
-        this.elements.storyElement.scrollTop = this.elements.storyElement.scrollHeight;
     },
     
     showEndOfStory() {

@@ -182,7 +182,7 @@ window.FinkInkEngine = {
                 return; // Don't generate choices yet, we're loading external content
             }
 
-            FinkUI.appendStoryContent(storyFragment);
+            FinkUI.replaceStoryContent(storyFragment);
             FinkUI.updateImageFromINKTags(this.story);
 
             // Generate choices
