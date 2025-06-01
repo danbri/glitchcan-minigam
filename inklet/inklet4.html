@@ -26,7 +26,7 @@
             --choice-left: #f1c2c7;
             --choice-middle: #c7e6d6;
             --choice-right: #c7dff7;
-            --choice-height: 12vh;
+            --choice-height: 18vh;
             --transition-time: 0.5s;
         }
 
@@ -381,7 +381,7 @@
             padding: 12px 8px;
             cursor: pointer;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             transition: all var(--transition-time) cubic-bezier(0.16, 1, 0.3, 1);
             transform-origin: bottom center;
             min-height: 0;
@@ -414,6 +414,18 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
             font-size: 14px;
+            transition: all var(--transition-time) ease;
+        }
+        
+        .choice-text-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            color: #000;
+            text-align: center;
+            margin-top: 8px;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+            letter-spacing: 0.5px;
             transition: all var(--transition-time) ease;
         }
 
@@ -528,7 +540,7 @@
         </div>
         
         <div class="url-form" id="url-form">
-            <input type="text" id="fink-url-input" value="toc.fink.js" placeholder="Enter URL of .fink.js file">
+            <input type="text" id="fink-url-input" value="toc-simple.fink.js" placeholder="Enter URL of .fink.js file">
             <input type="text" id="media-path-input" value="villaged/" placeholder="Media assets directory">
             <button id="load-fink-button">Load Story</button>
         </div>
@@ -576,6 +588,7 @@
         let expandingElement = null;
         let isNavigatingFromHistory = false;
         let pendingFinkFile = null;
+        let lastSeenFinkTag = null; // Store the most recent FINK: tag
         
         // Sandbox communication
         let activeSandbox = null;
@@ -789,30 +802,38 @@
             choicesContainer.innerHTML = '';
         }
 
-        function extractStoryTags(finkContent) {
-            // Extract MENU:, IMAGE:, BASEHREF: tags from FINK content
+        function extractStoryTagsFromINK() {
+            // Extract story-level tags from compiled INK Story
             const tags = {
                 menu: [],
                 images: [],
                 basehref: null
             };
             
-            const lines = finkContent.split(/\r?\n/);
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed.startsWith('MENU:')) {
-                    const menuMatch = trimmed.match(/MENU:\s*(.+?)\s*->\s*(.+)/);
+            if (!story) return tags;
+            
+            // Get all tags from the story (this may need to be extracted differently)
+            // For now, check current tags which includes story-level tags
+            const allTags = story.currentTags || [];
+            debugLog('Extracting story-level tags from INK: [' + allTags.join(', ') + ']');
+            
+            allTags.forEach(tag => {
+                debugLog('Processing story tag: "' + tag + '"');
+                if (tag.includes('MENU:')) {
+                    const menuMatch = tag.match(/MENU:\s*(.+?)\s*->\s*(.+)/);
                     if (menuMatch) {
                         tags.menu.push({ label: menuMatch[1], target: menuMatch[2] });
+                        debugLog('Found MENU tag: ' + menuMatch[1] + ' -> ' + menuMatch[2]);
                     }
-                } else if (trimmed.startsWith('BASEHREF:')) {
-                    const basehrefMatch = trimmed.match(/BASEHREF:\s*(.*)/);
+                } else if (tag.includes('BASEHREF:')) {
+                    const basehrefMatch = tag.match(/BASEHREF:\s*(.*)/);
                     if (basehrefMatch) {
                         tags.basehref = basehrefMatch[1].trim();
                         tags.basehref = tags.basehref.endsWith('/') ? tags.basehref : tags.basehref + '/';
+                        debugLog('Found BASEHREF tag: ' + tags.basehref);
                     }
                 }
-            }
+            });
             
             return tags;
         }
@@ -850,7 +871,7 @@
 
                     p.innerHTML = formattedText;
                     
-                    // Handle INK tags (like #BG:#0050e0, #CLASS:info)
+                    // Handle INK tags (like #BG:#0050e0, #CLASS:info, FINK:)
                     currentTags.forEach(tag => {
                         const parts = tag.split(':');
                         const key = parts[0]?.trim().toUpperCase();
@@ -860,6 +881,9 @@
                             document.body.style.background = value;
                         } else if (key === 'CLASS' && value) {
                             p.classList.add(value);
+                        } else if (key === 'FINK' && value) {
+                            lastSeenFinkTag = value;
+                            debugLog('Stored FINK tag for later loading: ' + value);
                         }
                     });
                     
@@ -868,15 +892,26 @@
 
                 storyElement.appendChild(storyFragment);
 
-                // Handle current images from story tags
-                updateImageFromStoryTags();
+                // Handle current images from INK Story tags
+                updateImageFromINKTags();
+
+                // Check for external FINK loading
+                const currentKnot = story.state ? story.state.currentPathString : null;
+                if (currentKnot && currentKnot.includes('external_story')) {
+                    debugLog('At external_story knot, checking for FINK tags to load');
+                    handleExternalFinkLoading();
+                    return; // Don't generate choices yet, we're loading external content
+                }
 
                 // Generate choices
                 if (story.currentChoices.length > 0) {
                     debugLog('Displaying ' + story.currentChoices.length + ' choices');
                     story.currentChoices.forEach((choice, i) => {
+                        debugLog('Choice ' + i + ' raw text: "' + choice.text + '"');
                         const emoji = chooseEmoji(choice.text);
-                        const cleanText = choice.text.replace(/[🎮📚❓🚀📖🌿🇺🇦🎭🔧📱⚙️🎨]/gu, '').trim();
+                        debugLog('Choice ' + i + ' emoji: "' + emoji + '"');
+                        const cleanText = choice.text.trim();
+                        debugLog('Choice ' + i + ' clean text: "' + cleanText + '"');
                         
                         const choiceEl = document.createElement('div');
                         const choiceNumber = Math.min(i + 1, 3);
@@ -885,12 +920,9 @@
                         
                         choiceEl.innerHTML = 
                             '<div class="choice-emoji">' + emoji + '</div>' +
-                            '<svg class="choice-label-svg" width="100%" height="40">' +
-                                '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
-                                      'class="choice-label-text" stroke="black" stroke-width="3" fill="black">' + escapeHtml(cleanText) + '</text>' +
-                                '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
-                                      'class="choice-label-text" fill="white">' + escapeHtml(cleanText) + '</text>' +
-                            '</svg>';
+                            '<div class="choice-text-label">' + escapeHtml(cleanText) + '</div>';
+                        
+                        debugLog('Choice ' + i + ' HTML: ' + choiceEl.innerHTML.substring(0, 200));
                         
                         choicesContainer.appendChild(choiceEl);
                     });
@@ -917,13 +949,62 @@
             }
         }
 
-        function updateImageFromStoryTags() {
-            // Check for IMAGE: tags in current story position
-            // This is simplified - in a full implementation you'd track images per knot
-            if (currentStoryTags.basehref) {
-                mediaBasePath = currentStoryTags.basehref;
-                debugLog('Using BASEHREF: ' + mediaBasePath);
+        function updateImageFromINKTags() {
+            if (!story) return;
+            
+            // Extract IMAGE: tags from current INK Story tags
+            const currentTags = story.currentTags || [];
+            debugLog('Current INK tags: [' + currentTags.join(', ') + ']');
+            
+            let imageToShow = null;
+            let newBasePath = null;
+            
+            currentTags.forEach(tag => {
+                debugLog('Processing tag: "' + tag + '"');
+                if (tag.includes('IMAGE:')) {
+                    imageToShow = tag.replace(/.*IMAGE:\s*/, '').trim();
+                    debugLog('Found IMAGE tag: ' + imageToShow);
+                } else if (tag.includes('BASEHREF:')) {
+                    newBasePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                    if (!newBasePath.endsWith('/')) newBasePath += '/';
+                    debugLog('Found BASEHREF tag: ' + newBasePath);
+                }
+            });
+            
+            // Update base path if found
+            if (newBasePath) {
+                mediaBasePath = newBasePath;
+                debugLog('Updated mediaBasePath to: ' + mediaBasePath);
             }
+            
+            // Show image if found
+            if (imageToShow) {
+                debugLog('Showing image from INK tags: ' + imageToShow);
+                updateImage(imageToShow);
+            } else {
+                debugLog('No IMAGE tag found in current position');
+            }
+        }
+
+        function handleExternalFinkLoading() {
+            if (!lastSeenFinkTag) {
+                debugLog('No FINK tag found for external loading');
+                showStatus('Error: No external story specified');
+                return;
+            }
+            
+            debugLog('Loading external FINK file: ' + lastSeenFinkTag);
+            showStatus('Loading ' + lastSeenFinkTag + '...', true);
+            
+            // Load the external FINK file
+            loadViaSandbox(new URL(lastSeenFinkTag, window.location.href).href)
+                .then(() => {
+                    debugLog('External FINK loaded successfully');
+                })
+                .catch(error => {
+                    debugLog('Error loading external FINK: ' + error.message);
+                    showStatus('Error loading external story: ' + error.message);
+                });
         }
 
         function chooseEmoji(choiceText) {
@@ -1044,8 +1125,11 @@
                             debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
                             clearTimeout(sandboxTimeout);
                             if (data.data && data.data.length > 0) {
-                                finkStoryContent = data.data.join('\n');
+                                // Remove duplicates and join
+                                const uniqueData = [...new Set(data.data)];
+                                finkStoryContent = uniqueData.join('\n');
                                 debugLog('FINK story loaded: ' + finkStoryContent.length + ' characters');
+                                debugLog('Original data blocks: ' + data.data.length + ', unique blocks: ' + uniqueData.length);
                                 compileAndRunStory(finkStoryContent);
                                 resolve();
                             } else {
@@ -1138,22 +1222,17 @@
             debugLog('Raw FINK content length: ' + finkContent.length);
             
             try {
-                // Extract story-level tags first
-                currentStoryTags = extractStoryTags(finkContent);
-                debugLog('Extracted story tags: ' + JSON.stringify(currentStoryTags));
+                // Initialize empty tags - will be extracted from INK after compilation
+                currentStoryTags = { menu: [], images: [], basehref: null };
+                debugLog('Will extract story tags from compiled INK Story API');
                 
-                // Set base path from BASEHREF if found
-                if (currentStoryTags.basehref) {
-                    mediaBasePath = currentStoryTags.basehref;
-                    debugLog('Using BASEHREF: ' + mediaBasePath);
-                }
-                
-                // Try INK compilation first
+                // Try INK compilation - no fallback to manual parsing
                 const inkSuccess = tryInkCompilation(finkContent);
                 
                 if (!inkSuccess) {
-                    debugLog('INK compilation failed, falling back to manual parsing');
-                    parseManualFinkStory(finkContent);
+                    debugLog('INK compilation failed - no manual fallback available');
+                    showStatus('INK compilation failed. Please check story syntax.');
+                    return;
                 }
                 
             } catch (error) {
@@ -1288,6 +1367,17 @@
                     
                     // Start the story with INK engine
                     debugLog('✅ INK compilation successful! Starting with real engine...');
+                    
+                    // Extract story-level tags from compiled INK Story
+                    currentStoryTags = extractStoryTagsFromINK();
+                    debugLog('Extracted story tags from INK: ' + JSON.stringify(currentStoryTags));
+                    
+                    // Set base path from BASEHREF if found
+                    if (currentStoryTags.basehref) {
+                        mediaBasePath = currentStoryTags.basehref;
+                        debugLog('Using BASEHREF from INK: ' + mediaBasePath);
+                    }
+                    
                     storyElement.innerHTML = '';
                     hideStatus();
                     continueStory();

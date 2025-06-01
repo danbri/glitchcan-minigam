@@ -107,12 +107,18 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 - Audio issues fixed: replaced 'noise' oscillator with 'sawtooth'
 - Context binding fixed: gameLoop.bind(this) prevents undefined errors
 
-## FINK Interactive Fiction System Status
+## FINK Interactive Fiction System - CRITICAL IMPLEMENTATION NOTES
 
-### Current State (CRITICAL ISSUE)
-- **PROBLEM**: Still using manual parsing instead of real INK engine despite promises
-- **SYMPTOM**: Conditional INK markup (`{variable: text}`) appears as visible text in stories
-- **IMPACT**: Stories display broken syntax instead of proper conditional content
+### STOP TRYING TO PARSE oooOO TEMPLATE LITERALS MANUALLY! 
+- **oooOO is a JAVASCRIPT FUNCTION** (tagged template literal)
+- **NEVER parse it with regex** - that breaks the entire JavaScript execution
+- **USE THE SANDBOX APPROACH** - inject script tags into safe iframe to execute the .fink.js files
+
+### Working Implementation Reference
+- **hamfinkdemo.html** (or similar in inklet/ folder) shows the CORRECT approach
+- Uses iframe sandbox with script injection to safely execute .fink.js files
+- The oooOO function captures content via JavaScript execution, not text parsing
+- This is the ONLY way to properly extract FINK content from .fink.js files
 
 ### CRITICAL UNDERSTANDING: INK Tags Are LEGITIMATE Extensions
 **INK was designed for extensibility via tags** - this is the official mechanism, not a hack:
@@ -122,29 +128,33 @@ Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focus
 - INK's extensibility via tags is used by Inkle Studios and the broader community
 
 ### What Needs to be Done (HIGH PRIORITY)
-1. **Use real INK compiler**: Compile FINK content with all tags intact using ink-full.js
-2. **Process conditional syntax**: Use INK runtime to handle `{variable: text}` properly
-3. **Keep tag system**: MENU:, IMAGE:, BASEHREF: are legitimate INK extensions, not FINK hacks
-4. **Enable INK engine**: Currently loads ink-full.js but ignores it in favor of manual parsing
+1. **Use sandbox execution**: Load .fink.js files via iframe script injection (NOT regex parsing)
+2. **Use real INK compiler**: Compile extracted FINK content with ink-full.js
+3. **Process conditional syntax**: Use INK runtime to handle `{variable: text}` properly
+4. **Keep tag system**: MENU:, IMAGE:, BASEHREF: are legitimate INK extensions, not FINK hacks
 
 ### Files Affected
-- `inklet3.html`: Lines 1509-1552 contain INK extraction logic but it's bypassed
-- All .fink.js files contain proper INK syntax with extension tags
-- Manual parser shows raw conditional syntax instead of processing it
+- Current State: Manual parsing still used despite having working sandbox examples
+- **SYMPTOM**: Conditional INK markup (`{variable: text}`) appears as visible text
+- **IMPACT**: Stories display broken syntax instead of proper conditional content
 
 ### Technical Requirements
 - ink-full.js CDN: https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js (already loaded)
-- Compile entire FINK content including tags: `new inkjs.Compiler(finkContent).Compile()`
+- Sandbox iframe execution to extract content from .fink.js files
+- Compile entire FINK content: `new inkjs.Compiler(finkContent).Compile()`
 - Use INK Story runtime: `new inkjs.Story(compiledStory)` for conditional processing
-- Process tags separately after compilation for MENU:, IMAGE:, BASEHREF: integration
 
-### Working Example for Reference
-**PERFECT IMPLEMENTATION**: See [hamfinkdemo.html](inklet/hamfinkdemo.html) for working INK engine integration
-- Uses real `inkjs.Compiler()` and `story.Continue()` properly  
-- Handles conditional syntax like `{variable: text}` correctly
-- Demonstrates proper FINK loading with sandbox pattern
-- Shows how to merge external FINK content with local INK source
+### STOP TRYING TO START HTTP SERVERS
+- User always arranges their own HTTP server setup
+- Don't run `python -m http.server` or similar commands
+- Focus on the code implementation, not server management
 
-### Implementation Priority
-**URGENT**: Users see broken syntax in stories. This breaks immersion completely.
-**NEXT SESSION**: Must implement real INK compilation or disable conditional content entirely.
+## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
+
+**CRITICAL**: FINK .js files are NOT standard JavaScript modules!
+
+- **Read glitchcanary.md** for full explanation of FINK architecture and syntax
+- .fink.js files contain `oooOO`...`` template literal calls (not wrapped in functions)
+- Sandbox iframe provides the `oooOO` function and executes the .js via script injection
+- Content extraction works via JavaScript execution, NOT text parsing
+- INK tags like `# IMAGE:`, `# FINK:`, `# BASEHREF:` are legitimate extensions

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>FINK Player v5 - Modular</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Real INK compiler integration -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+    
+    <!-- Modular JS files -->
+    <script src="fink-utils.js"></script>
+    <script src="fink-config.js"></script>
+    <script src="fink-sandbox.js"></script>
+    <script src="fink-ink-engine.js"></script>
+    <script src="fink-ui.js"></script>
+    <script src="fink-player.js"></script>
+    
+    <link rel="stylesheet" href="fink-player.css">
+</head>
+<body>
+    <div class="app-container" id="app-container">
+        <div class="menu-trigger" id="menu-trigger"></div>
+        <div class="title-bar" id="title-bar">
+            <h1 id="story-title">FINK Player v5</h1>
+            <div class="controls">
+                <button class="fullscreen-button" id="fullscreen-button">📺</button>
+                <button class="menu-button" id="menu-button">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="url-form" id="url-form">
+            <input type="text" id="fink-url-input" value="toc-simple.fink.js" placeholder="Enter URL of .fink.js file">
+            <input type="text" id="media-path-input" value="villaged/" placeholder="Media assets directory">
+            <button id="load-fink-button">Load Story</button>
+        </div>
+        
+        <div class="story-container">
+            <div class="image-container" id="image-container">
+                <img id="story-image" alt="Story scene" class="hidden">
+                <video id="story-video" loop muted playsinline class="hidden"></video>
+                <div class="image-overlay"></div>
+                <button class="choice-toggle" id="choice-toggle" title="Toggle choices">👁️</button>
+                <button class="fullscreen-toggle" id="fullscreen-toggle" title="Fullscreen">⛶</button>
+            </div>
+            
+            <div class="story-content" id="story-content-container">
+                <div id="story"></div>
+            </div>
+        </div>
+        
+        <div class="choices-container" id="choices-container">
+            <!-- Choices will be added here dynamically -->
+        </div>
+        
+        <div class="status-overlay" id="status-overlay">
+            <div id="status">
+                <div class="status-spinner"></div>
+                <div id="status-text">Loading story...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden sandbox iframe for loading fink.js files -->
+    <iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
+
+    <!-- Debug console -->
+    <div id="debug-console"></div>
+    <button id="debug-toggle">DEBUG</button>
+</body>
+</html>

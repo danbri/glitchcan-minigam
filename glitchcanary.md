@@ -31,6 +31,40 @@ The idea has gone through several mutations but common themes are:
 
 AI is not mandatory for fInk authoring but opens up possibilities; and experimenting here gives a mostly harmless venue for people to explore what this overhyped and yet extraordinary technology really amounts to.
 
+## FINK Technical Architecture
+
+**FINK = "FOAFy Ink"** - JavaScript-wrapped INK content for dynamic web loading.
+
+### File Structure
+FINK files (.fink.js) are executable JavaScript containing template literals:
+```javascript
+oooOO`
+-> main_menu
+
+=== main_menu ===
+# IMAGE: peaceful_sunset.png
+Welcome to the story!
+
++ [Start] -> beginning
+`
+```
+
+### Execution Model
+1. **Sandbox iframe**: Creates isolated execution environment with `oooOO` function
+2. **Script injection**: .fink.js file loaded via `<script>` tag in sandbox
+3. **Template literal capture**: `oooOO` function captures INK content from template literal
+4. **Content extraction**: Pure INK content sent back to main page for compilation
+5. **INK compilation**: Real ink-full.js compiler processes the extracted content
+
+### Key Points
+- **NOT text parsing**: Content extracted via JavaScript execution, not regex
+- **Template literals**: `oooOO` is a JavaScript tagged template function
+- **Legitimate tags**: `# IMAGE:`, `# FINK:`, `# BASEHREF:` are proper INK extensions
+- **Security**: Sandbox isolation prevents cross-origin issues
+- **Dynamic loading**: Stories can reference and load other FINK stories at runtime
+
+This approach allows readable INK syntax while enabling web-native dynamic loading.
+
 ## Code and prototypes
 
 The code is messy, often hacked up on phone by blabbing at Claude.ai, Gemini or ChatGPT. You'll see a few arcade/retro minigame prototypes. The most important is probably gamgam, which tries to integrate the ink-full game engine and compiler with other stuff. Right now you can find examples where Fink files contain videos, images, ... no sounds yet. There are examples in which an Ink story is directly embedded in a webapp "player" including [Hampstead](https://danbri.github.io/glitchcan-minigam/inklet/hampstead1.fink.js) (a social climbing adventure), and some test files with bits of [Hobbit](https://danbri.github.io/glitchcan-minigam/inklet/bagend1.fink.js) and [jungle adventure](https://danbri.github.io/glitchcan-minigam/inklet/jungle2.fink.js) situations flung together sloppily.

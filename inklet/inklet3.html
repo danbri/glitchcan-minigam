@@ -7,6 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Add ink-full.js for proper INK compilation -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+    
     <style>
         :root {
             --primary: #6d28d9;
@@ -943,6 +947,10 @@
         let isNavigatingFromHistory = false;
         let pendingFinkFile = null; // For handling FINK: references
         
+        // INK engine variables
+        let inkStory = null; // The compiled INK story instance
+        let useInkEngine = false; // Feature flag to enable ink-full.js gradually
+        
         // Sandbox communication
         let activeSandbox = null;
         let sandboxTimeout = null;
@@ -1113,6 +1121,14 @@
             debugToggle = document.getElementById('debug-toggle');
             
             debugLog('Initializing FINK player...');
+            
+            // Check URL parameters for INK engine flag
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('useink') === 'true') {
+                useInkEngine = true;
+                debugLog('INK engine enabled via URL parameter');
+            }
+            
             loadFinkButton.addEventListener('click', loadFinkStory);
             menuButton.addEventListener('click', toggleUrlForm);
             endRestartButton.addEventListener('click', restartStory);
@@ -1440,7 +1456,11 @@
                                 const script = document.createElement('script');
                                 
                                 script.onload = () => {
-                                    parent.postMessage({ type: 'fink-loaded', data: window.finkData, url: scriptUrl }, '*');
+                                    // Convert any non-string items to strings and ensure we have content
+                                    const dataStrings = window.finkData.map(item => 
+                                        typeof item === 'string' ? item : String(item)
+                                    ).filter(item => item && item.trim().length > 0);
+                                    parent.postMessage({ type: 'fink-loaded', data: dataStrings, url: scriptUrl }, '*');
                                 };
                                 
                                 script.onerror = () => {
@@ -1490,6 +1510,51 @@
             }
         }
         
+        // Extract pure INK content from FINK and compile with ink-full.js
+        function extractAndCompileInk(finkContent) {
+            try {
+                // Extract the pure INK content between oooOO` markers
+                const inkMatch = finkContent.match(/oooOO`\s*([\s\S]*?)\s*`/);
+                if (!inkMatch) {
+                    debugLog('No INK content found in FINK markers');
+                    return null;
+                }
+                
+                let pureInkContent = inkMatch[1];
+                debugLog('Extracted INK content length: ' + pureInkContent.length);
+                
+                // Convert FINK tags to proper INK tag syntax if needed
+                // BASEHREF:, IMAGE:, and FINK: are legitimate INK tags - keep them as-is
+                // Just clean up extra whitespace
+                pureInkContent = pureInkContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+                
+                debugLog('Cleaned INK content for compilation:');
+                debugLog(pureInkContent.substring(0, 200) + '...');
+                
+                // Compile with ink-full.js
+                if (typeof inkjs === 'undefined') {
+                    debugLog('ink-full.js not loaded, falling back to manual parsing');
+                    return null;
+                }
+                
+                const compiler = new inkjs.Compiler(pureInkContent);
+                const compiledStory = compiler.Compile();
+                
+                if (compiledStory) {
+                    debugLog('✅ INK compilation successful');
+                    return new inkjs.Story(compiledStory);
+                } else {
+                    debugLog('❌ INK compilation failed');
+                    return null;
+                }
+                
+            } catch (error) {
+                debugLog('INK compilation error: ' + error.message);
+                console.error('INK compilation error:', error);
+                return null;
+            }
+        }
+        
         // Parse the FINK content into our internal format (same as inklet2.html)
         function parseInkStory(content) {
             storyKnots = {};
@@ -1497,6 +1562,19 @@
             
             debugLog('Starting to parse FINK story content');
             debugLog('Content length: ' + content.length);
+            
+            // Try to compile with ink-full.js first
+            const compiledInkStory = extractAndCompileInk(content);
+            if (compiledInkStory && useInkEngine) {
+                debugLog('Using INK engine for story processing');
+                inkStory = compiledInkStory;
+                // TODO: Convert INK story to our knot format for compatibility
+                // For now, continue with manual parsing but log that we have INK available
+                debugLog('INK story compiled successfully, but using manual parsing for compatibility');
+            } else {
+                debugLog('Using manual FINK parsing');
+                inkStory = null;
+            }
             
             // Store original mediaBasePath to restore later
             const originalMediaBasePath = mediaBasePath;
@@ -1653,6 +1731,20 @@
                         knot.image = imagePath;
                         console.log("Found image:", imagePath);
                     }
+                } else if (trimmedLine.startsWith('~')) {
+                    // Parse variable assignment: ~ variable = value (ignore comments)
+                    const varMatch = trimmedLine.match(/~\s*(\w+)\s*([\+\-\*\/]?)=?\s*([^\/]*)(?:\/\/.*)?$/);
+                    if (varMatch) {
+                        const variable = varMatch[1];
+                        const operation = varMatch[2] || '=';
+                        const value = varMatch[3].trim();
+                        
+                        if (value) { // Only process if there's a value
+                            knot.variables.push({ variable, operation, value });
+                            console.log("Found variable assignment:", variable, operation, value);
+                        }
+                    }
+                    // Don't add this line to text - it's a variable assignment
                 } else if (trimmedLine.startsWith('+') || trimmedLine.startsWith('*')) {
                     // Parse INK choice syntax: + [choice text] -> target or + [choice text]
                     let choiceText = trimmedLine.substring(1).trim();
@@ -1732,8 +1824,8 @@
         
         // All other functions remain the same as inklet2.html
         function chooseEmoji(choiceText) {
-            // Extract emoji from the choice text if present
-            const emojiMatch = choiceText.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+            // Extract emoji from the choice text if present (including composite emojis)
+            const emojiMatch = choiceText.match(/[\u{1F600}-\u{1F64F}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F300}-\u{1F5FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F680}-\u{1F6FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F1E0}-\u{1F1FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{2600}-\u{26FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{2700}-\u{27BF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*/u);
             if (emojiMatch) {
                 return emojiMatch[0];
             }
@@ -1779,6 +1871,13 @@
             }
             
             debugLog('Knot data - text lines: ' + knot.text.length + ', choices: ' + knot.choices.length + ', image: ' + (knot.image || 'none'));
+            
+            // Apply variable modifications from this knot
+            if (knot.variables && knot.variables.length > 0) {
+                knot.variables.forEach(varMod => {
+                    applyVariableModification(varMod);
+                });
+            }
             
             storyElement.classList.add('fading');
             
@@ -1934,8 +2033,8 @@
             
             choices.forEach((choice, index) => {
                 const emoji = chooseEmoji(choice.text);
-                // Remove emoji from text to avoid duplication
-                const cleanText = choice.text.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+                // Remove emoji from text to avoid duplication (including composite emojis)
+                const cleanText = choice.text.replace(/[\u{1F600}-\u{1F64F}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F300}-\u{1F5FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F680}-\u{1F6FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{1F1E0}-\u{1F1FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{2600}-\u{26FF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*|[\u{2700}-\u{27BF}][\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}]*/gu, '').trim();
                 
                 const choiceEl = document.createElement('div');
                 const choiceNumber = Math.min(index + 1, 3);

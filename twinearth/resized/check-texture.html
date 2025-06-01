@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .image-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: white;
+        }
+        img {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Basic Texture Access Test</h1>
+    <p>This page tests whether the browser can access the texture files directly.</p>
+    
+    <div class="image-container">
+        <h2>color_map.jpg (direct access)</h2>
+        <p>Status: <span id="status1">Checking...</span></p>
+        <img src="color_map.jpg" alt="Earth Color Map" 
+             onload="document.getElementById('status1').textContent = 'SUCCESS! Image loaded correctly.';
+                     document.getElementById('status1').className = 'success';"
+             onerror="document.getElementById('status1').textContent = 'ERROR! Image failed to load.';
+                     document.getElementById('status1').className = 'error';">
+    </div>
+
+    <div class="image-container">
+        <h2>../color_map.jpg (parent directory access)</h2>
+        <p>Status: <span id="status2">Checking...</span></p>
+        <img src="../color_map.jpg" alt="Earth Color Map (Parent Dir)" 
+             onload="document.getElementById('status2').textContent = 'SUCCESS! Image loaded correctly.';
+                     document.getElementById('status2').className = 'success';"
+             onerror="document.getElementById('status2').textContent = 'ERROR! Image failed to load.';
+                     document.getElementById('status2').className = 'error';">
+    </div>
+
+    <h2>Texture Information</h2>
+    <ul>
+        <li><strong>color_map.jpg</strong>: JPEG map of Earth with continents and oceans</li>
+        <li><strong>bump.jpg</strong>: Height map for terrain</li>
+        <li><strong>clouds.png</strong>: Cloud layer (transparent PNG)</li>
+        <li><strong>night_lights.jpg</strong>: City lights visible at night</li>
+        <li><strong>spec_mask.jpg</strong>: Specular reflection mask</li>
+    </ul>
+
+    <h2>Server Directory Structure Check</h2>
+    <p>Press the button to check server directory structure:</p>
+    <button onclick="checkDirectoryStructure()">Check Directory Structure</button>
+    <pre id="directoryOutput">Results will appear here...</pre>
+
+    <script>
+        async function checkDirectoryStructure() {
+            const output = document.getElementById('directoryOutput');
+            output.textContent = "Checking...";
+            
+            try {
+                // Try to fetch a directory listing (note: this may not work depending on server configuration)
+                const response = await fetch('.');
+                const text = await response.text();
+                
+                // Simple regex to extract links from directory listing
+                const links = text.match(/<a[^>]*>([^<]+)<\/a>/g) || [];
+                const files = links.map(link => {
+                    const match = link.match(/<a[^>]*>([^<]+)<\/a>/);
+                    return match ? match[1] : '';
+                }).filter(Boolean);
+                
+                if (files.length > 0) {
+                    output.textContent = "Files found in current directory:\n" + files.join('\n');
+                } else {
+                    output.textContent = "Could not get directory listing. Server may not support directory indexes.";
+                }
+                
+                // Also try to fetch the texture file directly and report if successful
+                try {
+                    const textureResponse = await fetch('color_map.jpg');
+                    if (textureResponse.ok) {
+                        const contentType = textureResponse.headers.get('content-type');
+                        const contentLength = textureResponse.headers.get('content-length');
+                        
+                        output.textContent += "\n\nSuccessfully fetched color_map.jpg:\n" + 
+                            `Content-Type: ${contentType}\n` +
+                            `Size: ${Math.round(contentLength / 1024)} KB`;
+                    } else {
+                        output.textContent += "\n\nFailed to fetch color_map.jpg: " + 
+                            `HTTP ${textureResponse.status} ${textureResponse.statusText}`;
+                    }
+                } catch (fetchError) {
+                    output.textContent += "\n\nError fetching texture: " + fetchError.message;
+                }
+                
+            } catch (error) {
+                output.textContent = "Error checking directory: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
