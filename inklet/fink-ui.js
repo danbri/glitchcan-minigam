@@ -68,17 +68,28 @@ window.FinkUI = {
         document.addEventListener('touchmove', (e) => this.handleTouchMove(e));
         document.addEventListener('touchend', (e) => this.handleTouchEnd(e));
         
-        // Choice click handling
+        // Choice click handling - both mouse and touch
         document.addEventListener('click', (e) => {
             const choiceEl = e.target.closest('.choice');
             if (choiceEl && !this.animationInProgress) {
                 const index = parseInt(choiceEl.dataset.index);
-                const callback = choiceEl.dataset.callback;
-                if (callback && window[callback]) {
-                    this.handleChoiceClick({currentTarget: choiceEl}, index, window[callback]);
+                const actualCallback = choiceEl._callback;
+                if (actualCallback) {
+                    this.handleChoiceClick({currentTarget: choiceEl}, index, actualCallback);
                 }
             }
         });
+        
+        // Story menu controls
+        const storyRestart = document.getElementById('story-restart');
+        const storyBookmark = document.getElementById('story-bookmark');
+        const storyGotoBookmark = document.getElementById('story-goto-bookmark');
+        const openDevtools = document.getElementById('open-devtools');
+        
+        if (storyRestart) storyRestart.addEventListener('click', () => FinkPlayer.restartStory());
+        if (storyBookmark) storyBookmark.addEventListener('click', () => FinkPlayer.bookmarkCurrentKnot());
+        if (storyGotoBookmark) storyGotoBookmark.addEventListener('click', () => FinkPlayer.gotoBookmarkedKnot());
+        if (openDevtools) openDevtools.addEventListener('click', () => FinkUtils.toggleDebugConsole());
         
         // Debug console
         const debugToggle = document.getElementById('debug-toggle');
@@ -104,9 +115,14 @@ window.FinkUI = {
             choiceEl.dataset.index = i;
             choiceEl.dataset.callback = 'tempChoiceCallback'; // Will be replaced with actual callback
             
-            choiceEl.innerHTML = 
-                '<div class="choice-emoji">' + emoji + '</div>' +
-                '<div class="choice-text-label">' + FinkUtils.escapeHtml(cleanText) + '</div>';
+            choiceEl.innerHTML = `
+                <div class="choice-emoji">${emoji}</div>
+                <svg class="choice-label-svg" width="100%" height="40">
+                    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+                          class="choice-label-text" stroke="black" stroke-width="3" fill="black">${FinkUtils.escapeHtml(cleanText)}</text>
+                    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+                          class="choice-label-text" fill="white">${FinkUtils.escapeHtml(cleanText)}</text>
+                </svg>`;
             
             // Store the callback for this choice
             choiceEl._callback = onChoiceCallback;
@@ -221,9 +237,15 @@ window.FinkUI = {
                 imageToShow = tag.replace(/^IMAGE:\s*/, '').trim();
                 FinkUtils.debugLog('Found IMAGE tag: ' + imageToShow);
             } else if (tag.includes('BASEHREF:')) {
-                newBasePath = tag.replace(/.*BASEHREF:\\s*/, '').trim();
+                newBasePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                // Remove quotes if present
+                if ((newBasePath.startsWith('"') && newBasePath.endsWith('"')) || 
+                    (newBasePath.startsWith("'") && newBasePath.endsWith("'"))) {
+                    newBasePath = newBasePath.slice(1, -1);
+                }
+                FinkUtils.debugLog('BASEHREF extracted raw: "' + newBasePath + '"');
                 if (!newBasePath.endsWith('/')) newBasePath += '/';
-                FinkUtils.debugLog('Found BASEHREF tag: ' + newBasePath);
+                FinkUtils.debugLog('BASEHREF final: "' + newBasePath + '"');
             }
         });
         
@@ -231,6 +253,8 @@ window.FinkUI = {
             FinkPlayer.mediaBasePath = newBasePath;
             FinkUtils.debugLog('Updated mediaBasePath to: ' + FinkPlayer.mediaBasePath);
         }
+        
+        FinkUtils.debugLog('Current mediaBasePath before image: ' + FinkPlayer.mediaBasePath);
         
         if (imageToShow) {
             FinkUtils.debugLog('Showing image from INK tags: ' + imageToShow);
@@ -243,11 +267,15 @@ window.FinkUI = {
     updateImage(imagePath) {
         if (!imagePath) return;
         
+        FinkUtils.debugLog('updateImage called with: "' + imagePath + '"');
+        FinkUtils.debugLog('FinkPlayer.mediaBasePath is: "' + FinkPlayer.mediaBasePath + '"');
+        FinkUtils.debugLog('typeof FinkPlayer.mediaBasePath: ' + typeof FinkPlayer.mediaBasePath);
+        
         this.elements.storyImage.classList.add('hidden');
         this.elements.imageContainer.classList.remove('hidden');
         
         const actualImagePath = FinkPlayer.mediaBasePath + imagePath;
-        FinkUtils.debugLog('Loading image: ' + actualImagePath);
+        FinkUtils.debugLog('Constructed actualImagePath: "' + actualImagePath + '"');
         
         const img = new Image();
         img.onload = () => {

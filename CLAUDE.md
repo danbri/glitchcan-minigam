@@ -3,12 +3,84 @@
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.
 
-## Development Commands
-- **Run local server:** `python -m http.server 8000` (or `npx serve`)
-- **Open game in browser:** http://localhost:8000/glitchcan-minigam/thumbwar/thumbwar.html
+## FINK Player v5 - MAJOR MILESTONE ACHIEVED ✅
+**Status: Production Ready with Real INK Engine**
+
+### What Was Accomplished (June 2025):
+- ✅ **Replaced manual INK parsing with real ink-full.js compiler** 
+- ✅ **Working external FINK story loading via secure iframe sandbox**
+- ✅ **Modular JavaScript architecture** (6 separate modules for maintainability)
+- ✅ **Successful Hampstead adventure playthrough** with score tracking & variables
+- ✅ **Table of contents navigation system** working end-to-end
+- ✅ **Choice text labels visible and functional** (no more emoji-only choices)
+- ✅ **GitHub Pages deployment** at https://danbri.github.io/glitchcan-minigam/inklet/inklet5.html
+
+### Critical Files:
+- `inklet/inklet5.html` - Modular FINK Player (PRODUCTION)
+- `inklet/fink-*.js` - Modular JavaScript components
+- `inklet/toc-simple.fink.js` - Working table of contents
+- `inklet/hampstead1.fink.js` - Full adventure tested with real INK engine
+
+### LESSON LEARNED - UI vs Engine Trade-off:
+While achieving perfect INK engine functionality, we lost visual polish from inklet2.html:
+- **Lost**: Vibrant colors, larger emojis, smooth animations, floating restart button
+- **Gained**: Real INK parsing, external loading, modular architecture, debug tools
+
+### Next Steps - UI Enhancement Plan:
+1. **PRIORITY**: Restore visual polish WITHOUT breaking INK engine
+2. **APPROACH**: Incremental changes, test after each modification
+3. **SAFETY**: Keep inklet5.html as backup, create inklet6.html for experiments
+
+## CRITICAL ADMONISHMENTS FOR FUTURE DEVELOPMENT
+
+### ⚠️ NEVER AGAIN:
+1. **DO NOT break the real INK engine** - inklet5.html uses ink-full.js compiler, NOT manual parsing
+2. **DO NOT use regex to parse INK syntax** - let the real compiler handle it
+3. **DO NOT modify the modular JavaScript architecture** without extreme care
+4. **DO NOT change external FINK loading system** - it works via secure iframe sandbox
+5. **DO NOT assume UI changes are "safe"** - test Hampstead playthrough after EVERY change
+
+### ✅ SAFE UI RESTORATION STRATEGY:
+**Phase 1: Colors & Sizes (Low Risk)**
+- Copy vibrant color scheme from inklet2.html: `--choice-left: #f43f5e` etc.
+- Increase emoji size: `font-size: 4rem` (from 2.5rem)
+- Increase choice height: `--choice-height: 25vh` (from 18vh)
+- **Test**: Full Hampstead playthrough after each change
+
+**Phase 2: Animations (Medium Risk)**  
+- Add floating restart button with `@keyframes float`
+- Enhance loading animation with bouncing dots
+- Improve expanding choice animation
+- **Test**: Choice clicking and navigation after each change
+
+**Phase 3: Polish (Higher Risk)**
+- Add fullscreen CSS support
+- Enhance touch gesture handling
+- Mobile-specific improvements
+- **Test**: Cross-device compatibility
+
+### 🛡️ MANDATORY TESTING PROTOCOL:
+After ANY UI change, verify:
+1. TOC loads and displays properly
+2. "Games" → "Hampstead" → "Begin Urban Adventure" works
+3. Hampstead adventure plays through completion (8/8 score)
+4. Choice text labels are visible (not just emojis)
+5. External FINK loading triggers correctly
+6. Debug console shows no JavaScript errors
+
+### 📋 REGRESSION PREVENTION:
+- **Keep inklet5.html untouched** as known-good baseline
+- **Work incrementally** on inklet6.html
+- **Commit frequently** with detailed descriptions
+- **Test on both local and GitHub Pages** before proceeding
+
+## Development Commands (Suggested)
+These are suggestions - you may prefer to run servers in your own tab/process:
+- **Run local server:** `python -m http.server 8080` (or `npx serve -p 8080`)
+- **Open game in browser:** http://localhost:8080/thumbwar/thumbwar.html
 - **Hard reload (bust cache):** `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac)
-- **Validate HTML:** `npx html-validate glitchcan-minigam/**/*.html`
-- **JS Linting:** `npx eslint glitchcan-minigam/**/*.html --ext .html`
+- **Validate HTML:** `npx html-validate **/*.html`
+- **JS Linting:** `npx eslint **/*.html --ext .html`
 - **Spectro-specific commands:** `cd spectro && npm install && npm start` (runs http-server)
 
 ## Code Style
