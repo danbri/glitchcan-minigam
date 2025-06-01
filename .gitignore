@@ -1,1 +1,16 @@
 .aider*
+
+# Python virtual environments
+.venv/
+*/.venv/
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
