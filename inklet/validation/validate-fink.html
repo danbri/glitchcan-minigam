@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINK Validator</title>
+    
+    <!-- Load ink-full.js from local vendor directory as module -->
+    <script type="module">
+        import * as inkjs from './vendor/ink-full.mjs';
+        window.inkjs = inkjs;
+        console.log('INK library loaded:', !!window.inkjs);
+    </script>
+    
+    <!-- Load existing FINK modules from parent directory -->
+    <script src="../fink-config.js"></script>
+    <script src="../fink-utils.js"></script>
+    <script src="../fink-sandbox.js"></script>
+    <script src="../fink-ui.js"></script>
+    <script src="../fink-ink-engine.js"></script>
+</head>
+<body>
+    <div id="validation-status">FINK Validator Ready</div>
+    
+    <!-- Minimal DOM elements required by FinkUI -->
+    <div id="story"></div>
+    <div id="choices-container"></div>
+    <div id="status-overlay">
+        <div id="status-text"></div>
+    </div>
+    
+    <script>
+        // Global validation function for Puppeteer access
+        window.validateFinkContent = async function(finkContent, fileName = 'unknown') {
+            try {
+                console.log(`Validating FINK content from ${fileName}`);
+                console.log(`Content length: ${finkContent.length} characters`);
+                
+                // Initialize FINK components if needed
+                if (!window.FinkUtils) {
+                    throw new Error('FINK modules not loaded properly');
+                }
+                
+                // Skip FinkUI initialization for validation - we only need the engine
+                
+                // Use existing FINK engine to compile and validate
+                const validationResult = {
+                    fileName: fileName,
+                    success: false,
+                    errors: [],
+                    warnings: [],
+                    extractedInkLength: 0,
+                    compilationOutput: null
+                };
+                
+                // Capture debug output
+                const originalLog = console.log;
+                const originalError = console.error;
+                const capturedLogs = [];
+                const capturedErrors = [];
+                
+                console.log = (...args) => {
+                    capturedLogs.push(args.join(' '));
+                    originalLog.apply(console, args);
+                };
+                
+                console.error = (...args) => {
+                    capturedErrors.push(args.join(' '));
+                    originalError.apply(console, args);
+                };
+                
+                try {
+                    // Direct INK compilation for validation (bypass UI dependencies)
+                    if (typeof inkjs === 'undefined') {
+                        throw new Error('INK library not available');
+                    }
+                    
+                    // Execute FINK content directly to extract INK
+                    let extractedInk = '';
+                    
+                    // Create temporary oooOO function to capture content
+                    window.oooOO = function(strings, ...values) {
+                        extractedInk = strings.join('');
+                        return extractedInk;
+                    };
+                    
+                    // Execute the FINK JavaScript content
+                    eval(finkContent);
+                    
+                    // Clean up
+                    delete window.oooOO;
+                    
+                    if (!extractedInk) {
+                        throw new Error('No INK content extracted from FINK');
+                    }
+                    
+                    validationResult.extractedInkLength = extractedInk.length;
+                    
+                    // Compile extracted INK content
+                    const compiler = new inkjs.Compiler(extractedInk);
+                    
+                    if (compiler.errors && compiler.errors.length > 0) {
+                        validationResult.errors = compiler.errors.slice();
+                        validationResult.success = false;
+                    } else {
+                        const story = compiler.Compile();
+                        validationResult.success = true;
+                        
+                        // Test story execution
+                        const testOutput = [];
+                        let safety = 0;
+                        while (story.canContinue && safety < 100) {
+                            testOutput.push(story.Continue().trim());
+                            safety++;
+                        }
+                        validationResult.compilationOutput = testOutput.join('\n');
+                    }
+                    
+                } catch (compileError) {
+                    validationResult.success = false;
+                    validationResult.errors.push(compileError.message);
+                }
+                
+                // Restore console functions
+                console.log = originalLog;
+                console.error = originalError;
+                
+                // Add captured logs to result
+                validationResult.debugLogs = capturedLogs;
+                validationResult.errorLogs = capturedErrors;
+                
+                return validationResult;
+                
+            } catch (error) {
+                return {
+                    fileName: fileName,
+                    success: false,
+                    errors: [error.message],
+                    warnings: [],
+                    extractedInkLength: 0,
+                    compilationOutput: null,
+                    debugLogs: [],
+                    errorLogs: [error.message]
+                };
+            }
+        };
+        
+        // Signal that validator is ready
+        window.validatorReady = true;
+        console.log('FINK Validator ready for Puppeteer access');
+    </script>
+</body>
+</html>

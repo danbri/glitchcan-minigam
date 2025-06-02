@@ -279,6 +279,12 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 - **NEVER parse it with regex** - that breaks the entire JavaScript execution
 - **USE THE SANDBOX APPROACH** - inject script tags into safe iframe to execute the .fink.js files
 
+### FINK Script Injection Technique (JSONP-like with Template Literals)
+- **FINK uses script tags injected into iframe** to fetch content - JSONP-like technique with tagged template literal syntax
+- **DO NOT wrap oooOO in function calls** - script injection makes function wrapping pointless
+- **Direct template literal execution** - oooOO`` calls execute directly when script loads
+- **Content extraction via callback** - sandbox iframe provides oooOO function to capture content
+
 ### Working Implementation Reference
 - **hamfinkdemo.html** (or similar in inklet/ folder) shows the CORRECT approach
 - Uses iframe sandbox with script injection to safely execute .fink.js files

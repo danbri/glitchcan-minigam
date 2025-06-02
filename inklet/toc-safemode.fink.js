@@ -1,4 +1,4 @@
-window.finkData.push(oooOO`
+oooOO`
 -> main_menu
 
 === main_menu ===
@@ -23,4 +23,4 @@ The Hobbit adventure begins.
 
 + [Start] -> main_menu
 + [Back] -> games_menu
-`);
+`
