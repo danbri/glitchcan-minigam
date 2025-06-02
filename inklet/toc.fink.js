@@ -1,4 +1,4 @@
-window.finkData.push(oooOO`
+oooOO`
 // Table of Contents - FINK Story Collection
 // Main menu for navigating between different FINK stories
 
@@ -104,4 +104,4 @@ Technical documentation for authoring FINK stories, integrating multimedia asset
 + [🔧 View Documentation] -> help_menu
 + [🎨 Asset Integration] -> help_menu
 + [📖 Story Structure Guide] -> help_menu
-`);
+`
