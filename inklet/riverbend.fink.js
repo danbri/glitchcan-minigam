@@ -27,20 +27,20 @@ Years pass. You become a beloved member of Riverbend, your initial curiosity for
 -> END
 
 === follow_whispers ===
-# IMAGE: elara_listening_wind.png
+# IMAGE: elara_looking_for_clues.png
 Intrigued by the rumors, you decide to pay closer attention to the "whispers on the wind." You notice hushed conversations among some villagers, fleeting glances exchanged, and a general air of secrecy beneath the surface of everyday life.
 
 + [Try to eavesdrop on these hushed conversations.] -> eavesdrop
 + [Investigate the old mill that several people mentioned in hushed tones.] -> mill_direct
 
 === eavesdrop ===
-# IMAGE: elara_hiding.png
+# IMAGE: elara_reading_inscription.png
 You discreetly try to listen in on groups of villagers talking. Their voices often drop to a murmur, and they tend to stop talking or change the subject when you approach. You catch fragmented phrases: "...the flow must be maintained...", "...the balance...", "...not for outsiders..."
 
 + [Investigate the old mill that several people mentioned in hushed tones.] -> mill_direct
 
 === mill_direct ===
-# IMAGE: elara_searching.png
+# IMAGE: elara_searching_details.png
 You approach the old mill with determination. The structure looms before you, its broken wheel silent and still. Vines have claimed much of the stonework, and several windows are boarded up or broken entirely.
 
 + [Try the main door.] -> main_door

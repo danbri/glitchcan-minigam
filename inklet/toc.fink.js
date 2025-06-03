@@ -72,7 +72,7 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 === jungle_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: jungle.fink.js
+# FINK: mudslidemines.fink.js
 
 Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only.
 

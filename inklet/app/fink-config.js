@@ -5,7 +5,7 @@ window.FinkConfig = {
     
     // Default paths
     DEFAULT_MEDIA_PATH: '',
-    DEFAULT_FINK_FILE: 'toc.fink.js',
+    DEFAULT_FINK_FILE: '../toc.fink.js',
     
     // Choice emoji mapping
     emojiMap: {
