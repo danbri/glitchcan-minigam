@@ -17,3 +17,5 @@ danbri@tincan:~/working/glitchcan-minigam/inklet/validation$ find ..  -name \*.f
 ../bagend1.fink.js
 ../toc-safemode.fink.js
 ../test-variables.fink.js
+
+ node --enable-source-maps checkfink.mjs ../riverbend.fink.js
