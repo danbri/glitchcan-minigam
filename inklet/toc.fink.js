@@ -10,9 +10,13 @@ oooOO`
 
 === main_menu ===
 
-# IMAGE: riverbend/peaceful_sunset.png
+Enter the Finkiverse. Everything isn't here yet.
 
-Welcome to the FINK Collection! Choose your path to discover interactive stories, educational experiences, and helpful resources.
+// Nothing works properly yet. Episodes are Ink-based (and .fink.js distributed); Minigames are potential in-game widgets for the story-based chapters. This will only make sense to the curious.
+
+# IMAGE: coverart/GLITCHCAN_IMG_1461.JPEG
+
+
 
 + [Episodes] -> episodes_menu
 + [Minigames] -> minigames_menu
