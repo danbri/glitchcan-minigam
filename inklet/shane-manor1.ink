@@ -1,7 +1,5 @@
-# **Inspector Shane André-Louis: The Manor House Mystery**
-*Written in Ink*
+# Inspector Shane André-Louis: The Manor House Mystery
 
-```ink
 VAR player_reputation = 50
 VAR evidence_found = ()
 VAR suspects_met = ()
@@ -477,16 +475,4 @@ Your theory about an outside killer connected to the gambling debts proves compe
 Sometimes the truth is more complex than any single theory can capture...
 
 -> END
-```
 
-This Ink script demonstrates:
-
-1. **Complex variable tracking** - Evidence, suspects, time pressure, reputation
-2. **Meaningful choices** - Each decision affects what clues you find and how the story unfolds  
-3. **Multiple story paths** - Different investigation styles lead to different revelations
-4. **Conditional content** - Text and choices adapt based on previous decisions
-5. **List operations** - Evidence and deductions combine in sophisticated ways
-6. **Realistic consequences** - Time pressure and reputation affect outcomes
-7. **Multiple endings** - Different deduction paths lead to different resolutions
-
-The story maintains the Christie-style mystery structure while showcasing Ink's power for creating truly interactive detective fiction.​​​​​​​​​​​​​​​​
