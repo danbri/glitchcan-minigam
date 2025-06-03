@@ -1,7 +1,13 @@
+# BASEHREF: media/
+
+
+
 -> intro
 
 === intro ===
-[[Image: village_overview.png]]
+
+# IMAGE: villaged/village_overview.png
+
 The village of Riverbend nestled beside its namesake river, seems peaceful. Smoke curls from chimney pots, children laugh in the square, and the gentle murmur of the water fills the air. But Riverbend holds a secret, a carefully guarded piece of knowledge passed down through generations: the Whisperwind ATM.
 
 You are Elara, a newcomer to Riverbend, drawn by the quiet charm. However, whispers on the wind speak of something more... something extraordinary hidden within the seemingly ordinary.
