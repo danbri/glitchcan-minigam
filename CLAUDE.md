@@ -47,6 +47,96 @@ While achieving perfect INK engine functionality, we lost visual polish from ink
 3. **DO NOT modify the modular JavaScript architecture** without extreme care
 4. **DO NOT change external FINK loading system** - it works via secure iframe sandbox
 5. **DO NOT assume UI changes are "safe"** - test Hampstead playthrough after EVERY change
+6. **NEVER DELETE USER FILES WITHOUT EXPLICIT PERMISSION** - Always ask before removing ANY file, even duplicates. User work has value and history that must be preserved.
+
+## CONTENT-CENTRIC PATH RESOLUTION IMPLEMENTATION (June 2025)
+
+### Problem:
+FINK files were resolving paths relative to the app location (/app/) rather than relative to the story file location (/inklet/). This made stories less portable and required stories to "know" where they'd be loaded from.
+
+### Solution:
+Implement content-centric resolution where BASEHREF and FINK paths resolve relative to the story file's location, similar to ES6 modules.
+
+### Implementation Steps:
+1. **Track story file URLs** - Store the URL of the currently loaded story
+2. **Modify path resolution** - Resolve BASEHREF relative to story location, not app location
+3. **Update FINK loading** - Resolve cross-story FINK paths relative to current story
+4. **Preserve fallbacks** - Keep app-centric defaults when no story context exists
+
+### Risk Assessment: MEDIUM
+- **Risk**: Could break existing stories if they depend on app-centric paths
+- **Mitigation**: Careful testing of TOC → story loading chain
+- **Rollback**: Revert path resolution changes if stories break
+
+### Implementation Progress - PIVOT TO LAYERED BASE RESOLUTION:
+- ❌ **Previous approach**: Content-centric resolution too complex
+- ✅ **New approach**: Layered base resolution for environment flexibility
+
+### Layered Base Resolution Strategy:
+1. **Global Media Base** (environment config) → overrides everything
+2. **Story BASEHREF** (story-specific paths) → relative to global base or story location  
+3. **Fallback** (no config) → resolve relative to FINK file location
+
+### Implementation Steps:
+- ✅ **Step 1**: Created `resolveLayeredMediaUrl()` helper in FinkUtils
+- ✅ **Step 2**: Updated image resolution to use layered approach
+- ✅ **Step 3**: Added global media base configuration support via form
+- ✅ **Step 4**: Successfully tested - TOC, Bagend, Hampstead, Mudslidemines all working
+- ⏳ **Step 5**: Add INK runtime error handling for Ukrainian/Help menu failures
+
+### Bug Fixes Applied:
+- **Issue 1**: Double `media/` in path - was passing processed BASEHREF to layered resolver
+- **Fix 1**: Now pass raw BASEHREF directly to `resolveLayeredMediaUrl()` 
+- **Issue 2**: Raw BASEHREF not being passed correctly to updateImage
+- **Fix 2**: Use `newBasePath` from current processing instead of stored value
+- **Issue 3**: Global media base `../media/` causing "Invalid base URL" error  
+- **Fix 3**: Resolve global media base relative to current page location
+- **Issue 4**: BASEHREF not being detected from story-level tags
+- **Fix 4**: Added fallback to extract BASEHREF directly from raw FINK content using regex
+- **Issue 5**: Dual configuration system (form + config) causing complexity
+- **Fix 5**: **MAJOR SIMPLIFICATION** - Removed form fields entirely, use only fink-config.js
+- **Issue 6**: Absolute BASEHREF paths not handled correctly in layered resolution
+- **Fix 6**: Added proper absolute vs relative path detection in layered resolution
+- **Issue 7**: JavaScript errors from missing form element references
+- **Fix 7**: Removed form element references and event listeners
+- **Issue 8**: Missing null checks causing addEventListener errors on missing elements
+- **Fix 8**: Added null checks for all element references in event listener setup
+- **Issue 9**: Media base URL missing trailing slash causing incorrect path resolution
+- **Fix 9**: Ensure BASEHREF always ends with `/` for proper URL directory resolution
+
+### MAJOR SIMPLIFICATION COMPLETE:
+- ❌ **Removed**: Form fields, dual configuration complexity
+- ✅ **Single source**: fink-config.js only
+- ✅ **Cleaner code**: No form element references
+
+### LAYERED PATH RESOLUTION SUCCESS! ✅
+
+**Status Update:**
+- ✅ **TOC**: Images loading correctly
+- ✅ **Bagend**: Working properly  
+- ✅ **Hampstead**: Text works, needs better default image
+- ✅ **Mudslidemines**: Working correctly
+- ❌ **Ukrainian**: Runtime error - needs investigation
+- ❌ **Help menu**: Runtime error - needs investigation
+
+### TODO - HIGH PRIORITY:
+1. **Add INK Runtime Error Handler** - Implement `story.onError` callback for better error reporting
+2. **Debug Ukrainian story** - Investigate runtime error in language learning content
+3. **Debug Help menu** - Fix runtime error in help/dev guide section
+4. **Improve Hampstead image** - Replace placeholder with appropriate story image
+
+### Debug Notes:
+- TOC loaded from: /app/ with URL ../toc.fink.js  
+- Expected currentStoryUrl: http://localhost:8080/inklet/toc.fink.js
+- BASEHREF: media/ should resolve to: http://localhost:8080/inklet/media/
+- Actual result: http://localhost:8080/media/ (missing /inklet/)
+
+### Testing Protocol:
+- ⏳ TOC loads from app correctly
+- ⏳ Stories load from TOC correctly  
+- ⏳ Images display from story-relative paths
+- ⏳ Cross-story navigation works
+- ⏳ Hampstead playthrough completes
 
 ### ✅ SAFE UI RESTORATION STRATEGY:
 **Phase 1: Colors & Sizes (Low Risk)**
