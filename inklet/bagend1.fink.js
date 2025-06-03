@@ -5,7 +5,7 @@ oooOO`
 
 // Start the player at Bag End
 
-# BASEHREF: media/
+# BASEHREF: media/hobbit/
 
 -> Bag_End
 
@@ -109,8 +109,18 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
 
 {troll_status == "stone": With treasure in your pockets and a map to guide you, you've proven yourself a true burglar. The cave no longer seems so frightening.}
 {troll_status == "alive": The cave remains dangerous while the trolls are active. Best to leave quickly.}
-+ [Return to the trolls] -> {troll_status == "stone": Troll_Clearing_Dawn | Troll_Clearing}
++ [Return to the trolls]
+    -> return_to_trolls
 + [Head back to Hobbiton with your treasure] -> Victorious_Return
+
+=== return_to_trolls ===
+{troll_status == "stone":
+    -> Troll_Clearing_Dawn
+}
+{troll_status != "stone":
+    -> Troll_Clearing
+}
+
 
 === Victorious_Return ===
 

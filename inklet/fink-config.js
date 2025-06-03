@@ -4,8 +4,8 @@ window.FinkConfig = {
     SANDBOX_TIMEOUT_MS: 15000,
     
     // Default paths
-    DEFAULT_MEDIA_PATH: 'villaged/',
-    DEFAULT_FINK_FILE: 'toc-simple.fink.js',
+    DEFAULT_MEDIA_PATH: '',
+    DEFAULT_FINK_FILE: 'toc.fink.js',
     
     // Choice emoji mapping
     emojiMap: {

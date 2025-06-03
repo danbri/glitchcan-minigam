@@ -1,5 +1,7 @@
 oooOO`
 
+# BASEHREF: media/
+
 // --- Variables ---
 VAR score = 0
 VAR jeans_worn = false
