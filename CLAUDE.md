@@ -223,6 +223,7 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 - **Validate HTML:** `npx html-validate **/*.html`
 - **JS Linting:** `npx eslint **/*.html --ext .html`
 - **Spectro-specific commands:** `cd spectro && npm install && npm start` (runs http-server)
+- maybe useful?: imagemagick libimage-exiftool-perl webp ffmpeg
 
 ## Code Style
 - **HTML:** Semantic elements, accessibility attributes, responsive viewport meta
