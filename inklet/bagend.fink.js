@@ -11,7 +11,9 @@ oooOO`
 
 === Bag_End ===
 
-# IMAGE: bag_end_exterior.svg
+// # IMAGE: bag_end_exterior.svg
+# IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+
 
 You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. Gandalf the wizard sits smoking a pipe.
 + [Talk to Gandalf] -> Talk_To_Gandalf

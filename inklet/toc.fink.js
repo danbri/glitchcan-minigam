@@ -51,7 +51,8 @@ This is where things might be documented, eventually.
 
 === hobbit_selected ===
 
-# IMAGE: bagend/bag_end_exterior.png
+# IMAGE: coverart/bagend_splash_imag_9453.jpeg
+
 # FINK: ../bagend.fink.js
 
 Bag End
@@ -63,7 +64,8 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 
 === hampstead_selected ===
 
-# IMAGE: glitchcan-grey-portrait-web.jpg
+# IMAGE: coverart/hamstead_img_9432.jpeg
+
 # FINK: ../hampstead.fink.js
 
 Hampstead
