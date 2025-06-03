@@ -106,37 +106,85 @@ After ANY UI change, verify:
 
 **Priority:** Focus on actively used FINK files first (TOC, Hampstead, Jungle)
 
-## FINK Validator Specification
+## FINK Validation & Audit System - COMPLETE IMPLEMENTATION
 
-### Requirements
-**Usage:** `node validate-fink.js my-episode.fink.js`
+### ✅ Phase 1: COMPLETED - Basic Validation
+**Tools:** `checkfink.mjs`, `validate-fink-puppeteer.mjs`, `validate-fink.html`
+- ✅ Unified validator supporting .ink, .json, .fink.js files
+- ✅ Puppeteer-based browser execution (no regex hackery)
+- ✅ Repository scanning with --scan flag
+- ✅ Real ink-full.js compilation and validation
+- ✅ Exit codes for CI/CD integration
 
-**Core Functionality:**
-1. **Extract INK content** from current version and last committed git version using template literal execution (oooOO function)
-2. **Compile both versions** using real ink-full.js compiler to catch syntax errors
-3. **Report diff on basic metrics** like knot count, choice count, tag usage between versions
-4. **Detect regressions** where compilation breaks (was working in git, now fails)
-5. **For new files:** report basic stats only (no git comparison)
-6. **Validate proper FINK structure** and INK tag syntax
+### 🚧 Phase 2: IN PROGRESS - Rich Audit Dashboard
+**Mission:** Create non-technical HTML dashboard at https://danbri.github.io/glitchcan-minigam/fink-audit/
 
-### Technical Implementation
-- **MUST use real ink-full.js** loaded from CDN cache in vendor/ directory
-- **MUST use template literal execution** to extract INK from FINK (no string manipulation)
-- **MUST use ink-full.js Compiler()** for validation (no hackparsing)
-- **MUST use Story API** for tag extraction and analysis
-- **Exit code 1** when compilation regressions detected
-- **No npm packages** - pure Node.js with vendored ink-full.js
+#### Step 1: Enhance checkfink.mjs with Rich Metrics
+Add `--report` flag to generate detailed analysis:
+- **Story Structure**: knot count, choice count, external flow references
+- **Content Metrics**: word count, character count, estimated reading time
+- **INK Features**: variables used, tags present, conditional logic complexity
+- **FINK Extensions**: IMAGE tags, MENU tags, BASEHREF usage
+- **Quality Metrics**: unreachable knots, dead ends, branching factor
+- **Output**: Structured JSON data for dashboard consumption
 
-### Purpose
-- **Identify legacy pseudo-INK files** that need rebuilding with real INK syntax
-- **Follow "commit if it looks ok" validation workflow**
-- **Catch compilation failures** before they reach production
-- **Track structural improvements** when converting legacy files
+#### Step 2: Create fink-audit/ Folder Structure
+```
+fink-audit/
+├── index.html          ← Main dashboard with summary cards
+├── detailed.html       ← Per-file detailed breakdowns
+├── assets/
+│   ├── dashboard.css   ← Mobile-friendly styling
+│   └── charts.js       ← Visualization library integration
+└── data/
+    └── audit-data.json ← Generated metrics from checkfink.mjs
+```
 
-### Absolutely Forbidden
-- Manual parsing of INK content with regex
-- String manipulation instead of proper INK compilation
-- Any approach that doesn't use real ink-full.js Compiler
+#### Step 3: HTML Dashboard Features
+- **Summary Cards**: Total files, pass/fail counts, overall health score
+- **File Status Grid**: Visual indicators for each FINK file (✅❌⚠️)
+- **Metrics Tables**: Sortable data with knot counts, word counts, complexity
+- **Trend Tracking**: Historical data comparison if implemented
+- **Mobile-Responsive**: Non-technical audience accessibility
+- **Direct Links**: Jump to problematic files for debugging
+
+#### Step 4: GitHub Action Automation
+```yaml
+name: FINK Audit Dashboard
+on: [push, pull_request, schedule: daily]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - checkout code
+      - run FINK audit with rich metrics
+      - generate HTML dashboard from JSON
+      - commit dashboard to fink-audit/ folder
+      - deploy via GitHub Pages
+```
+
+#### Step 5: Integration & Documentation
+- Add link from main site index.html to audit dashboard
+- Update README with audit system explanation
+- Add CLAUDE.md section on dashboard maintenance
+
+### Known Issues to Address
+- **3 Broken Files Identified**: bagend1.fink.js, test-variables.fink.js, toc.fink.js
+- **Status**: TO BE DISCUSSED (separate from dashboard implementation)
+
+### Technical Requirements (Maintained)
+- **MUST use real ink-full.js** compiler (no regex parsing)
+- **MUST use Puppeteer browser execution** for FINK files
+- **MUST generate mobile-friendly HTML** for non-technical users
+- **MUST integrate with existing GitHub Pages** setup without disruption
+- **MUST provide actionable insights** for content creators
+
+### Success Criteria
+1. Dashboard accessible at https://danbri.github.io/glitchcan-minigam/fink-audit/
+2. Automatic updates via GitHub Actions on repo changes
+3. Clear visual indicators of FINK file health and metrics
+4. Non-technical users can assess content quality at a glance
+5. Zero disruption to existing GitHub Pages site
 
 ## FINK Player v6 TODO List
 
