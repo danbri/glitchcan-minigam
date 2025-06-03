@@ -1,5 +1,7 @@
 oooOO`
 
+-> start
+
 VAR correct_answers = 0
 
 === start ===

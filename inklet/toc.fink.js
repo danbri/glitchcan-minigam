@@ -1,40 +1,41 @@
 oooOO`
 
 # MENU: 🏠 Main Menu -> main_menu
-# MENU: 🎮 Game Selection -> games_menu
-# MENU: 📚 Learning Hub -> learn_menu
+# MENU: 🎮 Episodes -> episodes_menu
+# MENU: 📚 Minigames -> minigames_menu
 
 # BASEHREF: media/
 
 -> main_menu
 
 === main_menu ===
-# IMAGE: villaged/peaceful_sunset.png
+
+# IMAGE: riverbend/peaceful_sunset.png
+
 Welcome to the FINK Collection! Choose your path to discover interactive stories, educational experiences, and helpful resources.
 
-+ [Games] -> games_menu
-+ [Learn] -> learn_menu  
++ [Episodes] -> episodes_menu
++ [Minigames] -> minigames_menu
 + [Help] -> help_menu
 
-=== games_menu ===
-# IMAGE: glitchcan-grey-portrait-web.jpg
-Games
+=== episodes_menu ===
 
-Choose your adventure! Each game offers a unique interactive experience with rich storytelling and meaningful choices.
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Choose your adventure! Each episode is half-finished in a different way.
 
 + [Bagend] -> hobbit_selected
 + [Hampstead] -> hampstead_selected
-+ [Mudslide Mines] -> jungle_selected
++ [Mudslide Mines] -> mudslidemines_selected
 + [Riverbend] -> riverbend_selected
 
-=== learn_menu ===
+=== minigames_menu ===
+
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
-
-Educational interactive content designed to teach through engaging, story-driven experiences.
+Minigames and experiments, eventually for integration into story-based episodes.
 
 + [Ukrainian Language] -> ukrainian_selected
-+ [Developer Guide] -> dev_guide_selected
 
 === help_menu ===
 
@@ -46,14 +47,16 @@ FINK stories are JavaScript-based interactive fiction that can load external con
 
 This is where things might be documented, eventually.
 
++ [Developer Guide] -> dev_guide_selected
+
 === hobbit_selected ===
 
 # IMAGE: bagend/bag_end_exterior.png
-# FINK: bagend.fink.js
+# FINK: ../bagend.fink.js
 
 Bag End
 
-A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure. Explore the hobbit-hole, meet the dwarves, and begin a journey that will take you far from the comfortable Shire.
+A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure.
 
 
 + [enter Bag End] -> external_story
@@ -61,7 +64,7 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 === hampstead_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: hampstead.fink.js
+# FINK: ../hampstead.fink.js
 
 Hampstead
 
@@ -69,10 +72,10 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 
 + [enter Hampstead] -> external_story
 
-=== jungle_selected ===
+=== mudslidemines_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: mudslidemines.fink.js
+# FINK: ../mudslidemines.fink.js
 
 Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only.
 
@@ -81,7 +84,7 @@ Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer
 === riverbend_selected ===
 
 # IMAGE: riverbend/village_overview.png
-# FINK: riverbend.fink.js
+# FINK: ../riverbend.fink.js
 
 Riverbend - Village Mystery
 
@@ -92,7 +95,7 @@ Discover the secrets of a chocolate-box-perfect village where greed and jealousy
 === ukrainian_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: tml-2025-langlearn.fink.js
+# FINK: ../tml-2025-langlearn.fink.js
 
 Ukrainian Language Learning
 

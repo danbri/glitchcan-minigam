@@ -55,5 +55,74 @@ window.FinkUtils = {
             this.debugLog('Error resolving URL: ' + url + ' (base: ' + base + ')');
             return url;
         }
+    },
+    
+    // Layered media URL resolution - environment-flexible approach
+    resolveLayeredMediaUrl(storyBasehref, imagePath) {
+        this.debugLog('=== Layered Media Resolution ===');
+        this.debugLog('Story BASEHREF: "' + (storyBasehref || '(none)') + '"');
+        this.debugLog('Image path: "' + imagePath + '"');
+        
+        // Step 1: Determine the effective media base
+        const globalMediaBase = FinkPlayer.globalMediaBase; // From config or form
+        const currentStoryUrl = FinkPlayer.currentStoryUrl;
+        
+        let effectiveBase;
+        if (globalMediaBase) {
+            // Resolve global media base relative to current page if it's relative
+            try {
+                effectiveBase = new URL(globalMediaBase, window.location.href).href;
+                this.debugLog('Resolved global media base: ' + effectiveBase);
+            } catch (e) {
+                this.debugLog('Error resolving global media base, falling back to story location');
+                effectiveBase = currentStoryUrl ? new URL('.', currentStoryUrl).href : window.location.href;
+            }
+        } else if (currentStoryUrl) {
+            effectiveBase = new URL('.', currentStoryUrl).href; // Directory of story file
+            this.debugLog('Using story directory as base: ' + effectiveBase);
+        } else {
+            effectiveBase = window.location.href;
+            this.debugLog('Fallback to current page base: ' + effectiveBase);
+        }
+        
+        // Step 2: Handle absolute vs relative BASEHREF
+        let storyMediaBase = storyBasehref || 'media/';
+        // Ensure trailing slash for directory URLs
+        if (!storyMediaBase.endsWith('/')) {
+            storyMediaBase += '/';
+        }
+        this.debugLog('Processing storyMediaBase: "' + storyMediaBase + '"');
+        this.debugLog('Is absolute path: ' + (storyMediaBase.startsWith('/') || storyMediaBase.includes('://')));
+        
+        let mediaBaseUrl;
+        try {
+            if (storyMediaBase.startsWith('http://') || storyMediaBase.startsWith('https://')) {
+                // Full URL - use as-is
+                mediaBaseUrl = storyMediaBase;
+                this.debugLog('Using full URL as-is: ' + mediaBaseUrl);
+            } else if (storyMediaBase.startsWith('/')) {
+                // Absolute path - construct with current origin
+                mediaBaseUrl = new URL(storyMediaBase, window.location.origin).href;
+                this.debugLog('Absolute path resolved: ' + mediaBaseUrl);
+            } else {
+                // Relative path - resolve against effective base
+                mediaBaseUrl = new URL(storyMediaBase, effectiveBase).href;
+                this.debugLog('Relative path resolved: ' + mediaBaseUrl);
+            }
+        } catch (e) {
+            this.debugLog('Error resolving media base, using fallback: ' + e.message);
+            mediaBaseUrl = effectiveBase + storyMediaBase;
+        }
+        
+        // Step 3: Resolve image path relative to media base
+        try {
+            const finalUrl = new URL(imagePath, mediaBaseUrl).href;
+            this.debugLog('Final image URL: ' + finalUrl);
+            this.debugLog('=== End Resolution ===');
+            return finalUrl;
+        } catch (e) {
+            this.debugLog('Error resolving final image URL: ' + e.message);
+            return mediaBaseUrl + imagePath; // Simple concatenation fallback
+        }
     }
 };

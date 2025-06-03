@@ -20,9 +20,7 @@ window.FinkUI = {
             choicesContainer: document.getElementById('choices-container'),
             statusOverlay: document.getElementById('status-overlay'),
             statusText: document.getElementById('status-text'),
-            finkUrlInput: document.getElementById('fink-url-input'),
-            mediaPathInput: document.getElementById('media-path-input'),
-            loadFinkButton: document.getElementById('load-fink-button'),
+            // Form inputs removed - using config-based loading
             storyImage: document.getElementById('story-image'),
             storyVideo: document.getElementById('story-video'),
             imageContainer: document.getElementById('image-container'),
@@ -31,7 +29,7 @@ window.FinkUI = {
             fullscreenToggle: document.getElementById('fullscreen-toggle'),
             menuButton: document.getElementById('menu-button'),
             fullscreenButton: document.getElementById('fullscreen-button'),
-            urlForm: document.getElementById('url-form'),
+            // urlForm removed - using config-based loading
             storyTitle: document.getElementById('story-title')
         };
         
@@ -40,29 +38,35 @@ window.FinkUI = {
     },
     
     setupEventListeners() {
-        // Menu and form controls
-        this.elements.loadFinkButton.addEventListener('click', () => FinkPlayer.loadFinkStory());
-        this.elements.menuButton.addEventListener('click', () => this.toggleUrlForm());
-        this.elements.fullscreenButton.addEventListener('click', () => this.toggleFullscreen());
-        this.elements.choiceToggle.addEventListener('click', () => this.toggleChoices());
-        this.elements.fullscreenToggle.addEventListener('click', () => this.toggleImageFullscreen());
+        // Menu controls (form removed) - with null checks
+        if (this.elements.fullscreenButton) {
+            this.elements.fullscreenButton.addEventListener('click', () => this.toggleFullscreen());
+        }
+        if (this.elements.choiceToggle) {
+            this.elements.choiceToggle.addEventListener('click', () => this.toggleChoices());
+        }
+        if (this.elements.fullscreenToggle) {
+            this.elements.fullscreenToggle.addEventListener('click', () => this.toggleImageFullscreen());
+        }
         
-        // Menu trigger
-        this.elements.menuTrigger.addEventListener('mouseenter', () => {
-            this.elements.appContainer.classList.add('show-menu');
-        });
+        // Menu trigger - with null checks
+        if (this.elements.menuTrigger) {
+            this.elements.menuTrigger.addEventListener('mouseenter', () => {
+                this.elements.appContainer.classList.add('show-menu');
+            });
+            this.elements.menuTrigger.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (this.elements.titleBar) {
+                    this.elements.titleBar.classList.toggle('visible');
+                }
+            });
+        }
         
-        this.elements.titleBar.addEventListener('mouseleave', () => {
-            if (!this.elements.urlForm.classList.contains('active')) {
+        if (this.elements.titleBar) {
+            this.elements.titleBar.addEventListener('mouseleave', () => {
                 this.elements.appContainer.classList.remove('show-menu');
-            }
-        });
-        
-        this.elements.menuTrigger.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.elements.titleBar.classList.toggle('visible');
-        });
-        
+            });
+        }
         // Touch handling
         document.addEventListener('touchstart', (e) => this.handleTouchStart(e));
         document.addEventListener('touchmove', (e) => this.handleTouchMove(e));
@@ -249,33 +253,36 @@ window.FinkUI = {
             }
         });
         
+        // Store both processed (for backwards compatibility) and raw BASEHREF
         if (newBasePath) {
-            FinkPlayer.mediaBasePath = newBasePath;
+            FinkPlayer.mediaBasePath = newBasePath; // Processed (with trailing slash)
+            FinkPlayer.rawBasehref = newBasePath.replace(/\/$/, ''); // Raw (no trailing slash)
             FinkUtils.debugLog('Updated mediaBasePath to: ' + FinkPlayer.mediaBasePath);
+            FinkUtils.debugLog('Raw BASEHREF stored: ' + FinkPlayer.rawBasehref);
         }
-        
-        FinkUtils.debugLog('Current mediaBasePath before image: ' + FinkPlayer.mediaBasePath);
         
         if (imageToShow) {
             FinkUtils.debugLog('Showing image from INK tags: ' + imageToShow);
-            this.updateImage(imageToShow);
+            // Use the newBasePath from current processing, or fall back to stored mediaBasePath
+            const currentRawBasehref = newBasePath ? newBasePath.replace(/\/$/, '') : 
+                                     (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+            FinkUtils.debugLog('Using BASEHREF for image: "' + (currentRawBasehref || 'none') + '"');
+            this.updateImage(imageToShow, currentRawBasehref);
         } else {
             FinkUtils.debugLog('No IMAGE tag found in current position');
         }
     },
     
-    updateImage(imagePath) {
+    updateImage(imagePath, rawBasehref) {
         if (!imagePath) return;
         
-        FinkUtils.debugLog('updateImage called with: "' + imagePath + '"');
-        FinkUtils.debugLog('FinkPlayer.mediaBasePath is: "' + FinkPlayer.mediaBasePath + '"');
-        FinkUtils.debugLog('typeof FinkPlayer.mediaBasePath: ' + typeof FinkPlayer.mediaBasePath);
+        FinkUtils.debugLog('updateImage called with: "' + imagePath + '", rawBasehref: "' + (rawBasehref || 'none') + '"');
         
         this.elements.storyImage.classList.add('hidden');
         this.elements.imageContainer.classList.remove('hidden');
         
-        const actualImagePath = FinkPlayer.mediaBasePath + imagePath;
-        FinkUtils.debugLog('Constructed actualImagePath: "' + actualImagePath + '"');
+        // Use layered media resolution: global base → story BASEHREF → image path
+        const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
         
         const img = new Image();
         img.onload = () => {
@@ -360,10 +367,7 @@ window.FinkUI = {
         }
     },
     
-    toggleUrlForm() {
-        this.elements.titleBar.classList.add('visible');
-        this.elements.urlForm.classList.toggle('active');
-    },
+    // toggleUrlForm removed - no longer needed without form
     
     // Touch handling
     touchStartY: 0,

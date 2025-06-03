@@ -1,6 +1,8 @@
 // FINK Player - Main coordination module
 window.FinkPlayer = {
     mediaBasePath: FinkConfig.DEFAULT_MEDIA_PATH,
+    currentStoryUrl: null, // Track currently loaded story URL for layered resolution
+    globalMediaBase: null, // Global media base for environment-specific deployment
     
     // Initialize the player
     init() {
@@ -11,44 +13,43 @@ window.FinkPlayer = {
         
         FinkUtils.debugLog('FINK Player v5 initialized');
         
-        // Auto-load default story if specified
-        const urlInput = document.getElementById('fink-url-input');
-        if (urlInput && urlInput.value) {
-            FinkUtils.debugLog('Auto-loading default FINK URL: ' + urlInput.value);
+        // Auto-load default story from config
+        if (FinkConfig.DEFAULT_FINK_FILE) {
+            FinkUtils.debugLog('Auto-loading default FINK from config: ' + FinkConfig.DEFAULT_FINK_FILE);
             setTimeout(() => {
-                this.loadFinkStory();
+                this.loadFinkStory(FinkConfig.DEFAULT_FINK_FILE);
             }, 100);
         } else {
-            FinkUI.showStatus('Enter a URL to load a FINK story');
+            FinkUI.showStatus('No default story configured');
         }
     },
     
     // Load FINK story
-    async loadFinkStory() {
-        FinkUtils.debugLog('loadFinkStory called');
-        FinkUI.elements.urlForm.classList.remove('active');
+    async loadFinkStory(finkUrl) {
+        FinkUtils.debugLog('loadFinkStory called with: ' + (finkUrl || 'no URL'));
         
-        setTimeout(() => {
-            FinkUI.elements.appContainer.classList.remove('show-menu');
-            FinkUI.elements.titleBar.classList.remove('visible');
-        }, 1000);
-        
-        const finkUrl = FinkUI.elements.finkUrlInput.value.trim();
+        // Use parameter or fall back to config
+        finkUrl = finkUrl || FinkConfig.DEFAULT_FINK_FILE;
         if (!finkUrl) {
-            FinkUI.showStatus('Please enter a URL to a FINK file');
+            FinkUI.showStatus('No FINK file specified');
             return;
         }
         
-        // Update media path
-        const newMediaPath = FinkUI.elements.mediaPathInput.value.trim();
-        if (newMediaPath) {
-            this.mediaBasePath = newMediaPath.endsWith('/') ? newMediaPath : newMediaPath + '/';
+        // Set global media base from config
+        this.globalMediaBase = FinkConfig.DEFAULT_MEDIA_PATH;
+        if (this.globalMediaBase) {
+            FinkUtils.debugLog('Using global media base from config: ' + this.globalMediaBase);
+        } else {
+            FinkUtils.debugLog('No global media base set, will use story-relative paths');
         }
         
         FinkUI.showStatus('Loading story...', true);
         
         try {
-            const content = await FinkSandbox.loadViaSandbox(FinkUtils.resolveUrl(finkUrl));
+            const resolvedUrl = FinkUtils.resolveUrl(finkUrl);
+            this.currentStoryUrl = resolvedUrl; // Store for content-centric resolution
+            FinkUtils.debugLog('Loading story from: ' + resolvedUrl);
+            const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
             FinkInkEngine.compileAndRunStory(content);
         } catch (error) {
             FinkUtils.debugLog('Error loading story: ' + error.message);

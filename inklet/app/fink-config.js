@@ -3,8 +3,8 @@ window.FinkConfig = {
     // Sandbox settings
     SANDBOX_TIMEOUT_MS: 15000,
     
-    // Default paths
-    DEFAULT_MEDIA_PATH: '',
+    // Default paths - simplified, no form fields
+    DEFAULT_MEDIA_PATH: '', // Empty - let stories specify their own BASEHREF
     DEFAULT_FINK_FILE: '../toc.fink.js',
     
     // Choice emoji mapping

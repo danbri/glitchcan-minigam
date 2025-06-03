@@ -97,9 +97,20 @@ window.FinkInkEngine = {
                 this.currentStoryTags = this.extractStoryTagsFromINK();
                 FinkUtils.debugLog('Extracted story tags from INK: ' + JSON.stringify(this.currentStoryTags));
                 
+                // Fallback: extract BASEHREF from raw content if not found in tags
+                if (!this.currentStoryTags.basehref && this.finkStoryContent) {
+                    const basehrefMatch = this.finkStoryContent.match(/# BASEHREF:\s*(.+)/);
+                    if (basehrefMatch) {
+                        this.currentStoryTags.basehref = basehrefMatch[1].trim();
+                        FinkUtils.debugLog('Found BASEHREF in raw content: ' + this.currentStoryTags.basehref);
+                    }
+                }
+                
                 if (this.currentStoryTags.basehref) {
-                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref;
-                    FinkUtils.debugLog('Using BASEHREF from INK: ' + FinkPlayer.mediaBasePath);
+                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ? 
+                                               this.currentStoryTags.basehref : 
+                                               this.currentStoryTags.basehref + '/';
+                    FinkUtils.debugLog('Using BASEHREF from story: ' + FinkPlayer.mediaBasePath);
                 }
                 
                 FinkUI.clearStory();
@@ -236,7 +247,11 @@ window.FinkInkEngine = {
         
         if (!this.story) return tags;
         
-        const allTags = this.story.currentTags || [];
+        // Try to get global tags first, then current tags
+        const globalTags = this.story.globalTags || [];
+        const currentTags = this.story.currentTags || [];
+        const allTags = [...globalTags, ...currentTags];
+        
         FinkUtils.debugLog('Extracting story-level tags from INK: [' + allTags.join(', ') + ']');
         
         allTags.forEach(tag => {
