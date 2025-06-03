@@ -22,9 +22,9 @@ Games
 
 Choose your adventure! Each game offers a unique interactive experience with rich storytelling and meaningful choices.
 
-+ [The Hobbit] -> hobbit_selected
++ [Bagend] -> hobbit_selected
 + [Hampstead] -> hampstead_selected
-+ [Jungle Mystery] -> jungle_selected
++ [Mudslide Mines] -> jungle_selected
 + [Riverbend] -> riverbend_selected
 
 === learn_menu ===
@@ -42,47 +42,45 @@ Educational interactive content designed to teach through engaging, story-driven
 
 Get help with using the FINK system, understanding controls, and troubleshooting common issues.
 
-This system supports rich multimedia experiences with branching narratives and meaningful consequences. Use browser back and forward buttons to navigate history.
-
-Controls: Eye button hides choices for immersive viewing. Fullscreen button enters maximum immersion mode. Settings loads different stories and adjusts media paths.
-
 FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path.
 
+This is where things might be documented, eventually.
+
 === hobbit_selected ===
+
 # IMAGE: hobbit/bag_end_exterior.png
-# FINK: bagend1.fink.js
+# FINK: bagend.fink.js
 
-The Hobbit - Bag End Adventure
+Bag End
 
-A buggy and broken nod to the classic 1982 text adventure. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure. Explore the hobbit-hole, meet the dwarves, and begin a journey that will take you far from the comfortable Shire.
+A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure. Explore the hobbit-hole, meet the dwarves, and begin a journey that will take you far from the comfortable Shire.
 
-Features rich descriptions, character interactions, and puzzle-solving elements faithful to the original game while adding modern storytelling techniques.
 
-+ [Start Adventure] -> external_story
++ [enter Bag End] -> external_story
 
 === hampstead_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: hampstead1.fink.js
+# FINK: hampstead.fink.js
 
-Hampstead - Urban Adventure
+Hampstead
 
-Navigate the challenging social dynamics of 1980s London. A few scenes inspired by the classic 80s game. No imagery.
+Navigate the challenging social dynamics of 1980s London. A few scenes inspired by the classic 80s game. No images.
 
-+ [Enter Hampstead] -> external_story
++ [enter Hampstead] -> external_story
 
 === jungle_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: jungle2.fink.js
+# FINK: jungle.fink.js
 
-Jungle game. A map from a 2D game fed to GPT4o to make 3D. Just a test, nothing to do.
+Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only.
 
-+ [Enter the Jungle] -> external_story
++ [enter Mudslide Mines] -> external_story
 
 === riverbend_selected ===
 
-# IMAGE: villaged/village_overview.png
+# IMAGE: riverbend/village_overview.png
 # FINK: riverbend.fink.js
 
 Riverbend - Village Mystery
