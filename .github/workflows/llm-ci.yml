@@ -1,0 +1,78 @@
+name: LLM checks & auto-exec
+on:
+  push:
+    paths:
+      - '**/*.fink.js'
+      - 'reports/autoexec.bot/*-input.txt'
+
+jobs:
+  llm:
+    runs-on: ubuntu-latest          # 2 vCPU · 7 GB RAM  :contentReference[oaicite:0]{index=0}
+    timeout-minutes: 30             # fail fast on hangs
+    steps:
+    # 1 — check out repo
+    - uses: actions/checkout@v4
+
+    # 2 — reuse build + model if cached
+    - name: Cache llama.cpp + model
+      uses: actions/cache@v4
+      with:
+        key: qwen15-code-7b-${{ runner.os }}
+        path: |
+          ~/.cache/llama
+          ~/llama.cpp
+
+    # 3 — build llama.cpp once (~50 s)
+    - name: Build llama.cpp
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update && sudo apt-get install -y build-essential cmake
+        git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
+        cmake -S ~/llama.cpp -B ~/llama.cpp/build -DLLAMA_BUILD_EXAMPLES=OFF
+        cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+
+    # 4 — download CodeQwen-1.5-7B-Chat Q4-0
+    - name: Fetch model
+      run: |
+        mkdir -p ~/.cache/llama
+        test -f ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf || \
+        wget -q https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen1_5-7b-chat-q4_0.gguf \
+             -O ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf
+
+    # 5 — install Python deps for your LLM test
+    - name: Install Python deps
+      run: pip install -q "ctransformers>=0.3.2"
+
+    # 6 — run your Python review against changed *.fink.js
+    - name: Lint/Test with LLM
+      env:
+        MODEL_PATH: ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf
+      run: python tools/llm_check.py
+
+    # 7 — batch-process any *-input.txt prompts
+    - name: Auto-exec bot
+      env:
+        MODEL: ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf
+      run: |
+        set -euo pipefail
+        BIN=~/llama.cpp/build/bin/llama
+        SYS="<|im_start|>system
+        You are a concise assistant that replies in English.<|im_end|>"
+        shopt -s nullglob
+        for f in reports/autoexec.bot/*-input.txt; do
+          USER="<|im_start|>user
+          $(cat "$f")<|im_end|>"
+          PROMPT="$SYS
+          $USER
+          <|im_start|>assistant"
+          out="${f/-input.txt/-output.txt}"
+          "$BIN" -m "$MODEL" -p "$PROMPT" -n 256 --temp 0.7 > "$out"
+          echo "Generated $out"
+        done
+
+    # 8 — upload outputs as artefact
+    - name: Upload auto-exec outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: autoexec-reports
+        path: reports/autoexec.bot/*-output.txt
