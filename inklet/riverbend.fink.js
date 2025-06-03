@@ -7,7 +7,7 @@ oooOO`
 
 # IMAGE: villaged/village_overview.png
 
-The village of Riverbend nestled beside its namesake river, seems peaceful. Smoke curls from chimney pots, children laugh in the square, and the gentle murmur of the water fills the air. But Riverbend holds a secret, a carefully guarded piece of knowledge passed down through generations: the Whisperwind ATM.
+The village of Riverbend nestled beside its namesake river, seems peaceful. Smoke curls from chimney pots, children laugh in the square, and the gentle murmur of the water fills the air. But Riverbend holds a secret, a carefully guarded piece of knowledge passed down through generations.
 
 You are Elara, a newcomer to Riverbend, drawn by the quiet charm. However, whispers on the wind speak of something more... something extraordinary hidden within the seemingly ordinary.
 
@@ -23,7 +23,7 @@ You decide to embrace the tranquility of Riverbend. Days turn into weeks filled 
 
 === peaceful_life ===
 # IMAGE: villaged/peaceful_sunset.png
-Years pass. You become a beloved member of Riverbend, your initial curiosity forgotten. The secret of the Whisperwind ATM remains undisturbed. You live a happy, if uneventful, life.
+Years pass. You become a beloved member of Riverbend, your initial curiosity forgotten. The secret remains undisturbed. You live a happy, if uneventful, life.
 -> END
 
 === follow_whispers ===
