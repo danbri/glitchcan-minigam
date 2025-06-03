@@ -2,11 +2,12 @@ oooOO`
 # MENU: 🏠 Main Menu -> main_menu
 # MENU: 🎮 Game Selection -> games_menu
 # MENU: 📚 Learning Hub -> learn_menu
+# BASEHREF: media/
 
 -> main_menu
 
 === main_menu ===
-# IMAGE: peaceful_sunset.png
+# IMAGE: ../villaged/peaceful_sunset.png
 Welcome to the FINK Collection! Choose your path to discover interactive stories, educational experiences, and helpful resources.
 
 + [Games] -> games_menu
@@ -14,7 +15,7 @@ Welcome to the FINK Collection! Choose your path to discover interactive stories
 + [Help] -> help_menu
 
 === games_menu ===
-# IMAGE: adventure_path.png
+# IMAGE: glitchcan-grey--portrait.png
 Games
 
 Choose your adventure! Each game offers a unique interactive experience with rich storytelling and meaningful choices.
@@ -22,21 +23,19 @@ Choose your adventure! Each game offers a unique interactive experience with ric
 + [The Hobbit] -> hobbit_selected
 + [Hampstead] -> hampstead_selected
 + [Jungle Mystery] -> jungle_selected
-+ [Back to Main Menu] -> main_menu
 
 === learn_menu ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 Learn
 
 Educational interactive content designed to teach through engaging, story-driven experiences.
 
 + [Ukrainian Language] -> ukrainian_selected
-+ [Fiction Writing Primer] -> fiction_primer_selected
 + [Developer Guide] -> dev_guide_selected
 + [Back to Main Menu] -> main_menu
 
 === help_menu ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 Get help with using the FINK system, understanding controls, and troubleshooting common issues.
 
 This system supports rich multimedia experiences with branching narratives and meaningful consequences. Use browser back and forward buttons to navigate history.
@@ -48,12 +47,12 @@ FINK stories are JavaScript-based interactive fiction that can load external con
 + [Back to Main Menu] -> main_menu
 
 === hobbit_selected ===
-# IMAGE: bag_end_exterior.png
+# IMAGE: ../hobbit/bag_end_exterior.png
 # FINK: bagend1.fink.js
 
 The Hobbit - Bag End Adventure
 
-A tribute to the classic 1982 text adventure. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure. Explore the hobbit-hole, meet the dwarves, and begin a journey that will take you far from the comfortable Shire.
+A buggy and broken nod to the classic 1982 text adventure. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure. Explore the hobbit-hole, meet the dwarves, and begin a journey that will take you far from the comfortable Shire.
 
 Features rich descriptions, character interactions, and puzzle-solving elements faithful to the original game while adding modern storytelling techniques.
 
@@ -61,33 +60,27 @@ Features rich descriptions, character interactions, and puzzle-solving elements 
 + [Back to Games Menu] -> games_menu
 
 === hampstead_selected ===
-# IMAGE: village_overview.png  
+# IMAGE: glitchcan-grey--portrait.png  
 # FINK: hampstead1.fink.js
 
 Hampstead - Urban Adventure
 
-Navigate the challenging social dynamics of 1980s London. Start with nothing but ambition in a grotty bedsit and work your way up through wit, charm, and strategic choices. Can you climb the social ladder to reach the prestigious heights of Hampstead?
-
-This story explores themes of class, ambition, and social mobility through an interactive narrative filled with memorable characters and consequential decisions.
+Navigate the challenging social dynamics of 1980s London. A few scenes inspired by the classic 80s game. No imagery.
 
 + [Begin Urban Adventure] -> external_story
 + [Back to Games Menu] -> games_menu
 
 === jungle_selected ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 # FINK: jungle2.fink.js
 
-Jungle Mystery - Amazon Adventure
-
-Journey deep into the Amazon rainforest where ancient civilizations left behind mysterious artifacts and deadly secrets. Navigate treacherous terrain, decode ancient puzzles, and uncover the truth behind a lost civilization.
-
-Featuring survival elements, environmental storytelling, and choices that affect both your character's fate and the preservation of ancient knowledge.
+Jungle game. A map from a 2D game fed to GPT4o to make 3D. Just a test, nothing to do.
 
 + [Enter the Jungle] -> external_story
 + [Back to Games Menu] -> games_menu
 
 === ukrainian_selected ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 # FINK: tml-2025-langlearn.fink.js
 
 Ukrainian Language Learning
@@ -100,7 +93,7 @@ This educational experience combines language learning with cultural context, he
 + [Back to Learning Menu] -> learn_menu
 
 === fiction_primer_selected ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 
 Interactive Fiction Writing Primer
 
@@ -112,7 +105,7 @@ This comprehensive guide covers everything from basic choice architecture to adv
 + [Back to Learning Menu] -> learn_menu
 
 === dev_guide_selected ===
-# IMAGE: village_overview.png
+# IMAGE: glitchcan-grey--portrait.png
 
 FINK Developer Guide
 
