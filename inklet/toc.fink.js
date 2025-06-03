@@ -48,7 +48,7 @@ This is where things might be documented, eventually.
 
 === hobbit_selected ===
 
-# IMAGE: hobbit/bag_end_exterior.png
+# IMAGE: bagend/bag_end_exterior.png
 # FINK: bagend.fink.js
 
 Bag End
