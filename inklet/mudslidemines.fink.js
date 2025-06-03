@@ -2,12 +2,19 @@ oooOO`
 // Simple Jungle Adventure - Ink Draft
 // Based on GlitchCanary Map and Isometric Images
 
+
+# BASEHREF: media/mudslidemines/
+# IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png
+
+
+
 // Start the player at the crash site
+
 -> Crash_Site_Clearing
 
 === Crash_Site_Clearing ===
-# BASEHREF: media/mudslidemines/
-# IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png
+
+
 You stand amidst the wreckage of a small plane in a jungle clearing. Moss covers twisted metal. Paths lead East and South into the dense foliage.
 + [Go East] -> Overgrown_Path
 + [Go South] -> Dark_Cave
