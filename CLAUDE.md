@@ -125,6 +125,11 @@ Implement content-centric resolution where BASEHREF and FINK paths resolve relat
 3. **Debug Help menu** - Fix runtime error in help/dev guide section
 4. **Improve Hampstead image** - Replace placeholder with appropriate story image
 
+### COMPLETED - NEW FEATURES:
+- ✅ **Return to Main Menu** - Added 🏠 button in dropdown menu to reload TOC without page refresh
+- ✅ **Splash Image Fix** - Fixed IMAGE+FINK tag conflicts by splitting into separate knots
+- ✅ **Menu Placeholder Functions** - Added restart/bookmark stubs for future implementation
+
 ### Debug Notes:
 - TOC loaded from: /app/ with URL ../toc.fink.js  
 - Expected currentStoryUrl: http://localhost:8080/inklet/toc.fink.js
