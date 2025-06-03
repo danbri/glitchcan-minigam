@@ -1,4 +1,4 @@
-# Inspector Shane André-Louis: The Manor House Mystery
+// Inspector Shane André-Louis: The Manor House Mystery
 
 VAR player_reputation = 50
 VAR evidence_found = ()
