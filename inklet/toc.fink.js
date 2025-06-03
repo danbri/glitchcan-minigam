@@ -1,7 +1,9 @@
 oooOO`
+
 # MENU: 🏠 Main Menu -> main_menu
 # MENU: 🎮 Game Selection -> games_menu
 # MENU: 📚 Learning Hub -> learn_menu
+
 # BASEHREF: media/
 
 -> main_menu
@@ -85,9 +87,7 @@ Jungle game. A map from a 2D game fed to GPT4o to make 3D. Just a test, nothing 
 
 Riverbend - Village Mystery
 
-Discover the secrets of a peaceful village where whispers carry more than just gossip. Follow Elara as she uncovers the mysterious Whisperwind ATM hidden beneath the surface of rural tranquility.
-
-A classic adventure of discovery, choice, and consequence with beautiful illustrated scenes throughout the journey.
+Discover the secrets of a chocolate-box-perfect village where greed and jealousy bind neighbours together in a conspiracy of silence.
 
 + [Enter Riverbend] -> external_story
 
@@ -102,20 +102,8 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons an
 
 + [Enter Language demo] -> external_story
 
-=== fiction_primer_selected ===
-
-# IMAGE: glitchcan-grey-portrait-web.jpg
-
-Interactive Fiction Writing Primer
-
-Learn the fundamentals of interactive storytelling, narrative design, and FINK authoring. Explore branching narratives, character development, and world-building techniques used in modern interactive fiction.
-
-This comprehensive guide covers everything from basic choice architecture to advanced narrative techniques, with practical exercises and examples from successful interactive fiction works.
-
-+ [Start Learning] -> help_menu
-+ [Back to Learning Menu] -> learn_menu
-
 === dev_guide_selected ===
+
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
 FINK Developer Guide
