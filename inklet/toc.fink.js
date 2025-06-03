@@ -52,6 +52,7 @@ FINK stories are JavaScript-based interactive fiction that can load external con
 This is where things might be documented, eventually.
 
 + [Developer Guide] -> dev_guide_selected
++ [Shane Manor Mystery (testing)] -> shane_manor_selected
 
 === hobbit_selected ===
 
@@ -117,6 +118,17 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons an
 FINK Developer Guide
 
 Does not exist.
+
+=== shane_manor_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+# FINK: ../shane-manor.fink.js
+
+Shane Manor Mystery
+
+A test story for debugging and demonstrating FINK functionality. This is primarily for development testing.
+
++ [Enter Shane Manor] -> external_story
 
 === external_story ===
 Loading external story...
