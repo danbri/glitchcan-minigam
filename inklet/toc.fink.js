@@ -13,8 +13,8 @@ oooOO`
 Enter the Finkiverse. Everything isn't here yet.
 
 // Nothing works properly yet. Episodes are Ink-based (and .fink.js distributed); Minigames are potential in-game widgets for the story-based chapters. This will only make sense to the curious.
-
-# IMAGE: coverart/GLITCHCAN_IMG_1461.JPEG
+// big file, # IMAGE: coverart/GLITCHCAN_IMG_1461.JPEG
+# IMAGE: coverart/glitchcan-cover-medium.jpg
 
 
 
