@@ -6,16 +6,14 @@ node --enable-source-maps checkfink.mjs --max-lines 5 ../riverbend.ink
 danbri@tincan:~/working/glitchcan-minigam/inklet/validation$ find ..  -name \*.ink
 ../riverbend.ink
 
-These aren't yet checkable do to the js wrapper:
+find .  -name \*.fink.js
+./toc.fink.js
+./riverbend.fink.js
+./validation/tests/test-variables.fink.js
+./jungle2.fink.js
+./tml-2025-langlearn.fink.js
+./hampstead1.fink.js
+./bagend1.fink.js
 
-danbri@tincan:~/working/glitchcan-minigam/inklet/validation$ find ..  -name \*.fink.js
-../toc-simple.fink.js
-../toc.fink.js
-../jungle2.fink.js
-../tml-2025-langlearn.fink.js
-../hampstead1.fink.js
-../bagend1.fink.js
-../toc-safemode.fink.js
-../test-variables.fink.js
 
  node --enable-source-maps checkfink.mjs ../riverbend.fink.js
