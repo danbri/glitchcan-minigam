@@ -1,3 +1,5 @@
+
+oooOO`
 // Inspector Shane André-Louis: The Manor House Mystery
 
 VAR player_reputation = 50
@@ -476,3 +478,4 @@ Sometimes the truth is more complex than any single theory can capture...
 
 -> END
 
+`

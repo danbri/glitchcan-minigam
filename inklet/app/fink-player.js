@@ -55,6 +55,30 @@ window.FinkPlayer = {
             FinkUtils.debugLog('Error loading story: ' + error.message);
             FinkUI.showStatus(`Error: ${error.message}`);
         }
+    },
+    
+    // Return to main menu (reload TOC)
+    returnToMainMenu() {
+        FinkUtils.debugLog('Returning to main menu...');
+        FinkUI.showStatus('Loading main menu...', true);
+        this.loadFinkStory(FinkConfig.DEFAULT_FINK_FILE);
+    },
+    
+    // Restart current story (placeholder - needs implementation)
+    restartStory() {
+        FinkUtils.debugLog('Restart story not yet implemented');
+        FinkUI.showStatus('Restart feature coming soon!');
+    },
+    
+    // Bookmark functionality (placeholder - needs implementation)  
+    bookmarkCurrentKnot() {
+        FinkUtils.debugLog('Bookmark feature not yet implemented');
+        FinkUI.showStatus('Bookmark feature coming soon!');
+    },
+    
+    gotoBookmarkedKnot() {
+        FinkUtils.debugLog('Go to bookmark not yet implemented');
+        FinkUI.showStatus('Bookmark feature coming soon!');
     }
 };
 

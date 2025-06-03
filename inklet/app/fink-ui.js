@@ -86,11 +86,13 @@ window.FinkUI = {
         
         // Story menu controls
         const storyRestart = document.getElementById('story-restart');
+        const returnToMain = document.getElementById('return-to-main');
         const storyBookmark = document.getElementById('story-bookmark');
         const storyGotoBookmark = document.getElementById('story-goto-bookmark');
         const openDevtools = document.getElementById('open-devtools');
         
         if (storyRestart) storyRestart.addEventListener('click', () => FinkPlayer.restartStory());
+        if (returnToMain) returnToMain.addEventListener('click', () => FinkPlayer.returnToMainMenu());
         if (storyBookmark) storyBookmark.addEventListener('click', () => FinkPlayer.bookmarkCurrentKnot());
         if (storyGotoBookmark) storyGotoBookmark.addEventListener('click', () => FinkPlayer.gotoBookmarkedKnot());
         if (openDevtools) openDevtools.addEventListener('click', () => FinkUtils.toggleDebugConsole());
