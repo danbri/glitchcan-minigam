@@ -11,6 +11,8 @@
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.
 
+**Current Issues**: See [shane_todo.md](shane_todo.md) for detailed analysis of Shane Manor FINK story compilation problems.
+
 ## FINK Player v5 - MAJOR MILESTONE ACHIEVED ✅
 **Status: Production Ready with Real INK Engine**
 
