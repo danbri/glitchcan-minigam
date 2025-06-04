@@ -22,7 +22,7 @@ TAXI DRIVER: Nasty business, this. Lord Pemberton seemed a decent sort.
 * [Question the driver about local gossip]
     ~ player_reputation += 2
     ANDRÉ-LOUIS: What's the word in the village about the family?
-    DRIVER: Young Master Charles has been about more lately. Money troubles, they say. And there's talk about the ward - Miss Victoria - and that Blackwood lad.
+    DRIVER: Young Master Charles has been about more lately. Money troubles, they say. There's talk about the ward - Miss Victoria - and that Blackwood lad.
     
 * [Observe the manor's architecture and security]
     ~ investigation_style = "observational"
@@ -40,11 +40,9 @@ TAXI DRIVER: Nasty business, this. Lord Pemberton seemed a decent sort.
 
 ASHFORD: Inspector André-Louis? I am Ashford, the butler. Thank heavens you've arrived so quickly.
 
-The man is clearly shaken - his usually pristine collar slightly askew, hands trembling as he takes your coat.
+Clearly shaken - his usually pristine collar slightly askew, hands trembling as he takes your coat.
 
 ASHFORD: His Lordship... it's simply unprecedented. In thirty years of service, I've never...
-
-You notice his demeanor - professional yet clearly rattled by the morning's events.
 
 # IMAGE: desktop/entrance_hall_stairs_desktop.jpg
 
