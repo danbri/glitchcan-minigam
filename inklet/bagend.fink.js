@@ -1,8 +1,6 @@
 
 oooOO`
-// The Hobbit - ZX Spectrum Tribute
-// A fair use tribute to the classic 1982 adventure game
-
+// HOBBO
 // Start the player at Bag End
 
 # BASEHREF: media/bagend/
@@ -13,7 +11,6 @@ oooOO`
 
 // # IMAGE: bag_end_exterior.svg
 # IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
-
 
 You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. Gandalf the wizard sits smoking a pipe.
 + [Talk to Gandalf] -> Talk_To_Gandalf
@@ -43,18 +40,20 @@ This is a well-stocked hobbit kitchen with pantries full of food. A small window
 
 === Hobbiton_Village ===
 
+The cheerful village of Hobbiton bustles with activity. Hobbits go about their business, some giving you curious looks. The Green Dragon Inn stands invitingly nearby.
+
 # IMAGE: gandalf_at_door.svg
 
-The cheerful village of Hobbiton bustles with activity. Hobbits go about their business, some giving you curious looks. The Green Dragon Inn stands invitingly nearby.
 + [Return West to Bag End] -> Outside_Bag_End
 + [Enter the Green Dragon Inn] -> Green_Dragon
 + [Go North toward the wilderness] -> Trollshaws
 
 === Green_Dragon ===
 
+The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale and telling stories. The innkeeper nods to you from behind the bar.
+
 # IMAGE: green_dragon.svg
 
-The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale and telling stories. The innkeeper nods to you from behind the bar.
 + [Talk to the innkeeper]
     "Heading out on an adventure, are you, Mr. Bilbo?" asks the innkeeper with a wink.
     "News travels fast," you mutter.
