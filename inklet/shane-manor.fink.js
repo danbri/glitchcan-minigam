@@ -10,13 +10,14 @@ VAR time_pressure = 3
 -> start
 
 === start ===
-# IMAGE: manor_with_taxi.png
 
 Inspector Shane André-Louis steps out of the black taxi into the November drizzle. His colleagues at Scotland Yard call him "Andalou" - a nickname that stuck after someone noticed his crime scene sketches had an oddly surreal quality, like frames from an art film.
 
 The Gothic towers of Greystone Manor pierce the grey sky ahead.
 
 TAXI DRIVER: Nasty business, this. Lord Pemberton seemed a decent sort.
+
+# IMAGE: desktop/manor_with_taxi_desktop.jpg
 
 * [Question the driver about local gossip]
     ~ player_reputation += 2
@@ -36,13 +37,17 @@ TAXI DRIVER: Nasty business, this. Lord Pemberton seemed a decent sort.
 -> meet_butler
 
 === meet_butler ===
-# IMAGE: entrance_hall_stairs.png
 
 ASHFORD: Inspector André-Louis? I am Ashford, the butler. Thank heavens you've arrived so quickly.
 
 The man is clearly shaken - his usually pristine collar slightly askew, hands trembling as he takes your coat.
 
 ASHFORD: His Lordship... it's simply unprecedented. In thirty years of service, I've never...
+
+You notice his demeanor - professional yet clearly rattled by the morning's events.
+
+# IMAGE: desktop/entrance_hall_stairs_desktop.jpg
+# IMAGE: desktop/butler_questioning_desktop.jpg
 
 * [Put him at ease with gentle questioning]
     ~ player_reputation += 3
@@ -84,8 +89,6 @@ The grandfather clock in the hallway chimes eleven. {time_pressure > 1: Time is 
     -> gather_household
 
 === crime_scene ===
-# IMAGE: study_crime_scene.png
-
 ~ time_pressure--
 
 The study door stands slightly ajar. Ashford produces a heavy brass key.
@@ -103,6 +106,8 @@ OBSERVATIONS:
 - Fresh mud tracked near the window
 - Cut crystal brandy glass, barely touched
 - Heavy wooden chair wedged under the door handle
+
+# IMAGE: desktop/study_crime_scene_desktop.jpg
 
 * [Examine the open safe first]
     -> examine_safe
@@ -122,6 +127,8 @@ The safe contains several intriguing items:
 
 ANDRÉ-LOUIS: {investigation_style == "observational": The photographs suggest Lord Pemberton was watching someone. | Interesting - money left behind rules out simple robbery.}
 
+# IMAGE: desktop/study_library_combo_desktop.jpg
+
 -> deduction
 
 === examine_chess ===
@@ -138,11 +145,11 @@ The muddy prints lead from the window to the desk and back. Size 9 or 10 boots, 
 
 ANDRÉ-LOUIS: Someone definitely entered through this window. But why leave such obvious tracks?
 
+# IMAGE: desktop/manor_floor_plan_desktop.jpg
+
 -> deduction
 
 === interview_mary ===
-# IMAGE: servants_hall.png
-
 ~ time_pressure--
 
 Mary Collins sits in the servants' hall, a cup of untouched tea growing cold before her. She's perhaps twenty-five, with red-rimmed eyes and hands that won't stop shaking.
@@ -161,11 +168,11 @@ MARY: Oh, Inspector, it was horrible. I've never seen anything like it in my lif
 
 - MARY: I fetched Mr. Ashford when I couldn't get in. He had to put his shoulder to the door.
 
+# IMAGE: desktop/servants_hall_desktop.jpg
+
 -> deduction
 
 === gather_household ===
-# IMAGE: household_meeting.png
-
 ~ time_pressure--
 
 You assemble the household in the morning room. The tension is palpable.
@@ -178,6 +185,9 @@ CHARLES: We had dinner together around seven. Uncle seemed agitated about someth
 
 VICTORIA: *quietly* There was an argument after dinner. About money.
 
+# IMAGE: desktop/household_meeting_desktop.jpg
+# IMAGE: desktop/dining_room_formal_desktop.jpg
+
 -> deduction
 
 === deduction ===
@@ -186,6 +196,8 @@ VICTORIA: *quietly* There was an argument after dinner. About money.
 The pieces are starting to come together. You've gathered enough evidence to form a theory.
 
 The locked room mystery, the family tensions, the gambling debts, and the chess game all point to one conclusion.
+
+# IMAGE: desktop/morning_room_table_desktop.jpg
 
 * [Accuse Charles of the murder]
     -> accuse_charles
@@ -197,7 +209,7 @@ The locked room mystery, the family tensions, the gambling debts, and the chess 
     {time_pressure > 0: -> investigation_choice | -> time_up}
 
 === accuse_charles ===
-# IMAGE: household_meeting.png
+# IMAGE: desktop/household_meeting_desktop.jpg
 
 ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle using your knowledge of this house to create an impossible locked-room mystery.
 

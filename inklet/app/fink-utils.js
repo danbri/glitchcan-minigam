@@ -57,18 +57,11 @@ window.FinkUtils = {
         }
     },
     
-    // Layered media URL resolution - environment-flexible approach with responsive images
+    // Layered media URL resolution - environment-flexible approach
     resolveLayeredMediaUrl(storyBasehref, imagePath) {
         this.debugLog('=== Layered Media Resolution ===');
         this.debugLog('Story BASEHREF: "' + (storyBasehref || '(none)') + '"');
         this.debugLog('Image path: "' + imagePath + '"');
-        
-        // Check if this is a Shane Manor image that needs responsive handling
-        if (storyBasehref && storyBasehref.includes('shane') && window.shaneManorImages) {
-            const responsivePath = window.shaneManorImages.getOptimalImagePath(imagePath);
-            this.debugLog('Using responsive image: ' + responsivePath);
-            return responsivePath;
-        }
         
         // Step 1: Determine the effective media base
         const globalMediaBase = FinkPlayer.globalMediaBase; // From config or form
