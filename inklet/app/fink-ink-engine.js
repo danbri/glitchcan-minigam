@@ -160,7 +160,8 @@ window.FinkInkEngine = {
                 let escapedText = FinkUtils.escapeHtml(rawText.trim());
                 let formattedText = escapedText
                     .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-                    .replace(/\*(.*?)\*/g, '<i>$1</i>');
+                    .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                    .replace(/(https?:\/\/[^\s\)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 
                 p.innerHTML = formattedText;
                 

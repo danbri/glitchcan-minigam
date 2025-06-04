@@ -53,6 +53,7 @@ This is where things might be documented, eventually.
 
 + [Developer Guide] -> dev_guide_selected
 + [Shane Manor Mystery (testing)] -> shane_manor_selected
++ [Experiments] -> experiments_selected
 
 === hobbit_selected ===
 
@@ -129,6 +130,61 @@ Shane Manor Mystery
 A test story for debugging and demonstrating FINK functionality. This is primarily for development testing.
 
 + [Enter Shane Manor] -> external_story
+
+=== experiments_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Experiments & Prototypes
+
+A collection of experimental games, prototypes, and technical demonstrations. These are works-in-progress showcasing different gameplay mechanics and visual styles.
+
+**Games & Interactive Experiments:**
+
+🎮 **FINK Integration Tests:**
+- GamGam Web Components: https://danbri.github.io/glitchcan-minigam/inklet/gamgam-wc.html
+
+🚀 **Action Games:**
+- Thumbwar: https://danbri.github.io/glitchcan-minigam/thumbwar/thumbwar.html
+- Battleboids: https://danbri.github.io/glitchcan-minigam/thumbwar/battleboids.html
+- GridLuck: https://danbri.github.io/glitchcan-minigam/thumbwar/gridluck.html
+
+🤖 **AI & Simulation:**
+- Schemoids: https://danbri.github.io/glitchcan-minigam/schemoids/schemoids.html
+- ED-209 Parking Bot: https://danbri.github.io/glitchcan-minigam/gencity/ed209-parkbot.html
+- Dejanking Test: https://codepen.io/danbri/pen/ZYGQzpG
+
+🌌 **Space & Strategy:**
+- Rockall UI Tests: https://codepen.io/danbri/pen/JodGOOa
+- Rockall Mocks: https://codepen.io/danbri/pen/bNdpbBx (Asteroids-inspired crafting game)
+- Mamikon Mini-Chess: https://codepen.io/danbri/pen/azOvvGX (needs Queen sacrifice move)
+- Tankoff: https://codepen.io/danbri/pen/raVaWBm
+
+🎲 **Game Mechanics:**
+- Rock Paper Boids: https://codepen.io/danbri/pen/YPPBjdw
+
+🎬 **Video Integration Tests:**
+- INK + Video Test A: https://codepen.io/danbri/pen/Byymzyd
+- INK + Video Test B: https://codepen.io/danbri/pen/NPPwpjZ
+
+**Sounds & Visuals:**
+
+🎵 **Audio:**
+- Grid-Alt Music Maker: https://danbri.github.io/glitchcan-minigam/blipblop/grid-alt.html
+
+🌍 **Visual Effects:**
+- Twin Earth Animation: https://danbri.github.io/glitchcan-minigam/twinearth/index.html
+- Emoji Particles: https://codepen.io/danbri/pen/NPqGjLP
+- Hobbit/Bagend SVG: https://codepen.io/danbri/pen/PwwEVMZ
+
+**Infrastructure:**
+
+🔐 **Authentication:**
+- Mock Login (Steam/Discord/Mastodon): https://codepen.io/danbri/pen/QwbbaaY
+
+Most experiments are hosted on CodePen for rapid prototyping and easy sharing. Local experiments are in the GitHub Pages deployment.
+
++ [Return to Help Menu] -> help_menu
 
 === external_story ===
 Loading external story...
