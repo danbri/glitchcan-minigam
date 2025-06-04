@@ -11,7 +11,7 @@ VAR time_pressure = 3
 
 === start ===
 
-Inspector Shane André-Louis steps out of the black taxi into the November drizzle. His colleagues at Scotland Yard call him "Andalou" - a nickname that stuck after someone noticed his crime scene sketches had an oddly surreal quality, like frames from an art film.
+Inspector Shane André-Louis steps out of the black taxi into the November drizzle. 
 
 The Gothic towers of Greystone Manor pierce the grey sky ahead.
 
@@ -47,7 +47,6 @@ ASHFORD: His Lordship... it's simply unprecedented. In thirty years of service, 
 You notice his demeanor - professional yet clearly rattled by the morning's events.
 
 # IMAGE: desktop/entrance_hall_stairs_desktop.jpg
-# IMAGE: desktop/butler_questioning_desktop.jpg
 
 * [Put him at ease with gentle questioning]
     ~ player_reputation += 3
@@ -138,6 +137,8 @@ ANDRÉ-LOUIS: Charles plays chess, according to the driver. This could be signif
 
 The position suggests the game was interrupted suddenly - white was about to deliver checkmate in three moves.
 
+# IMAGE: desktop/dining_room_formal_desktop.jpg
+
 -> deduction
 
 === examine_footprints ===
@@ -185,8 +186,7 @@ CHARLES: We had dinner together around seven. Uncle seemed agitated about someth
 
 VICTORIA: *quietly* There was an argument after dinner. About money.
 
-# IMAGE: desktop/household_meeting_desktop.jpg
-# IMAGE: desktop/dining_room_formal_desktop.jpg
+# IMAGE: desktop/butler_questioning_desktop.jpg
 
 -> deduction
 
@@ -209,8 +209,6 @@ The locked room mystery, the family tensions, the gambling debts, and the chess 
     {time_pressure > 0: -> investigation_choice | -> time_up}
 
 === accuse_charles ===
-# IMAGE: desktop/household_meeting_desktop.jpg
-
 ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle using your knowledge of this house to create an impossible locked-room mystery.
 
 The assembled household gasps. Charles goes white.
