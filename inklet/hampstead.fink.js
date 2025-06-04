@@ -27,8 +27,12 @@ ZX-Spectrum ready. 48 K RAM found.
 + Continue -> intro
 
 === intro ===
+
+
 #BG:#000
 You eye a cassette: Hampstead.
+
+# IMAGE: coverart/hamstead_img_9433.jpeg
 
 * Boot the Speccy
     Loading bars screech cheerfully. #CLASS:info

@@ -71,13 +71,14 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 
 === hampstead_selected ===
 
-# IMAGE: coverart/hamstead_img_9432.jpeg
 
 # FINK: ../hampstead.fink.js
 
 Hampstead
 
 Navigate the challenging social dynamics of 1980s London. A few scenes inspired by the classic 80s game. No images.
+
+# IMAGE: coverart/hamstead_img_9432.jpeg
 
 + [enter Hampstead] -> external_story
 
