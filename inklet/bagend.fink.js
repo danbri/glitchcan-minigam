@@ -5,7 +5,7 @@ oooOO`
 
 // Start the player at Bag End
 
-# BASEHREF: /inklet/media/bagend/
+# BASEHREF: media/bagend/
 
 -> Bag_End
 
