@@ -32,12 +32,15 @@ jobs:
         cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
     # 4 — download CodeQwen-1.5-7B-Chat Q4-0
+
+    # codeqwen-1_5-7b-chat-q4_0.gguf        
+    # ← hyphen before 1_5
     - name: Fetch model
       run: |
         mkdir -p ~/.cache/llama
-        test -f ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf || \
-        wget -q https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen1_5-7b-chat-q4_0.gguf \
-             -O ~/.cache/llama/codeqwen15-7b-chat.q4_0.gguf
+        test -f ~/.cache/llama/codeqwen-15-7b-chat.q4_0.gguf || \
+        wget -q https://huggingface.co/Qwen/CodeQwen-1.5-7B-Chat-GGUF/resolve/main/codeqwen1_5-7b-chat-q4_0.gguf \
+             -O ~/.cache/llama/codeqwen-15-7b-chat.q4_0.gguf
 
     # 5 — install Python deps for your LLM test
     - name: Install Python deps
