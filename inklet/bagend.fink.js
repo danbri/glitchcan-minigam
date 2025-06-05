@@ -1,13 +1,7 @@
-
 oooOO`
-// HOBBO
-// Start the player at Bag End
-
+// HOBBO. Start the player at Bag End
 # BASEHREF: media/bagend/
-
 -> Bag_End
-
-
 
 
 
