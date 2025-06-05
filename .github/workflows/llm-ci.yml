@@ -1,4 +1,3 @@
-# .github/workflows/llm.yml
 name: LLM checks & auto-exec
 
 on:
@@ -12,102 +11,90 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Re-useable locations for the big assets
-    env:
-      MODEL_FILE: ${{ runner.temp }}/models/codeqwen-1_5-7b-chat-q4_0.gguf
-      LLAMA_DIR:  ${{ runner.temp }}/llama.cpp
-      LLAMA_BIN:  ${{ runner.temp }}/llama.cpp/build/bin/llama
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # 1️⃣  Pull model + build artefacts from cache if they exist
-    - name: Restore llama.cpp build + model
-      id: cache
-      uses: actions/cache@v4
-      with:
-        key: qwen15-7b-llama-v1
-        path: |
-          ${{ env.MODEL_FILE }}
-          ${{ env.LLAMA_DIR }}
+      - name: Cache llama.cpp & model
+        uses: actions/cache@v4
+        with:
+          key: qwen15-code-7b-v3-${{ runner.os }}
+          path: |
+            ~/.cache/llama
+            ~/llama.cpp
 
-    # 2️⃣  Install toolchain only when cache miss
-    - name: Install build tools (first run only)
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
+      - name: Build llama.cpp
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
+          git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
+          cmake -S ~/llama.cpp -B ~/llama.cpp/build -DLLAMA_BUILD_EXAMPLES=OFF
+          cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-    # 3️⃣  Build llama.cpp if not cached
-    - name: Build llama.cpp (first run only)
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        git clone --depth 1 https://github.com/ggerganov/llama.cpp ${{ env.LLAMA_DIR }}
-        cmake -S ${{ env.LLAMA_DIR }} -B ${{ env.LLAMA_DIR }}/build -DLLAMA_BUILD_EXAMPLES=OFF
-        cmake --build ${{ env.LLAMA_DIR }}/build --config Release -j$(nproc)
+      - name: Fetch model
+        run: |
+          set -euo pipefail
+          MODEL_DIR="$HOME/.cache/llama"
+          FILE="$MODEL_DIR/codeqwen-1_5-7b-chat-q4_0.gguf"
+          URL="https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen-1_5-7b-chat-q4_0.gguf"
+          mkdir -p "$MODEL_DIR"
+          [ -s "$FILE" ] || rm -f "$FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "Downloading CodeQwen (≈4.5 GB)…"
+            curl -L --fail --retry 3 -o "$FILE" "$URL"
+          fi
 
-    # 4️⃣  Download the 4 GB model once
-    - name: Download CodeQwen model (first run only)
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p "$(dirname "${{ env.MODEL_FILE }}")"
-        curl -L --retry 3 --fail \
-          -o "${{ env.MODEL_FILE }}" \
-          https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen-1_5-7b-chat-q4_0.gguf
+      - name: Install Python deps
+        run: |
+          pip install --upgrade pip
+          pip install -q "ctransformers==0.2.27"
 
-    # 5️⃣  Lightweight deps (always)
-    - name: Install Python deps
-      run: |
-        python -m pip install -U pip
-        pip install -q "ctransformers==0.2.27"
+      - name: Lint / Test with LLM
+        env:
+          MODEL_PATH: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+        run: |
+          python - <<'PY'
+          import os, sys, re
+          from ctransformers import AutoModelForCausalLM
+          model_path = os.environ["MODEL_PATH"]
+          llm = AutoModelForCausalLM.from_pretrained(
+              model_path, model_type="qwen", gpu_layers=0
+          )
+          for path in Path(".").rglob("*.fink.js"):
+              code = path.read_text()[:4000]
+              resp = llm(
+                  "<|im_start|>system\nReview JS code.<|im_end|>\n"
+                  f"<|im_start|>user\n{code}<|im_end|>\n"
+                  "<|im_start|>assistant\n",
+                  max_new_tokens=128,
+              )
+              print(f"\n--- {path} ---\n{resp}\n")
+          PY
 
-    # 6️⃣  Lint / test JS with the local LLM
-    - name: Lint with CodeQwen
-      env:
-        MODEL_PATH: ${{ env.MODEL_FILE }}
-      run: |
-        python - <<'PY'
-        import os, re
-        from pathlib import Path
-        from ctransformers import AutoModelForCausalLM
+      - name: Auto-exec bot
+        env:
+          MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+        run: |
+          set -euo pipefail
+          BIN="$HOME/llama.cpp/build/bin/llama"
+          SYS="<|im_start|>system
+          You are a concise assistant.<|im_end|>"
+          shopt -s nullglob
+          for f in reports/autoexec.bot/*-input.txt; do
+            [ -f "$f" ] || continue
+            USER="<|im_start|>user
+            $(cat "$f")<|im_end|>"
+            PROMPT="$SYS
+            $USER
+            <|im_start|>assistant"
+            OUT="${f/-input.txt/-output.txt}"
+            "$BIN" -m "$MODEL" -p "$PROMPT" -n 256 --temp 0.7 > "$OUT"
+            echo "Generated $OUT"
+          done
 
-        llm = AutoModelForCausalLM.from_pretrained(
-            os.environ["MODEL_PATH"], model_type="qwen", gpu_layers=0
-        )
-
-        for js in Path(".").rglob("*.fink.js"):
-            code = js.read_text()[:4000]
-            reply = llm(
-                "<|im_start|>system\nReview JS code.<|im_end|>\n"
-                f"<|im_start|>user\n{code}<|im_end|>\n"
-                "<|im_start|>assistant\n",
-                max_new_tokens=128,
-            )
-            print(f"\n--- {js} ---\n{reply}\n")
-        PY
-
-    # 7️⃣  Batch-generate answers for any *-input.txt prompts
-    - name: Auto-exec bot
-      run: |
-        set -euo pipefail
-        SYS="<|im_start|>system
-        You are a concise assistant.<|im_end|>"
-        shopt -s nullglob
-        for f in reports/autoexec.bot/*-input.txt; do
-          USER="<|im_start|>user
-          $(cat "$f")<|im_end|>"
-          PROMPT="$SYS
-          $USER
-          <|im_start|>assistant"
-          OUT="${f/-input.txt/-output.txt}"
-          ${{ env.LLAMA_BIN }} -m "${{ env.MODEL_FILE }}" -p "$PROMPT" -n 256 --temp 0.7 > "$OUT"
-          echo "Generated $OUT"
-        done
-
-    # 8️⃣  Publish the answers as an artifact
-    - name: Upload outputs
-      uses: actions/upload-artifact@v4
-      with:
-        name: autoexec-reports
-        path: reports/autoexec.bot/*-output.txt
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoexec-reports
+          path: reports/autoexec.bot/*-output.txt
