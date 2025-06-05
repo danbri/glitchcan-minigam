@@ -16,83 +16,83 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # 1 ─ check out repo -----------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    # 1 ─ checkout ------------------------------------------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # 2 ─ reuse build + model if cached -------------------------------------
-      - name: Cache llama.cpp & model
-        uses: actions/cache@v4
-        with:
-          key: qwen15-code-7b-v2-${{ runner.os }}
-          path: |
-            ~/.cache/llama
-            ~/llama.cpp
+    # 2 ─ cache llama.cpp build + model ---------------------------------------
+    - name: Cache llama.cpp & model
+      uses: actions/cache@v4
+      with:
+        key: qwen15-code-7b-v2-${{ runner.os }}
+        path: |
+          ~/.cache/llama
+          ~/llama.cpp
 
-      # 3 ─ build llama.cpp (only when cache miss) ----------------------------
-      - name: Build llama.cpp
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
-          git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
-          cmake -S ~/llama.cpp -B ~/llama.cpp/build -DLLAMA_BUILD_EXAMPLES=OFF
-          cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+    # 3 ─ build llama.cpp (only on cache miss) --------------------------------
+    - name: Build llama.cpp
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
+        git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
+        cmake -S ~/llama.cpp -B ~/llama.cpp/build -DLLAMA_BUILD_EXAMPLES=OFF
+        cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-      # 4 ─ download CodeQwen-1.5-7B-Chat Q4_0 (once, then cached) ------------
-      - name: Fetch model
-        run: |
-          set -euo pipefail
-          MODEL_DIR=$HOME/.cache/llama
-          FILE=$MODEL_DIR/codeqwen-1_5-7b-chat-q4_0.gguf
-          URL=https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen-1_5-7b-chat-q4_0.gguf
+    # 4 ─ fetch CodeQwen-1.5-7B-Chat Q4_0 (download once, then cached) --------
+    - name: Fetch model
+      run: |
+        set -euo pipefail
+        MODEL_DIR="$HOME/.cache/llama"
+        FILE="$MODEL_DIR/codeqwen-1_5-7b-chat-q4_0.gguf"
+        URL="https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen-1_5-7b-chat-q4_0.gguf"
 
-          mkdir -p "$MODEL_DIR"
-          # wipe zero-byte stub if present
-          [ -s "$FILE" ] || rm -f "$FILE"
+        mkdir -p "$MODEL_DIR"
+        # remove zero-byte stub if an earlier failed download left one
+        [ -s "$FILE" ] || rm -f "$FILE"
 
-          if [ ! -f "$FILE" ]; then
-            echo "Downloading CodeQwen-1.5-7B-Chat Q4_0 (≈4.5 GB)…"
-            curl -L --fail --retry 3 -o "$FILE" "$URL"
-          fi
+        if [ ! -f "$FILE" ]; then
+          echo "Downloading CodeQwen-1.5-7B-Chat Q4_0 (≈4.5 GB)…"
+          curl -L --fail --retry 3 -o "$FILE" "$URL"
+        fi
 
-      # 5 ─ install Python deps -----------------------------------------------
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -q "ctransformers==0.2.27"
+    # 5 ─ Python deps ----------------------------------------------------------
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -q "ctransformers==0.2.27"
 
-      # 6 ─ run your Python review against changed *.fink.js -------------------
-      - name: Lint / Test with LLM
-        env:
-          MODEL_PATH: ~/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
-        run: python tools/llm_check.py
+    # 6 ─ run your Python checker ---------------------------------------------
+    - name: Lint / Test with LLM
+      env:
+        MODEL_PATH: $HOME/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+      run: python tools/llm_check.py
 
-      # 7 ─ batch-process any *-input.txt prompts ------------------------------
-      - name: Auto-exec bot
-        env:
-          MODEL: ~/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
-        run: |
-          set -euo pipefail
-          BIN=$HOME/llama.cpp/build/bin/llama
-          SYS="<|im_start|>system
-          You are a concise assistant that replies in English.<|im_end|>"
-          shopt -s nullglob
-          for f in reports/autoexec.bot/*-input.txt; do
-            [ -f "$f" ] || continue
-            USER="<|im_start|>user
-            $(cat "$f")<|im_end|>"
-            PROMPT="$SYS
-            $USER
-            <|im_start|>assistant"
-            OUT="${f/-input.txt/-output.txt}"
-            "$BIN" -m "$MODEL" -p "$PROMPT" -n 256 --temp 0.7 > "$OUT"
-            echo "Generated $OUT"
-          done
+    # 7 ─ auto-exec any *-input.txt prompts -----------------------------------
+    - name: Auto-exec bot
+      env:
+        MODEL: $HOME/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+      run: |
+        set -euo pipefail
+        BIN="$HOME/llama.cpp/build/bin/llama"
+        SYS="<|im_start|>system
+        You are a concise assistant that replies in English.<|im_end|>"
+        shopt -s nullglob
+        for f in reports/autoexec.bot/*-input.txt; do
+          [ -f "$f" ] || continue
+          USER="<|im_start|>user
+          $(cat "$f")<|im_end|>"
+          PROMPT="$SYS
+          $USER
+          <|im_start|>assistant"
+          OUT="${f/-input.txt/-output.txt}"
+          "$BIN" -m "$MODEL" -p "$PROMPT" -n 256 --temp 0.7 > "$OUT"
+          echo "Generated $OUT"
+        done
 
-      # 8 ─ upload generated outputs ------------------------------------------
-      - name: Upload auto-exec outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: autoexec-reports
-          path: reports/autoexec.bot/*-output.txt
+    # 8 ─ upload outputs -------------------------------------------------------
+    - name: Upload auto-exec outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: autoexec-reports
+        path: reports/autoexec.bot/*-output.txt
