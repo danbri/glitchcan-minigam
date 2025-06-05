@@ -1,5 +1,5 @@
 oooOO`
-// Simple Jungle Adventure - Ink Draft
+
 // Based on GlitchCanary Map and Isometric Images
 
 
