@@ -68,7 +68,7 @@ jobs:
           llm = AutoModelForCausalLM.from_pretrained(
               model_path,
               model_type="qwen",
-              library=llama_lib,          # <- critical fix
+              lib_path=llama_lib,          # <- critical fix
               gpu_layers=0,
           )
 
