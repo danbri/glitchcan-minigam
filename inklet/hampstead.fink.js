@@ -22,7 +22,7 @@ VAR debug_message = "" // <<<< NEW: Debug variable
 #CLASS:info
 ZX-Spectrum ready. 48 K RAM found.
 
-// <<<< FINISHED fINK CONTENT WILL ADD A CHOICE HERE >>>>
+
 
 + Continue -> intro
 
@@ -76,8 +76,6 @@ Inside the wardrobe you see frayed jeans and a cheap tie.
 === street ===
 #BG:#001515
 Neon rain slicks binbags and chip wrappers.
-Signposts glisten:
-EAST → Job Centre WEST → Oxfam SOUTH → Duke Pub NORTH → Gallery District
 
 + East to Job Centre -> jobcentre
 + West to Oxfam -> oxfam
@@ -85,12 +83,6 @@ EAST → Job Centre WEST → Oxfam SOUTH → Duke Pub NORTH → Gallery Di
 + North to Gallery District -> gallery_pass
 + Flag down a night-bus
     Nobody stops for riff-raff. #CLASS:danger
-    -> street
-+ Examine strange shimmering rift nearby
-    It hums faintly. Seems inactive for now.
-    // Previously linked to -> Portal_Chamber in remote ink.
-    // Now just an observation unless fINK content adds a Portal_Chamber knot.
-    ~ debug_message = "Hampstead: Examined inactive rift"
     -> street
 
 === jobcentre ===
@@ -200,6 +192,7 @@ Stained-glass windows glow; Afghan hounds slumber.
 
 === car ===
 #BG:#112233
+
 You steer the 2CV toward greener postcodes.
 
 { key_2cv:
