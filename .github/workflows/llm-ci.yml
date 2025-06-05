@@ -16,10 +16,8 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # 1 ─ checkout
       - uses: actions/checkout@v4
 
-      # 2 ─ cache llama.cpp & model
       - uses: actions/cache@v4
         with:
           key: qwen15-code-7b-v3-${{ runner.os }}
@@ -27,7 +25,6 @@ jobs:
             ~/.cache/llama
             ~/llama.cpp
 
-      # 3 ─ build llama.cpp (only on cache miss)
       - name: Build llama.cpp
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -37,7 +34,6 @@ jobs:
           cmake -S ~/llama.cpp -B ~/llama.cpp/build -DLLAMA_BUILD_EXAMPLES=OFF
           cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-      # 4 ─ fetch CodeQwen-1.5-7B-Chat Q4_0 (once, then cached)
       - name: Fetch model
         run: |
           set -euo pipefail
@@ -47,43 +43,46 @@ jobs:
           mkdir -p "$MODEL_DIR"
           [ -s "$FILE" ] || rm -f "$FILE"
           if [ ! -f "$FILE" ]; then
-            echo "Downloading CodeQwen-1.5-7B-Chat Q4_0 (≈4.5 GB)…"
             curl -L --fail --retry 3 -o "$FILE" "$URL"
           fi
 
-      # 5 ─ Python deps — build latest ctransformers from GitHub
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install -q cmake            # needed for wheel build
+          pip install -q cmake
           pip install -q "git+https://github.com/marella/ctransformers.git"
 
-      # 6 ─ run your Python checker
       - name: Lint / Test with LLM
         env:
           MODEL_PATH: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+          LLAMA_LIB: /home/runner/llama.cpp/build/libllama.so
         run: |
           python - <<'PY'
           import os, sys
           from pathlib import Path
           from ctransformers import AutoModelForCausalLM
+
           model_path = os.environ["MODEL_PATH"]
+          llama_lib  = os.environ["LLAMA_LIB"]
+
           llm = AutoModelForCausalLM.from_pretrained(
-              model_path, model_type="qwen", gpu_layers=0
+              model_path,
+              model_type="qwen",
+              library=llama_lib,          # <- critical fix
+              gpu_layers=0,
           )
-          from pathlib import Path
-          for path in Path(".").rglob("*.fink.js"):
-              code = path.read_text()[:4000]
+
+          for js_file in Path(".").rglob("*.fink.js"):
+              code = js_file.read_text()[:4000]
               resp = llm(
                   "<|im_start|>system\nReview JS code.<|im_end|>\n"
                   f"<|im_start|>user\n{code}<|im_end|>\n"
                   "<|im_start|>assistant\n",
                   max_new_tokens=128,
               )
-              print(f"\n--- {path} ---\n{resp}\n")
+              print(f"\n--- {js_file} ---\n{resp}\n")
           PY
 
-      # 7 ─ batch-process *-input.txt prompts
       - name: Auto-exec bot
         env:
           MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
@@ -105,7 +104,6 @@ jobs:
             echo "Generated $OUT"
           done
 
-      # 8 ─ upload outputs
       - uses: actions/upload-artifact@v4
         with:
           name: autoexec-reports
