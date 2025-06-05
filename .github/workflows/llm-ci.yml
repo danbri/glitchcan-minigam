@@ -52,16 +52,11 @@ jobs:
           curl -L --fail --retry 3 -o "$FILE" "$URL"
         fi
 
-        # 5 — install Python deps for your LLM test
-      - name: Install Python deps
-        run: |
-          pip install --upgrade pip
-          pip install -q "ctransformers==0.2.27"
-
-
-    # 5 ─ Python deps for your checker -----------------------------------------
-    - name: Install Python deps
-      run: pip install -q "ctransformers>=0.3.2"
+    # 5 — install Python deps for your LLM test
+   - name: Install Python deps
+     run: |
+       pip install --upgrade pip
+       pip install -q "ctransformers==0.2.27"
 
     # 6 ─ run your Python review against changed *.fink.js ----------------------
     - name: Lint/Test with LLM
