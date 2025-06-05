@@ -243,7 +243,7 @@ The case closes with Charles Pemberton confessing to manslaughter. Your reputati
 -> END
 
 === partial_resolution ===
-Your theory proves compelling but incomplete. While justice isn't fully served, you've uncovered important truths about the Pemberton family.
+Your theory proves compelling but incomplete. While justice isn't fully served, you've uncovered important truths about the case.
 
 -> END
 `
