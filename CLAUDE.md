@@ -49,6 +49,37 @@ While achieving perfect INK engine functionality, we lost visual polish from ink
 3. **DO NOT modify the modular JavaScript architecture** without extreme care
 4. **DO NOT change external FINK loading system** - it works via secure iframe sandbox
 5. **DO NOT assume UI changes are "safe"** - test Hampstead playthrough after EVERY change
+6. **DO NOT add complex responsive image JavaScript** - GitHub Pages deployment uses static files only
+
+## IMAGE DEPLOYMENT STRATEGY - STATIC FILES ONLY
+**CRITICAL**: Our deployment environment (GitHub Pages) uses static file serving, not dynamic JavaScript image selection.
+
+### ✅ CORRECT APPROACH:
+- **Create optimized images on disk** during development
+- **Reference optimized files directly** in FINK IMAGE tags
+- **Use simple, static paths** like `# IMAGE: manor_optimized.jpg`
+- **Follow working Bagend pattern**: Simple BASEHREF + direct image references
+
+### ❌ WRONG APPROACH:
+- Dynamic responsive JavaScript image selection
+- Complex path resolution systems
+- Client-side image optimization
+- Conditional image loading based on device detection
+
+### EXAMPLE - WORKING PATTERN (Bagend):
+```ink
+# BASEHREF: media/bagend/
+# IMAGE: adventure_path.svg  → media/bagend/adventure_path.svg ✅
+```
+
+### PROBLEM PATTERN (Shane Manor):
+```ink
+# BASEHREF: media/shane/
+# IMAGE: manor_with_taxi.png  → 2.1MB file, should use optimized version ❌
+```
+
+### SOLUTION:
+Replace large PNG references with pre-optimized JPG files in the shane-manor.fink.js IMAGE tags.
 6. **NEVER DELETE USER FILES WITHOUT EXPLICIT PERMISSION** - Always ask before removing ANY file, even duplicates. User work has value and history that must be preserved.
 
 ## CONTENT-CENTRIC PATH RESOLUTION IMPLEMENTATION (June 2025)
