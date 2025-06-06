@@ -99,11 +99,8 @@ jobs:
             if [ ! -f "$f" ]; then
               continue
             fi
-            USER="<|im_start|>user
-$(cat "$f")<|im_end|>"
-            PROMPT="$SYS
-$USER
-<|im_start|>assistant"
+            USER="<|im_start|>user $(cat "$f")<|im_end|>"
+            PROMPT="$SYS $USER <|im_start|>assistant"
             OUT="${f/-input.txt/-output.txt}"
             echo ">>> Generating $OUT"
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 256 --temp 0.7 > "$OUT"
