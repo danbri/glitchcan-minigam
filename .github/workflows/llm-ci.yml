@@ -40,7 +40,7 @@ jobs:
           cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
       # 3a ─ Debug: list llama.cpp/build contents to confirm libllama.so exists
-      - name: Debug: show llama.cpp/build contents
+      - name: Debug show llama.cpp/build contents
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           echo "==== CONTENTS OF ~/llama.cpp/build ===="
