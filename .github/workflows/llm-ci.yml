@@ -22,30 +22,31 @@ jobs:
       - name: Cache llama.cpp build+model
         uses: actions/cache@v4
         with:
-          key: qwen15-code-7b-v7-${{ runner.os }}
+          key: qwen15-code-7b-v8-${{ runner.os }}
           path: |
             ~/.cache/llama
             ~/llama.cpp
 
-      - name: Build llama.cpp
+      - name: Build llama.cpp (with examples ON)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
           git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
           cmake -S ~/llama.cpp -B ~/llama.cpp/build \
-                -DLLAMA_BUILD_EXAMPLES=OFF \
-                -DLLAMA_SHARED=ON
+                -DLLAMA_BUILD_EXAMPLES=ON \
+                -DLLAMA_SHARED=ON \
+                -DCMAKE_BUILD_TYPE=Release
           cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-      - name: Show build directory contents
+      - name: Show llama.cpp/build contents
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          echo "====== ~/llama.cpp/build ======"
+          echo "====== contents of ~/llama.cpp/build ======"
           ls -R ~/llama.cpp/build || true
-          echo "==============================="
+          echo "==========================================="
 
-      - name: Fetch model
+      - name: Fetch CodeQwen‐1.5‐7B‐Chat Q4_0
         run: |
           set -euo pipefail
           MODEL_DIR="$HOME/.cache/llama"
@@ -54,7 +55,7 @@ jobs:
           mkdir -p "$MODEL_DIR"
           [ -s "$FILE" ] || rm -f "$FILE"
           if [ ! -f "$FILE" ]; then
-            echo "Downloading CodeQwen-1.5-7B-Chat Q4_0"
+            echo "Downloading CodeQwen‐1.5‐7B‐Chat Q4_0 (≈4.5 GB)…"
             curl -L --fail --retry 3 -o "$FILE" "$URL"
           fi
 
@@ -88,7 +89,13 @@ jobs:
             [ -f "$f" ] || continue
             echo "Reviewing $f"
             SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/')
-            PROMPT="<|im_start|>system You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|><|im_start|>user $SNIPPET<|im_end|><|im_start|>assistant"
+            read -r -d '' PROMPT << 'EOF'
+<|im_start|>system
+You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|>
+<|im_start|>user
+'"$SNIPPET"'<|im_end|>
+<|im_start|>assistant
+EOF
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3
             echo
           done
@@ -99,18 +106,25 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
-          # Reuse the same llama binary from the previous step
           CANDIDATES=(~/llama.cpp/build/**/llama)
           if [ ${#CANDIDATES[@]} -eq 0 ]; then
             echo "Error: llama binary not found for auto-exec bot"
             exit 1
           fi
           BIN="${CANDIDATES[0]}"
-          SYS="<|im_start|>system You are a concise assistant that replies in English.<|im_end|>"
+          read -r -d '' SYS << 'EOF'
+<|im_start|>system
+You are a concise assistant that replies in English.<|im_end|>
+EOF
           for f in reports/autoexec.bot/*-input.txt; do
             [ -f "$f" ] || continue
-            USER="<|im_start|>user $(cat "$f")<|im_end|>"
-            PROMPT="$SYS $USER <|im_start|>assistant"
+            USER="<|im_start|>user
+$(cat "$f")<|im_end|>"
+            read -r -d '' PROMPT << EOF
+$SYS
+$USER
+<|im_start|>assistant
+EOF
             OUT="${f/-input.txt/-output.txt}"
             echo "Generating $OUT"
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 256 --temp 0.7 > "$OUT"
@@ -121,4 +135,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: autoexec-reports
-          path: reports/autoexec.bot/*-output.txt
+          path: |
+            reports/autoexec.bot/*-output.txt
