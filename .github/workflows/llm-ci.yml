@@ -93,8 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           BIN="$HOME/llama.cpp/build/bin/llama"
-          SYS="<|im_start|>system
-You are a concise assistant that replies in English.<|im_end|>"
+          SYS="<|im_start|>system You are a concise assistant that replies in English.<|im_end|>"
           shopt -s nullglob
           for f in reports/autoexec.bot/*-input.txt; do
             if [ ! -f "$f" ]; then
