@@ -80,11 +80,7 @@ jobs:
             # extract first ~2048 bytes (≈2000 chars) to avoid huge contexts
             SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/' )
 
-            PROMPT="<|im_start|>system
-You are a senior JS engine reviewer; identify one bug or anti-pattern and suggest a one-line fix.<|im_end|>
-<|im_start|>user
-$SNIPPET<|im_end|>
-<|im_start|>assistant"
+            PROMPT="<|im_start|>system You are a senior JS engine reviewer; identify one bug or anti-pattern and suggest a one-line fix.<|im_end|><|im_start|>user $SNIPPET<|im_end|> <|im_start|>assistant"
 
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3 --color          # streams with colors
             echo
