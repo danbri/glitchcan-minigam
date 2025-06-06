@@ -22,25 +22,24 @@ jobs:
       # 2 ─ cache llama.cpp build + model
       - uses: actions/cache@v4
         with:
-          key: qwen15-code-7b-v4-${{ runner.os }}
+          key: qwen15-code-7b-v5-${{ runner.os }}
           path: |
             ~/.cache/llama
             ~/llama.cpp
 
-      # 3 ─ build llama.cpp (only when cache miss), INCLUDING shared library
+      # 3 ─ build llama.cpp if cache miss (including shared library)
       - name: Build llama.cpp
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
           git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
-          # Build both the CLI and the shared libllama.so
           cmake -S ~/llama.cpp -B ~/llama.cpp/build \
                 -DLLAMA_BUILD_EXAMPLES=OFF \
                 -DLLAMA_SHARED=ON
           cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-      # 4 ─ fetch CodeQwen-1.5-7B-Chat Q4_0 (once, then cached)
+      # 4 ─ fetch CodeQwen-1.5-7B-Chat-Q4_0 (once, then cached)
       - name: Fetch model
         run: |
           set -euo pipefail
@@ -54,31 +53,36 @@ jobs:
             curl -L --fail --retry 3 -o "$FILE" "$URL"
           fi
 
-      # 5 ─ Python deps — install latest ctransformers from GitHub
+      # 5 ─ install latest ctransformers from GitHub
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install -q cmake
           pip install -q "git+https://github.com/marella/ctransformers.git"
 
-      # 6 ─ run your Python checker (pointing at the freshly built libllama.so)
+      # 6 ─ Lint/Test with LLM (find libllama.so dynamically)
       - name: Lint / Test with LLM
         env:
           MODEL_PATH: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
-          LLAMA_LIB: /home/runner/llama.cpp/build/libllama.so
         run: |
           python - <<'PY'
           import os
+          import glob
           from pathlib import Path
           from ctransformers import AutoModelForCausalLM
 
           model_path = os.environ["MODEL_PATH"]
-          llama_lib  = os.environ["LLAMA_LIB"]
+          # Search for libllama.so under the build directory
+          build_dir = os.path.expanduser("~/llama.cpp/build")
+          candidates = glob.glob(f"{build_dir}/libllama*.so") + glob.glob(f"{build_dir}/lib/libllama*.so")
+          if not candidates:
+              raise RuntimeError(f"Could not locate libllama.so under {build_dir!r}")
+          llama_lib = candidates[0]
 
           llm = AutoModelForCausalLM.from_pretrained(
               model_path,
               model_type="qwen",
-              lib=llama_lib,        # ← load the shared library we just built
+              lib=llama_lib,
               gpu_layers=0,
           )
 
@@ -90,7 +94,7 @@ jobs:
                   "<|im_start|>assistant\n",
                   max_new_tokens=128,
               )
-              print(f"\n--- {js_file} ---\n{resp}\n")
+              print(f"--- {js_file} ---\n{resp}\n")
           PY
 
       # 7 ─ batch-process *-input.txt prompts
@@ -116,8 +120,7 @@ jobs:
           done
 
       # 8 ─ upload generated outputs
-      - name: Upload auto-exec outputs
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: autoexec-reports
           path: reports/autoexec.bot/*-output.txt
