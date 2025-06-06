@@ -106,15 +106,11 @@ jobs:
             exit 1
           fi
           BIN="${CANDIDATES[0]}"
-          SYS="<|im_start|>system
-You are a concise assistant that replies in English.<|im_end|>"
+          SYS="<|im_start|>system You are a concise assistant that replies in English.<|im_end|>"
           for f in reports/autoexec.bot/*-input.txt; do
             [ -f "$f" ] || continue
-            USER="<|im_start|>user
-$(cat "$f")<|im_end|>"
-            PROMPT="$SYS
-$USER
-<|im_start|>assistant"
+            USER="<|im_start|>user $(cat "$f")<|im_end|>"
+            PROMPT="$SYS $USER <|im_start|>assistant"
             OUT="${f/-input.txt/-output.txt}"
             echo "Generating $OUT"
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 256 --temp 0.7 > "$OUT"
