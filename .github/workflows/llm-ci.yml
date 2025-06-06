@@ -16,18 +16,17 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # 1 ─ Checkout repository
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # 2 ─ Cache llama.cpp build + model
-      - uses: actions/cache@v4
+      - name: Cache llama.cpp build+model
+        uses: actions/cache@v4
         with:
           key: qwen15-code-7b-v7-${{ runner.os }}
           path: |
             ~/.cache/llama
             ~/llama.cpp
 
-      # 3 ─ Build llama.cpp (with shared lib, though we’ll call the CLI directly)
       - name: Build llama.cpp
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -39,15 +38,13 @@ jobs:
                 -DLLAMA_SHARED=ON
           cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 
-      # 3a ─ Debug: list llama.cpp/build contents to confirm libllama.so exists
-      - name: Debug show llama.cpp/build contents
+      - name: Show build directory contents
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          echo "==== CONTENTS OF ~/llama.cpp/build ===="
+          echo "====== ~/llama.cpp/build ======"
           ls -R ~/llama.cpp/build || true
-          echo "======================================="
+          echo "==============================="
 
-      # 4 ─ Fetch CodeQwen-1.5-7B-Chat-Q4_0.gguf (once, then cached)
       - name: Fetch model
         run: |
           set -euo pipefail
@@ -57,57 +54,78 @@ jobs:
           mkdir -p "$MODEL_DIR"
           [ -s "$FILE" ] || rm -f "$FILE"
           if [ ! -f "$FILE" ]; then
-            echo "Downloading CodeQwen-1.5-7B-Chat Q4_0 (≈4.5 GB)…"
+            echo "Downloading CodeQwen-1.5-7B-Chat Q4_0"
             curl -L --fail --retry 3 -o "$FILE" "$URL"
           fi
 
-      # 5 ─ Lint/Test JS files by invoking llama CLI directly
-      - name: Lint / Test with LLM
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -q cmake
+          pip install -q "git+https://github.com/marella/ctransformers.git"
+
+      - name: Run LLM review
         env:
           MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
         run: |
           set -euo pipefail
-          BIN="$HOME/llama.cpp/build/bin/llama"
-
-          echo "=== Running LLM review on *.fink.js files ==="
-          # for each .fink.js, take first ~2048 bytes to keep RAM low, then prompt the model
+          # Find the llama CLI binary under ~/llama.cpp/build
           shopt -s globstar nullglob
+          CANDIDATES=(~/llama.cpp/build/**/llama)
+          echo "Found llama candidates:"
+          for c in "${CANDIDATES[@]}"; do
+            echo "  - $c"
+          done
+          if [ ${#CANDIDATES[@]} -eq 0 ]; then
+            echo "Error: llama binary not found under ~/llama.cpp/build"
+            exit 1
+          fi
+          BIN="${CANDIDATES[0]}"
+          echo "Using llama binary: $BIN"
+
+          echo "=== Reviewing *.fink.js files ==="
           for f in **/*.fink.js; do
-            if [ ! -f "$f" ]; then
-              continue
-            fi
-            echo ">>> Reviewing $f"
-            # extract first ~2048 bytes (≈2000 chars) to avoid huge contexts
-            SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/' )
-
-            PROMPT="<|im_start|>system You are a senior JS engine reviewer; identify one bug or anti-pattern and suggest a one-line fix.<|im_end|><|im_start|>user $SNIPPET<|im_end|> <|im_start|>assistant"
-
-            echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3 --color          # streams with colors
+            [ -f "$f" ] || continue
+            echo "Reviewing $f"
+            SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/')
+            PROMPT="<|im_start|>system
+You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|>
+<|im_start|>user
+$SNIPPET<|im_end|>
+<|im_start|>assistant"
+            echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3
             echo
           done
 
-      # 6 ─ Batch-process any *-input.txt prompts with llama CLI
       - name: Auto-exec bot
         env:
           MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
         run: |
           set -euo pipefail
-          BIN="$HOME/llama.cpp/build/bin/llama"
-          SYS="<|im_start|>system You are a concise assistant that replies in English.<|im_end|>"
-          shopt -s nullglob
+          shopt -s globstar nullglob
+          # Reuse the same llama binary from the previous step
+          CANDIDATES=(~/llama.cpp/build/**/llama)
+          if [ ${#CANDIDATES[@]} -eq 0 ]; then
+            echo "Error: llama binary not found for auto-exec bot"
+            exit 1
+          fi
+          BIN="${CANDIDATES[0]}"
+          SYS="<|im_start|>system
+You are a concise assistant that replies in English.<|im_end|>"
           for f in reports/autoexec.bot/*-input.txt; do
-            if [ ! -f "$f" ]; then
-              continue
-            fi
-            USER="<|im_start|>user $(cat "$f")<|im_end|>"
-            PROMPT="$SYS $USER <|im_start|>assistant"
+            [ -f "$f" ] || continue
+            USER="<|im_start|>user
+$(cat "$f")<|im_end|>"
+            PROMPT="$SYS
+$USER
+<|im_start|>assistant"
             OUT="${f/-input.txt/-output.txt}"
-            echo ">>> Generating $OUT"
+            echo "Generating $OUT"
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 256 --temp 0.7 > "$OUT"
+            echo "Done $OUT"
           done
 
-      # 7 ─ Upload all *-output.txt as artifact
-      - name: Upload auto-exec outputs
+      - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
           name: autoexec-reports
