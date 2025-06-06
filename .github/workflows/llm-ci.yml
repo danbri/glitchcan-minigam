@@ -88,11 +88,7 @@ jobs:
             [ -f "$f" ] || continue
             echo "Reviewing $f"
             SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/')
-            PROMPT="<|im_start|>system
-You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|>
-<|im_start|>user
-$SNIPPET<|im_end|>
-<|im_start|>assistant"
+            PROMPT="<|im_start|>system You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|><|im_start|>user $SNIPPET<|im_end|><|im_start|>assistant"
             echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3
             echo
           done
