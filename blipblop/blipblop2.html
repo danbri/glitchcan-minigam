@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Dual Pattern Bass Sequencer</title>
+<style>
+:root {
+--bg-color: #120458;
+--primary-glow: #ff00a0;
+--secondary-glow: #2de2e6;
+--dark-accent: #0d033d;
+--light-text: #eeeeee;
+--button-text: #120458;
+--monospace-font: 'Courier New', Courier, monospace;
+--sans-serif-font: 'Arial', sans-serif;
+}
+
+body {
+font-family: var(--sans-serif-font);
+display: flex;
+flex-direction: column;
+align-items: center;
+background-color: var(--bg-color);
+color: var(--primary-glow);
+padding: 15px;
+margin: 0;
+overscroll-behavior: none;
+user-select: none;
+-webkit-user-select: none;
+-webkit-tap-highlight-color: transparent;
+}
+
+h1 {
+font-size: 1.8em;
+font-weight: bold;
+text-shadow: 0 0 6px var(--primary-glow), 0 0 12px var(--primary-glow);
+margin: 20px 0;
+text-align: center;
+}
+
+#sequencer-container {
+width: fit-content;
+max-width: 100%;
+margin: 20px 0;
+background-color: var(--dark-accent);
+padding: 8px;
+border: 1px solid var(--primary-glow);
+border-radius: 6px;
+box-shadow: 0 0 15px rgba(255, 0, 160, 0.3);
+}
+
+#sequencer {
+display: grid;
+gap: 4px;
+position: relative;
+}
+
+.row-label {
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+min-width: 35px;
+color: var(--primary-glow);
+font-size: 0.9em;
+padding-right: 5px;
+}
+
+.note {
+width: 32px;
+height: 32px;
+border: 1px solid var(--primary-glow);
+cursor: pointer;
+transition: opacity 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+border-radius: 4px;
+position: relative;
+background-color: rgba(255, 255, 255, 0.05);
+}
+
+.note[style*="background-color"] {
+background-color: inherit;
+}
+
+.note.active {
+box-shadow: 0 0 8px currentColor, 0 0 15px currentColor;
+transform: scale(1.03);
+border-width: 2px;
+}
+
+.note.playing {
+box-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff !important;
+border: 2px solid #ffffff !important;
+opacity: 1 !important;
+transform: scale(1.06);
+}
+
+.vertical-highlight {
+position: absolute;
+top: 8px;
+bottom: 8px;
+width: calc(32px + 4px);
+background-color: rgba(45, 226, 230, 0.35);
+pointer-events: none;
+transition: left 0.05s linear;
+z-index: 3;
+border-radius: 3px;
+left: -100px;
+display: none;
+}
+
+body.playing .vertical-highlight {
+display: block;
+}
+
+#controls {
+margin: 15px 0;
+display: flex;
+gap: 15px;
+justify-content: center;
+flex-wrap: wrap;
+}
+
+button {
+padding: 12px 25px;
+font-size: 1.1em;
+font-weight: bold;
+background-color: var(--secondary-glow);
+border: none;
+color: var(--button-text);
+cursor: pointer;
+transition: all 0.2s ease;
+border-radius: 5px;
+box-shadow: 0 3px 6px rgba(0,0,0,0.2), 0 0 8px rgba(45, 226, 230, 0.5);
+min-width: 100px;
+text-align: center;
+}
+
+button:hover {
+background-color: var(--primary-glow);
+color: var(--light-text);
+box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 15px var(--primary-glow);
+}
+
+button:active {
+transform: translateY(1px);
+box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 5px var(--primary-glow);
+}
+
+#togglePatternButton.patternB {
+background-color: #ff80ed;
+box-shadow: 0 3px 6px rgba(0,0,0,0.2), 0 0 8px rgba(255, 128, 237, 0.5);
+}
+
+#togglePatternButton.patternB:hover {
+background-color: #f757e1;
+color: var(--light-text);
+box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 15px #f757e1;
+}
+
+#log-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+width: 95%;
+max-width: 400px;
+margin-top: 15px;
+gap: 10px;
+}
+
+#activity-stream, #console-log {
+width: 100%;
+height: 60px;
+overflow-y: scroll;
+border: 1px solid var(--primary-glow);
+padding: 8px;
+background-color: rgba(18, 4, 88, 0.75);
+font-size: 0.8em;
+border-radius: 4px;
+color: var(--light-text);
+box-sizing: border-box;
+}
+
+#console-log {
+color: var(--secondary-glow);
+font-family: var(--monospace-font);
+}
+</style>
+</head>
+<body>
+
+<h1>Dual Pattern Bass Sequencer</h1>
+
+<div id="sequencer-container">
+<div id="sequencer">
+<!-- Grid elements generated here -->
+</div>
+</div>
+
+<div id="controls">
+<button id="playPause">Play</button>
+<button id="togglePatternButton">Pattern A</button>
+</div>
+
+<div id="log-container">
+<div id="activity-stream">Activity Log Initialized...</div>
+<div id="console-log">Console Log Initialized...</div>
+</div>
+
+<script>
+let audioContext;
+
+// Expanded note range (now includes melody notes)
+const notes = [
+{ index: 0, name: 'C2', freq: 65.41, key: 'C2', color: '#4575b4', voice: 'pulse' },
+{ index: 1, name: 'D2', freq: 73.42, key: 'D2', color: '#7d0abf', voice: 'pulse' },
+{ index: 2, name: 'E2', freq: 82.41, key: 'E2', color: '#d73027', voice: 'pulse' },
+{ index: 3, name: 'F2', freq: 87.31, key: 'F2', color: '#2477db', voice: 'pulse' },
+{ index: 4, name: 'G2', freq: 98.00, key: 'G2', color: '#1a9850', voice: 'pulse' },
+{ index: 5, name: 'A2', freq: 110.00, key: 'A2', color: '#fee08b', voice: 'pulse' },
+{ index: 6, name: 'B2', freq: 123.47, key: 'B2', color: '#FF69B4', voice: 'pulse' },
+{ index: 7, name: 'C3', freq: 130.81, key: 'C3', color: '#ff8c42', voice: 'pulse' },
+];
+
+const steps = 8;
+let isPlaying = false;
+let currentStep = 0;
+let intervalId = null;
+const stepDuration = 0.25; // Duration of one eighth note step
+
+const sequencer = document.getElementById('sequencer');
+const playPauseBtn = document.getElementById('playPause');
+const togglePatternBtn = document.getElementById('togglePatternButton');
+const activityStream = document.getElementById('activity-stream');
+const consoleElement = document.getElementById('console-log');
+
+// --- Grid Data for Both Patterns ---
+const gridA = notes.map(() => Array(steps).fill(false));
+const gridB = notes.map(() => Array(steps).fill(false));
+
+// Pattern A: Classic House Bass (C-C-G-G-C-C-G-G)
+gridA[0][0] = true; gridA[0][1] = true; // C2 on 1,2
+gridA[4][2] = true; gridA[4][3] = true; // G2 on 3,4
+gridA[0][4] = true; gridA[0][5] = true; // C2 on 5,6
+gridA[4][6] = true; gridA[4][7] = true; // G2 on 7,8
+
+// Pattern B: Synth-Pop Bassline (C-E-G-A-C-E-G-A)
+gridB[0][0] = true; // C2 on 1
+gridB[2][1] = true; // E2 on 2
+gridB[4][2] = true; // G2 on 3
+gridB[5][3] = true; // A2 on 4
+gridB[7][4] = true; // C3 on 5
+gridB[2][5] = true; // E2 on 6
+gridB[4][6] = true; // G2 on 7
+gridB[5][7] = true; // A2 on 8
+
+let activePattern = 'A';
+
+// --- Enhanced Web Audio Functions ---
+
+function initAudioContext() {
+if (!audioContext) {
+try {
+audioContext = new (window.AudioContext || window.webkitAudioContext)();
+consoleLog('Audio context initialized.');
+if (audioContext.state === 'suspended') {
+audioContext.resume().then(() => { consoleLog('Audio context resumed successfully on init.'); })
+.catch(e => consoleLog(`Context suspended, needs interaction to resume.`));
+}
+} catch (e) { consoleError('Web Audio API not supported.'); alert('Web Audio API not supported.'); return false; }
+} else if (audioContext.state === 'suspended') { consoleLog(`Context suspended, needs interaction to resume.`); }
+return true;
+}
+
+// Enhanced synthesis with better bass sound
+function playNote(noteData, duration = stepDuration * 0.9) {
+if (!audioContext || audioContext.state !== 'running') {
+consoleError(`PlayNote called but context not running (State: ${audioContext ? audioContext.state : 'null'})`);
+if(audioContext && audioContext.state === 'suspended'){ audioContext.resume().catch(e => consoleError('Silent resume failed in playNote')); }
+return;
+}
+
+const now = audioContext.currentTime;
+const attackTime = 0.01;
+const sustainLevel = 0.6;
+const releaseTime = 0.25;
+const effectiveSustainDuration = Math.max(0.01, duration - attackTime);
+
+// Create two oscillators for richer sound
+const osc1 = audioContext.createOscillator();
+const osc2 = audioContext.createOscillator();
+const filter = audioContext.createBiquadFilter();
+const distortion = audioContext.createWaveShaper();
+const mainGain = audioContext.createGain();
+const filterGain = audioContext.createGain();
+
+// Setup oscillators
+osc1.type = 'sawtooth';
+osc1.frequency.setValueAtTime(noteData.freq, now);
+
+osc2.type = 'square';
+osc2.frequency.setValueAtTime(noteData.freq * 0.5, now); // Sub oscillator
+
+// Enhanced filter
+filter.type = 'lowpass';
+filter.frequency.setValueAtTime(600, now);
+filter.Q.setValueAtTime(2.0, now);
+
+// Add subtle distortion for warmth
+const makeDistortionCurve = (amount) => {
+const samples = 44100;
+const curve = new Float32Array(samples);
+const deg = Math.PI / 180;
+for (let i = 0; i < samples; i++) {
+const x = (i * 2) / samples - 1;
+curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+}
+return curve;
+};
+distortion.curve = makeDistortionCurve(2);
+distortion.oversample = '4x';
+
+// Envelope
+mainGain.gain.setValueAtTime(0, now);
+mainGain.gain.linearRampToValueAtTime(sustainLevel, now + attackTime);
+const releaseStartTime = now + effectiveSustainDuration;
+mainGain.gain.setValueAtTime(sustainLevel, releaseStartTime);
+mainGain.gain.exponentialRampToValueAtTime(0.001, releaseStartTime + releaseTime);
+
+// Sub oscillator gain
+filterGain.gain.setValueAtTime(0.3, now);
+
+// Connect everything
+osc1.connect(distortion);
+osc2.connect(filterGain);
+distortion.connect(filter);
+filterGain.connect(filter);
+filter.connect(mainGain);
+mainGain.connect(audioContext.destination);
+
+// Start and stop
+osc1.start(now);
+osc2.start(now);
+osc1.stop(releaseStartTime + releaseTime + 0.05);
+osc2.stop(releaseStartTime + releaseTime + 0.05);
+}
+
+// --- UI and Sequencer Logic ---
+
+function createSequencer() {
+sequencer.innerHTML = '';
+sequencer.style.gridTemplateColumns = `auto repeat(${steps}, 1fr)`;
+
+notes.forEach((noteData) => {
+// Create Row Label
+const rowLabel = document.createElement('div');
+rowLabel.className = 'row-label';
+rowLabel.textContent = noteData.name;
+sequencer.appendChild(rowLabel);
+
+// Create Note Cells for the row
+for (let col = 0; col < steps; col++) {
+const noteElement = document.createElement('div');
+noteElement.className = 'note';
+noteElement.dataset.row = noteData.index;
+noteElement.dataset.col = col;
+noteElement.style.setProperty('--note-color', noteData.color);
+noteElement.style.backgroundColor = noteData.color;
+
+// Add event listeners
+noteElement.addEventListener('click', toggleNote);
+noteElement.addEventListener('touchstart', (e) => { e.preventDefault(); toggleNote(e); }, { passive: false });
+sequencer.appendChild(noteElement);
+}
+});
+
+// Add highlight bar (initially hidden)
+const verticalHighlight = document.createElement('div');
+verticalHighlight.className = 'vertical-highlight';
+sequencer.appendChild(verticalHighlight);
+
+updateGridVisuals();
+consoleLog(`Sequencer grid created. Initial pattern: ${activePattern}`);
+}
+
+function updateGridVisuals() {
+const currentGrid = (activePattern === 'A') ? gridA : gridB;
+const noteElements = sequencer.querySelectorAll('.note');
+
+noteElements.forEach(noteElement => {
+const row = parseInt(noteElement.dataset.row, 10);
+const col = parseInt(noteElement.dataset.col, 10);
+const isActive = currentGrid[row][col];
+
+noteElement.style.opacity = isActive ? '1' : '0.35';
+noteElement.classList.toggle('active', isActive);
+});
+consoleLog(`Grid visuals updated to Pattern ${activePattern}`);
+}
+
+function toggleNote(event) {
+if (!initAudioContext()) return;
+if(audioContext.state === 'suspended'){
+audioContext.resume().then(()=>{ consoleLog('Audio resumed on note toggle.'); _performToggle(event); })
+.catch(e => consoleError('Failed to resume audio on toggle.'));
+return;
+}
+_performToggle(event);
+}
+
+function _performToggle(event) {
+const target = event.target;
+if (!target.classList.contains('note')) return;
+
+const row = parseInt(target.dataset.row, 10);
+const col = parseInt(target.dataset.col, 10);
+if (isNaN(row) || isNaN(col) || row < 0 || row >= notes.length || col < 0 || col >= steps) {
+consoleError(`Invalid note coordinates: index=${row}, col=${col}`); return;
+}
+
+const targetGrid = (activePattern === 'A') ? gridA : gridB;
+targetGrid[row][col] = !targetGrid[row][col];
+
+target.style.opacity = targetGrid[row][col] ? '1' : '0.35';
+target.classList.toggle('active', targetGrid[row][col]);
+
+if (targetGrid[row][col]) {
+const noteToPlay = notes.find(n => n.index === row);
+if(noteToPlay) { playNote(noteToPlay, 0.15); }
+}
+
+const noteName = notes.find(n => n.index === row)?.name || `Row ${row}`;
+logActivity(`Pattern ${activePattern}: Toggled ${noteName} [Col ${col}] to ${targetGrid[row][col] ? 'ON' : 'OFF'}`);
+}
+
+function togglePattern() {
+activePattern = (activePattern === 'A') ? 'B' : 'A';
+togglePatternBtn.textContent = `Pattern ${activePattern}`;
+togglePatternBtn.classList.toggle('patternB', activePattern === 'B');
+updateGridVisuals();
+logActivity(`Switched to Pattern ${activePattern}`);
+}
+
+function logActivity(message) {
+const logEntry = document.createElement('div');
+const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'});
+logEntry.textContent = `[${time}] ${message}`;
+activityStream.insertBefore(logEntry, activityStream.firstChild);
+if (activityStream.childNodes.length > 30) { activityStream.removeChild(activityStream.lastChild); }
+}
+
+function consoleLog(message) {
+console.log(message);
+const logEntry = document.createElement('div');
+logEntry.textContent = `> ${message}`;
+consoleElement.appendChild(logEntry);
+consoleElement.scrollTop = consoleElement.scrollHeight;
+}
+
+function consoleError(message) {
+console.error(message);
+const logEntry = document.createElement('div');
+logEntry.style.color = '#FF6B6B';
+logEntry.textContent = `> ERROR: ${message}`;
+consoleElement.appendChild(logEntry);
+consoleElement.scrollTop = consoleElement.scrollHeight;
+}
+
+function step() {
+if (!isPlaying || !audioContext || audioContext.state !== 'running') return;
+
+const currentGrid = (activePattern === 'A') ? gridA : gridB;
+const prevStep = (currentStep - 1 + steps) % steps;
+
+// Update highlights
+sequencer.querySelectorAll(`.note[data-col="${prevStep}"]`).forEach(noteEl => { noteEl.classList.remove('playing'); });
+const highlightElements = sequencer.querySelectorAll(`.note[data-col="${currentStep}"]`);
+
+// Play notes based on the active grid
+notes.forEach((noteData) => {
+const row = noteData.index;
+const noteElement = sequencer.querySelector(`.note[data-row="${row}"][data-col="${currentStep}"]`);
+if(noteElement) noteElement.classList.add('playing');
+
+if (currentGrid[row][currentStep]) {
+playNote(noteData);
+}
+});
+
+// Move highlight bar
+const verticalHighlight = sequencer.querySelector('.vertical-highlight');
+if (verticalHighlight) {
+const firstLabel = sequencer.querySelector('.row-label');
+const firstNote = sequencer.querySelector('.note');
+if (firstLabel && firstNote) {
+const labelWidth = parseFloat(getComputedStyle(firstLabel).width);
+const noteWidth = parseFloat(getComputedStyle(firstNote).width);
+const gap = parseFloat(getComputedStyle(sequencer).gap);
+const highlightLeft = labelWidth + 8 + 5 + currentStep * (noteWidth + gap);
+verticalHighlight.style.left = `${highlightLeft}px`;
+}
+}
+
+currentStep = (currentStep + 1) % steps;
+}
+
+function togglePlayPause() {
+if (!initAudioContext()) { alert("Could not initialize audio..."); return; }
+if (audioContext.state === 'suspended') {
+audioContext.resume().then(() => {
+consoleLog('Audio context resumed on play toggle.');
+if (isPlaying) { stopPlayback(); } else { startPlayback(); }
+}).catch(e => { consoleError(`Failed to resume audio context on play toggle: ${e}`); alert("Audio couldn't start..."); });
+} else {
+if (isPlaying) { stopPlayback(); } else { startPlayback(); }
+}
+}
+
+function startPlayback() {
+if (isPlaying || !audioContext || audioContext.state !== 'running') return;
+currentStep = 0;
+document.body.classList.add('playing');
+step();
+intervalId = setInterval(step, stepDuration * 1000);
+playPauseBtn.textContent = 'Pause';
+isPlaying = true;
+logActivity('Sequencer Started');
+consoleLog('Playback started.');
+}
+
+function stopPlayback() {
+if (!isPlaying) return;
+clearInterval(intervalId);
+intervalId = null;
+document.body.classList.remove('playing');
+sequencer.querySelectorAll(`.note.playing`).forEach(noteEl => { noteEl.classList.remove('playing'); });
+const verticalHighlight = sequencer.querySelector('.vertical-highlight');
+if(verticalHighlight) verticalHighlight.style.left = '-100px';
+playPauseBtn.textContent = 'Play';
+isPlaying = false;
+logActivity('Sequencer Stopped');
+consoleLog('Playback stopped.');
+}
+
+// --- Initialization ---
+createSequencer();
+playPauseBtn.addEventListener('click', togglePlayPause);
+togglePatternBtn.addEventListener('click', togglePattern);
+
+// Initial interaction handler
+const initInteractionHandler = () => { initAudioContext(); consoleLog('Initial user interaction detected.'); };
+document.body.addEventListener('click', initInteractionHandler, { once: true });
+document.body.addEventListener('touchstart', initInteractionHandler, { once: true });
+
+consoleLog('Dual Pattern Sequencer initialized.');
+logActivity('App loaded. Interact (tap/click) then Press Play.');
+
+</script>
+</body>
+</html>
