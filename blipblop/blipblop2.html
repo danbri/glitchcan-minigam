@@ -239,11 +239,13 @@ const consoleElement = document.getElementById('console-log');
 const gridA = notes.map(() => Array(steps).fill(false));
 const gridB = notes.map(() => Array(steps).fill(false));
 
-// Pattern A: Classic House Bass (C-C-G-G-C-C-G-G)
-gridA[0][0] = true; gridA[0][1] = true; // C2 on 1,2
-gridA[4][2] = true; gridA[4][3] = true; // G2 on 3,4
-gridA[0][4] = true; gridA[0][5] = true; // C2 on 5,6
-gridA[4][6] = true; gridA[4][7] = true; // G2 on 7,8
+// Pattern A: Blue Monday-style Bass (E-E-B-E-E-B-D-E)
+gridA[2][0] = true; gridA[2][1] = true; // E2 on 1,2 (main riff)
+gridA[6][2] = true; // B2 on 3 (tension note)
+gridA[2][3] = true; // E2 on 4 (back to root)
+gridA[2][4] = true; gridA[2][5] = true; // E2 on 5,6 (emphasis)
+gridA[6][6] = true; // B2 on 7 (tension)
+gridA[1][7] = true; // D2 on 8 (passing tone)
 
 // Pattern B: Synth-Pop Bassline (C-E-G-A-C-E-G-A)
 gridB[0][0] = true; // C2 on 1
