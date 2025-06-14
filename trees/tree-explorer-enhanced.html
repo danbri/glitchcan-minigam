@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUSK THE DRAGON: Bristol Tree Quest</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: #2c5530;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+        
+        .sidebar {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .query-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .query-section h3 {
+            margin: 0 0 1rem 0;
+            color: #2c5530;
+        }
+        
+        select, input, textarea, button {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background: #2c5530;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        
+        button:hover {
+            background: #1a3d1f;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            background: white;
+            font-family: monospace;
+            font-size: 0.8em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c5530;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #2c5530;
+            transition: width 0.3s ease;
+        }
+        
+        .tree-emoji-icon {
+            background: none !important;
+            border: none !important;
+            font-size: 20px;
+            text-align: center;
+            line-height: 20px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .tree-emoji-icon:hover {
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 8px rgba(255, 165, 0, 1));
+        }
+        
+        /* Tree eating animation */
+        @keyframes treeGrow {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(10); opacity: 0.8; }
+            100% { transform: scale(100); opacity: 0; }
+        }
+        
+        .eating-animation {
+            animation: treeGrow 2s ease-out forwards;
+            z-index: 9999 !important;
+            pointer-events: none;
+        }
+        
+        /* Screen shake animation */
+        @keyframes screenShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+            20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+        
+        .screen-shake {
+            animation: screenShake 0.8s ease-in-out;
+        }
+        
+        /* Dragon roar effect */
+        .dragon-roar {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8em;
+            z-index: 10000;
+            pointer-events: none;
+            animation: roarEffect 1.5s ease-out forwards;
+        }
+        
+        @keyframes roarEffect {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(3); }
+        }
+
+        /* Cluster eating effect */
+        .cluster-explosion {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12em;
+            z-index: 10000;
+            pointer-events: none;
+            animation: explosionEffect 2s ease-out forwards;
+        }
+        
+        @keyframes explosionEffect {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.1) rotate(0deg); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(2) rotate(180deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(5) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐉 MUSK THE DRAGON: Bristol Tree Quest</h1>
+        <p>Help MUSK eat all the trees in Bristol to survive! Educational tree-eating adventure</p>
+        <div id="gameStats" style="display: flex; justify-content: center; gap: 2rem; margin-top: 0.5rem;">
+            <div>❤️ Health: <span id="health">100</span></div>
+            <div>🍃 Trees Eaten: <span id="score">0</span></div>
+            <div>⏱️ Time: <span id="timer">0</span>s</div>
+            <div>🌳 Trees Remaining: <span id="remaining">0</span></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div id="loading" class="loading">
+                <p>Loading tree database...</p>
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <p id="loadingStatus">Initializing...</p>
+            </div>
+            
+            <div id="controls" style="display: none;">
+                <div class="query-section">
+                    <h3>🐉 MUSK's Status</h3>
+                    <div style="background: #f0f8ff; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <div style="font-size: 2em; text-align: center; margin-bottom: 0.5rem;">🐉</div>
+                        <div id="dragonStatus">MUSK is hungry and needs trees!</div>
+                        <div style="margin-top: 0.5rem;">
+                            <div style="background: #ddd; height: 10px; border-radius: 5px;">
+                                <div id="healthBar" style="background: #ff4444; height: 100%; width: 100%; border-radius: 5px; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="startGame()" id="startBtn">🎮 Start Game</button>
+                    <button onclick="pauseGame()" id="pauseBtn" style="display: none;">⏸️ Pause</button>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalTrees">0</div>
+                        <div>Total Trees</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="uniqueSpecies">0</div>
+                        <div>Species</div>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>🌳 Tree Learning</h3>
+                    <div id="treeInfo" style="background: #f9f9f9; padding: 1rem; border-radius: 8px; min-height: 100px;">
+                        <div style="text-align: center; color: #888;">Click on trees or clusters to learn about them!</div>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>🐉 Dragon Controls</h3>
+                    <p style="font-size: 0.9em; margin: 0.5rem 0;">
+                        🖱️ Click on 🌳 trees to eat them<br>
+                        💥 Click on clusters for MEGA FEASTS<br>
+                        🔍 Zoom in to find individual trees<br>
+                        ❤️ Health decreases over time<br>
+                        🍃 Eating trees restores health
+                    </p>
+                    <button onclick="showTreesInView()" id="showTreesBtn">🔍 Find Trees Here</button>
+                    <button onclick="clearIndividualTrees()">🧹 Clear Area</button>
+                    <p id="viewportInfo" style="font-size: 0.8em; color: #666; margin: 0.5rem 0;">Zoom in to find trees automatically</p>
+                </div>
+                
+                <div class="query-section">
+                    <h3>Query Results</h3>
+                    <div class="results" id="queryResults">No query executed yet</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+    <script>
+        let db;
+        let map;
+        let clusterGroup;
+        let individualMarkers = [];
+        let debounceTimer;
+        let isLoadingTrees = false;
+        
+        // Game variables
+        let gameState = {
+            isPlaying: false,
+            health: 100,
+            score: 0,
+            startTime: 0,
+            totalTrees: 0,
+            eatenTrees: new Set(),
+            gameTimer: null,
+            healthDecayTimer: null
+        };
+        
+        // WebAudio setup
+        let audioContext;
+        
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('WebAudio initialized successfully!');
+            } catch (error) {
+                console.warn('WebAudio not supported:', error);
+            }
+        }
+        
+        function playChompSound() {
+            if (!audioContext) return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.1);
+                oscillator.type = 'sawtooth';
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 200;
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        function playRoarSound() {
+            if (!audioContext) return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(60, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(120, audioContext.currentTime + 0.5);
+                oscillator.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 1);
+                oscillator.type = 'sawtooth';
+                
+                filter.type = 'bandpass';
+                filter.frequency.value = 150;
+                filter.Q.value = 5;
+                
+                gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1.2);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        function playGulpSound() {
+            if (!audioContext) return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.4);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        function playBurpSound() {
+            if (!audioContext) return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(100, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(60, audioContext.currentTime + 0.2);
+                oscillator.type = 'square';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        // Initialize the application
+        async function init() {
+            updateProgress(10, "Loading SQLite...");
+            await initSQLite();
+            
+            updateProgress(20, "Loading CSV data...");
+            await loadCSVData();
+            
+            updateProgress(80, "Setting up map...");
+            initMap();
+            
+            updateProgress(90, "Finalizing...");
+            await populateFilters();
+            
+            updateProgress(95, "Initializing dragon sounds...");
+            initAudio();
+            
+            updateProgress(100, "Complete!");
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('controls').style.display = 'block';
+            
+            loadAllTrees();
+        }
+        
+        function updateProgress(percent, status) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('loadingStatus').textContent = status;
+        }
+        
+        async function initSQLite() {
+            const sqlPromise = initSqlJs({
+                locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+            });
+            const SQL = await sqlPromise;
+            db = new SQL.Database();
+        }
+        
+        async function loadCSVData() {
+            try {
+                updateProgress(30, "Fetching CSV file...");
+                const response = await fetch('Trees.csv');
+                const csvText = await response.text();
+                
+                updateProgress(40, "Parsing CSV...");
+                const lines = csvText.split('\n');
+                
+                updateProgress(50, "Creating database table...");
+                const createTableSQL = `
+                    CREATE TABLE trees (
+                        objectid INTEGER, asset_id TEXT, site_name TEXT, plot_no TEXT, feature_id TEXT, location TEXT, type TEXT, prim_meas TEXT, unit TEXT, site_code TEXT, feat_gp TEXT, x REAL, y REAL, dead TEXT, classification TEXT, extent_easting_1 REAL, extent_northing_1 REAL, extent_easting_2 REAL, extent_northing_2 REAL, layers TEXT, latin_code TEXT, latin_name TEXT, feature_type_name TEXT, common_name TEXT, full_common_name TEXT, crown_height TEXT, crown_width TEXT, crown_area TEXT, dbh TEXT, location_risk_zone TEXT, epicormic TEXT, insurance_claim_history TEXT, central_asset_id TEXT, contract_area_name TEXT, customer TEXT, dead_flag TEXT, feature_group TEXT, feature_group_code TEXT, featuretypecode TEXT, notes TEXT, revision_no TEXT, tree_species TEXT, tree_modified_risk TEXT, canopy_size_at_maturity TEXT, sponsorship TEXT, sponsorship_package TEXT, planting_season TEXT, planting_funder TEXT, planting_notes TEXT, species_notes TEXT, tree_type TEXT, jobs_required TEXT, services_visibility TEXT, constraints TEXT, cancellation_reason TEXT, notes_for_status TEXT, cancellation_notes TEXT
+                    )
+                `;
+                db.run(createTableSQL);
+                
+                updateProgress(60, "Inserting tree data...");
+                const batchSize = 1000;
+                let inserted = 0;
+                
+                for (let i = 1; i < lines.length; i += batchSize) {
+                    const batch = lines.slice(i, i + batchSize);
+                    const values = [];
+                    
+                    for (const line of batch) {
+                        if (line.trim()) {
+                            const row = parseCSVLine(line);
+                            if (row.length >= 50) {
+                                values.push('(' + row.map(val => `'${val.replace(/'/g, "''")}'`).join(',') + ')');
+                            }
+                        }
+                    }
+                    
+                    if (values.length > 0) {
+                        const insertSQL = `INSERT INTO trees VALUES ${values.join(',')}`;
+                        try {
+                            db.run(insertSQL);
+                            inserted += values.length;
+                            updateProgress(60 + (i / lines.length) * 20, `Inserted ${inserted} trees...`);
+                        } catch (e) {
+                            console.warn('Batch insert error:', e);
+                        }
+                    }
+                }
+                
+                console.log(`Loaded ${inserted} trees into database`);
+                
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+                updateProgress(0, "Error loading data");
+            }
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+        
+        function initMap() {
+            map = L.map('map').setView([51.4545, -2.5879], 11);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            clusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                chunkInterval: 500,
+                chunkDelay: 50
+            });
+            
+            // Make clusters clickable for mass tree eating
+            clusterGroup.on('clusterclick', function(event) {
+                if (gameState.isPlaying) {
+                    const cluster = event.layer;
+                    const childMarkers = cluster.getAllChildMarkers();
+                    eatCluster(cluster, childMarkers);
+                }
+            });
+            
+            map.addLayer(clusterGroup);
+            map.on('moveend zoomend', debounceViewportLoad);
+        }
+        
+        async function populateFilters() {
+            const totalResult = db.exec("SELECT COUNT(*) FROM trees");
+            const speciesCountResult = db.exec("SELECT COUNT(DISTINCT common_name) FROM trees WHERE common_name != ''");
+            
+            document.getElementById('totalTrees').textContent = totalResult[0].values[0][0];
+            document.getElementById('uniqueSpecies').textContent = speciesCountResult[0].values[0][0];
+        }
+        
+        function loadAllTrees() {
+            const result = db.exec("SELECT x, y, common_name, site_name, latin_name FROM trees WHERE x IS NOT NULL AND y IS NOT NULL AND x != '' AND y != ''");
+            loadTreesIntoClusters(result);
+        }
+        
+        function loadTreesIntoClusters(result) {
+            if (result.length === 0) return;
+            
+            const data = result[0];
+            const columns = data.columns;
+            const xIndex = columns.indexOf('x');
+            const yIndex = columns.indexOf('y');
+            const nameIndex = columns.indexOf('common_name');
+            const siteIndex = columns.indexOf('site_name');
+            
+            if (xIndex < 0 || yIndex < 0) return;
+            
+            updateProgress(85, `Adding ${data.values.length} trees to clusters...`);
+            clusterGroup.clearLayers();
+            
+            let added = 0;
+            data.values.forEach((row, index) => {
+                const x = parseFloat(row[xIndex]);
+                const y = parseFloat(row[yIndex]);
+                
+                if (!isNaN(x) && !isNaN(y)) {
+                    const latLng = convertBNGToLatLng(x, y);
+                    
+                    if (latLng) {
+                        const marker = L.marker(latLng);
+                        const name = row[nameIndex] || 'Unknown species';
+                        const site = row[siteIndex] || 'Unknown location';
+                        marker.bindPopup(`<strong>🌳 ${name}</strong><br>📍 ${site}`);
+                        clusterGroup.addLayer(marker);
+                        added++;
+                    }
+                }
+                
+                if (index % 1000 === 0) {
+                    updateProgress(85 + (index / data.values.length) * 10, `Added ${added} trees...`);
+                }
+            });
+            
+            console.log(`Added ${added} trees to clusters`);
+            gameState.totalTrees = added;
+            document.getElementById('remaining').textContent = added;
+            document.getElementById('queryResults').textContent = `Loaded ${added} trees into clusters. Start the game to begin MUSK's adventure!`;
+        }
+        
+        function debounceViewportLoad() {
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            
+            if (map.getZoom() >= 14) {
+                debounceTimer = setTimeout(() => {
+                    showTreesInView();
+                }, 2000);
+                
+                document.getElementById('viewportInfo').textContent = 'Loading trees in 2 seconds...';
+            } else {
+                document.getElementById('viewportInfo').textContent = 'Zoom in closer to auto-load individual trees';
+            }
+        }
+        
+        function showTreesInView() {
+            if (isLoadingTrees) return;
+            
+            const bounds = map.getBounds();
+            const bneBounds = convertLatLngBoundsToBNG(bounds);
+            
+            if (!bneBounds) {
+                document.getElementById('queryResults').textContent = 'Unable to determine map bounds for tree loading';
+                return;
+            }
+            
+            isLoadingTrees = true;
+            document.getElementById('showTreesBtn').disabled = true;
+            document.getElementById('showTreesBtn').textContent = 'Loading...';
+            
+            const query = `
+                SELECT x, y, common_name, site_name, latin_name 
+                FROM trees 
+                WHERE x IS NOT NULL AND y IS NOT NULL 
+                AND x != '' AND y != '' 
+                AND x BETWEEN ${bneBounds.west} AND ${bneBounds.east}
+                AND y BETWEEN ${bneBounds.south} AND ${bneBounds.north}
+                LIMIT 500
+            `;
+            
+            try {
+                const result = db.exec(query);
+                displayIndividualTrees(result);
+                
+                const count = result.length > 0 ? result[0].values.length : 0;
+                document.getElementById('viewportInfo').textContent = `Loaded ${count} individual trees in current view`;
+                
+            } catch (error) {
+                document.getElementById('queryResults').textContent = 'Error loading trees: ' + error.message;
+            } finally {
+                isLoadingTrees = false;
+                document.getElementById('showTreesBtn').disabled = false;
+                document.getElementById('showTreesBtn').textContent = '🔍 Find Trees Here';
+            }
+        }
+        
+        function convertLatLngBoundsToBNG(bounds) {
+            // Use same reference point as convertBNGToLatLng for consistency
+            const queenSquareLatLng = { lat: 51.4534, lng: -2.5970 };
+            const queenSquareBNG = { x: 358950, y: 172850 };
+            
+            // Same scale factors as forward conversion
+            const scaleX = 70700; // meters per degree longitude at Bristol
+            const scaleY = 111300; // meters per degree latitude
+            
+            const west = queenSquareBNG.x + (bounds.getWest() - queenSquareLatLng.lng) * scaleX;
+            const east = queenSquareBNG.x + (bounds.getEast() - queenSquareLatLng.lng) * scaleX;
+            const south = queenSquareBNG.y + (bounds.getSouth() - queenSquareLatLng.lat) * scaleY;
+            const north = queenSquareBNG.y + (bounds.getNorth() - queenSquareLatLng.lat) * scaleY;
+            
+            return { west, east, south, north };
+        }
+        
+        function displayIndividualTrees(result) {
+            clearIndividualTrees();
+            
+            if (result.length === 0) {
+                document.getElementById('queryResults').textContent = 'No trees found in current view';
+                return;
+            }
+            
+            const data = result[0];
+            const columns = data.columns;
+            const xIndex = columns.indexOf('x');
+            const yIndex = columns.indexOf('y');
+            const nameIndex = columns.indexOf('common_name');
+            const siteIndex = columns.indexOf('site_name');
+            
+            if (xIndex < 0 || yIndex < 0) return;
+            
+            let plotted = 0;
+            
+            data.values.forEach(row => {
+                const x = parseFloat(row[xIndex]);
+                const y = parseFloat(row[yIndex]);
+                
+                if (!isNaN(x) && !isNaN(y)) {
+                    const latLng = convertBNGToLatLng(x, y);
+                    
+                    if (latLng) {
+                        const treeIcon = L.divIcon({
+                            html: '🌳',
+                            iconSize: [20, 20],
+                            className: 'tree-emoji-icon'
+                        });
+                        
+                        const marker = L.marker(latLng, { icon: treeIcon }).addTo(map);
+                        const name = row[nameIndex] || 'Unknown species';
+                        const site = row[siteIndex] || 'Unknown location';
+                        const latin = row[4] || 'Species unknown';
+                        
+                        const treeData = { x, y, name, site, latin };
+                        
+                        marker.on('click', () => {
+                            eatTree(marker, treeData);
+                        });
+                        
+                        marker.bindPopup(`
+                            <strong>🌳 ${name}</strong><br>
+                            <em>${latin}</em><br>
+                            📍 ${site}<br>
+                            ${gameState.isPlaying ? '<br>🐉 Click to eat!' : ''}
+                        `);
+                        individualMarkers.push(marker);
+                        plotted++;
+                    }
+                }
+            });
+            
+            document.getElementById('queryResults').textContent = `Showing ${plotted} individual trees (🌳) in current view`;
+        }
+        
+        function clearIndividualTrees() {
+            individualMarkers.forEach(marker => map.removeLayer(marker));
+            individualMarkers = [];
+            document.getElementById('viewportInfo').textContent = 'Individual trees cleared';
+        }
+        
+        function convertBNGToLatLng(easting, northing) {
+            // More accurate BNG to WGS84 conversion for Bristol area
+            // Queen Square Bristol is approximately BNG: 358950, 172850
+            const queenSquareBNG = { x: 358950, y: 172850 };
+            const queenSquareLatLng = { lat: 51.4534, lng: -2.5970 };
+            
+            // Use more accurate conversion factors for SW England
+            // These factors account for the non-linear nature of the projection
+            const deltaX = easting - queenSquareBNG.x;
+            const deltaY = northing - queenSquareBNG.y;
+            
+            // Improved scale factors based on OS grid conversion
+            // At Bristol latitude (~51.45°N), 1 degree longitude ≈ 70.7km, 1 degree latitude ≈ 111.3km
+            const scaleX = 1 / 70700; // meters per degree longitude at Bristol
+            const scaleY = 1 / 111300; // meters per degree latitude
+            
+            const lat = queenSquareLatLng.lat + (deltaY * scaleY);
+            const lng = queenSquareLatLng.lng + (deltaX * scaleX);
+            
+            // Expanded bounds for greater Bristol area
+            if (lat > 51.3 && lat < 51.6 && lng > -2.8 && lng < -2.2) {
+                return [lat, lng];
+            }
+            return null;
+        }
+        
+        // GAME FUNCTIONS WITH EPIC ANIMATIONS AND SOUNDS!
+        
+        function startGame() {
+            gameState.isPlaying = true;
+            gameState.health = 100;
+            gameState.score = 0;
+            gameState.startTime = Date.now();
+            gameState.eatenTrees.clear();
+            
+            updateGameUI();
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('dragonStatus').textContent = 'MUSK is on the hunt for trees! 🐉';
+            
+            // Enable audio context with user interaction
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            startGameTimers();
+        }
+        
+        function pauseGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            clearInterval(gameState.healthDecayTimer);
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = '▶️ Resume Game';
+            document.getElementById('pauseBtn').style.display = 'none';
+            document.getElementById('dragonStatus').textContent = 'Game paused. MUSK is resting...';
+        }
+        
+        function startGameTimers() {
+            gameState.gameTimer = setInterval(() => {
+                if (gameState.isPlaying) {
+                    const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+                    document.getElementById('timer').textContent = elapsed;
+                }
+            }, 1000);
+            
+            gameState.healthDecayTimer = setInterval(() => {
+                if (gameState.isPlaying && gameState.health > 0) {
+                    gameState.health = Math.max(0, gameState.health - 0.5);
+                    updateGameUI();
+                    
+                    if (gameState.health <= 0) {
+                        gameOver();
+                    } else if (gameState.health <= 20) {
+                        document.getElementById('dragonStatus').textContent = 'MUSK is starving! Find trees quickly! 🚨';
+                    } else if (gameState.health <= 50) {
+                        document.getElementById('dragonStatus').textContent = 'MUSK is getting hungry... 😰';
+                    }
+                }
+            }, 1000);
+        }
+        
+        function eatTree(marker, treeData) {
+            if (!gameState.isPlaying) return;
+            
+            const treeId = `${treeData.x}_${treeData.y}`;
+            if (gameState.eatenTrees.has(treeId)) return;
+            
+            // EPIC TREE EATING ANIMATION
+            animateTreeEating(marker, () => {
+                map.removeLayer(marker);
+                individualMarkers = individualMarkers.filter(m => m !== marker);
+            });
+            
+            // Dragon sounds!
+            playChompSound();
+            setTimeout(() => playGulpSound(), 200);
+            
+            // Screen shake effect
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 800);
+            
+            // Dragon roar emoji effect
+            showDragonRoar('🐉');
+            
+            // Update game state
+            gameState.eatenTrees.add(treeId);
+            gameState.score++;
+            gameState.health = Math.min(100, gameState.health + 15);
+            
+            showTreeInfo(treeData);
+            updateGameUI();
+            
+            if (gameState.score >= gameState.totalTrees) {
+                winGame();
+            } else {
+                document.getElementById('dragonStatus').textContent = `MUSK devoured a ${treeData.name}! Delicious! 😋`;
+            }
+        }
+        
+        function eatCluster(cluster, childMarkers) {
+            if (!gameState.isPlaying) return;
+            
+            const treesToEat = Math.min(childMarkers.length, 100);
+            
+            // MEGA DRAGON ROAR for cluster eating
+            playRoarSound();
+            setTimeout(() => playBurpSound(), 1000);
+            
+            // Giant explosion effect
+            showClusterExplosion('💥🐲💥');
+            
+            // Massive screen shake
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 1500);
+            
+            // Update game state for cluster eating
+            for (let i = 0; i < treesToEat; i++) {
+                const marker = childMarkers[i];
+                if (marker) {
+                    const treeId = `cluster_${Date.now()}_${i}`;
+                    if (!gameState.eatenTrees.has(treeId)) {
+                        gameState.eatenTrees.add(treeId);
+                        gameState.score++;
+                        gameState.health = Math.min(100, gameState.health + 3); // Smaller health per tree in cluster
+                    }
+                }
+            }
+            
+            updateGameUI();
+            document.getElementById('dragonStatus').textContent = `MUSK DEVOURED ${treesToEat} TREES AT ONCE! EPIC! 🔥`;
+            
+            document.getElementById('treeInfo').innerHTML = `
+                <h4>🐲 CLUSTER FEAST!</h4>
+                <p>MUSK ate ${treesToEat} trees in one massive bite!</p>
+                <p>🐉 Gained ${treesToEat * 3} health!</p>
+                <small>Mass deforestation isn't sustainable in real life!</small>
+            `;
+        }
+        
+        function animateTreeEating(marker, onComplete) {
+            const element = marker.getElement();
+            if (!element) return;
+            
+            element.classList.add('eating-animation');
+            setTimeout(onComplete, 2000);
+        }
+        
+        function showDragonRoar(emoji = '🐉', fontSize = '8em') {
+            const roarElement = document.createElement('div');
+            roarElement.className = 'dragon-roar';
+            roarElement.textContent = emoji;
+            roarElement.style.fontSize = fontSize;
+            
+            document.body.appendChild(roarElement);
+            setTimeout(() => document.body.removeChild(roarElement), 1500);
+        }
+        
+        function showClusterExplosion(emoji = '💥🐲💥') {
+            const explosionElement = document.createElement('div');
+            explosionElement.className = 'cluster-explosion';
+            explosionElement.textContent = emoji;
+            
+            document.body.appendChild(explosionElement);
+            setTimeout(() => document.body.removeChild(explosionElement), 2000);
+        }
+        
+        function showTreeInfo(treeData) {
+            const commonName = treeData.name || 'Unknown tree';
+            const latinName = treeData.latin || 'Species unknown';
+            const location = treeData.site || 'Location unknown';
+            
+            const info = `
+                <h4>🌳 ${commonName}</h4>
+                <p><em>${latinName}</em></p>
+                <p>📍 ${location}</p>
+                <p>🐉 MUSK gained 15 health from eating this ${commonName.toLowerCase()}!</p>
+                <small>Trees provide oxygen, reduce pollution, and support wildlife habitats.</small>
+            `;
+            
+            document.getElementById('treeInfo').innerHTML = info;
+        }
+        
+        function updateGameUI() {
+            document.getElementById('health').textContent = Math.round(gameState.health);
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('remaining').textContent = gameState.totalTrees - gameState.score;
+            
+            const healthPercent = (gameState.health / 100) * 100;
+            document.getElementById('healthBar').style.width = healthPercent + '%';
+            
+            const healthBar = document.getElementById('healthBar');
+            if (gameState.health > 70) {
+                healthBar.style.background = '#44ff44';
+            } else if (gameState.health > 30) {
+                healthBar.style.background = '#ffaa00';
+            } else {
+                healthBar.style.background = '#ff4444';
+            }
+        }
+        
+        function gameOver() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            clearInterval(gameState.healthDecayTimer);
+            
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            document.getElementById('dragonStatus').innerHTML = `
+                💀 MUSK starved to death!<br>
+                🍃 Trees eaten: ${gameState.score}<br>
+                ⏱️ Survived: ${elapsed}s<br>
+                <button onclick="startGame()" style="margin-top: 0.5rem;">🔄 Try Again</button>
+            `;
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = '🎮 New Game';
+            document.getElementById('pauseBtn').style.display = 'none';
+        }
+        
+        function winGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            clearInterval(gameState.healthDecayTimer);
+            
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            document.getElementById('dragonStatus').innerHTML = `
+                🎉 MUSK ATE ALL THE TREES!<br>
+                🐉 Bristol is now treeless!<br>
+                ⏱️ Time: ${elapsed}s<br>
+                <small>In reality, trees are vital for our ecosystem!</small><br>
+                <button onclick="startGame()" style="margin-top: 0.5rem;">🎮 Play Again</button>
+            `;
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = '🎮 New Game';
+            document.getElementById('pauseBtn').style.display = 'none';
+        }
+        
+        // Initialize the app when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
