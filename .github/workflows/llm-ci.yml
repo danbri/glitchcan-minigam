@@ -1,0 +1,139 @@
+name: LLM checks & auto-exec
+
+on:
+  push:
+    paths:
+      - '**/*.fink.js'
+      - 'reports/autoexec.bot/*-input.txt'
+  pull_request:
+    paths:
+      - '**/*.fink.js'
+      - 'reports/autoexec.bot/*-input.txt'
+
+jobs:
+  llm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache llama.cpp build+model
+        uses: actions/cache@v4
+        with:
+          key: qwen15-code-7b-v8-${{ runner.os }}
+          path: |
+            ~/.cache/llama
+            ~/llama.cpp
+
+      - name: Build llama.cpp (with examples ON)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential cmake libcurl4-openssl-dev
+          git clone --depth 1 https://github.com/ggerganov/llama.cpp ~/llama.cpp
+          cmake -S ~/llama.cpp -B ~/llama.cpp/build \
+                -DLLAMA_BUILD_EXAMPLES=ON \
+                -DLLAMA_SHARED=ON \
+                -DCMAKE_BUILD_TYPE=Release
+          cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+
+      - name: Show llama.cpp/build contents
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "====== contents of ~/llama.cpp/build ======"
+          ls -R ~/llama.cpp/build || true
+          echo "==========================================="
+
+      - name: Fetch CodeQwen‐1.5‐7B‐Chat Q4_0
+        run: |
+          set -euo pipefail
+          MODEL_DIR="$HOME/.cache/llama"
+          FILE="$MODEL_DIR/codeqwen-1_5-7b-chat-q4_0.gguf"
+          URL="https://huggingface.co/Qwen/CodeQwen1.5-7B-Chat-GGUF/resolve/main/codeqwen-1_5-7b-chat-q4_0.gguf"
+          mkdir -p "$MODEL_DIR"
+          [ -s "$FILE" ] || rm -f "$FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "Downloading CodeQwen‐1.5‐7B‐Chat Q4_0 (≈4.5 GB)…"
+            curl -L --fail --retry 3 -o "$FILE" "$URL"
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -q cmake
+          pip install -q "git+https://github.com/marella/ctransformers.git"
+
+      - name: Run LLM review
+        env:
+          MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+        run: |
+          set -euo pipefail
+          # Find the llama CLI binary under ~/llama.cpp/build
+          shopt -s globstar nullglob
+          CANDIDATES=(~/llama.cpp/build/**/llama)
+          echo "Found llama candidates:"
+          for c in "${CANDIDATES[@]}"; do
+            echo "  - $c"
+          done
+          if [ ${#CANDIDATES[@]} -eq 0 ]; then
+            echo "Error: llama binary not found under ~/llama.cpp/build"
+            exit 1
+          fi
+          BIN="${CANDIDATES[0]}"
+          echo "Using llama binary: $BIN"
+
+          echo "=== Reviewing *.fink.js files ==="
+          for f in **/*.fink.js; do
+            [ -f "$f" ] || continue
+            echo "Reviewing $f"
+            SNIPPET=$(head -c 2048 "$f" | sed 's/$/\\n/')
+            read -r -d '' PROMPT << 'EOF'
+<|im_start|>system
+You are a senior JS engine reviewer; identify a bug or anti-pattern and suggest a one-line fix.<|im_end|>
+<|im_start|>user
+'"$SNIPPET"'<|im_end|>
+<|im_start|>assistant
+EOF
+            echo "$PROMPT" | "$BIN" -m "$MODEL" -n 128 --temp 0.3
+            echo
+          done
+
+      - name: Auto-exec bot
+        env:
+          MODEL: /home/runner/.cache/llama/codeqwen-1_5-7b-chat-q4_0.gguf
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          CANDIDATES=(~/llama.cpp/build/**/llama)
+          if [ ${#CANDIDATES[@]} -eq 0 ]; then
+            echo "Error: llama binary not found for auto-exec bot"
+            exit 1
+          fi
+          BIN="${CANDIDATES[0]}"
+          read -r -d '' SYS << 'EOF'
+<|im_start|>system
+You are a concise assistant that replies in English.<|im_end|>
+EOF
+          for f in reports/autoexec.bot/*-input.txt; do
+            [ -f "$f" ] || continue
+            USER="<|im_start|>user
+$(cat "$f")<|im_end|>"
+            read -r -d '' PROMPT << EOF
+$SYS
+$USER
+<|im_start|>assistant
+EOF
+            OUT="${f/-input.txt/-output.txt}"
+            echo "Generating $OUT"
+            echo "$PROMPT" | "$BIN" -m "$MODEL" -n 256 --temp 0.7 > "$OUT"
+            echo "Done $OUT"
+          done
+
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoexec-reports
+          path: |
+            reports/autoexec.bot/*-output.txt

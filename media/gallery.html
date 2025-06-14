@@ -248,131 +248,145 @@
     </div>
     
     <script>
-        // Media files with AI-generated descriptions
-        const mediaFiles = [
-            {
-                filename: "IMG_0290.jpeg",
-                description: "Stunning 360° urban panorama transformed into a 'tiny planet' effect, showing modern architecture, bridges, and city streets warped into a spherical view",
-                alt: "Tiny planet effect panorama of urban architecture with buildings and bridges in spherical distortion"
-            },
-            {
-                filename: "12E67B94-4352-4F5F-BCA7-0DB27A471ED9.png",
-                description: "Isometric pixel art dungeon scene featuring a character near treasure chests, glowing gems, and atmospheric dungeon lighting",
-                alt: "Isometric pixel art game scene with character, treasure chests, and glowing blue gems in a dungeon setting"
-            },
-            {
-                filename: "EA969AD0-24EE-4A5D-99F1-3A576217C355.png",
-                description: "Atmospheric isometric castle or dungeon interior with stone architecture, warm torch lighting, and mysterious pathways",
-                alt: "Isometric castle interior with stone walls, torches, and shadowy pathways creating atmospheric dungeon scene"
-            },
-            {
-                filename: "237A2C79-5EDE-407D-A699-B0A3CF1C4567.png",
-                description: "Mystical forest scene with a glowing cyan waterfall, magical lighting, and a character exploring an enchanted environment",
-                alt: "Magical forest scene with luminous waterfall, mystical blue lighting, and character in enchanted woodland setting"
+        let mediaFiles = [];
+        
+        // Load metadata from JSON file
+        async function loadMetadata() {
+            try {
+                const response = await fetch('../image_metadata.json?v=' + Date.now());
+                const metadata = await response.json();
+                
+                // Transform JSON-LD format to gallery format, filtering only media files
+                mediaFiles = metadata.image
+                    .filter(img => img.contentUrl.startsWith('media/'))
+                    .map(img => ({
+                        filename: img.contentUrl.replace('media/', ''),
+                        description: img.description,
+                        alt: img.description,  // Use same description for alt text
+                        genre: img.genre
+                    }));
+                
+                // Discover additional files not in metadata
+                await discoverAdditionalFiles();
+                
+                loadGallery();
+            } catch (error) {
+                console.error('Failed to load metadata:', error);
+                // Fallback to manual file discovery
+                await discoverAdditionalFiles();
+                loadGallery();
             }
-        ];
+        }
         
-        // Add all other existing files with generic descriptions
-        const otherFiles = [
-            "03F3BBED-CFD8-446A-AEA8-E17D9CF566F3.png",
-            "1CD7A2F8-C207-4420-9C60-60C77DA70516.png",
-            "1F5FFF26-F815-478F-AD62-522CB011CDE5.JPEG",
-            "1F5FFF26-F815-478F-AD62-522CB011CDE5.png",
-            "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png",
-            "37ECA225-5A36-4B04-AF40-4D11B78FE16C.png",
-            "383B165C-8F26-44A8-96B2-2E62A9645BB6.png",
-            "3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png",
-            "49259C34-ED3E-43FD-AD0D-11F7CBF4E8B2.png",
-            "4CB33058-288A-4F93-BDBE-9CCCF4A0DCAA.png",
-            "5437e4f1_e62e_4211_a301_9306d1ca3c9c.mp4",
-            "546ADC22-C6F0-4BA0-BA19-EFAE18E93E29.png",
-            "590C2081-0A9F-42B5-9128-909E629BBAD0.png",
-            "596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png",
-            "5AE4093E-F93B-4CCD-8E70-6BB8F3D54E19.png",
-            "603BC341-4AFD-4E35-A4AE-77BE7C564303.png",
-            "6055F905-B41A-4D17-80F9-76F45CC522C3.png",
-            "616991D1-18B1-4E73-A61A-C44D76023CAB.png",
-            "68DCC484-0992-4E9B-8543-B7C5F29F729A-1.png",
-            "68DCC484-0992-4E9B-8543-B7C5F29F729A.png",
-            "6D27939D-8543-4A73-8F65-81D9F8C2E0DE.png",
-            "6E992CE5-A92F-45EE-A94C-9336B63513DE.png",
-            "6dc70b36-91a2-42fd-b6fd-5f3e7c1169eb.mp4",
-            "72acd4ca_14be_4769_9224_215099a3504b.mp4",
-            "827115E8-9A15-401B-A429-381A25325101.png",
-            "8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png",
-            "95E0F783-0B0A-403E-8AF7-02404221FA0E.png",
-            "97EA1FC7-CA24-4F34-A425-305242ED3949.png",
-            "9C2A6066-A174-4C64-A0B2-D0BE87B23792_2025-03-07T09-02-01_upscaled.mp4",
-            "A4F6EB35-0334-4E3E-9B5F-5DD4D0FF403A.png",
-            "A6ECE166-CA68-47FC-8D41-815EB95F5FEF.png",
-            "AFC4774C-5ABB-434B-B45C-89CB4BB1A36F.png",
-            "B266C9A3-9402-4622-962E-129F6921D855.png",
-            "B6343CE4-917A-49CB-BF67-32F517B5BE1A.png",
-            "B803ED86-A395-429E-ABC1-6E3DDC4AFE0E.png",
-            "BE621CCB-627A-4D51-B894-884685EE2607.png",
-            "BF0B4114-C919-455B-950D-D6332CBCA095.png",
-            "C1130841-8AD0-4FD0-B5B6-E3E22514F3F9.png",
-            "C431EB91-07CC-44C9-A24E-3976C64158EB.png",
-            "C69EC766-9D12-4686-BD3D-B3F9AD356C41.png",
-            "CA45D43C-8DB4-4214-A574-5BFC424D9136.png",
-            "D26D98D2-F85F-483A-84E0-F21CD1EA7AC4.png",
-            "D78E805C-A5F4-4CCE-ABAD-F60A6296ABC4.png",
-            "DE351903-562D-4CE8-91C9-00B9FA4E21BB.png",
-            "DE3FFCDF-527B-4247-86E1-F0FB73BDBAC3.png",
-            "E1E8E642-0058-4D3A-A168-FC3DC001A322-1.png",
-            "E1E8E642-0058-4D3A-A168-FC3DC001A322.png",
-            "E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png",
-            "E52C8509-E3BB-4177-957F-80E4E11D2119.png",
-            "E70260A2-3326-46B9-B5A6-AE31C68FB5C5.png",
-            "EA0E5AC2-4D25-403B-B098-5D793721513A.png",
-            "F025B9B6-5A9C-47F5-8FE8-2AB91C603C4E.png",
-            "F1643523-32EF-4852-B9DC-B356A4E018AC.png",
-            "F73167DB-36FF-4C78-8801-9F9CC68A3F89.png",
-            "F9BE0838-3B35-4968-8897-8E37BDF3AA76.png",
-            "FF1B25CD-52E5-4C8A-9D7D-5DEA2A4298AA.png",
-            "IMG_7048.PNG",
-            "IMG_7049.PNG",
-            "IMG_7068.PNG",
-            "IMG_7072.JPEG",
-            "IMG_7093.JPEG",
-            "IMG_7095.PNG",
-            "IMG_7102.PNG",
-            "IMG_7103.PNG",
-            "IMG_7220.JPEG",
-            "IMG_7237.PNG",
-            "IMG_7310.PNG",
-            "IMG_7317.PNG",
-            "IMG_7318.PNG",
-            "IMG_7323.JPEG",
-            "IMG_7368.PNG",
-            "IMG_7369.PNG",
-            "IMG_7370.PNG",
-            "IMG_7397.PNG",
-            "IMG_7431.PNG",
-            "IMG_7535.PNG",
-            "IMG_7573.PNG",
-            "d94a6357-1549-44a1-9173-ce2a9a51d556.mp4"
-        ];
-        
-        // Add generic descriptions for other files
-        otherFiles.forEach(filename => {
-            const type = getFileType(filename);
-            const isIMG = filename.startsWith('IMG_');
+        // Discover files that exist but aren't in metadata
+        async function discoverAdditionalFiles() {
+            const knownFiles = [
+                "03F3BBED-CFD8-446A-AEA8-E17D9CF566F3.png",
+                "1CD7A2F8-C207-4420-9C60-60C77DA70516.png",
+                "1F5FFF26-F815-478F-AD62-522CB011CDE5.JPEG",
+                "1F5FFF26-F815-478F-AD62-522CB011CDE5.png",
+                "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png",
+                "37ECA225-5A36-4B04-AF40-4D11B78FE16C.png",
+                "383B165C-8F26-44A8-96B2-2E62A9645BB6.png",
+                "3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png",
+                "49259C34-ED3E-43FD-AD0D-11F7CBF4E8B2.png",
+                "4CB33058-288A-4F93-BDBE-9CCCF4A0DCAA.png",
+                "5437e4f1_e62e_4211_a301_9306d1ca3c9c.mp4",
+                "546ADC22-C6F0-4BA0-BA19-EFAE18E93E29.png",
+                "590C2081-0A9F-42B5-9128-909E629BBAD0.png",
+                "596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png",
+                "5AE4093E-F93B-4CCD-8E70-6BB8F3D54E19.png",
+                "603BC341-4AFD-4E35-A4AE-77BE7C564303.png",
+                "6055F905-B41A-4D17-80F9-76F45CC522C3.png",
+                "616991D1-18B1-4E73-A61A-C44D76023CAB.png",
+                "68DCC484-0992-4E9B-8543-B7C5F29F729A-1.png",
+                "68DCC484-0992-4E9B-8543-B7C5F29F729A.png",
+                "6D27939D-8543-4A73-8F65-81D9F8C2E0DE.png",
+                "6E992CE5-A92F-45EE-A94C-9336B63513DE.png",
+                "6dc70b36-91a2-42fd-b6fd-5f3e7c1169eb.mp4",
+                "72acd4ca_14be_4769_9224_215099a3504b.mp4",
+                "827115E8-9A15-401B-A429-381A25325101.png",
+                "8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png",
+                "95E0F783-0B0A-403E-8AF7-02404221FA0E.png",
+                "97EA1FC7-CA24-4F34-A425-305242ED3949.png",
+                "9C2A6066-A174-4C64-A0B2-D0BE87B23792_2025-03-07T09-02-01_upscaled.mp4",
+                "A4F6EB35-0334-4E3E-9B5F-5DD4D0FF403A.png",
+                "A6ECE166-CA68-47FC-8D41-815EB95F5FEF.png",
+                "AFC4774C-5ABB-434B-B45C-89CB4BB1A36F.png",
+                "B266C9A3-9402-4622-962E-129F6921D855.png",
+                "B6343CE4-917A-49CB-BF67-32F517B5BE1A.png",
+                "B803ED86-A395-429E-ABC1-6E3DDC4AFE0E.png",
+                "BE621CCB-627A-4D51-B894-884685EE2607.png",
+                "BF0B4114-C919-455B-950D-D6332CBCA095.png",
+                "C1130841-8AD0-4FD0-B5B6-E3E22514F3F9.png",
+                "C431EB91-07CC-44C9-A24E-3976C64158EB.png",
+                "C69EC766-9D12-4686-BD3D-B3F9AD356C41.png",
+                "CA45D43C-8DB4-4214-A574-5BFC424D9136.png",
+                "D26D98D2-F85F-483A-84E0-F21CD1EA7AC4.png",
+                "D78E805C-A5F4-4CCE-ABAD-F60A6296ABC4.png",
+                "DE351903-562D-4CE8-91C9-00B9FA4E21BB.png",
+                "DE3FFCDF-527B-4247-86E1-F0FB73BDBAC3.png",
+                "E1E8E642-0058-4D3A-A168-FC3DC001A322-1.png",
+                "E1E8E642-0058-4D3A-A168-FC3DC001A322.png",
+                "E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png",
+                "E52C8509-E3BB-4177-957F-80E4E11D2119.png",
+                "E70260A2-3326-46B9-B5A6-AE31C68FB5C5.png",
+                "EA0E5AC2-4D25-403B-B098-5D793721513A.png",
+                "EA969AD0-24EE-4A5D-99F1-3A576217C355.png",
+                "F025B9B6-5A9C-47F5-8FE8-2AB91C603C4E.png",
+                "F1643523-32EF-4852-B9DC-B356A4E018AC.png",
+                "F73167DB-36FF-4C78-8801-9F9CC68A3F89.png",
+                "F9BE0838-3B35-4968-8897-8E37BDF3AA76.png",
+                "FF1B25CD-52E5-4C8A-9D7D-5DEA2A4298AA.png",
+                "IMG_7048.PNG",
+                "IMG_7049.PNG",
+                "IMG_7068.PNG",
+                "IMG_7072.JPEG",
+                "IMG_7093.JPEG",
+                "IMG_7095.PNG",
+                "IMG_7102.PNG",
+                "IMG_7103.PNG",
+                "IMG_7220.JPEG",
+                "IMG_7237.PNG",
+                "IMG_7310.PNG",
+                "IMG_7317.PNG",
+                "IMG_7318.PNG",
+                "IMG_7323.JPEG",
+                "IMG_7368.PNG",
+                "IMG_7369.PNG",
+                "IMG_7370.PNG",
+                "IMG_7397.PNG",
+                "IMG_7431.PNG",
+                "IMG_7535.PNG",
+                "IMG_7573.PNG",
+                "d94a6357-1549-44a1-9173-ce2a9a51d556.mp4"
+            ];
             
-            mediaFiles.push({
-                filename: filename,
-                description: isIMG ? 
-                    "Screenshot or photo captured on mobile device - may contain interface elements, artwork, or personal content" :
-                    type === 'video' ? 
-                        "Video content - may include gameplay footage, demonstrations, or multimedia experiments" :
-                        "Digital image or artwork - creative content with unique visual elements and design",
-                alt: isIMG ?
-                    "Mobile screenshot or photo with interface or content elements" :
-                    type === 'video' ?
-                        "Video file containing multimedia content" :
-                        "Digital image with creative visual content"
+            const existingFilenames = mediaFiles.map(f => f.filename);
+            
+            // Add files not already in metadata
+            knownFiles.forEach(filename => {
+                if (!existingFilenames.includes(filename)) {
+                    const type = getFileType(filename);
+                    const isIMG = filename.startsWith('IMG_');
+                    
+                    mediaFiles.push({
+                        filename: filename,
+                        description: isIMG ? 
+                            "Mobile screenshot or photo - specific content requires analysis" :
+                            type === 'video' ? 
+                                "Video content - specific content requires analysis" :
+                                "Image content - specific content requires analysis",
+                        alt: isIMG ?
+                            "Mobile screenshot or photo" :
+                            type === 'video' ?
+                                "Video file" :
+                                "Image file",
+                        genre: isIMG ? "mobile screenshot" : type
+                    });
+                }
             });
-        });
+        }
         
         let currentFilter = 'all';
         let currentSearch = '';
@@ -536,7 +550,7 @@
         });
         
         // Load gallery on page load
-        loadGallery();
+        loadMetadata();
     </script>
 </body>
 </html>

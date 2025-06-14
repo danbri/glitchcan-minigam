@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; padding: 0; background: white; }
+        svg { display: block; }
+    </style>
+</head>
+<body>
+    <?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#98FB98;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="doorGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#654321;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect width="400" height="150" fill="url(#skyGradient)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="150" width="400" height="150" fill="#228B22"/>
+  
+  <!-- Hill (hobbit hole) -->
+  <ellipse cx="200" cy="180" rx="180" ry="60" fill="#32CD32"/>
+  <ellipse cx="200" cy="175" rx="170" ry="55" fill="#228B22"/>
+  
+  <!-- Door -->
+  <circle cx="200" cy="200" r="25" fill="url(#doorGradient)" stroke="#8B4513" stroke-width="2"/>
+  
+  <!-- Door knob -->
+  <circle cx="215" cy="200" r="3" fill="#FFD700"/>
+  
+  <!-- Door frame -->
+  <circle cx="200" cy="200" r="27" fill="none" stroke="#654321" stroke-width="3"/>
+  
+  <!-- Windows -->
+  <circle cx="150" cy="185" r="8" fill="#87CEEB" stroke="#654321" stroke-width="2"/>
+  <circle cx="250" cy="185" r="8" fill="#87CEEB" stroke="#654321" stroke-width="2"/>
+  
+  <!-- Window frames -->
+  <line x1="142" y1="185" x2="158" y2="185" stroke="#654321" stroke-width="1"/>
+  <line x1="150" y1="177" x2="150" y2="193" stroke="#654321" stroke-width="1"/>
+  <line x1="242" y1="185" x2="258" y2="185" stroke="#654321" stroke-width="1"/>
+  <line x1="250" y1="177" x2="250" y2="193" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Path to door -->
+  <path d="M 200 225 Q 200 250 200 300" stroke="#8B4513" stroke-width="15" fill="none"/>
+  
+  <!-- Garden fence -->
+  <rect x="80" y="230" width="240" height="40" fill="none" stroke="#654321" stroke-width="2"/>
+  <line x1="90" y1="230" x2="90" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="110" y1="230" x2="110" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="130" y1="230" x2="130" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="170" y1="230" x2="170" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="190" y1="230" x2="190" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="210" y1="230" x2="210" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="230" y1="230" x2="230" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="270" y1="230" x2="270" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="290" y1="230" x2="290" y2="270" stroke="#654321" stroke-width="2"/>
+  <line x1="310" y1="230" x2="310" y2="270" stroke="#654321" stroke-width="2"/>
+  
+  <!-- Flowers in garden -->
+  <circle cx="100" cy="250" r="3" fill="#FF69B4"/>
+  <circle cx="120" cy="245" r="3" fill="#FFD700"/>
+  <circle cx="140" cy="255" r="3" fill="#FF69B4"/>
+  <circle cx="160" cy="248" r="3" fill="#9370DB"/>
+  <circle cx="240" cy="252" r="3" fill="#FFD700"/>
+  <circle cx="260" cy="247" r="3" fill="#FF69B4"/>
+  <circle cx="280" cy="253" r="3" fill="#9370DB"/>
+  <circle cx="300" cy="249" r="3" fill="#FFD700"/>
+  
+  <!-- Mailbox -->
+  <rect x="350" y="240" width="8" height="30" fill="#654321"/>
+  <rect x="345" y="235" width="18" height="10" fill="#8B4513"/>
+  
+  <!-- Tree in background -->
+  <rect x="50" y="130" width="8" height="40" fill="#8B4513"/>
+  <circle cx="54" cy="120" r="20" fill="#228B22"/>
+  
+  <!-- Chimney smoke -->
+  <circle cx="180" cy="140" r="2" fill="#D3D3D3" opacity="0.7"/>
+  <circle cx="175" cy="135" r="3" fill="#D3D3D3" opacity="0.5"/>
+  <circle cx="170" cy="130" r="2" fill="#D3D3D3" opacity="0.3"/>
+  
+  <!-- Title -->
+  <text x="200" y="30" text-anchor="middle" font-family="monospace" font-size="16" fill="#2F4F4F" font-weight="bold">BAG END</text>
+</svg>
+    <script>
+        // Auto-convert when loaded in browser
+        setTimeout(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            const svg = document.querySelector('svg');
+            if (svg) {
+                const data = new XMLSerializer().serializeToString(svg);
+                const img = new Image();
+                img.onload = function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Download the PNG
+                    const link = document.createElement('a');
+                    link.download = 'bag_end_exterior.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+                const blob = new Blob([data], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            }
+        }, 100);
+    </script>
+</body>
+</html>

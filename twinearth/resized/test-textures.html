@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture Test</title>
+    <style>
+        body {
+            background-color: #333;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .texture-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .texture-item {
+            margin-bottom: 20px;
+        }
+        img {
+            max-width: 500px;
+            border: 2px solid #666;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .status {
+            color: #ffcc00;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Texture Loading Test</h1>
+    <p class="status" id="status">Testing texture loading...</p>
+    
+    <div class="texture-container" id="texture-container">
+        <!-- Textures will be displayed here -->
+    </div>
+    
+    <script>
+        const texturePaths = [
+            { name: 'Color Map', path: '../color_map.jpg' },
+            { name: 'Bump Map', path: '../bump.jpg' },
+            { name: 'Clouds', path: '../clouds.png' },
+            { name: 'Night Lights', path: '../night_lights.jpg' },
+            { name: 'Specular Map', path: '../spec_mask.jpg' }
+        ];
+        
+        const statusEl = document.getElementById('status');
+        const container = document.getElementById('texture-container');
+        
+        // Test loading each texture
+        let loadedCount = 0;
+        
+        texturePaths.forEach(texture => {
+            const div = document.createElement('div');
+            div.className = 'texture-item';
+            
+            const h2 = document.createElement('h2');
+            h2.textContent = texture.name;
+            div.appendChild(h2);
+            
+            const status = document.createElement('p');
+            status.textContent = 'Loading...';
+            status.className = 'status';
+            div.appendChild(status);
+            
+            const img = document.createElement('img');
+            img.alt = texture.name;
+            
+            img.onload = () => {
+                status.textContent = 'Loaded successfully!';
+                status.style.color = 'lightgreen';
+                loadedCount++;
+                if (loadedCount === texturePaths.length) {
+                    statusEl.textContent = 'All textures loaded successfully!';
+                    statusEl.style.color = 'lightgreen';
+                } else {
+                    statusEl.textContent = `Loaded ${loadedCount} of ${texturePaths.length} textures...`;
+                }
+            };
+            
+            img.onerror = (err) => {
+                status.textContent = 'Error loading texture!';
+                status.style.color = 'red';
+                console.error(`Failed to load texture: ${texture.path}`, err);
+            };
+            
+            img.src = texture.path;
+            div.appendChild(img);
+            
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>

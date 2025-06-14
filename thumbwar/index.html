@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thumbwar Experiments</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-list {
+            list-style: none;
+            padding: 0;
+        }
+        .game-item {
+            background: #34495e;
+            border-radius: 8px;
+            margin: 15px 0;
+            padding: 20px;
+            border: 1px solid #3498db;
+        }
+        .game-link {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .game-link:hover {
+            color: #e74c3c;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .back-link a {
+            color: #3498db;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+        }
+        .back-link a:hover {
+            background-color: #3498db;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <h1>Thumbwar Experiments</h1>
+    
+    <ul class="game-list" id="gameList">
+        <!-- Auto-populated by JavaScript -->
+    </ul>
+    
+    <div class="back-link">
+        <a href="../index.html">← Back to Main</a>
+    </div>
+
+    <script>
+        // Auto-discover HTML files in this directory
+        const games = [
+            { file: 'thumbwar.html', name: 'Thumbwar' },
+            { file: 'battleboids.html', name: 'Battleboids' },
+            { file: 'gridluck.html', name: 'Grid Luck' }
+        ];
+
+        function populateGameList() {
+            const gameList = document.getElementById('gameList');
+            
+            games.forEach(game => {
+                const li = document.createElement('li');
+                li.className = 'game-item';
+                li.innerHTML = `<a href="${game.file}" class="game-link">${game.name}</a>`;
+                gameList.appendChild(li);
+            });
+        }
+
+        populateGameList();
+    </script>
+</body>
+</html>
