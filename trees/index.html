@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🐉🚗 Tesla Dragon: Bristol Tree Quest - ULTIMATE EDITION</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            position: fixed;
+            width: 100%;
+        }
+        
+        .mobile-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #2c5530 0%, #1a3d1f 100%);
+            color: white;
+            padding: env(safe-area-inset-top, 0) 10px 10px 10px;
+            text-align: center;
+            z-index: 2000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .game-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            padding: 5px 0;
+        }
+        
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .map-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            padding-top: 120px;
+            box-sizing: border-box;
+        }
+        
+        .mobile-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #2c5530 0%, #1a3d1f 100%);
+            padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 10px) 10px;
+            z-index: 2000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+            background: #45a049;
+        }
+        
+        .btn:disabled {
+            background: #666;
+            transform: none;
+        }
+        
+        .btn-upgrade {
+            background: #ff6b35;
+        }
+        
+        .btn-upgrade:active {
+            background: #e55a2b;
+        }
+        
+        .dragon-status {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .health-bar {
+            background: rgba(255,255,255,0.2);
+            height: 6px;
+            border-radius: 3px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        
+        .health-fill {
+            background: #4CAF50;
+            height: 100%;
+            transition: width 0.3s ease, background-color 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        /* EPIC TESLA DRAGON - HUGE and GLOWING */
+        .tesla-dragon {
+            font-size: 80px !important;
+            z-index: 1500 !important;
+            animation: dragonPulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 30px rgba(255, 100, 0, 0.5));
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes dragonPulse {
+            0%, 100% { transform: scale(1) rotate(-3deg); }
+            50% { transform: scale(1.15) rotate(3deg); }
+        }
+        
+        /* MEGA SWARM CARS */
+        .swarm-car {
+            font-size: 50px !important;
+            z-index: 1400 !important;
+            animation: carMove 3s linear infinite;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 200, 255, 0.4));
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes carMove {
+            0%, 100% { transform: translateX(0) rotate(-2deg) scale(1); }
+            50% { transform: translateX(8px) rotate(2deg) scale(1.05); }
+        }
+        
+        /* EPIC TREE EATING ANIMATION - FILLS ENTIRE SCREEN */
+        @keyframes treeGrow {
+            0% { transform: scale(1); opacity: 1; }
+            20% { transform: scale(3); opacity: 0.9; }
+            60% { transform: scale(15); opacity: 0.7; }
+            100% { transform: scale(100); opacity: 0; }
+        }
+        
+        .eating-animation {
+            animation: treeGrow 2.5s ease-out forwards;
+            z-index: 9999 !important;
+            pointer-events: none;
+        }
+        
+        /* MASSIVE SCREEN SHAKE */
+        @keyframes screenShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) translateY(-3px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px) translateY(3px); }
+        }
+        
+        .screen-shake {
+            animation: screenShake 1s ease-in-out;
+        }
+        
+        /* CLUSTER EXPLOSION EFFECT */
+        .cluster-explosion {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 15em;
+            z-index: 10000;
+            pointer-events: none;
+            animation: explosionEffect 3s ease-out forwards;
+        }
+        
+        @keyframes explosionEffect {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.1) rotate(0deg); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.5) rotate(90deg); }
+            60% { opacity: 0.8; transform: translate(-50%, -50%) scale(3) rotate(270deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(8) rotate(720deg); }
+        }
+        
+        /* DRAGON ROAR EFFECT */
+        .dragon-roar {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10em;
+            z-index: 10000;
+            pointer-events: none;
+            animation: roarEffect 2s ease-out forwards;
+        }
+        
+        @keyframes roarEffect {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(4); }
+        }
+        
+        /* Dragon movement trail */
+        .dragon-trail {
+            color: gold;
+            z-index: 1450;
+        }
+        
+        /* Arrow pointer to dragon */
+        .dragon-pointer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 215, 0, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            z-index: 3000;
+            animation: pointerPulse 1s ease-in-out infinite;
+            pointer-events: auto;
+            transform-origin: center;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+        
+        @keyframes pointerPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        /* Screen flash effects */
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.4);
+            z-index: 5000;
+            pointer-events: none;
+            animation: flashEffect 0.5s ease-out;
+        }
+        
+        @keyframes flashEffect {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        /* Loading screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c5530 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+        }
+        
+        .loading-spinner {
+            font-size: 4em;
+            animation: spin 2s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.4em;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .loading-progress {
+            width: 80%;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 5px;
+        }
+        
+        /* Hide leaflet controls for clean mobile experience */
+        .leaflet-control-container {
+            display: none !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: rgba(0,0,0,0.9);
+            color: white;
+            border-radius: 12px;
+        }
+        
+        .leaflet-popup-content {
+            margin: 8px 12px;
+            font-size: 0.9em;
+        }
+        
+        /* Haptic feedback simulation */
+        .haptic-feedback {
+            animation: hapticVibrate 0.2s ease-in-out 3;
+        }
+        
+        @keyframes hapticVibrate {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner">🐉🚗</div>
+        <div class="loading-text">Tesla Dragon: ULTIMATE EDITION</div>
+        <div class="loading-text" style="font-size: 1em;">Loading Bristol's 53,904 trees...</div>
+        <div class="loading-progress">
+            <div class="loading-bar" id="loadingBar"></div>
+        </div>
+        <div id="loadingStatus" class="loading-text">Initializing epic dragon sounds...</div>
+    </div>
+
+    <div class="mobile-header">
+        <div class="game-title">🐉🚗 Tesla Dragon: ULTIMATE Bristol Tree Quest</div>
+        <div class="stats-bar">
+            <div class="stat-item">❤️ <span id="health">100</span></div>
+            <div class="stat-item">🍃 <span id="score">0</span></div>
+            <div class="stat-item">💰 $<span id="money">0</span></div>
+            <div class="stat-item">🚗 <span id="swarmCount">0</span></div>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+    <div class="mobile-controls">
+        <div class="dragon-status" id="dragonStatus">
+            Tesla Dragon ULTIMATE EDITION ready! 🐉🚗⚡
+            <div class="health-bar">
+                <div class="health-fill" id="healthBar" style="width: 100%;"></div>
+            </div>
+        </div>
+        
+        <div class="control-buttons">
+            <button class="btn" id="startBtn" onclick="startGame()">🎮 START EPIC HUNT</button>
+            <button class="btn" id="pauseBtn" onclick="pauseGame()" style="display: none;">⏸️ Pause</button>
+            <button class="btn btn-upgrade" id="upgradeBtn" onclick="cycleUpgrades()" disabled>🛒 Buy Swarm Car</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+    <script>
+        // ULTIMATE GAME STATE
+        let gameState = {
+            isPlaying: false,
+            health: 100,
+            score: 0,
+            money: 0,
+            startTime: 0,
+            totalTrees: 0,
+            eatenTrees: new Set(),
+            gameTimer: null,
+            healthDecayTimer: null,
+            swarmCars: [],
+            teslaDragon: null,
+            dragonCircle: null,
+            upgrades: {
+                swarmSize: 0,
+                dragonSpeed: 1,
+                autoEat: false,
+                megaBite: false
+            }
+        };
+
+        let db, map, clusterGroup, individualMarkers = [];
+        let audioContext;
+        
+        // Tesla Dragon position and movement
+        let dragonPosition = { lat: 51.4534, lng: -2.5970 }; // Queen Square
+        let dragonMarker = null;
+        let isMovingDragon = false;
+
+        // EPIC WEBAUDIO DRAGON SOUNDS
+        function initEpicAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('🔊 Epic dragon audio system initialized!');
+            } catch (error) {
+                console.warn('Audio not available:', error);
+            }
+        }
+
+        function playEpicChompSound() {
+            if (!audioContext || audioContext.state !== 'running') return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+                oscillator.type = 'sawtooth';
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 300;
+                
+                gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.4);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        function playMegaRoarSound() {
+            if (!audioContext || audioContext.state !== 'running') return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.8);
+                oscillator.frequency.exponentialRampToValueAtTime(60, audioContext.currentTime + 1.5);
+                oscillator.type = 'sawtooth';
+                
+                filter.type = 'bandpass';
+                filter.frequency.value = 200;
+                filter.Q.value = 8;
+                
+                gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.8);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1.8);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+        
+        function playDriveSound() {
+            if (!audioContext || audioContext.state !== 'running') return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(250, audioContext.currentTime + 0.2);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+
+        function playGulpSound() {
+            if (!audioContext || audioContext.state !== 'running') return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(250, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.4);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) { console.warn('Sound error:', e); }
+        }
+
+        // EPIC HAPTIC FEEDBACK
+        function triggerEpicHaptic(type = 'medium') {
+            if (navigator.vibrate) {
+                switch(type) {
+                    case 'light': navigator.vibrate(80); break;
+                    case 'medium': navigator.vibrate([100, 50, 100]); break;
+                    case 'heavy': navigator.vibrate([200, 100, 200, 100, 200]); break;
+                    case 'mega': navigator.vibrate([300, 100, 300, 100, 300, 100, 300]); break;
+                }
+            }
+            
+            // Visual feedback simulation
+            document.body.classList.add('haptic-feedback');
+            setTimeout(() => document.body.classList.remove('haptic-feedback'), 600);
+        }
+
+        // EPIC SCREEN EFFECTS
+        function flashScreen() {
+            const flash = document.createElement('div');
+            flash.className = 'screen-flash';
+            document.body.appendChild(flash);
+            setTimeout(() => document.body.removeChild(flash), 500);
+        }
+        
+        function shakeScreen() {
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 1000);
+        }
+        
+        function showEpicDragonRoar(emoji = '🐉', fontSize = '10em') {
+            const roarElement = document.createElement('div');
+            roarElement.className = 'dragon-roar';
+            roarElement.textContent = emoji;
+            roarElement.style.fontSize = fontSize;
+            
+            document.body.appendChild(roarElement);
+            setTimeout(() => document.body.removeChild(roarElement), 2000);
+        }
+        
+        function showClusterExplosion(emoji = '💥🐲💥') {
+            const explosionElement = document.createElement('div');
+            explosionElement.className = 'cluster-explosion';
+            explosionElement.textContent = emoji;
+            
+            document.body.appendChild(explosionElement);
+            setTimeout(() => document.body.removeChild(explosionElement), 3000);
+        }
+
+        // Initialize the ULTIMATE application
+        async function init() {
+            updateLoadingProgress(10, "Loading SQLite database...");
+            await initSQLite();
+            
+            updateLoadingProgress(30, "Loading 53,904 Bristol trees...");
+            await loadCSVData();
+            
+            updateLoadingProgress(70, "Initializing epic map system...");
+            initEpicMap();
+            
+            updateLoadingProgress(85, "Spawning MEGA Tesla Dragon...");
+            initMegaTeslaDragon();
+            
+            updateLoadingProgress(95, "Powering up dragon sound system...");
+            initEpicAudio();
+            
+            updateLoadingProgress(100, "READY FOR EPIC TREE DOMINATION!");
+            await loadAllTrees();
+            
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }, 1500);
+        }
+
+        function updateLoadingProgress(percent, status) {
+            document.getElementById('loadingBar').style.width = percent + '%';
+            document.getElementById('loadingStatus').textContent = status;
+        }
+
+        async function initSQLite() {
+            const sqlPromise = initSqlJs({
+                locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+            });
+            const SQL = await sqlPromise;
+            db = new SQL.Database();
+        }
+
+        async function loadCSVData() {
+            try {
+                const response = await fetch('Trees.csv');
+                const csvText = await response.text();
+                
+                const lines = csvText.split('\n');
+                
+                const createTableSQL = `
+                    CREATE TABLE trees (
+                        objectid INTEGER, asset_id TEXT, site_name TEXT, plot_no TEXT, feature_id TEXT, location TEXT, type TEXT, prim_meas TEXT, unit TEXT, site_code TEXT, feat_gp TEXT, x REAL, y REAL, dead TEXT, classification TEXT, extent_easting_1 REAL, extent_northing_1 REAL, extent_easting_2 REAL, extent_northing_2 REAL, layers TEXT, latin_code TEXT, latin_name TEXT, feature_type_name TEXT, common_name TEXT, full_common_name TEXT, crown_height TEXT, crown_width TEXT, crown_area TEXT, dbh TEXT, location_risk_zone TEXT, epicormic TEXT, insurance_claim_history TEXT, central_asset_id TEXT, contract_area_name TEXT, customer TEXT, dead_flag TEXT, feature_group TEXT, feature_group_code TEXT, featuretypecode TEXT, notes TEXT, revision_no TEXT, tree_species TEXT, tree_modified_risk TEXT, canopy_size_at_maturity TEXT, sponsorship TEXT, sponsorship_package TEXT, planting_season TEXT, planting_funder TEXT, planting_notes TEXT, species_notes TEXT, tree_type TEXT, jobs_required TEXT, services_visibility TEXT, constraints TEXT, cancellation_reason TEXT, notes_for_status TEXT, cancellation_notes TEXT
+                    )
+                `;
+                db.run(createTableSQL);
+                
+                const batchSize = 1000;
+                let inserted = 0;
+                
+                for (let i = 1; i < lines.length; i += batchSize) {
+                    const batch = lines.slice(i, i + batchSize);
+                    const values = [];
+                    
+                    for (const line of batch) {
+                        if (line.trim()) {
+                            const row = parseCSVLine(line);
+                            if (row.length >= 50) {
+                                values.push('(' + row.map(val => `'${val.replace(/'/g, "''")}'`).join(',') + ')');
+                            }
+                        }
+                    }
+                    
+                    if (values.length > 0) {
+                        const insertSQL = `INSERT INTO trees VALUES ${values.join(',')}`;
+                        try {
+                            db.run(insertSQL);
+                            inserted += values.length;
+                        } catch (e) {
+                            console.warn('Batch insert error:', e);
+                        }
+                    }
+                }
+                
+                console.log(`🌳 Loaded ${inserted} trees into epic database!`);
+                
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+            }
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function initEpicMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false,
+                doubleClickZoom: false,
+                scrollWheelZoom: true,
+                touchZoom: true,
+                boxZoom: false,
+                keyboard: false
+            }).setView([51.4534, -2.5970], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            clusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                chunkInterval: 200,
+                chunkDelay: 10,
+                maxClusterRadius: 40
+            });
+            
+            // EPIC cluster eating with mega effects
+            clusterGroup.on('clusterclick', function(event) {
+                if (gameState.isPlaying) {
+                    triggerEpicHaptic('mega');
+                    const cluster = event.layer;
+                    const childMarkers = cluster.getAllChildMarkers();
+                    eatEpicCluster(cluster, childMarkers);
+                }
+            });
+            
+            map.addLayer(clusterGroup);
+            
+            // Epic touch controls for dragon movement
+            map.on('click', function(event) {
+                if (gameState.isPlaying && !isMovingDragon) {
+                    moveEpicTeslaDragon(event.latlng);
+                }
+            });
+            
+            // Auto-load nearby trees when map moves
+            map.on('moveend', () => {
+                if (gameState.isPlaying) {
+                    loadNearbyTrees();
+                }
+            });
+        }
+
+        function initMegaTeslaDragon() {
+            const epicDragonIcon = L.divIcon({
+                html: '🐉🚗',
+                iconSize: [120, 120],
+                iconAnchor: [60, 60],
+                className: 'tesla-dragon'
+            });
+            
+            dragonMarker = L.marker([dragonPosition.lat, dragonPosition.lng], { 
+                icon: epicDragonIcon,
+                zIndexOffset: 1000
+            }).addTo(map);
+            
+            // Add epic pulsing circle around dragon
+            const epicDragonCircle = L.circle([dragonPosition.lat, dragonPosition.lng], {
+                color: 'gold',
+                fillColor: 'yellow',
+                fillOpacity: 0.3,
+                radius: 80,
+                weight: 4
+            }).addTo(map);
+            
+            gameState.teslaDragon = dragonMarker;
+            gameState.dragonCircle = epicDragonCircle;
+            
+            // Add epic pointer system
+            updateEpicDragonPointer();
+            setInterval(updateEpicDragonPointer, 1000);
+        }
+
+        function updateEpicDragonPointer() {
+            if (!dragonMarker || !gameState.isPlaying) return;
+            
+            const mapBounds = map.getBounds();
+            const dragonPos = dragonMarker.getLatLng();
+            
+            // Remove existing pointer
+            const existingPointer = document.getElementById('epicDragonPointer');
+            if (existingPointer) {
+                existingPointer.remove();
+            }
+            
+            // Check if dragon is visible on screen
+            if (!mapBounds.contains(dragonPos)) {
+                // Dragon is off-screen, show EPIC pointer
+                const mapCenter = map.getCenter();
+                const angle = Math.atan2(dragonPos.lat - mapCenter.lat, dragonPos.lng - mapCenter.lng);
+                
+                const pointer = document.createElement('div');
+                pointer.id = 'epicDragonPointer';
+                pointer.className = 'dragon-pointer';
+                pointer.innerHTML = '🐉';
+                pointer.style.transform = `translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)`;
+                
+                // Position pointer at edge of screen pointing to dragon
+                const distance = 120;
+                const x = 50 + (Math.cos(angle) * distance / window.innerWidth * 100);
+                const y = 50 + (Math.sin(angle) * distance / window.innerHeight * 100);
+                
+                pointer.style.left = Math.max(5, Math.min(95, x)) + '%';
+                pointer.style.top = Math.max(15, Math.min(85, y)) + '%';
+                
+                // Click to center on dragon with epic effect
+                pointer.onclick = () => {
+                    map.setView(dragonPos, map.getZoom());
+                    triggerEpicHaptic('medium');
+                    playDriveSound();
+                    pointer.remove();
+                };
+                
+                document.body.appendChild(pointer);
+            }
+        }
+
+        function moveEpicTeslaDragon(targetLatLng) {
+            if (isMovingDragon) return;
+            
+            isMovingDragon = true;
+            triggerEpicHaptic('light');
+            playDriveSound();
+            
+            const startPos = dragonMarker.getLatLng();
+            const endPos = targetLatLng;
+            
+            const steps = 40; // Ultra smooth movement
+            let currentStep = 0;
+            
+            const moveInterval = setInterval(() => {
+                currentStep++;
+                const progress = currentStep / steps;
+                
+                // Epic smooth easing
+                const easedProgress = 1 - Math.pow(1 - progress, 4);
+                
+                const lat = startPos.lat + (endPos.lat - startPos.lat) * easedProgress;
+                const lng = startPos.lng + (endPos.lng - startPos.lng) * easedProgress;
+                
+                dragonMarker.setLatLng([lat, lng]);
+                dragonPosition = { lat, lng };
+                
+                // Update circle position
+                if (gameState.dragonCircle) {
+                    gameState.dragonCircle.setLatLng([lat, lng]);
+                }
+                
+                // Add epic movement trail
+                if (currentStep % 4 === 0) {
+                    addEpicDragonTrail(lat, lng);
+                }
+                
+                // Check for nearby trees while moving
+                checkNearbyTrees();
+                
+                if (currentStep >= steps) {
+                    clearInterval(moveInterval);
+                    isMovingDragon = false;
+                    triggerEpicHaptic('light');
+                    
+                    // Smooth center map on dragon
+                    map.panTo([lat, lng]);
+                }
+            }, 25); // Super smooth intervals
+        }
+        
+        function addEpicDragonTrail(lat, lng) {
+            const trailMarker = L.circleMarker([lat, lng], {
+                color: 'gold',
+                fillColor: 'orange',
+                fillOpacity: 0.8,
+                radius: 5,
+                weight: 2
+            }).addTo(map);
+            
+            // Remove trail after epic animation
+            setTimeout(() => {
+                map.removeLayer(trailMarker);
+            }, 3000);
+        }
+
+        async function loadAllTrees() {
+            const result = db.exec("SELECT x, y, common_name, site_name, latin_name FROM trees WHERE x IS NOT NULL AND y IS NOT NULL AND x != '' AND y != '' LIMIT 8000");
+            loadTreesIntoClusters(result);
+        }
+
+        function loadTreesIntoClusters(result) {
+            if (result.length === 0) return;
+            
+            const data = result[0];
+            const columns = data.columns;
+            const xIndex = columns.indexOf('x');
+            const yIndex = columns.indexOf('y');
+            const nameIndex = columns.indexOf('common_name');
+            const siteIndex = columns.indexOf('site_name');
+            
+            if (xIndex < 0 || yIndex < 0) return;
+            
+            clusterGroup.clearLayers();
+            
+            let added = 0;
+            data.values.forEach((row, index) => {
+                const x = parseFloat(row[xIndex]);
+                const y = parseFloat(row[yIndex]);
+                
+                if (!isNaN(x) && !isNaN(y)) {
+                    const latLng = convertBNGToLatLng(x, y);
+                    
+                    if (latLng) {
+                        const treeIcon = L.divIcon({
+                            html: '🌳',
+                            iconSize: [28, 28],
+                            className: 'tree-emoji-icon'
+                        });
+                        
+                        const marker = L.marker(latLng, { icon: treeIcon });
+                        const name = row[nameIndex] || 'Unknown species';
+                        const site = row[siteIndex] || 'Unknown location';
+                        
+                        const treeData = {
+                            id: `${x}_${y}`,
+                            x, y, name, site,
+                            latin: row[4] || 'Species unknown'
+                        };
+                        
+                        marker.treeData = treeData;
+                        
+                        marker.on('click', () => {
+                            if (gameState.isPlaying) {
+                                eatEpicTree(marker, treeData);
+                            }
+                        });
+                        
+                        marker.bindPopup(`
+                            <strong>🌳 ${name}</strong><br>
+                            <em>${treeData.latin}</em><br>
+                            📍 ${site}<br>
+                            ${gameState.isPlaying ? '<br>🐉🚗 Click for EPIC tree eating!' : ''}
+                        `);
+                        
+                        clusterGroup.addLayer(marker);
+                        added++;
+                    }
+                }
+            });
+            
+            console.log(`🌳 Loaded ${added} trees for EPIC game!`);
+            gameState.totalTrees = added;
+            updateUI();
+        }
+
+        function convertBNGToLatLng(easting, northing) {
+            const queenSquareBNG = { x: 358950, y: 172850 };
+            const queenSquareLatLng = { lat: 51.4534, lng: -2.5970 };
+            
+            const deltaX = easting - queenSquareBNG.x;
+            const deltaY = northing - queenSquareBNG.y;
+            
+            const scaleX = 1 / 70700;
+            const scaleY = 1 / 111300;
+            
+            const lat = queenSquareLatLng.lat + (deltaY * scaleY);
+            const lng = queenSquareLatLng.lng + (deltaX * scaleX);
+            
+            if (lat > 51.3 && lat < 51.6 && lng > -2.8 && lng < -2.2) {
+                return [lat, lng];
+            }
+            return null;
+        }
+
+        // EPIC GAME MECHANICS
+
+        function startGame() {
+            gameState.isPlaying = true;
+            gameState.health = 100;
+            gameState.score = 0;
+            gameState.money = 0;
+            gameState.startTime = Date.now();
+            gameState.eatenTrees.clear();
+            
+            // Enable epic audio context
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('upgradeBtn').disabled = false;
+            
+            updateDragonStatus('🐉🚗 Tesla Dragon ULTIMATE EDITION is hunting trees! Tap map to drive! ⚡');
+            triggerEpicHaptic('heavy');
+            playMegaRoarSound();
+            showEpicDragonRoar('🐉⚡');
+            
+            startGameTimers();
+            loadNearbyTrees();
+        }
+
+        function pauseGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            clearInterval(gameState.healthDecayTimer);
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = '▶️ Resume Epic Hunt';
+            document.getElementById('pauseBtn').style.display = 'none';
+            
+            updateDragonStatus('Game paused. Tesla Dragon is recharging epic batteries... 🔋⚡');
+        }
+
+        function startGameTimers() {
+            gameState.gameTimer = setInterval(() => {
+                if (gameState.isPlaying) {
+                    // Health decay
+                    gameState.health = Math.max(0, gameState.health - 0.25);
+                    
+                    // Auto-earn money from swarm
+                    if (gameState.swarmCars.length > 0) {
+                        gameState.money += gameState.swarmCars.length * 0.15;
+                    }
+                    
+                    updateUI();
+                    
+                    if (gameState.health <= 0) {
+                        epicGameOver();
+                    } else if (gameState.health <= 15) {
+                        updateDragonStatus('🚨 Tesla Dragon battery CRITICALLY LOW! Find trees NOW! ⚡💀');
+                        triggerEpicHaptic('mega');
+                        shakeScreen();
+                    } else if (gameState.health <= 30) {
+                        updateDragonStatus('⚠️ Tesla Dragon getting hungry... Need tree power! 🔋');
+                        triggerEpicHaptic('heavy');
+                    }
+                }
+            }, 1000);
+        }
+
+        function eatEpicTree(marker, treeData) {
+            if (!gameState.isPlaying || gameState.eatenTrees.has(treeData.id)) return;
+            
+            // ULTRA EPIC TREE EATING EFFECTS
+            triggerEpicHaptic('heavy');
+            flashScreen();
+            shakeScreen();
+            playEpicChompSound();
+            setTimeout(() => playGulpSound(), 300);
+            showEpicDragonRoar('🐉💥');
+            
+            // EPIC tree growth animation that FILLS THE SCREEN
+            const element = marker.getElement();
+            if (element) {
+                element.classList.add('eating-animation');
+                setTimeout(() => {
+                    map.removeLayer(marker);
+                    clusterGroup.removeLayer(marker);
+                }, 2500);
+            }
+            
+            // Update game state
+            gameState.eatenTrees.add(treeData.id);
+            gameState.score++;
+            gameState.money += 2;
+            gameState.health = Math.min(100, gameState.health + 12);
+            
+            updateUI();
+            updateDragonStatus(`🐉💥 Tesla Dragon DEVOURED a ${treeData.name}! +$2 EPIC! 🌳💰`);
+            
+            // Check for swarm spawn opportunity
+            if (gameState.score % 8 === 0 && gameState.money >= 50) {
+                showSwarmUpgrade();
+            }
+        }
+
+        function eatEpicCluster(cluster, childMarkers) {
+            const treesToEat = Math.min(childMarkers.length, 25);
+            
+            // ULTRA MEGA EPIC CLUSTER EFFECTS
+            triggerEpicHaptic('mega');
+            flashScreen();
+            shakeScreen();
+            playMegaRoarSound();
+            showClusterExplosion('💥🐲🔥💥');
+            showEpicDragonRoar('🐉⚡', '12em');
+            
+            setTimeout(() => {
+                flashScreen();
+                triggerEpicHaptic('mega');
+            }, 500);
+            
+            for (let i = 0; i < treesToEat; i++) {
+                const marker = childMarkers[i];
+                if (marker && marker.treeData) {
+                    const treeId = marker.treeData.id || `cluster_${Date.now()}_${i}`;
+                    if (!gameState.eatenTrees.has(treeId)) {
+                        gameState.eatenTrees.add(treeId);
+                        gameState.score++;
+                        gameState.money += 3;
+                        gameState.health = Math.min(100, gameState.health + 6);
+                    }
+                }
+            }
+            
+            updateUI();
+            updateDragonStatus(`🐉🔥 TESLA DRAGON MEGA CLUSTER FEAST! Devoured ${treesToEat} trees! EPIC! 💥`);
+        }
+
+        function checkNearbyTrees() {
+            const dragonPos = dragonMarker.getLatLng();
+            const eatRadius = 0.0012; // Slightly larger radius for epic experience
+            
+            individualMarkers.forEach(marker => {
+                const treePos = marker.getLatLng();
+                const distance = dragonPos.distanceTo(treePos);
+                
+                if (distance < eatRadius * 111000) {
+                    const treeData = marker.treeData;
+                    if (treeData && !gameState.eatenTrees.has(treeData.id)) {
+                        eatEpicTree(marker, treeData);
+                    }
+                }
+            });
+        }
+
+        function loadNearbyTrees() {
+            const bounds = map.getBounds();
+            const bneBounds = convertLatLngBoundsToBNG(bounds);
+            
+            if (!bneBounds) return;
+            
+            const query = `
+                SELECT x, y, common_name, site_name, latin_name 
+                FROM trees 
+                WHERE x IS NOT NULL AND y IS NOT NULL 
+                AND x != '' AND y != '' 
+                AND x BETWEEN ${bneBounds.west} AND ${bneBounds.east}
+                AND y BETWEEN ${bneBounds.south} AND ${bneBounds.north}
+                LIMIT 150
+            `;
+            
+            try {
+                const result = db.exec(query);
+                displayNearbyTrees(result);
+            } catch (error) {
+                console.error('Error loading nearby trees:', error);
+            }
+        }
+
+        function convertLatLngBoundsToBNG(bounds) {
+            const queenSquareLatLng = { lat: 51.4534, lng: -2.5970 };
+            const queenSquareBNG = { x: 358950, y: 172850 };
+            
+            const scaleX = 70700;
+            const scaleY = 111300;
+            
+            const west = queenSquareBNG.x + (bounds.getWest() - queenSquareLatLng.lng) * scaleX;
+            const east = queenSquareBNG.x + (bounds.getEast() - queenSquareLatLng.lng) * scaleX;
+            const south = queenSquareBNG.y + (bounds.getSouth() - queenSquareLatLng.lat) * scaleY;
+            const north = queenSquareBNG.y + (bounds.getNorth() - queenSquareLatLng.lat) * scaleY;
+            
+            return { west, east, south, north };
+        }
+
+        function displayNearbyTrees(result) {
+            // Clear existing individual markers
+            individualMarkers.forEach(marker => map.removeLayer(marker));
+            individualMarkers = [];
+            
+            if (result.length === 0) return;
+            
+            const data = result[0];
+            const columns = data.columns;
+            const xIndex = columns.indexOf('x');
+            const yIndex = columns.indexOf('y');
+            const nameIndex = columns.indexOf('common_name');
+            const siteIndex = columns.indexOf('site_name');
+            
+            if (xIndex < 0 || yIndex < 0) return;
+            
+            data.values.forEach(row => {
+                const x = parseFloat(row[xIndex]);
+                const y = parseFloat(row[yIndex]);
+                
+                if (!isNaN(x) && !isNaN(y)) {
+                    const latLng = convertBNGToLatLng(x, y);
+                    
+                    if (latLng) {
+                        const treeIcon = L.divIcon({
+                            html: '🌳',
+                            iconSize: [32, 32],
+                            className: 'tree-emoji-icon'
+                        });
+                        
+                        const marker = L.marker(latLng, { icon: treeIcon }).addTo(map);
+                        const name = row[nameIndex] || 'Unknown species';
+                        const site = row[siteIndex] || 'Unknown location';
+                        
+                        const treeData = {
+                            id: `${x}_${y}`,
+                            x, y, name, site,
+                            latin: row[4] || 'Species unknown'
+                        };
+                        
+                        marker.treeData = treeData;
+                        
+                        marker.on('click', () => {
+                            if (gameState.isPlaying) {
+                                eatEpicTree(marker, treeData);
+                            }
+                        });
+                        
+                        individualMarkers.push(marker);
+                    }
+                }
+            });
+        }
+
+        // EPIC SWARM CAR SYSTEM
+        function cycleUpgrades() {
+            if (gameState.money >= 50) {
+                spawnEpicSwarmCar();
+                triggerEpicHaptic('heavy');
+                playDriveSound();
+                updateUI();
+            } else {
+                updateDragonStatus(`💰 Need $50 for epic swarm car! Keep devouring trees! 🌳🔥`);
+                triggerEpicHaptic('light');
+            }
+        }
+
+        function spawnEpicSwarmCar() {
+            if (gameState.money < 50) return;
+            
+            gameState.money -= 50;
+            
+            const epicCarIcon = L.divIcon({
+                html: '🚗💨',
+                iconSize: [70, 70],
+                iconAnchor: [35, 35],
+                className: 'swarm-car'
+            });
+            
+            // Spawn near dragon with epic visibility
+            const carLat = dragonPosition.lat + (Math.random() - 0.5) * 0.01;
+            const carLng = dragonPosition.lng + (Math.random() - 0.5) * 0.01;
+            
+            const carMarker = L.marker([carLat, carLng], { 
+                icon: epicCarIcon,
+                zIndexOffset: 900
+            }).addTo(map);
+            
+            // Make swarm car clickable for epic info
+            carMarker.bindPopup(`
+                <strong>🚗💨 Epic Swarm Car #${gameState.swarmCars.length + 1}</strong><br>
+                Auto-devouring trees with EPIC efficiency!<br>
+                Earning $0.15/second
+            `);
+            
+            // Give the car epic AI movement
+            setInterval(() => {
+                if (gameState.isPlaying) {
+                    moveEpicSwarmCar(carMarker);
+                }
+            }, 4000);
+            
+            gameState.swarmCars.push(carMarker);
+            
+            updateUI();
+            updateDragonStatus(`🚗💨 Epic swarm car deployed! Fleet size: ${gameState.swarmCars.length} EPIC cars! ⚡`);
+            triggerEpicHaptic('heavy');
+            
+            // Update button text
+            document.getElementById('upgradeBtn').textContent = `🛒 Buy Epic Car ($50)`;
+        }
+        
+        function moveEpicSwarmCar(carMarker) {
+            const currentPos = carMarker.getLatLng();
+            
+            // Move car with epic AI
+            const newLat = currentPos.lat + (Math.random() - 0.5) * 0.004;
+            const newLng = currentPos.lng + (Math.random() - 0.5) * 0.004;
+            
+            // Epic smooth movement animation
+            const steps = 15;
+            let currentStep = 0;
+            
+            const moveInterval = setInterval(() => {
+                currentStep++;
+                const progress = currentStep / steps;
+                
+                const lat = currentPos.lat + (newLat - currentPos.lat) * progress;
+                const lng = currentPos.lng + (newLng - currentPos.lng) * progress;
+                
+                carMarker.setLatLng([lat, lng]);
+                
+                if (currentStep >= steps) {
+                    clearInterval(moveInterval);
+                    // Check for nearby trees with epic AI
+                    checkEpicSwarmCarTrees(carMarker);
+                }
+            }, 80);
+        }
+        
+        function checkEpicSwarmCarTrees(carMarker) {
+            const carPos = carMarker.getLatLng();
+            const eatRadius = 0.0010; // Epic swarm car radius
+            
+            individualMarkers.forEach(marker => {
+                const treePos = marker.getLatLng();
+                const distance = carPos.distanceTo(treePos);
+                
+                if (distance < eatRadius * 111000) {
+                    const treeData = marker.treeData;
+                    if (treeData && !gameState.eatenTrees.has(treeData.id)) {
+                        eatTreeEpicSwarm(marker, treeData);
+                    }
+                }
+            });
+        }
+        
+        function eatTreeEpicSwarm(marker, treeData) {
+            gameState.eatenTrees.add(treeData.id);
+            gameState.score++;
+            gameState.money += 0.8; // Epic swarm cars earn more
+            
+            // Remove tree with epic animation
+            const element = marker.getElement();
+            if (element) {
+                element.classList.add('tree-eating');
+                setTimeout(() => {
+                    map.removeLayer(marker);
+                    clusterGroup.removeLayer(marker);
+                }, 1000);
+            }
+            
+            updateUI();
+            playEpicChompSound();
+        }
+
+        function showSwarmUpgrade() {
+            if (gameState.money >= 50) {
+                updateDragonStatus('🚗⚡ EPIC SWARM CAR AVAILABLE! Tap upgrades for autonomous tree destruction! 🤖🔥');
+                triggerEpicHaptic('heavy');
+                playDriveSound();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('health').textContent = Math.round(gameState.health);
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('money').textContent = Math.round(gameState.money);
+            document.getElementById('swarmCount').textContent = gameState.swarmCars.length;
+            
+            const healthPercent = (gameState.health / 100) * 100;
+            const healthBar = document.getElementById('healthBar');
+            healthBar.style.width = healthPercent + '%';
+            
+            if (gameState.health > 70) {
+                healthBar.style.background = '#4CAF50';
+            } else if (gameState.health > 30) {
+                healthBar.style.background = '#FF9800';
+            } else {
+                healthBar.style.background = '#F44336';
+            }
+        }
+
+        function updateDragonStatus(message) {
+            document.getElementById('dragonStatus').innerHTML = 
+                message + '<div class="health-bar"><div class="health-fill" id="healthBar" style="width: ' + 
+                gameState.health + '%;"></div></div>';
+        }
+
+        function epicGameOver() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            
+            triggerEpicHaptic('mega');
+            shakeScreen();
+            playMegaRoarSound();
+            showEpicDragonRoar('💀🐉', '15em');
+            
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            
+            updateDragonStatus(`
+                💀 Tesla Dragon battery depleted!<br>
+                🍃 Epic trees devoured: ${gameState.score}<br>
+                💰 Epic money earned: $${Math.round(gameState.money)}<br>
+                🚗 Epic swarm fleet: ${gameState.swarmCars.length} cars<br>
+                ⏱️ Epic survival time: ${elapsed}s
+            `);
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = '🔄 New Epic Hunt';
+            document.getElementById('pauseBtn').style.display = 'none';
+        }
+
+        // Initialize ULTIMATE app
+        window.addEventListener('load', init);
+        
+        // Prevent default touch behaviors for epic mobile experience
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.closest('#map')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('#map')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
