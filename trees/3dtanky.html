@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Bristol Vector Hunt - LOD</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    body {
+        background: #000;
+        color: #00ff00;
+        font-family: 'Orbitron', monospace;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+    }
+    
+    #container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height for mobile */
+    }
+    
+    #hud {
+        position: absolute;
+        top: max(10px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+        right: max(70px, env(safe-area-inset-right) + 60px);
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #00ff00;
+        padding: 12px;
+        font-size: 11px;
+        box-shadow: 0 0 15px #00ff00;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+    }
+    
+    #dev-toggle {
+        position: absolute;
+        top: max(10px, env(safe-area-inset-top));
+        right: max(10px, env(safe-area-inset-right));
+        width: 50px;
+        height: 50px;
+        border: 2px solid #ff6600;
+        background: rgba(0, 0, 0, 0.9);
+        color: #ff6600;
+        font-size: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 101;
+        touch-action: manipulation;
+        backdrop-filter: blur(10px);
+    }
+    
+    #dev-toggle:active {
+        transform: scale(0.95);
+        background: rgba(255, 102, 0, 0.3);
+    }
+    
+    #dev-panel {
+        position: absolute;
+        top: max(70px, env(safe-area-inset-top) + 60px);
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        z-index: 200;
+        background: rgba(0, 0, 0, 0.95);
+        border: 2px solid #ff6600;
+        padding: 15px;
+        font-size: 10px;
+        max-height: 50vh;
+        overflow-y: auto;
+        border-radius: 8px;
+        transform: translateY(-120%);
+        transition: transform 0.3s ease;
+        backdrop-filter: blur(10px);
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #dev-panel.visible {
+        transform: translateY(0);
+    }
+    
+    .dev-btn {
+        background: rgba(255, 102, 0, 0.2);
+        border: 1px solid #ff6600;
+        color: #ff6600;
+        padding: 12px 16px;
+        margin: 6px 3px;
+        cursor: pointer;
+        font-family: 'Orbitron', monospace;
+        font-size: 10px;
+        border-radius: 6px;
+        touch-action: manipulation;
+        display: inline-block;
+        min-height: 44px; /* iOS touch target minimum */
+        line-height: 1.2;
+    }
+    
+    .dev-btn:active {
+        background: rgba(255, 102, 0, 0.4);
+        transform: scale(0.98);
+    }
+    
+    #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 200;
+        text-align: center;
+        font-size: 16px;
+        text-shadow: 0 0 20px #00ff00;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 10px;
+        border: 2px solid #00ff00;
+    }
+    
+    #touch-controls {
+        position: absolute;
+        bottom: max(20px, env(safe-area-inset-bottom) + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .touch-control {
+        width: 60px;
+        height: 60px;
+        border: 2px solid #00ff00;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ff00;
+        font-size: 14px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        touch-action: manipulation;
+        backdrop-filter: blur(10px);
+        transition: all 0.1s;
+    }
+    
+    .touch-control:active {
+        background: rgba(0, 255, 0, 0.3);
+        box-shadow: 0 0 20px #00ff00;
+        transform: scale(0.95);
+    }
+    
+    #view-info {
+        position: absolute;
+        bottom: max(100px, env(safe-area-inset-bottom) + 90px);
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #00ff00;
+        padding: 10px;
+        font-size: 10px;
+        text-align: center;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+    }
+    
+    canvas {
+        display: block;
+        touch-action: none;
+    }
+    
+    /* Further style optimizations from previous state are assumed to be here */
+    @media (display-mode: standalone) { body { background: #000; user-select: none; } }
+    @media (orientation: landscape) and (max-height: 500px) { #hud { font-size: 9px; padding: 8px; } #view-info { bottom: max(80px, env(safe-area-inset-bottom) + 70px); font-size: 9px; padding: 8px; } .touch-control { width: 50px; height: 50px; font-size: 12px; } }
+    @media (min-width: 768px) { #hud { font-size: 12px; padding: 15px; } .dev-btn { font-size: 11px; padding: 10px 14px; } .touch-control { width: 70px; height: 70px; font-size: 16px; } }
+    @media (-webkit-min-device-pixel-ratio: 2) { canvas { image-rendering: -webkit-optimize-contrast; } }
+    input, select, textarea { font-size: 16px; }
+    @supports (-webkit-touch-callout: none) { #container { height: 100vh; height: -webkit-fill-available; } }
+
+</style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">
+            <div>🗺️ LOADING BRISTOL DATA</div>
+            <div style="font-size: 12px; margin-top: 10px;">Checking cache...</div>
+        </div>
+
+        <div id="hud">
+            <div><strong>BRISTOL OSM VIEWER - LOD</strong></div>
+            <div>Source: <span id="data-source">Unknown</span></div>
+            <div>Buildings: <span id="building-count">0</span> | Roads: <span id="road-count">0</span></div>
+            <div>Status: <span id="status">Loading...</span></div>
+            <div>FPS: <span id="fps-counter">--</span></div>
+        </div>
+        
+        <div id="dev-toggle" title="Dev Panel">⚙</div>
+        
+        <div id="dev-panel">
+            <div style="color: #ff6600; font-weight: bold; margin-bottom: 10px;">🛠️ DEV PANEL</div>
+            <div style="margin-bottom: 10px; line-height: 1.3;">
+                <div>Strategy: geodataCache.json → Overpass API → Fallback</div>
+                <div>Bounds: Bristol ±0.02° lat/lng</div>
+                <div>LOD: Buildings cull > <span id="lod-b-dist"></span>, Roads cull > <span id="lod-r-dist"></span></div>
+            </div>
+            <div style="margin: 10px 0;">
+                <button class="dev-btn" id="export-btn">📦 Export Cache</button>
+                <button class="dev-btn" id="reload-api-btn">🔄 Reload API</button>
+                <button class="dev-btn" id="clear-cache-btn">🗑️ Clear</button>
+            </div>
+            <div style="margin: 10px 0;">
+                <button class="dev-btn" id="test-minimal-btn">🧪 Test Data</button>
+                <button class="dev-btn" id="show-bounds-btn">📍 Show Bounds</button>
+                <button class="dev-btn" id="reset-view-btn">🎯 Reset View</button>
+            </div>
+            <div style="font-size: 9px; color: #888; margin-top: 10px; line-height: 1.3;">
+                💡 Export saves to Downloads<br>
+                📁 Place geodataCache.json in same directory<br>
+                🚀 Commit to repo for offline use
+            </div>
+        </div>
+        
+        <div id="view-info">
+            <div><strong>TOUCH CONTROLS</strong></div>
+            <div>Pinch: Zoom | Drag: Orbit | Two-finger drag: Pan</div>
+            <div>Camera: <span id="camera-info">0, 0, 0</span></div>
+        </div>
+        
+        <div id="touch-controls">
+            <div class="touch-control" id="zoom-out-btn">−</div>
+            <div class="touch-control" id="reset-btn">⌂</div>
+            <div class="touch-control" id="zoom-in-btn">+</div>
+        </div>
+    </div>
+
+<script>
+    // Global state
+    let scene, camera, renderer;
+    let buildingsLODs = [], roadsLODs = [], markers = []; // Store LOD objects
+    let bristolGeodata = null;
+    
+    // Constants
+    const BRISTOL_CENTER = { lat: 51.4545, lng: -2.5879 };
+    const BRISTOL_BOUNDS = {
+        north: 51.4745, south: 51.4345,
+        east: -2.5579, west: -2.6179
+    };
+    const SCALE_FACTOR = 100000;
+    const LONGITUDE_SCALE_CORRECTION = Math.cos(BRISTOL_CENTER.lat * Math.PI / 180);
+
+    // LOD Constants (distances in scene units)
+    const LOD_BUILDING_CULL_DISTANCE = 600; // Hide buildings farther than this
+    const LOD_ROAD_MAJOR_CULL_DISTANCE = 1200; // Hide major roads farther than this
+    const LOD_ROAD_MINOR_CULL_DISTANCE = 400;  // Hide minor roads farther than this
+    
+    // Touch/mobile controls
+    let touches = [];
+    let lastTouchDistance = 0;
+    let lastTouchCenter = { x: 0, y: 0 };
+    let cameraRotationX = 0.5;
+    let cameraRotationY = 0;
+    let cameraDistance = 300;
+    let cameraTarget = new THREE.Vector3(0, 0, 0);
+    
+    // Device detection
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    // FPS Counter
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+
+    // Initialize
+    async function init() {
+        setupThreeJS();
+        setupTouchControls();
+        setupDevPanel();
+        updateLODInfoInDevPanel();
+        
+        bristolGeodata = await loadBristolGeodata();
+        renderBristolData();
+        
+        animate();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('status').textContent = 'Ready - Touch to explore';
+    }
+    
+    function updateLODInfoInDevPanel() {
+        document.getElementById('lod-b-dist').textContent = LOD_BUILDING_CULL_DISTANCE;
+        document.getElementById('lod-r-dist').textContent = `${LOD_ROAD_MINOR_CULL_DISTANCE} (minor), ${LOD_ROAD_MAJOR_CULL_DISTANCE} (major)`;
+    }
+
+    function setupThreeJS() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 5000);
+        updateCameraPosition();
+        
+        renderer = new THREE.WebGLRenderer({ 
+            antialias: !isMobile,
+            powerPreference: 'high-performance',
+            alpha: false
+        });
+        
+        if (isMobile) {
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        } else {
+            renderer.setPixelRatio(window.devicePixelRatio);
+        }
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('container').appendChild(renderer.domElement);
+        
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0x00ff00, 0.8);
+        directionalLight.position.set(100, 200, 100);
+        scene.add(directionalLight);
+        
+        const gridHelper = new THREE.GridHelper(1000, 20, 0x004400, 0x002200);
+        scene.add(gridHelper);
+    }
+    
+    // setupTouchControls, handleTouchStart, handleTouchMove, handleTouchEnd, getTouchDistance, getTouchCenter
+    // handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, zoomCamera, resetView
+    // These functions remain largely the same as your provided code.
+    // For brevity, I'll skip re-pasting them if they are identical to your last version.
+    // Assume they are correctly implemented from your previous complete code dump.
+    function setupTouchControls() {
+        const canvas = renderer.domElement;
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+        document.getElementById('zoom-in-btn').addEventListener('click', () => zoomCamera(-50));
+        document.getElementById('zoom-out-btn').addEventListener('click', () => zoomCamera(50));
+        document.getElementById('reset-btn').addEventListener('click', resetView);
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+    function handleTouchStart(event) {
+        event.preventDefault();
+        touches = Array.from(event.touches);
+        if (touches.length === 1) { lastTouchCenter = { x: touches[0].clientX, y: touches[0].clientY }; }
+        else if (touches.length === 2) { lastTouchDistance = getTouchDistance(); lastTouchCenter = getTouchCenter(); }
+    }
+    function handleTouchMove(event) {
+        event.preventDefault();
+        const currentTouches = Array.from(event.touches);
+        let needsUpdate = false;
+        if (currentTouches.length === 1 && touches.length === 1) {
+            const deltaX = currentTouches[0].clientX - lastTouchCenter.x;
+            const deltaY = currentTouches[0].clientY - lastTouchCenter.y;
+            cameraRotationY -= deltaX * 0.005;
+            cameraRotationX -= deltaY * 0.005;
+            cameraRotationX = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, cameraRotationX));
+            lastTouchCenter = { x: currentTouches[0].clientX, y: currentTouches[0].clientY };
+            needsUpdate = true;
+        } else if (currentTouches.length === 2 && touches.length === 2) {
+            const currentDistance = getTouchDistance(currentTouches);
+            const currentCenter = getTouchCenter(currentTouches);
+            cameraDistance -= (currentDistance - lastTouchDistance) * 0.5;
+            cameraDistance = Math.max(50, Math.min(2000, cameraDistance));
+            const panSpeed = 0.5 * (cameraDistance / 300);
+            const panDeltaX = (currentCenter.x - lastTouchCenter.x) * panSpeed;
+            const panDeltaZ = (currentCenter.y - lastTouchCenter.y) * panSpeed; // Changed from Y to Z
+            const forward = new THREE.Vector3(); camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
+            const right = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
+            cameraTarget.add(right.multiplyScalar(-panDeltaX));
+            cameraTarget.add(forward.multiplyScalar(panDeltaZ)); // Adjusted for Z-pan
+            lastTouchDistance = currentDistance;
+            lastTouchCenter = currentCenter;
+            needsUpdate = true;
+        }
+        if (needsUpdate) updateCameraPosition();
+        if(currentTouches.length !== touches.length || currentTouches.length === 1) {
+            touches = currentTouches;
+            if (touches.length === 1) { lastTouchCenter = { x: touches[0].clientX, y: touches[0].clientY };}
+        }
+    }
+    function handleTouchEnd(event) {
+        event.preventDefault();
+        touches = Array.from(event.touches);
+        if (touches.length === 1) { lastTouchCenter = { x: touches[0].clientX, y: touches[0].clientY }; }
+    }
+    function getTouchDistance(touchArray = touches) {
+        if (touchArray.length < 2) return 0;
+        const dx = touchArray[0].clientX - touchArray[1].clientX; const dy = touchArray[0].clientY - touchArray[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    function getTouchCenter(touchArray = touches) {
+        if (touchArray.length === 1) return { x: touchArray[0].clientX, y: touchArray[0].clientY };
+        if (touchArray.length < 2) return { x: 0, y: 0 };
+        return { x: (touchArray[0].clientX + touchArray[1].clientX) / 2, y: (touchArray[0].clientY + touchArray[1].clientY) / 2 };
+    }
+    let isMouseDown = false; let lastMouseX = 0, lastMouseY = 0;
+    function handleMouseDown(event) { isMouseDown = true; lastMouseX = event.clientX; lastMouseY = event.clientY;}
+    function handleMouseMove(event) {
+        if (!isMouseDown) return;
+        const deltaX = event.clientX - lastMouseX; const deltaY = event.clientY - lastMouseY;
+        let needsUpdate = false;
+        if (event.buttons === 1) {
+            cameraRotationY -= deltaX * 0.005; cameraRotationX -= deltaY * 0.005;
+            cameraRotationX = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, cameraRotationX));
+            needsUpdate = true;
+        } else if (event.buttons === 2 || (event.buttons === 1 && event.ctrlKey)) {
+            const panSpeed = 0.5 * (cameraDistance / 300);
+            const panDeltaX = deltaX * panSpeed; const panDeltaZ = deltaY * panSpeed;
+            const forward = new THREE.Vector3(); camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
+            const right = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
+            cameraTarget.add(right.multiplyScalar(-panDeltaX));
+            cameraTarget.add(forward.multiplyScalar(-panDeltaZ)); // Note: Y mouse movement for Z pan
+            needsUpdate = true;
+        }
+        if(needsUpdate) updateCameraPosition();
+        lastMouseX = event.clientX; lastMouseY = event.clientY;
+    }
+    function handleMouseUp() { isMouseDown = false; }
+    function handleWheel(event) {
+        event.preventDefault();
+        cameraDistance += event.deltaY * 0.2;
+        cameraDistance = Math.max(50, Math.min(2000, cameraDistance));
+        updateCameraPosition();
+    }
+    function zoomCamera(delta) { cameraDistance += delta; cameraDistance = Math.max(50, Math.min(2000, cameraDistance)); updateCameraPosition(); }
+    function resetView() { cameraRotationX = 0.5; cameraRotationY = 0; cameraDistance = 300; cameraTarget.set(0,0,0); updateCameraPosition(); }
+
+
+    function updateCameraPosition() {
+        const x = cameraTarget.x + Math.sin(cameraRotationY) * Math.cos(cameraRotationX) * cameraDistance;
+        const y = cameraTarget.y + Math.sin(cameraRotationX) * cameraDistance;
+        const z = cameraTarget.z + Math.cos(cameraRotationY) * Math.cos(cameraRotationX) * cameraDistance;
+        
+        camera.position.set(x, y, z);
+        camera.lookAt(cameraTarget);
+        
+        document.getElementById('camera-info').textContent = 
+            `${Math.round(x)}, ${Math.round(y)}, ${Math.round(z)}`;
+    }
+    
+    function setupDevPanel() { // Same as before
+        const devToggle = document.getElementById('dev-toggle');
+        const devPanel = document.getElementById('dev-panel');
+        devToggle.addEventListener('click', () => devPanel.classList.toggle('visible'));
+        document.getElementById('export-btn').addEventListener('click', exportGeodata);
+        document.getElementById('reload-api-btn').addEventListener('click', reloadFromAPI);
+        document.getElementById('clear-cache-btn').addEventListener('click', clearCache);
+        document.getElementById('test-minimal-btn').addEventListener('click', testMinimalData);
+        document.getElementById('show-bounds-btn').addEventListener('click', showBounds);
+        document.getElementById('reset-view-btn').addEventListener('click', resetView);
+    }
+    
+    // loadBristolGeodata, fetchFromOverpassAPI, processOverpassData
+    // These remain largely the same.
+    // processBuildingWay and processRoadWay need to account for LONGITUDE_SCALE_CORRECTION
+    async function loadBristolGeodata() {
+        document.getElementById('status').textContent = 'Checking cache...';
+        try {
+            const response = await fetch('./geodataCache.json', { cache: "no-store" });
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('data-source').textContent = 'Cache (geodataCache.json)';
+                console.log('✅ Loaded Bristol data from local geodataCache.json');
+                return data;
+            } else { console.log('📁 geodataCache.json not found or error, fetching from API...');}
+        } catch (error) { console.log('📁 Error fetching geodataCache.json, proceeding to API...', error); }
+        
+        document.getElementById('status').textContent = 'Fetching from Overpass API...';
+        document.getElementById('data-source').textContent = 'Live API (Overpass)';
+        try {
+            const data = await fetchFromOverpassAPI(); return data;
+        } catch (error) {
+            console.error('❌ Failed to load from Overpass API:', error);
+            document.getElementById('data-source').textContent = 'Fallback Data';
+            document.getElementById('status').textContent = 'API failed, using fallback';
+            return createMinimalBristolData();
+        }
+    }
+    async function fetchFromOverpassAPI() {
+        const query = `
+            [out:json][timeout:30];
+            (
+                way["building"](${BRISTOL_BOUNDS.south},${BRISTOL_BOUNDS.west},${BRISTOL_BOUNDS.north},${BRISTOL_BOUNDS.east});
+                way["highway"~"^(primary|secondary|tertiary|residential|service|footway)$"](${BRISTOL_BOUNDS.south},${BRISTOL_BOUNDS.west},${BRISTOL_BOUNDS.north},${BRISTOL_BOUNDS.east});
+            );
+            out geom;
+        `;
+        const overpassUrl = 'https://overpass-api.de/api/interpreter';
+        const response = await fetch(overpassUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: query });
+        if (!response.ok) { throw new Error(`Overpass API Error: ${response.status} ${response.statusText}`); }
+        const data = await response.json();
+        console.log('📊 Fetched data from Overpass API:', data.elements.length, "elements");
+        return processOverpassData(data);
+    }
+    function processOverpassData(data) {
+        const processed = { buildings: [], roads: [], timestamp: new Date().toISOString(), bounds: BRISTOL_BOUNDS, source: 'overpass-api' };
+        data.elements.forEach(element => {
+            if (element.type === 'way' && element.geometry && element.geometry.length > 0) {
+                let processedWay = null;
+                if (element.tags?.building) {
+                    processedWay = processBuildingWay(element);
+                    if (processedWay) processed.buildings.push(processedWay);
+                } else if (element.tags?.highway) {
+                    processedWay = processRoadWay(element);
+                    if (processedWay) processed.roads.push(processedWay);
+                }
+            }
+        });
+        console.log(`📊 Processed ${processed.buildings.length} buildings, ${processed.roads.length} roads`);
+        return processed;
+    }
+    
+    function processBuildingWay(way) {
+        const validGeometry = way.geometry.filter(node => typeof node.lat === 'number' && typeof node.lon === 'number');
+        if (validGeometry.length < 3) return null;
+        const coords = validGeometry.map(node => ({
+            lat: node.lat, lng: node.lon,
+            x: (node.lon - BRISTOL_CENTER.lng) * SCALE_FACTOR * LONGITUDE_SCALE_CORRECTION,
+            z: -(node.lat - BRISTOL_CENTER.lat) * SCALE_FACTOR
+        }));
+        const bounds = coords.reduce((acc, coord) => ({
+            minX: Math.min(acc.minX, coord.x), maxX: Math.max(acc.maxX, coord.x),
+            minZ: Math.min(acc.minZ, coord.z), maxZ: Math.max(acc.maxZ, coord.z)
+        }), { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity });
+        const width = Math.max(2, bounds.maxX - bounds.minX);
+        const depth = Math.max(2, bounds.maxZ - bounds.minZ);
+        const centerX = (bounds.minX + bounds.maxX) / 2;
+        const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+        let height = 10;
+        if (way.tags?.['building:levels']) { height = Math.max(3, parseInt(way.tags['building:levels']) * 3.5 || 10); }
+        else if (way.tags?.height) { height = Math.max(3, parseFloat(way.tags.height) || 10); }
+        else { const type = way.tags.building; if (type === 'church' || type === 'cathedral') height = 30; else if (type === 'university' || type === 'college') height = 20; else if (type === 'hospital') height = 25; else if (type === 'office' || type === 'commercial' || type === 'retail') height = 15; else if (type === 'apartments' || type === 'residential' || type === 'house' || type === 'detached') height = 7;}
+        return { id: way.id, center: { x: centerX, z: centerZ }, dimensions: { width, height, depth }, tags: way.tags || {} };
+    }
+    
+    function processRoadWay(way) {
+        const validGeometry = way.geometry.filter(node => typeof node.lat === 'number' && typeof node.lon === 'number');
+        if (validGeometry.length < 2) return null;
+        const coords = validGeometry.map(node => ({
+            lat: node.lat, lng: node.lon,
+            x: (node.lon - BRISTOL_CENTER.lng) * SCALE_FACTOR * LONGITUDE_SCALE_CORRECTION,
+            z: -(node.lat - BRISTOL_CENTER.lat) * SCALE_FACTOR
+        }));
+        return { id: way.id, coords, tags: way.tags || {}, highway: way.tags?.highway || 'unknown' };
+    }
+    
+    function createMinimalBristolData() { /* Same as before */
+        console.log('⚠️ Using minimal fallback data.');
+        return {
+            buildings: [ { center: { x: 0, z: 0 }, dimensions: { width: 30, height: 20, depth: 20 }, tags: { name: "Central Box" } }, { center: { x: -100, z: 50 }, dimensions: { width: 20, height: 15, depth: 40 }, tags: { name: "Side Box" } } ],
+            roads: [ { coords: [{ x: -200, z: 0 }, { x: 200, z: 0 }], highway: 'primary', tags: { name: 'Main Road' } }, { coords: [{ x: 0, z: -200 }, { x: 0, z: 200 }], highway: 'secondary', tags: { name: 'Cross Road' } } ],
+            timestamp: new Date().toISOString(), bounds: BRISTOL_BOUNDS, source: 'minimal-fallback'
+        };
+    }
+    
+    function renderBristolData() {
+        if (!bristolGeodata) return;
+        clearScene();
+        bristolGeodata.buildings.filter(b => b).forEach(building => {
+            createWireframeBuildingLOD(building.center.x, building.center.z, building.dimensions.width, building.dimensions.height, building.dimensions.depth, building.tags);
+        });
+        bristolGeodata.roads.filter(r => r).forEach(road => {
+            createWireframeRoadLOD(road.coords, road.highway, road.tags);
+        });
+        document.getElementById('building-count').textContent = bristolGeodata.buildings.filter(b => b).length;
+        document.getElementById('road-count').textContent = bristolGeodata.roads.filter(r => r).length;
+    }
+    
+    function clearScene() {
+        buildingsLODs.forEach(lod => scene.remove(lod));
+        roadsLODs.forEach(lod => scene.remove(lod));
+        markers.forEach(marker => scene.remove(marker));
+        buildingsLODs = [];
+        roadsLODs = [];
+        markers = [];
+    }
+    
+    // --- LOD CREATION FUNCTIONS ---
+    function createWireframeBuildingLOD(x, z, width, height, depth, tags = {}) {
+        const lod = new THREE.LOD();
+
+        // Level 0: Detailed mesh (visible when close)
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+        const edges = new THREE.EdgesGeometry(geometry);
+        let color = 0x00ff00; 
+        if (tags.building) { switch (tags.building) { case 'church': case 'cathedral': color = 0xffff00; break; case 'university': case 'school': color = 0xff00ff; break; case 'hospital': color = 0xff6666; break; case 'commercial': case 'office': case 'retail': color = 0x00ffff; break; case 'industrial': color = 0xffaa00; break; default: color = 0x00cc00; }}
+        const material = new THREE.LineBasicMaterial({ color, linewidth: 1 });
+        const wireframeDetailed = new THREE.LineSegments(edges, material);
+        // Position of the mesh inside the LOD is relative to the LOD's origin.
+        // The LOD itself will be positioned at the building's base center.
+        // wireframeDetailed.position.set(0, height / 2, 0); // Mesh origin is its center, so it's already centered for BoxGeometry
+
+        lod.addLevel(wireframeDetailed, LOD_BUILDING_CULL_DISTANCE); // Show this mesh up to CULL_DISTANCE
+        // Beyond LOD_BUILDING_CULL_DISTANCE, nothing from this LOD will be rendered.
+
+        lod.position.set(x, height / 2, z); // Position the LOD object itself
+        lod.userData = { type: 'building', tags };
+        
+        scene.add(lod);
+        buildingsLODs.push(lod);
+    }
+    
+    function createWireframeRoadLOD(coords, highway = 'unknown', tags = {}) {
+        if (coords.length < 2) return;
+        const lod = new THREE.LOD();
+
+        // Level 0: Detailed mesh
+        const points = coords.map(coord => new THREE.Vector3(coord.x, 0.1, coord.z));
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        let color = 0x004400; let linewidth = 1;
+        switch(highway) { case 'primary': color = 0x009900; linewidth = 2; break; case 'secondary': color = 0x007700; linewidth = 1.5; break; case 'tertiary': color = 0x005500; linewidth = 1; break; case 'residential': case 'service': color = 0x333333; linewidth = 1; break; case 'footway': case 'path': color = 0x553311; linewidth = 0.5; break; default: color = 0x003300;}
+        const material = new THREE.LineBasicMaterial({ color, linewidth }); // Linewidth > 1 might not always work
+        const lineDetailed = new THREE.Line(geometry, material);
+
+        let cullDistance = LOD_ROAD_MINOR_CULL_DISTANCE;
+        if (highway === 'primary' || highway === 'secondary') {
+            cullDistance = LOD_ROAD_MAJOR_CULL_DISTANCE;
+        }
+        lod.addLevel(lineDetailed, cullDistance);
+
+        // LOD for roads is positioned at 0,0,0 because its points are already in world space.
+        // lod.position.set(0,0,0); // Default, not strictly needed
+        lod.userData = { type: 'road', highway, tags };
+
+        scene.add(lod);
+        roadsLODs.push(lod);
+    }
+
+    // showBounds, exportGeodata, reloadFromAPI, clearCache, testMinimalData
+    // These remain largely the same.
+    function showBounds() { /* Same as before, ensuring markers are handled */
+        markers.forEach(marker => scene.remove(marker)); markers = [];
+        const corners = [ { lat: BRISTOL_BOUNDS.north, lng: BRISTOL_BOUNDS.west }, { lat: BRISTOL_BOUNDS.north, lng: BRISTOL_BOUNDS.east }, { lat: BRISTOL_BOUNDS.south, lng: BRISTOL_BOUNDS.east }, { lat: BRISTOL_BOUNDS.south, lng: BRISTOL_BOUNDS.west } ];
+        const centerMarkerGeometry = new THREE.SphereGeometry(15, 16, 12); const centerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: true }); const centerSphere = new THREE.Mesh(centerMarkerGeometry, centerMaterial); centerSphere.position.set(0, 20, 0); scene.add(centerSphere); markers.push(centerSphere);
+        corners.forEach((corner) => {
+            const x = (corner.lng - BRISTOL_CENTER.lng) * SCALE_FACTOR * LONGITUDE_SCALE_CORRECTION; const z = -(corner.lat - BRISTOL_CENTER.lat) * SCALE_FACTOR;
+            const geometry = new THREE.SphereGeometry(10, 8, 6); const material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true }); const sphere = new THREE.Mesh(geometry, material); sphere.position.set(x, 20, z); scene.add(sphere); markers.push(sphere);
+        }); console.log('🎯 Bounds markers added');
+    }
+    function exportGeodata() { /* Same as before */
+        if (!bristolGeodata || bristolGeodata.source === 'minimal-fallback') { alert("No significant data to export or currently using fallback data."); return; }
+        const dataStr = JSON.stringify(bristolGeodata, null, 2); const dataBlob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a'); link.href = url; link.download = 'geodataCache.json'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        URL.revokeObjectURL(url); console.log('📦 Exported geodataCache.json'); document.getElementById('status').textContent = 'Cache exported';
+    }
+    async function reloadFromAPI() { /* Same as before, ensure loading UI */
+        document.getElementById('loading').style.display = 'flex'; document.getElementById('status').textContent = 'Reloading from API...';
+        try { bristolGeodata = await fetchFromOverpassAPI(); renderBristolData(); document.getElementById('data-source').textContent = 'Live API (Overpass)'; document.getElementById('status').textContent = 'Reloaded from API';
+        } catch (error) { console.error('Failed to reload from API:', error); document.getElementById('status').textContent = 'API Reload failed. Check console.'; if (!bristolGeodata) { bristolGeodata = createMinimalBristolData(); renderBristolData(); document.getElementById('data-source').textContent = 'Fallback Data';}
+        } finally { document.getElementById('loading').style.display = 'none'; }
+    }
+    function clearCache() { /* Same as before */
+        console.log('🗑️ Cache clear requested. To fully clear, delete geodataCache.json and hard refresh (Ctrl+Shift+R).'); document.getElementById('status').textContent = 'Cache "cleared" (simulated)';
+        if (bristolGeodata && bristolGeodata.source.includes('Cache')) { bristolGeodata = null; document.getElementById('data-source').textContent = 'Unknown (Cache cleared)'; document.getElementById('building-count').textContent = '0'; document.getElementById('road-count').textContent = '0'; clearScene(); }
+    }
+    function testMinimalData() { /* Same as before, ensure loading UI */
+        document.getElementById('loading').style.display = 'flex';
+        bristolGeodata = createMinimalBristolData(); renderBristolData();
+        document.getElementById('data-source').textContent = 'Test Data (Minimal)'; document.getElementById('status').textContent = 'Using test data';
+        document.getElementById('loading').style.display = 'none';
+    }
+    
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Update LODs
+        const cameraPosition = camera.position;
+        buildingsLODs.forEach(lod => lod.update(camera));
+        roadsLODs.forEach(lod => lod.update(camera));
+        // Note: For THREE.LOD, you pass the camera object itself.
+        // It internally calculates distances.
+        // If you were doing manual LOD, you'd calculate distance: lod.position.distanceTo(cameraPosition)
+
+        renderer.render(scene, camera);
+
+        // FPS Counter
+        frameCount++;
+        const now = performance.now();
+        if (now >= lastFrameTime + 1000) {
+            document.getElementById('fps-counter').textContent = frameCount;
+            frameCount = 0;
+            lastFrameTime = now;
+        }
+    }
+    
+    // handleResize, iOS double tap prevention, wake lock: Same as before
+    function handleResize() { if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => { setTimeout(handleResize, isIOS ? 200 : 100); });
+    let lastDoubleTapTime = 0;
+    document.addEventListener('touchend', (event) => { if (event.touches.length > 0) return; const now = (new Date()).getTime(); if (now - lastDoubleTapTime <= 300) { event.preventDefault(); } lastDoubleTapTime = now; }, { passive: false });
+    let wakeLock = null;
+    async function requestWakeLock() { if (isMobile && 'wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { console.log('🔆 Screen wake lock released'); }); console.log('🔆 Screen wake lock active'); } catch (err) { console.warn(`Wake Lock request failed: ${err.name}, ${err.message}`); wakeLock = null; } } }
+    document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') { await requestWakeLock(); } });
+    
+    // Start the application
+    init().then(() => { if (isMobile) requestWakeLock(); })
+    .catch(err => {
+        console.error("Initialization failed:", err);
+        document.getElementById('loading').innerHTML = `<div>❌ CRITICAL ERROR</div><div style="font-size:12px; margin-top:10px;">${err.message}.<br>Try reloading.</div>`;
+        document.getElementById('status').textContent = 'Error';
+    });
+
+</script>
+</body>
+</html>
