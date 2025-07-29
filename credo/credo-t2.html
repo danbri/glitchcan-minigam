@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safari Digital Credentials – Minimal Age Demo (v2)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+    button { font-size: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f6f6f6; padding: 1rem; border-radius: 0.5rem; }
+    .note { color: #555; }
+    code { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Safari (iOS 26 beta) – Minimal “Over‑18” Test (v2)</h1>
+  <p class="note">
+    This version uses the Safari beta shape where each Digital Credential request object must include a
+    <code>data</code> property. It requests only a boolean age attribute.
+  </p>
+
+  <button id="btn">Prove you’re over 18</button>
+  <p id="status" class="note"></p>
+  <pre id="out"></pre>
+
+  <script>
+  const statusEl = document.getElementById('status');
+  const outEl = document.getElementById('out');
+  const btn = document.getElementById('btn');
+
+  function log(msg) { statusEl.textContent = msg; }
+  function show(obj) { outEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2); }
+
+  const hasCreds = 'credentials' in navigator && typeof navigator.credentials.get === 'function';
+  if (!hasCreds) log('Digital Credentials API not detected. Check iOS version / Safari feature flags.');
+
+  const mdocRequest = {
+    protocol: 'org-iso-mdoc',
+    data: {
+      docType: 'org.iso.18013.5.1.mDL',
+      nameSpaces: [{ name: 'org.iso.18013.5.1', dataElements: ['age_over_18'] }]
+    }
+  };
+
+  const oid4vpRequest = {
+    protocol: 'openid4vp',
+    data: {
+      presentation_definition: {
+        input_descriptors: [{
+          id: 'ageOver18',
+          constraints: { fields: [{ path: ['ageOver18'], filter: { const: true } }] }
+        }]
+      }
+    }
+  };
+
+  async function tryIdentity() {
+    return await navigator.credentials.get({
+      mediation: 'required',
+      identity: { reason: 'Prove you are over 18', requests: [mdocRequest, oid4vpRequest] }
+    });
+  }
+
+  async function tryDigital() {
+    return await navigator.credentials.get({
+      mediation: 'required',
+      digital: { requests: [mdocRequest, oid4vpRequest] }
+    });
+  }
+
+  btn.addEventListener('click', async () => {
+    if (!hasCreds) return;
+    try {
+      log('Requesting via identity.requests…');
+      const vp = await tryIdentity();
+      log('Success via identity.requests'); show(vp);
+    } catch (e1) {
+      if (e1 && e1.name === 'NotFoundError') { log('No provider: ' + e1.name); show(e1); return; }
+      log('identity.requests failed: ' + (e1.message || e1.name) + ' — retrying with digital.requests…');
+      try {
+        const vp2 = await tryDigital();
+        log('Success via digital.requests'); show(vp2);
+      } catch (e2) {
+        log('digital.requests failed: ' + (e2.message || e2.name));
+        show(e2 && e2.stack || String(e2));
+      }
+    }
+  });
+  </script>
+</body>
+</html>
