@@ -66,7 +66,7 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 + [enter Bag End] -> load_bagend
 
 === load_bagend ===
-# FINK: ../bagend2.fink.js
+# FINK: ../bagend.fink.js
 -> external_story
 
 === hampstead_selected ===
