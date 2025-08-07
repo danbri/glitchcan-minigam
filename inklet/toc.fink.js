@@ -40,6 +40,8 @@ Choose your adventure! Each episode is half-finished in a different way.
 Minigames and experiments, eventually for integration into story-based episodes.
 
 + [Ukrainian Language] -> ukrainian_selected
++ [Bagend bleeding edge] -> bagend2_selected
+
 
 === help_menu ===
 
@@ -68,6 +70,23 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 === load_bagend ===
 # FINK: ../bagend.fink.js
 -> external_story
+
+
+
+=== bagend2_selected ===
+
+Bag End 2 (bagend2.fink.js)
+
+Extra half-baked version.
+
+# IMAGE: coverart/bagend_splash_imag_9453.jpeg
+
++ [enter Bag End v2 / alpha etc] -> load_bagend2
+
+=== load_bagend2 ===
+# FINK: ../bagend2.fink.js
+-> external_story
+
 
 === hampstead_selected ===
 
