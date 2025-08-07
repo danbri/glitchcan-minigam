@@ -1,6 +1,11 @@
+/* bagend2.fink.js
+   Fink (FOAF-inspired JSONP-like) wrapper embedding Ink story text.
+   Loads assets relative to BASEHREF and uses Ink-compatible syntax.
+*/
+
 oooOO`
-// HOBBO. Start the player at Bag End for the revised Bagend episode
-// This version adds richer state management using Ink variables and lists
+// ==== Bag End (Revised) ====
+// Start the player at Bag End; richer state via Ink variables & lists.
 # BASEHREF: media/bagend/
 -> Bag_End
 
@@ -14,9 +19,10 @@ VAR has_key = false
 VAR has_sword = false
 VAR has_map = false
 VAR committed_to_adventure = false
+VAR talked_to_innkeeper = false
+VAR has_treasure = false
 
-// Define the universe of possible inventory items,
-// then clear the player's inventory to empty.
+// Define possible inventory items, then start inventory empty.
 LIST Inventory = cheese, bread, apples, key, sword, map
 ~ Inventory = ()
 
@@ -70,11 +76,18 @@ The cheerful village of Hobbiton bustles with activity. Hobbits go about their b
 
 # IMAGE: green_dragon.svg
 The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale and telling stories. The innkeeper nods to you from behind the bar.
-+ [Talk to the innkeeper]
+
++ {not talked_to_innkeeper} [Talk to the innkeeper]
     "Heading out on an adventure, are you, Mr. Bilbo?" asks the innkeeper with a wink.
     "News travels fast," you mutter.
     "That it does. Mind those trolls in the woods north of here. They've been causing trouble."
+    ~ talked_to_innkeeper = true
     -> Green_Dragon
+
+{talked_to_innkeeper:
+    The innkeeper is busy polishing a mug now, and lets you be.
+}
+
 + [Leave the inn] -> Hobbiton_Village
 
 == Trollshaws ==
@@ -82,10 +95,20 @@ The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale an
 # IMAGE: trollshaws.svg
 The path leads into a dark wooded area. Massive boulders dot the landscape. You can hear strange grunting noises ahead. A cave entrance is visible to the East.
 + [Go South back to Hobbiton] -> Hobbiton_Village
-+ [Go East to the cave] -> Troll_Cave
+
+// Gate the cave until trolls are stone; offer a teasing approach otherwise.
++ [Go East to the cave] {troll_status == "stone"} -> Troll_Cave
++ {troll_status != "stone"} [Approach the cave]
+    You take a few steps toward the cave mouth, but the angry troll voices echo closer. Not a good idea while they’re still about.
+    -> Trollshaws
+
 + [Investigate the noises] -> Troll_Clearing
 
 == Troll_Clearing ==
+
+{troll_status == "stone":
+    -> Troll_Clearing_Dawn
+}
 
 # IMAGE: troll_clearing.svg
 You enter a clearing where three enormous trolls sit around a fire. They appear to be arguing about how to cook you! The sun is starting to rise.
@@ -122,6 +145,7 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
     {troll_status == "stone" && has_key && not has_map:
         You unlock the chest with the key and carefully lift the lid. Inside you find a small hoard of gold coins and a curious map showing the path to the Lonely Mountain. The adventure truly begins!
         ~ has_map = true
+        ~ has_treasure = true
         ~ Inventory += map
     }
     {troll_status == "stone" && has_map:
@@ -149,7 +173,7 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
     The cave remains dangerous while the trolls are active. Best to leave quickly.
 }
 + [Return to the trolls] -> return_to_trolls
-+ [Head back to Hobbiton with your treasure] -> Victorious_Return
++ {has_treasure} [Head back to Hobbiton with your treasure] -> Victorious_Return
 
 == return_to_trolls ==
 {troll_status == "stone":
@@ -221,5 +245,4 @@ Sometimes, on clear evenings, you look toward the mountains and wonder what migh
     Your own eyes widen despite yourself. That does sound rather exciting...
     ~ talked_to_thorin = true
     -> Kitchen
-
 `
