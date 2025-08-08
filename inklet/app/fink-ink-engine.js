@@ -148,6 +148,9 @@ window.FinkInkEngine = {
 
             FinkUI.clearChoices();
             let storyFragment = document.createDocumentFragment();
+            // Track last seen media-related tags during this continuation burst
+            let lastImageTag = null;
+            let lastBasehrefTag = null;
 
             while (this.story.canContinue) {
                 const p = document.createElement('p');
@@ -165,7 +168,7 @@ window.FinkInkEngine = {
 
                 p.innerHTML = formattedText;
                 
-                // Handle INK tags (like #BG:#0050e0, #CLASS:info, FINK:)
+                // Handle INK tags (like BG:#0050e0, CLASS:info, FINK:, IMAGE:, BASEHREF:)
                 currentTags.forEach(tag => {
                     const parts = tag.split(':');
                     const key = parts[0]?.trim().toUpperCase();
@@ -178,6 +181,12 @@ window.FinkInkEngine = {
                     } else if (key === 'FINK' && value) {
                         this.lastSeenFinkTag = value;
                         FinkUtils.debugLog('Stored FINK tag for later loading: ' + value);
+                    } else if (key === 'IMAGE' && value) {
+                        lastImageTag = value;
+                        FinkUtils.debugLog('Captured IMAGE tag this turn: ' + lastImageTag);
+                    } else if (key === 'BASEHREF' && value) {
+                        lastBasehrefTag = value.replace(/^\s*["']?|["']?\s*$/g, '');
+                        FinkUtils.debugLog('Captured BASEHREF tag this turn: ' + lastBasehrefTag);
                     }
                 });
                 
@@ -195,7 +204,13 @@ window.FinkInkEngine = {
             }
 
             FinkUI.replaceStoryContent(storyFragment);
-            FinkUI.updateImageFromINKTags(this.story);
+            // Prefer media tags seen during this continuation burst; fallback to live currentTags
+            if (lastImageTag) {
+                const base = lastBasehrefTag || (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+                FinkUI.updateImage(lastImageTag, base);
+            } else {
+                FinkUI.updateImageFromINKTags(this.story);
+            }
 
             // Generate choices
             if (this.story.currentChoices.length > 0) {
