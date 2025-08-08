@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shane Manor Minichess Test</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            background-color: #2c1810;
+            color: #f4f1e8;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #d4af37;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: rgba(139, 69, 19, 0.2);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 2px solid #8b4513;
+        }
+        .test-result {
+            font-weight: bold;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: rgba(0, 128, 0, 0.3);
+            color: #90ee90;
+        }
+        .error {
+            background-color: rgba(255, 0, 0, 0.3);
+            color: #ffcccb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏰 Shane Manor Minichess Integration Test</h1>
+        
+        <div class="test-section">
+            <h2>Story Context</h2>
+            <p><em>Inspector André-Louis examines the chess position in Lord Pemberton's study...</em></p>
+            <p>The carved ivory pieces seem frozen in time, capturing the final moments before the murder. White has just played an aggressive queen sacrifice - but was it brilliance or desperation?</p>
+            
+            <div id="chess-container"></div>
+            
+            <div id="results" class="test-result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Integration Test Results</h2>
+            <div id="integration-results"></div>
+        </div>
+    </div>
+
+    <script src="mamikon-minichess.js"></script>
+    <script>
+        // Test the minichess integration
+        function runTest() {
+            const resultsDiv = document.getElementById('integration-results');
+            let testResults = [];
+            
+            // Test 1: Check if MamikonMiniChess class exists
+            if (typeof MamikonMiniChess !== 'undefined') {
+                testResults.push('<div class="success">✓ MamikonMiniChess class loaded successfully</div>');
+            } else {
+                testResults.push('<div class="error">✗ MamikonMiniChess class not found</div>');
+                return;
+            }
+            
+            // Test 2: Initialize chess game
+            try {
+                const chess = new MamikonMiniChess('chess-container', {
+                    onGameEnd: function(performance, queenSacrifice, moveHistory) {
+                        // Simulate FINK variable updates
+                        let chess_skill = 0;
+                        if (performance === 'Brilliant') chess_skill = 85;
+                        else if (performance === 'Good') chess_skill = 65;
+                        else if (performance === 'Decent') chess_skill = 45;
+                        else chess_skill = 25;
+                        
+                        const results = document.getElementById('results');
+                        results.style.display = 'block';
+                        results.innerHTML = `
+                            <h3>Chess Analysis Complete</h3>
+                            <p><strong>Performance:</strong> ${performance}</p>
+                            <p><strong>Queen Sacrifice Detected:</strong> ${queenSacrifice ? 'Yes' : 'No'}</p>
+                            <p><strong>Chess Skill Score:</strong> ${chess_skill}</p>
+                            <p><strong>Moves Played:</strong> ${moveHistory.length}</p>
+                            <p><strong>FINK Integration:</strong> Variables ready for story continuation</p>
+                        `;
+                        
+                        // Add to test results
+                        const gameResults = document.getElementById('integration-results');
+                        gameResults.innerHTML += '<div class="success">✓ Game completion callback working</div>';
+                        gameResults.innerHTML += `<div class="success">✓ Performance evaluation: ${performance}</div>`;
+                    }
+                });
+                testResults.push('<div class="success">✓ Chess game initialized successfully</div>');
+            } catch (error) {
+                testResults.push(`<div class="error">✗ Chess initialization failed: ${error.message}</div>`);
+            }
+            
+            // Test 3: Check DOM elements
+            setTimeout(() => {
+                const boardEl = document.getElementById('chess-board');
+                if (boardEl) {
+                    testResults.push('<div class="success">✓ Chess board rendered</div>');
+                } else {
+                    testResults.push('<div class="error">✗ Chess board not rendered</div>');
+                }
+                
+                const squares = document.querySelectorAll('.chess-square');
+                if (squares.length === 64) {
+                    testResults.push('<div class="success">✓ All 64 squares rendered</div>');
+                } else {
+                    testResults.push(`<div class="error">✗ Expected 64 squares, found ${squares.length}</div>`);
+                }
+                
+                const pieces = document.querySelectorAll('.chess-square.piece');
+                if (pieces.length > 0) {
+                    testResults.push(`<div class="success">✓ ${pieces.length} pieces rendered</div>`);
+                } else {
+                    testResults.push('<div class="error">✗ No pieces found on board</div>');
+                }
+                
+                resultsDiv.innerHTML = testResults.join('');
+            }, 500);
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', runTest);
+    </script>
+</body>
+</html>
