@@ -281,19 +281,33 @@ Based on your investigation style and the evidence you've gathered, several theo
 
 # IMAGE: desktop/morning_room_table_desktop.jpg
 
-{primary_suspect == "victoria": * [Accuse Victoria of the murder] -> accuse_victoria | * [Present evidence against Victoria] -> accuse_victoria}
+{ primary_suspect == "victoria":
+  + [Accuse Victoria of the murder] -> accuse_victoria
+}
 
-{primary_suspect == "charles" or chess_game_completed: * [Accuse Charles using the chess evidence] -> accuse_charles}
+{ primary_suspect == "charles" or chess_game_completed:
+  + [Accuse Charles using the chess evidence] -> accuse_charles
+}
 
-{primary_suspect == "family_quarrel": * [Accuse Mrs. Pemberton of orchestrating the murder] -> accuse_mrs_pemberton}
+{ primary_suspect == "family_quarrel":
+  + [Accuse Mrs. Pemberton of orchestrating the murder] -> accuse_mrs_pemberton
+}
 
-{investigation_style == "psychological": * [Expose Ashford's secret involvement] -> accuse_ashford}
+{ investigation_style == "psychological":
+  + [Expose Ashford's secret involvement] -> accuse_ashford
+}
 
-* [Present the conspiracy theory - multiple killers] -> conspiracy_theory
++ [Present the conspiracy theory - multiple killers] -> conspiracy_theory
 
-* [Suggest an outside intruder theory] -> outside_theory
++ [Suggest an outside intruder theory] -> outside_theory
     
-{time_pressure > 0: * [Gather more evidence first] -> investigation_choice | * [The case grows cold] -> time_up}
+{ time_pressure > 0:
+  + [Gather more evidence first] -> investigation_choice
+}
+
+{ time_pressure <= 0:
+  + [The case grows cold] -> time_up
+}
 
 === accuse_charles ===
 ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle in a moment of desperate fury.
