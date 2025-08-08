@@ -1,0 +1,729 @@
+Big claude chat on how to design things so files knit together as an ecosystem.
+
+No clear conclusiosn yet, I just wanted to store this somewhere. --danbri
+------
+
+
+> Sounds good. However we also need to specify how FINK URLs appear as annotations ("# FINK blahblah") in Ink content. And what expectations might exist about integrating files
+   that link each other. Recompiled? Fink re-runs Ink compiler with multiple inputs? All inputs so far?
+
+● Update Todos
+  ⎿  ☐ Analyze current FINK tag syntax and external loading
+     ☐ Design multi-file compilation strategies
+     ☐ Define FINK linking semantics and expectations
+     ☐ Consider incremental vs full recompilation approaches
+     ☐ Map out story dependency management patterns
+
+● Excellent point! We need to define the FINK linking semantics and how multi-file stories get compiled together. Let me analyze the current implementation and design a clear
+  specification.
+
+● Search(pattern: "# FINK|FINK:", path: "..", output_mode: "content")
+  ⎿  Found 12 lines (ctrl+r to expand)
+
+● Read(../toc.fink.js)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+● Search(pattern: "external_story", path: "../toc.fink.js", output_mode: "content")
+  ⎿  Found 8 lines (ctrl+r to expand)
+
+● Read(../toc.fink.js)
+  ⎿  Read 12 lines (ctrl+r to expand)
+
+● Read(../app/fink-ink-engine.js)
+  ⎿  Read 25 lines (ctrl+r to expand)
+
+● Update Todos
+  ⎿  ☒ Analyze current FINK tag syntax and external loading
+     ☐ Design multi-file compilation strategies
+     ☐ Define FINK linking semantics and expectations
+     ☐ Consider incremental vs full recompilation approaches
+     ☐ Map out story dependency management patterns
+
+● Now let me check if there are any examples of FINK files that reference each other directly (beyond the TOC pattern):
+
+● Search(pattern: "\.fink\.js", path: "..", glob: "*.fink.js", output_mode: "content")
+  ⎿  Found 10 lines (ctrl+r to expand)
+
+● Search(pattern: "INCLUDE|IMPORT|chapter|episode|continue|next", path: "..", glob: "*.fink.js")
+  ⎿  Found 4 files (ctrl+r to expand)
+
+● Update Todos
+  ⎿  ☒ Analyze current FINK tag syntax and external loading
+     ☒ Design multi-file compilation strategies
+     ☒ Define FINK linking semantics and expectations
+     ☒ Consider incremental vs full recompilation approaches
+     ☒ Map out story dependency management patterns
+
+● FINK Multi-File Linking & Compilation Specification
+
+  Based on the current implementation analysis, here's the comprehensive specification for FINK file linking and multi-file compilation strategies.
+
+  CURRENT FINK TAG SYNTAX
+
+  FINK External Loading Tag
+
+  # FINK: ../bagend.fink.js
+  -> external_story
+
+  === external_story ===
+  Loading external story...
+
+  Current Behavior:
+  - # FINK: tag gets parsed as INK tag during story execution
+  - Engine stores the URL in lastSeenFinkTag
+  - When reaching external_story knot, engine triggers external loading
+  - Complete replacement - new FINK file replaces entire current story
+
+  PROPOSED FINK LINKING SEMANTICS
+
+  1. Replacement Linking (Current)
+
+  // toc.fink.js - Menu/launcher pattern
+  === load_adventure ===
+  # FINK: ../adventure.fink.js
+  -> external_story  // Triggers complete replacement
+
+  === external_story ===
+  Loading external story...
+
+  Use Case: Menu systems, chapter transitions, completely separate stories
+
+  2. Include Linking (New)
+
+  // chapter1.fink.js - Multi-file story pattern
+  === start ===
+  You begin your adventure...
+  + [Go to the forest] -> forest_entrance
+
+  === forest_entrance ===
+  # INCLUDE: ../shared/forest_encounters.fink.js
+  You enter the dark forest...
+  -> shared_forest_start  // Reference knot from included file
+
+  // Multi-file compilation required for this to work
+
+  Use Case: Large stories split across files, shared content libraries
+
+  3. Chapter Linking (New)
+
+  // chapter1.fink.js
+  === chapter_end ===
+  The chapter concludes...
+  + [Continue to Chapter 2] -> next_chapter
+
+  === next_chapter ===
+  # CHAPTER: ../chapter2.fink.js
+  -> external_story  // But preserve some context/variables
+
+  Use Case: Episodic content with state preservation
+
+  MULTI-FILE COMPILATION STRATEGIES
+
+  Strategy A: Lazy Loading (Current Implementation)
+
+  // Single file compilation, load-on-demand
+  class FinkEngine {
+    async loadStory(url) {
+      this.compiledStory = this.compileInkSingle(finkContent);
+      // Only current file is compiled
+    }
+
+    onFinkTag(finkUrl) {
+      // Replace entire story context
+      await this.loadStory(finkUrl);  // Fresh compilation
+    }
+  }
+
+  Pros: Memory efficient, simple, fast startupCons: No cross-file references, no shared variables
+
+  Strategy B: Multi-File Compilation (Proposed)
+
+  // Multiple files compiled together into single INK story
+  class FinkEngine {
+    async loadStoryProject(manifestUrl) {
+      const manifest = await this.loadManifest(manifestUrl);
+      const allFinkContent = await this.loadAllFiles(manifest.files);
+
+      // Combine all FINK files into single INK source
+      const combinedInk = this.processFinkIncludes(allFinkContent);
+      this.compiledStory = this.compileInk(combinedInk);
+    }
+
+    processFinkIncludes(finkFiles) {
+      // Process # INCLUDE: tags during compilation
+      // Resolve cross-file knot references
+      // Handle variable scoping across files
+    }
+  }
+
+  Pros: Cross-file references work, shared variables, faster navigationCons: Larger memory usage, slower initial load
+
+  Strategy C: Hybrid Compilation (Best of Both)
+
+  // Manifest-driven with incremental loading
+  class FinkEngine {
+    async loadStoryManifest(url) {
+      this.manifest = await this.loadManifest(url);
+      this.loadedFiles = new Map();
+
+      // Load entry point
+      await this.loadFile(this.manifest.entryPoint);
+    }
+
+    onFinkReference(finkUrl, type) {
+      switch(type) {
+        case 'INCLUDE':
+          return this.includeFile(finkUrl);    // Immediate compilation
+        case 'CHAPTER':
+          return this.loadChapter(finkUrl);    // Replace with context
+        case 'FINK':
+          return this.replaceStory(finkUrl);   // Complete replacement
+      }
+    }
+  }
+
+  FINK MANIFEST SYSTEM (Proposed)
+
+  Story Manifest (fink-manifest.json)
+
+  {
+    "name": "Epic Adventure",
+    "version": "1.0.0",
+    "entryPoint": "./toc.fink.js",
+    "files": [
+      {
+        "path": "./chapter1.fink.js",
+        "type": "chapter",
+        "dependencies": ["./shared/combat.fink.js"]
+      },
+      {
+        "path": "./shared/combat.fink.js",
+        "type": "library",
+        "exports": ["combat_system", "weapon_stats"]
+      }
+    ],
+    "sharedVariables": ["player_name", "score", "inventory"],
+    "basehref": "media/adventure/"
+  }
+
+  Engine Manifest Loading
+
+  const engine = new FinkEngine();
+
+  // Load story project with dependency resolution
+  await engine.loadProject('https://stories.com/adventure/fink-manifest.json');
+
+  // Engine events for multi-file loading
+  engine.on('file-loading', (data) => {
+    console.log(`Loading ${data.file} (${data.progress}%)`);
+  });
+
+  engine.on('compilation-complete', (data) => {
+    console.log(`Compiled ${data.fileCount} files, ${data.knotCount} knots`);
+  });
+
+  COMPILATION APPROACHES
+
+  Option 1: Full Recompilation
+
+  // Every FINK reference triggers complete recompilation
+  onFinkTag(url) {
+    const allRelevantFiles = this.resolveDependencies(url);
+    const combinedContent = this.combineFiles(allRelevantFiles);
+    this.story = new inkjs.Compiler(combinedContent).Compile();
+  }
+  Pros: Always consistent, handles complex dependenciesCons: Potentially slow for large projects
+
+  Option 2: Incremental Compilation
+
+  // Only compile new/changed files
+  onFinkTag(url) {
+    if (!this.compiledFiles.has(url)) {
+      const newContent = await this.loadFile(url);
+      this.addToCompilation(newContent);  // Merge into existing story
+    }
+    this.story.JumpToKnot(startingKnot);
+  }
+  Pros: Faster for large projectsCons: Complex merge logic, potential inconsistencies
+
+  Option 3: Context Compilation (Recommended)
+
+  // Smart compilation based on reference type
+  onFinkTag(url, type) {
+    switch(type) {
+      case 'INCLUDE':   // Immediate merge
+        const content = await this.loadFile(url);
+        this.mergeIntoStory(content);
+        break;
+
+      case 'CHAPTER':   // New compilation + variable transfer
+        await this.saveContext();
+        await this.loadNewStory(url);
+        await this.restoreContext();
+        break;
+
+      case 'FINK':      // Complete replacement
+        await this.loadNewStory(url);
+        break;
+    }
+  }
+
+  PROPOSED ENGINE API EVENTS
+
+  Multi-File Loading Events
+
+  engine.on('story-project-loading', { manifest, totalFiles });
+  engine.on('story-file-loaded', { url, fileIndex, totalFiles });
+  engine.on('story-compilation-started', { fileCount, strategy });
+  engine.on('story-compilation-complete', { knotCount, choiceCount, warnings });
+
+  // Cross-file navigation events
+  engine.on('story-include-resolved', { includedFile, newKnots });
+  engine.on('story-chapter-transition', { fromFile, toFile, contextPreserved });
+  engine.on('story-external-loading', { url, replacesCurrentStory });
+
+  Error Events for Multi-File Issues
+
+  engine.on('story-dependency-error', {
+    missingFile: 'shared/combat.fink.js',
+    referencedFrom: 'chapter1.fink.js:45',
+    suggestion: 'Check file path or add to manifest'
+  });
+
+  engine.on('story-circular-dependency', {
+    chain: ['a.fink.js', 'b.fink.js', 'a.fink.js'],
+    suggestion: 'Refactor to avoid circular includes'
+  });
+
+  engine.on('story-variable-conflict', {
+    variable: 'player_health',
+    conflictingFiles: ['chapter1.fink.js', 'shared/stats.fink.js'],
+    suggestion: 'Use unique variable names or shared scope'
+  });
+
+  This specification provides three clear linking patterns with flexible compilation strategies that can evolve based on developer needs while maintaining the clean engine-only
+   API boundary you specified!
+
+> Good discussion. We will want several possibilities at least at toolkit level. This can help us understand limits of the API / library. We should allow for complete
+  replacement. For merging. For testing for common use of variable / list / knot names. Anything else where naming clash is an issue? Also what is the terminology in Ink for a
+  live running session with variables and potentially UI state? At least the variables part should be storable. Could we have a notion of pushing the last Ink "situation" onto
+  a stack, going into the newly loaded scene? And for the engine to have a notion of what the path through Finkspace is that we've taken? Eg. I start out in
+  AliceHomepage.fink.js and go to AliceBotKitchen.fink.js story, and that story links to bobs_tales.fink.js on a different website. That whole session/journey we have these 3
+  files A B C. But one could enter at any point. B might not even know about or point to A. C might have no mentions of B or A. A might also link to C. HOWEVER we might want an
+   experience (remembering "goto considered harmful") in which B takes us into C but allows us to pop out again at the end. What state might be passed or set in variables? Our
+  game (see notes in repo) also allows mini games to be invoked and pass and set state, how does that relate. So in A i..e. AliceHomepage.fink.js it might let us play a space
+  invaders game and that game gives us points stored and visible in Ink as variables. So you get good at space invaders, Fink logic lets you get to hidden knots in A that
+  reveal the existence of B, we load up B, A gets pickled onto the stack, we do something cool in B and leave, pop back into our A state, but with some new variable set in B
+  that lets us get more out of our A environment eg. bigger space ship in space invaders. How can this all hang together while avoiding complexity, naming clash,
+  pre-coordinating too much or too little???
+
+● Update Todos
+  ⎿  ☐ Define INK runtime terminology and state concepts
+     ☐ Design story stack and context preservation system
+     ☐ Map out naming clash detection and resolution
+     ☐ Design variable scoping and passing mechanisms
+     ☐ Integrate minigame state passing patterns
+     ☐ Design Finkspace navigation tracking
+
+● Brilliant! This is exactly the kind of complex real-world scenario that will stress-test the FINK engine design. You're describing a distributed narrative web with state
+  persistence, story stacking, and minigame integration. Let me analyze the INK runtime concepts and design a comprehensive system.
+
+● Read(../app/fink-ink-engine.js)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+● Bash(cd inklet/validation && node -e "
+      const ink = await import('./vendor/ink-full.mjs');…)
+  ⎿  Error: /bin/bash: line 19: cd: inklet/validation: No such file or directory
+
+● Bash(node -e "
+      const ink = await import('./vendor/ink-full.mjs');…)
+  ⎿  INK Story object exploration
+
+● Update Todos
+  ⎿  ☒ Define INK runtime terminology and state concepts
+     ☐ Design story stack and context preservation system
+     ☐ Map out naming clash detection and resolution
+     ☐ Design variable scoping and passing mechanisms
+     ☐ Integrate minigame state passing patterns
+     ☐ Design Finkspace navigation tracking
+
+● Update Todos
+  ⎿  ☒ Define INK runtime terminology and state concepts
+     ☒ Design story stack and context preservation system
+     ☒ Map out naming clash detection and resolution
+     ☒ Design variable scoping and passing mechanisms
+     ☒ Integrate minigame state passing patterns
+     ☒ Design Finkspace navigation tracking
+
+● FINK Distributed Narrative State Management System
+
+  This is a fantastic complex scenario! You're describing a distributed narrative web with persistent state, story stacking, and cross-system integration. Let me design a
+  comprehensive system that handles this elegantly.
+
+  INK RUNTIME TERMINOLOGY & STATE CONCEPTS
+
+  INK Runtime State Components
+
+  // INK Story runtime contains:
+  story.variablesState     // All VAR and LIST values
+  story.state              // Current position, flow, callstack
+  story.currentFlowName    // Which flow we're in (default: DEFAULT_FLOW)
+  story.canContinue        // Can continue reading
+  story.currentChoices     // Available choices
+  story.currentTags        // Tags at current position
+  story.globalTags         // Story-level tags
+
+  FINK Extended State Concepts
+
+  // FINK adds layered state management:
+  FinkSession {
+    navigationStack: [],        // Story context stack (A → B → C)
+    globalScope: {},           // Cross-story persistent variables
+    currentStoryState: {},     // Active story's INK state
+    minigameResults: {},       // Results from embedded games
+    journeyPath: [],           // Full navigation history
+    scopeChain: []             // Variable resolution chain
+  }
+
+  STORY STACK & CONTEXT PRESERVATION
+
+  Navigation Stack Design
+
+  class FinkNavigationStack {
+    constructor() {
+      this.stack = [];
+      this.currentIndex = -1;
+    }
+
+    // Push current context before loading new story
+    push(context) {
+      const snapshot = {
+        url: context.currentStoryUrl,
+        storyState: context.story.state,           // INK execution state
+        variablesState: context.story.variablesState, // All variables
+        currentKnot: context.story.currentFlowName,
+        metadata: {
+          entryPoint: context.entryKnot,
+          timestamp: Date.now(),
+          scopeLevel: this.stack.length
+        }
+      };
+      this.stack.push(snapshot);
+      this.currentIndex = this.stack.length - 1;
+      return snapshot;
+    }
+
+    // Pop back to previous story context
+    pop() {
+      if (this.stack.length === 0) return null;
+
+      const context = this.stack.pop();
+      this.currentIndex = this.stack.length - 1;
+      return context;
+    }
+
+    // Peek at what we'd return to
+    peek() {
+      return this.stack[this.stack.length - 1] || null;
+    }
+  }
+
+  Story Context Transitions
+
+  // Example: AliceHomepage → AliceBotKitchen → bobs_tales
+  const engine = new FinkEngine();
+
+  // A → B (with stack push)
+  engine.pushStory('AliceBotKitchen.fink.js', {
+    passVariables: ['player_name', 'space_invaders_score'],
+    returnKnot: 'kitchen_completed',  // Where to resume in A
+    stackLevel: 1
+  });
+
+  // B → C (deeper stack)
+  engine.pushStory('https://bobs-site.com/bobs_tales.fink.js', {
+    passVariables: ['alice_kitchen_items'],
+    returnKnot: 'tales_finished',       // Where to resume in B
+    stackLevel: 2
+  });
+
+  // Pop back: C → B → A
+  const returnContext = engine.popStory(); // Back to B with new variables
+  const homeContext = engine.popStory();   // Back to A with enriched state
+
+  NAMING CLASH DETECTION & RESOLUTION
+
+  Multi-Level Scoping System
+
+  class FinkScopeChain {
+    constructor() {
+      this.scopes = [
+        { name: 'global', variables: {}, persistent: true },     // Cross-story
+        { name: 'session', variables: {}, persistent: false },   // Current session
+        { name: 'story', variables: {}, persistent: false },     // Current story
+        { name: 'local', variables: {}, persistent: false }      // Temporary
+      ];
+    }
+
+    // Detect potential naming conflicts before loading
+    analyzeConflicts(newStoryVariables) {
+      const conflicts = {
+        shadowing: [],    // New story shadows existing variables
+        collision: [],    // Same name, different types/purposes
+        resolved: []      // Successfully merged
+      };
+
+      for (const [name, newVar] of Object.entries(newStoryVariables)) {
+        const existing = this.findVariable(name);
+        if (existing) {
+          if (existing.scope === 'global') {
+            conflicts.resolved.push({ name, action: 'inherit_global' });
+          } else if (this.typesCompatible(existing.value, newVar.value)) {
+            conflicts.resolved.push({ name, action: 'merge_compatible' });
+          } else {
+            conflicts.collision.push({
+              name,
+              existingType: typeof existing.value,
+              newType: typeof newVar.value,
+              suggestion: `Use scoped access: story.${name} vs global.${name}`
+            });
+          }
+        }
+      }
+
+      return conflicts;
+    }
+  }
+
+  Scoped Variable Access
+
+  // In AliceHomepage.fink.js
+  VAR space_invaders_score = 0
+  VAR player_name = "Alice"
+
+  // In AliceBotKitchen.fink.js
+  VAR kitchen_items = 0
+  // Inherit from previous scope automatically
+  You are {player_name} with a score of {space_invaders_score}.
+
+  // In bobs_tales.fink.js
+  VAR player_name = "Unknown"  // Would normally conflict
+  // But resolved through scoping:
+  Hello {global.player_name}! In this story you are {story.player_name}.
+
+  VARIABLE PASSING & STATE MANAGEMENT
+
+  State Passing Mechanisms
+
+  // 1. Explicit Variable Passing
+  engine.pushStory('next.fink.js', {
+    passVariables: {
+      'space_invaders_score': engine.getVariable('space_invaders_score'),
+      'player_level': engine.getVariable('player_level')
+    },
+    receiveVariables: ['new_ability', 'bonus_points']  // What to bring back
+  });
+
+  // 2. Global Persistent Variables
+  engine.setGlobalVariable('player_name', 'Alice');     // Available everywhere
+  engine.setGlobalVariable('total_points', 1500);       // Cross-story progress
+
+  // 3. Scoped Inheritance
+  engine.pushStory('child.fink.js', {
+    inheritScope: 'session',    // Inherit session variables
+    isolateScope: 'local'       // Local variables stay isolated
+  });
+
+  // 4. Contract-Based Passing
+  engine.pushStory('minigame.fink.js', {
+    contract: {
+      provides: ['player_name', 'current_health'],
+      expects: ['game_score', 'items_earned'],
+      guarantees: ['player_name']  // Won't modify these
+    }
+  });
+
+  MINIGAME STATE INTEGRATION
+
+  Bidirectional State Flow
+
+  // From FINK to Minigame
+  engine.on('minigame-launch', (gameData) => {
+    const gameState = {
+      playerName: engine.getVariable('player_name'),
+      spaceInvadersScore: engine.getVariable('space_invaders_score'),
+      playerLevel: engine.getVariable('player_level'),
+      availableUpgrades: engine.getList('ship_upgrades')
+    };
+
+    // Launch external minigame with state
+    window.launchSpaceInvaders(gameState);
+  });
+
+  // From Minigame back to FINK
+  window.onMinigameComplete = (results) => {
+    engine.setVariable('space_invaders_score', results.finalScore);
+    engine.setVariable('games_played', engine.getVariable('games_played') + 1);
+    engine.addToList('ship_upgrades', results.unlockedUpgrades);
+
+    // Trigger story continuation with new state
+    engine.emit('minigame-results', results);
+    engine.continueStory();
+  };
+
+  FINK Minigame Integration Tags
+
+  // In AliceHomepage.fink.js
+  === space_invaders_arcade ===
+  You approach the space invaders arcade machine.
+
+  + [Play space invaders] -> play_game
+
+  === play_game ===
+  # MINIGAME: space_invaders
+  # MINIGAME_STATE: player_name, space_invaders_score, ship_upgrades
+  # MINIGAME_RETURNS: final_score, games_played, new_upgrades
+  Loading space invaders...
+
+  // Engine pauses INK execution, launches minigame
+  // When minigame completes, continues from here with updated variables
+
+  === game_completed ===
+  {final_score > space_invaders_score:
+      Excellent! You improved your score to {final_score}!
+      {final_score > 5000:
+          The machine makes a special sound and dispenses a bonus token!
+          ~ ship_upgrades += bonus_token
+      }
+  - else:
+      You scored {final_score}. Your best is still {space_invaders_score}.
+  }
+
+  {ship_upgrades ? bonus_token:
+      With your bonus token, you can now access the secret kitchen passage!
+      + [Enter secret passage] -> secret_kitchen_path
+  }
+
+  FINKSPACE NAVIGATION TRACKING
+
+  Journey Path System
+
+  class FinkJourneyTracker {
+    constructor() {
+      this.journeyPath = [];
+      this.currentSession = null;
+    }
+
+    startSession(entryPoint) {
+      this.currentSession = {
+        id: this.generateSessionId(),
+        startTime: Date.now(),
+        entryPoint: entryPoint,
+        path: [{
+          url: entryPoint,
+          timestamp: Date.now(),
+          action: 'enter',
+          stackLevel: 0
+        }]
+      };
+    }
+
+    recordNavigation(fromUrl, toUrl, action, metadata = {}) {
+      const navEvent = {
+        from: fromUrl,
+        to: toUrl,
+        action: action,        // 'push', 'pop', 'replace', 'external'
+        timestamp: Date.now(),
+        stackLevel: metadata.stackLevel || 0,
+        variablesPassed: metadata.passedVariables || [],
+        minigameResults: metadata.minigameResults || null
+      };
+
+      this.currentSession.path.push(navEvent);
+      this.journeyPath.push(navEvent);
+    }
+
+    // Generate shareable journey URLs
+    getJourneyUrl() {
+      const compressed = this.compressJourney(this.currentSession);
+      return `fink://journey/${compressed}`;
+    }
+
+    // Resume from journey URL
+    async resumeFromJourney(journeyUrl) {
+      const journey = this.decompressJourney(journeyUrl);
+      // Replay the journey path with state reconstruction
+      for (const step of journey.path) {
+        await this.replayNavigationStep(step);
+      }
+    }
+  }
+
+  Cross-Domain Journey Support
+
+  // Example journey: A → B → C with state flow
+  const journey = [
+    { url: 'alice-site.com/AliceHomepage.fink.js', action: 'enter' },
+    { url: 'alice-site.com/AliceBotKitchen.fink.js', action: 'push',
+      state: { space_invaders_score: 1200, player_name: 'Alice' } },
+    { url: 'bobs-site.com/bobs_tales.fink.js', action: 'push',
+      state: { kitchen_items: 3, alice_context: true } },
+    { url: 'alice-site.com/AliceBotKitchen.fink.js', action: 'pop',
+      state: { bobs_wisdom: 'trust_the_process', bonus_items: 2 } },
+    { url: 'alice-site.com/AliceHomepage.fink.js', action: 'pop',
+      state: { kitchen_completed: true, total_score: 1500 } }
+  ];
+
+  // Engine can resume any interrupted journey
+  engine.resumeJourney(journey);
+
+  ADVANCED ENGINE API
+
+  Stack Management Events
+
+  engine.on('story-push', (data) => {
+    // { fromUrl, toUrl, stackLevel, preservedState, passedVariables }
+  });
+
+  engine.on('story-pop', (data) => {
+    // { fromUrl, toUrl, stackLevel, restoredState, returnedVariables }
+  });
+
+  engine.on('scope-conflict', (conflicts) => {
+    // { shadowing: [...], collision: [...], resolved: [...] }
+    // Game can resolve conflicts or show warning UI
+  });
+
+  engine.on('minigame-integration', (gameData) => {
+    // { gameType, initialState, expectedReturns }
+  });
+
+  engine.on('journey-checkpoint', (checkpoint) => {
+    // { sessionId, path, currentState, resumeUrl }
+    // Game can save checkpoint for later resume
+  });
+
+  Developer Usage Patterns
+
+  // Complex distributed story with minigames
+  const engine = new FinkEngine({
+    enableStackNavigation: true,
+    enableGlobalScope: true,
+    enableMinigameIntegration: true,
+    enableJourneyTracking: true,
+    conflictResolution: 'warn' // 'error', 'auto', 'warn'
+  });
+
+  // Load main story
+  await engine.loadStory('AliceHomepage.fink.js');
+
+  // Engine automatically handles:
+  // - Variable scoping conflicts
+  // - Story stack push/pop
+  // - Minigame state passing
+  // - Cross-domain security
+  // - Journey reconstruction
+  // - State persistence
+
+  This system provides the complexity you need while maintaining clean boundaries and avoiding pre-coordination requirements. Stories can link anywhere, state flows naturally,
+  minigames integrate seamlessly, and the journey is always recoverable!
