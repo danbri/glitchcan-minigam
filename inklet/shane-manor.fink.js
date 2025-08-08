@@ -291,9 +291,25 @@ ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle using your know
 
 The assembled household gasps. Charles goes white.
 
-ANDRÉ-LOUIS: The chess game proves you were in the study with him. That aggressive queen sacrifice - that's your style, not his. After stabbing him, you used the old servants' bell system to barricade the door from outside.
+{chess_insights == "brilliant_analysis":
+    ANDRÉ-LOUIS: The chess game confirms everything. That queen sacrifice was Lord Pemberton's style - brilliant, aggressive, final. You were losing badly and couldn't accept it, could you?
+    
+    CHARLES: *breaking down* How could you possibly... that position was impossible! Uncle was always showing off his tactics...
+}
+{chess_insights == "good_understanding":
+    ANDRÉ-LOUIS: The chess position tells the tale. Your uncle was winning decisively when frustration overcame you.
+    
+    CHARLES: *shaking* You don't understand the pressure... the debts...
+}
+{chess_insights == "basic_analysis":
+    ANDRÉ-LOUIS: The chess game was interrupted at a crucial moment. Given your gambling debts and your uncle's refusal to help...
+    
+    CHARLES: *quietly* I never meant for it to happen.
+}
 
-CHARLES: *breaking down* You don't understand the pressure I was under. Those gambling debts... Uncle could have helped, but he refused. I never meant to kill him!
+ANDRÉ-LOUIS: After stabbing him, you used the old servants' bell pull system to jam the door from outside, creating the locked room illusion.
+
+CHARLES: Those gambling debts would have destroyed me. Uncle could have helped, but he refused. When I saw that chess position... I knew I was beaten in everything.
 
 -> resolution
 
@@ -316,9 +332,29 @@ The case remains unsolved, though your investigation provides valuable leads for
 
 ASHFORD: Inspector André-Louis, your reputation is well-deserved. How did you see through the locked room deception?
 
-ANDRÉ-LOUIS: The chess position was the key. Lord Pemberton was a careful, defensive player, but that aggressive queen sacrifice was the move of a younger, more desperate mind.
+{chess_insights == "brilliant_analysis":
+    ANDRÉ-LOUIS: The chess position was the crucial clue. Lord Pemberton's queen sacrifice revealed a mind under pressure making one final, brilliant move. Charles underestimated both his uncle's chess mastery and a detective's ability to read the position.
+    
+    ~ player_reputation += 5
+    
+    MARY: *amazed* You could tell all that from just looking at the chess pieces?
+    
+    ANDRÉ-LOUIS: Chess is a game of psychology as much as tactics. The board never lies about the players' state of mind.
+}
+{chess_insights == "good_understanding":
+    ANDRÉ-LOUIS: The chess game provided crucial context. The position showed Lord Pemberton was winning decisively - enough to drive a desperate nephew to violence.
+    
+    ~ player_reputation += 3
+}
+{chess_insights == "basic_analysis":
+    ANDRÉ-LOUIS: Multiple clues converged - the gambling debts, family tensions, and the interrupted chess game all pointed to Charles. Sometimes the simplest explanation is correct.
+}
 
-The case closes with Charles Pemberton confessing to manslaughter. Your reputation as a detective grows.
+The case closes with Charles Pemberton confessing to manslaughter. Your reputation as a detective grows considerably.
+
+{player_reputation >= 70:
+    Word of your brilliant deduction spreads quickly through London's detective circles. The "Shane Manor Chess Gambit" becomes a legendary case study.
+}
 
 -> END
 
