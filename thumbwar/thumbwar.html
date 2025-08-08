@@ -1433,195 +1433,240 @@
             shockwaveTypeLocations.push(gl.getUniformLocation(program, `u_shockwave_type[${i}]`));
         }
         
-        // Touch and mouse handling
-        let touch1 = { x: 0.25, y: 0.5 };
-        let touch2 = { x: 0.75, y: 0.5 };
-        let isMouseDown = false;
+        // =============================================================================
+        // INPUT HANDLING SYSTEM
+        // =============================================================================
         
+        // Touch/mouse position tracking (normalized 0-1 coordinates)
+        let touch1 = { x: 0.25, y: 0.5 };  // Default positions for visual interest
+        let touch2 = { x: 0.75, y: 0.5 };  // when no input is active
+        let isMouseDown = false;            // Desktop mouse interaction state
+        
+        // MULTI-TOUCH INPUT HANDLER
+        // Processes touch events for mobile devices with dual-thumb gameplay
         function handleTouches(e) {
-            e.preventDefault();
+            e.preventDefault(); // Prevent scrolling and other default touch behaviors
             
-            // Track if both thumbs are active
+            // GAME RULE: Track if both thumbs are actively being used
+            // This affects scoring bonuses and penalties
             bothThumbsActive = (e.touches.length >= 2);
             
+            // FIRST TOUCH: Always present, controls primary touch point
             if (e.touches.length >= 1) {
                 touch1.x = e.touches[0].clientX / canvas.width;
                 touch1.y = e.touches[0].clientY / canvas.height;
             }
             
+            // SECOND TOUCH: Creates dual-thumb gameplay when present
             if (e.touches.length >= 2) {
                 touch2.x = e.touches[1].clientX / canvas.width;
                 touch2.y = e.touches[1].clientY / canvas.height;
                 
-                // If this is the first time both thumbs are active, initialize the lastActiveScoreTime
+                // Initialize bonus score timer when both thumbs first become active
                 if (lastActiveScoreTime === 0) {
                     lastActiveScoreTime = Date.now();
                 }
             }
             
-            // Check for target collection
+            // Check if touch points are hitting any targets
             checkTargets();
         }
         
-        // Mouse support for desktop users
+        // MOUSE INPUT HANDLER (Desktop Support)
+        // Simulates dual-touch behavior using single mouse cursor
         function handleMouseMove(e) {
-            if (!isMouseDown) return;
+            if (!isMouseDown) return; // Only respond during active drag
             
-            // Update the first touch point to follow the mouse
+            // PRIMARY TOUCH: Follows mouse cursor directly
             touch1.x = e.clientX / canvas.width;
             touch1.y = e.clientY / canvas.height;
             
-            // Create a secondary touch point that follows at an offset
-            // This simulates having two fingers but with just a mouse
+            // SECONDARY TOUCH: Mirror position for interesting visual effect
+            // Creates symmetric tendril and fluid patterns
             touch2.x = 1 - touch1.x;
             touch2.y = 1 - touch1.y;
             
-            // Check for target collection
+            // Check for target collection during mouse interaction
             checkTargets();
         }
         
+        // MOUSE DOWN HANDLER
+        // Initiates mouse-based gameplay and sets up dual-touch simulation
         function handleMouseDown(e) {
             isMouseDown = true;
             
-            // When using mouse, both "thumbs" are considered active
+            // GAME RULE: Mouse interaction counts as "both thumbs active"
             bothThumbsActive = true;
             if (lastActiveScoreTime === 0) {
                 lastActiveScoreTime = Date.now();
             }
             
-            // Update the first touch point to follow the mouse
+            // Set initial positions for both simulated touch points
             touch1.x = e.clientX / canvas.width;
             touch1.y = e.clientY / canvas.height;
             
-            // Create a secondary touch point that follows at an offset
+            // Create mirrored second touch point
             touch2.x = 1 - touch1.x;
             touch2.y = 1 - touch1.y;
             
-            // Check for target collection on initial click
+            // Check for immediate target collection on click
             checkTargets();
         }
         
+        // MOUSE UP HANDLER  
+        // Ends mouse interaction and resets game state
         function handleMouseUp() {
             isMouseDown = false;
             bothThumbsActive = false;
         }
         
-        // Also check for clicks directly on targets (for easier desktop play)
+        // DIRECT TARGET CLICKING (Desktop Accessibility)
+        // Allows desktop users to click directly on targets for easier gameplay
         function handleClick(e) {
             const mouseX = e.clientX / canvas.width;
             const mouseY = e.clientY / canvas.height;
             
-            // Check if the click was directly on a target
+            // Check if click hit any active targets
             targets.forEach(target => {
-                if (target.collected) return;
+                if (target.collected) return; // Skip already collected targets
                 
+                // Calculate distance from click to target center
                 const dist = Math.hypot(
                     target.x - mouseX,
                     target.y - mouseY
                 );
                 
-                if (dist < 0.08) {  // Same collection radius as with touch
+                // Same collection radius as touch-based collection
+                if (dist < 0.08) {
                     collectTarget(target);
                 }
             });
         }
         
-        // Touch events
+        // EVENT LISTENER REGISTRATION
+        // Set up all input event handlers
+        
+        // Touch events for mobile devices
         canvas.addEventListener('touchstart', handleTouches);
         canvas.addEventListener('touchmove', handleTouches);
         
-        // Mouse events
+        // Mouse events for desktop interaction
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUp);
-        canvas.addEventListener('mouseleave', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseUp);  // Handle mouse leaving canvas
         canvas.addEventListener('click', handleClick);
         
-        // Score update with animation and sound
+        // =============================================================================
+        // SCORING SYSTEM & FEEDBACK
+        // =============================================================================
+        
+        // Updates player score and provides multi-modal feedback
+        // Combines visual, audio, and haptic feedback for game events
         function updateScore(points) {
             score += points;
             document.getElementById('score').textContent = `Score: ${score}`;
             
-            // Visual feedback
+            // VISUAL FEEDBACK: Update score display styling
             const scoreElement = document.getElementById('score');
             scoreElement.classList.remove('negative');
             
             if (points > 0) {
+                // POSITIVE SCORE CHANGE: Green target collected
                 scoreDirection = 1;
-                // Play good sound
+                
+                // AUDIO FEEDBACK: Pleasant ascending arpeggio
                 if (audioEnabled) {
                     createCollectSound();
                 }
-                // Short vibration for good targets
+                // HAPTIC FEEDBACK: Brief vibration confirmation
                 vibrate(50);
             } else {
+                // NEGATIVE SCORE CHANGE: Red target hit or penalty
                 scoreDirection = -1;
-                scoreElement.classList.add('negative');
-                // Play bad sound
+                scoreElement.classList.add('negative'); // Red text color
+                
+                // AUDIO FEEDBACK: Harsh, descending warning sound
                 if (audioEnabled) {
                     createBadSound();
                 }
-                // More intense vibration for bad targets
+                // HAPTIC FEEDBACK: More intense vibration pattern for warning
                 vibrate([50, 50, 100]);
             }
             
+            // Track timing for score change animations
             lastScoreChange = Date.now();
             
-            // Reset visual feedback after a delay
+            // VISUAL CLEANUP: Remove negative styling after brief display
             setTimeout(() => {
                 scoreElement.classList.remove('negative');
             }, 500);
         }
         
-        // Target generation
+        // =============================================================================
+        // TARGET GENERATION & MANAGEMENT
+        // =============================================================================
+        
+        // Creates new targets at random positions with random type (good/bad)
         function createTarget() {
+            // CAPACITY CHECK: Don't exceed maximum simultaneous targets
             if (targets.length >= MAX_TARGETS) return;
             
-            // Decide if this is a good or bad target
-            const isBad = Math.random() < 0.3; // 30% chance for bad targets
+            // TARGET TYPE SELECTION: 30% chance for penalty targets, 70% for reward targets
+            const isBad = Math.random() < 0.3;
             
+            // TARGET OBJECT CREATION
             const target = {
-                x: Math.random() * 0.8 + 0.1,
-                y: Math.random() * 0.8 + 0.1,
-                createdAt: Date.now(),
-                collected: false,
-                isBad: isBad,
-                element: document.createElement('div')
+                x: Math.random() * 0.8 + 0.1,  // Random X: 0.1 to 0.9 (avoid screen edges)
+                y: Math.random() * 0.8 + 0.1,  // Random Y: 0.1 to 0.9 (avoid screen edges)
+                createdAt: Date.now(),          // Birth timestamp for lifespan tracking
+                collected: false,               // Collection state flag
+                isBad: isBad,                  // Target type: true=penalty, false=reward
+                element: document.createElement('div') // DOM element for visual representation
             };
             
-            // Set appropriate CSS class
+            // DOM ELEMENT SETUP: Style and position the visual target
             target.element.className = isBad ? 'target bad' : 'target good';
             target.element.style.left = `${target.x * 100}%`;
             target.element.style.top = `${target.y * 100}%`;
             document.getElementById('targets').appendChild(target.element);
             
+            // Add to active targets list
             targets.push(target);
         }
         
+        // TARGET CLEANUP: Remove target from both DOM and game state
         function removeTarget(target) {
-            target.element.remove();
-            targets = targets.filter(t => t !== target);
+            target.element.remove(); // Remove DOM element
+            targets = targets.filter(t => t !== target); // Remove from array
         }
         
+        // TARGET LIFECYCLE MANAGEMENT
+        // Handles target expiration and spawning of new targets
         function updateTargets() {
             const now = Date.now();
             
-            // Remove expired targets
+            // EXPIRATION CHECK: Remove targets that have exceeded their lifespan
             targets.forEach(target => {
                 if (now - target.createdAt > targetLifespan && !target.collected) {
                     removeTarget(target);
                 }
             });
             
-            // Create new targets if needed, rate affected by control panel
+            // SPAWNING LOGIC: Create new targets based on control panel rate setting
+            // Probability-based spawning: 1% base chance per frame, scaled by rate multiplier
             if (targets.length < MAX_TARGETS && Math.random() < (0.01 * gameSettings.targetGenerationRate)) {
                 createTarget();
             }
         }
         
-        // Create a new shockwave effect
+        // =============================================================================
+        // SHOCKWAVE EFFECT SYSTEM
+        // =============================================================================
+        
+        // Creates expanding ring effect when targets are collected
         function createShockwave(x, y, isGood) {
-            // Find an available slot for a new shockwave
+            // SLOT ALLOCATION: Find available shockwave slot (reuse system for performance)
             let index = -1;
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (!shockwaves[i] || !shockwaves[i].active) {
@@ -1630,23 +1675,29 @@
                 }
             }
             
-            // If no slot is available, return
+            // If all slots occupied, skip shockwave (should be rare)
             if (index === -1) return;
             
-            // Create the shockwave
+            // SHOCKWAVE CREATION: Set up expanding ring effect
             shockwaves[index] = {
                 active: true,
-                x: x,
-                y: y,
-                startTime: Date.now() / 1000, // Current time in seconds
-                isGood: isGood
+                x: x,                           // Center position X
+                y: y,                           // Center position Y
+                startTime: Date.now() / 1000,   // Start time in seconds (for shader)
+                isGood: isGood                  // Type affects color: green=good, red=bad
             };
         }
         
+        // =============================================================================
+        // COLLISION DETECTION & TARGET COLLECTION
+        // =============================================================================
+        
+        // Checks if either touch point is close enough to collect targets
         function checkTargets() {
             targets.forEach(target => {
-                if (target.collected) return;
+                if (target.collected) return; // Skip already collected targets
                 
+                // DISTANCE CALCULATION: Check both touch points
                 const distToTouch1 = Math.hypot(
                     target.x - touch1.x,
                     target.y - touch1.y
@@ -1657,58 +1708,68 @@
                     target.y - touch2.y
                 );
                 
+                // COLLECTION THRESHOLD: 0.08 normalized distance (about 8% of screen)
                 if (distToTouch1 < 0.08 || distToTouch2 < 0.08) {
                     collectTarget(target);
                 }
             });
         }
         
+        // TARGET COLLECTION HANDLER
+        // Processes target collection with scoring, effects, and cleanup
         function collectTarget(target) {
-            if (target.collected) return;
+            if (target.collected) return; // Prevent double-collection
             
             target.collected = true;
             
-            // Create a shockwave effect at the target's position
+            // VISUAL EFFECT: Create shockwave at collection point
             createShockwave(target.x, target.y, !target.isBad);
             
             if (target.isBad) {
-                // Bad target visuals
+                // BAD TARGET COLLECTION: Penalty feedback
                 target.element.style.border = '4px solid rgba(255, 51, 102, 1.0)';
                 target.element.style.boxShadow = '0 0 25px rgba(255, 51, 102, 1.0)';
-                updateScore(-15); // Lose 15 points
+                updateScore(-15); // Heavy penalty: -15 points
             } else {
-                // Good target visuals
+                // GOOD TARGET COLLECTION: Reward feedback
                 target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
                 target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
-                updateScore(10); // Gain 10 points
+                updateScore(10); // Standard reward: +10 points
             }
             
+            // COLLECTION ANIMATION: Scale up and stop CSS animations
             target.element.style.animation = 'none';
             target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
             
+            // CLEANUP: Remove target after brief display of collection effect
             setTimeout(() => {
                 removeTarget(target);
             }, 500);
         }
         
-        // Animation loop
+        // =============================================================================
+        // ADVANCED GAME MECHANICS
+        // =============================================================================
+        
+        // Animation timing for main game loop
         let startTime = Date.now();
         
-        // Check if tendril intersects with a target
+        // TENDRIL-TARGET COLLISION DETECTION
+        // Checks if energy beams between touch points intersect with targets
         function checkTendrilTargetIntersection() {
-            // Only check if tendrils are enabled
+            // FEATURE GATE: Only check if tendrils are enabled via control panel
             if (!gameSettings.enableTendrils) return;
             
-            // Only check if the thumbs are far enough apart to create a tendril
+            // DISTANCE REQUIREMENT: Only create tendrils when touch points are far enough apart
             let touchDistance = Math.hypot(
                 touch1.x - touch2.x,
                 touch1.y - touch2.y
             );
             
-            if (touchDistance < 0.15) return;
+            if (touchDistance < 0.15) return; // Same threshold as shader
             
-            // Create a simplified path between touch points to check for collisions
-            // We'll sample multiple points along the path to approximate the tendril
+            // PATH SAMPLING APPROACH
+            // Since tendril path is complex (from shader), we approximate using linear sampling
             const numSamples = 10;
             
             targets.forEach(target => {
@@ -1716,110 +1777,115 @@
                 
                 let hit = false;
                 
-                // Check multiple points along the tendril path
+                // SAMPLE POINTS along straight line between touch points
                 for (let i = 0; i <= numSamples; i++) {
-                    const t = i / numSamples;
+                    const t = i / numSamples; // 0 to 1 along the line
                     
-                    // Simple linear interpolation between touch points
-                    // This is an approximation - the actual tendril has swirls and curves
+                    // LINEAR INTERPOLATION between touch points
                     const x = touch1.x + (touch2.x - touch1.x) * t;
                     const y = touch1.y + (touch2.y - touch1.y) * t;
                     
-                    // Add some randomization to simulate the swirly nature
-                    // This is a simplification of the shader's complex patterns
+                    // TURBULENCE SIMULATION: Add swirl approximation
+                    // This tries to match the shader's complex tendril curves
                     const time = Date.now() / 1000;
                     const offset = 0.05 * gameSettings.tendrilTurbulence * Math.sin(t * 6 + time * 2);
                     
-                    // Calculate distance to target
+                    // COLLISION CHECK: Distance from target to sampled point
                     const dist = Math.hypot(
                         target.x - (x + offset),
                         target.y - y
                     );
                     
-                    // Thickness depends on control panel settings
+                    // HIT DETECTION: Use control panel thickness setting + target radius
                     const thickness = 0.05 * gameSettings.tendrilThickness;
                     
-                    if (dist < thickness + 0.03) {  // 0.03 is approximate target hit radius
+                    if (dist < thickness + 0.03) { // 0.03 = approximate target hit radius
                         hit = true;
                         break;
                     }
                 }
                 
                 if (hit) {
-                    // Tendril hit target!
+                    // TENDRIL HIT: Apply scoring based on target type
                     if (target.isBad) {
-                        // Penalize for hitting bad target with tendril
-                        updateScore(-5);
+                        updateScore(-5); // Moderate penalty for tendril hitting bad target
                     } else {
-                        // Reward for hitting good target with tendril
-                        updateScore(5);
+                        updateScore(5);  // Moderate reward for tendril hitting good target  
                     }
                     collectTarget(target);
                 }
             });
         }
         
-        // Check if thumbs are too close and apply penalty
+        // PROXIMITY PENALTY SYSTEM
+        // Prevents players from cheating by keeping thumbs too close together
         function checkThumbsDistance() {
-            if (!bothThumbsActive) return;
+            if (!bothThumbsActive) return; // Only applies when both thumbs are down
             
             const touchDistance = Math.hypot(
                 touch1.x - touch2.x,
                 touch1.y - touch2.y
             );
             
-            // If thumbs are too close, apply penalty (but only once)
+            // PENALTY APPLICATION: One-time penalty when thumbs get too close
             if (touchDistance < THUMBS_TOO_CLOSE_THRESHOLD && !thumbsClosePenaltyActive) {
                 thumbsClosePenaltyActive = true;
-                updateScore(-3);
+                updateScore(-3); // Penalty for poor technique
                 
-                // Visual and haptic feedback
+                // ENHANCED FEEDBACK: Stronger vibration for rule violation
                 if (navigator.vibrate) {
-                    navigator.vibrate([50, 50, 50]);  // More intense vibration for penalty
+                    navigator.vibrate([50, 50, 50]); // Triple pulse for warning
                 }
                 
-                // Add a small timeout to prevent constant penalties
+                // COOLDOWN PERIOD: Prevent rapid-fire penalties
                 setTimeout(() => {
                     thumbsClosePenaltyActive = false;
                 }, 1000);
             }
         }
         
-        // Check for bonus when both thumbs are active
+        // ACTIVE PLAY BONUS SYSTEM
+        // Rewards players for maintaining dual-thumb engagement
         function checkActiveThumbsBonus() {
             const now = Date.now();
             
-            // Only apply if both thumbs are currently active
+            // BONUS CONDITIONS: Both thumbs active + sufficient time elapsed
             if (bothThumbsActive && now - lastActiveScoreTime > BOTH_THUMBS_ACTIVE_SCORE_INTERVAL) {
-                updateScore(1);  // Small bonus for keeping both thumbs active
+                updateScore(1); // Small continuous bonus for active engagement
                 lastActiveScoreTime = now;
             }
         }
         
+        // =============================================================================
+        // MAIN RENDER LOOP & WEBGL RENDERING
+        // =============================================================================
+        
+        // Primary rendering function called every frame via requestAnimationFrame
         function render() {
-            resize();
-            updateTargets();
+            // FRAME SETUP: Handle resize and target lifecycle
+            resize();           // Update canvas size if window changed
+            updateTargets();    // Handle target expiration and spawning
             
-            // Game rule checks
-            checkTendrilTargetIntersection();
-            checkThumbsDistance();
-            checkActiveThumbsBonus();
+            // GAME RULE ENFORCEMENT: Apply all gameplay mechanics
+            checkTendrilTargetIntersection(); // Tendril-target collisions
+            checkThumbsDistance();            // Proximity penalties  
+            checkActiveThumbsBonus();         // Engagement bonuses
             
+            // TIME CALCULATION: Convert to seconds for shader consistency
             const currentTime = (Date.now() - startTime) / 1000;
             
-            // True black background
-            gl.clearColor(0, 0, 0, 1);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            // WEBGL RENDERING SETUP
+            gl.clearColor(0, 0, 0, 1);        // Pure black background
+            gl.clear(gl.COLOR_BUFFER_BIT);     // Clear previous frame
+            gl.useProgram(program);            // Activate shader program
             
-            gl.useProgram(program);
-            
-            // Set uniforms
+            // CORE UNIFORMS: Basic rendering parameters
             gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
             gl.uniform1f(timeUniformLocation, currentTime);
             gl.uniform2f(touch1UniformLocation, touch1.x, touch1.y);
             gl.uniform2f(touch2UniformLocation, touch2.x, touch2.y);
             
-            // Set control panel uniforms
+            // CONTROL PANEL UNIFORMS: Pass user settings to shaders
             gl.uniform1f(gl.getUniformLocation(program, 'u_fluid_intensity'), gameSettings.fluidIntensity);
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_background'), gameSettings.enableBackground ? 1.0 : 0.0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_tendrils'), gameSettings.enableTendrils ? 1.0 : 0.0);
@@ -1829,77 +1895,83 @@
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_shockwaves'), gameSettings.enableShockwaves ? 1.0 : 0.0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_shockwave_intensity'), gameSettings.shockwaveIntensity);
             
-            // Set target uniforms
+            // TARGET UNIFORMS: Send target data to shaders for highlighting
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (i < targets.length && !targets[i].collected) {
+                    // ACTIVE TARGET: Send position and type data
                     gl.uniform2f(targetLocations[i], targets[i].x, targets[i].y);
                     gl.uniform1f(targetActiveLocations[i], 1.0);
                     gl.uniform1f(targetTypeLocations[i], targets[i].isBad ? 1.0 : 0.0);
                 } else {
+                    // INACTIVE SLOT: Clear data to prevent rendering artifacts
                     gl.uniform2f(targetLocations[i], 0, 0);
                     gl.uniform1f(targetActiveLocations[i], 0.0);
                     gl.uniform1f(targetTypeLocations[i], 0.0);
                 }
             }
             
-            // Set shockwave uniforms
+            // SHOCKWAVE UNIFORMS: Send expanding ring effect data
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (shockwaves[i] && shockwaves[i].active) {
                     const timeSinceStart = currentTime - shockwaves[i].startTime;
                     
-                    // Deactivate shockwaves after 1 second
+                    // LIFETIME CHECK: Deactivate expired shockwaves (1 second duration)
                     if (timeSinceStart > 1.0) {
                         shockwaves[i].active = false;
                         gl.uniform1f(shockwaveActiveLocations[i], 0.0);
                     } else {
+                        // ACTIVE SHOCKWAVE: Send all data to shader
                         gl.uniform1f(shockwaveActiveLocations[i], 1.0);
                         gl.uniform2f(shockwavePosLocations[i], shockwaves[i].x, shockwaves[i].y);
                         gl.uniform1f(shockwaveStartLocations[i], shockwaves[i].startTime);
                         gl.uniform1f(shockwaveTypeLocations[i], shockwaves[i].isGood ? 0.0 : 1.0);
                     }
                 } else {
+                    // INACTIVE SHOCKWAVE: Clear data
                     gl.uniform1f(shockwaveActiveLocations[i], 0.0);
                 }
             }
             
-            // Set position attribute
+            // VERTEX DATA SETUP: Configure full-screen quad for fragment shader
             const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
             gl.enableVertexAttribArray(positionAttributeLocation);
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
             
-            // Draw
+            // FINAL RENDER: Draw full-screen quad (triggers fragment shader on every pixel)
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             
+            // FRAME COMPLETION: Schedule next frame
             requestAnimationFrame(render);
         }
         
-        // Start the game - audio needs user interaction to work in modern browsers
+        // =============================================================================
+        // GAME INITIALIZATION & STARTUP
+        // =============================================================================
         
-        // Add additional event listeners to ensure audio context starts
-        // First user interaction with the page will enable audio
+        // Additional audio enablement handler for browser policy compliance
         function enableAudio() {
             if (audioContext.state === 'suspended') {
                 audioContext.resume();
             }
             
-            // Play a test sound to ensure audio is working
+            // AUDIO TEST: Confirm audio system is working
             if (audioEnabled) {
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
-                gain.gain.value = 0.2;  // More audible test sound
-                osc.frequency.value = 440; // A4 note
+                gain.gain.value = 0.2;  
+                osc.frequency.value = 440; // A4 reference tone
                 osc.connect(gain);
                 gain.connect(audioContext.destination);
                 osc.start();
                 osc.stop(audioContext.currentTime + 0.1);
             }
             
-            // Remove event listeners once audio is enabled
+            // CLEANUP: Remove one-time event listeners
             document.removeEventListener('click', enableAudio);
             document.removeEventListener('touchstart', enableAudio);
             
-            // Alert the user that audio is now enabled
+            // USER FEEDBACK: Show audio enabled confirmation
             const audioAlert = document.createElement('div');
             audioAlert.textContent = 'Audio enabled! 🔊';
             audioAlert.style.position = 'absolute';
@@ -1914,19 +1986,19 @@
             audioAlert.style.pointerEvents = 'none';
             document.body.appendChild(audioAlert);
             
-            // Remove the alert after 2 seconds
+            // CLEANUP: Remove notification after display
             setTimeout(() => {
                 audioAlert.remove();
             }, 2000);
         }
         
-        // Add user interaction listeners to enable audio
+        // BROWSER POLICY COMPLIANCE: Wait for user interaction before enabling audio
         document.addEventListener('click', enableAudio);
         document.addEventListener('touchstart', enableAudio);
         
-        // Initial target creation and start render loop
-        createTarget();
-        render();
+        // GAME STARTUP: Create initial content and begin render loop
+        createTarget();  // Spawn first target
+        render();       // Begin main game loop
     </script>
 </body>
 </html>
