@@ -816,31 +816,50 @@
             precision highp float; // High precision required for smooth gradients
             
             // CORE RENDERING UNIFORMS
-            uniform vec2 u_resolution;        // Screen resolution in pixels
-            uniform float u_time;             // Current time for animations
-            uniform vec2 u_touch1;            // First touch point (0-1 normalized)
-            uniform vec2 u_touch2;            // Second touch point (0-1 normalized)
+            // Screen resolution in pixels
+            uniform vec2 u_resolution;
+            // Current time for animations
+            uniform float u_time;
+            // First touch point (0-1 normalized)
+            uniform vec2 u_touch1;
+            // Second touch point (0-1 normalized)
+            uniform vec2 u_touch2;
             
             // TARGET SYSTEM UNIFORMS (arrays for multiple simultaneous targets)
-            uniform vec2 u_targets[${MAX_TARGETS}];           // Target positions
-            uniform float u_target_active[${MAX_TARGETS}];    // 1.0 if target exists, 0.0 if not
-            uniform float u_target_type[${MAX_TARGETS}];      // 0 = good target, 1 = bad target
+            // Target positions
+            uniform vec2 u_targets[${MAX_TARGETS}];
+            // 1.0 if target exists, 0.0 if not
+            uniform float u_target_active[${MAX_TARGETS}];
+            // 0 = good target, 1 = bad target
+            uniform float u_target_type[${MAX_TARGETS}];
             
             // SHOCKWAVE EFFECT UNIFORMS (expanding rings when targets collected)
-            uniform float u_shockwave_active[${MAX_TARGETS}]; // 1.0 if shockwave active
-            uniform vec2 u_shockwave_pos[${MAX_TARGETS}];     // Center position of shockwave
-            uniform float u_shockwave_start[${MAX_TARGETS}];  // Time when shockwave started
-            uniform float u_shockwave_type[${MAX_TARGETS}];   // Type matches target type
+            // 1.0 if shockwave active
+            uniform float u_shockwave_active[${MAX_TARGETS}];
+            // Center position of shockwave
+            uniform vec2 u_shockwave_pos[${MAX_TARGETS}];
+            // Time when shockwave started
+            uniform float u_shockwave_start[${MAX_TARGETS}];
+            // Type matches target type
+            uniform float u_shockwave_type[${MAX_TARGETS}];
             
             // CONTROL PANEL UNIFORMS (user-adjustable parameters)
-            uniform float u_fluid_intensity;     // Overall fluid effect strength
-            uniform float u_enable_background;   // Background energy field on/off
-            uniform float u_enable_tendrils;     // Tendril effects on/off
-            uniform float u_tendril_thickness;   // Width of tendril connections
-            uniform float u_tendril_turbulence;  // How much tendrils swirl and curve
-            uniform float u_tendril_glow;        // Glow intensity around tendrils
-            uniform float u_enable_shockwaves;   // Shockwave effects on/off
-            uniform float u_shockwave_intensity; // Strength of shockwave visuals
+            // Overall fluid effect strength
+            uniform float u_fluid_intensity;
+            // Background energy field on/off
+            uniform float u_enable_background;
+            // Tendril effects on/off
+            uniform float u_enable_tendrils;
+            // Width of tendril connections
+            uniform float u_tendril_thickness;
+            // How much tendrils swirl and curve
+            uniform float u_tendril_turbulence;
+            // Glow intensity around tendrils
+            uniform float u_tendril_glow;
+            // Shockwave effects on/off
+            uniform float u_enable_shockwaves;
+            // Strength of shockwave visuals
+            uniform float u_shockwave_intensity;
             
             /**
              * TENDRIL EFFECT FUNCTION
