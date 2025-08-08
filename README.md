@@ -21,3 +21,9 @@ LED light strip simulators for bookshelves with various patterns and animations.
 
 ### Sandpit
 A code sandbox for running Python and JavaScript snippets with a helpful chat interface.
+
+## Ink Standard Compliance
+
+- Inklet stories use the Ink language unmodified within FINK wrappers (see `inklet/`).
+- Validation tools in `inklet/validation/` are standard-based and must not fork or reinterpret the language.
+- When unsure, defer to the official Ink documentation and examples. See `inklet/validation/README.md` for the analyzer’s compliance notes.

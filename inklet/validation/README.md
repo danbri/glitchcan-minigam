@@ -1,19 +1,22 @@
+Inklet Validation Tools — Ink Standards Compliance
 
-Experiment towards validation of Ink and Fink files.
+Purpose
+- Provide structure and quality analysis for stories written in Inkle’s Ink, embedded via FINK wrappers.
 
-node --enable-source-maps checkfink.mjs --max-lines 5 ../riverbend.ink
+Standards Rule (Prominent)
+- This tooling is standard-based. Do NOT fork the Ink language.
+- Interpret constructs per Ink documentation: knots (`==`), stitches (`===`), choices (`*`, `+`), diverts (`->`), variables (`VAR`, `TEMP`, `~`), and tags (`#`).
+- Any simplifications (e.g., treating stitches as nodes for graphing) are purely analytical and must not change or imply different language semantics.
+- When in doubt, defer to the official Ink specification and examples (Inkle/Ink).
 
-danbri@tincan:~/working/glitchcan-minigam/inklet/validation$ find ..  -name \*.ink
-../riverbend.ink
+Analyzer Notes
+- Choice parsing supports `*` (standard) and `+` (sticky), optional conditions, bracketed or plain labels, and same-line diverts.
+- Variables: counts `~ var = ...` assignments and list ops `~ L += x` / `~ L -= x`.
+- Start detection: uses the first top-level `-> target` divert if present, otherwise the first header.
+- End detection: considers nodes with no outgoing edges as terminal for path calculations.
+- FINK tags like `# IMAGE:` and `# BASEHREF:` are treated as metadata (not part of Ink’s core).
 
-find .  -name \*.fink.js
-./toc.fink.js
-./riverbend.fink.js
-./validation/tests/test-variables.fink.js
-./jungle2.fink.js
-./tml-2025-langlearn.fink.js
-./hampstead1.fink.js
-./bagend1.fink.js
+Scope & Limitations
+- This is a static analyzer, not a full parser/interpreter. It focuses on topology, not narrative runtime.
+- It should never introduce non-standard syntax or behaviors.
 
-
- node --enable-source-maps checkfink.mjs ../riverbend.fink.js
