@@ -356,139 +356,243 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        // Game variables
-        let score = 0;
-        const MAX_TARGETS = 4; // Increased to accommodate both good and bad targets
-        let targetLifespan = 5000; // milliseconds (can be modified by controls)
-        let targets = [];
-        let shockwaves = []; // Array to store active shockwaves
-        let audioEnabled = true;
-        let lastScoreChange = 0; // Track when score last changed (for animation)
-        let scoreDirection = 1; // 1 for positive, -1 for negative
+        /*
+         * =============================================================================
+         * THUMBWAR FLUID DYNAMICS GAME
+         * =============================================================================
+         * 
+         * A WebGL-powered fluid dynamics game where players use touch or mouse 
+         * to manipulate flowing streams of energy. Players must collect green targets
+         * while avoiding red ones, creating beautiful visual effects through 
+         * multi-touch interaction.
+         * 
+         * CORE ARCHITECTURE:
+         * - WebGL fragment shader handles all visual effects (fluid dynamics, tendrils, shockwaves)
+         * - JavaScript manages game logic, input handling, and WebGL uniform updates
+         * - Real-time control panel allows tweaking of visual and gameplay parameters
+         * - Multi-platform support: touch on mobile, mouse on desktop
+         * 
+         * VISUAL EFFECTS SYSTEMS:
+         * 1. Fluid Dynamics: Iterative flow simulation with swirling patterns
+         * 2. Tendril Effects: Organic energy beams connecting touch points
+         * 3. Shockwave Effects: Expanding rings when targets are collected
+         * 4. Background Energy: Subtle animated field providing atmosphere
+         * 
+         * GAMEPLAY MECHANICS:
+         * - Score +10 for collecting green targets, -15 for red targets
+         * - Bonus +1 every second when both thumbs/touches are active
+         * - Penalty -3 when thumbs get too close together
+         * - Tendril energy beams can also hit targets for +5/-5 points
+         */
+
+        // =============================================================================
+        // GAME VARIABLES & CONSTANTS
+        // =============================================================================
         
-        // Game rule variables
-        let bothThumbsActive = false; // Track if both thumbs are currently active
-        let thumbsClosePenaltyActive = false; // Prevent constant penalties
-        let lastActiveScoreTime = 0; // For passive score increase when both thumbs active
-        let THUMBS_TOO_CLOSE_THRESHOLD = 0.2; // Distance threshold for "too close" penalty
-        let BOTH_THUMBS_ACTIVE_SCORE_INTERVAL = 1000; // ms between score points for active play
+        // Core Game State
+        let score = 0;                      // Player's current score
+        const MAX_TARGETS = 4;              // Maximum number of targets on screen simultaneously
+        let targetLifespan = 5000;          // How long targets remain active (milliseconds)
+        let targets = [];                   // Array of active target objects
+        let shockwaves = [];                // Array of expanding ring effects when targets collected
+        let audioEnabled = true;            // Whether sound effects are enabled
+        let lastScoreChange = 0;            // Timestamp of last score change (for UI animation)
+        let scoreDirection = 1;             // Direction of last score change: 1=positive, -1=negative
         
-        // Effect control variables (used by control panel)
+        // Multi-Touch Game Rules & Mechanics
+        let bothThumbsActive = false;       // True when player has 2+ touches active
+        let thumbsClosePenaltyActive = false; // Prevents rapid-fire penalties when thumbs too close
+        let lastActiveScoreTime = 0;        // Timestamp for last bonus point from active play
+        
+        // Tunable Gameplay Constants
+        // These values control game balance and can be adjusted for difficulty
+        let THUMBS_TOO_CLOSE_THRESHOLD = 0.2;      // Distance below which thumbs are "too close" (normalized 0-1)
+        let BOTH_THUMBS_ACTIVE_SCORE_INTERVAL = 1000; // Milliseconds between bonus points for keeping both thumbs active
+        
+        // =============================================================================
+        // VISUAL EFFECTS CONTROL SETTINGS
+        // =============================================================================
+        
+        // Effect control variables - these settings are adjustable via the control panel
+        // and directly affect how the WebGL shaders render visual effects
         let gameSettings = {
-            // Tendril controls
-            enableTendrils: true,
-            tendrilThickness: 1.0,
-            tendrilTurbulence: 1.0, 
-            tendrilGlow: 1.0,
+            // Tendril Effect Controls
+            // Tendrils are the energy beams that connect the two touch points
+            enableTendrils: true,           // Master switch for tendril visibility
+            tendrilThickness: 1.0,          // Base thickness multiplier (0.1-2.0)
+            tendrilTurbulence: 1.0,         // Amount of swirling/organic movement (0.1-2.0) 
+            tendrilGlow: 1.0,               // Intensity of glow effect around tendrils (0-2.0)
             
-            // Fluid dynamics
-            fluidIntensity: 1.0,
-            enableBackground: true,
+            // Fluid Dynamics Controls
+            // These affect the background flowing energy patterns
+            fluidIntensity: 1.0,            // Overall strength of fluid simulation (0.1-2.0)
+            enableBackground: true,         // Whether to show background energy field
             
-            // Shockwave effects
-            enableShockwaves: true,
-            shockwaveIntensity: 1.0,
+            // Shockwave Effect Controls  
+            // Shockwaves are expanding rings when targets are collected
+            enableShockwaves: true,         // Master switch for shockwave effects
+            shockwaveIntensity: 1.0,        // Strength of shockwave visual impact (0-2.0)
             
-            // Gameplay
-            targetGenerationRate: 1.0,
-            targetLifespan: 5.0, // seconds
+            // Gameplay Timing Controls
+            targetGenerationRate: 1.0,      // How quickly new targets spawn (0.2-2.0)
+            targetLifespan: 5.0,            // How long targets stay active in seconds (2-10)
             
-            // Performance
-            qualityPreset: 'medium',
-            fluidIterations: 12
+            // Performance & Quality Controls
+            qualityPreset: 'medium',        // Overall quality: 'low', 'medium', 'high'
+            fluidIterations: 12             // Number of fluid simulation iterations per frame (4-16)
+                                           // Higher = more complex patterns but slower performance
         };
+        
+        // =============================================================================
+        // CONTROL PANEL SETUP & EVENT HANDLING
+        // =============================================================================
+        
+        // The control panel provides real-time adjustment of visual effects and gameplay
+        // parameters. All changes immediately update the gameSettings object which
+        // is passed to WebGL shaders as uniforms each frame.
         
         // Control Panel Logic
         const controlPanelToggle = document.getElementById('control-panel-toggle');
         const controlPanel = document.getElementById('control-panel');
         
-        // Toggle control panel visibility
+        // Toggle control panel visibility with smooth animation
         controlPanelToggle.addEventListener('click', () => {
             controlPanel.classList.toggle('visible');
         });
         
         // Setup control panel listeners
+        // Each control immediately updates the corresponding gameSettings value
+        // which is then passed to the shader as a uniform in the render loop
         function setupControlPanel() {
-            // Tendril controls
+            // TENDRIL CONTROLS
+            // These affect the organic energy beams connecting touch points
+            
+            // Master switch for tendril visibility
             document.getElementById('enable-tendrils').addEventListener('change', e => {
                 gameSettings.enableTendrils = e.target.checked;
             });
             
+            // Tendril thickness: affects base width of energy beams
+            // Lower values = thinner, more delicate tendrils
+            // Higher values = thicker, more prominent energy streams
             document.getElementById('tendril-thickness').addEventListener('input', e => {
                 gameSettings.tendrilThickness = parseFloat(e.target.value);
                 document.getElementById('tendril-thickness-value').textContent = e.target.value;
             });
             
+            // Tendril turbulence: controls amount of swirling/organic movement
+            // Lower values = straighter, more stable beams
+            // Higher values = more chaotic, swirling patterns
             document.getElementById('tendril-turbulence').addEventListener('input', e => {
                 gameSettings.tendrilTurbulence = parseFloat(e.target.value);
                 document.getElementById('tendril-turbulence-value').textContent = e.target.value;
             });
             
+            // Tendril glow: intensity of soft halo effect around energy beams
+            // 0 = no glow, sharp edges
+            // Higher values = more diffuse, magical appearance
             document.getElementById('tendril-glow').addEventListener('input', e => {
                 gameSettings.tendrilGlow = parseFloat(e.target.value);
                 document.getElementById('tendril-glow-value').textContent = e.target.value;
             });
             
-            // Fluid dynamics
+            // FLUID DYNAMICS CONTROLS
+            // These affect the background flowing energy patterns
+            
+            // Overall intensity of fluid simulation
+            // Controls how prominent the swirling background effects are
             document.getElementById('fluid-intensity').addEventListener('input', e => {
                 gameSettings.fluidIntensity = parseFloat(e.target.value);
                 document.getElementById('fluid-intensity-value').textContent = e.target.value;
             });
             
+            // Background energy field toggle
+            // When disabled, only touch-triggered effects are visible
             document.getElementById('enable-background').addEventListener('change', e => {
                 gameSettings.enableBackground = e.target.checked;
             });
             
-            // Shockwaves
+            // SHOCKWAVE CONTROLS
+            // Shockwaves are expanding ring effects when targets are collected
+            
+            // Master switch for shockwave visibility
             document.getElementById('enable-shockwaves').addEventListener('change', e => {
                 gameSettings.enableShockwaves = e.target.checked;
             });
             
+            // Shockwave intensity: controls visual impact of expanding rings
+            // Lower values = subtle, gentle waves
+            // Higher values = dramatic, screen-filling effects
             document.getElementById('shockwave-intensity').addEventListener('input', e => {
                 gameSettings.shockwaveIntensity = parseFloat(e.target.value);
                 document.getElementById('shockwave-intensity-value').textContent = e.target.value;
             });
             
-            // Gameplay
+            // GAMEPLAY CONTROLS
+            // These affect timing and difficulty of the game
+            
+            // Target generation rate: how quickly new targets appear
+            // Lower values = slower, easier gameplay
+            // Higher values = faster, more challenging gameplay
             document.getElementById('target-rate').addEventListener('input', e => {
                 gameSettings.targetGenerationRate = parseFloat(e.target.value);
                 document.getElementById('target-rate-value').textContent = e.target.value;
             });
             
+            // Target lifespan: how long targets remain active before disappearing
+            // Shorter = more pressure, requires quick reactions
+            // Longer = more relaxed, strategic gameplay
             document.getElementById('target-lifespan').addEventListener('input', e => {
                 gameSettings.targetLifespan = parseFloat(e.target.value);
-                targetLifespan = gameSettings.targetLifespan * 1000; // convert to ms
+                targetLifespan = gameSettings.targetLifespan * 1000; // convert to milliseconds
                 document.getElementById('target-lifespan-value').textContent = e.target.value + 's';
             });
             
-            // Performance
+            // PERFORMANCE CONTROLS
+            // These balance visual quality vs. framerate
+            
+            // Quality preset: applies predefined settings for different performance levels
             document.getElementById('quality-preset').addEventListener('change', e => {
                 gameSettings.qualityPreset = e.target.value;
                 applyQualityPreset(e.target.value);
             });
             
+            // Fluid iterations: number of simulation steps per frame
+            // Lower = simpler patterns, better performance
+            // Higher = more complex, detailed flow patterns
             document.getElementById('fluid-iterations').addEventListener('input', e => {
                 gameSettings.fluidIterations = parseInt(e.target.value);
                 document.getElementById('fluid-iterations-value').textContent = e.target.value;
             });
         }
         
-        // Apply performance presets
+        // =============================================================================
+        // PERFORMANCE PRESET SYSTEM
+        // =============================================================================
+        
+        // Apply performance presets that balance visual quality with framerate
+        // Each preset adjusts the fluid simulation complexity
         function applyQualityPreset(preset) {
             const iterationsSlider = document.getElementById('fluid-iterations');
             
             switch(preset) {
                 case 'high':
+                    // Maximum visual quality: 15 fluid iterations per frame
+                    // Best for powerful devices, may cause framerate drops on mobile
                     gameSettings.fluidIterations = 15;
                     iterationsSlider.value = 15;
                     document.getElementById('fluid-iterations-value').textContent = '15';
                     break;
                 case 'medium':
+                    // Balanced quality: 12 fluid iterations per frame  
+                    // Good compromise for most devices
                     gameSettings.fluidIterations = 12;
                     iterationsSlider.value = 12;
                     document.getElementById('fluid-iterations-value').textContent = '12';
                     break;
                 case 'low':
+                    // Performance mode: 8 fluid iterations per frame
+                    // Simpler patterns but smooth framerate on slower devices
                     gameSettings.fluidIterations = 8;
                     iterationsSlider.value = 8;
                     document.getElementById('fluid-iterations-value').textContent = '8';
@@ -496,39 +600,45 @@
             }
         }
         
-        // Initialize control panel
+        // Initialize control panel event listeners
         setupControlPanel();
         
-        // Audio setup
+        // =============================================================================
+        // AUDIO SYSTEM & SOUND EFFECTS
+        // =============================================================================
+        
+        // Web Audio API setup for procedural sound generation
+        // All sounds are synthesized in real-time for consistency across platforms
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         
-        // Audio toggle
+        // Audio toggle button handling
+        // Modern browsers require user interaction before playing audio
         const audioToggle = document.getElementById('audio-toggle');
         let audioInitialized = false;
         
         audioToggle.addEventListener('click', function() {
-            // First click always enables audio
+            // First click always enables audio (browser policy compliance)
             if (!audioInitialized) {
                 audioEnabled = true;
                 audioInitialized = true;
                 this.textContent = '🔊 On';
                 
-                // Play test tone on first click
+                // Resume audio context if suspended by browser policy
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
                 
-                // Play a clear, audible test tone
+                // Play a brief test tone to confirm audio is working
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 gain.gain.value = 0.2;
-                osc.frequency.value = 440; // A4 note
+                osc.frequency.value = 440; // A4 note (standard tuning reference)
                 osc.connect(gain);
                 gain.connect(audioContext.destination);
                 osc.start();
                 osc.stop(audioContext.currentTime + 0.1);
                 
-                // Alert that audio is now active
+                // Show user feedback that audio is now enabled
                 const audioAlert = document.createElement('div');
                 audioAlert.textContent = 'Audio enabled! 🔊';
                 audioAlert.style.position = 'absolute';
@@ -548,7 +658,7 @@
                     audioAlert.remove();
                 }, 2000);
             } else {
-                // Toggle audio on/off after first initialization
+                // After initialization, button toggles audio on/off
                 audioEnabled = !audioEnabled;
                 this.textContent = audioEnabled ? '🔊 On' : '🔇 Off';
             }
@@ -559,17 +669,24 @@
             }
         });
         
-        // Sound effects
+        // =============================================================================
+        // PROCEDURAL SOUND GENERATION
+        // =============================================================================
+        
+        // Creates a pleasant ascending arpeggio for positive events (collecting good targets)
+        // Uses pure sine waves for a clean, magical sound
         function createCollectSound() {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
-            // Good sound: Major arpeggio
+            // Generate major arpeggio: A4 → C#5 → E5 (A major chord)
+            // These frequencies create a harmonious, uplifting sound
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);        // A4 (440 Hz)
             oscillator.frequency.setValueAtTime(554.37, audioContext.currentTime + 0.1); // C#5
             oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.2); // E5
             
+            // Envelope: quick attack, moderate decay for musical phrasing
             gainNode.gain.setValueAtTime(0, audioContext.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
             gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
@@ -581,29 +698,34 @@
             oscillator.stop(audioContext.currentTime + 0.3);
         }
         
+        // Creates a harsh, descending sound for negative events (hitting bad targets)
+        // Uses sawtooth wave and distortion for an unpleasant, warning-like effect
         function createBadSound() {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             const distortion = audioContext.createWaveShaper();
             
-            // Bad sound: Distorted descending frequencies
+            // Create waveshaper distortion curve for harsh, aggressive sound
             function makeDistortionCurve(amount) {
                 const k = typeof amount === 'number' ? amount : 50;
                 const n_samples = 44100;
                 const curve = new Float32Array(n_samples);
                 for (let i = 0; i < n_samples; ++i) {
                     const x = i * 2 / n_samples - 1;
+                    // Mathematical distortion function creates harsh harmonics
                     curve[i] = (3 + k) * x * 20 * (Math.PI / 180) / (Math.PI + k * Math.abs(x));
                 }
                 return curve;
             }
             
-            distortion.curve = makeDistortionCurve(400);
+            distortion.curve = makeDistortionCurve(400); // Heavy distortion
             
-            oscillator.type = 'sawtooth';
+            // Descending sawtooth: 300Hz → 150Hz creates falling, unpleasant effect
+            oscillator.type = 'sawtooth'; // Rich in harsh harmonics
             oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
             oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
             
+            // Longer envelope for more persistent warning effect
             gainNode.gain.setValueAtTime(0, audioContext.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
             gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
@@ -616,14 +738,24 @@
             oscillator.stop(audioContext.currentTime + 0.4);
         }
         
-        // Haptic feedback (vibration)
+        // =============================================================================
+        // HAPTIC FEEDBACK SYSTEM
+        // =============================================================================
+        
+        // Provides tactile feedback on mobile devices through vibration patterns
+        // Different patterns help distinguish between positive and negative events
         function vibrate(pattern) {
             if (navigator.vibrate) {
                 navigator.vibrate(pattern);
             }
         }
         
-        // Canvas and WebGL setup
+        // =============================================================================
+        // WEBGL SETUP & CANVAS MANAGEMENT
+        // =============================================================================
+        
+        // Initialize WebGL context for hardware-accelerated graphics
+        // All visual effects are rendered using GPU shaders for optimal performance
         const canvas = document.getElementById('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         
@@ -631,11 +763,13 @@
             alert('WebGL not supported');
         }
         
-        // Resize canvas
+        // Handle canvas resizing to maintain full-screen coverage
+        // Called on window resize and initial setup
         function resize() {
             const displayWidth = canvas.clientWidth;
             const displayHeight = canvas.clientHeight;
             
+            // Only update if size actually changed (performance optimization)
             if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
                 canvas.width = displayWidth;
                 canvas.height = displayHeight;
@@ -644,9 +778,14 @@
         }
         
         window.addEventListener('resize', resize);
-        resize();
+        resize(); // Initial sizing
         
-        // Shader sources
+        // =============================================================================
+        // WEBGL SHADERS
+        // =============================================================================
+        
+        // Simple vertex shader: transforms screen coordinates for fragment shader
+        // Uses a full-screen quad to cover the entire canvas
         const vertexShaderSource = `
             attribute vec2 a_position;
             void main() {
@@ -654,187 +793,241 @@
             }
         `;
         
+        // FRAGMENT SHADER: Contains all visual effect algorithms
+        // This is where the magic happens - fluid dynamics, tendrils, and shockwaves
+        // are all computed in parallel on the GPU for each pixel
         const fragmentShaderSource = `
             precision highp float;
             
-            uniform vec2 u_resolution;
-            uniform float u_time;
-            uniform vec2 u_touch1;
-            uniform vec2 u_touch2;
-            uniform vec2 u_targets[${MAX_TARGETS}];
-            uniform float u_target_active[${MAX_TARGETS}];
-            uniform float u_target_type[${MAX_TARGETS}];  // 0 = good, 1 = bad
+            // Core uniforms for rendering
+            uniform vec2 u_resolution;       // Canvas size in pixels
+            uniform float u_time;            // Current time for animations
+            uniform vec2 u_touch1;           // First touch/mouse position (0-1 range)
+            uniform vec2 u_touch2;           // Second touch position (0-1 range)
             
-            // Added shockwave effect variables
-            uniform float u_shockwave_active[${MAX_TARGETS}];
-            uniform vec2 u_shockwave_pos[${MAX_TARGETS}];
-            uniform float u_shockwave_start[${MAX_TARGETS}];
-            uniform float u_shockwave_type[${MAX_TARGETS}]; // 0 = good, 1 = bad
+            // Target rendering uniforms (for game objectives)
+            uniform vec2 u_targets[${MAX_TARGETS}];      // Target positions
+            uniform float u_target_active[${MAX_TARGETS}]; // Whether each target is active
+            uniform float u_target_type[${MAX_TARGETS}];   // 0 = good (green), 1 = bad (red)
             
-            // Control panel uniforms
-            uniform float u_fluid_intensity;
-            uniform float u_enable_background;
-            uniform float u_enable_tendrils;
-            uniform float u_tendril_thickness;
-            uniform float u_tendril_turbulence;
-            uniform float u_tendril_glow;
-            uniform float u_enable_shockwaves;
-            uniform float u_shockwave_intensity;
+            // Shockwave effect uniforms (expanding rings when targets collected)
+            uniform float u_shockwave_active[${MAX_TARGETS}];   // Whether shockwave is active
+            uniform vec2 u_shockwave_pos[${MAX_TARGETS}];       // Shockwave center position
+            uniform float u_shockwave_start[${MAX_TARGETS}];    // Time when shockwave started
+            uniform float u_shockwave_type[${MAX_TARGETS}];     // 0 = good, 1 = bad
             
-            // Function to create an organic, swirling tendril effect between points
+            // Control panel uniforms (allow real-time effect adjustment)
+            uniform float u_fluid_intensity;     // Overall fluid simulation strength
+            uniform float u_enable_background;   // Whether to show background energy field
+            uniform float u_enable_tendrils;     // Whether to show tendril effects
+            uniform float u_tendril_thickness;   // Base thickness of energy beams
+            uniform float u_tendril_turbulence;  // Amount of swirling motion
+            uniform float u_tendril_glow;        // Intensity of glow effect
+            uniform float u_enable_shockwaves;   // Whether to show shockwave effects
+            uniform float u_shockwave_intensity; // Strength of shockwave visuals
+            
+            // =============================================================================
+            // TENDRIL EFFECT ALGORITHM
+            // =============================================================================
+            
+            // Creates organic, swirling energy beams between two points using layered sine waves
+            // This function generates the complex mathematical patterns for tendril effects
+            // Parameters:
+            //   p: current pixel position being evaluated
+            //   start: starting point of tendril
+            //   end: ending point of tendril  
+            //   time: current animation time
+            //   thickness: base thickness of the tendril
+            //   turbulence: amount of swirling/organic movement
             float swirlTendril(vec2 p, vec2 start, vec2 end, float time, float thickness, float turbulence) {
-                // Vector from start to end
+                // Calculate base vector and distance between start and end points
                 vec2 direction = end - start;
                 float distance = length(direction);
                 direction = normalize(direction);
                 
-                // Perpendicular vector for swirls
+                // Calculate perpendicular vector for lateral displacement
                 vec2 perpendicular = vec2(-direction.y, direction.x);
                 
-                // Project point onto line
+                // Project current pixel onto the line between start and end
                 float t = clamp(dot(p - start, direction) / distance, 0.0, 1.0);
                 vec2 projection = start + direction * t * distance;
                 
-                // Base parameters for a more organic, flowing tendril
+                // LAYERED SINE WAVE SYSTEM for organic flow patterns
+                // Each layer adds different frequency components to create complex, natural-looking curves
+                
                 float swirl = 0.0;
                 
-                // Layered sine waves with different frequencies and amplitudes for organic flow
-                // Layer 1: Large, slow undulations (base flow)
+                // LAYER 1: Base Flow - Large, slow undulations forming the primary shape
+                // Low frequency (2 cycles along tendril) with slow time evolution
                 float baseFlow = sin(t * 3.14159 * 2.0 + time * 0.7) * 0.04 * turbulence;
                 
-                // Layer 2: Medium ripples
+                // LAYER 2: Medium Ripples - Mid-frequency oscillations adding character
+                // 5 cycles along tendril with faster time changes for secondary motion
                 float mediumRipples = sin(t * 3.14159 * 5.0 + time * 1.2) * 0.025 * turbulence;
                 
-                // Layer 3: Small, rapid oscillations (micro-movement)
+                // LAYER 3: Micro-Movement - High frequency details for fine texture
+                // 12 cycles with rapid time evolution for "electrical" appearance
                 float microMovement = sin(t * 3.14159 * 12.0 + time * 2.5) * 0.01 * turbulence;
                 
-                // Layer 4: Tiny, very rapid oscillations for detail
+                // LAYER 4: Detail Noise - Very high frequency for surface texture
+                // 25 cycles creating fine-grain detail at pixel level
                 float detailNoise = sin(t * 3.14159 * 25.0 + time * 4.0) * 0.005 * turbulence;
                 
-                // Additional spiral effect
+                // LAYER 5: Spiral Component - Creates helical twisting motion
+                // Combines sine and cosine for circular motion around main axis
                 float spiral = sin(t * 3.14159 * 3.0 + time * 0.5) * cos(t * 3.14159 * 2.0 + time * 0.3) * 0.02 * turbulence;
                 
-                // Temporal variation to make the flow appear to change direction/shape over time
-                float timeWave1 = sin(time * 0.3) * 0.01;
-                float timeWave2 = cos(time * 0.5 + t) * 0.01;
+                // TEMPORAL VARIATION: Makes the entire tendril shape evolve over time
+                // These create slow morphing of the overall tendril structure
+                float timeWave1 = sin(time * 0.3) * 0.01;           // Very slow global shift
+                float timeWave2 = cos(time * 0.5 + t) * 0.01;       // Position-dependent time variation
                 
-                // Flow distortion near the endpoints for a more natural connection
+                // ENDPOINT EFFECTS: Creates more natural connection at start/end points
+                // Reduces oscillation near endpoints for smoother attachment
                 float endpointEffect = (1.0 - pow(abs(2.0 * t - 1.0), 0.5)) * 0.01;
                 
-                // Combine all effects with different weights to create organic flow
+                // COMBINE ALL LAYERS: Weighted sum creates complex, organic patterns
+                // Each layer contributes different frequency components like harmonic overtones
                 swirl = baseFlow + mediumRipples + microMovement + detailNoise + spiral + timeWave1 + timeWave2 + endpointEffect;
                 
-                // Temporal scaling - makes the whole tendril pulse slightly
+                // GLOBAL PULSING: Makes entire tendril breathe/pulse subtly
+                // Creates impression of living energy flowing through the beam
                 float tendrilPulse = 0.9 + 0.1 * sin(time * 0.8 + t * 2.0);
                 swirl *= tendrilPulse;
                 
-                // Dynamic thickness variation along the tendril
+                // DYNAMIC THICKNESS: Varies width along tendril length
+                // Creates more interesting, organic shapes rather than uniform thickness
                 float thicknessVariation = 0.8 + 0.2 * sin(t * 8.0 + time * 1.5);
                 float effectiveThickness = thickness * thicknessVariation;
                 
-                // Make tendril thinner near the midpoint for a stretched appearance
+                // TAPER EFFECT: Makes tendril thinner toward middle for stretched appearance
+                // sin(t * π) creates 0 at endpoints, 1 at center, giving natural taper
                 effectiveThickness *= 0.7 + 0.3 * sin(t * 3.14159);
                 
-                // Apply swirl to create the curved, organic path
+                // APPLY DISPLACEMENT: Move pixels perpendicular to main tendril axis
                 vec2 offset = perpendicular * swirl;
                 
-                // For more interesting paths, add a secondary perpendicular component
-                vec2 secondary = vec2(direction.x, direction.y); // Orthogonal to perpendicular
+                // SECONDARY AXIS DISPLACEMENT: Adds motion along the tendril direction
+                // Creates more complex 3D-like motion in 2D space
+                vec2 secondary = vec2(direction.x, direction.y);
                 offset += secondary * sin(t * 3.14159 * 4.0 + time * 0.9) * 0.01;
                 
-                // Calculate distance to the swirling path
+                // DISTANCE CALCULATION: How far is current pixel from the displaced path?
                 float distortedDistance = length(p - (projection + offset));
                 
-                // Create smooth falloff for the tendril glow
+                // SMOOTH FALLOFF: Creates soft edges using smoothstep function
+                // Inner edge = effectiveThickness * 0.2 (full intensity)
+                // Outer edge = effectiveThickness (zero intensity)
                 return smoothstep(effectiveThickness, effectiveThickness * 0.2, distortedDistance);
             }
             
+            // =============================================================================
+            // FLUID DYNAMICS ALGORITHM
+            // =============================================================================
+            
+            // Main fluid simulation function creating swirling energy patterns
+            // Uses iterative flow calculations to simulate complex fluid behavior
             vec4 fluidEffect(vec2 uv, float time, vec2 touch1, vec2 touch2) {
-                vec4 o = vec4(0.01);
+                vec4 o = vec4(0.01);  // Accumulator for flow calculations
                 vec2 r = u_resolution;
-                vec2 p = (gl_FragCoord.xy * 2.0 - r) / r.y;
+                vec2 p = (gl_FragCoord.xy * 2.0 - r) / r.y;  // Normalized pixel coordinates
                 
-                // Make background truly dark
+                // Start with pure black background
                 vec4 backgroundColor = vec4(0.0, 0.0, 0.0, 1.0);
                 
-                // Touch influence - trail effect
-                float t1 = length(p - touch1) * 1.1;
-                float t2 = length(p - touch2) * 1.1;
+                // TOUCH INFLUENCE CALCULATION
+                // Calculate distance from current pixel to each touch point
+                float t1 = length(p - touch1) * 1.1;  // Touch 1 influence radius
+                float t2 = length(p - touch2) * 1.1;  // Touch 2 influence radius
                 
-                // More chaotic time-based flow vectors for extreme swirling
+                // DYNAMIC FLOW VECTORS
+                // Create time-varying flow directions for chaotic swirling motion
+                // These vectors control the direction of energy flow around touch points
                 vec2 flowVec1 = vec2(
-                    sin(time * 0.7) * 0.4 + sin(time * 1.5) * 0.3,
-                    cos(time * 0.5) * 0.4 + cos(time * 1.7) * 0.3
+                    sin(time * 0.7) * 0.4 + sin(time * 1.5) * 0.3,    // X component with dual frequencies
+                    cos(time * 0.5) * 0.4 + cos(time * 1.7) * 0.3     // Y component, different frequencies
                 );
                 vec2 flowVec2 = vec2(
-                    sin(time * 0.5 + 2.0) * 0.4 + sin(time * 1.3) * 0.3,
+                    sin(time * 0.5 + 2.0) * 0.4 + sin(time * 1.3) * 0.3,  // Offset phase for variety
                     cos(time * 0.6 + 1.0) * 0.4 + cos(time * 1.9) * 0.3
                 );
                 
-                // Create multiple trailing points for each touch (more points = more complex streams)
+                // ENERGY TRAIL SYSTEM
+                // Create multiple trailing points for each touch to simulate flowing energy streams
+                // Each trail point has different offset and intensity for layered effect
                 vec2 trailPos1 = touch1 + flowVec1;
                 vec2 trailPos2 = touch2 + flowVec2;
                 
-                // Create more trail points with different offsets
-                float t1a = length(p - (touch1 + flowVec1 * 0.3)) * 1.3;
-                float t1b = length(p - (touch1 + flowVec1 * 0.6)) * 1.4;
-                float t1c = length(p - (touch1 + flowVec1 * 0.9)) * 1.5;
-                float t1d = length(p - (touch1 + flowVec1 * 1.2)) * 1.6;
-                float t1e = length(p - (touch1 + flowVec1 * 1.5)) * 1.7;
-                float t1f = length(p - (touch1 + vec2(sin(time*2.3), cos(time*2.1)) * 0.7)) * 1.5; // Additional chaotic trail
+                // Generate multiple trail distances with different intensities
+                // This creates the illusion of energy flowing away from touch points
+                float t1a = length(p - (touch1 + flowVec1 * 0.3)) * 1.3;  // Close trail
+                float t1b = length(p - (touch1 + flowVec1 * 0.6)) * 1.4;  // Medium trail  
+                float t1c = length(p - (touch1 + flowVec1 * 0.9)) * 1.5;  // Far trail
+                float t1d = length(p - (touch1 + flowVec1 * 1.2)) * 1.6;  // Distant trail
+                float t1e = length(p - (touch1 + flowVec1 * 1.5)) * 1.7;  // Very distant
+                float t1f = length(p - (touch1 + vec2(sin(time*2.3), cos(time*2.1)) * 0.7)) * 1.5; // Chaotic trail
                 
+                // Same trail system for second touch point
                 float t2a = length(p - (touch2 + flowVec2 * 0.3)) * 1.3;
                 float t2b = length(p - (touch2 + flowVec2 * 0.6)) * 1.4;
                 float t2c = length(p - (touch2 + flowVec2 * 0.9)) * 1.5;
                 float t2d = length(p - (touch2 + flowVec2 * 1.2)) * 1.6;
                 float t2e = length(p - (touch2 + flowVec2 * 1.5)) * 1.7;
-                float t2f = length(p - (touch2 + vec2(cos(time*2.5), sin(time*1.9)) * 0.7)) * 1.5; // Additional chaotic trail
+                float t2f = length(p - (touch2 + vec2(cos(time*2.5), sin(time*1.9)) * 0.7)) * 1.5;
                 
-                // Combined touch effect with all trail points
+                // COMBINED TOUCH INFLUENCE
+                // Find minimum distance to any trail point = strongest influence
                 float touchEffect = min(
                     min(min(min(t1, t1a), min(t1b, t1c)), min(min(t1d, t1e), t1f)),
                     min(min(min(t2, t2a), min(t2b, t2c)), min(min(t2d, t2e), t2f))
                 );
-                touchEffect = clamp(touchEffect, 0.06, 1.0); // Lower clamp value for more intense effect
+                touchEffect = clamp(touchEffect, 0.06, 1.0); // Prevent extreme values
                 
-                // Extreme fluid dynamics with added vorticity
-                // Fix uninitialized variable issue
-                vec2 l = vec2(0.0);
+                // FLUID VECTOR FIELD CALCULATION
+                // This is the core of the fluid simulation - creates flowing patterns
+                vec2 l = vec2(0.0);  // Initialize length accumulator
                 vec2 v = p * (1.0 - (l += abs(0.7 - dot(p, p)))) / (max(0.05, touchEffect * 0.1));
                 
-                // Enhanced vector field for extreme swirling effect
+                // CURL/VORTICITY FIELD
+                // Creates swirling motion by adding rotational components to flow
                 vec2 curl = vec2(
                     sin(p.y * 5.0 + time) * cos(p.x * 4.0 - time * 0.7) + sin(p.y * 8.0 - time * 1.3) * 0.3,
                     cos(p.x * 5.0 - time) * sin(p.y * 4.0 + time * 0.7) + cos(p.x * 8.0 + time * 1.3) * 0.3
-                ) * 0.25; // Increased strength
+                ) * 0.25;
                 
-                v += curl; // Add curl to create intense swirling
+                v += curl; // Add rotational motion to base flow
                 
-                // Fractalize the flow with turbulent noise-like patterns
+                // TURBULENCE INJECTION
+                // Add fine-scale chaotic motion for visual complexity
                 v.x += 0.2 * sin(v.y * 4.0 + time * 0.9) * cos(v.x * 3.0);
                 v.y += 0.2 * cos(v.x * 4.0 - time * 0.8) * sin(v.y * 3.0);
                 
-                // Flow iterations - create extreme snaking patterns with turbulence
-                // WebGL 1.0 requires constant loop bounds
-                for(float i = 0.0; i < 12.0; i++) { // Fixed number of iterations
+                // ITERATIVE FLOW SIMULATION
+                // This loop performs the actual fluid dynamics calculation
+                // Each iteration adds more complexity and detail to the flow patterns
+                for(float i = 0.0; i < 12.0; i++) { // Fixed loop for WebGL 1.0 compatibility
                     float ii = i + 1.0;
                     
-                    // Create more complex flow patterns with wilder warping
+                    // DYNAMIC OFFSET CALCULATION
+                    // Creates time-varying flow patterns with different scales
                     vec2 offset = vec2(
                         sin(time * 0.4 + ii * 0.2 + sin(time)) * 0.6,
                         cos(time * 0.3 + ii * 0.2 + cos(time)) * 0.6
                     );
                     
-                    // Use complex sinusoidal waves to create fire-like movement
+                    // WARPING FUNCTION
+                    // Creates fire-like, organic movement patterns
                     vec2 warp = vec2(
                         sin(v.x * 2.0 + time * 0.6) * 0.3 + sin(v.x * 5.0 - time * 0.3) * 0.1,
                         cos(v.y * 2.0 + time * 0.5) * 0.3 + cos(v.y * 5.0 - time * 0.2) * 0.1
                     );
                     
-                    // Create turbulent snake-like patterns with complex oscillation
+                    // ITERATIVE UPDATE
+                    // Core fluid equation: each iteration builds upon the previous
                     v += cos(v.yx * ii * 0.7 + offset + time * 0.8) / (ii * 0.4) + warp + 0.6;
                     
-                    // Add fluctuating intensity with multiple frequencies for flame-like effect
+                    // INTENSITY MODULATION
+                    // Creates flickering, flame-like effects with multiple frequencies
                     float flicker = 0.8 + sin(time * 5.0 + ii) * 0.2 + sin(time * 9.0 + ii * 0.7) * 0.1;
                     o += (sin(v.xyyx * 1.8 + time * 0.4) + 1.0) * abs(v.x - v.y) * 0.3 * flicker;
                 }
