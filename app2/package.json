@@ -1,0 +1,13 @@
+{
+  "name": "glitchcan-app2",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo workspace for gcfink (core) and gcui (UI shell)",
+  "workspaces": [
+    "gcfink",
+    "gcui"
+  ],
+  "devDependencies": {
+    "playwright": "^1.54.2"
+  }
+}
