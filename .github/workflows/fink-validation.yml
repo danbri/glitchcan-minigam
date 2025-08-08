@@ -1,0 +1,88 @@
+name: FINK Story Validation
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+    paths: 
+      - 'inklet/**/*.fink.js'
+      - 'inklet/validation/**'
+      - '.github/workflows/fink-validation.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'inklet/**/*.fink.js'
+      - 'inklet/validation/**'
+
+jobs:
+  validate-fink-stories:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: inklet/validation/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        cd inklet/validation
+        PUPPETEER_SKIP_DOWNLOAD=true npm install --no-optional
+        
+    - name: Install Chromium for Puppeteer
+      run: |
+        cd inklet/validation
+        npx puppeteer browsers install chrome --path ./browsers
+        
+    - name: Validate Shane Manor story
+      run: |
+        cd inklet/validation
+        CHROME_PATH=./browsers/chrome/linux-*/chrome-linux*/chrome node checkfink.mjs ../shane-manor.fink.js
+        
+    - name: Validate all FINK stories
+      run: |
+        cd inklet/validation
+        CHROME_PATH=./browsers/chrome/linux-*/chrome-linux*/chrome node checkfink.mjs --scan
+        
+    - name: Test minichess integration
+      run: |
+        cd inklet
+        # Start local server for testing
+        python3 -m http.server 8080 &
+        SERVER_PID=$!
+        sleep 3
+        
+        # Test that minichess loads correctly
+        curl -f http://localhost:8080/test-minichess.html > /dev/null
+        
+        # Stop server
+        kill $SERVER_PID
+        
+    - name: Generate validation report
+      if: always()
+      run: |
+        cd inklet/validation
+        echo "# FINK Story Validation Report" > validation-report.md
+        echo "Date: $(date)" >> validation-report.md
+        echo "" >> validation-report.md
+        
+        echo "## Story Files Validated" >> validation-report.md
+        find .. -name "*.fink.js" -not -path "../validation/*" | while read file; do
+          echo "- $file" >> validation-report.md
+        done
+        
+        echo "" >> validation-report.md
+        echo "## Validation Results" >> validation-report.md
+        echo "See job logs for detailed results." >> validation-report.md
+        
+    - name: Upload validation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fink-validation-report
+        path: inklet/validation/validation-report.md
+        retention-days: 30

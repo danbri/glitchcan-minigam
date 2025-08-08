@@ -236,6 +236,7 @@ window.FinkUI = {
         
         let imageToShow = null;
         let newBasePath = null;
+        let minigameConfig = null;
         
         currentTags.forEach(tag => {
             FinkUtils.debugLog('Processing tag: "' + tag + '"');
@@ -252,6 +253,21 @@ window.FinkUI = {
                 FinkUtils.debugLog('BASEHREF extracted raw: "' + newBasePath + '"');
                 if (!newBasePath.endsWith('/')) newBasePath += '/';
                 FinkUtils.debugLog('BASEHREF final: "' + newBasePath + '"');
+            } else if (tag.includes('MINIGAME:')) {
+                const minigameType = tag.replace(/^MINIGAME:\s*/, '').trim();
+                FinkUtils.debugLog('Found MINIGAME tag: ' + minigameType);
+                if (!minigameConfig) minigameConfig = {};
+                minigameConfig.type = minigameType;
+            } else if (tag.includes('SCRIPT:')) {
+                const scriptPath = tag.replace(/^SCRIPT:\s*/, '').trim();
+                FinkUtils.debugLog('Found SCRIPT tag: ' + scriptPath);
+                if (!minigameConfig) minigameConfig = {};
+                minigameConfig.script = scriptPath;
+            } else if (tag.includes('CONFIG:')) {
+                const configJson = tag.replace(/^CONFIG:\s*/, '').trim();
+                FinkUtils.debugLog('Found CONFIG tag: ' + configJson);
+                if (!minigameConfig) minigameConfig = {};
+                minigameConfig.config = configJson;
             }
         });
         
@@ -272,6 +288,12 @@ window.FinkUI = {
             this.updateImage(imageToShow, currentRawBasehref);
         } else {
             FinkUtils.debugLog('No IMAGE tag found in current position');
+        }
+        
+        // Process minigame if present
+        if (minigameConfig && minigameConfig.type && minigameConfig.script) {
+            FinkUtils.debugLog('Processing minigame: ' + minigameConfig.type);
+            this.processMinigame(minigameConfig);
         }
     },
     
@@ -299,6 +321,41 @@ window.FinkUI = {
         };
         
         img.src = actualImagePath;
+    },
+    
+    processMinigame(minigameConfig) {
+        FinkUtils.debugLog(`Processing minigame: ${JSON.stringify(minigameConfig)}`);
+        
+        // Find a good place to insert the minigame
+        const storyOutput = document.getElementById('story-output');
+        if (!storyOutput) {
+            FinkUtils.debugLog('No story-output element found for minigame');
+            return;
+        }
+        
+        // Create minigame container
+        const containerId = `minigame-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const minigameDiv = document.createElement('div');
+        minigameDiv.id = containerId;
+        minigameDiv.className = 'minigame-container';
+        minigameDiv.dataset.type = minigameConfig.type;
+        
+        // Insert before choices (or at end if no choices)
+        const choicesContainer = this.elements.choicesContainer;
+        if (choicesContainer && choicesContainer.parentNode === storyOutput) {
+            storyOutput.insertBefore(minigameDiv, choicesContainer);
+        } else {
+            storyOutput.appendChild(minigameDiv);
+        }
+        
+        // Load and initialize minigame
+        FinkUtils.loadMinigameScript(minigameConfig.script).then(() => {
+            FinkUtils.initializeMinigame(containerId, minigameConfig.type, 
+                minigameConfig.config ? JSON.parse(minigameConfig.config) : {});
+        }).catch(error => {
+            FinkUtils.debugLog(`Minigame initialization failed: ${error.message}`);
+            minigameDiv.innerHTML = `<div class="minigame-error">Failed to load ${minigameConfig.type} minigame</div>`;
+        });
     },
     
     // Status and messaging

@@ -1,9 +1,19 @@
 oooOO`
 // Inspector Shane André-Louis: The Manor House Mystery
+// Enhanced Interactive Detective Story with Minigame Integration
+//
+// DIRECT LINKS FOR TESTING:
+// #start - Story beginning
+// #crime_scene - Examine the locked study  
+// #chess_minigame - Interactive chess analysis
+// #deduction - Final deduction phase
+// #resolution - Story conclusion
 
 VAR player_reputation = 50
 VAR investigation_style = ""
 VAR time_pressure = 3
+VAR chess_skill = 0
+VAR chess_insights = ""
 
 # BASEHREF: media/shane/
 
@@ -11,28 +21,30 @@ VAR time_pressure = 3
 
 === start ===
 
-Inspector Shane André-Louis steps out of the black taxi into the November drizzle. 
+The November rain drums against the taxi windows as Inspector Shane André-Louis peers through the mist at Greystone Manor. 
 
-The Gothic towers of Greystone Manor pierce the grey sky ahead.
+Even through the gloom, the Gothic towers thrust defiantly skyward, their stone gargoyles seeming to watch his approach with carved malevolence.
 
-TAXI DRIVER: Nasty business, this. Lord Pemberton seemed a decent sort.
+TAXI DRIVER: *nervously* Nasty business, this murder. Lord Pemberton seemed decent enough when I'd see him in the village. Course, you never know what goes on behind closed doors in these grand houses...
+
+A flash of lightning illuminates the manor's facade, revealing new details: security bars on some windows, freshly installed electric lighting, and what appears to be a figure watching from an upstairs window.
 
 # IMAGE: desktop/manor_with_taxi_desktop.jpg
 
-* [Question the driver about local gossip]
+* [Question the driver about recent changes to the manor]
     ~ player_reputation += 2
-    ANDRÉ-LOUIS: What's the word in the village about the family?
-    DRIVER: Young Master Charles has been about more lately. Money troubles, they say. There's talk about the ward - Miss Victoria - and that Blackwood lad.
+    ANDRÉ-LOUIS: I notice the manor has new security measures. Has Lord Pemberton seemed concerned about something lately?
+    DRIVER: Aye, that's the thing. Started about two months ago - new locks, those bars on the windows. Miss Victoria mentioned he'd been receiving strange letters.
     
-* [Observe the manor's architecture and security]
+* [Observe the manor's defensive modifications]
     ~ investigation_style = "observational"
-    Victorian Gothic with modern additions - new locks on the windows, electric lighting recently installed. Someone was security-conscious.
+    Victorian Gothic with distinctly modern paranoia - those window bars are recent, and the electric lighting is positioned for security rather than ambiance. Someone was expecting trouble.
     
 * [Review your case notes methodically]
     ~ investigation_style = "procedural"
-    Body discovered 8 AM by maid Mary Collins. Death estimated between midnight and 2 AM. Lord Pemberton, 58, found stabbed in locked study.
+    Body discovered 8 AM by maid Mary Collins. Death estimated between midnight and 2 AM. Lord Pemberton, 58, found stabbed in locked study. No signs of forced entry.
 
-- The imposing front door opens before you can knock.
+- The imposing front door opens before you can knock, as if someone has been watching for your arrival...
 
 -> meet_butler
 
@@ -137,6 +149,50 @@ The position suggests the game was interrupted suddenly - white was about to del
 
 # IMAGE: desktop/dining_room_formal_desktop.jpg
 
+* [Study the position carefully - you play chess yourself]
+    ANDRÉ-LOUIS: I need to understand exactly what was happening here. The position tells a story.
+    -> chess_minigame
+    
+* [Note the position but focus on other evidence]
+    ANDRÉ-LOUIS: I'll make note of the position, but other evidence may be more revealing.
+    ~ chess_insights = "basic_observation"
+    -> deduction
+
+=== chess_minigame ===
+You lean over the ornate chess set, studying the position intently. The carved ivory pieces seem to whisper of the deadly game that unfolded here.
+
+# MINIGAME: chess
+# SCRIPT: mamikon-minichess.js
+# CONFIG: {"position": "shane_manor", "onComplete": "chess_analysis"}
+
+The mahogany and ebony squares reflect the lamplight as you analyze white's brilliant queen sacrifice...
+
+* [Continue investigating after chess analysis] -> chess_analysis
+
+=== chess_analysis ===
+{chess_skill >= 80:
+    ~ player_reputation += 5
+    ~ chess_insights = "brilliant_analysis"
+    ANDRÉ-LOUIS: Extraordinary! This wasn't just any game - white sacrificed the queen to force mate in three moves. Only a master-level player would see this combination.
+    
+    You realize that the killer may have underestimated Lord Pemberton's chess prowess - or perhaps they knew exactly how good he was.
+}
+{chess_skill >= 50 && chess_skill < 80:
+    ~ player_reputation += 3
+    ~ chess_insights = "good_understanding"
+    ANDRÉ-LOUIS: I can see the tactical sequence here. White gave up the queen for a winning attack. The game was decided before the murder.
+    
+    This suggests the killer was either frustrated by losing or was using the game as a distraction.
+}
+{chess_skill < 50:
+    ~ chess_insights = "basic_analysis"
+    ANDRÉ-LOUIS: The position is complex, but clearly white was pressing for an advantage. The sacrifice suggests desperation or brilliance.
+    
+    Without deeper chess knowledge, the exact significance remains unclear.
+}
+
+The chess analysis complete, you now have additional insight into the final moments before the murder.
+
 -> deduction
 
 === examine_footprints ===
@@ -195,6 +251,13 @@ The pieces are starting to come together. You've gathered enough evidence to for
 
 The locked room mystery, the family tensions, the gambling debts, and the chess game all point to one conclusion.
 
+{chess_insights == "brilliant_analysis":
+    Your chess analysis revealed crucial insight - only someone who truly understood Lord Pemberton's chess mastery could have been playing with him at that level.
+}
+{chess_insights == "good_understanding":
+    The chess position suggests the game was more significant than a casual match - there was real tension between the players.
+}
+
 # IMAGE: desktop/morning_room_table_desktop.jpg
 
 * [Accuse Charles of the murder]
@@ -203,17 +266,50 @@ The locked room mystery, the family tensions, the gambling debts, and the chess 
 * [Suggest an outside intruder]
     -> outside_theory
     
+{chess_insights == "brilliant_analysis": * [Present the chess evidence as key proof] -> chess_evidence_theory}
+    
 * [Gather more evidence first]
     {time_pressure > 0: -> investigation_choice | -> time_up}
+
+=== chess_evidence_theory ===
+ANDRÉ-LOUIS: The chess position is the key to everything. This wasn't a casual game - it was a desperate struggle between two skilled players.
+
+{chess_insights == "brilliant_analysis":
+    ANDRÉ-LOUIS: Lord Pemberton was winning brilliantly with that queen sacrifice. His opponent would have been facing inevitable mate in three moves. That level of frustration, combined with the financial pressures...
+    
+    CHARLES: *going pale* You can't possibly know that from just looking at the board!
+    
+    ANDRÉ-LOUIS: But I can, Charles. And so could you - because you were the one playing. You saw the mate coming and couldn't bear to lose, not when so much was at stake.
+}
+
+The chess evidence proves decisive in your deduction.
+
+-> resolution
 
 === accuse_charles ===
 ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle using your knowledge of this house to create an impossible locked-room mystery.
 
 The assembled household gasps. Charles goes white.
 
-ANDRÉ-LOUIS: The chess game proves you were in the study with him. That aggressive queen sacrifice - that's your style, not his. After stabbing him, you used the old servants' bell system to barricade the door from outside.
+{chess_insights == "brilliant_analysis":
+    ANDRÉ-LOUIS: The chess game confirms everything. That queen sacrifice was Lord Pemberton's style - brilliant, aggressive, final. You were losing badly and couldn't accept it, could you?
+    
+    CHARLES: *breaking down* How could you possibly... that position was impossible! Uncle was always showing off his tactics...
+}
+{chess_insights == "good_understanding":
+    ANDRÉ-LOUIS: The chess position tells the tale. Your uncle was winning decisively when frustration overcame you.
+    
+    CHARLES: *shaking* You don't understand the pressure... the debts...
+}
+{chess_insights == "basic_analysis":
+    ANDRÉ-LOUIS: The chess game was interrupted at a crucial moment. Given your gambling debts and your uncle's refusal to help...
+    
+    CHARLES: *quietly* I never meant for it to happen.
+}
 
-CHARLES: *breaking down* You don't understand the pressure I was under. Those gambling debts... Uncle could have helped, but he refused. I never meant to kill him!
+ANDRÉ-LOUIS: After stabbing him, you used the old servants' bell pull system to jam the door from outside, creating the locked room illusion.
+
+CHARLES: Those gambling debts would have destroyed me. Uncle could have helped, but he refused. When I saw that chess position... I knew I was beaten in everything.
 
 -> resolution
 
@@ -236,9 +332,29 @@ The case remains unsolved, though your investigation provides valuable leads for
 
 ASHFORD: Inspector André-Louis, your reputation is well-deserved. How did you see through the locked room deception?
 
-ANDRÉ-LOUIS: The chess position was the key. Lord Pemberton was a careful, defensive player, but that aggressive queen sacrifice was the move of a younger, more desperate mind.
+{chess_insights == "brilliant_analysis":
+    ANDRÉ-LOUIS: The chess position was the crucial clue. Lord Pemberton's queen sacrifice revealed a mind under pressure making one final, brilliant move. Charles underestimated both his uncle's chess mastery and a detective's ability to read the position.
+    
+    ~ player_reputation += 5
+    
+    MARY: *amazed* You could tell all that from just looking at the chess pieces?
+    
+    ANDRÉ-LOUIS: Chess is a game of psychology as much as tactics. The board never lies about the players' state of mind.
+}
+{chess_insights == "good_understanding":
+    ANDRÉ-LOUIS: The chess game provided crucial context. The position showed Lord Pemberton was winning decisively - enough to drive a desperate nephew to violence.
+    
+    ~ player_reputation += 3
+}
+{chess_insights == "basic_analysis":
+    ANDRÉ-LOUIS: Multiple clues converged - the gambling debts, family tensions, and the interrupted chess game all pointed to Charles. Sometimes the simplest explanation is correct.
+}
 
-The case closes with Charles Pemberton confessing to manslaughter. Your reputation as a detective grows.
+The case closes with Charles Pemberton confessing to manslaughter. Your reputation as a detective grows considerably.
+
+{player_reputation >= 70:
+    Word of your brilliant deduction spreads quickly through London's detective circles. The "Shane Manor Chess Gambit" becomes a legendary case study.
+}
 
 -> END
 
