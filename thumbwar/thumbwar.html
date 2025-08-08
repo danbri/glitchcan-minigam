@@ -1032,50 +1032,63 @@
                     o += (sin(v.xyyx * 1.8 + time * 0.4) + 1.0) * abs(v.x - v.y) * 0.3 * flicker;
                 }
                 
-                // Northern lights style color mapping with more dramatic gradients
+                // =============================================================================
+                // COLOR MAPPING & VISUAL RENDERING
+                // =============================================================================
+                
+                // INTENSITY CALCULATION
+                // Convert flow simulation output to visual intensity
                 float intensity = clamp(o.x + o.y + o.z + o.w, 0.1, 4.0);
                 float factor = exp(-1.8 * l.x) / intensity * 2.0;
                 
-                // Core texture noise for touch points - adds detailed texture at heart of blobs
+                // PROCEDURAL TEXTURE NOISE
+                // High-frequency noise patterns add detail to touch point cores
                 float noise1 = sin(p.x * 30.0 + time) * sin(p.y * 30.0 + time * 1.2) * 0.5 + 0.5;
                 float noise2 = sin(p.x * 20.0 - time * 1.3) * sin(p.y * 20.0 + time) * 0.5 + 0.5;
                 
-                // Create fire/magic-like colors with more dramatic variation and core texturing
-                // Enhanced color transitions for more vibrant visuals
+                // AURORA-STYLE BACKGROUND COLORS
+                // Creates northern lights effect from fluid simulation data
+                // Uses flow vectors to modulate RGB channels for organic color variation
                 vec4 auroraColor = vec4(
-                    0.5 * (1.0 + sin(v.x * 3.0 + time * 0.4 + noise1 * 0.5)),  // More intense red
-                    0.8 * (1.0 + sin(v.y * 2.0 + time * 0.5 + noise2 * 0.7)),  // Stronger green
-                    0.7 * (1.0 + sin(v.x * v.y + time * 0.6 + noise1 * noise2)),  // More vibrant blue
+                    0.5 * (1.0 + sin(v.x * 3.0 + time * 0.4 + noise1 * 0.5)),  // Red: flow-dependent
+                    0.8 * (1.0 + sin(v.y * 2.0 + time * 0.5 + noise2 * 0.7)),  // Green: dominant channel
+                    0.7 * (1.0 + sin(v.x * v.y + time * 0.6 + noise1 * noise2)), // Blue: interaction-based
                     1.0
                 );
                 
-                // Core colors of touch points - make more vibrant and varied
+                // DYNAMIC TOUCH POINT COLORS
+                // Each touch point gets unique, time-varying colors for visual distinction
                 vec4 core1Color = vec4(
-                    0.1 + 0.4 * sin(time * 2.0),           // More dramatic pulsing red
-                    0.9 + 0.3 * sin(time * 2.5 + 2.0),     // Strong green with variation
-                    0.6 + 0.4 * sin(time * 3.0 + 4.0),     // More intense pulsing blue
+                    0.1 + 0.4 * sin(time * 2.0),           // Pulsing red component
+                    0.9 + 0.3 * sin(time * 2.5 + 2.0),     // Dominant green with phase offset
+                    0.6 + 0.4 * sin(time * 3.0 + 4.0),     // Pulsing blue component
                     1.0
                 );
                 
                 vec4 core2Color = vec4(
-                    0.2 + 0.4 * sin(time * 2.2 + 1.0),     // More dramatic red pulse
-                    0.3 + 0.3 * sin(time * 2.7 + 3.0),     // Enhanced green
-                    0.9 + 0.3 * sin(time * 3.2 + 5.0),     // Strong blue with variation
+                    0.2 + 0.4 * sin(time * 2.2 + 1.0),     // Red with different frequency
+                    0.3 + 0.3 * sin(time * 2.7 + 3.0),     // Moderate green
+                    0.9 + 0.3 * sin(time * 3.2 + 5.0),     // Dominant blue with phase offset
                     1.0
                 );
                 
-                // More intense touch colors with trail falloff and core texturing
-                float coreFactor1 = 4.0 * pow(1.0 - min(1.0, t1 * 0.8), 5.0);
+                // DISTANCE-BASED INTENSITY CALCULATION
+                // Creates smooth falloff from touch points using power functions
+                // Higher powers = sharper falloff, more concentrated energy
+                float coreFactor1 = 4.0 * pow(1.0 - min(1.0, t1 * 0.8), 5.0);  // Sharp core
                 float coreFactor2 = 4.0 * pow(1.0 - min(1.0, t2 * 0.8), 5.0);
                 
-                float trailFactor1 = 3.0 * pow(1.0 - min(1.0, t1 * 0.9), 4.0);
-                float trailFactor1a = 2.5 * pow(1.0 - min(1.0, t1a * 0.9), 4.0) * 0.7;
-                float trailFactor1b = 2.0 * pow(1.0 - min(1.0, t1b * 0.9), 4.0) * 0.5;
-                float trailFactor1c = 1.5 * pow(1.0 - min(1.0, t1c * 0.9), 4.0) * 0.4;
+                // TRAIL INTENSITY FACTORS
+                // Each trail point has decreasing intensity for layered flow effect
+                float trailFactor1 = 3.0 * pow(1.0 - min(1.0, t1 * 0.9), 4.0);      // Primary trail
+                float trailFactor1a = 2.5 * pow(1.0 - min(1.0, t1a * 0.9), 4.0) * 0.7; // Secondary trails
+                float trailFactor1b = 2.0 * pow(1.0 - min(1.0, t1b * 0.9), 4.0) * 0.5; // with decreasing
+                float trailFactor1c = 1.5 * pow(1.0 - min(1.0, t1c * 0.9), 4.0) * 0.4; // intensity
                 float trailFactor1d = 1.2 * pow(1.0 - min(1.0, t1d * 0.9), 4.0) * 0.3;
                 float trailFactor1e = 1.0 * pow(1.0 - min(1.0, t1e * 0.9), 4.0) * 0.2;
-                float trailFactor1f = 2.0 * pow(1.0 - min(1.0, t1f * 0.9), 4.0) * 0.6;
+                float trailFactor1f = 2.0 * pow(1.0 - min(1.0, t1f * 0.9), 4.0) * 0.6; // Chaotic trail
                 
+                // Same intensity system for second touch point
                 float trailFactor2 = 3.0 * pow(1.0 - min(1.0, t2 * 0.9), 4.0);
                 float trailFactor2a = 2.5 * pow(1.0 - min(1.0, t2a * 0.9), 4.0) * 0.7;
                 float trailFactor2b = 2.0 * pow(1.0 - min(1.0, t2b * 0.9), 4.0) * 0.5;
@@ -1084,20 +1097,23 @@
                 float trailFactor2e = 1.0 * pow(1.0 - min(1.0, t2e * 0.9), 4.0) * 0.2;
                 float trailFactor2f = 2.0 * pow(1.0 - min(1.0, t2f * 0.9), 4.0) * 0.6;
                 
-                // Core of touch points with texture noise
+                // TOUCH POINT CORE RENDERING
+                // Mix base colors with dynamic colors using noise for texture
                 vec4 coreTouch1 = mix(
-                    vec4(0.0, 0.9, 0.5, 1.0), 
-                    core1Color, 
-                    noise1
+                    vec4(0.0, 0.9, 0.5, 1.0),  // Base green-cyan
+                    core1Color,                 // Dynamic pulsing color
+                    noise1                      // Noise modulation for texture
                 ) * coreFactor1;
                 
                 vec4 coreTouch2 = mix(
-                    vec4(0.1, 0.3, 0.9, 1.0), 
-                    core2Color, 
-                    noise2
+                    vec4(0.1, 0.3, 0.9, 1.0),  // Base blue
+                    core2Color,                 // Dynamic pulsing color
+                    noise2                      // Noise modulation for texture
                 ) * coreFactor2;
                 
-                // Green magic touch with trail - more vibrant greens
+                // TRAIL COLOR SYSTEM
+                // Creates layered energy streams with different colors for each touch
+                // Touch 1: Green/cyan energy streams
                 vec4 touch1Color = vec4(0.0, 1.0, 0.6, 1.0) * trailFactor1;
                 vec4 touch1ColorA = vec4(0.0, 0.95, 0.55, 1.0) * trailFactor1a;
                 vec4 touch1ColorB = vec4(0.0, 0.9, 0.5, 1.0) * trailFactor1b;
@@ -1106,7 +1122,7 @@
                 vec4 touch1ColorE = vec4(0.0, 0.75, 0.35, 1.0) * trailFactor1e;
                 vec4 touch1ColorF = mix(vec4(0.3, 1.0, 0.6, 1.0), vec4(0.1, 0.8, 0.4, 1.0), noise1) * trailFactor1f;
                 
-                // Blue magic touch with trail - more intense blues
+                // Touch 2: Blue energy streams  
                 vec4 touch2Color = vec4(0.1, 0.4, 1.0, 1.0) * trailFactor2;
                 vec4 touch2ColorA = vec4(0.1, 0.38, 0.95, 1.0) * trailFactor2a;
                 vec4 touch2ColorB = vec4(0.1, 0.36, 0.9, 1.0) * trailFactor2b;
@@ -1115,28 +1131,38 @@
                 vec4 touch2ColorE = vec4(0.1, 0.3, 0.75, 1.0) * trailFactor2e;
                 vec4 touch2ColorF = mix(vec4(0.2, 0.5, 1.0, 1.0), vec4(0.0, 0.3, 0.8, 1.0), noise2) * trailFactor2f;
                 
-                // Combine all trail colors for smoky effect with core highlights
+                // COMBINED EFFECT ASSEMBLY
+                // Add all color components together for additive blending effect
                 vec4 combinedTrailColor = coreTouch1 + touch1Color + touch1ColorA + touch1ColorB + touch1ColorC + 
                                         touch1ColorD + touch1ColorE + touch1ColorF +
                                         coreTouch2 + touch2Color + touch2ColorA + touch2ColorB + touch2ColorC + 
                                         touch2ColorD + touch2ColorE + touch2ColorF;
                 
-                // Apply fluid effect only where there's activity
+                // ACTIVITY CALCULATION
+                // Measure total energy for blending between background and active effects
                 float activity = clamp(length(combinedTrailColor), 0.0, 1.0);
                 
-                // Create final magical effect
+                // FINAL COLOR COMPOSITION
+                // Blend aurora background with touch effects based on activity level
                 vec4 fluidColor = mix(backgroundColor, auroraColor * factor * 3.0, clamp(intensity * 0.5, 0.0, 1.0));
-                fluidColor = mix(fluidColor, combinedTrailColor, 0.9);
+                fluidColor = mix(fluidColor, combinedTrailColor, 0.9); // Strong emphasis on touch effects
                 
-                // Add faint background energy field - enhanced with more dynamic patterns
+                // BACKGROUND ENERGY FIELD
+                // Adds subtle animated patterns even when no touch input is active
                 float backgroundEnergy = 0.0;
                 if (u_enable_background > 0.5) {
+                    // Grid-based energy pattern with time animation
                     backgroundEnergy = 0.12 * (0.5 + 0.5 * sin(p.x * 8.0 + time) * sin(p.y * 8.0 + time * 0.7));
+                    // Cross-term for more complex patterns
                     backgroundEnergy += 0.08 * sin(p.x * p.y * 5.0 + time * 0.5);
                 }
                 
+                // =============================================================================
+                // TENDRIL EFFECT RENDERING
+                // =============================================================================
+                
                 // Create lightning/tendril effect between the two touch points
-                // Only render if touch points are far enough apart and tendrils are enabled
+                // Only render if touch points are sufficiently far apart and tendrils enabled
                 float touchDistance = length(touch1 - touch2);
                 vec4 lightningColor = vec4(0.0);
                 
@@ -1145,98 +1171,116 @@
                     float baseThickness = 0.01 * u_tendril_thickness; 
                     float baseTurbulence = 1.0 * u_tendril_turbulence;
                     
-                    // Create multiple layers of tendrils with different properties
+                    // MULTI-LAYER TENDRIL SYSTEM
+                    // Creates complex, organic energy beams using multiple tendril layers
                     
-                    // Primary tendril - thin, fast-moving
+                    // Primary tendril - main energy beam with fast movement
                     float tendrilIntensity1 = swirlTendril(p, touch1, touch2, time, baseThickness, baseTurbulence);
                     
-                    // Secondary tendril - offset in time for different pattern
+                    // Secondary tendril - offset in time for different swirl pattern
                     float tendrilIntensity2 = swirlTendril(p, touch1, touch2, time + 4.27, baseThickness * 0.8, baseTurbulence * 0.8);
                     
-                    // Tertiary tendril - slower movement, thinner
+                    // Tertiary tendril - slower movement for depth
                     float tendrilIntensity3 = swirlTendril(p, touch1, touch2, time * 0.7, baseThickness * 0.5, baseTurbulence * 1.2);
                     
-                    // Create a more organic connection by adding a few more very thin tendrils
+                    // Micro-tendrils - very thin details for organic appearance
                     float microTendril1 = swirlTendril(p, touch1, touch2, time * 1.3 + 2.8, baseThickness * 0.3, baseTurbulence * 1.5);
                     float microTendril2 = swirlTendril(p, touch1, touch2, time * 0.9 - 3.6, baseThickness * 0.25, baseTurbulence * 1.7);
                     
-                    // Color the tendrils with fiery, organic colors
-                    // Main tendril - orange-red, fiery
+                    // TENDRIL COLOR SYSTEM
+                    // Each layer gets different colors for visual depth and complexity
+                    
+                    // Primary tendril: hot orange-red core like flame center
                     vec4 primaryTendril = vec4(0.9, 0.3, 0.05, 1.0) * tendrilIntensity1;
                     
-                    // Secondary tendril - yellow-orange, like a flame's edge
+                    // Secondary tendril: bright yellow-orange like flame edge
                     vec4 secondaryTendril = vec4(1.0, 0.5, 0.05, 1.0) * tendrilIntensity2;
                     
-                    // Tertiary tendril - deeper red for depth
+                    // Tertiary tendril: deep red for visual depth
                     vec4 tertiaryTendril = vec4(0.7, 0.1, 0.05, 1.0) * tendrilIntensity3;
                     
-                    // Micro-tendrils with subtle purple/blue tint for contrast
+                    // Micro-tendrils: subtle purple/blue accents for contrast
                     vec4 microTendrilColor1 = vec4(0.3, 0.1, 0.5, 1.0) * microTendril1 * 0.5;
                     vec4 microTendrilColor2 = vec4(0.1, 0.05, 0.3, 1.0) * microTendril2 * 0.4;
                     
-                    // Create time-varying color shift with subtle variations
-                    float colorShift = sin(time * 1.5) * 0.3 + 0.7;
-                    float intensityPulse = 0.7 + 0.3 * pow(sin(time * 2.3) * 0.5 + 0.5, 2.0);
+                    // TEMPORAL COLOR MODULATION
+                    // Makes colors shift over time for living energy effect
+                    float colorShift = sin(time * 1.5) * 0.3 + 0.7;           // Slow color variation
+                    float intensityPulse = 0.7 + 0.3 * pow(sin(time * 2.3) * 0.5 + 0.5, 2.0); // Energy pulsing
                     
-                    // Combine all tendril effects with appropriate blending
+                    // COMBINE ALL TENDRIL LAYERS
+                    // Additive blending creates intense, layered energy beam
                     lightningColor = primaryTendril * intensityPulse + 
                                     secondaryTendril * colorShift +
                                     tertiaryTendril * (0.6 + 0.4 * sin(time * 1.1)) +
                                     microTendrilColor1 + microTendrilColor2;
                     
-                    // Add soft glow around the tendrils with control panel glow setting
+                    // TENDRIL GLOW EFFECT
+                    // Add soft halo around tendril based on control panel glow setting
                     float glowThickness = 0.05 * u_tendril_glow;
                     float glowIntensity = swirlTendril(p, touch1, touch2, time * 0.8, glowThickness, baseTurbulence * 0.5) * 0.3;
                     lightningColor += vec4(0.5, 0.1, 0.05, 0.7) * glowIntensity * u_tendril_glow;
                 }
                 
-                // Final composition with background energy field and lightning
+                // FINAL COLOR COMPOSITION
+                // Layer all effects: background energy → fluid effects → tendril beams
                 vec4 finalColor = mix(
-                    mix(backgroundColor, auroraColor * 0.4, backgroundEnergy), 
-                    fluidColor, 
-                    clamp(activity * 4.0, 0.0, 1.0)
+                    mix(backgroundColor, auroraColor * 0.4, backgroundEnergy),  // Background + energy field
+                    fluidColor,                                                // Add fluid effects
+                    clamp(activity * 4.0, 0.0, 1.0)                          // Based on touch activity
                 );
                 
-                // Add the lightning effect on top
+                // Add tendril effects on top (additive)
                 finalColor += lightningColor;
                 
                 return finalColor;
             }
             
+            // =============================================================================
+            // MAIN SHADER FUNCTION & TARGET RENDERING
+            // =============================================================================
+            
             void main() {
-                vec2 touch1 = u_touch1 * 2.0 - 1.0; // Convert to -1 to 1 range
+                // COORDINATE TRANSFORMATION
+                // Convert touch positions from 0-1 range to -1 to 1 range for shader math
+                vec2 touch1 = u_touch1 * 2.0 - 1.0;
                 vec2 touch2 = u_touch2 * 2.0 - 1.0;
-                touch1.y *= -1.0; // Flip Y
+                touch1.y *= -1.0; // Flip Y coordinate (canvas Y is inverted)
                 touch2.y *= -1.0;
                 
+                // FLUID EFFECTS RENDERING
+                // Generate all fluid dynamics, color effects, and tendrils
                 vec4 color = fluidEffect(gl_FragCoord.xy / u_resolution, u_time, touch1, touch2);
                 
-                // Pre-calculate normalized position for targets
+                // GAME TARGET HIGHLIGHTING
+                // Add visual effects for game targets (goals to collect)
                 vec2 normalizedPos = gl_FragCoord.xy / u_resolution * 2.0 - 1.0;
                 
-                // Highlight targets with dynamic pulsing effects
+                // Process each potential target
                 for (int i = 0; i < ${MAX_TARGETS}; i++) {
                     if (u_target_active[i] > 0.5) {
                         vec2 targetPos = u_targets[i] * 2.0 - 1.0;
                         targetPos.y *= -1.0;
                         float dist = length(normalizedPos - targetPos);
                         
+                        // Only highlight pixels near targets
                         if (dist < 0.1) {
-                            // Dynamic pulsing effect
+                            // DYNAMIC TARGET PULSING
+                            // Creates animated glow effect around targets
                             float pulse = sin(u_time * 8.0) * 0.2 + 0.8;
                             float glow = (0.1 - dist) / 0.1 * pulse;
                             
-                            // Good target: enhanced green glow with pulse
+                            // GOOD TARGET: Green glow with sparkle effects
                             if (u_target_type[i] < 0.5) {
                                 vec4 glowColor = vec4(0.0, 1.0, 0.5, 1.0);
-                                // Add sparkle effect
+                                // Add sparkle effect for extra visual appeal
                                 glowColor += vec4(0.2) * pow(sin(u_time * 10.0 + dist * 50.0), 10.0);
                                 color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
                             } 
-                            // Bad target: enhanced red glow with pulse
+                            // BAD TARGET: Red glow with warning pulse effects
                             else {
                                 vec4 glowColor = vec4(1.0, 0.2, 0.3, 1.0);
-                                // Add warning pulse effect
+                                // Add intense warning pulse effect
                                 glowColor += vec4(0.3, 0.0, 0.0, 0.0) * pow(sin(u_time * 15.0), 4.0);
                                 color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
                             }
@@ -1244,7 +1288,11 @@
                     }
                 }
                 
-                // Add shockwave effects when targets are collected (if enabled)
+                // =============================================================================
+                // SHOCKWAVE EFFECTS SYSTEM
+                // =============================================================================
+                
+                // Add expanding ring effects when targets are collected (if enabled)
                 if (u_enable_shockwaves > 0.5) {
                     for (int i = 0; i < ${MAX_TARGETS}; i++) {
                         if (u_shockwave_active[i] > 0.5) {
@@ -1253,28 +1301,33 @@
                             
                             float timeSinceStart = u_time - u_shockwave_start[i];
                             
+                            // Shockwaves last for 1 second
                             if (timeSinceStart < 1.0) {
-                                float waveRadius = timeSinceStart * 0.6; // Speed of expansion
+                                // WAVE EXPANSION CALCULATION
+                                float waveRadius = timeSinceStart * 0.6;           // Expansion speed
                                 float dist = length(normalizedPos - shockwavePos);
-                                float thickness = 0.03 * (1.0 - timeSinceStart); // Wave gets thinner as it expands
+                                float thickness = 0.03 * (1.0 - timeSinceStart);   // Wave gets thinner over time
                                 
-                                // Create ring effect
+                                // RING GENERATION
+                                // Creates sharp ring edge using smoothstep function
                                 float waveFront = smoothstep(0.0, thickness, abs(dist - waveRadius));
                                 waveFront = 1.0 - waveFront;
                                 
-                                // Apply shockwave color based on target type with intensity control
+                                // SHOCKWAVE COLOR APPLICATION
+                                // Apply color based on target type (good=green, bad=red)
                                 if (waveFront > 0.05) {
                                     if (u_shockwave_type[i] < 0.5) {
-                                        // Good target: green shockwave
+                                        // GOOD TARGET SHOCKWAVE: Green expanding ring
                                         vec4 waveColor = vec4(0.0, 1.0, 0.5, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
                                         color += waveColor * waveFront;
                                     } else {
-                                        // Bad target: red shockwave
+                                        // BAD TARGET SHOCKWAVE: Red expanding ring  
                                         vec4 waveColor = vec4(1.0, 0.2, 0.3, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
                                         color += waveColor * waveFront;
                                     }
                                     
-                                    // Add distortion to the area inside the shockwave
+                                    // INTERIOR DISTORTION EFFECT
+                                    // Add visual distortion inside the shockwave ring
                                     if (dist < waveRadius) {
                                         float distortionFactor = 0.05 * (1.0 - dist/waveRadius) * (1.0 - timeSinceStart) * u_shockwave_intensity;
                                         color.rgb += sin(color.gbr * 10.0 + u_time * 5.0) * distortionFactor;
@@ -1285,16 +1338,22 @@
                     }
                 }
                 
+                // OUTPUT FINAL PIXEL COLOR
                 gl_FragColor = color;
             }
         `;
         
-        // Create shader program
+        // =============================================================================
+        // WEBGL SHADER COMPILATION & PROGRAM SETUP
+        // =============================================================================
+        
+        // Create and compile individual shaders with error checking
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
             
+            // Check for compilation errors and provide useful debug info
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
                 console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
                 gl.deleteShader(shader);
@@ -1304,12 +1363,14 @@
             return shader;
         }
         
+        // Link vertex and fragment shaders into a complete WebGL program
         function createProgram(gl, vertexShader, fragmentShader) {
             const program = gl.createProgram();
             gl.attachShader(program, vertexShader);
             gl.attachShader(program, fragmentShader);
             gl.linkProgram(program);
             
+            // Check for linking errors
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
                 console.error('Program linking error:', gl.getProgramInfoLog(program));
                 return null;
@@ -1318,29 +1379,39 @@
             return program;
         }
         
+        // Compile shaders and create the main WebGL program
         const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
         const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
         const program = createProgram(gl, vertexShader, fragmentShader);
         
-        // Set up position buffer
+        // =============================================================================
+        // VERTEX BUFFER SETUP
+        // =============================================================================
+        
+        // Create a full-screen quad using two triangles
+        // This covers the entire canvas so the fragment shader runs on every pixel
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -1, -1,
-            1, -1,
-            -1, 1,
-            -1, 1,
-            1, -1,
-            1, 1
+            -1, -1,  // Bottom-left
+            1, -1,   // Bottom-right
+            -1, 1,   // Top-left
+            -1, 1,   // Top-left (triangle 2)
+            1, -1,   // Bottom-right (triangle 2)
+            1, 1     // Top-right (triangle 2)
         ]), gl.STATIC_DRAW);
         
-        // Get uniform locations
+        // =============================================================================
+        // UNIFORM LOCATION BINDING
+        // =============================================================================
+        
+        // Get locations for core rendering uniforms
         const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
         const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
         const touch1UniformLocation = gl.getUniformLocation(program, 'u_touch1');
         const touch2UniformLocation = gl.getUniformLocation(program, 'u_touch2');
         
-        // Get target uniform locations
+        // Get uniform locations for target rendering system
         const targetLocations = [];
         const targetActiveLocations = [];
         const targetTypeLocations = [];
@@ -1350,7 +1421,7 @@
             targetTypeLocations.push(gl.getUniformLocation(program, `u_target_type[${i}]`));
         }
         
-        // Get shockwave uniform locations
+        // Get uniform locations for shockwave effect system
         const shockwaveActiveLocations = [];
         const shockwavePosLocations = [];
         const shockwaveStartLocations = [];
