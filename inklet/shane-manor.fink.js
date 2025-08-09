@@ -9,22 +9,30 @@ VAR chess_game_completed = false
 VAR primary_suspect = ""
 
 # BASEHREF: media/shane/
+// NOTE: Keep tag lines beginning with '#' to simple alphanumeric words and spaces.
+// Complex separators like '|' or punctuation can break Ink compilation in validation.
 
 -> start
 
 // TESTING KNOTS - Direct Web Links for CI and Debugging
 === test_chess_position ===
-# MENU: Direct Link Test|#chess_minigame|Jump to Chess Minigame Scene
+# MENU Direct Link Test
+# MENU TARGET chess_minigame
+# MENU DESC Jump to Chess Minigame Scene
 This is a direct link test for CI and debugging purposes.
 -> examine_chess
 
 === test_character_confrontation ===
-# MENU: Direct Link Test|#household_confrontation|Jump to Character Confrontation Scene  
+# MENU Direct Link Test
+# MENU TARGET household_confrontation
+# MENU DESC Jump to Character Confrontation Scene  
 This is a direct link test for CI and debugging purposes.
 -> household_confrontation
 
 === test_multiple_endings ===
-# MENU: Direct Link Test|#deduction|Jump to Multiple Endings Scene
+# MENU Direct Link Test
+# MENU TARGET deduction
+# MENU DESC Jump to Multiple Endings Scene
 This is a direct link test for CI and debugging purposes.
 -> deduction
 
@@ -178,7 +186,9 @@ ANDRÉ-LOUIS: *concentrating deeply* Let me work through this position...
 
 You sit at the chess board, feeling the weight of the investigation. The position is complex - a queen sacrifice that should lead to mate in three moves, but only if played perfectly.
 
-# MENU: Play Chess Minigame|https://codepen.io/danbri/pen/azOvvGX|Opens Mamikon Mini-Chess in new tab
+# MENU Play Chess Minigame
+# MENU URL codepen io danbri pen azOvvGX
+# MENU DESC Opens Mamikon Mini Chess in new tab
 
 *After completing the chess puzzle...*
 
@@ -314,12 +324,14 @@ ANDRÉ-LOUIS: Charles Pemberton, I believe you killed your uncle in a moment of 
 
 The assembled household gasps. Charles goes white as chalk.
 
-{chess_game_completed: 
-    ANDRÉ-LOUIS: The chess position tells the whole story. Your uncle was teaching you his famous gambit, but when you realized he was demonstrating how easily he could trap and destroy you - just like he planned to do with your inheritance - you snapped. The letter opener was within reach, and thirty seconds later, you were an orphan again.
+{chess_game_completed:
+    ANDRÉ-LOUIS: The chess position tells the whole story. Your uncle was teaching you his famous gambit, but when you realized he was demonstrating how easily he could trap and destroy you just like he planned to do with your inheritance you snapped. The letter opener was within reach, and thirty seconds later, you were an orphan again.
     
     CHARLES: *voice breaking* He said I was weak, that I'd gambled away my birthright. That he'd rather leave everything to a foundling than a failure. I... I didn't mean to...
-| 
-    ANDRÉ-LOUIS: The muddy footprints, the open window, the chair wedged under the door - all staging to suggest an outside intruder. But you made one mistake: the chess position. Your uncle would never have played such an aggressive opening against you unless he was trying to make a point about your own reckless nature.
+}
+
+{ not chess_game_completed:
+    ANDRÉ-LOUIS: The muddy footprints, the open window, the chair wedged under the door were all staging to suggest an outside intruder. But you made one mistake: the chess position. Your uncle would never have played such an aggressive opening against you unless he was trying to make a point about your own reckless nature.
     
     CHARLES: *breaking down* You don't understand the pressure I was under. Those gambling debts... Uncle could have helped, but he refused. I never meant to kill him!
 }

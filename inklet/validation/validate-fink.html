@@ -94,15 +94,15 @@
                         throw new Error('No INK content extracted from FINK');
                     }
                     
-                    validationResult.extractedInkLength = extractedInk.length;
+                    // Sanitize FINK-only tag syntax that Ink doesn't accept (e.g., '|' inside tag lines)
+                    // We keep tags but replace '|' so Ink parser doesn't choke; semantics of tags don't affect compile.
+                    const sanitizedInk = extractedInk.replace(/^(\s*#.*)\|(.+)$/gm, (m) => m.replace(/\|/g, '¦'));
+
+                    validationResult.extractedInkLength = sanitizedInk.length;
                     
                     // Compile extracted INK content
-                    const compiler = new inkjs.Compiler(extractedInk);
-                    
-                    if (compiler.errors && compiler.errors.length > 0) {
-                        validationResult.errors = compiler.errors.slice();
-                        validationResult.success = false;
-                    } else {
+                    const compiler = new inkjs.Compiler(sanitizedInk);
+                    try {
                         const story = compiler.Compile();
                         validationResult.success = true;
                         
@@ -114,6 +114,17 @@
                             safety++;
                         }
                         validationResult.compilationOutput = testOutput.join('\n');
+                    } catch (e) {
+                        // When Compile() throws, detailed errors are on compiler.errors
+                        if (compiler.errors && compiler.errors.length > 0) {
+                            validationResult.errors = compiler.errors.slice();
+                        } else {
+                            validationResult.errors = [e.message || String(e)];
+                        }
+                        if (compiler.warnings && compiler.warnings.length > 0) {
+                            validationResult.warnings = compiler.warnings.slice();
+                        }
+                        validationResult.success = false;
                     }
                     
                 } catch (compileError) {

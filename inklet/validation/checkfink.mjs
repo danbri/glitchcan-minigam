@@ -151,7 +151,38 @@ async function validateFile(file) {
       story = new Story(json);
     } else if (file.endsWith('.ink')) {
       const src = await fs.readFile(file, 'utf8');
-      story = new Compiler(src, null).Compile();  // returns Story
+      const compiler = new Compiler(src, null);
+      try {
+        story = compiler.Compile();
+      } catch (e) {
+        // If the compiler throws, prefer structured errors if present
+        if (compiler?.errors?.length) {
+          console.error(`✗ FAIL  ${file}`);
+          compiler.errors.forEach(err => console.error(`   ↳ ${err}`));
+          if (compiler.warnings && compiler.warnings.length) {
+            console.warn(`   ⚠ Warnings:`);
+            compiler.warnings.forEach(w => console.warn(`     - ${w}`));
+          }
+          return false;
+        }
+        throw e; // fall back to outer catch
+      }
+
+      // Even if no exception, check collected diagnostics
+      if (compiler.errors && compiler.errors.length) {
+        console.error(`✗ FAIL  ${file}`);
+        compiler.errors.forEach(err => console.error(`   ↳ ${err}`));
+        if (compiler.warnings && compiler.warnings.length) {
+          console.warn(`   ⚠ Warnings:`);
+          compiler.warnings.forEach(w => console.warn(`     - ${w}`));
+        }
+        return false;
+      }
+
+      if (compiler.warnings && compiler.warnings.length) {
+        console.warn(`⚠ WARN  ${file}`);
+        compiler.warnings.forEach(w => console.warn(`   - ${w}`));
+      }
     } else {
       throw new Error('Unsupported extension (expected .ink, .json, or .fink.js)');
     }
