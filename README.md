@@ -1,6 +1,6 @@
 # 🐥 Minigames
 
-A [collection](https://danbri.github.io/glitchcan-minigam/) of very experimental browser-based minigames, sloppy by design. Investigating possibilities around player-generated sloppy AI minigames within a larger framework.
+A halfbaked [collection](https://danbri.github.io/glitchcan-minigam/) of very experimental browser-based minigames, sloppy by design. Investigating possibilities around player-generated sloppy AI minigames within a larger framework.
 
 ## Experiments
 
