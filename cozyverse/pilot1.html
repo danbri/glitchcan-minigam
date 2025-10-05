@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maple Hollow: Aslan Rising</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+```
+    body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #1a1f2e 0%, #2d1b3d 100%);
+        color: #e8eaed;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    #game-container {
+        max-width: 900px;
+        width: 100%;
+        background: rgba(26, 31, 46, 0.95);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        border: 1px solid rgba(138, 180, 248, 0.2);
+    }
+    
+    #header {
+        background: linear-gradient(135deg, #2d1b3d 0%, #1a1f2e 100%);
+        padding: 30px 30px 0 30px;
+        text-align: center;
+        border-bottom: 2px solid rgba(138, 180, 248, 0.3);
+    }
+    
+    #title {
+        font-size: 32px;
+        color: #8ab4f8;
+        margin-bottom: 8px;
+        font-weight: 300;
+        letter-spacing: 2px;
+    }
+    
+    #subtitle {
+        font-size: 14px;
+        color: #9aa0a6;
+        font-style: italic;
+        margin-bottom: 20px;
+    }
+    
+    #tabs {
+        display: flex;
+        justify-content: center;
+        gap: 0;
+    }
+    
+    .tab {
+        padding: 12px 30px;
+        background: transparent;
+        border: none;
+        color: #9aa0a6;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .tab:hover {
+        color: #e8eaed;
+    }
+    
+    .tab.active {
+        color: #8ab4f8;
+        border-bottom-color: #8ab4f8;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    #video-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 177.78%;
+        background: #000;
+    }
+    
+    #video-player {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    
+    #video-link-overlay {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        z-index: 10;
+        text-align: right;
+    }
+    
+    .watch-button {
+        display: inline-block;
+        padding: 10px 18px;
+        background: rgba(45, 55, 72, 0.9);
+        color: #8ab4f8;
+        text-decoration: none;
+        border-radius: 6px;
+        border: 1px solid #4a5568;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.3s;
+        backdrop-filter: blur(8px);
+    }
+    
+    .watch-button:hover {
+        background: rgba(61, 71, 88, 0.95);
+        border-color: #8ab4f8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(138, 180, 248, 0.3);
+    }
+    
+    .watch-instruction {
+        display: none;
+    }
+    
+    #scene-info {
+        padding: 25px 30px;
+        background: rgba(45, 55, 72, 0.5);
+        border-bottom: 1px solid rgba(138, 180, 248, 0.2);
+    }
+    
+    #scene-title {
+        font-size: 24px;
+        color: #fbbf24;
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+    
+    #scene-id {
+        font-size: 12px;
+        color: #9aa0a6;
+        font-family: 'Courier New', monospace;
+    }
+    
+    #choices {
+        padding: 30px;
+    }
+    
+    .choice-button {
+        display: block;
+        width: 100%;
+        padding: 18px 24px;
+        margin-bottom: 12px;
+        background: linear-gradient(135deg, #3d4758 0%, #2d3748 100%);
+        border: 2px solid #4a5568;
+        border-radius: 8px;
+        color: #e8eaed;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+        font-family: 'Georgia', serif;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .choice-button::before {
+        content: '→';
+        position: absolute;
+        left: -30px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 20px;
+        color: #8ab4f8;
+        transition: all 0.3s ease;
+    }
+    
+    .choice-button:hover {
+        background: linear-gradient(135deg, #4a5568 0%, #3d4758 100%);
+        border-color: #8ab4f8;
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(138, 180, 248, 0.3);
+    }
+    
+    .choice-button:hover::before {
+        left: 10px;
+    }
+    
+    .choice-button:active {
+        transform: translateX(3px) scale(0.98);
+    }
+    
+    #map-container {
+        width: 100%;
+        height: 600px;
+        background: #1a1f2e;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    #story-map {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .map-node {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .map-node circle {
+        stroke-width: 2px;
+        transition: all 0.3s;
+    }
+    
+    .map-node:hover circle {
+        stroke-width: 3px;
+        filter: brightness(1.3);
+    }
+    
+    .map-node.visited circle {
+        opacity: 1;
+    }
+    
+    .map-node.unvisited circle {
+        opacity: 0.4;
+    }
+    
+    .map-node.current circle {
+        stroke-width: 4px;
+        filter: drop-shadow(0 0 8px currentColor);
+        animation: pulse-node 2s infinite;
+    }
+    
+    @keyframes pulse-node {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .map-node text {
+        font-size: 10px;
+        font-weight: 500;
+        text-anchor: middle;
+        fill: #e8eaed;
+        pointer-events: none;
+    }
+    
+    .map-link {
+        fill: none;
+        stroke: #4a5568;
+        stroke-width: 1.5px;
+        opacity: 0.4;
+        transition: all 0.3s;
+    }
+    
+    .map-link.traveled {
+        stroke: #fbbf24;
+        stroke-width: 2.5px;
+        opacity: 0.8;
+    }
+    
+    .map-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 5px;
+        z-index: 10;
+    }
+    
+    .map-control-btn {
+        background: rgba(45, 55, 72, 0.9);
+        border: 1px solid #4a5568;
+        color: #8ab4f8;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+    }
+    
+    .map-control-btn:hover {
+        background: rgba(61, 71, 88, 0.9);
+    }
+    
+    .map-legend {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(26, 31, 46, 0.95);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #4a5568;
+        font-size: 11px;
+        z-index: 10;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+        color: #9aa0a6;
+    }
+    
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #e8eaed;
+    }
+    
+    #footer {
+        padding: 20px 30px;
+        background: rgba(26, 31, 46, 0.8);
+        border-top: 1px solid rgba(138, 180, 248, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    #progress {
+        font-size: 13px;
+        color: #9aa0a6;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .footer-button {
+        padding: 8px 16px;
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        border-radius: 4px;
+        color: #8ab4f8;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+    
+    .footer-button:hover {
+        background: #3d4758;
+        border-color: #8ab4f8;
+    }
+    
+    .end-screen {
+        padding: 60px 40px;
+        text-align: center;
+    }
+    
+    .end-title {
+        font-size: 36px;
+        color: #fbbf24;
+        margin-bottom: 20px;
+    }
+    
+    .end-message {
+        font-size: 18px;
+        color: #e8eaed;
+        line-height: 1.6;
+        margin-bottom: 30px;
+    }
+    
+    .end-stats {
+        background: rgba(45, 55, 72, 0.5);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        display: inline-block;
+    }
+    
+    .stat-line {
+        font-size: 14px;
+        color: #9aa0a6;
+        margin: 8px 0;
+    }
+    
+    .restart-button {
+        padding: 15px 40px;
+        background: linear-gradient(135deg, #8ab4f8 0%, #6366f1 100%);
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 600;
+    }
+    
+    .restart-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(138, 180, 248, 0.4);
+    }
+    
+    @media (max-width: 600px) {
+        #title {
+            font-size: 24px;
+        }
+        
+        #scene-title {
+            font-size: 20px;
+        }
+        
+        .choice-button {
+            font-size: 14px;
+            padding: 15px 20px;
+        }
+        
+        #video-link-overlay {
+            bottom: 50%;
+            right: 50%;
+            transform: translate(50%, 50%);
+            text-align: center;
+        }
+        
+        .watch-button {
+            padding: 14px 24px;
+            font-size: 15px;
+            background: rgba(45, 55, 72, 0.95);
+            border: 2px solid #8ab4f8;
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="game-container">
+        <div id="header">
+            <div id="title">Maple Hollow: Aslan Rising</div>
+            <div id="subtitle">An Interactive Story</div>
+            <div id="tabs">
+                <button class="tab active" onclick="switchTab('story')">Story</button>
+                <button class="tab" onclick="switchTab('map')">Map</button>
+            </div>
+        </div>
+
+```
+    <div id="story-content" class="tab-content active">
+        <div id="video-container">
+            <iframe id="video-player" 
+                    src="" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+            </iframe>
+            <div id="video-link-overlay">
+                <a id="external-link" href="#" target="_blank" rel="noopener noreferrer" class="watch-button">
+                    Watch on YouTube
+                </a>
+            </div>
+        </div>
+        
+        <div id="scene-info">
+            <div id="scene-title"></div>
+            <div id="scene-id"></div>
+        </div>
+        
+        <div id="choices"></div>
+    </div>
+    
+    <div id="map-content" class="tab-content">
+        <div id="map-container">
+            <svg id="story-map"></svg>
+            <div class="map-controls">
+                <button class="map-control-btn" onclick="resetMapView()">Reset View</button>
+                <button class="map-control-btn" onclick="centerOnCurrent()">Center Current</button>
+            </div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #10b981;"></div>
+                    <span>Entry</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #8ab4f8;"></div>
+                    <span>Current</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #fbbf24;"></div>
+                    <span>Visited</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #4a5568; opacity: 0.4;"></div>
+                    <span>Unvisited</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="footer">
+        <div id="progress"></div>
+        <div>
+            <button class="footer-button" onclick="toggleHistory()">History</button>
+            <button class="footer-button" onclick="restartStory()">Restart</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storyData = {
+        'scene-mh01': {
+            title: 'The Train Arrives',
+            clip: 'clip-mh01',
+            url: 'https://youtube.com/embed/R4ZGGJsho7I',
+            externalUrl: 'https://youtube.com/watch?v=R4ZGGJsho7I',
+            choices: [
+                { text: 'Spot Jake by the truck', target: 'scene-rj02' },
+                { text: 'Go to the bakery', target: 'scene-hc04' },
+                { text: 'Watch a snowflake fall on her hand', target: 'scene-sk07' }
+            ]
+        },
+        'scene-rj02': {
+            title: 'The Unexpected Reunion',
+            clip: 'clip-rj02',
+            url: 'https://youtube.com/embed/BlAGHcJsJio',
+            externalUrl: 'https://youtube.com/watch?v=BlAGHcJsJio',
+            choices: [
+                { text: 'Walk together toward town', target: 'scene-tp03' },
+                { text: 'She looks away—keep moving', target: 'scene-hc04' },
+                { text: "Lily's snowball ambush", target: 'scene-lp05' }
+            ]
+        },
+        'scene-tp03': {
+            title: 'Old Friends, New Light',
+            clip: 'clip-tp03',
+            url: 'https://youtube.com/embed/q6mGKXTJdCw',
+            externalUrl: 'https://youtube.com/watch?v=q6mGKXTJdCw',
+            choices: [
+                { text: 'Ride to festival prep', target: 'scene-fp06' },
+                { text: 'She hops out to walk', target: 'scene-hc04' },
+                { text: 'Radio crackle—their song returns', target: 'scene-sr08' }
+            ]
+        },
+        'scene-hc04': {
+            title: 'The Hearth & Crumb',
+            clip: 'clip-hc04',
+            url: 'https://youtube.com/embed/7Fs_xFCEegM',
+            externalUrl: 'https://youtube.com/watch?v=7Fs_xFCEegM',
+            choices: [
+                { text: 'Talk about staying', target: 'scene-fp06' },
+                { text: 'Mention Jake', target: 'scene-tp03' },
+                { text: 'Tray slip—flour poof!', target: 'scene-bo09' }
+            ]
+        },
+        'scene-lp05': {
+            title: "Lily's Plan",
+            clip: 'clip-lp05',
+            url: 'https://youtube.com/embed/bFo5lWvD8Ms',
+            externalUrl: 'https://youtube.com/watch?v=bFo5lWvD8Ms',
+            choices: [
+                { text: 'Ben waves Emma over', target: 'scene-fp06' },
+                { text: 'He shrugs it off—hot cocoa', target: 'scene-hc04' },
+                { text: 'Grandma June overhears', target: 'scene-al10' }
+            ]
+        },
+        'scene-fp06': {
+            title: 'Festival Preparations',
+            clip: 'clip-fp06',
+            url: 'https://youtube.com/embed/TBPoH_FyWLw',
+            externalUrl: 'https://youtube.com/watch?v=TBPoH_FyWLw',
+            choices: [
+                { text: 'Keep hanging—hands brush again', target: 'scene-sr08' },
+                { text: 'Ben calls Emma aside', target: 'scene-lp05' },
+                { text: 'Power flickers—golden flare', target: 'scene-al10' }
+            ]
+        },
+        'scene-sk07': {
+            title: "A Stranger's Kindness",
+            clip: 'clip-sk07',
+            url: 'https://youtube.com/embed/5BT8jT16n88',
+            externalUrl: 'https://youtube.com/watch?v=5BT8jT16n88',
+            choices: [
+                { text: 'Cocoa detour', target: 'scene-hc04' },
+                { text: 'Back to the station', target: 'scene-mh01' },
+                { text: 'Camera catches strange light', target: 'scene-al10' }
+            ]
+        },
+        'scene-sr08': {
+            title: 'The Song Returns',
+            clip: 'clip-sr08',
+            url: 'https://youtube.com/embed/LpjWnlA5Eus',
+            externalUrl: 'https://youtube.com/watch?v=LpjWnlA5Eus',
+            choices: [
+                { text: 'Smile—head to festival', target: 'scene-fp06' },
+                { text: 'Change the subject—bakery', target: 'scene-hc04' },
+                { text: 'Soft duet—snow intensifies', target: 'scene-al10' }
+            ]
+        },
+        'scene-bo09': {
+            title: 'Bake-Off Mishap',
+            clip: 'clip-bo09',
+            url: 'https://youtube.com/embed/gY0AynfJ3m8',
+            externalUrl: 'https://youtube.com/watch?v=gY0AynfJ3m8',
+            choices: [
+                { text: 'Team up for the contest', target: 'scene-fp06' },
+                { text: 'Flour war spills outside', target: 'scene-lp05' },
+                { text: 'Grandma June taste-test', target: 'scene-al10' }
+            ]
+        },
+        'scene-al10': {
+            title: 'The Lights of Rising',
+            clip: 'clip-al10',
+            url: 'https://youtube.com/embed/mj1Dqod1MTA',
+            externalUrl: 'https://youtube.com/watch?v=mj1Dqod1MTA',
+            choices: [
+                { text: 'Emma & Jake hold hands—soft end', target: 'END' },
+                { text: "Lily's smile—loop back", target: 'scene-mh01' },
+                { text: 'Lantern flares—new hook', target: 'scene-sk07' }
+            ]
+        }
+    };
+
+    let currentScene = 'scene-mh01';
+    let storyHistory = [];
+    let choiceCount = 0;
+    let mapInitialized = false;
+    let svgGroup, currentTransform;
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            if ((tabName === 'story' && tab.textContent === 'Story') ||
+                (tabName === 'map' && tab.textContent === 'Map')) {
+                tab.classList.add('active');
+            }
+        });
+        
+        if (tabName === 'story') {
+            document.getElementById('story-content').classList.add('active');
+        } else if (tabName === 'map') {
+            document.getElementById('map-content').classList.add('active');
+            if (!mapInitialized) {
+                initializeMap();
+                mapInitialized = true;
+            }
+            updateMap();
+        }
+    }
+
+    function initializeMap() {
+        const mapContainer = document.getElementById('story-map');
+        const width = mapContainer.clientWidth || 900;
+        const height = 600;
+        
+        mapContainer.setAttribute('width', width);
+        mapContainer.setAttribute('height', height);
+        
+        svgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        mapContainer.appendChild(svgGroup);
+        
+        let isPanning = false;
+        let startPoint = { x: 0, y: 0 };
+        currentTransform = { x: 0, y: 0, scale: 1 };
+        
+        const updateTransform = () => {
+            svgGroup.setAttribute('transform', 
+                `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.scale})`);
+        };
+        
+        mapContainer.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.map-node')) return;
+            isPanning = true;
+            startPoint = { x: e.clientX - currentTransform.x, y: e.clientY - currentTransform.y };
+        });
+        
+        mapContainer.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            currentTransform.x = e.clientX - startPoint.x;
+            currentTransform.y = e.clientY - startPoint.y;
+            updateTransform();
+        });
+        
+        mapContainer.addEventListener('mouseup', () => {
+            isPanning = false;
+        });
+        
+        mapContainer.addEventListener('mouseleave', () => {
+            isPanning = false;
+        });
+        
+        mapContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            currentTransform.scale *= delta;
+            currentTransform.scale = Math.max(0.5, Math.min(3, currentTransform.scale));
+            updateTransform();
+        });
+        
+        const nodes = [
+            { id: 'scene-mh01', x: width/2, y: 50, label: 'mh01', color: '#10b981' },
+            { id: 'scene-rj02', x: width/3, y: 150, label: 'rj02', color: '#6366f1' },
+            { id: 'scene-hc04', x: width/2, y: 200, label: 'hc04', color: '#8ab4f8' },
+            { id: 'scene-sk07', x: width*2/3, y: 150, label: 'sk07', color: '#6366f1' },
+            { id: 'scene-tp03', x: width/4, y: 280, label: 'tp03', color: '#6366f1' },
+            { id: 'scene-lp05', x: width/6, y: 380, label: 'lp05', color: '#6366f1' },
+            { id: 'scene-fp06', x: width/2, y: 350, label: 'fp06', color: '#8ab4f8' },
+            { id: 'scene-sr08', x: width*3/4, y: 280, label: 'sr08', color: '#6366f1' },
+            { id: 'scene-bo09', x: width*3/5, y: 450, label: 'bo09', color: '#6366f1' },
+            { id: 'scene-al10', x: width/2, y: 500, label: 'al10', color: '#f59e0b' },
+            { id: 'END', x: width/2, y: 580, label: 'END', color: '#ef4444' }
+        ];
+        
+        const links = [];
+        Object.keys(storyData).forEach(sceneId => {
+            const scene = storyData[sceneId];
+            scene.choices.forEach(choice => {
+                const source = nodes.find(n => n.id === sceneId);
+                const target = nodes.find(n => n.id === choice.target);
+                if (source && target) {
+                    links.push({ source, target, sourceId: sceneId, targetId: choice.target });
+                }
+            });
+        });
+        
+        links.forEach(link => {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const dx = link.target.x - link.source.x;
+            const dy = link.target.y - link.source.y;
+            const pathData = `M${link.source.x},${link.source.y} Q${(link.source.x + link.target.x)/2},${(link.source.y + link.target.y)/2 - 30} ${link.target.x},${link.target.y}`;
+            path.setAttribute('d', pathData);
+            path.setAttribute('class', 'map-link');
+            path.dataset.source = link.sourceId;
+            path.dataset.target = link.targetId;
+            svgGroup.appendChild(path);
+        });
+        
+        nodes.forEach(node => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'map-node unvisited');
+            g.setAttribute('transform', `translate(${node.x},${node.y})`);
+            g.dataset.sceneId = node.id;
+            
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', 18);
+            circle.setAttribute('fill', node.color);
+            circle.setAttribute('stroke', '#e8eaed');
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('dy', '0.35em');
+            text.textContent = node.label;
+            
+            g.appendChild(circle);
+            g.appendChild(text);
+            
+            const sceneData = storyData[node.id];
+            if (sceneData) {
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = sceneData.title;
+                g.appendChild(title);
+            }
+            
+            svgGroup.appendChild(g);
+            
+            g.onclick = () => {
+                if (node.id !== 'END') {
+                    switchTab('story');
+                    loadScene(node.id);
+                }
+            };
+        });
+    }
+    
+    function updateMap() {
+        if (!mapInitialized) return;
+        
+        const visitedSet = new Set(storyHistory);
+        
+        document.querySelectorAll('.map-node').forEach(node => {
+            const sceneId = node.dataset.sceneId;
+            node.classList.remove('visited', 'unvisited', 'current');
+            
+            if (sceneId === currentScene) {
+                node.classList.add('current');
+            } else if (visitedSet.has(sceneId)) {
+                node.classList.add('visited');
+            } else {
+                node.classList.add('unvisited');
+            }
+        });
+        
+        document.querySelectorAll('.map-link').forEach(link => {
+            link.classList.remove('traveled');
+            const source = link.dataset.source;
+            const target = link.dataset.target;
+            
+            for (let i = 0; i < storyHistory.length - 1; i++) {
+                if (storyHistory[i] === source && storyHistory[i + 1] === target) {
+                    link.classList.add('traveled');
+                    break;
+                }
+            }
+        });
+    }
+    
+    function resetMapView() {
+        if (!mapInitialized || !currentTransform) return;
+        currentTransform.x = 0;
+        currentTransform.y = 0;
+        currentTransform.scale = 1;
+        svgGroup.setAttribute('transform', 'translate(0,0) scale(1)');
+    }
+    
+    function centerOnCurrent() {
+        if (!mapInitialized || !currentTransform) return;
+        const currentNode = document.querySelector(`.map-node[data-scene-id="${currentScene}"]`);
+        if (currentNode) {
+            const transform = currentNode.getAttribute('transform');
+            const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+            if (match) {
+                const x = parseFloat(match[1]);
+                const y = parseFloat(match[2]);
+                const mapContainer = document.getElementById('story-map');
+                const width = mapContainer.clientWidth;
+                const height = 600;
+                currentTransform.scale = 1.5;
+                currentTransform.x = width/2 - x * currentTransform.scale;
+                currentTransform.y = height/2 - y * currentTransform.scale;
+                svgGroup.setAttribute('transform', 
+                    `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.scale})`);
+            }
+        }
+    }
+
+    function loadScene(sceneId) {
+        if (sceneId === 'END') {
+            showEndScreen();
+            return;
+        }
+
+        const scene = storyData[sceneId];
+        if (!scene) {
+            console.error('Scene not found:', sceneId);
+            return;
+        }
+
+        currentScene = sceneId;
+        storyHistory.push(sceneId);
+        choiceCount++;
+
+        document.getElementById('video-player').src = scene.url;
+        document.getElementById('external-link').href = scene.externalUrl;
+        document.getElementById('scene-title').textContent = scene.title;
+        document.getElementById('scene-id').textContent = scene.clip;
+
+        const choicesContainer = document.getElementById('choices');
+        choicesContainer.innerHTML = '';
+
+        scene.choices.forEach(choice => {
+            const button = document.createElement('button');
+            button.className = 'choice-button';
+            button.textContent = choice.text;
+            button.onclick = () => loadScene(choice.target);
+            choicesContainer.appendChild(button);
+        });
+
+        updateProgress();
+        updateMap();
+    }
+
+    function showEndScreen() {
+        const container = document.getElementById('game-container');
+        container.innerHTML = `
+            <div id="header">
+                <div id="title">Maple Hollow: Aslan Rising</div>
+                <div id="subtitle">An Interactive Story</div>
+            </div>
+            <div class="end-screen">
+                <div class="end-title">The End</div>
+                <div class="end-message">
+                    Emma and Jake's story has reached its conclusion.<br>
+                    But in Maple Hollow, every ending is just a new beginning.
+                </div>
+                <div class="end-stats">
+                    <div class="stat-line">Scenes visited: ${new Set(storyHistory).size}</div>
+                    <div class="stat-line">Choices made: ${choiceCount}</div>
+                    <div class="stat-line">Your path: ${storyHistory.slice(-3).join(' → ')}</div>
+                </div>
+                <button class="restart-button" onclick="restartStory()">Play Again</button>
+            </div>
+        `;
+    }
+
+    function updateProgress() {
+        const uniqueScenes = new Set(storyHistory).size;
+        const totalScenes = Object.keys(storyData).length;
+        document.getElementById('progress').textContent = 
+            `Scenes: ${uniqueScenes}/${totalScenes} | Choices: ${choiceCount}`;
+    }
+
+    function toggleHistory() {
+        const recent = storyHistory.slice(-5).join(' → ');
+        alert(`Recent path:\n${recent}`);
+    }
+
+    function restartStory() {
+        location.reload();
+    }
+
+    loadScene('scene-mh01');
+</script>
+```
+
+</body>
+</html>
