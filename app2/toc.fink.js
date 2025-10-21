@@ -151,11 +151,15 @@ https://danbri.github.io/glitchcan-minigam/inklet/gamgam-wc.html
 
 Classic FINK Episodes
 
-These are the same stories available in the main app, demonstrating that app2 doesn't break existing content.
+Interactive fiction stories powered by real INK engine:
 
-+ [Hampstead] -> load_hampstead
-+ [Bagend] -> load_bagend
-+ [Back to Main] -> main_menu
++ [🏙️ Hampstead Heath Adventure] -> load_hampstead
++ [🏡 Bagend: Bilbo's Home] -> load_bagend
++ [🏰 Shane Manor Mystery] -> load_shane_manor
++ [⛰️ Mudslidemines Depths] -> load_mudslidemines
++ [🌊 Riverbend Tales] -> load_riverbend
++ [🇺🇦 Ukrainian Language Learning] -> load_ukrainian
++ [🏠 Back to Main] -> main_menu
 
 === load_hampstead ===
 # FINK: ../inklet/hampstead.fink.js
@@ -163,6 +167,22 @@ These are the same stories available in the main app, demonstrating that app2 do
 
 === load_bagend ===
 # FINK: ../inklet/bagend.fink.js
+-> external_story
+
+=== load_shane_manor ===
+# FINK: ../inklet/shane-manor.fink.js
+-> external_story
+
+=== load_mudslidemines ===
+# FINK: ../inklet/mudslidemines.fink.js
+-> external_story
+
+=== load_riverbend ===
+# FINK: ../inklet/riverbend.fink.js
+-> external_story
+
+=== load_ukrainian ===
+# FINK: ../inklet/tml-2025-langlearn.fink.js
 -> external_story
 
 === help ===
