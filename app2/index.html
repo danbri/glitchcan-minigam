@@ -235,8 +235,12 @@
                 }
             }
 
-            // Call original to render choices
-            FinkUI.renderChoices();
+            // Render choices using FinkUI
+            if (story.currentChoices && story.currentChoices.length > 0) {
+                FinkUI.displayChoices(story.currentChoices, (index) => {
+                    FinkInkEngine.continueStory(index);
+                });
+            }
         };
 
         // Launch minigame function
