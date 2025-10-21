@@ -45,16 +45,22 @@ PLUS:
 └── Minigame integration (inline script in index.html)
 ```
 
-### Latest Fix (Oct 21, 2025 - Post Nuclear Rebuild):
-**ISSUE:** Choices displayed but clicking them did nothing
-**ROOT CAUSE:** Minigame override of `FinkInkEngine.continueStory()` didn't handle `choiceIndex` parameter
-**FIX:** Updated override to:
-1. Accept `choiceIndex` parameter (matching original signature)
-2. Call `story.ChooseChoiceIndex(index)` when index provided
-3. Clear choices before processing continuation
-4. Then process story continuation normally
+### Latest Fixes (Oct 21, 2025 - Post Nuclear Rebuild):
 
-**COMMIT:** c80e9b7 "Fix choice click handling in minigame override"
+**FIX 1: Choices not responding to clicks**
+- **ISSUE:** Choices displayed but clicking them did nothing
+- **ROOT CAUSE:** Minigame override didn't handle `choiceIndex` parameter
+- **FIX:** Added choice selection logic before story continuation
+- **COMMIT:** c80e9b7
+
+**FIX 2: External FINK stories don't load**
+- **ISSUE:** Classic Episodes menu items don't load external stories
+- **ROOT CAUSE:** Minigame override replaced ALL continueStory() logic, bypassing FINK/IMAGE/BASEHREF tag handling
+- **FIX:** Refactored to peek ahead for MINIGAME tags:
+  - If MINIGAME found → intercept and launch minigame
+  - If NO MINIGAME → delegate to original continueStory() with full features
+- **RESULT:** Preserves all inklet/app/ functionality (FINK, IMAGE, BASEHREF, MENU tags, etc.)
+- **COMMITS:** edf14c9 (added 6 classic stories), ba2c4c5 (fixed loading)
 
 ### What Works Now (v3):
 ✅ ALL inklet/app/ features:
