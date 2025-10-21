@@ -163,6 +163,7 @@
         let currentStory = null;
         let currentStoryUrl = null;
         let activeMinigame = null;
+        let currentBasehref = '../inklet/media/'; // Default media path
 
         // DOM elements
         const storyContainer = document.getElementById('story');
@@ -175,6 +176,9 @@
         const minigameControls = document.getElementById('minigame-controls');
         const debugConsole = document.getElementById('debug-console');
         const debugToggle = document.getElementById('debug-toggle');
+        const storyImage = document.getElementById('story-image');
+        const storyVideo = document.getElementById('story-video');
+        const imageContainer = document.getElementById('image-container');
 
         // Debug logging
         function debug(message, data = null) {
@@ -272,6 +276,23 @@
 
                 debug('Story line', { text, tags });
 
+                // Process tags
+                tags.forEach(tag => {
+                    // Check for BASEHREF tag
+                    if (tag.includes('BASEHREF:')) {
+                        const newBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                        currentBasehref = newBasehref.endsWith('/') ? newBasehref : newBasehref + '/';
+                        debug('BASEHREF updated', { currentBasehref });
+                    }
+
+                    // Check for IMAGE tag
+                    if (tag.includes('IMAGE:')) {
+                        const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                        debug('IMAGE tag detected', { imagePath, currentBasehref });
+                        displayImage(imagePath);
+                    }
+                });
+
                 // Check for MINIGAME tag
                 const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
                 if (minigameTag) {
@@ -319,6 +340,50 @@
             debug('Choice made', { index });
             currentStory.ChooseChoiceIndex(index);
             continueStory();
+        }
+
+        // Display image
+        function displayImage(imagePath) {
+            if (!imagePath) {
+                debug('No image path provided');
+                return;
+            }
+
+            // Resolve full image URL
+            const fullUrl = resolveMediaUrl(imagePath);
+            debug('Displaying image', { imagePath, fullUrl });
+
+            // Hide video, show image
+            storyVideo.classList.add('hidden');
+            storyImage.src = fullUrl;
+            storyImage.classList.remove('hidden');
+            imageContainer.classList.remove('hidden');
+        }
+
+        // Resolve media URL using current BASEHREF
+        function resolveMediaUrl(path) {
+            // If path is absolute URL, use as-is
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+                return path;
+            }
+
+            // If path starts with /, resolve relative to origin
+            if (path.startsWith('/')) {
+                return window.location.origin + path;
+            }
+
+            // Otherwise, combine with BASEHREF
+            const base = currentBasehref;
+
+            // Create full URL by resolving against current page location
+            try {
+                const baseUrl = new URL(base, window.location.href);
+                return new URL(path, baseUrl).href;
+            } catch (e) {
+                debug('Error resolving media URL', { error: e.message, base, path });
+                // Fallback: simple concatenation
+                return base + path;
+            }
         }
 
         // Launch minigame
