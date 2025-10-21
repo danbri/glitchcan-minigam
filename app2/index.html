@@ -2,432 +2,435 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>App2 - FINK + Minigame Integration</title>
-    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin">
-    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>App2 - FINK + Minigame</title>
 
-    <!-- Real INK compiler integration -->
+    <!-- Real INK compiler -->
     <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
 
-    <!-- Copy existing app CSS for now -->
-    <link rel="stylesheet" href="../inklet/app/fink-player.css">
-
     <style>
-        /* App2-specific styling */
-        .app2-badge {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 68, 0, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 10000;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .minigame-container {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .badge {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            background: #ff4400;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 9999;
+        }
+
+        .error {
+            position: fixed;
+            top: 40px;
+            left: 8px;
+            right: 8px;
+            background: #f00;
+            color: #fff;
+            padding: 12px;
+            border-radius: 4px;
             display: none;
+            z-index: 9998;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 12px 16px;
+            border-bottom: 1px solid #444;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .status {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 9000;
         }
 
-        .minigame-container.active {
-            display: flex;
-            flex-direction: column;
+        .status.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #444;
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .content {
+            padding: 16px;
+            padding-bottom: 200px;
+        }
+
+        .content p {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .choices {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #2a2a2a;
+            padding: 16px;
+            border-top: 1px solid #444;
+        }
+
+        .choice {
+            display: block;
+            width: 100%;
+            background: #4a4a4a;
+            color: #fff;
+            border: none;
+            padding: 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .choice:active {
+            background: #5a5a5a;
+        }
+
+        .debug {
+            position: fixed;
+            bottom: 60px;
+            right: 8px;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 8000;
+        }
+
+        .console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50vh;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 10px;
+            overflow-y: auto;
+            padding: 8px;
+            display: none;
+            z-index: 8001;
+        }
+
+        .console.show {
+            display: block;
+        }
+
+        .minigame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: none;
             align-items: center;
             justify-content: center;
+            z-index: 7000;
         }
 
-        .minigame-demo {
-            background: #222;
-            padding: 40px;
+        .minigame.active {
+            display: flex;
+        }
+
+        .minigame-box {
+            background: #2a2a2a;
+            padding: 24px;
             border-radius: 8px;
+            max-width: 400px;
             text-align: center;
+        }
+
+        .minigame-box h2 {
+            margin-bottom: 12px;
+        }
+
+        .minigame-box button {
+            background: #4a9eff;
             color: #fff;
-            max-width: 600px;
-        }
-
-        .minigame-demo h2 {
-            margin-top: 0;
-            color: #4af;
-        }
-
-        .minigame-demo button {
-            background: #4af;
-            color: #000;
             border: none;
             padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
+            margin: 4px;
             border-radius: 4px;
-            cursor: pointer;
-            margin: 8px;
-        }
-
-        .minigame-demo button:hover {
-            background: #6cf;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="app2-badge">APP2 - EXPERIMENTAL</div>
+    <div class="badge">APP2 v2</div>
+    <div class="error" id="error"></div>
 
-    <div class="app-container" id="app-container">
-        <div class="menu-trigger" id="menu-trigger"></div>
-        <div class="title-bar" id="title-bar">
-            <div class="story-menu">
-                <h1 class="story-title" id="story-title">App2</h1>
-                <div class="story-dropdown" id="story-dropdown">
-                    <div class="dropdown-section">
-                        <div class="dropdown-header">Story</div>
-                        <button class="dropdown-item" id="story-restart">🔄 Restart Story</button>
-                        <button class="dropdown-item" id="return-to-main">🏠 Return to Main Menu</button>
-                    </div>
-                    <div class="dropdown-section">
-                        <div class="dropdown-header">Tools</div>
-                        <button class="dropdown-item" id="open-devtools">🤖 Open DevTools</button>
-                    </div>
-                </div>
-            </div>
-            <div class="controls">
-                <button class="fullscreen-button" id="fullscreen-button">📺</button>
-                <button class="menu-button" id="menu-button">⚙️</button>
-            </div>
-        </div>
+    <div class="header">
+        <div class="title">FINK + Minigame Demo</div>
+    </div>
 
-        <div class="story-container">
-            <div class="image-container" id="image-container">
-                <img id="story-image" alt="Story scene" class="hidden">
-                <video id="story-video" loop muted playsinline class="hidden"></video>
-                <div class="image-overlay"></div>
-            </div>
+    <div class="status" id="status">
+        <div class="spinner"></div>
+    </div>
 
-            <div class="story-content" id="story-content-container">
-                <div id="story"></div>
-            </div>
-        </div>
+    <div class="content" id="content"></div>
+    <div class="choices" id="choices"></div>
 
-        <div class="choices-container" id="choices-container">
-            <!-- Choices will be added here dynamically -->
-        </div>
+    <button class="debug" id="debug-btn">CONSOLE</button>
+    <div class="console" id="console"></div>
 
-        <div class="status-overlay" id="status-overlay">
-            <div id="status">
-                <div class="status-spinner"></div>
-                <div id="status-text">Loading story...</div>
-            </div>
+    <div class="minigame" id="minigame">
+        <div class="minigame-box">
+            <h2 id="mg-title">Minigame</h2>
+            <p id="mg-text">Instructions</p>
+            <div id="mg-controls"></div>
         </div>
     </div>
 
-    <!-- Minigame container (hidden by default) -->
-    <div class="minigame-container" id="minigame-container">
-        <div class="minigame-demo">
-            <h2 id="minigame-title">Minigame Demo</h2>
-            <p id="minigame-instructions">Click buttons to simulate minigame results</p>
-            <div id="minigame-controls"></div>
-        </div>
-    </div>
+    <script>
+    (function() {
+        'use strict';
 
-    <!-- Hidden sandbox iframe for loading fink.js files -->
-    <iframe id="fink-sandbox" sandbox="allow-scripts" style="display: none;"></iframe>
-
-    <!-- Debug console -->
-    <div id="debug-console"></div>
-    <button id="debug-toggle">DEBUG</button>
-
-    <script type="module">
-        // App2 - FINK Player with Minigame Integration
-        // Uses gcfink library for FINK extraction and INK compilation
-
-        import { extractFinkFromJsSource, compileInk } from './gcfink/src/index.js';
-
-        // Configuration
-        const CONFIG = {
-            DEFAULT_FINK_FILE: './toc.fink.js',
-            SANDBOX_TIMEOUT_MS: 15000,
-            DEBUG_ENABLED: true
+        const $ = id => document.getElementById(id);
+        const log = (msg, data) => {
+            const line = `${new Date().toLocaleTimeString()}: ${msg}`;
+            console.log(line, data || '');
+            const div = document.createElement('div');
+            div.textContent = line + (data ? ' ' + JSON.stringify(data) : '');
+            $('console').appendChild(div);
+            $('console').scrollTop = $('console').scrollHeight;
         };
 
+        const showError = msg => {
+            $('error').textContent = msg;
+            $('error').style.display = 'block';
+            log('ERROR: ' + msg);
+        };
+
+        const hideStatus = () => $('status').classList.add('hidden');
+        const showStatus = () => $('status').classList.remove('hidden');
+
+        // Check inkjs
+        if (!window.inkjs) {
+            showError('InkJS failed to load. Check network.');
+            hideStatus();
+            return;
+        }
+        log('InkJS loaded OK');
+
+        // Inline FINK extraction
+        function extractFink(jsCode) {
+            const items = [];
+            function oooOO(strings) {
+                try {
+                    const txt = strings && strings.raw ? strings.raw.join('') : String(strings || '');
+                    items.push(txt);
+                    return txt;
+                } catch (e) {
+                    return '';
+                }
+            }
+            try {
+                new Function('oooOO', jsCode)(oooOO);
+            } catch (e) {
+                log('Extract error', e.message);
+            }
+            const seen = new Set();
+            const unique = [];
+            items.forEach(x => { if (!seen.has(x)) { seen.add(x); unique.push(x); } });
+            return unique.join('\n');
+        }
+
         // State
-        let currentStory = null;
-        let currentStoryUrl = null;
-        let activeMinigame = null;
+        let story = null;
+        let storyUrl = null;
 
-        // DOM elements
-        const storyContainer = document.getElementById('story');
-        const choicesContainer = document.getElementById('choices-container');
-        const statusOverlay = document.getElementById('status-overlay');
-        const statusText = document.getElementById('status-text');
-        const minigameContainer = document.getElementById('minigame-container');
-        const minigameTitle = document.getElementById('minigame-title');
-        const minigameInstructions = document.getElementById('minigame-instructions');
-        const minigameControls = document.getElementById('minigame-controls');
-        const debugConsole = document.getElementById('debug-console');
-        const debugToggle = document.getElementById('debug-toggle');
-
-        // Debug logging
-        function debug(message, data = null) {
-            if (!CONFIG.DEBUG_ENABLED) return;
-            const timestamp = new Date().toLocaleTimeString();
-            console.log(`[${timestamp}] ${message}`, data || '');
-
-            const entry = document.createElement('div');
-            entry.textContent = `${timestamp}: ${message}`;
-            if (data) entry.textContent += ` ${JSON.stringify(data)}`;
-            debugConsole.appendChild(entry);
-            debugConsole.scrollTop = debugConsole.scrollHeight;
-        }
-
-        // Status overlay
-        function setStatus(message, show = true) {
-            statusText.textContent = message;
-            statusOverlay.style.display = show ? 'flex' : 'none';
-        }
-
-        // Load and compile FINK file
-        async function loadFinkFile(url) {
-            debug(`Loading FINK file: ${url}`);
-            setStatus(`Loading ${url}...`);
+        // Load FINK file
+        async function loadFink(url) {
+            log('Loading FINK: ' + url);
+            showStatus();
 
             try {
-                // Fetch FINK JS file
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
-                }
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('Fetch failed: ' + resp.statusText);
 
-                const finkJs = await response.text();
-                debug('FINK JS loaded', { length: finkJs.length });
+                const jsCode = await resp.text();
+                log('FINK downloaded', { bytes: jsCode.length });
 
-                // Extract INK content using gcfink
-                const inkSource = extractFinkFromJsSource(finkJs);
-                debug('INK extracted', { length: inkSource.length });
+                const ink = extractFink(jsCode);
+                log('INK extracted', { bytes: ink.length });
 
-                // Compile with real inkjs compiler
-                const result = compileInk(inkSource, {
-                    compilerImpl: (source) => new window.inkjs.Compiler(source).Compile()
-                });
+                if (!ink || ink.length < 10) throw new Error('No INK content extracted');
 
-                if (!result.ok) {
-                    throw result.error;
-                }
+                story = new window.inkjs.Compiler(ink).Compile();
+                if (!story) throw new Error('Compile failed');
 
-                currentStory = result.story;
-                currentStoryUrl = url;
-                debug('Story compiled successfully');
+                storyUrl = url;
+                log('Story compiled OK');
 
-                // Initialize INK variables for minigame demos
-                if (!currentStory.variablesState.minigame_score) {
-                    currentStory.variablesState.minigame_score = 0;
-                }
-                if (!currentStory.variablesState.minigame_attempts) {
-                    currentStory.variablesState.minigame_attempts = 0;
-                }
-                if (!currentStory.variablesState.collected_items) {
-                    currentStory.variablesState.collected_items = 0;
-                }
-                if (!currentStory.variablesState.has_red_key) {
-                    currentStory.variablesState.has_red_key = false;
-                }
-                if (!currentStory.variablesState.has_blue_key) {
-                    currentStory.variablesState.has_blue_key = false;
-                }
+                // Init vars
+                story.variablesState.minigame_score = story.variablesState.minigame_score || 0;
+                story.variablesState.minigame_attempts = story.variablesState.minigame_attempts || 0;
 
-                setStatus('', false);
+                hideStatus();
                 continueStory();
-            } catch (error) {
-                console.error('Error loading FINK:', error);
-                debug('Error loading FINK', { error: error.message });
-                setStatus(`Error: ${error.message}`, true);
+            } catch (e) {
+                hideStatus();
+                showError(e.message);
             }
         }
 
-        // Continue story execution
+        // Continue story
         function continueStory() {
-            if (!currentStory) {
-                debug('No story loaded');
-                return;
-            }
+            if (!story) return;
 
-            // Clear previous content
-            choicesContainer.innerHTML = '';
+            $('choices').innerHTML = '';
+            const content = $('content');
 
-            // Continue story until we hit choices or end
-            let fragment = document.createDocumentFragment();
+            while (story.canContinue) {
+                const text = story.Continue();
+                const tags = story.currentTags || [];
 
-            while (currentStory.canContinue) {
-                const text = currentStory.Continue();
-                const tags = currentStory.currentTags || [];
-
-                debug('Story line', { text, tags });
-
-                // Check for MINIGAME tag
-                const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
-                if (minigameTag) {
-                    const gameName = minigameTag.split(':')[1].trim();
-                    debug('MINIGAME tag detected', { gameName });
-                    launchMinigame(gameName);
-                    return; // Pause story execution
+                // Check for minigame tag
+                const mgTag = tags.find(t => t.startsWith('MINIGAME:'));
+                if (mgTag) {
+                    const game = mgTag.split(':')[1].trim();
+                    log('Minigame tag: ' + game);
+                    launchMinigame(game);
+                    return;
                 }
 
-                // Render text
                 if (text.trim()) {
                     const p = document.createElement('p');
                     p.textContent = text.trim();
-                    fragment.appendChild(p);
+                    content.appendChild(p);
                 }
             }
 
-            storyContainer.appendChild(fragment);
-
             // Render choices
-            if (currentStory.currentChoices && currentStory.currentChoices.length > 0) {
-                debug('Rendering choices', { count: currentStory.currentChoices.length });
-
-                currentStory.currentChoices.forEach((choice, index) => {
-                    const button = document.createElement('button');
-                    button.className = 'choice-button';
-                    button.textContent = choice.text;
-                    button.onclick = () => makeChoice(index);
-                    choicesContainer.appendChild(button);
+            if (story.currentChoices && story.currentChoices.length > 0) {
+                log('Rendering choices', { count: story.currentChoices.length });
+                story.currentChoices.forEach((ch, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice';
+                    btn.textContent = ch.text;
+                    btn.onclick = () => makeChoice(i);
+                    $('choices').appendChild(btn);
                 });
             } else {
-                debug('Story ended');
-                const endP = document.createElement('p');
-                endP.textContent = '— THE END —';
-                endP.style.textAlign = 'center';
-                endP.style.opacity = '0.6';
-                storyContainer.appendChild(endP);
+                log('Story ended');
+                const p = document.createElement('p');
+                p.textContent = '— THE END —';
+                p.style.textAlign = 'center';
+                p.style.opacity = '0.5';
+                content.appendChild(p);
             }
 
-            storyContainer.scrollTop = storyContainer.scrollHeight;
+            content.scrollTop = content.scrollHeight;
         }
 
-        // Make a choice
-        function makeChoice(index) {
-            debug('Choice made', { index });
-            currentStory.ChooseChoiceIndex(index);
+        // Make choice
+        function makeChoice(idx) {
+            log('Choice: ' + idx);
+            story.ChooseChoiceIndex(idx);
             continueStory();
         }
 
         // Launch minigame
-        function launchMinigame(gameName) {
-            debug('Launching minigame', { gameName });
-            activeMinigame = gameName;
+        function launchMinigame(name) {
+            log('Launching minigame: ' + name);
+            $('mg-title').textContent = 'Minigame: ' + name;
+            $('mg-controls').innerHTML = '';
 
-            // Show minigame container
-            minigameContainer.classList.add('active');
-            minigameTitle.textContent = `Minigame: ${gameName}`;
+            if (name === 'simple-score') {
+                $('mg-text').textContent = 'Choose outcome:';
 
-            // Create minigame-specific demo controls
-            minigameControls.innerHTML = '';
-
-            if (gameName === 'simple-score') {
-                minigameInstructions.textContent = 'Simulate different score outcomes:';
-
-                const lowButton = createMinigameButton('Low Score (50)', () => {
-                    completeMinigame({ score: 50, attempts: 1 });
+                ['Low Score (50)', 'High Score (200)', 'Failed (0)'].forEach((label, i) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = label;
+                    btn.onclick = () => completeMinigame({ score: [50, 200, 0][i], attempts: 1 });
+                    $('mg-controls').appendChild(btn);
                 });
-                const highButton = createMinigameButton('High Score (200)', () => {
-                    completeMinigame({ score: 200, attempts: 1 });
-                });
-                const failButton = createMinigameButton('Failed (0)', () => {
-                    completeMinigame({ score: 0, attempts: 1 });
-                });
-
-                minigameControls.appendChild(lowButton);
-                minigameControls.appendChild(highButton);
-                minigameControls.appendChild(failButton);
             } else {
-                minigameInstructions.textContent = `Minigame "${gameName}" not fully implemented`;
-
-                const backButton = createMinigameButton('Return to Story', () => {
-                    minigameContainer.classList.remove('active');
-                    activeMinigame = null;
+                $('mg-text').textContent = 'Not implemented';
+                const btn = document.createElement('button');
+                btn.textContent = 'Back to Story';
+                btn.onclick = () => {
+                    $('minigame').classList.remove('active');
                     continueStory();
-                });
-                minigameControls.appendChild(backButton);
+                };
+                $('mg-controls').appendChild(btn);
             }
+
+            $('minigame').classList.add('active');
         }
 
-        // Create minigame button helper
-        function createMinigameButton(label, onclick) {
-            const button = document.createElement('button');
-            button.textContent = label;
-            button.onclick = onclick;
-            return button;
-        }
+        // Complete minigame
+        function completeMinigame(result) {
+            log('Minigame complete', result);
 
-        // Complete minigame and return to story
-        function completeMinigame(results) {
-            debug('Minigame complete', results);
-
-            // Update INK variables based on results
-            if (results.score !== undefined) {
-                currentStory.variablesState.minigame_score = results.score;
+            if (result.score !== undefined) {
+                story.variablesState.minigame_score = result.score;
             }
-            if (results.attempts !== undefined) {
-                currentStory.variablesState.minigame_attempts = results.attempts;
+            if (result.attempts !== undefined) {
+                story.variablesState.minigame_attempts = result.attempts;
             }
 
-            debug('INK variables updated', {
-                minigame_score: currentStory.variablesState.minigame_score,
-                minigame_attempts: currentStory.variablesState.minigame_attempts
-            });
-
-            // Hide minigame container
-            minigameContainer.classList.remove('active');
-            activeMinigame = null;
-
-            // Continue story
+            $('minigame').classList.remove('active');
             continueStory();
         }
 
-        // Menu buttons
-        document.getElementById('story-restart').onclick = () => {
-            debug('Restart requested');
-            if (currentStoryUrl) {
-                storyContainer.innerHTML = '';
-                loadFinkFile(currentStoryUrl);
-            }
-        };
-
-        document.getElementById('return-to-main').onclick = () => {
-            debug('Return to main menu');
-            storyContainer.innerHTML = '';
-            loadFinkFile(CONFIG.DEFAULT_FINK_FILE);
-        };
-
-        document.getElementById('open-devtools').onclick = () => {
-            debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
-        };
-
         // Debug toggle
-        debugToggle.onclick = () => {
-            debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
+        $('debug-btn').onclick = () => {
+            $('console').classList.toggle('show');
         };
 
-        // Menu dropdown
-        const menuButton = document.getElementById('menu-button');
-        const storyDropdown = document.getElementById('story-dropdown');
-        menuButton.onclick = () => {
-            storyDropdown.classList.toggle('active');
-        };
-
-        // Initialize
-        debug('App2 initializing');
-        loadFinkFile(CONFIG.DEFAULT_FINK_FILE);
+        // Start
+        log('App2 starting...');
+        loadFink('./toc.fink.js');
+    })();
     </script>
 </body>
 </html>

@@ -5,7 +5,10 @@ This PR adds a bleeding-edge experimental entry point that extends the FINK play
 ## 🎯 What's Added
 
 ### New Entry Point: `app2/`
-- **app2/index.html** - Entry point with minigame integration (433 lines)
+- **app2/index.html** - Ultra-minimal, iOS-compatible entry point (437 lines)
+  - 📱 **iOS Safari Compatible** - All code inline, no external dependencies
+  - 🔧 **Built-in Debug Console** - Tap CONSOLE button for error logs
+  - ⚡ **Zero Dependencies** - Only requires inkjs CDN
 - **app2/toc.fink.js** - Content TOC with minigame demos (200 lines)
 - **app2/README_APP2.md** - Comprehensive documentation (410 lines)
 
@@ -35,6 +38,13 @@ This PR adds a bleeding-edge experimental entry point that extends the FINK play
 - Uses `extractFinkFromJsSource()` for FINK extraction
 - Uses `compileInk()` with real inkjs compiler
 - Modular, testable design
+
+### 4. iOS Safari Compatibility
+- **Ultra-minimal implementation** - All CSS and JavaScript inline
+- **No ES6 module imports** - Fully compatible with GitHub Pages static hosting
+- **No external CSS dependencies** - Eliminates Eruda conflicts
+- **Built-in debugging** - Console button for mobile troubleshooting
+- **iOS-optimized meta tags** - `user-scalable=no`, `apple-mobile-web-app-capable`
 
 ## 🧪 Testing Results
 
@@ -126,6 +136,20 @@ See **PEER_ARCHITECTURE_DESIGN.md** for full design.
 3. Add Service Layer (Auth, Storage, Network)
 4. Transition to full peer architecture
 
+## 🔧 Troubleshooting
+
+### If you see a blank page on iOS:
+1. **Hard refresh** - Pull down to refresh or clear browsing data
+2. **Check badge** - Should say "APP2 v2" (not "APP2 - EXPERIMENTAL")
+3. **Tap CONSOLE button** - Built-in debug console shows errors
+4. **Wait for GitHub Pages** - Deployment takes 1-2 minutes after merge
+
+### Expected behavior:
+- Page loads with "FINK + Minigame Demo" title
+- Story content appears below header
+- Clickable choice buttons at bottom
+- Orange "APP2 v2" badge in top-right corner
+
 ---
 
-**All tests pass. Existing app unchanged. Ready for deployment.**
+**All tests pass. Existing app unchanged. iOS-compatible. Ready for deployment.**
