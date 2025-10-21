@@ -45,6 +45,17 @@ PLUS:
 └── Minigame integration (inline script in index.html)
 ```
 
+### Latest Fix (Oct 21, 2025 - Post Nuclear Rebuild):
+**ISSUE:** Choices displayed but clicking them did nothing
+**ROOT CAUSE:** Minigame override of `FinkInkEngine.continueStory()` didn't handle `choiceIndex` parameter
+**FIX:** Updated override to:
+1. Accept `choiceIndex` parameter (matching original signature)
+2. Call `story.ChooseChoiceIndex(index)` when index provided
+3. Clear choices before processing continuation
+4. Then process story continuation normally
+
+**COMMIT:** c80e9b7 "Fix choice click handling in minigame override"
+
 ### What Works Now (v3):
 ✅ ALL inklet/app/ features:
 - IMAGE tag support
@@ -74,6 +85,38 @@ PLUS:
 - `index-standalone.html` - Old incomplete version
 
 **ALWAYS use index.html - it's now the full-featured iOS-compatible version.**
+
+---
+
+## ⚠️ IMPORTANT: Development Environment vs Platform Support
+
+### Platform Support (Deployment Target):
+App2 works on **all modern web platforms**:
+- ✅ Desktop browsers (Chrome, Firefox, Safari, Edge)
+- ✅ iOS (all browsers)
+- ✅ Android (all browsers)
+
+### Development Environment (Where Code is Written):
+User often develops on **iPhone via Claude App**, which means:
+- ❌ **NO shell command access** - Don't suggest curl, wget, python server
+- ❌ **NO localhost testing** - Must use GitHub Pages
+- ❌ **NO traditional DevTools** - Use Eruda mobile debugger instead
+- ✅ **Eruda console available** - For viewing logs and debugging
+- ✅ **GitHub Pages deployment** - Primary testing method (1-5 min wait)
+
+### ❌ DON'T Suggest When User is on iPhone:
+- "Run `curl https://...`" - They can't
+- "Test at `http://localhost:8080`" - They can't
+- "Open browser DevTools console" - Not available
+- "Run `npm start`" - No shell access
+
+### ✅ DO Instead:
+- Commit and push to GitHub
+- Ask user to test at https://danbri.github.io/glitchcan-minigam/app2/
+- Use Eruda console for debugging (auto-loads on mobile)
+- Add extensive FinkUtils.debugLog() for troubleshooting
+
+**See `DEVELOPMENT_NOTES.md` for full details.**
 
 ---
 

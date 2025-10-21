@@ -199,11 +199,21 @@
         const minigameControls = document.getElementById('minigame-controls');
 
         // Override continueStory to intercept MINIGAME tags
-        FinkInkEngine.continueStory = function() {
+        FinkInkEngine.continueStory = function(choiceIndex = null) {
             const story = this.story;
-            if (!story) return;
+            if (!story) {
+                FinkUtils.debugLog('ERROR: Cannot continue - no story instance');
+                return;
+            }
 
-            // Process story lines
+            // FIRST: Make the choice if an index was provided
+            if (choiceIndex !== null && typeof choiceIndex === 'number') {
+                FinkUtils.debugLog('Making choice: ' + choiceIndex);
+                story.ChooseChoiceIndex(choiceIndex);
+                FinkUI.clearChoices();
+            }
+
+            // THEN: Process story lines
             while (story.canContinue) {
                 const text = story.Continue();
                 const tags = story.currentTags || [];
