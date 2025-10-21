@@ -6,6 +6,17 @@ This document provides essential context for understanding the Glitchcan App2 ar
 
 ---
 
+## 🔑 KEY FACT: App2 = inklet/app/ + MINIGAME Support
+
+**NEVER FORGET:** App2 is a **copy** of the fully working inklet/app/ code with MINIGAME tag support added on top.
+
+**Source of Truth:** `inklet/app/` contains the proven, working FINK player
+**App2 Relationship:** Uses all the same modules (fink-*.js files) PLUS minigame integration
+
+**If something works in inklet/app/ but not app2/, the bug is in app2's override logic, NOT the base modules.**
+
+---
+
 ## 🚨 CRITICAL: Nuclear Rebuild (Oct 21, 2025)
 
 **REGRESSION IDENTIFIED AND FIXED**
@@ -53,14 +64,20 @@ PLUS:
 - **FIX:** Added choice selection logic before story continuation
 - **COMMIT:** c80e9b7
 
-**FIX 2: External FINK stories don't load**
-- **ISSUE:** Classic Episodes menu items don't load external stories
-- **ROOT CAUSE:** Minigame override replaced ALL continueStory() logic, bypassing FINK/IMAGE/BASEHREF tag handling
-- **FIX:** Refactored to peek ahead for MINIGAME tags:
-  - If MINIGAME found → intercept and launch minigame
-  - If NO MINIGAME → delegate to original continueStory() with full features
-- **RESULT:** Preserves all inklet/app/ functionality (FINK, IMAGE, BASEHREF, MENU tags, etc.)
-- **COMMITS:** edf14c9 (added 6 classic stories), ba2c4c5 (fixed loading)
+**FIX 2: External FINK stories don't load (CRITICAL STATE RESTORE BUG)**
+- **ISSUE:** Classic Episodes menu items don't load external stories (Hampstead, Bagend, etc.)
+- **ROOT CAUSE:** Minigame override used save/restore state to peek ahead for MINIGAME tags
+  - This had a FATAL FLAW: state restore **undid the user's choice selection**!
+  - Flow: Click choice → ChooseChoiceIndex() → Save state → Peek ahead → **Restore state (UNDOES CHOICE!)** → Delegate
+  - Result: Story never navigated to chosen knot, FINK tags never seen, external loading never happened
+- **FIX:** Removed save/restore approach entirely. Override now:
+  - Processes story continuation normally (like original function)
+  - Intercepts MINIGAME tags when found
+  - Handles FINK tags directly (stores in lastSeenFinkTag)
+  - Checks for external loading trigger
+  - **No state manipulation, no undoing choices**
+- **WHY IT WORKS IN inklet/app/:** No override! Direct use of original continueStory() with no state games
+- **COMMITS:** edf14c9 (added 6 classic stories), ba2c4c5 (first attempt), 29a41df (proper fix)
 
 ### What Works Now (v3):
 ✅ ALL inklet/app/ features:
