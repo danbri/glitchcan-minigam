@@ -198,7 +198,7 @@
         const minigameInstructions = document.getElementById('minigame-instructions');
         const minigameControls = document.getElementById('minigame-controls');
 
-        // Override continueStory to intercept MINIGAME tags
+        // Override continueStory to intercept MINIGAME tags ONLY
         FinkInkEngine.continueStory = function(choiceIndex = null) {
             const story = this.story;
             if (!story) {
@@ -206,50 +206,57 @@
                 return;
             }
 
-            // FIRST: Make the choice if an index was provided
+            // Make choice if provided
             if (choiceIndex !== null && typeof choiceIndex === 'number') {
                 FinkUtils.debugLog('Making choice: ' + choiceIndex);
                 story.ChooseChoiceIndex(choiceIndex);
                 FinkUI.clearChoices();
             }
 
-            // THEN: Process story lines
-            while (story.canContinue) {
-                const text = story.Continue();
-                const tags = story.currentTags || [];
+            // Check for MINIGAME tag in upcoming content
+            // Peek ahead to see if there's a MINIGAME tag before processing
+            const savedState = story.state.ToJson();
+            let hasMinigameTag = false;
+            let minigameTagValue = null;
 
-                // Check for MINIGAME tag
+            while (story.canContinue) {
+                story.Continue();
+                const tags = story.currentTags || [];
                 const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
                 if (minigameTag) {
-                    const gameName = minigameTag.split(':')[1].trim();
-                    FinkUtils.debugLog('MINIGAME tag detected: ' + gameName);
+                    hasMinigameTag = true;
+                    minigameTagValue = minigameTag.split(':')[1].trim();
+                    break;
+                }
+            }
 
-                    // Add current text before launching minigame
+            // Restore state
+            story.state.LoadJson(savedState);
+
+            // If MINIGAME tag found, intercept and launch minigame
+            if (hasMinigameTag) {
+                FinkUtils.debugLog('MINIGAME tag detected: ' + minigameTagValue);
+
+                // Process up to the MINIGAME tag using original logic
+                while (story.canContinue) {
+                    const text = story.Continue();
+                    const tags = story.currentTags || [];
+
                     if (text.trim()) {
                         const p = document.createElement('p');
                         p.textContent = text.trim();
                         FinkUI.elements.storyElement.appendChild(p);
                     }
 
-                    // Launch minigame and pause story
-                    launchMinigame(gameName);
-                    return;
+                    const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
+                    if (minigameTag) {
+                        launchMinigame(minigameTagValue);
+                        return;
+                    }
                 }
-
-                // Normal text processing - let original function handle it
-                // But we need to do it manually since we're in the loop
-                if (text.trim()) {
-                    const p = document.createElement('p');
-                    p.textContent = text.trim();
-                    FinkUI.elements.storyElement.appendChild(p);
-                }
-            }
-
-            // Render choices using FinkUI
-            if (story.currentChoices && story.currentChoices.length > 0) {
-                FinkUI.displayChoices(story.currentChoices, (index) => {
-                    FinkInkEngine.continueStory(index);
-                });
+            } else {
+                // No MINIGAME tag - use original function for all features
+                originalContinueStory.call(this, null); // choiceIndex already processed above
             }
         };
 
