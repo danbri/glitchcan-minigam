@@ -13,6 +13,23 @@
     <!-- Real INK compiler integration -->
     <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
 
+    <!-- Eruda mobile debugging console -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        // Initialize Eruda for mobile debugging
+        // Always initialize to prevent "Please call eruda.init() first" errors
+        // It will only show on mobile or with ?eruda=true
+        if (typeof eruda !== 'undefined') {
+            eruda.init();
+            // Auto-show only on mobile or with URL param
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const erudaParam = new URLSearchParams(window.location.search).get('eruda');
+            if (!isMobile && erudaParam !== 'true') {
+                eruda.hide();
+            }
+        }
+    </script>
+
     <!-- Modular JS files (iOS compatible - no ES6 modules) -->
     <script src="fink-utils.js"></script>
     <script src="fink-config.js"></script>

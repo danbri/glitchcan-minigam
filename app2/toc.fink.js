@@ -1,6 +1,5 @@
 oooOO`
 
-// Declare variables used in minigame demos
 VAR minigame_score = 0
 VAR minigame_attempts = 0
 VAR collected_items = 0
