@@ -213,50 +213,109 @@
                 FinkUI.clearChoices();
             }
 
-            // Check for MINIGAME tag in upcoming content
-            // Peek ahead to see if there's a MINIGAME tag before processing
-            const savedState = story.state.ToJson();
-            let hasMinigameTag = false;
-            let minigameTagValue = null;
+            // Use a wrapper to intercept MINIGAME tags during normal processing
+            let minigameIntercepted = false;
 
-            while (story.canContinue) {
-                story.Continue();
-                const tags = story.currentTags || [];
-                const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
-                if (minigameTag) {
-                    hasMinigameTag = true;
-                    minigameTagValue = minigameTag.split(':')[1].trim();
-                    break;
-                }
-            }
+            // Call original function but intercept if we see a MINIGAME tag
+            try {
+                FinkUI.clearChoices();
+                let storyFragment = document.createDocumentFragment();
+                let lastImageTag = null;
+                let lastBasehrefTag = null;
 
-            // Restore state
-            story.state.LoadJson(savedState);
-
-            // If MINIGAME tag found, intercept and launch minigame
-            if (hasMinigameTag) {
-                FinkUtils.debugLog('MINIGAME tag detected: ' + minigameTagValue);
-
-                // Process up to the MINIGAME tag using original logic
                 while (story.canContinue) {
                     const text = story.Continue();
                     const tags = story.currentTags || [];
 
-                    if (text.trim()) {
-                        const p = document.createElement('p');
-                        p.textContent = text.trim();
-                        FinkUI.elements.storyElement.appendChild(p);
-                    }
-
+                    // Check for MINIGAME tag FIRST
                     const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
                     if (minigameTag) {
-                        launchMinigame(minigameTagValue);
+                        const gameName = minigameTag.split(':')[1].trim();
+                        FinkUtils.debugLog('MINIGAME tag detected: ' + gameName);
+
+                        // Append any accumulated content
+                        if (storyFragment.hasChildNodes()) {
+                            FinkUI.replaceStoryContent(storyFragment);
+                        }
+
+                        // Add current text before launching
+                        if (text.trim()) {
+                            const p = document.createElement('p');
+                            p.textContent = text.trim();
+                            FinkUI.elements.storyElement.appendChild(p);
+                        }
+
+                        launchMinigame(gameName);
+                        minigameIntercepted = true;
                         return;
                     }
+
+                    // Normal text processing
+                    if (text.trim()) {
+                        const p = document.createElement('p');
+                        let escapedText = FinkUtils.escapeHtml(text.trim());
+                        let formattedText = escapedText
+                            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                            .replace(/\*(.*?)\*/g, '<i>$1</i>');
+                        p.innerHTML = formattedText;
+                        storyFragment.appendChild(p);
+                    }
+
+                    // Track all INK tags (IMAGE, BASEHREF, FINK, etc.)
+                    tags.forEach(tag => {
+                        const parts = tag.split(':');
+                        const key = parts[0]?.trim().toUpperCase();
+                        const value = parts[1]?.trim();
+                        if (key === 'IMAGE') {
+                            lastImageTag = value;
+                        } else if (key === 'BASEHREF') {
+                            lastBasehrefTag = value.replace(/^\s*["']?|["']?\s*$/g, '');
+                        } else if (key === 'FINK' && value) {
+                            FinkInkEngine.lastSeenFinkTag = value;
+                            FinkUtils.debugLog('Stored FINK tag for later loading: ' + value);
+                        }
+                    });
                 }
-            } else {
-                // No MINIGAME tag - use original function for all features
-                originalContinueStory.call(this, null); // choiceIndex already processed above
+
+                // Check for external FINK loading BEFORE appending content
+                const storyText = storyFragment.textContent || '';
+                FinkUtils.debugLog('Fragment text: "' + storyText + '"');
+                FinkUtils.debugLog('Has FINK tag: ' + !!FinkInkEngine.lastSeenFinkTag);
+                if (storyText.includes('Loading external story') && FinkInkEngine.lastSeenFinkTag) {
+                    FinkUtils.debugLog('At external_story knot, checking for FINK tags to load');
+                    FinkInkEngine.handleExternalFinkLoading();
+                    return; // Don't generate choices yet, we're loading external content
+                }
+
+                // Append accumulated content
+                if (storyFragment.hasChildNodes()) {
+                    FinkUI.replaceStoryContent(storyFragment);
+                }
+
+                // Handle images
+                if (lastImageTag) {
+                    const base = lastBasehrefTag || (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+                    FinkUI.updateImage(lastImageTag, base);
+                } else {
+                    FinkUI.updateImageFromINKTags(story);
+                }
+
+                // Display choices
+                if (story.currentChoices.length > 0) {
+                    FinkUtils.debugLog('Displaying ' + story.currentChoices.length + ' choices');
+                    FinkUI.displayChoices(story.currentChoices, (index) => {
+                        FinkInkEngine.continueStory(index);
+                    });
+                    FinkUI.hideStatus();
+                } else {
+                    FinkUtils.debugLog('Reached end of story');
+                    FinkUI.showEndOfStory();
+                    FinkUI.hideStatus();
+                }
+
+            } catch (e) {
+                FinkUtils.debugLog('ERROR during story continuation: ' + e.message);
+                FinkUI.showStatus('Runtime Error: ' + e.message);
             }
         };
 
