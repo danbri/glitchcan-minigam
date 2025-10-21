@@ -1,5 +1,12 @@
 oooOO`
 
+// Declare variables used in minigame demos
+VAR minigame_score = 0
+VAR minigame_attempts = 0
+VAR collected_items = 0
+VAR has_red_key = false
+VAR has_blue_key = false
+
 # MENU: 🏠 Main Menu -> main_menu
 # MENU: 🎮 Minigame Demos -> minigame_demos
 
