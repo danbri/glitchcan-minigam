@@ -112,6 +112,28 @@
             border-top: 1px solid #444;
         }
 
+        .image-container {
+            width: 100%;
+            max-height: 40vh;
+            overflow: hidden;
+            background: #000;
+            display: none;
+        }
+
+        .image-container.show {
+            display: block;
+        }
+
+        .story-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .story-image.hidden {
+            display: none;
+        }
+
         .choice {
             display: block;
             width: 100%;
@@ -215,6 +237,10 @@
         <div class="spinner"></div>
     </div>
 
+    <div class="image-container" id="image-container">
+        <img id="story-image" class="story-image hidden" alt="Story scene">
+    </div>
+
     <div class="content" id="content"></div>
     <div class="choices" id="choices"></div>
 
@@ -286,6 +312,7 @@
         // State
         let story = null;
         let storyUrl = null;
+        let currentBasehref = '../inklet/media/'; // Default media path
 
         // Load FINK file
         async function loadFink(url) {
@@ -322,6 +349,43 @@
             }
         }
 
+        // Display image
+        function displayImage(imagePath) {
+            if (!imagePath) return;
+
+            const fullUrl = resolveMediaUrl(imagePath);
+            log('Displaying image: ' + fullUrl);
+
+            const img = $('story-image');
+            const container = $('image-container');
+
+            img.src = fullUrl;
+            img.classList.remove('hidden');
+            container.classList.add('show');
+        }
+
+        // Resolve media URL using current BASEHREF
+        function resolveMediaUrl(path) {
+            // Absolute URL
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+                return path;
+            }
+
+            // Root-relative path
+            if (path.startsWith('/')) {
+                return window.location.origin + path;
+            }
+
+            // BASEHREF-relative path
+            try {
+                const baseUrl = new URL(currentBasehref, window.location.href);
+                return new URL(path, baseUrl).href;
+            } catch (e) {
+                log('URL resolve error', e.message);
+                return currentBasehref + path;
+            }
+        }
+
         // Continue story
         function continueStory() {
             if (!story) return;
@@ -332,6 +396,22 @@
             while (story.canContinue) {
                 const text = story.Continue();
                 const tags = story.currentTags || [];
+
+                // Process tags
+                tags.forEach(tag => {
+                    // BASEHREF tag
+                    if (tag.includes('BASEHREF:')) {
+                        const newBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                        currentBasehref = newBasehref.endsWith('/') ? newBasehref : newBasehref + '/';
+                        log('BASEHREF updated: ' + currentBasehref);
+                    }
+
+                    // IMAGE tag
+                    if (tag.includes('IMAGE:')) {
+                        const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                        displayImage(imagePath);
+                    }
+                });
 
                 // Check for minigame tag
                 const mgTag = tags.find(t => t.startsWith('MINIGAME:'));
