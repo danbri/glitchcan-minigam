@@ -6,6 +6,77 @@ This document provides essential context for understanding the Glitchcan App2 ar
 
 ---
 
+## 🚨 CRITICAL: Nuclear Rebuild (Oct 21, 2025)
+
+**REGRESSION IDENTIFIED AND FIXED**
+
+### What Happened:
+App2 was originally created **from scratch** instead of being properly based on inklet/app/. This caused massive feature regression:
+
+**Missing features from day 1:**
+- ❌ IMAGE tag support
+- ❌ BASEHREF tag support
+- ❌ FINK tag support (external story loading)
+- ❌ MENU tag support (dynamic dropdown)
+- ❌ VIDEO tag support
+- ❌ Choice emoji detection
+- ❌ Touch gesture handling
+- ❌ Layered media resolution
+- ❌ Proper UI (title bar, menus, fullscreen)
+
+### The Fix (Nuclear Rebuild):
+**Completely rebuilt app2/index.html by:**
+1. ✅ Copied ALL inklet/app/ modules (fink-*.js, fink-player.css)
+2. ✅ Created new index.html that loads them (iOS compatible - no ES6 modules)
+3. ✅ Added MINIGAME tag support on top
+4. ✅ Now has FULL feature parity with inklet/app/ PLUS minigames
+
+### Current Architecture (v3):
+```
+app2/index.html
+├── fink-utils.js       ← All inklet/app/ features
+├── fink-config.js      ← Configuration
+├── fink-sandbox.js     ← FINK loading
+├── fink-ink-engine.js  ← IMAGE, BASEHREF, FINK, MENU tags
+├── fink-ui.js          ← Full UI with touch, emojis, fullscreen
+├── fink-player.js      ← Main coordinator
+└── fink-player.css     ← Complete styling
+PLUS:
+└── Minigame integration (inline script in index.html)
+```
+
+### What Works Now (v3):
+✅ ALL inklet/app/ features:
+- IMAGE tag support
+- BASEHREF tag support
+- FINK tag support (external story loading)
+- MENU tag support (dynamic dropdown)
+- VIDEO tag support
+- Choice emoji detection
+- Touch gesture handling (swipe between choices)
+- Layered media resolution
+- Story restart
+- Bookmark functionality
+- Fullscreen support
+- Proper title bar with dropdown menu
+- Debug console
+
+✅ PLUS App2-specific:
+- MINIGAME tag support
+- Minigame overlay container
+- State sharing (INK ↔ minigames)
+- iOS compatible (no ES6 modules)
+
+### Files:
+- `index.html` - ✅ **NUCLEAR REBUILD - Use this!**
+- `index.html.backup-before-nuke` - Old broken version
+- `index-modules.html` - ES6 version (doesn't work on iOS)
+- `index-standalone.html` - Old incomplete version
+
+**ALWAYS use index.html - it's now the full-featured iOS-compatible version.**
+
+---
+
 ## 📚 Required Reading Order
 
 ### 1. **Core Concepts** (Read these FIRST)
