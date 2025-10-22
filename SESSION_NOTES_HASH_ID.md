@@ -97,13 +97,74 @@ python -m http.server 8080
 3. ✅ The knot navigation system is production-ready in `/app2/`
 4. ✅ Created `app2/FOLDER_STRUCTURE_NOTE.md` to prevent future confusion
 
+## Bug Fixes Applied (Second Session)
+
+### Issues Reported
+1. Only seeing single hash (not updating as navigating through story)
+2. Seeing "(no hash)" or similar error messages
+
+### Root Causes Identified
+
+**Problem 1: Wrong Knot Tracking Method**
+- Code used `choice[0].sourcePath` to get current knot
+- This only works when choices exist (fails at story end)
+- sourcePath represents where choice came FROM, not where you ARE
+- Results in wrong knot names and missing updates
+
+**Problem 2: Missing Story URL on External Loads**
+- When loading stories from TOC (external FINK files)
+- `FinkPlayer.currentStoryUrl` wasn't updated
+- Knot cache built with wrong URL
+- Hash IDs didn't match, causing lookup failures
+
+### Fixes Applied (Commit 8715a9d)
+
+**Fix 1: Added `getCurrentKnotName()` Method**
+- Properly reads from `story.state.currentPathString`
+- Handles both method and property access patterns
+- Fallback to `story.state.currentPath.toString()`
+- Extracts knot name (before any dots/stitches)
+
+**Fix 2: Added `updateKnotFragment()` Method**
+- Centralized fragment update logic
+- Calls `getCurrentKnotName()` for accurate location
+- Updates URL via `FinkKnotNav.setFragmentForKnot()`
+
+**Fix 3: Updated `continueStory()`**
+- Removed old choice.sourcePath tracking
+- Added call to `updateKnotFragment()`
+- Now updates URL on EVERY knot, not just when choices exist
+
+**Fix 4: Fixed External FINK Loading**
+- Resolve external URL and store it
+- Update `FinkPlayer.currentStoryUrl` BEFORE compiling
+- Ensures cache uses correct story URL
+
+### Files Modified
+- `/app2/fink-ink-engine.js` - All 4 fixes applied
+- `/app2/HASH_ID_FIX_NOTES.md` - Detailed documentation of fixes
+
+### Testing
+
+See `/app2/HASH_ID_FIX_NOTES.md` for comprehensive testing checklist.
+
+Quick test:
+```bash
+cd /home/user/glitchcan-minigam
+python -m http.server 8080
+# Open http://localhost:8080/app2/
+# Navigate through stories
+# Watch URL update with each knot
+# Check console for "Extracted knot name" messages
+```
+
 ## Next Steps
 
-If the hash ID feature needs improvements or testing:
-1. Test existing implementation in `/app2/`
-2. Make any modifications in `/app2/` only
-3. Refer to `/inklet/KNOT_NAVIGATION_README.md` for design documentation
-4. Use `/inklet/HASH_ID_TESTING.md` as testing guide
+1. **Test the fixes** using guide in `/app2/HASH_ID_FIX_NOTES.md`
+2. Verify URL updates on every knot transition
+3. Confirm external stories (from TOC) work correctly
+4. Check that browser back/forward navigation works
+5. Test deep linking by copying/pasting URLs with hash fragments
 
 ## Files for Reference
 
