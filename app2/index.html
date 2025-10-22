@@ -143,6 +143,15 @@
             font-weight: bold;
             z-index: 10001;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-family: monospace;
+            max-width: 200px;
+            word-break: break-all;
+        }
+        .app2-badge .hash-id {
+            display: block;
+            font-size: 9px;
+            opacity: 0.8;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -152,7 +161,10 @@
     <div id="knot-debug">
         <div id="knot-debug-content">Loading...</div>
     </div>
-    <div class="app2-badge">APP2 v3 - Full Featured</div>
+    <div class="app2-badge" id="app2-badge">
+        APP2 v3
+        <span class="hash-id" id="hash-display"></span>
+    </div>
 
     <div class="app-container" id="app-container">
         <div class="menu-trigger" id="menu-trigger"></div>
@@ -434,6 +446,24 @@
 
     <!-- Knot Navigation Status Monitor (iOS visible) -->
     <script>
+        // Update hash display in badge
+        function updateHashDisplay() {
+            const hashDisplay = document.getElementById('hash-display');
+            if (!hashDisplay) return;
+
+            const fragment = window.location.hash;
+            if (fragment && fragment.length > 1) {
+                hashDisplay.textContent = fragment; // Shows "#a1b2c3d4"
+            } else {
+                hashDisplay.textContent = '(no hash)';
+            }
+        }
+
+        // Update on load and on hash change
+        window.addEventListener('DOMContentLoaded', updateHashDisplay);
+        window.addEventListener('hashchange', updateHashDisplay);
+        setInterval(updateHashDisplay, 500); // Also poll every 500ms
+
         // Update knot debug panel every second
         setInterval(() => {
             const debugContent = document.getElementById('knot-debug-content');
