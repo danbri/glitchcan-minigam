@@ -1,4 +1,5 @@
 # CLAUDE.md - Guide for 🐥 Minigames
+<!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
 
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
