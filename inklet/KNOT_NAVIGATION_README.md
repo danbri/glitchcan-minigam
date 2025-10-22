@@ -83,7 +83,7 @@ Checks if a knot is public based on naming convention.
 
 ```javascript
 FinkKnotNav.isPublicKnot('Splash'); // true
-FinkKnotNav.isPublicKnot('bedsit'); // false
+FinkKnotNav.isPublicKnot('bedsit'); // true
 ```
 
 #### `FinkKnotNav.getPublicKnots(story)`
