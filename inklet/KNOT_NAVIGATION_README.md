@@ -73,7 +73,7 @@ Generates a unique 8-character hash ID for a knot.
 ```javascript
 const knotId = await FinkKnotNav.generateKnotId(
     'https://example.com/story.fink.js',
-    'Splash'
+    'splash'
 );
 // Returns: "a1b2c3d4"
 ```
@@ -82,8 +82,13 @@ const knotId = await FinkKnotNav.generateKnotId(
 Checks if a knot is public based on naming convention.
 
 ```javascript
+<<<<<<< HEAD
 FinkKnotNav.isPublicKnot('Splash'); // true
 FinkKnotNav.isPublicKnot('bedsit'); // true
+=======
+FinkKnotNav.isPublicKnot('splash'); // true
+FinkKnotNav.isPublicKnot('_helper'); // false
+>>>>>>> 60c7e8d (Fix documentation: align knot convention examples with implementation)
 ```
 
 #### `FinkKnotNav.getPublicKnots(story)`
@@ -91,7 +96,7 @@ Extracts all public knots from a compiled INK story.
 
 ```javascript
 const publicKnots = FinkKnotNav.getPublicKnots(story);
-// Returns: ['Splash', 'Intro', 'Chapter1']
+// Returns: ['splash', 'intro', 'bedsit', 'street']
 ```
 
 #### `FinkKnotNav.navigateToKnotById(fragmentId, story, finkUri)`
@@ -109,7 +114,7 @@ const success = await FinkKnotNav.navigateToKnotById(
 Generates a shareable URL for a specific knot.
 
 ```javascript
-const shareUrl = await FinkKnotNav.generateShareLink('Intro');
+const shareUrl = await FinkKnotNav.generateShareLink('intro');
 // Returns: "https://example.com/app/?fink=...#b2c3d4e5"
 ```
 
@@ -148,18 +153,18 @@ You start your journey...
 ### Example 2: Testing Deep Links
 
 1. Open: `http://localhost:8080/inklet/app/`
-2. Story loads, navigate to "Intro" knot
+2. Story loads, navigate to "intro" knot
 3. URL automatically updates: `http://localhost:8080/inklet/app/#b2c3d4e5`
 4. Copy this URL and open in new tab
-5. Story loads directly to "Intro" knot
+5. Story loads directly to "intro" knot
 
 ### Example 3: Browser History Integration
 
 ```javascript
-// User navigates through story: Splash → Intro → Chapter1
+// User navigates through story: splash → intro → bedsit
 // Browser history shows three different hash fragments
 // User clicks back button twice
-// Story returns to Splash knot automatically
+// Story returns to splash knot automatically
 ```
 
 ## API Reference
@@ -179,10 +184,14 @@ You start your journey...
 
 ## Limitations
 
+<<<<<<< HEAD
 1. **Only Public Knots**: Deep linking only works for public (non-underscore prefixed) knots
+=======
+1. **Only Public Knots**: Deep linking only works for public knots (those without underscore prefix)
+>>>>>>> 60c7e8d (Fix documentation: align knot convention examples with implementation)
 2. **No State Transfer**: Deep links jump to knot start, don't restore story state
 3. **Must Be Entry Point**: Linked knot must be a valid starting point
-4. **Catchall Knots**: Some FINK files may have only a single public "Menu" knot
+4. **Catchall Knots**: Some FINK files may have only a single public knot
 
 ## Future Enhancements
 
