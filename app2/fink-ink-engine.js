@@ -255,6 +255,10 @@ window.FinkInkEngine = {
                 FinkUI.updateImageFromINKTags(this.story);
             }
 
+            // Update URL fragment with current knot
+            // This should happen BEFORE displaying choices, as we want to track where we ARE
+            this.updateKnotFragment();
+
             // Generate choices
             if (this.story.currentChoices.length > 0) {
                 FinkUtils.debugLog('Displaying ' + this.story.currentChoices.length + ' choices');
@@ -262,15 +266,6 @@ window.FinkInkEngine = {
                     this.continueStory(index);
                 });
                 FinkUI.hideStatus();
-
-                // Track current knot for URL fragment updates
-                // Use sourcePath from first choice (format: "knotName.stitch.index")
-                if (typeof FinkKnotNav !== 'undefined' && this.story.currentChoices[0] && this.story.currentChoices[0].sourcePath) {
-                    const sourcePath = this.story.currentChoices[0].sourcePath;
-                    const knotName = sourcePath.split('.')[0]; // Extract knot name before first dot
-                    FinkUtils.debugLog(`Tracking knot from sourcePath: ${sourcePath} -> knot: ${knotName}`);
-                    FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl || '', knotName);
-                }
             } else {
                 FinkUtils.debugLog('Reached end of story');
                 FinkUI.showEndOfStory();
@@ -290,13 +285,19 @@ window.FinkInkEngine = {
             FinkUI.showStatus('Error: No external story specified');
             return;
         }
-        
+
         FinkUtils.debugLog('Loading external FINK file: ' + this.lastSeenFinkTag);
         FinkUI.showStatus('Loading ' + this.lastSeenFinkTag + '...', true);
-        
-        FinkSandbox.loadViaSandbox(new URL(this.lastSeenFinkTag, window.location.href).href)
+
+        // Resolve the external FINK URL
+        const externalUrl = new URL(this.lastSeenFinkTag, window.location.href).href;
+        FinkUtils.debugLog('Resolved external FINK URL: ' + externalUrl);
+
+        FinkSandbox.loadViaSandbox(externalUrl)
             .then((content) => {
                 FinkUtils.debugLog('External FINK loaded successfully');
+                // Update currentStoryUrl BEFORE compiling so cache uses correct URL
+                FinkPlayer.currentStoryUrl = externalUrl;
                 this.compileAndRunStory(content);
             })
             .catch(error => {
@@ -305,6 +306,63 @@ window.FinkInkEngine = {
             });
     },
     
+    // Get current knot name from story state
+    getCurrentKnotName() {
+        if (!this.story || !this.story.state) {
+            FinkUtils.debugLog('Cannot get current knot - no story or state');
+            return null;
+        }
+
+        try {
+            // Try currentPathString first (might be a method or property)
+            let pathString = null;
+
+            if (typeof this.story.state.currentPathString === 'function') {
+                pathString = this.story.state.currentPathString();
+            } else if (typeof this.story.state.currentPathString === 'string') {
+                pathString = this.story.state.currentPathString;
+            }
+
+            if (!pathString && this.story.state.currentPath) {
+                // Fallback: try to construct from currentPath
+                pathString = this.story.state.currentPath.toString();
+            }
+
+            if (!pathString) {
+                FinkUtils.debugLog('No path string available from story state');
+                return null;
+            }
+
+            FinkUtils.debugLog(`Raw path string from story state: "${pathString}"`);
+
+            // Extract just the knot name (before any dots for stitches)
+            // Path format is typically "knotName" or "knotName.stitchName"
+            const parts = pathString.split('.');
+            const knotName = parts[0];
+
+            FinkUtils.debugLog(`Extracted knot name: "${knotName}"`);
+            return knotName;
+
+        } catch (error) {
+            FinkUtils.debugLog('Error getting current knot: ' + error.message);
+            return null;
+        }
+    },
+
+    // Update URL fragment for current knot
+    updateKnotFragment() {
+        if (typeof FinkKnotNav === 'undefined') {
+            return; // Knot navigation not available
+        }
+
+        const knotName = this.getCurrentKnotName();
+        if (knotName && FinkPlayer.currentStoryUrl) {
+            FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl, knotName);
+        } else {
+            FinkUtils.debugLog('Cannot update fragment - missing knot name or story URL');
+        }
+    },
+
     // Extract story-level tags from compiled INK Story
     extractStoryTagsFromINK() {
         const tags = {
