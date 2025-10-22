@@ -115,8 +115,28 @@ window.FinkInkEngine = {
                 
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
-                this.continueStory();
-                
+
+                // Build knot ID cache for deep linking
+                if (typeof FinkKnotNav !== 'undefined' && FinkPlayer.currentStoryUrl) {
+                    FinkKnotNav.buildKnotIdCache(this.story, FinkPlayer.currentStoryUrl)
+                        .then(() => {
+                            FinkUtils.debugLog('Knot ID cache ready, checking for fragment navigation...');
+                            // Check for URL fragment navigation after cache is ready
+                            this.checkInitialFragment();
+                            // Start story
+                            this.continueStory();
+                        })
+                        .catch(error => {
+                            FinkUtils.debugLog('Error building knot cache: ' + error.message);
+                            // Start story anyway
+                            this.continueStory();
+                        });
+                } else {
+                    // No knot nav available, start story directly
+                    this.checkInitialFragment();
+                    this.continueStory();
+                }
+
                 return true;
                 
             } catch (storyError) {
@@ -129,7 +149,28 @@ window.FinkInkEngine = {
             return false;
         }
     },
-    
+
+    // Check for initial URL fragment and navigate if needed
+    checkInitialFragment() {
+        if (typeof FinkKnotNav === 'undefined') {
+            FinkUtils.debugLog('FinkKnotNav not available, skipping fragment check');
+            return;
+        }
+
+        const fragmentId = FinkKnotNav.getCurrentFragment();
+        if (fragmentId && FinkPlayer.currentStoryUrl) {
+            FinkUtils.debugLog(`Found initial fragment: ${fragmentId}, attempting navigation...`);
+
+            // Try to navigate to the knot (now synchronous using cache)
+            const success = FinkKnotNav.navigateToKnotById(fragmentId, this.story, FinkPlayer.currentStoryUrl);
+            if (success) {
+                FinkUtils.debugLog('Successfully navigated to fragment knot');
+            } else {
+                FinkUtils.debugLog('Fragment knot not found, starting from beginning');
+            }
+        }
+    },
+
     // Continue story progression
     continueStory(choiceIndex = null) {
         if (!this.story) {
@@ -151,6 +192,17 @@ window.FinkInkEngine = {
             // Track last seen media-related tags during this continuation burst
             let lastImageTag = null;
             let lastBasehrefTag = null;
+
+            // Track current knot for URL fragment updates
+            let currentKnotPath = null;
+            if (this.story.state && this.story.state.currentPathString) {
+                currentKnotPath = this.story.state.currentPathString();
+                // Extract just the knot name (first part before any dots)
+                const knotName = currentKnotPath.split('.')[0];
+                if (knotName && typeof FinkKnotNav !== 'undefined') {
+                    FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl || '', knotName);
+                }
+            }
 
             while (this.story.canContinue) {
                 const p = document.createElement('p');

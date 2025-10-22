@@ -7,16 +7,10 @@ window.FinkPlayer = {
     // Initialize the player
     init() {
         FinkUtils.debugLog('Initializing FINK Player v5 with modular architecture...');
-
+        
         // Initialize all modules
         FinkUI.init();
-
-        // Initialize knot navigation system if available
-        if (typeof FinkKnotNav !== 'undefined') {
-            FinkKnotNav.init();
-            FinkUtils.debugLog('Knot navigation system initialized');
-        }
-
+        
         FinkUtils.debugLog('FINK Player v5 initialized');
         
         // Auto-load default story from config
@@ -100,6 +94,5 @@ window.fink = {
     engine: FinkInkEngine,
     sandbox: FinkSandbox,
     utils: FinkUtils,
-    config: FinkConfig,
-    knotNav: typeof FinkKnotNav !== 'undefined' ? FinkKnotNav : null
+    config: FinkConfig
 };
