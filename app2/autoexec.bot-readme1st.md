@@ -10,6 +10,8 @@ This document provides essential context for understanding the Glitchcan App2 ar
 
 **NEVER FORGET:** App2 is a **copy** of the fully working inklet/app/ code with MINIGAME tag support added on top.
 
+we leave the old code running in prev version.
+
 **Source of Truth:** `inklet/app/` contains the proven, working FINK player
 **App2 Relationship:** Uses all the same modules (fink-*.js files) PLUS minigame integration
 
