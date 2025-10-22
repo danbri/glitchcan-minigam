@@ -115,8 +115,12 @@ window.FinkInkEngine = {
                 
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
+
+                // Check for URL fragment navigation before starting story
+                this.checkInitialFragment();
+
                 this.continueStory();
-                
+
                 return true;
                 
             } catch (storyError) {
@@ -130,6 +134,32 @@ window.FinkInkEngine = {
         }
     },
     
+    // Check for initial URL fragment and navigate if needed
+    checkInitialFragment() {
+        if (typeof FinkKnotNav === 'undefined') {
+            FinkUtils.debugLog('FinkKnotNav not available, skipping fragment check');
+            return;
+        }
+
+        const fragmentId = FinkKnotNav.getCurrentFragment();
+        if (fragmentId && FinkPlayer.currentStoryUrl) {
+            FinkUtils.debugLog(`Found initial fragment: ${fragmentId}, attempting navigation...`);
+
+            // Try to navigate to the knot
+            FinkKnotNav.navigateToKnotById(fragmentId, this.story, FinkPlayer.currentStoryUrl)
+                .then(success => {
+                    if (success) {
+                        FinkUtils.debugLog('Successfully navigated to fragment knot');
+                    } else {
+                        FinkUtils.debugLog('Fragment knot not found, starting from beginning');
+                    }
+                })
+                .catch(error => {
+                    FinkUtils.debugLog('Error navigating to fragment: ' + error.message);
+                });
+        }
+    },
+
     // Continue story progression
     continueStory(choiceIndex = null) {
         if (!this.story) {
@@ -152,11 +182,22 @@ window.FinkInkEngine = {
             let lastImageTag = null;
             let lastBasehrefTag = null;
 
+            // Track current knot for URL fragment updates
+            let currentKnotPath = null;
+            if (this.story.state && this.story.state.currentPathString) {
+                currentKnotPath = this.story.state.currentPathString();
+                // Extract just the knot name (first part before any dots)
+                const knotName = currentKnotPath.split('.')[0];
+                if (knotName && typeof FinkKnotNav !== 'undefined') {
+                    FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl || '', knotName);
+                }
+            }
+
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 let rawText = this.story.Continue();
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText + '"');
-                
+
                 let currentTags = this.story.currentTags || [];
                 FinkUtils.debugLog('Current tags: [' + currentTags.join(', ') + ']');
 
