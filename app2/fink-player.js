@@ -52,7 +52,9 @@ window.FinkPlayer = {
         FinkUI.showStatus('Loading story...', true);
         
         try {
-            const resolvedUrl = FinkUtils.resolveUrl(finkUrl);
+            let resolvedUrl = FinkUtils.resolveUrl(finkUrl);
+            // Clean up multiple consecutive slashes in URL (except after protocol)
+            resolvedUrl = resolvedUrl.replace(/([^:]\/)\/+/g, '$1');
             this.currentStoryUrl = resolvedUrl; // Store for content-centric resolution
             FinkUtils.debugLog('Loading story from: ' + resolvedUrl);
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
