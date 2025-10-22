@@ -179,7 +179,7 @@ You start your journey...
 
 ## Limitations
 
-1. **Only Public Knots**: Deep linking only works for public (capitalized) knots
+1. **Only Public Knots**: Deep linking only works for public (non-underscore prefixed) knots
 2. **No State Transfer**: Deep links jump to knot start, don't restore story state
 3. **Must Be Entry Point**: Linked knot must be a valid starting point
 4. **Catchall Knots**: Some FINK files may have only a single public "Menu" knot
