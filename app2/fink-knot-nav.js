@@ -73,15 +73,29 @@ window.FinkKnotNav = {
             if (content.namedContent) {
                 FinkUtils.debugLog('Scanning namedContent for public knots...');
 
-                // Iterate through named content
+                // INK stores namedContent as a Map, not a plain object
                 const namedContentMap = content.namedContent;
-                for (const key in namedContentMap) {
-                    if (namedContentMap.hasOwnProperty(key)) {
+
+                if (namedContentMap instanceof Map) {
+                    // It's a Map - use Map iteration
+                    FinkUtils.debugLog(`namedContent is a Map with ${namedContentMap.size} entries`);
+                    for (const [knotName, knotContent] of namedContentMap.entries()) {
                         // Filter out function knots and only include public knots
-                        // Functions in INK are also stored as named content but shouldn't be entry points
-                        if (this.isPublicKnot(key) && !key.startsWith('function ')) {
-                            publicKnots.push(key);
-                            FinkUtils.debugLog(`Found public knot: ${key}`);
+                        if (this.isPublicKnot(knotName) && !knotName.startsWith('function ')) {
+                            publicKnots.push(knotName);
+                            FinkUtils.debugLog(`Found public knot: ${knotName}`);
+                        }
+                    }
+                } else {
+                    // Fallback: plain object iteration
+                    FinkUtils.debugLog('namedContent is a plain object');
+                    for (const key in namedContentMap) {
+                        if (namedContentMap.hasOwnProperty(key)) {
+                            // Filter out function knots and only include public knots
+                            if (this.isPublicKnot(key) && !key.startsWith('function ')) {
+                                publicKnots.push(key);
+                                FinkUtils.debugLog(`Found public knot: ${key}`);
+                            }
                         }
                     }
                 }
