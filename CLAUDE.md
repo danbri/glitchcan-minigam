@@ -44,6 +44,31 @@ While achieving perfect INK engine functionality, we lost visual polish from ink
 
 ## CRITICAL ADMONISHMENTS FOR FUTURE DEVELOPMENT
 
+### ⚠️ CHANGE MANAGEMENT PROTOCOL:
+**BEFORE making ANY code changes:**
+1. **Understand WHY** - Identify the specific problem or requirement driving the change
+2. **Research FIRST** - Check git history to understand when code last worked and what changed
+3. **Test BEFORE** - Verify current functionality works (especially cross-browser)
+4. **Document BASELINE** - Note what browsers/devices currently work
+5. **Minimal CHANGES** - Make smallest possible change to fix the issue
+6. **Test AFTER** - Verify fix works AND didn't break existing functionality
+7. **Cross-browser** - Test Chrome, Safari iOS, Safari desktop BEFORE claiming success
+
+**REGRESSION PREVENTION:**
+- If user reports "it used to work", STOP and investigate WHAT changed before attempting fixes
+- Use `git log --all -S"keyword"` to find when relevant code changed
+- Check commit messages and dates to understand context
+- NEVER assume breakage is recent - could be months-old issue just discovered
+- Safari iOS has stricter security than Chrome - test BOTH browsers
+
+**EXAMPLE INVESTIGATION:**
+```bash
+# When Safari breaks, investigate:
+git log --all --oneline path/to/file.js
+git show commit-hash:path/to/file.js | grep "relevant-code"
+git log --all -S"security-keyword" --oneline
+```
+
 ### ⚠️ NEVER AGAIN:
 1. **DO NOT break the real INK engine** - inklet5.html uses ink-full.js compiler, NOT manual parsing
 2. **DO NOT use regex to parse INK syntax** - let the real compiler handle it
