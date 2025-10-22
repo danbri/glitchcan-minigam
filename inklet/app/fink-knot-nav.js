@@ -3,6 +3,10 @@ window.FinkKnotNav = {
     // Secret salt for ID generation (in production, this could be environment-specific)
     SALT: 'glitchcan-fink-v1',
 
+    // Cache of knot name -> hash ID for current story
+    knotIdCache: {},
+    currentStoryUrl: null,
+
     // Convention: knots are public UNLESS they start with underscore
     // This provides backwards compatibility with existing FINK files
     isPublicKnot(knotName) {
@@ -72,30 +76,30 @@ window.FinkKnotNav = {
         return publicKnots;
     },
 
-    // Navigate to knot by ID
-    async navigateToKnotById(fragmentId, story, finkUri) {
-        if (!fragmentId || !story || !finkUri) {
+    // Navigate to knot by ID (uses cache for performance)
+    navigateToKnotById(fragmentId, story, finkUri) {
+        if (!fragmentId || !story) {
             FinkUtils.debugLog('Cannot navigate - missing parameters');
             return false;
         }
 
         FinkUtils.debugLog(`Attempting to navigate to knot with ID: ${fragmentId}`);
 
-        // Get all public knots and find matching ID
-        const publicKnots = this.getPublicKnots(story);
-
-        for (const knotName of publicKnots) {
-            const knotId = await this.generateKnotId(finkUri, knotName);
-
-            if (knotId === fragmentId) {
-                FinkUtils.debugLog(`Found matching knot: ${knotName}`);
-                this.navigateToKnot(story, knotName);
-                return true;
+        // Use cache if available
+        if (Object.keys(this.knotIdCache).length > 0) {
+            // Search cache for matching ID
+            for (const [knotName, knotId] of Object.entries(this.knotIdCache)) {
+                if (knotId === fragmentId) {
+                    FinkUtils.debugLog(`Found matching knot in cache: ${knotName}`);
+                    return this.navigateToKnot(story, knotName);
+                }
             }
+            FinkUtils.debugLog(`No matching knot found in cache for ID: ${fragmentId}`);
+            return false;
+        } else {
+            FinkUtils.debugLog('Knot ID cache not available, cannot navigate by fragment');
+            return false;
         }
-
-        FinkUtils.debugLog(`No matching knot found for ID: ${fragmentId}`);
-        return false;
     },
 
     // Navigate to specific knot
@@ -117,14 +121,44 @@ window.FinkKnotNav = {
         }
     },
 
-    // Set URL fragment for current knot
-    async setFragmentForKnot(finkUri, knotName) {
-        if (!this.isPublicKnot(knotName)) {
-            // Don't set fragment for non-public knots
+    // Build cache of all knot IDs for current story (async initialization)
+    async buildKnotIdCache(story, finkUri) {
+        if (!story || !finkUri) {
+            FinkUtils.debugLog('Cannot build knot cache - missing story or URI');
             return;
         }
 
-        const knotId = await this.generateKnotId(finkUri, knotName);
+        this.currentStoryUrl = finkUri;
+        this.knotIdCache = {};
+
+        const publicKnots = this.getPublicKnots(story);
+        FinkUtils.debugLog(`Building knot ID cache for ${publicKnots.length} public knots...`);
+
+        // Pre-generate all hash IDs
+        for (const knotName of publicKnots) {
+            const knotId = await this.generateKnotId(finkUri, knotName);
+            this.knotIdCache[knotName] = knotId;
+            FinkUtils.debugLog(`Cached: ${knotName} -> #${knotId}`);
+        }
+
+        FinkUtils.debugLog(`Knot ID cache built with ${Object.keys(this.knotIdCache).length} entries`);
+    },
+
+    // Set URL fragment for current knot (synchronous using cache)
+    setFragmentForKnot(finkUri, knotName) {
+        if (!this.isPublicKnot(knotName)) {
+            // Don't set fragment for non-public knots
+            FinkUtils.debugLog(`Skipping fragment for private knot: ${knotName}`);
+            return;
+        }
+
+        // Use cached ID if available
+        const knotId = this.knotIdCache[knotName];
+        if (!knotId) {
+            FinkUtils.debugLog(`No cached ID for knot: ${knotName} (cache may not be built yet)`);
+            return;
+        }
+
         const newUrl = window.location.pathname + window.location.search + '#' + knotId;
 
         // Use replaceState to avoid adding to browser history on every knot
