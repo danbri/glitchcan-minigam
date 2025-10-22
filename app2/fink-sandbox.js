@@ -10,7 +10,8 @@ window.FinkSandbox = {
             this.cleanupSandbox();
             
             const iframe = document.createElement('iframe');
-            iframe.setAttribute('sandbox', 'allow-scripts');
+            // Safari requires allow-same-origin to load external scripts
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
             iframe.style.display = 'none';
             
             this.activeSandbox = iframe;
