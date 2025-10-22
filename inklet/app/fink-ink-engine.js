@@ -93,10 +93,10 @@ window.FinkInkEngine = {
                 FinkUtils.debugLog(`Story state: canContinue=${canContinue}, choices=${currentChoices}`);
                 
                 FinkUtils.debugLog('✅ INK compilation successful! Starting with real engine...');
-                
+
                 this.currentStoryTags = this.extractStoryTagsFromINK();
                 FinkUtils.debugLog('Extracted story tags from INK: ' + JSON.stringify(this.currentStoryTags));
-                
+
                 // Fallback: extract BASEHREF from raw content if not found in tags
                 if (!this.currentStoryTags.basehref && this.finkStoryContent) {
                     const basehrefMatch = this.finkStoryContent.match(/# BASEHREF:\s*(.+)/);
@@ -105,18 +105,21 @@ window.FinkInkEngine = {
                         FinkUtils.debugLog('Found BASEHREF in raw content: ' + this.currentStoryTags.basehref);
                     }
                 }
-                
+
                 if (this.currentStoryTags.basehref) {
-                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ? 
-                                               this.currentStoryTags.basehref : 
+                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ?
+                                               this.currentStoryTags.basehref :
                                                this.currentStoryTags.basehref + '/';
                     FinkUtils.debugLog('Using BASEHREF from story: ' + FinkPlayer.mediaBasePath);
                 }
-                
+
+                // Build knot ID cache for deep linking
+                this.initializeKnotNavigation();
+
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
                 this.continueStory();
-                
+
                 return true;
                 
             } catch (storyError) {
@@ -197,6 +200,9 @@ window.FinkInkEngine = {
             FinkUI.replaceStoryContent(storyFragment);
             FinkUI.updateImageFromINKTags(this.story);
 
+            // Update URL fragment for current knot
+            this.updateKnotFragment();
+
             // Generate choices
             if (this.story.currentChoices.length > 0) {
                 FinkUtils.debugLog('Displaying ' + this.story.currentChoices.length + ' choices');
@@ -245,16 +251,16 @@ window.FinkInkEngine = {
             images: [],
             basehref: null
         };
-        
+
         if (!this.story) return tags;
-        
+
         // Try to get global tags first, then current tags
         const globalTags = this.story.globalTags || [];
         const currentTags = this.story.currentTags || [];
         const allTags = [...globalTags, ...currentTags];
-        
+
         FinkUtils.debugLog('Extracting story-level tags from INK: [' + allTags.join(', ') + ']');
-        
+
         allTags.forEach(tag => {
             FinkUtils.debugLog('Processing story tag: "' + tag + '"');
             if (tag.includes('MENU:')) {
@@ -272,7 +278,58 @@ window.FinkInkEngine = {
                 }
             }
         });
-        
+
         return tags;
+    },
+
+    // Initialize knot navigation system (async)
+    async initializeKnotNavigation() {
+        if (!this.story || !FinkPlayer.currentStoryUrl) {
+            FinkUtils.debugLog('Cannot initialize knot navigation - missing story or URL');
+            return;
+        }
+
+        FinkUtils.debugLog('Initializing knot navigation for current story...');
+
+        // Build cache of all public knot IDs
+        await FinkKnotNav.buildKnotIdCache(this.story, FinkPlayer.currentStoryUrl);
+
+        // Check if there's a hash fragment to navigate to
+        const initialFragment = FinkKnotNav.getCurrentFragment();
+        if (initialFragment) {
+            FinkUtils.debugLog(`Initial fragment detected: #${initialFragment}, attempting navigation...`);
+            const navigated = await FinkKnotNav.navigateToKnotById(initialFragment, this.story, FinkPlayer.currentStoryUrl);
+            if (navigated) {
+                FinkUtils.debugLog('Successfully navigated to deep-linked knot');
+            } else {
+                FinkUtils.debugLog('Could not navigate to fragment, starting from beginning');
+            }
+        }
+    },
+
+    // Get current knot name from story state
+    getCurrentKnotName() {
+        if (!this.story || !this.story.state) return null;
+
+        try {
+            // Get current path string (e.g., "splash" or "intro.scene1")
+            const pathString = this.story.state.currentPathString;
+            if (!pathString) return null;
+
+            // Extract just the knot name (before any dots for stitches)
+            const parts = pathString.split('.');
+            return parts[0];
+        } catch (error) {
+            FinkUtils.debugLog('Error getting current knot: ' + error.message);
+            return null;
+        }
+    },
+
+    // Update URL fragment when knot changes
+    updateKnotFragment() {
+        const knotName = this.getCurrentKnotName();
+        if (knotName && FinkPlayer.currentStoryUrl) {
+            FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl, knotName);
+        }
     }
 };
