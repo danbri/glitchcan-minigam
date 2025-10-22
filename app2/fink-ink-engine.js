@@ -193,16 +193,7 @@ window.FinkInkEngine = {
             let lastImageTag = null;
             let lastBasehrefTag = null;
 
-            // Track current knot for URL fragment updates
-            let currentKnotPath = null;
-            if (this.story.state && this.story.state.currentPathString) {
-                currentKnotPath = this.story.state.currentPathString();
-                // Extract just the knot name (first part before any dots)
-                const knotName = currentKnotPath.split('.')[0];
-                if (knotName && typeof FinkKnotNav !== 'undefined') {
-                    FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl || '', knotName);
-                }
-            }
+            // Note: Knot tracking moved to after choices display (uses currentChoices[0].sourcePath)
 
             while (this.story.canContinue) {
                 const p = document.createElement('p');
@@ -271,6 +262,15 @@ window.FinkInkEngine = {
                     this.continueStory(index);
                 });
                 FinkUI.hideStatus();
+
+                // Track current knot for URL fragment updates
+                // Use sourcePath from first choice (format: "knotName.stitch.index")
+                if (typeof FinkKnotNav !== 'undefined' && this.story.currentChoices[0] && this.story.currentChoices[0].sourcePath) {
+                    const sourcePath = this.story.currentChoices[0].sourcePath;
+                    const knotName = sourcePath.split('.')[0]; // Extract knot name before first dot
+                    FinkUtils.debugLog(`Tracking knot from sourcePath: ${sourcePath} -> knot: ${knotName}`);
+                    FinkKnotNav.setFragmentForKnot(FinkPlayer.currentStoryUrl || '', knotName);
+                }
             } else {
                 FinkUtils.debugLog('Reached end of story');
                 FinkUI.showEndOfStory();
