@@ -41,7 +41,7 @@ Using SHA-256, the first 8 characters create a unique, stable ID.
 ### 1. Story Load
 When a FINK story loads:
 - System scans all knots in the compiled story
-- Identifies public knots (capital letter naming convention)
+- Identifies public knots (underscore prefix convention: knots starting with `_` are private)
 - Checks URL fragment for deep link
 - If fragment matches a public knot, navigates there automatically
 
