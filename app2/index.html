@@ -28,6 +28,92 @@
                 eruda.hide();
             }
         }
+
+        // Console buffer capture for easy copying (mobile dev workflow)
+        window.consoleBuffer = [];
+        const maxBufferSize = 300;
+
+        function captureConsoleMethod(method) {
+            const original = console[method];
+            console[method] = function(...args) {
+                const timestamp = new Date().toLocaleTimeString();
+                const message = args.map(arg => {
+                    if (typeof arg === 'object') {
+                        try {
+                            return JSON.stringify(arg, null, 2);
+                        } catch (e) {
+                            return String(arg);
+                        }
+                    }
+                    return String(arg);
+                }).join(' ');
+
+                window.consoleBuffer.push(`[${timestamp}] ${method.toUpperCase()}: ${message}`);
+                if (window.consoleBuffer.length > maxBufferSize) {
+                    window.consoleBuffer.shift();
+                }
+
+                original.apply(console, args);
+            };
+        }
+
+        // Capture all console methods
+        ['log', 'warn', 'error', 'info', 'debug'].forEach(captureConsoleMethod);
+
+        // Add copy button after DOM loads
+        window.addEventListener('DOMContentLoaded', () => {
+            const copyBtn = document.createElement('button');
+            copyBtn.id = 'copy-console-btn';
+            copyBtn.textContent = '📋 COPY';
+            copyBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: #ff6b6b;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 4px;
+                z-index: 10002;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                cursor: pointer;
+                font-family: monospace;
+            `;
+
+            copyBtn.onclick = async () => {
+                const fullLog = window.consoleBuffer.join('\n');
+                try {
+                    await navigator.clipboard.writeText(fullLog);
+                    copyBtn.textContent = '✅ COPIED!';
+                    copyBtn.style.background = '#51cf66';
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 COPY';
+                        copyBtn.style.background = '#ff6b6b';
+                    }, 1500);
+                } catch (err) {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = fullLog;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    copyBtn.textContent = '✅ COPIED!';
+                    copyBtn.style.background = '#51cf66';
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 COPY';
+                        copyBtn.style.background = '#ff6b6b';
+                    }, 1500);
+                }
+            };
+
+            document.body.appendChild(copyBtn);
+        });
     </script>
 
     <!-- Modular JS files (iOS compatible - no ES6 modules) -->
