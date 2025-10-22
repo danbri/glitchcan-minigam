@@ -42,6 +42,41 @@
     <link rel="stylesheet" href="fink-player.css">
 
     <style>
+        /* Visible debug info for iOS testing */
+        #knot-debug {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 200px;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            z-index: 10000;
+            display: none;
+        }
+        #knot-debug.active {
+            display: block;
+        }
+        #knot-debug-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #0f0;
+            color: #000;
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            z-index: 10001;
+            font-weight: bold;
+        }
+    </style>
+
+    <style>
         /* App2-specific: Minigame overlay */
         .minigame-container {
             display: none;
@@ -112,6 +147,11 @@
     </style>
 </head>
 <body>
+    <!-- Visible debug toggle for iOS -->
+    <button id="knot-debug-toggle" onclick="document.getElementById('knot-debug').classList.toggle('active')">KNOT</button>
+    <div id="knot-debug">
+        <div id="knot-debug-content">Loading...</div>
+    </div>
     <div class="app2-badge">APP2 v3 - Full Featured</div>
 
     <div class="app-container" id="app-container">
@@ -390,6 +430,49 @@
             }, 1000);
         });
     })();
+    </script>
+
+    <!-- Knot Navigation Status Monitor (iOS visible) -->
+    <script>
+        // Update knot debug panel every second
+        setInterval(() => {
+            const debugContent = document.getElementById('knot-debug-content');
+            if (!debugContent) return;
+
+            let html = '';
+
+            // Check if FinkKnotNav exists
+            if (typeof FinkKnotNav === 'undefined') {
+                html = '<strong style="color:#f00">❌ FinkKnotNav NOT LOADED</strong>';
+            } else {
+                html += '<strong style="color:#0f0">✅ FinkKnotNav loaded</strong><br>';
+
+                // Check cache
+                const cacheSize = Object.keys(FinkKnotNav.knotIdCache || {}).length;
+                html += `Cache: ${cacheSize} knots<br>`;
+
+                // Show current URL fragment
+                const fragment = window.location.hash;
+                html += `Fragment: ${fragment || '(none)'}<br>`;
+
+                // Show some cached knots
+                if (cacheSize > 0) {
+                    html += '<br><small>';
+                    let count = 0;
+                    for (const [knot, id] of Object.entries(FinkKnotNav.knotIdCache)) {
+                        if (count++ < 3) {
+                            html += `${knot}: #${id}<br>`;
+                        }
+                    }
+                    if (cacheSize > 3) {
+                        html += `...and ${cacheSize - 3} more<br>`;
+                    }
+                    html += '</small>';
+                }
+            }
+
+            debugContent.innerHTML = html;
+        }, 1000);
     </script>
 </body>
 </html>
