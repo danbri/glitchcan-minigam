@@ -116,10 +116,26 @@ window.FinkInkEngine = {
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
 
-                // Check for URL fragment navigation before starting story
-                this.checkInitialFragment();
-
-                this.continueStory();
+                // Build knot ID cache for deep linking
+                if (typeof FinkKnotNav !== 'undefined' && FinkPlayer.currentStoryUrl) {
+                    FinkKnotNav.buildKnotIdCache(this.story, FinkPlayer.currentStoryUrl)
+                        .then(() => {
+                            FinkUtils.debugLog('Knot ID cache ready, checking for fragment navigation...');
+                            // Check for URL fragment navigation after cache is ready
+                            this.checkInitialFragment();
+                            // Start story
+                            this.continueStory();
+                        })
+                        .catch(error => {
+                            FinkUtils.debugLog('Error building knot cache: ' + error.message);
+                            // Start story anyway
+                            this.continueStory();
+                        });
+                } else {
+                    // No knot nav available, start story directly
+                    this.checkInitialFragment();
+                    this.continueStory();
+                }
 
                 return true;
                 
@@ -145,18 +161,13 @@ window.FinkInkEngine = {
         if (fragmentId && FinkPlayer.currentStoryUrl) {
             FinkUtils.debugLog(`Found initial fragment: ${fragmentId}, attempting navigation...`);
 
-            // Try to navigate to the knot
-            FinkKnotNav.navigateToKnotById(fragmentId, this.story, FinkPlayer.currentStoryUrl)
-                .then(success => {
-                    if (success) {
-                        FinkUtils.debugLog('Successfully navigated to fragment knot');
-                    } else {
-                        FinkUtils.debugLog('Fragment knot not found, starting from beginning');
-                    }
-                })
-                .catch(error => {
-                    FinkUtils.debugLog('Error navigating to fragment: ' + error.message);
-                });
+            // Try to navigate to the knot (now synchronous using cache)
+            const success = FinkKnotNav.navigateToKnotById(fragmentId, this.story, FinkPlayer.currentStoryUrl);
+            if (success) {
+                FinkUtils.debugLog('Successfully navigated to fragment knot');
+            } else {
+                FinkUtils.debugLog('Fragment knot not found, starting from beginning');
+            }
         }
     },
 
