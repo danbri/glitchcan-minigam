@@ -39,6 +39,19 @@ export default defineConfig({
     // Base URL for all page.goto() calls
     baseURL: process.env.BASE_URL || 'http://localhost:8080',
 
+    // Custom Chromium binary (if provided via environment variable)
+    // Usage: export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=./chrome-linux/chrome
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH && {
+      launchOptions: {
+        executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+        args: [
+          '--no-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+      },
+    }),
+
     // Collect trace when retrying failed tests
     trace: 'on-first-retry',
 
