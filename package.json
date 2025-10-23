@@ -1,0 +1,29 @@
+{
+  "name": "glitchcan-minigam",
+  "version": "1.0.0",
+  "description": "A halfbaked [collection](https://danbri.github.io/glitchcan-minigam/) of very experimental browser-based minigames, sloppy by design. Investigating possibilities around player-generated sloppy AI minigames within a larger framework.",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "bash setup-chrome.sh || true",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:fink": "playwright test tests/fink-player.spec.js",
+    "test:gridluck": "playwright test tests/gridluck.spec.js",
+    "test:smoke": "playwright test tests/minigames-smoke.spec.js",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "server": "python -m http.server 8080",
+    "setup-chrome": "bash setup-chrome.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:20502/git/danbri/glitchcan-minigam"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
