@@ -7,8 +7,9 @@ set -e  # Exit on error
 CHROME_DIR="./chrome-linux"
 CHROME_BINARY="$CHROME_DIR/chrome"
 
-# Configuration - UPDATE THIS URL
-CHROME_URL="${CHROME_BINARY_URL:-https://github.com/danbri/glitchcan-minigam/releases/download/chromium-v1/chromium-linux.tar.gz}"
+# Configuration - Working URL from Google Cloud Storage
+# This URL bypasses CDN restrictions that block Playwright/Puppeteer downloads
+CHROME_URL="${CHROME_BINARY_URL:-https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Linux_x64%2F1000000%2Fchrome-linux.zip?alt=media}"
 
 echo "🔍 Checking for Chromium binary..."
 
@@ -23,7 +24,15 @@ echo "URL: $CHROME_URL"
 
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
-ARCHIVE="$TEMP_DIR/chromium.tar.gz"
+
+# Determine archive type from URL
+if [[ "$CHROME_URL" == *.zip* ]]; then
+    ARCHIVE="$TEMP_DIR/chromium.zip"
+    EXTRACT_CMD="unzip -q"
+else
+    ARCHIVE="$TEMP_DIR/chromium.tar.gz"
+    EXTRACT_CMD="tar -xzf"
+fi
 
 # Download with progress
 if command -v curl &> /dev/null; then
@@ -44,11 +53,19 @@ else
 fi
 
 echo "📂 Extracting archive..."
-tar -xzf "$ARCHIVE" -C . || {
-    echo "❌ Extraction failed. Archive may be corrupted."
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
+if [[ "$CHROME_URL" == *.zip* ]]; then
+    unzip -q "$ARCHIVE" || {
+        echo "❌ Extraction failed. Archive may be corrupted."
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+else
+    tar -xzf "$ARCHIVE" -C . || {
+        echo "❌ Extraction failed. Archive may be corrupted."
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+fi
 
 # Make executable
 if [ -f "$CHROME_BINARY" ]; then
