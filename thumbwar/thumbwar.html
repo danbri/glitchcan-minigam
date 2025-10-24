@@ -356,58 +356,131 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        // Game variables
+        /**
+         * THUMBWAR FLUID DYNAMICS GAME
+         * =================================
+         * An interactive WebGL-based game featuring fluid dynamics, tendril effects,
+         * and shockwave animations. Players use touch/mouse input to manipulate
+         * fluid streams and collect targets while avoiding penalties.
+         * 
+         * Key Features:
+         * - Real-time fluid dynamics simulation using WebGL shaders
+         * - Organic tendril effects connecting touch points
+         * - Shockwave animations for visual feedback
+         * - Dynamic target system with good/bad targets
+         * - Procedural audio synthesis for game sounds
+         * - Comprehensive control panel for parameter tweaking
+         */
+        
+        // =================================================================
+        // CORE GAME VARIABLES
+        // =================================================================
+        
+        /** Current player score, modified by collecting targets and game actions */
         let score = 0;
+        
+        /** Maximum number of targets that can exist simultaneously on screen */
         const MAX_TARGETS = 4; // Increased to accommodate both good and bad targets
-        let targetLifespan = 5000; // milliseconds (can be modified by controls)
+        
+        /** How long targets remain on screen before disappearing (milliseconds) */
+        let targetLifespan = 5000; // Can be modified by control panel
+        
+        /** Array storing all active target objects with position, type, and state */
         let targets = [];
-        let shockwaves = []; // Array to store active shockwaves
+        
+        /** Array storing active shockwave effects triggered by target collection */
+        let shockwaves = []; // Used by WebGL shader for visual effects
+        
+        /** Global audio enabled state - controls all sound effects */
         let audioEnabled = true;
-        let lastScoreChange = 0; // Track when score last changed (for animation)
-        let scoreDirection = 1; // 1 for positive, -1 for negative
         
-        // Game rule variables
-        let bothThumbsActive = false; // Track if both thumbs are currently active
-        let thumbsClosePenaltyActive = false; // Prevent constant penalties
-        let lastActiveScoreTime = 0; // For passive score increase when both thumbs active
-        let THUMBS_TOO_CLOSE_THRESHOLD = 0.2; // Distance threshold for "too close" penalty
-        let BOTH_THUMBS_ACTIVE_SCORE_INTERVAL = 1000; // ms between score points for active play
+        /** Timestamp of last score change for UI animation timing */
+        let lastScoreChange = 0;
         
-        // Effect control variables (used by control panel)
+        /** Direction of last score change: 1 for positive, -1 for negative */
+        let scoreDirection = 1;
+        
+        // =================================================================
+        // GAMEPLAY MECHANICS VARIABLES
+        // =================================================================
+        
+        /** True when player has two active touch points (thumbs/fingers) */
+        let bothThumbsActive = false;
+        
+        /** Prevents repeated penalties when thumbs stay too close together */
+        let thumbsClosePenaltyActive = false;
+        
+        /** Timestamp for awarding passive points when both thumbs are active */
+        let lastActiveScoreTime = 0;
+        
+        /** Minimum distance between touch points before penalty is applied */
+        let THUMBS_TOO_CLOSE_THRESHOLD = 0.2; // Normalized screen coordinates (0-1)
+        
+        /** Interval between bonus points for keeping both thumbs active (milliseconds) */
+        let BOTH_THUMBS_ACTIVE_SCORE_INTERVAL = 1000;
+        
+        // =================================================================
+        // VISUAL EFFECTS AND GAMEPLAY SETTINGS
+        // =================================================================
+        
+        /**
+         * Game settings object - controls all visual effects and gameplay parameters
+         * These values are modified by the control panel and passed to WebGL shaders
+         */
         let gameSettings = {
-            // Tendril controls
+            // TENDRIL EFFECT CONTROLS
+            /** Enable/disable the lightning-like connections between touch points */
             enableTendrils: true,
+            /** Thickness multiplier for tendril lines (0.1-2.0) */
             tendrilThickness: 1.0,
-            tendrilTurbulence: 1.0, 
+            /** Turbulence intensity - how much tendrils swirl and curve (0.1-2.0) */
+            tendrilTurbulence: 1.0,
+            /** Glow intensity around tendrils for visual impact (0-2.0) */
             tendrilGlow: 1.0,
             
-            // Fluid dynamics
+            // FLUID DYNAMICS CONTROLS
+            /** Overall intensity multiplier for fluid simulation effects (0.1-2.0) */
             fluidIntensity: 1.0,
+            /** Enable background energy field patterns */
             enableBackground: true,
             
-            // Shockwave effects
+            // SHOCKWAVE EFFECT CONTROLS
+            /** Enable expanding ring effects when targets are collected */
             enableShockwaves: true,
+            /** Intensity of shockwave visual effects (0-2.0) */
             shockwaveIntensity: 1.0,
             
-            // Gameplay
+            // GAMEPLAY BALANCE CONTROLS
+            /** Rate of new target generation - higher = more targets (0.2-2.0) */
             targetGenerationRate: 1.0,
-            targetLifespan: 5.0, // seconds
+            /** How long targets stay on screen before expiring (2-10 seconds) */
+            targetLifespan: 5.0,
             
-            // Performance
+            // PERFORMANCE OPTIMIZATION
+            /** Quality preset: 'low', 'medium', 'high' - affects shader iterations */
             qualityPreset: 'medium',
+            /** Number of fluid simulation iterations per frame (4-16) - higher = smoother but slower */
             fluidIterations: 12
         };
         
-        // Control Panel Logic
+        // =================================================================
+        // CONTROL PANEL SYSTEM
+        // =================================================================
+        
+        /** References to control panel DOM elements for show/hide functionality */
         const controlPanelToggle = document.getElementById('control-panel-toggle');
         const controlPanel = document.getElementById('control-panel');
         
-        // Toggle control panel visibility
+        // Toggle control panel visibility with smooth CSS transitions
         controlPanelToggle.addEventListener('click', () => {
             controlPanel.classList.toggle('visible');
         });
         
-        // Setup control panel listeners
+        /**
+         * Setup all control panel event listeners
+         * Creates real-time connections between UI controls and game settings
+         * Changes are immediately applied to the running game simulation
+         */
         function setupControlPanel() {
             // Tendril controls
             document.getElementById('enable-tendrils').addEventListener('change', e => {
@@ -473,7 +546,15 @@
             });
         }
         
-        // Apply performance presets
+        /**
+         * Apply performance quality presets
+         * Adjusts fluid simulation complexity based on device capabilities
+         * 
+         * Quality Levels:
+         * - High (15 iterations): Best visual quality, requires powerful GPU
+         * - Medium (12 iterations): Balanced quality/performance
+         * - Low (8 iterations): Optimized for mobile/older devices
+         */
         function applyQualityPreset(preset) {
             const iterationsSlider = document.getElementById('fluid-iterations');
             
@@ -496,14 +577,24 @@
             }
         }
         
-        // Initialize control panel
+        // Initialize control panel event listeners for real-time parameter adjustment
         setupControlPanel();
         
-        // Audio setup
+        // =================================================================
+        // PROCEDURAL AUDIO SYSTEM
+        // =================================================================
+        
+        /**
+         * Web Audio API context for procedural sound synthesis
+         * Creates all game audio effects using oscillators and filters
+         * rather than loading external audio files
+         */
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         
-        // Audio toggle
+        /** Reference to audio toggle button for user interaction */
         const audioToggle = document.getElementById('audio-toggle');
+        
+        /** Tracks whether audio has been initialized by user interaction (required by browsers) */
         let audioInitialized = false;
         
         audioToggle.addEventListener('click', function() {
@@ -559,20 +650,29 @@
             }
         });
         
-        // Sound effects
+        // =================================================================
+        // PROCEDURAL SOUND SYNTHESIS FUNCTIONS
+        // =================================================================
+        
+        /**
+         * Generate positive feedback sound for collecting good targets
+         * Creates an ascending major arpeggio (A4 -> C#5 -> E5) using sine waves
+         * Duration: 300ms with smooth attack/decay envelope
+         */
         function createCollectSound() {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
-            // Good sound: Major arpeggio
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+            // Good sound: Major arpeggio (musical and pleasant)
+            oscillator.type = 'sine'; // Pure tone for clean sound
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 (440 Hz)
             oscillator.frequency.setValueAtTime(554.37, audioContext.currentTime + 0.1); // C#5
             oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.2); // E5
             
+            // Smooth volume envelope to avoid clicks/pops
             gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
-            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05); // Quick attack
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3); // Gradual decay
             
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
@@ -581,33 +681,47 @@
             oscillator.stop(audioContext.currentTime + 0.3);
         }
         
+        /**
+         * Generate negative feedback sound for hitting bad targets
+         * Creates a harsh, distorted descending tone to indicate penalty
+         * Uses sawtooth wave with waveshaper distortion for unpleasant effect
+         * Duration: 400ms with descending pitch sweep
+         */
         function createBadSound() {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             const distortion = audioContext.createWaveShaper();
             
-            // Bad sound: Distorted descending frequencies
+            /**
+             * Generate waveshaper distortion curve for harsh audio effect
+             * Higher amount = more distortion and perceived "badness"
+             * @param {number} amount - Distortion intensity (higher = more distorted)
+             */
             function makeDistortionCurve(amount) {
                 const k = typeof amount === 'number' ? amount : 50;
-                const n_samples = 44100;
+                const n_samples = 44100; // Standard sample rate
                 const curve = new Float32Array(n_samples);
                 for (let i = 0; i < n_samples; ++i) {
-                    const x = i * 2 / n_samples - 1;
+                    const x = i * 2 / n_samples - 1; // Normalize to [-1, 1]
+                    // Asymmetric distortion formula creates harsh overtones
                     curve[i] = (3 + k) * x * 20 * (Math.PI / 180) / (Math.PI + k * Math.abs(x));
                 }
                 return curve;
             }
             
-            distortion.curve = makeDistortionCurve(400);
+            distortion.curve = makeDistortionCurve(400); // Heavy distortion
             
+            // Sawtooth wave has rich harmonics that distort well
             oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
+            oscillator.frequency.setValueAtTime(300, audioContext.currentTime); // Start higher
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3); // Descend
             
+            // Slightly longer envelope for more dramatic effect
             gainNode.gain.setValueAtTime(0, audioContext.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
             gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
             
+            // Audio processing chain: Oscillator -> Distortion -> Gain -> Output
             oscillator.connect(distortion);
             distortion.connect(gainNode);
             gainNode.connect(audioContext.destination);
@@ -616,86 +730,170 @@
             oscillator.stop(audioContext.currentTime + 0.4);
         }
         
-        // Haptic feedback (vibration)
+        /**
+         * Haptic feedback system for mobile devices
+         * Provides tactile feedback for game events
+         * @param {number|Array} pattern - Vibration pattern (ms) or array of on/off intervals
+         */
         function vibrate(pattern) {
             if (navigator.vibrate) {
                 navigator.vibrate(pattern);
             }
         }
         
-        // Canvas and WebGL setup
+        // =================================================================
+        // WEBGL SETUP AND CANVAS MANAGEMENT
+        // =================================================================
+        
+        /** Main canvas element that fills the entire viewport */
         const canvas = document.getElementById('canvas');
+        
+        /** WebGL rendering context - handles all GPU-accelerated graphics */
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         
+        // Ensure WebGL is supported by the browser/device
         if (!gl) {
-            alert('WebGL not supported');
+            alert('WebGL not supported - this game requires hardware acceleration');
         }
         
-        // Resize canvas
+        /**
+         * Resize canvas to match display size and update WebGL viewport
+         * Called on window resize and during initialization
+         * Maintains pixel-perfect rendering across different screen sizes
+         */
         function resize() {
             const displayWidth = canvas.clientWidth;
             const displayHeight = canvas.clientHeight;
             
+            // Only resize if dimensions have actually changed (optimization)
             if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
                 canvas.width = displayWidth;
                 canvas.height = displayHeight;
+                // Update WebGL viewport to match new canvas size
                 gl.viewport(0, 0, canvas.width, canvas.height);
             }
         }
         
+        // Setup automatic canvas resizing for responsive display
         window.addEventListener('resize', resize);
-        resize();
+        resize(); // Initial sizing
         
-        // Shader sources
+        // =================================================================
+        // SHADER SOURCE CODE
+        // =================================================================
+        
+        /**
+         * VERTEX SHADER
+         * Simple passthrough shader that positions vertices
+         * Creates a full-screen quad for fragment shader processing
+         */
         const vertexShaderSource = `
-            attribute vec2 a_position;
+            attribute vec2 a_position; // Vertex positions in normalized device coordinates
             void main() {
+                // Simply pass through vertex positions to fragment shader
                 gl_Position = vec4(a_position, 0, 1);
             }
         `;
         
+        /**
+         * FRAGMENT SHADER - MAIN VISUAL EFFECTS PROCESSOR
+         * ===============================================
+         * 
+         * This complex shader handles all visual effects in the game:
+         * 1. Fluid dynamics simulation with multiple layers
+         * 2. Organic tendril effects between touch points  
+         * 3. Target highlighting and glow effects
+         * 4. Shockwave animations when targets are collected
+         * 5. Background energy field patterns
+         * 
+         * The shader uses multiple mathematical techniques:
+         * - Fractal noise for organic movement
+         * - Sinusoidal functions for wave-like patterns
+         * - Distance fields for smooth gradients
+         * - Color mixing for aurora-like effects
+         */
         const fragmentShaderSource = `
-            precision highp float;
+            precision highp float; // High precision required for smooth gradients
             
+            // CORE RENDERING UNIFORMS
+            // Screen resolution in pixels
             uniform vec2 u_resolution;
+            // Current time for animations
             uniform float u_time;
+            // First touch point (0-1 normalized)
             uniform vec2 u_touch1;
+            // Second touch point (0-1 normalized)
             uniform vec2 u_touch2;
+            
+            // TARGET SYSTEM UNIFORMS (arrays for multiple simultaneous targets)
+            // Target positions
             uniform vec2 u_targets[${MAX_TARGETS}];
+            // 1.0 if target exists, 0.0 if not
             uniform float u_target_active[${MAX_TARGETS}];
-            uniform float u_target_type[${MAX_TARGETS}];  // 0 = good, 1 = bad
+            // 0 = good target, 1 = bad target
+            uniform float u_target_type[${MAX_TARGETS}];
             
-            // Added shockwave effect variables
+            // SHOCKWAVE EFFECT UNIFORMS (expanding rings when targets collected)
+            // 1.0 if shockwave active
             uniform float u_shockwave_active[${MAX_TARGETS}];
+            // Center position of shockwave
             uniform vec2 u_shockwave_pos[${MAX_TARGETS}];
+            // Time when shockwave started
             uniform float u_shockwave_start[${MAX_TARGETS}];
-            uniform float u_shockwave_type[${MAX_TARGETS}]; // 0 = good, 1 = bad
+            // Type matches target type
+            uniform float u_shockwave_type[${MAX_TARGETS}];
             
-            // Control panel uniforms
+            // CONTROL PANEL UNIFORMS (user-adjustable parameters)
+            // Overall fluid effect strength
             uniform float u_fluid_intensity;
+            // Background energy field on/off
             uniform float u_enable_background;
+            // Tendril effects on/off
             uniform float u_enable_tendrils;
+            // Width of tendril connections
             uniform float u_tendril_thickness;
+            // How much tendrils swirl and curve
             uniform float u_tendril_turbulence;
+            // Glow intensity around tendrils
             uniform float u_tendril_glow;
+            // Shockwave effects on/off
             uniform float u_enable_shockwaves;
+            // Strength of shockwave visuals
             uniform float u_shockwave_intensity;
+            // Number of fluid simulation iterations (4-16)
+            uniform float u_fluid_iterations;
             
-            // Function to create an organic, swirling tendril effect between points
+            /**
+             * TENDRIL EFFECT FUNCTION
+             * ======================
+             * Creates organic, lightning-like connections between two points
+             * Uses multiple layers of sinusoidal waves to simulate natural flow
+             * 
+             * Parameters:
+             * - p: Current pixel position being evaluated
+             * - start: Starting point of tendril
+             * - end: Ending point of tendril  
+             * - time: Current animation time
+             * - thickness: Base width of tendril line
+             * - turbulence: Amount of swirling/curving motion
+             * 
+             * Returns: Float value (0-1) representing tendril intensity at pixel p
+             */
             float swirlTendril(vec2 p, vec2 start, vec2 end, float time, float thickness, float turbulence) {
-                // Vector from start to end
+                // Calculate base direction vector from start to end point
                 vec2 direction = end - start;
                 float distance = length(direction);
                 direction = normalize(direction);
                 
-                // Perpendicular vector for swirls
+                // Create perpendicular vector for lateral movement/swirling
                 vec2 perpendicular = vec2(-direction.y, direction.x);
                 
-                // Project point onto line
+                // Project current pixel onto the straight line between points
+                // t represents position along line: 0.0 = start, 1.0 = end
                 float t = clamp(dot(p - start, direction) / distance, 0.0, 1.0);
                 vec2 projection = start + direction * t * distance;
                 
-                // Base parameters for a more organic, flowing tendril
+                // Initialize swirl displacement - will be built up with multiple wave layers
                 float swirl = 0.0;
                 
                 // Layered sine waves with different frequencies and amplitudes for organic flow
@@ -749,12 +947,30 @@
                 return smoothstep(effectiveThickness, effectiveThickness * 0.2, distortedDistance);
             }
             
+            /**
+             * MAIN FLUID DYNAMICS SIMULATION FUNCTION
+             * =======================================
+             * 
+             * Implements a complex fluid dynamics simulation using fractal noise,
+             * vector field mathematics, and multiple rendering layers.
+             * 
+             * The algorithm works by:
+             * 1. Creating vector fields based on touch input
+             * 2. Adding turbulence and curl for organic movement
+             * 3. Iterating the simulation multiple times per frame
+             * 4. Applying color gradients based on flow intensity
+             * 5. Adding trails and particle-like effects
+             * 
+             * This creates the swirling, aurora-like fluid patterns
+             * that respond dynamically to user touch input.
+             */
             vec4 fluidEffect(vec2 uv, float time, vec2 touch1, vec2 touch2) {
-                vec4 o = vec4(0.01);
+                vec4 o = vec4(0.01);  // Output color accumulator
                 vec2 r = u_resolution;
+                // Convert screen coordinates to normalized [-1,1] range with aspect ratio correction
                 vec2 p = (gl_FragCoord.xy * 2.0 - r) / r.y;
                 
-                // Make background truly dark
+                // Start with pure black background for contrast
                 vec4 backgroundColor = vec4(0.0, 0.0, 0.0, 1.0);
                 
                 // Touch influence - trail effect
@@ -814,28 +1030,39 @@
                 v.x += 0.2 * sin(v.y * 4.0 + time * 0.9) * cos(v.x * 3.0);
                 v.y += 0.2 * cos(v.x * 4.0 - time * 0.8) * sin(v.y * 3.0);
                 
-                // Flow iterations - create extreme snaking patterns with turbulence
-                // WebGL 1.0 requires constant loop bounds
-                for(float i = 0.0; i < 12.0; i++) { // Fixed number of iterations
-                    float ii = i + 1.0;
+                // FLUID SIMULATION ITERATIONS
+                // ==========================
+                // Each iteration adds more complexity to the fluid motion
+                // More iterations = smoother flow but higher GPU cost
+                // WebGL 1.0 requires constant loop bounds, so we use max iterations with conditional break
+                for(float i = 0.0; i < 16.0; i++) { // Max possible iterations for WebGL compatibility
+                    if(i >= u_fluid_iterations) break; // Use configurable iteration count
+                    float ii = i + 1.0; // Iteration counter
                     
-                    // Create more complex flow patterns with wilder warping
+                    // Create time-varying flow patterns for organic movement
+                    // Multiple sine/cosine functions create complex, non-repeating motion
                     vec2 offset = vec2(
                         sin(time * 0.4 + ii * 0.2 + sin(time)) * 0.6,
                         cos(time * 0.3 + ii * 0.2 + cos(time)) * 0.6
                     );
                     
-                    // Use complex sinusoidal waves to create fire-like movement
+                    // Multi-frequency warping creates fire/smoke-like turbulence
+                    // High frequency + low frequency = natural-looking irregularity
                     vec2 warp = vec2(
                         sin(v.x * 2.0 + time * 0.6) * 0.3 + sin(v.x * 5.0 - time * 0.3) * 0.1,
                         cos(v.y * 2.0 + time * 0.5) * 0.3 + cos(v.y * 5.0 - time * 0.2) * 0.1
                     );
                     
-                    // Create turbulent snake-like patterns with complex oscillation
+                    // Apply the fluid dynamics update step
+                    // This is where the "magic" happens - each iteration builds on the previous
                     v += cos(v.yx * ii * 0.7 + offset + time * 0.8) / (ii * 0.4) + warp + 0.6;
                     
-                    // Add fluctuating intensity with multiple frequencies for flame-like effect
+                    // Add time-varying intensity for flickering/pulsing effects
+                    // Multiple frequencies prevent obvious repetition
                     float flicker = 0.8 + sin(time * 5.0 + ii) * 0.2 + sin(time * 9.0 + ii * 0.7) * 0.1;
+                    
+                    // Accumulate color based on vector field properties
+                    // abs(v.x - v.y) creates interesting directional patterns
                     o += (sin(v.xyyx * 1.8 + time * 0.4) + 1.0) * abs(v.x - v.y) * 0.3 * flicker;
                 }
                 
@@ -1010,40 +1237,53 @@
                 return finalColor;
             }
             
+            /**
+             * MAIN SHADER ENTRY POINT
+             * ======================
+             * Called once per pixel on the screen every frame
+             * Coordinates all visual effects and produces final pixel color
+             */
             void main() {
-                vec2 touch1 = u_touch1 * 2.0 - 1.0; // Convert to -1 to 1 range
+                // Convert touch coordinates from [0,1] to [-1,1] range for shader math
+                vec2 touch1 = u_touch1 * 2.0 - 1.0;
                 vec2 touch2 = u_touch2 * 2.0 - 1.0;
-                touch1.y *= -1.0; // Flip Y
+                touch1.y *= -1.0; // Flip Y axis to match screen coordinates
                 touch2.y *= -1.0;
                 
+                // Generate base fluid dynamics effect
                 vec4 color = fluidEffect(gl_FragCoord.xy / u_resolution, u_time, touch1, touch2);
                 
-                // Pre-calculate normalized position for targets
+                // Pre-calculate normalized screen position for efficiency
                 vec2 normalizedPos = gl_FragCoord.xy / u_resolution * 2.0 - 1.0;
                 
-                // Highlight targets with dynamic pulsing effects
+                // TARGET HIGHLIGHTING SYSTEM
+                // ===========================
+                // Creates glowing, pulsing effects around collectible targets
+                // Different colors and patterns for good vs bad targets
                 for (int i = 0; i < ${MAX_TARGETS}; i++) {
-                    if (u_target_active[i] > 0.5) {
+                    if (u_target_active[i] > 0.5) { // Only process active targets
+                        // Convert target position to shader coordinate system
                         vec2 targetPos = u_targets[i] * 2.0 - 1.0;
-                        targetPos.y *= -1.0;
+                        targetPos.y *= -1.0; // Match screen coordinate flip
                         float dist = length(normalizedPos - targetPos);
                         
+                        // Only apply glow effect within target radius
                         if (dist < 0.1) {
-                            // Dynamic pulsing effect
+                            // Create pulsing animation that varies over time
                             float pulse = sin(u_time * 8.0) * 0.2 + 0.8;
+                            // Distance-based falloff for smooth glow gradient
                             float glow = (0.1 - dist) / 0.1 * pulse;
                             
-                            // Good target: enhanced green glow with pulse
                             if (u_target_type[i] < 0.5) {
+                                // GOOD TARGET: Green glow with sparkle effects
                                 vec4 glowColor = vec4(0.0, 1.0, 0.5, 1.0);
-                                // Add sparkle effect
+                                // Add high-frequency sparkle for extra appeal
                                 glowColor += vec4(0.2) * pow(sin(u_time * 10.0 + dist * 50.0), 10.0);
                                 color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
-                            } 
-                            // Bad target: enhanced red glow with pulse
-                            else {
+                            } else {
+                                // BAD TARGET: Red glow with warning pulse
                                 vec4 glowColor = vec4(1.0, 0.2, 0.3, 1.0);
-                                // Add warning pulse effect
+                                // Add intense warning flash effect
                                 glowColor += vec4(0.3, 0.0, 0.0, 0.0) * pow(sin(u_time * 15.0), 4.0);
                                 color = mix(color, glowColor, glow * 0.8 + 0.3 * sin(u_time * 6.0));
                             }
@@ -1051,39 +1291,47 @@
                     }
                 }
                 
-                // Add shockwave effects when targets are collected (if enabled)
+                // SHOCKWAVE EFFECT SYSTEM
+                // =======================
+                // Creates expanding ring effects when targets are collected
+                // Provides visual feedback and adds dramatic flair to gameplay
                 if (u_enable_shockwaves > 0.5) {
                     for (int i = 0; i < ${MAX_TARGETS}; i++) {
                         if (u_shockwave_active[i] > 0.5) {
+                            // Convert shockwave position to shader coordinates
                             vec2 shockwavePos = u_shockwave_pos[i] * 2.0 - 1.0;
                             shockwavePos.y *= -1.0;
                             
                             float timeSinceStart = u_time - u_shockwave_start[i];
                             
+                            // Shockwaves last for 1 second
                             if (timeSinceStart < 1.0) {
-                                float waveRadius = timeSinceStart * 0.6; // Speed of expansion
+                                // Ring expands outward over time
+                                float waveRadius = timeSinceStart * 0.6; // Expansion speed
                                 float dist = length(normalizedPos - shockwavePos);
-                                float thickness = 0.03 * (1.0 - timeSinceStart); // Wave gets thinner as it expands
+                                // Ring gets thinner as it expands (perspective effect)
+                                float thickness = 0.03 * (1.0 - timeSinceStart);
                                 
-                                // Create ring effect
+                                // Create crisp ring edge using distance field
                                 float waveFront = smoothstep(0.0, thickness, abs(dist - waveRadius));
-                                waveFront = 1.0 - waveFront;
+                                waveFront = 1.0 - waveFront; // Invert for bright ring
                                 
-                                // Apply shockwave color based on target type with intensity control
+                                // Apply color and intensity based on target type
                                 if (waveFront > 0.05) {
                                     if (u_shockwave_type[i] < 0.5) {
-                                        // Good target: green shockwave
+                                        // Good target: Bright green expanding ring
                                         vec4 waveColor = vec4(0.0, 1.0, 0.5, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
                                         color += waveColor * waveFront;
                                     } else {
-                                        // Bad target: red shockwave
+                                        // Bad target: Red warning ring
                                         vec4 waveColor = vec4(1.0, 0.2, 0.3, 1.0) * (1.0 - timeSinceStart) * 0.7 * u_shockwave_intensity;
                                         color += waveColor * waveFront;
                                     }
                                     
-                                    // Add distortion to the area inside the shockwave
+                                    // Add color distortion inside the ring for extra impact
                                     if (dist < waveRadius) {
                                         float distortionFactor = 0.05 * (1.0 - dist/waveRadius) * (1.0 - timeSinceStart) * u_shockwave_intensity;
+                                        // Color channel shifting creates dramatic effect
                                         color.rgb += sin(color.gbr * 10.0 + u_time * 5.0) * distortionFactor;
                                     }
                                 }
@@ -1092,16 +1340,28 @@
                     }
                 }
                 
+                // Output final pixel color
                 gl_FragColor = color;
             }
-        `;
+        `; // End of fragment shader
         
-        // Create shader program
+        // =================================================================
+        // SHADER COMPILATION AND PROGRAM CREATION
+        // =================================================================
+        
+        /**
+         * Compile a WebGL shader from source code
+         * @param {WebGLRenderingContext} gl - WebGL context
+         * @param {number} type - Shader type (gl.VERTEX_SHADER or gl.FRAGMENT_SHADER)
+         * @param {string} source - GLSL shader source code
+         * @returns {WebGLShader|null} Compiled shader or null on failure
+         */
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
             
+            // Check for compilation errors and provide detailed feedback
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
                 console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
                 gl.deleteShader(shader);
@@ -1111,12 +1371,20 @@
             return shader;
         }
         
+        /**
+         * Create a WebGL shader program by linking vertex and fragment shaders
+         * @param {WebGLRenderingContext} gl - WebGL context
+         * @param {WebGLShader} vertexShader - Compiled vertex shader
+         * @param {WebGLShader} fragmentShader - Compiled fragment shader
+         * @returns {WebGLProgram|null} Linked shader program or null on failure
+         */
         function createProgram(gl, vertexShader, fragmentShader) {
             const program = gl.createProgram();
             gl.attachShader(program, vertexShader);
             gl.attachShader(program, fragmentShader);
             gl.linkProgram(program);
             
+            // Check for linking errors - common issues include mismatched attributes/uniforms
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
                 console.error('Program linking error:', gl.getProgramInfoLog(program));
                 return null;
@@ -1125,43 +1393,59 @@
             return program;
         }
         
+        // Compile shaders and create GPU program
         const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
         const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
         const program = createProgram(gl, vertexShader, fragmentShader);
         
-        // Set up position buffer
+        /**
+         * FULLSCREEN QUAD VERTEX BUFFER
+         * =============================
+         * Creates a simple quad that covers the entire screen
+         * The fragment shader does all the visual work - vertices just provide coverage
+         */
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        // Two triangles forming a quad covering normalized device coordinates [-1,1]
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -1, -1,
-            1, -1,
-            -1, 1,
-            -1, 1,
-            1, -1,
-            1, 1
-        ]), gl.STATIC_DRAW);
+            -1, -1,  // Bottom left
+             1, -1,  // Bottom right  
+            -1,  1,  // Top left
+            -1,  1,  // Top left (second triangle)
+             1, -1,  // Bottom right
+             1,  1   // Top right
+        ]), gl.STATIC_DRAW); // STATIC_DRAW: data won't change
         
-        // Get uniform locations
+        // =================================================================
+        // WEBGL UNIFORM LOCATION CACHING
+        // =================================================================
+        
+        /**
+         * Cache uniform locations for efficient GPU communication
+         * Getting uniform locations is expensive - do it once at startup
+         */
+        
+        // Core rendering uniforms - used every frame
         const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
         const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
         const touch1UniformLocation = gl.getUniformLocation(program, 'u_touch1');
         const touch2UniformLocation = gl.getUniformLocation(program, 'u_touch2');
         
-        // Get target uniform locations
-        const targetLocations = [];
-        const targetActiveLocations = [];
-        const targetTypeLocations = [];
+        // Target system uniform arrays - for collectible objects
+        const targetLocations = [];          // Target positions
+        const targetActiveLocations = [];    // Whether each target exists
+        const targetTypeLocations = [];      // Good vs bad target types
         for (let i = 0; i < MAX_TARGETS; i++) {
             targetLocations.push(gl.getUniformLocation(program, `u_targets[${i}]`));
             targetActiveLocations.push(gl.getUniformLocation(program, `u_target_active[${i}]`));
             targetTypeLocations.push(gl.getUniformLocation(program, `u_target_type[${i}]`));
         }
         
-        // Get shockwave uniform locations
-        const shockwaveActiveLocations = [];
-        const shockwavePosLocations = [];
-        const shockwaveStartLocations = [];
-        const shockwaveTypeLocations = [];
+        // Shockwave system uniform arrays - for visual feedback effects
+        const shockwaveActiveLocations = [];  // Whether each shockwave is active
+        const shockwavePosLocations = [];     // Shockwave center positions
+        const shockwaveStartLocations = [];   // When each shockwave started
+        const shockwaveTypeLocations = [];    // Shockwave type (matches target type)
         for (let i = 0; i < MAX_TARGETS; i++) {
             shockwaveActiveLocations.push(gl.getUniformLocation(program, `u_shockwave_active[${i}]`));
             shockwavePosLocations.push(gl.getUniformLocation(program, `u_shockwave_pos[${i}]`));
@@ -1169,195 +1453,278 @@
             shockwaveTypeLocations.push(gl.getUniformLocation(program, `u_shockwave_type[${i}]`));
         }
         
-        // Touch and mouse handling
-        let touch1 = { x: 0.25, y: 0.5 };
-        let touch2 = { x: 0.75, y: 0.5 };
+        // =================================================================
+        // INPUT HANDLING SYSTEM
+        // =================================================================
+        
+        /** 
+         * Touch point tracking - normalized coordinates [0,1]
+         * Default positions create initial fluid streams on screen
+         */
+        let touch1 = { x: 0.25, y: 0.5 };  // Left side default
+        let touch2 = { x: 0.75, y: 0.5 };  // Right side default
+        
+        /** Mouse input state tracking for desktop users */
         let isMouseDown = false;
         
+        /**
+         * Handle touch events for mobile devices
+         * Supports multi-touch input for fluid manipulation
+         * @param {TouchEvent} e - Touch event from browser
+         */
         function handleTouches(e) {
-            e.preventDefault();
+            e.preventDefault(); // Prevent scrolling/zooming on mobile
             
-            // Track if both thumbs are active
+            // Update game state based on number of active touches
             bothThumbsActive = (e.touches.length >= 2);
             
+            // Update first touch point (always present in touch events)
             if (e.touches.length >= 1) {
                 touch1.x = e.touches[0].clientX / canvas.width;
                 touch1.y = e.touches[0].clientY / canvas.height;
             }
             
+            // Update second touch point if present (two-finger interaction)
             if (e.touches.length >= 2) {
                 touch2.x = e.touches[1].clientX / canvas.width;
                 touch2.y = e.touches[1].clientY / canvas.height;
                 
-                // If this is the first time both thumbs are active, initialize the lastActiveScoreTime
+                // Initialize bonus score timer on first dual-touch
                 if (lastActiveScoreTime === 0) {
                     lastActiveScoreTime = Date.now();
                 }
             }
             
-            // Check for target collection
+            // Check if touch points are over any collectible targets
             checkTargets();
         }
         
-        // Mouse support for desktop users
+        /**
+         * Handle mouse movement for desktop users
+         * Simulates two-finger touch by creating mirrored touch points
+         * @param {MouseEvent} e - Mouse event from browser
+         */
         function handleMouseMove(e) {
-            if (!isMouseDown) return;
+            if (!isMouseDown) return; // Only track when mouse is pressed
             
-            // Update the first touch point to follow the mouse
+            // Primary touch point follows mouse cursor
             touch1.x = e.clientX / canvas.width;
             touch1.y = e.clientY / canvas.height;
             
-            // Create a secondary touch point that follows at an offset
-            // This simulates having two fingers but with just a mouse
-            touch2.x = 1 - touch1.x;
-            touch2.y = 1 - touch1.y;
+            // Secondary touch point mirrors across screen center
+            // This creates interesting fluid dynamics with just mouse input
+            touch2.x = 1 - touch1.x;  // Horizontal mirror
+            touch2.y = 1 - touch1.y;  // Vertical mirror
             
-            // Check for target collection
+            // Check for target collection on both simulated touch points
             checkTargets();
         }
         
+        /**
+         * Handle mouse press events
+         * Initializes dual-touch simulation for desktop users
+         * @param {MouseEvent} e - Mouse event from browser
+         */
         function handleMouseDown(e) {
             isMouseDown = true;
             
-            // When using mouse, both "thumbs" are considered active
+            // Mouse interaction counts as "both thumbs active" for scoring
             bothThumbsActive = true;
             if (lastActiveScoreTime === 0) {
                 lastActiveScoreTime = Date.now();
             }
             
-            // Update the first touch point to follow the mouse
+            // Initialize touch points at mouse position and mirror
             touch1.x = e.clientX / canvas.width;
             touch1.y = e.clientY / canvas.height;
-            
-            // Create a secondary touch point that follows at an offset
             touch2.x = 1 - touch1.x;
             touch2.y = 1 - touch1.y;
             
-            // Check for target collection on initial click
+            // Check for immediate target collection
             checkTargets();
         }
         
+        /**
+         * Handle mouse release events
+         * Deactivates touch simulation and scoring bonuses
+         */
         function handleMouseUp() {
             isMouseDown = false;
-            bothThumbsActive = false;
+            bothThumbsActive = false; // Stop dual-touch bonus scoring
         }
         
-        // Also check for clicks directly on targets (for easier desktop play)
+        /**
+         * Handle direct clicks on targets for easier desktop gameplay
+         * Provides alternative to fluid manipulation for target collection
+         * @param {MouseEvent} e - Click event from browser
+         */
         function handleClick(e) {
+            // Convert mouse position to normalized coordinates
             const mouseX = e.clientX / canvas.width;
             const mouseY = e.clientY / canvas.height;
             
-            // Check if the click was directly on a target
+            // Check each target for click collision
             targets.forEach(target => {
-                if (target.collected) return;
+                if (target.collected) return; // Skip already collected targets
                 
+                // Calculate distance from click to target center
                 const dist = Math.hypot(
                     target.x - mouseX,
                     target.y - mouseY
                 );
                 
-                if (dist < 0.08) {  // Same collection radius as with touch
+                // Use same collection radius as touch/fluid interaction
+                if (dist < 0.08) {
                     collectTarget(target);
                 }
             });
         }
         
-        // Touch events
+        // =================================================================
+        // EVENT LISTENER REGISTRATION
+        // =================================================================
+        
+        // Touch events for mobile devices
         canvas.addEventListener('touchstart', handleTouches);
         canvas.addEventListener('touchmove', handleTouches);
         
-        // Mouse events
+        // Mouse events for desktop users
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUp);
-        canvas.addEventListener('mouseleave', handleMouseUp);
-        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('mouseleave', handleMouseUp); // Treat mouse leave as mouse up
+        canvas.addEventListener('click', handleClick); // Direct target clicking
         
-        // Score update with animation and sound
+        // =================================================================
+        // SCORING SYSTEM
+        // =================================================================
+        
+        /**
+         * Update player score with audio/visual feedback
+         * Handles both positive and negative score changes with appropriate effects
+         * @param {number} points - Points to add (positive) or subtract (negative)
+         */
         function updateScore(points) {
             score += points;
             document.getElementById('score').textContent = `Score: ${score}`;
             
-            // Visual feedback
+            // Update visual styling based on score change direction
             const scoreElement = document.getElementById('score');
             scoreElement.classList.remove('negative');
             
             if (points > 0) {
+                // POSITIVE SCORE CHANGE
                 scoreDirection = 1;
-                // Play good sound
+                
+                // Play pleasant ascending tone
                 if (audioEnabled) {
                     createCollectSound();
                 }
-                // Short vibration for good targets
+                
+                // Brief, satisfying vibration
                 vibrate(50);
             } else {
+                // NEGATIVE SCORE CHANGE  
                 scoreDirection = -1;
-                scoreElement.classList.add('negative');
-                // Play bad sound
+                scoreElement.classList.add('negative'); // Red coloring
+                
+                // Play harsh descending tone
                 if (audioEnabled) {
                     createBadSound();
                 }
-                // More intense vibration for bad targets
-                vibrate([50, 50, 100]);
+                
+                // More intense vibration pattern for penalty
+                vibrate([50, 50, 100]); // Short-pause-short-pause-long
             }
             
+            // Track timing for UI animations
             lastScoreChange = Date.now();
             
-            // Reset visual feedback after a delay
+            // Reset negative styling after brief display period
             setTimeout(() => {
                 scoreElement.classList.remove('negative');
             }, 500);
         }
         
-        // Target generation
+        // =================================================================
+        // TARGET MANAGEMENT SYSTEM
+        // =================================================================
+        
+        /**
+         * Create a new collectible target at random position
+         * Balances good vs bad targets to maintain game challenge
+         */
         function createTarget() {
+            // Enforce maximum target limit to prevent screen clutter
             if (targets.length >= MAX_TARGETS) return;
             
-            // Decide if this is a good or bad target
-            const isBad = Math.random() < 0.3; // 30% chance for bad targets
+            // Random target type generation - biased toward good targets
+            const isBad = Math.random() < 0.3; // 30% bad, 70% good targets
             
+            // Create target object with all necessary properties
             const target = {
-                x: Math.random() * 0.8 + 0.1,
-                y: Math.random() * 0.8 + 0.1,
-                createdAt: Date.now(),
-                collected: false,
-                isBad: isBad,
-                element: document.createElement('div')
+                // Random position with margin from screen edges
+                x: Math.random() * 0.8 + 0.1,  // 10% margin on each side
+                y: Math.random() * 0.8 + 0.1,  // 10% margin top/bottom
+                createdAt: Date.now(),          // For expiration timing
+                collected: false,               // Collection state flag
+                isBad: isBad,                  // Target type affects scoring
+                element: document.createElement('div') // DOM element for display
             };
             
-            // Set appropriate CSS class
+            // Apply appropriate CSS styling based on target type
             target.element.className = isBad ? 'target bad' : 'target good';
+            
+            // Position DOM element to match target coordinates
             target.element.style.left = `${target.x * 100}%`;
             target.element.style.top = `${target.y * 100}%`;
-            document.getElementById('targets').appendChild(target.element);
             
+            // Add to DOM and internal tracking array
+            document.getElementById('targets').appendChild(target.element);
             targets.push(target);
         }
         
+        /**
+         * Remove target from game (cleanup DOM and internal state)
+         * @param {Object} target - Target object to remove
+         */
         function removeTarget(target) {
-            target.element.remove();
-            targets = targets.filter(t => t !== target);
+            target.element.remove(); // Remove from DOM
+            targets = targets.filter(t => t !== target); // Remove from array
         }
         
+        /**
+         * Update target system each frame
+         * Handles target expiration and new target generation
+         */
         function updateTargets() {
             const now = Date.now();
             
-            // Remove expired targets
+            // Remove targets that have exceeded their lifespan
             targets.forEach(target => {
-                if (now - target.createdAt > targetLifespan && !target.collected) {
-                    removeTarget(target);
+                const age = now - target.createdAt;
+                if (age > targetLifespan && !target.collected) {
+                    removeTarget(target); // Clean up expired targets
                 }
             });
             
-            // Create new targets if needed, rate affected by control panel
-            if (targets.length < MAX_TARGETS && Math.random() < (0.01 * gameSettings.targetGenerationRate)) {
+            // Generate new targets based on control panel settings
+            // Lower probability per frame = steady generation rate
+            const generationChance = 0.01 * gameSettings.targetGenerationRate;
+            if (targets.length < MAX_TARGETS && Math.random() < generationChance) {
                 createTarget();
             }
         }
         
-        // Create a new shockwave effect
+        /**
+         * Create expanding shockwave effect at target collection point
+         * Provides dramatic visual feedback for player actions
+         * @param {number} x - Normalized X position (0-1)
+         * @param {number} y - Normalized Y position (0-1) 
+         * @param {boolean} isGood - True for good target, false for bad
+         */
         function createShockwave(x, y, isGood) {
-            // Find an available slot for a new shockwave
+            // Find available slot in shockwave array (reuse expired slots)
             let index = -1;
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (!shockwaves[i] || !shockwaves[i].active) {
@@ -1366,23 +1733,28 @@
                 }
             }
             
-            // If no slot is available, return
+            // No available slots - skip this shockwave
             if (index === -1) return;
             
-            // Create the shockwave
+            // Initialize shockwave data for shader processing
             shockwaves[index] = {
                 active: true,
-                x: x,
+                x: x,                        // Center position
                 y: y,
-                startTime: Date.now() / 1000, // Current time in seconds
-                isGood: isGood
+                startTime: Date.now() / 1000, // Convert to seconds for shader
+                isGood: isGood               // Affects color and intensity
             };
         }
         
+        /**
+         * Check if any targets are within collection range of touch points
+         * Called every frame and on input events
+         */
         function checkTargets() {
             targets.forEach(target => {
-                if (target.collected) return;
+                if (target.collected) return; // Skip already collected targets
                 
+                // Calculate distance from target to each touch point
                 const distToTouch1 = Math.hypot(
                     target.x - touch1.x,
                     target.y - touch1.y
@@ -1393,58 +1765,86 @@
                     target.y - touch2.y
                 );
                 
-                if (distToTouch1 < 0.08 || distToTouch2 < 0.08) {
+                // Collection occurs if target is close enough to either touch point
+                const COLLECTION_RADIUS = 0.08; // Normalized distance threshold
+                if (distToTouch1 < COLLECTION_RADIUS || distToTouch2 < COLLECTION_RADIUS) {
                     collectTarget(target);
                 }
             });
         }
         
+        /**
+         * Handle target collection with scoring and visual effects
+         * @param {Object} target - Target object being collected
+         */
         function collectTarget(target) {
-            if (target.collected) return;
+            if (target.collected) return; // Prevent double collection
             
-            target.collected = true;
+            target.collected = true; // Mark as collected immediately
             
-            // Create a shockwave effect at the target's position
+            // Create dramatic shockwave effect at collection point
             createShockwave(target.x, target.y, !target.isBad);
             
             if (target.isBad) {
-                // Bad target visuals
+                // BAD TARGET COLLECTION
+                // Visual: Intense red highlighting
                 target.element.style.border = '4px solid rgba(255, 51, 102, 1.0)';
                 target.element.style.boxShadow = '0 0 25px rgba(255, 51, 102, 1.0)';
-                updateScore(-15); // Lose 15 points
+                updateScore(-15); // Significant point penalty
             } else {
-                // Good target visuals
+                // GOOD TARGET COLLECTION
+                // Visual: Bright green highlighting  
                 target.element.style.border = '4px solid rgba(0, 255, 170, 1.0)';
                 target.element.style.boxShadow = '0 0 25px rgba(0, 255, 170, 1.0)';
-                updateScore(10); // Gain 10 points
+                updateScore(10); // Point reward
             }
             
+            // Stop any existing CSS animations and apply collection effect
             target.element.style.animation = 'none';
             target.element.style.transform = 'translate(-50%, -50%) scale(1.2)';
             
+            // Remove target after brief visual feedback period
             setTimeout(() => {
                 removeTarget(target);
             }, 500);
         }
         
-        // Animation loop
+        /** 
+         * GAME TIMING SYSTEM
+         * ==================
+         * Base timestamp for calculating animation time in shaders
+         * All time-based effects use this as reference point
+         */
         let startTime = Date.now();
         
-        // Check if tendril intersects with a target
+        // =================================================================
+        // ADVANCED GAMEPLAY MECHANICS
+        // =================================================================
+        
+        /**
+         * Check if lightning-like tendrils intersect with any targets
+         * Advanced gameplay mechanic - rewards skillful positioning
+         * 
+         * The tendril system creates a "lightning rod" effect where targets
+         * can be collected indirectly through the energy beam connection
+         * between the two touch points.
+         */
         function checkTendrilTargetIntersection() {
-            // Only check if tendrils are enabled
+            // Skip if tendril effects are disabled
             if (!gameSettings.enableTendrils) return;
             
-            // Only check if the thumbs are far enough apart to create a tendril
+            // Calculate distance between touch points
             let touchDistance = Math.hypot(
                 touch1.x - touch2.x,
                 touch1.y - touch2.y
             );
             
-            if (touchDistance < 0.15) return;
+            // Tendrils only form when touch points are sufficiently separated
+            const MIN_TENDRIL_DISTANCE = 0.15;
+            if (touchDistance < MIN_TENDRIL_DISTANCE) return;
             
-            // Create a simplified path between touch points to check for collisions
-            // We'll sample multiple points along the path to approximate the tendril
+            // Sample multiple points along tendril path for collision detection
+            // More samples = more accurate but more expensive
             const numSamples = 10;
             
             targets.forEach(target => {
@@ -1452,42 +1852,43 @@
                 
                 let hit = false;
                 
-                // Check multiple points along the tendril path
+                // Check collision at multiple points along tendril path
                 for (let i = 0; i <= numSamples; i++) {
-                    const t = i / numSamples;
+                    const t = i / numSamples; // Parameter along line (0 to 1)
                     
-                    // Simple linear interpolation between touch points
-                    // This is an approximation - the actual tendril has swirls and curves
+                    // Linear interpolation between touch points (base path)
+                    // Note: Real tendril in shader has complex swirling motion
                     const x = touch1.x + (touch2.x - touch1.x) * t;
                     const y = touch1.y + (touch2.y - touch1.y) * t;
                     
-                    // Add some randomization to simulate the swirly nature
-                    // This is a simplification of the shader's complex patterns
+                    // Approximate the tendril's swirling motion for collision
+                    // Simplified version of complex shader mathematics
                     const time = Date.now() / 1000;
-                    const offset = 0.05 * gameSettings.tendrilTurbulence * Math.sin(t * 6 + time * 2);
+                    const swirl = 0.05 * gameSettings.tendrilTurbulence * Math.sin(t * 6 + time * 2);
                     
-                    // Calculate distance to target
+                    // Calculate distance from target to swirling tendril path
                     const dist = Math.hypot(
-                        target.x - (x + offset),
+                        target.x - (x + swirl),
                         target.y - y
                     );
                     
-                    // Thickness depends on control panel settings
+                    // Collision threshold based on tendril thickness setting
                     const thickness = 0.05 * gameSettings.tendrilThickness;
+                    const hitRadius = thickness + 0.03; // Include target size
                     
-                    if (dist < thickness + 0.03) {  // 0.03 is approximate target hit radius
+                    if (dist < hitRadius) {
                         hit = true;
-                        break;
+                        break; // Exit sampling loop early
                     }
                 }
                 
                 if (hit) {
-                    // Tendril hit target!
+                    // TENDRIL HIT DETECTED!
                     if (target.isBad) {
-                        // Penalize for hitting bad target with tendril
+                        // Smaller penalty than direct touch (skill-based)
                         updateScore(-5);
                     } else {
-                        // Reward for hitting good target with tendril
+                        // Smaller reward than direct touch (encourages direct play)
                         updateScore(5);
                     }
                     collectTarget(target);
@@ -1495,67 +1896,103 @@
             });
         }
         
-        // Check if thumbs are too close and apply penalty
+        /**
+         * Penalty system for keeping touch points too close together
+         * Encourages players to maintain proper finger separation
+         * Prevents "lazy" gameplay where fingers barely move
+         */
         function checkThumbsDistance() {
-            if (!bothThumbsActive) return;
+            if (!bothThumbsActive) return; // Only applies during dual-touch
             
             const touchDistance = Math.hypot(
                 touch1.x - touch2.x,
                 touch1.y - touch2.y
             );
             
-            // If thumbs are too close, apply penalty (but only once)
+            // Apply penalty if thumbs are too close (but prevent spam penalties)
             if (touchDistance < THUMBS_TOO_CLOSE_THRESHOLD && !thumbsClosePenaltyActive) {
                 thumbsClosePenaltyActive = true;
-                updateScore(-3);
+                updateScore(-3); // Moderate penalty to encourage proper play
                 
-                // Visual and haptic feedback
+                // Enhanced haptic feedback for rule violation
                 if (navigator.vibrate) {
-                    navigator.vibrate([50, 50, 50]);  // More intense vibration for penalty
+                    navigator.vibrate([50, 50, 50]); // Triple buzz pattern
                 }
                 
-                // Add a small timeout to prevent constant penalties
+                // Cooldown period prevents continuous penalties
                 setTimeout(() => {
                     thumbsClosePenaltyActive = false;
-                }, 1000);
+                }, 1000); // 1 second cooldown
             }
         }
         
-        // Check for bonus when both thumbs are active
+        /**
+         * Bonus scoring system for maintaining active dual-touch gameplay
+         * Rewards players for continuous engagement rather than passive play
+         * Encourages the intended "thumb war" style of interaction
+         */
         function checkActiveThumbsBonus() {
             const now = Date.now();
             
-            // Only apply if both thumbs are currently active
-            if (bothThumbsActive && now - lastActiveScoreTime > BOTH_THUMBS_ACTIVE_SCORE_INTERVAL) {
-                updateScore(1);  // Small bonus for keeping both thumbs active
+            // Award bonus points for sustained dual-touch interaction
+            const timeSinceLastBonus = now - lastActiveScoreTime;
+            if (bothThumbsActive && timeSinceLastBonus > BOTH_THUMBS_ACTIVE_SCORE_INTERVAL) {
+                updateScore(1); // Small but steady bonus encourages active play
                 lastActiveScoreTime = now;
             }
         }
         
+        // =================================================================
+        // MAIN RENDERING LOOP
+        // =================================================================
+        
+        /**
+         * Main render function - called every frame by requestAnimationFrame
+         * Coordinates all game systems and renders the final frame
+         * 
+         * Render Loop Order:
+         * 1. Update canvas size if needed
+         * 2. Update game logic (targets, collisions, scoring)
+         * 3. Set up WebGL rendering state
+         * 4. Pass all data to GPU via uniforms
+         * 5. Draw fullscreen quad (fragment shader does all visual work)
+         * 6. Schedule next frame
+         */
         function render() {
+            // Ensure canvas matches display size (handles window resizing)
             resize();
-            updateTargets();
             
-            // Game rule checks
-            checkTendrilTargetIntersection();
-            checkThumbsDistance();
-            checkActiveThumbsBonus();
+            // Update game state systems
+            updateTargets(); // Target generation and expiration
             
+            // Advanced gameplay mechanic checks
+            checkTendrilTargetIntersection(); // Lightning collection system
+            checkThumbsDistance();            // Proximity penalty system  
+            checkActiveThumbsBonus();         // Engagement reward system
+            
+            // Calculate animation time (seconds since game start)
             const currentTime = (Date.now() - startTime) / 1000;
             
-            // True black background
-            gl.clearColor(0, 0, 0, 1);
+            // Clear framebuffer to pure black for maximum contrast
+            gl.clearColor(0, 0, 0, 1); // RGBA: opaque black
             gl.clear(gl.COLOR_BUFFER_BIT);
             
+            // Activate shader program for rendering
             gl.useProgram(program);
             
-            // Set uniforms
+            // =============================================================
+            // CORE RENDERING UNIFORMS
+            // Send essential data to GPU for shader processing
+            // =============================================================
             gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
             gl.uniform1f(timeUniformLocation, currentTime);
             gl.uniform2f(touch1UniformLocation, touch1.x, touch1.y);
             gl.uniform2f(touch2UniformLocation, touch2.x, touch2.y);
             
-            // Set control panel uniforms
+            // =============================================================
+            // CONTROL PANEL UNIFORMS
+            // Pass user-adjustable parameters to shader for real-time effects
+            // =============================================================
             gl.uniform1f(gl.getUniformLocation(program, 'u_fluid_intensity'), gameSettings.fluidIntensity);
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_background'), gameSettings.enableBackground ? 1.0 : 0.0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_tendrils'), gameSettings.enableTendrils ? 1.0 : 0.0);
@@ -1564,53 +2001,81 @@
             gl.uniform1f(gl.getUniformLocation(program, 'u_tendril_glow'), gameSettings.tendrilGlow);
             gl.uniform1f(gl.getUniformLocation(program, 'u_enable_shockwaves'), gameSettings.enableShockwaves ? 1.0 : 0.0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_shockwave_intensity'), gameSettings.shockwaveIntensity);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_fluid_iterations'), gameSettings.fluidIterations);
             
-            // Set target uniforms
+            // =============================================================
+            // TARGET SYSTEM UNIFORMS
+            // Send target data to shader for glow effects and highlighting
+            // =============================================================
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (i < targets.length && !targets[i].collected) {
+                    // Active target - send position and type data
                     gl.uniform2f(targetLocations[i], targets[i].x, targets[i].y);
-                    gl.uniform1f(targetActiveLocations[i], 1.0);
-                    gl.uniform1f(targetTypeLocations[i], targets[i].isBad ? 1.0 : 0.0);
+                    gl.uniform1f(targetActiveLocations[i], 1.0); // Mark as active
+                    gl.uniform1f(targetTypeLocations[i], targets[i].isBad ? 1.0 : 0.0); // Type affects color
                 } else {
+                    // Inactive slot - clear data to prevent rendering
                     gl.uniform2f(targetLocations[i], 0, 0);
-                    gl.uniform1f(targetActiveLocations[i], 0.0);
+                    gl.uniform1f(targetActiveLocations[i], 0.0); // Mark as inactive
                     gl.uniform1f(targetTypeLocations[i], 0.0);
                 }
             }
             
-            // Set shockwave uniforms
+            // =============================================================
+            // SHOCKWAVE SYSTEM UNIFORMS  
+            // Send shockwave data to shader for expanding ring effects
+            // =============================================================
             for (let i = 0; i < MAX_TARGETS; i++) {
                 if (shockwaves[i] && shockwaves[i].active) {
                     const timeSinceStart = currentTime - shockwaves[i].startTime;
                     
-                    // Deactivate shockwaves after 1 second
+                    // Shockwave lifetime management (1 second duration)
                     if (timeSinceStart > 1.0) {
+                        // Expired - deactivate and free slot for reuse
                         shockwaves[i].active = false;
                         gl.uniform1f(shockwaveActiveLocations[i], 0.0);
                     } else {
+                        // Active - send all shockwave data to shader
                         gl.uniform1f(shockwaveActiveLocations[i], 1.0);
                         gl.uniform2f(shockwavePosLocations[i], shockwaves[i].x, shockwaves[i].y);
                         gl.uniform1f(shockwaveStartLocations[i], shockwaves[i].startTime);
                         gl.uniform1f(shockwaveTypeLocations[i], shockwaves[i].isGood ? 0.0 : 1.0);
                     }
                 } else {
+                    // Inactive slot - ensure shader ignores this shockwave
                     gl.uniform1f(shockwaveActiveLocations[i], 0.0);
                 }
             }
             
-            // Set position attribute
+            // =============================================================
+            // VERTEX DATA AND RENDERING
+            // Set up fullscreen quad and execute draw call
+            // =============================================================
+            
+            // Bind vertex position attribute for fullscreen quad
             const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
             gl.enableVertexAttribArray(positionAttributeLocation);
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            // Configure vertex attribute: 2 floats per vertex, tightly packed
             gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
             
-            // Draw
+            // EXECUTE RENDER - Draw 6 vertices as 2 triangles forming fullscreen quad
+            // Fragment shader processes every pixel and creates all visual effects
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             
+            // Schedule next frame using browser's optimal timing
             requestAnimationFrame(render);
         }
         
-        // Start the game - audio needs user interaction to work in modern browsers
+        // =================================================================
+        // GAME INITIALIZATION AND STARTUP
+        // =================================================================
+        
+        /** 
+         * Game startup sequence
+         * Modern browsers require user interaction before audio can be enabled
+         * due to autoplay policies - audio context starts in suspended state
+         */
         
         // Add additional event listeners to ensure audio context starts
         // First user interaction with the page will enable audio
@@ -1660,9 +2125,17 @@
         document.addEventListener('click', enableAudio);
         document.addEventListener('touchstart', enableAudio);
         
-        // Initial target creation and start render loop
+        // =================================================================
+        // START THE GAME
+        // =================================================================
+        
+        // Create initial target to give player something to collect immediately
         createTarget();
+        
+        // Begin the main game loop - this will run continuously at ~60fps
         render();
+        
+        // Game is now running! All systems initialized and rendering loop active.
     </script>
 </body>
 </html>
