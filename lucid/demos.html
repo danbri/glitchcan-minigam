@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SDF Demos – Lucid</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .demo-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-dot.active {
+      background: #22d3ee;
+      transform: scale(1.3);
+    }
+
+    .nav-dot:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Code Panel */
+    .code-panel {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      transition: right 0.3s ease;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .code-panel.open {
+      right: 0;
+    }
+
+    .code-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #22d3ee;
+    }
+
+    .code-close {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .code-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .code-content {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .code-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Code Toggle Button */
+    .code-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #22d3ee;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      transition: all 0.3s ease;
+    }
+
+    .code-toggle:hover {
+      background: rgba(34, 211, 238, 0.2);
+      transform: scale(1.1);
+    }
+
+    /* Demo Title */
+    .demo-title {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+    }
+
+    .demo-title h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .demo-title p {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* Loading */
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #22d3ee;
+      font-size: 14px;
+      z-index: 200;
+    }
+
+    @media (max-width: 768px) {
+      .code-panel {
+        width: 100vw;
+        right: -100vw;
+      }
+
+      .demo-title {
+        left: 10px;
+        right: 70px;
+        padding: 8px 12px;
+      }
+
+      .demo-title h1 {
+        font-size: 16px;
+      }
+
+      .demo-title p {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">Loading...</div>
+
+  <div class="demo-title">
+    <h1 id="title">Loading...</h1>
+    <p id="subtitle">SDF Raymarching Demo</p>
+  </div>
+
+  <button class="code-toggle" title="View DSL Code">{ }</button>
+
+  <div class="demo-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <nav class="nav" id="nav"></nav>
+
+  <aside class="code-panel" id="codePanel">
+    <div class="code-header">
+      <span class="code-title">DSL Source</span>
+      <button class="code-close" title="Close">&times;</button>
+    </div>
+    <div class="code-content">
+      <div class="code-block">
+        <div class="code-label">Scene Definition</div>
+        <pre id="dslCode">...</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-label">Description</div>
+        <pre id="dslDescription">...</pre>
+      </div>
+    </div>
+  </aside>
+
+  <script type="module">
+    import {
+      parseDslToSceneGraph,
+      generateGlslFromSceneGraph,
+      log
+    } from './core/index.js';
+
+    // ============================================================
+    // Demo Scenes
+    // ============================================================
+
+    const demos = [
+      {
+        title: "Pulsing Sphere",
+        subtitle: "Animated radius with color shift",
+        dsl: `# Pulsing sphere with color shift
+s0 = sphere(
+  r = 1.0 + 0.3*sin(time),
+  color = [0.4 + 0.4*sin(time), 0.6, 1.0],
+  offset = [0.0, 0.3*sin(time*0.7), 0.0]
+)
+out = s0`,
+        description: "A simple animated sphere demonstrating time-based parameter modulation. The radius pulses between 0.7 and 1.3 units, while the color shifts through cyan tones and the position oscillates vertically."
+      },
+      {
+        title: "Rotating Torus",
+        subtitle: "Classic donut with orbit",
+        dsl: `# Rotating torus
+t0 = torus(
+  majorR = 1.2,
+  minorR = 0.3,
+  center = [sin(time), 0.0, cos(time)],
+  color = [1.0, 0.5 + 0.3*sin(time*2.0), 0.3]
+)
+out = t0`,
+        description: "A torus orbiting in a circle while its color shifts between orange and reddish tones. Demonstrates circular motion using sin/cos functions."
+      },
+      {
+        title: "Smooth Union",
+        subtitle: "Two spheres blending together",
+        dsl: `# Smooth union of two spheres
+s1 = sphere(
+  r = 0.8,
+  center = [sin(time)*0.5, 0.3, 0.0],
+  color = [0.3, 0.8, 1.0]
+)
+
+s2 = sphere(
+  r = 0.8,
+  center = [-sin(time)*0.5, -0.3, 0.0],
+  color = [1.0, 0.3, 0.8]
+)
+
+blend = smoothUnion(a=s1, b=s2, k=0.4)
+out = blend`,
+        description: "Two spheres oscillating horizontally and blending together smoothly. The smooth union operator creates organic-looking connections between shapes."
+      },
+      {
+        title: "Box & Sphere Dance",
+        subtitle: "Geometric shapes in harmony",
+        dsl: `# Box and sphere composition
+b1 = box(
+  size = [0.6, 0.6, 0.6],
+  center = [0.0, sin(time*1.5)*0.4, 0.0],
+  color = [1.0, 0.7, 0.2]
+)
+
+s1 = sphere(
+  r = 0.5,
+  center = [cos(time)*0.8, 0.0, sin(time)*0.8],
+  color = [0.2, 0.7, 1.0]
+)
+
+combo = union(a=b1, b=s1)
+out = combo`,
+        description: "A golden box bobbing vertically while a cyan sphere orbits around it. Demonstrates the union operator combining different primitive shapes."
+      },
+      {
+        title: "Capsule Chain",
+        subtitle: "Connected segments in motion",
+        dsl: `# Capsule with dynamic endpoints
+cap = capsule(
+  a = [0.0, sin(time)*0.5, 0.0],
+  b = [cos(time)*0.8, -sin(time)*0.5, sin(time)*0.4],
+  radius = 0.2,
+  color = [0.8, 1.0, 0.3]
+)
+out = cap`,
+        description: "A capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules are perfect for limbs, ropes, or organic connections."
+      },
+      {
+        title: "Smooth Subtract",
+        subtitle: "Organic boolean operation",
+        dsl: `# Smooth subtraction - carved sphere
+s1 = sphere(
+  r = 1.0,
+  center = [0.0, 0.0, 0.0],
+  color = [0.9, 0.4, 0.6]
+)
+
+s2 = sphere(
+  r = 0.8,
+  center = [sin(time)*0.4, cos(time*1.3)*0.4, 0.0],
+  color = [0.3, 0.6, 1.0]
+)
+
+carved = smoothSubtract(a=s1, b=s2, k=0.3)
+out = carved`,
+        description: "A sphere being carved by another moving sphere using smooth subtraction. Creates organic indentations that move across the surface."
+      }
+    ];
+
+    // ============================================================
+    // WebGL Renderer (Simplified Raymarcher)
+    // ============================================================
+
+    class SimpleRaymarcher {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!this.gl) {
+          throw new Error('WebGL not supported');
+        }
+
+        this.params = {
+          maxSteps: 100,
+          maxDist: 50.0,
+          surfDist: 0.001,
+          stepSize: 1.0
+        };
+
+        this.currentGlsl = '';
+        this.program = null;
+        this.startTime = performance.now();
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        if (this.gl) {
+          this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        }
+      }
+
+      updateScene(glslCode) {
+        this.currentGlsl = glslCode;
+        this.compileShaders();
+      }
+
+      compileShaders() {
+        const gl = this.gl;
+
+        const vertexShaderSource = `
+          attribute vec4 a_position;
+          void main() {
+            gl_Position = a_position;
+          }
+        `;
+
+        const fragmentShaderSource = `
+          precision highp float;
+          uniform vec2 u_resolution;
+          uniform float u_time;
+
+          ${this.currentGlsl}
+
+          vec3 calcNormal(vec3 p) {
+            vec2 e = vec2(0.001, 0.0);
+            return normalize(vec3(
+              g_df_scene(p + e.xyy).x - g_df_scene(p - e.xyy).x,
+              g_df_scene(p + e.yxy).x - g_df_scene(p - e.yxy).x,
+              g_df_scene(p + e.yyx).x - g_df_scene(p - e.yyx).x
+            ));
+          }
+
+          vec4 raymarch(vec3 ro, vec3 rd) {
+            float t = 0.0;
+            vec3 col = vec3(0.0);
+
+            for (int i = 0; i < 100; i++) {
+              vec3 p = ro + rd * t;
+              vec4 scene = g_df_scene(p);
+              float d = scene.x;
+
+              if (abs(d) < 0.001) {
+                vec3 normal = calcNormal(p);
+                vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                float diff = max(dot(normal, light), 0.0);
+                float amb = 0.3;
+                float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
+
+                col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+                return vec4(col, 1.0);
+              }
+
+              if (t > 50.0) break;
+              t += abs(d) * 0.9;
+            }
+
+            return vec4(0.0);
+          }
+
+          void main() {
+            vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+            vec3 ro = vec3(0.0, 0.0, -4.0);
+            vec3 rd = normalize(vec3(uv, 1.0));
+
+            vec4 col = raymarch(ro, rd);
+
+            // Background gradient
+            if (col.a < 0.5) {
+              vec3 bg = mix(vec3(0.02, 0.02, 0.08), vec3(0.05, 0.0, 0.1), uv.y * 0.5 + 0.5);
+              col = vec4(bg, 1.0);
+            }
+
+            gl_FragColor = col;
+          }
+        `;
+
+        // Clean up old program
+        if (this.program) {
+          gl.deleteProgram(this.program);
+        }
+
+        // Compile shaders
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+          console.error('Fragment shader error:', gl.getShaderInfoLog(fragmentShader));
+          return;
+        }
+
+        // Link program
+        this.program = gl.createProgram();
+        gl.attachShader(this.program, vertexShader);
+        gl.attachShader(this.program, fragmentShader);
+        gl.linkProgram(this.program);
+
+        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+          console.error('Program link error:', gl.getProgramInfoLog(this.program));
+          return;
+        }
+
+        // Set up geometry
+        const positions = new Float32Array([
+          -1, -1,
+           1, -1,
+          -1,  1,
+           1,  1,
+        ]);
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(this.program, 'a_position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+      }
+
+      render() {
+        if (!this.program) return;
+
+        const gl = this.gl;
+        gl.useProgram(this.program);
+
+        const resolutionLocation = gl.getUniformLocation(this.program, 'u_resolution');
+        gl.uniform2f(resolutionLocation, this.canvas.width, this.canvas.height);
+
+        const timeLocation = gl.getUniformLocation(this.program, 'u_time');
+        const time = (performance.now() - this.startTime) / 1000.0;
+        gl.uniform1f(timeLocation, time);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    }
+
+    // ============================================================
+    // Demo Controller
+    // ============================================================
+
+    let currentDemo = 0;
+    let renderer = null;
+
+    function init() {
+      const canvas = document.getElementById('canvas');
+      renderer = new SimpleRaymarcher(canvas);
+
+      // Create navigation dots
+      const nav = document.getElementById('nav');
+      demos.forEach((demo, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+        dot.addEventListener('click', () => switchDemo(i));
+        nav.appendChild(dot);
+      });
+
+      // Code panel toggle
+      const codeToggle = document.querySelector('.code-toggle');
+      const codePanel = document.getElementById('codePanel');
+      const codeClose = document.querySelector('.code-close');
+
+      codeToggle.addEventListener('click', () => {
+        codePanel.classList.add('open');
+      });
+
+      codeClose.addEventListener('click', () => {
+        codePanel.classList.remove('open');
+      });
+
+      // Load first demo
+      switchDemo(0);
+
+      // Start render loop
+      function renderLoop() {
+        renderer.render();
+        requestAnimationFrame(renderLoop);
+      }
+      renderLoop();
+
+      // Hide loading
+      document.querySelector('.loading').style.display = 'none';
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          switchDemo((currentDemo + 1) % demos.length);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          switchDemo((currentDemo - 1 + demos.length) % demos.length);
+        } else if (e.key === 'c' || e.key === 'C') {
+          codePanel.classList.toggle('open');
+        }
+      });
+    }
+
+    function switchDemo(index) {
+      currentDemo = index;
+      const demo = demos[index];
+
+      // Update UI
+      document.getElementById('title').textContent = demo.title;
+      document.getElementById('subtitle').textContent = demo.subtitle;
+      document.getElementById('dslCode').textContent = demo.dsl;
+      document.getElementById('dslDescription').textContent = demo.description;
+
+      // Update nav dots
+      document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+      });
+
+      // Parse and generate GLSL
+      const parsed = parseDslToSceneGraph(demo.dsl);
+      if (parsed.errors.length > 0) {
+        console.error('Parse errors:', parsed.errors);
+        return;
+      }
+
+      const glsl = generateGlslFromSceneGraph(parsed.nodes);
+      renderer.updateScene(glsl);
+    }
+
+    // Start on load
+    init();
+  </script>
+</body>
+</html>
