@@ -587,12 +587,48 @@ out = carved`,
       const codeClose = document.querySelector('.code-close');
 
       codeToggle.addEventListener('click', () => {
-        codePanel.classList.add('open');
+        codePanel.classList.toggle('open');
       });
 
       codeClose.addEventListener('click', () => {
         codePanel.classList.remove('open');
       });
+
+      // Touch swipe support
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchEndX = 0;
+      let touchEndY = 0;
+
+      const demoContainer = document.querySelector('.demo-container');
+
+      demoContainer.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      demoContainer.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+      }, { passive: true });
+
+      function handleSwipe() {
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const minSwipeDistance = 50;
+
+        // Only trigger if horizontal swipe is dominant
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+          if (deltaX > 0) {
+            // Swipe right - previous demo
+            switchDemo((currentDemo - 1 + demos.length) % demos.length);
+          } else {
+            // Swipe left - next demo
+            switchDemo((currentDemo + 1) % demos.length);
+          }
+        }
+      }
 
       // Load first demo
       switchDemo(0);
