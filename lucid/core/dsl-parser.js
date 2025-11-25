@@ -118,8 +118,22 @@ export function parseDslToSceneGraph(text) {
       if (eqIdx !== -1) {
         const key = part.slice(0, eqIdx).trim();
         const valRaw = part.slice(eqIdx + 1).trim();
-        node.params[key] = parseValue(valRaw);
-        node.paramOrder.push(key);
+        const val = parseValue(valRaw);
+
+        // Check if this is an input reference (simple identifier) or a parameter value
+        // Input references are node IDs like "s1", "blend", etc.
+        // Parameters are numbers, arrays, or expressions like "1.0", "[0,0,0]", "sin(time)"
+        const isInputRef = typeof val === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(val);
+
+        if (isInputRef) {
+          // This is a reference to another node (input)
+          node.inputs[key] = val;
+          node.inputOrder.push(val);
+        } else {
+          // This is a parameter value
+          node.params[key] = val;
+          node.paramOrder.push(key);
+        }
       } else {
         const id = parseValue(part);
         if (!id) return;
