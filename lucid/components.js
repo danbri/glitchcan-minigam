@@ -7,10 +7,14 @@
  *
  * Usage:
  *   import { getComponent, isComponentRegistered } from './lucid/components.js';
+ *   import { appContext, parseDslToSceneGraph } from './lucid/core/index.js';
  *
  *   const DebugConsole = getComponent('debug-console-app');
  *   const renderer = document.createElement('sdf-renderer-app');
  */
+
+// Re-export core utilities for convenience
+export * from './core/index.js';
 
 /**
  * Get a registered custom element constructor
