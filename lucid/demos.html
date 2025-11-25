@@ -512,7 +512,10 @@ out = carved`,
         gl.compileShader(fragmentShader);
 
         if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-          console.error('Fragment shader error:', gl.getShaderInfoLog(fragmentShader));
+          const error = gl.getShaderInfoLog(fragmentShader);
+          console.error('❌ Fragment shader compilation FAILED:');
+          console.error(error);
+          console.log('Shader source:', fragmentShaderSource);
           return;
         }
 
@@ -523,9 +526,13 @@ out = carved`,
         gl.linkProgram(this.program);
 
         if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-          console.error('Program link error:', gl.getProgramInfoLog(this.program));
+          const error = gl.getProgramInfoLog(this.program);
+          console.error('❌ Program linking FAILED:');
+          console.error(error);
           return;
         }
+
+        console.log('✅ Shader compiled and linked successfully');
 
         // Set up geometry
         const positions = new Float32Array([
@@ -679,7 +686,10 @@ out = carved`,
         return;
       }
 
+      console.log('=== Demo:', demo.title, '===');
+      console.log('Parsed nodes:', parsed.nodes);
       const glsl = generateGlslFromSceneGraph(parsed.nodes);
+      console.log('Generated GLSL:\n', glsl);
       renderer.updateScene(glsl);
     }
 
