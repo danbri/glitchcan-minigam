@@ -29,6 +29,30 @@
 - Educational tool for learning SDFs and raymarching
 - Artistic tool for procedural 3D design
 
+### 4. **Proven Strengths: Organic Modeling**
+
+**IMPORTANT:** SDFs are EXCELLENT for organic shapes, characters, and creatures!
+
+**Evidence:**
+- **[Dreams](https://www.playstation.com/en-us/games/dreams/)** (Media Molecule/Sony) - Entire AAA game built on SDFs with full character creation, animation, and gameplay
+- **[Inigo Quilez](https://iquilezles.org/)** - Pioneer of SDF raymarching, creates [characters](https://yahnd.com/theater/r/youtube/8--5LwHRhjk/), [creatures](https://80.lv/articles/procedural-sdf-painting-a-girl-with-math), and organic forms purely with math
+- **[Shadertoy](https://www.shadertoy.com/)** - Community has created thousands of organic SDFs: angels, insects, sea creatures, plants, faces
+
+**Techniques for Organic Shapes:**
+- **Smooth blending** (`smoothMin`, `smoothMax`) - Blend spheres into limbs, bodies, faces
+- **Domain repetition** - Create scales, feathers, fur, tentacles
+- **Fractal recursion** - Complex organic structures from simple formulas
+- **Noise displacement** - Add wrinkles, skin texture, natural variation
+- **Line segment SDFs** - Model arms, legs, hair strands, tentacles
+- **Soft shadows & AO** - Natural lighting from SDF distance gradients
+
+**Why SDFs Excel at Organic:**
+- Infinite resolution (zoom in forever, no polygons)
+- Smooth morphing and blending (impossible with polygons)
+- Procedural details (add noise, never runs out of detail)
+- Compact representation (a creature in <100 lines of code)
+- Perfect normals (always smooth from distance field gradients)
+
 ---
 
 ## What the System IS NOT (Yet)
@@ -590,26 +614,40 @@ canvas.style.height = window.innerHeight + 'px';
    - Turn-based or slow-paced (less performance pressure)
    - Estimated: 2-3 months
 
-#### ⚠️ **Challenging Game Types**
+#### ✅ **Absolutely Feasible (With Proven Examples)**
+
+1. **Character-driven games** (RPG, platformer, adventure)
+   - **SDFs EXCELLENT for organic shapes!** (humans, animals, creatures)
+   - **Proof:** [Dreams by Media Molecule](https://www.playstation.com/en-us/games/dreams/) - entire AAA game engine built on SDFs
+   - **Proof:** [Inigo Quilez's "Painting a Character with Maths"](https://yahnd.com/theater/r/youtube/8--5LwHRhjk/) - sculpts faces, hair, bodies with SDF formulas
+   - **Techniques:** Smooth blending (smoothMin), domain repetition, fractal recursion, noise displacement
+   - **Examples:** Shadertoy has countless organic creatures ([Angels](https://iquilezles.org/live/), [Insect with IK](https://iquilezles.org/live/), [Sea Creature](https://iquilezles.org/live/))
+   - **Challenges:** Animation rigging requires custom approaches (CSG movement, soft blends)
+   - Estimated: 3-6 months with character animation system
+
+2. **Creative sandbox games** (like Dreams)
+   - Players sculpt characters and worlds with SDFs
+   - Community sharing of SDF models (sdfgraph format)
+   - Estimated: 4-6 months for basic creation tools
+
+#### ⚠️ **Challenging But Possible**
 
 1. **Fast-paced action games** (FPS, Racing)
    - Performance bottlenecks with raymarching
-   - Need optimizations (1+ month)
-   - Estimated: 3-4 months
+   - Need optimizations: adaptive step size, reduced resolution, LOD
+   - **Dreams proved it's possible** at 30-60fps on PS4
+   - Estimated: 3-4 months with optimizations
 
 2. **Large open worlds**
    - SDF raymarching not designed for huge scenes
-   - Need hybrid rendering (polygons + SDF details)
+   - Solutions: chunking, voxelization, hybrid rendering (polygons + SDF details)
+   - Dreams used voxel-based approach with marching cubes extraction
    - Estimated: 4-6 months
 
-#### ❌ **Impractical Game Types**
-
-1. **Character-driven games** (RPG, platformer)
-   - SDFs bad for organic shapes (humans, animals)
-   - Better suited for geometric/abstract games
-
-2. **Multiplayer shooters**
-   - Network sync + collision + performance = very complex
+3. **Multiplayer games**
+   - Network sync + collision + performance = complex
+   - Possible with server-authoritative model
+   - SDF can be efficiently synchronized (compact representation)
    - Estimated: 6+ months
 
 ---
@@ -750,6 +788,13 @@ The Lucid SDF system is **currently best suited for:**
 
 **The system is 70% creative tool, 30% toward being a game engine.**
 
-With focused development on input, collision, and game loop, it could become a viable platform for **geometric/abstract indie games** - but it will never compete with Unity/Unreal for character-driven or large-scale games due to the fundamental performance tradeoffs of raymarching.
+With focused development on input, collision, and game loop, it could become a viable platform for **procedural indie games** including character-driven experiences. SDFs excel at:
+- ✅ **Organic shapes and characters** (proven by Dreams, Inigo Quilez, Shadertoy community)
+- ✅ **Smooth blending and morphing** (unique SDF strength)
+- ✅ **Procedural generation** (infinite variations from formulas)
+- ✅ **Compact representation** (entire scenes in small sdfgraph files)
+- ✅ **Math-driven animation** (time-based expressions, procedural movement)
 
-**Best strategy:** Embrace the strengths (procedural SDFs, math-driven visuals) and build games that showcase those unique capabilities rather than trying to replicate traditional game engines.
+**Performance tradeoffs:** Raymarching is slower than polygon rasterization, but Dreams proved SDFs can power full AAA games at 30-60fps on PS4 hardware.
+
+**Best strategy:** Embrace SDF strengths (procedural modeling, smooth organic forms, compact scenes) and build games showcasing those unique capabilities - like Dreams did. This isn't about replacing traditional engines, it's about offering a completely different creative paradigm.
