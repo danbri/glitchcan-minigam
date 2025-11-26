@@ -40,13 +40,13 @@ export function normalizeDslText(text) {
 }
 
 // ============================================================
-// Macro System
+// Template System (Unified DSL Syntax)
 // ============================================================
 //
 // DESIGN NOTE: Why line-based parsing here?
 //
-// The macro system uses Python-style indentation to define scope:
-//   def foo():
+// Templates use indentation to define scope (consistent with DSL design):
+//   template foo(params):
 //     body line 1
 //     body line 2
 //
@@ -56,19 +56,20 @@ export function normalizeDslText(text) {
 // require different parsing - there's no way around line-based processing.
 //
 // Workflow:
-//   1. Extract macros from raw text (preserves indentation)
-//   2. Expand macro calls (string substitution)
+//   1. Extract templates from raw text (preserves indentation)
+//   2. Expand template calls (string substitution)
 //   3. normalizeDslText() processes the result (handles multi-line calls)
-//   4. Parse into IR
+//   4. Parse into IR with template metadata
+//   5. GLSL generator creates functions for reused templates
 //
-// This means macro bodies can contain multi-line function calls, and they'll
+// This means template bodies can contain multi-line function calls, and they'll
 // be properly normalized AFTER expansion.
 //
 // ============================================================
 
 /**
- * Extract macro definitions from raw DSL text
- * Must process raw text to detect Python-style indentation
+ * Extract template definitions from raw DSL text
+ * Unified DSL syntax: template name(params):
  */
 export function extractMacros(text) {
   const lines = text.split(/\r?\n/);
@@ -79,8 +80,8 @@ export function extractMacros(text) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Match: def name(params):
-    const defMatch = trimmed.match(/^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*:$/);
+    // Match: template name(params):
+    const defMatch = trimmed.match(/^template\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*:$/);
 
     if (defMatch) {
       const macroName = defMatch[1];
@@ -113,7 +114,7 @@ export function extractMacros(text) {
 }
 
 /**
- * Expand macro calls in raw DSL text
+ * Expand template calls in raw DSL text
  * Returns { expandedText, templateInfo }
  * templateInfo tracks which nodes came from which templates for GLSL optimization
  */
@@ -126,8 +127,8 @@ export function expandMacros(text, macros) {
   for (let line of lines) {
     const trimmed = line.trim();
 
-    // Skip macro definitions (they'll be removed from output)
-    if (trimmed.startsWith('def ')) {
+    // Skip template definitions (they'll be removed from output)
+    if (trimmed.startsWith('template ')) {
       inMacroDef = true;
       continue;
     }
@@ -235,8 +236,8 @@ export function expandMacros(text, macros) {
       }
     }
 
-    // Not a macro - keep as is
-    if (!trimmed.startsWith('def ') && trimmed) {
+    // Not a template - keep as is
+    if (!trimmed.startsWith('template ') && trimmed) {
       expanded.push(trimmed);
     }
   }

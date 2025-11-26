@@ -669,17 +669,17 @@ out = formation`,
         };
       })(),
       {
-        title: "Space Invaders (Macro)",
-        subtitle: "Reusable invader function with def syntax",
-        dsl: `# Define a reusable invader macro
-def invader(x, y, color):
+        title: "Space Invaders (Template)",
+        subtitle: "Reusable invader template with unified DSL syntax",
+        dsl: `# Define a reusable invader template
+template invader(x, y, color):
   body = box(size=[0.5, 0.4, 0.3], center=[x, y, 0], color=color)
   eye1 = sphere(r=0.1, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
   eye2 = sphere(r=0.1, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
   temp = subtract(a=body, b=eye1)
   return subtract(a=temp, b=eye2)
 
-# Create invader instances using the macro
+# Create invader instances - template generates GLSL function
 i1 = invader(-1.5, 0.6, [0.0, 1.0, 0.5])
 i2 = invader(0.0, 0.6, [0.0, 1.0, 0.5])
 i3 = invader(1.5, 0.6, [0.0, 1.0, 0.5])
@@ -690,7 +690,7 @@ i6 = invader(1.5, -0.6, [1.0, 0.3, 0.8])
 # Combine into formation
 formation = union(i1, i2, i3, i4, i5, i6)
 out = formation`,
-        description: "Same 6 invaders but using the DSL macro system with 'def' syntax. The invader() macro is defined once and reused for each instance. This is cleaner than JavaScript IIFE generation and produces the same GLSL output. Demonstrates the new macro system for reusable shape definitions."
+        description: "6 invaders using unified DSL template syntax. The invader() template is compiled into a GLSL function (10x smaller code). Templates used 2+ times become functions automatically. Check console for 'Template invader used 6 times - generating GLSL function' message!"
       },
       {
         title: "Cylinder Tower",
