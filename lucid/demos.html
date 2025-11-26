@@ -417,8 +417,8 @@ out = combo`,
         description: "A golden box bobbing vertically while a cyan sphere orbits around it. Demonstrates the union operator combining different primitive shapes."
       },
       {
-        title: "Capsule Chain",
-        subtitle: "Connected segments in motion",
+        title: "Animated Capsule",
+        subtitle: "Single segment with moving endpoints",
         dsl: `# Capsule with dynamic endpoints
 cap = capsule(
   a = [0.0, sin(time)*0.5, 0.0],
@@ -427,7 +427,7 @@ cap = capsule(
   color = [0.8, 1.0, 0.3]
 )
 out = cap`,
-        description: "A capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules are perfect for limbs, ropes, or organic connections."
+        description: "A single capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules define line segments perfect for limbs and connections."
       },
       {
         title: "Smooth Subtract",
@@ -448,6 +448,87 @@ s2 = sphere(
 carved = smoothSubtract(a=s1, b=s2, k=0.3)
 out = carved`,
         description: "A sphere being carved by another moving sphere using smooth subtraction. Creates organic indentations that move across the surface."
+      },
+      {
+        title: "Capsule Chain",
+        subtitle: "Multiple connected segments",
+        dsl: `# Real capsule chain with multiple segments
+c1 = capsule(
+  a = [-1.0, 0.0, 0.0],
+  b = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  radius = 0.15,
+  color = [1.0, 0.3, 0.3]
+)
+
+c2 = capsule(
+  a = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  b = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  radius = 0.15,
+  color = [0.3, 1.0, 0.3]
+)
+
+c3 = capsule(
+  a = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  b = [1.0, 0.0, 0.0],
+  radius = 0.15,
+  color = [0.3, 0.3, 1.0]
+)
+
+chain = union(c1, c2, c3)
+out = chain`,
+        description: "Three capsules connected end-to-end forming an animated chain. Each segment moves independently creating a flowing, rope-like motion. Demonstrates multi-part construction."
+      },
+      {
+        title: "Space Invaders",
+        subtitle: "Multiple instances in a grid",
+        dsl: `# Grid of spheres - classic arcade formation
+i1 = sphere(r=0.3, center=[-1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+i2 = sphere(r=0.3, center=[-0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+i3 = sphere(r=0.3, center=[0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+i4 = sphere(r=0.3, center=[1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+
+i5 = sphere(r=0.3, center=[-1.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+i6 = sphere(r=0.3, center=[-0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+i7 = sphere(r=0.3, center=[0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+i8 = sphere(r=0.3, center=[1.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+
+i9 = sphere(r=0.3, center=[-1.0, -1.0, 0.0], color=[1.0, 1.0, 0.3])
+i10 = sphere(r=0.3, center=[0.0, -1.0 + sin(time)*0.2, 0.0], color=[1.0, 1.0, 0.3])
+i11 = sphere(r=0.3, center=[1.0, -1.0, 0.0], color=[1.0, 1.0, 0.3])
+
+grid = union(i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11)
+out = grid`,
+        description: "Multiple sphere instances arranged in a grid formation. The middle bottom sphere animates, demonstrating individual control. Shows the system can handle many primitives efficiently."
+      },
+      {
+        title: "Cylinder Tower",
+        subtitle: "Stacked geometric primitives",
+        dsl: `# Tower of cylinders and cone top
+base = cylinder(
+  r = 0.5,
+  h = 0.3,
+  center = [0.0, -0.8, 0.0],
+  color = [0.8, 0.4, 0.2]
+)
+
+mid = cylinder(
+  r = 0.4,
+  h = 0.3,
+  center = [0.0, -0.3, 0.0],
+  rot = [0.0, time*0.5, 0.0],
+  color = [0.4, 0.7, 0.9]
+)
+
+top = cone(
+  r = 0.5,
+  h = 0.6,
+  center = [0.0, 0.4, 0.0],
+  color = [1.0, 0.8, 0.2]
+)
+
+tower = union(base, mid, top)
+out = tower`,
+        description: "A tower made from cylinders and a cone. The middle cylinder rotates independently. Demonstrates cylinder and cone primitives with rotation transforms."
       }
     ];
 
