@@ -693,6 +693,54 @@ out = formation`,
         description: "6 invaders using unified DSL template syntax. The invader() template is compiled into a GLSL function (10x smaller code). Templates used 2+ times become functions automatically. Check console for 'Template invader used 6 times - generating GLSL function' message!"
       },
       {
+        title: "Animated Invaders (Instance-Level)",
+        subtitle: "sin(time) passed as template parameters",
+        dsl: `# Same invader template
+template invader(x, y, color):
+  body = box(size=[0.5, 0.4, 0.3], center=[x, y, 0], color=color)
+  eye1 = sphere(r=0.1, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  eye2 = sphere(r=0.1, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  temp = subtract(a=body, b=eye1)
+  return subtract(a=temp, b=eye2)
+
+# Instance-level animation: pass sin(time) to x/y positions
+i1 = invader(-1.5 + sin(time)*0.3, 0.6, [0.0, 1.0, 0.5])
+i2 = invader(0.0, 0.6 + sin(time+1.0)*0.2, [0.0, 1.0, 0.5])
+i3 = invader(1.5 + sin(time)*0.3, 0.6, [0.0, 1.0, 0.5])
+i4 = invader(-1.5, -0.6 + sin(time+2.0)*0.2, [1.0, 0.3, 0.8])
+i5 = invader(0.0 + sin(time)*0.3, -0.6, [1.0, 0.3, 0.8])
+i6 = invader(1.5, -0.6 + sin(time+3.0)*0.2, [1.0, 0.3, 0.8])
+
+formation = union(i1, i2, i3, i4, i5, i6)
+out = formation`,
+        description: "Instance-level animation: Each invader receives sin(time) expressions as parameters. The template generates a GLSL function once, and each instance calls it with animated values. Demonstrates parameter-driven animation with template reuse."
+      },
+      {
+        title: "Animated Invaders (Template-Level)",
+        subtitle: "sin(time) inside template definition",
+        dsl: `# Template with internal animation
+template pulsing_invader(x, y, color):
+  pulse = 0.3 + sin(time*2.0)*0.1
+  body = box(size=[pulse, pulse*0.8, 0.3], center=[x, y, 0], color=color)
+  eye_size = 0.08 + sin(time*3.0)*0.02
+  eye1 = sphere(r=eye_size, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  eye2 = sphere(r=eye_size, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  temp = subtract(a=body, b=eye1)
+  return subtract(a=temp, b=eye2)
+
+# Static positions, animation is inside template
+i1 = pulsing_invader(-1.5, 0.6, [0.0, 1.0, 0.5])
+i2 = pulsing_invader(0.0, 0.6, [0.0, 1.0, 0.5])
+i3 = pulsing_invader(1.5, 0.6, [0.0, 1.0, 0.5])
+i4 = pulsing_invader(-1.5, -0.6, [1.0, 0.3, 0.8])
+i5 = pulsing_invader(0.0, -0.6, [1.0, 0.3, 0.8])
+i6 = pulsing_invader(1.5, -0.6, [1.0, 0.3, 0.8])
+
+formation = union(i1, i2, i3, i4, i5, i6)
+out = formation`,
+        description: "Template-level animation: sin(time) is used INSIDE the template for pulsing body size and blinking eyes. All instances animate synchronously. Shows how templates can encapsulate animated behavior."
+      },
+      {
         title: "Cylinder Tower",
         subtitle: "Stacked geometric primitives",
         dsl: `# Tower of cylinders and cone top
