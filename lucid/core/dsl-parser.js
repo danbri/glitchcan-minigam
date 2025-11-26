@@ -242,12 +242,27 @@ export function parseDslToSceneGraph(text) {
       parseParams(args, node);
       if (!node.params.n) node.params.n = ["0.0", "1.0", "0.0"];
       if (!node.params.d) node.params.d = "0.0";
-    } else if (func === "union" || func === "subtract" || func === "smoothUnion") {
+    } else if (func === "torus") {
+      parseParams(args, node);
+      if (!node.params.majorR && !node.params.r1) node.params.majorR = "1.0";
+      if (!node.params.minorR && !node.params.r2) node.params.minorR = "0.3";
+    } else if (func === "cylinder") {
+      parseParams(args, node);
+      if (!node.params.r && !node.params.radius) node.params.r = "0.5";
+      if (!node.params.h && !node.params.height) node.params.h = "1.0";
+    } else if (func === "cone") {
+      parseParams(args, node);
+      if (!node.params.r && !node.params.radius) node.params.r = "1.0";
+      if (!node.params.h && !node.params.height) node.params.h = "1.0";
+    } else if (func === "union" || func === "subtract" || func === "smoothUnion" || func === "smoothSubtract") {
       parseInputsAndParams(args, node);
       if (node.inputOrder.length < 1) {
         addError(lineNo, func + " requires at least one input");
       }
       if (func === "smoothUnion" && !node.params.k) {
+        node.params.k = "0.2";
+      }
+      if (func === "smoothSubtract" && !node.params.k) {
         node.params.k = "0.2";
       }
     } else {
