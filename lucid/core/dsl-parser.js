@@ -100,18 +100,25 @@ export function extractMacros(text) {
 export function expandMacros(text, macros) {
   const lines = text.split(/\r?\n/);
   const expanded = [];
+  let inMacroDef = false;
 
   for (let line of lines) {
     const trimmed = line.trim();
 
-    // Skip macro definitions (they've already been extracted)
+    // Track when we're inside a macro definition
     if (trimmed.startsWith('def ')) {
-      continue;
+      inMacroDef = true;
+      continue;  // Skip the def line itself
     }
 
-    // Skip indented lines (macro bodies)
-    if (line.match(/^\s+/) && !line.match(/^\s*$/)) {
-      continue;
+    // Skip indented lines ONLY if they're macro bodies (after a def)
+    if (inMacroDef && line.match(/^\s+/) && !line.match(/^\s*$/)) {
+      continue;  // This is a macro body line
+    }
+
+    // End of macro definition (non-indented line or empty line)
+    if (inMacroDef && !line.match(/^\s+/)) {
+      inMacroDef = false;
     }
 
     // Check for macro calls: id = macroName(args) or macroName(args)
