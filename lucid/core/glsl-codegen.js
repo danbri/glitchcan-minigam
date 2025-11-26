@@ -208,7 +208,7 @@ export function generateGlslFromSceneGraph(sceneGraph) {
     const params = node.params || {};
 
     const col = vec3Expr(params.color || ["1.0", "1.0", "1.0"], "1.0", "color");
-    const off = vec3Expr(params.offset || ["0.0", "0.0", "0.0"], "0.0", "offset");
+    const off = vec3Expr(params.offset || params.center || ["0.0", "0.0", "0.0"], "0.0", "offset");
     const rot = vec3Expr(params.rot || ["0.0", "0.0", "0.0"], "0.0", "rot");
     const hasQuat = params.rotq != null;
 
