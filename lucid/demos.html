@@ -824,15 +824,14 @@ out = tower`,
           vec4 raymarch(vec3 ro, vec3 rd) {
             float t = 0.0;
             vec3 colVol = vec3(0.0);
-            vec3 colSurf = vec3(0.0);
             float trans = 1.0;
             bool hitGround = false;
-            bool hitSurf = false;
             vec3 hitPos = vec3(0.0);
             float stepSize = 0.05;
 
             for (int i = 0; i < 100; i++) {
-              if (t > 50.0 || trans < 0.01) break;
+              if (t > 50.0) break;
+              if (u_volumeRender > 0.5 && trans < 0.01) break;
 
               vec3 p = ro + rd * t;
               vec4 scene = g_df_scene(p);
@@ -850,54 +849,42 @@ out = tower`,
                 }
               }
 
-              // Surface hit detection
-              if (abs(d) < 0.001 && !hitGround && !hitSurf) {
-                hitSurf = true;
-                vec3 normal = calcNormal(p);
-                vec3 light = normalize(vec3(1.0, 1.0, -1.0));
-                float diff = max(dot(normal, light), 0.0);
-                float amb = 0.3;
-                float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
-                colSurf = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
-              }
+              // Surface mode - traditional raymarching
+              if (u_volumeRender < 0.5) {
+                if (abs(d) < 0.001 && !hitGround) {
+                  vec3 normal = calcNormal(p);
+                  vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                  float diff = max(dot(normal, light), 0.0);
+                  float amb = 0.3;
+                  float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
+                  vec3 col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+                  return vec4(col, 1.0);
+                }
 
-              // Ground plane rendering
-              if (hitGround && !hitSurf) {
-                vec3 normal = vec3(0.0, 1.0, 0.0);
-                vec3 light = normalize(vec3(1.0, 1.0, -1.0));
-                float diff = max(dot(normal, light), 0.0);
-                float amb = 0.3;
-                colSurf = getGroundColor(hitPos) * (amb + diff * 0.7);
-                hitSurf = true;
-              }
+                if (hitGround) {
+                  vec3 normal = vec3(0.0, 1.0, 0.0);
+                  vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                  float diff = max(dot(normal, light), 0.0);
+                  float amb = 0.3;
+                  vec3 col = getGroundColor(hitPos) * (amb + diff * 0.7);
+                  return vec4(col, 1.0);
+                }
 
-              // Volume rendering accumulation
-              if (u_volumeRender > 0.5) {
-                // Convert SDF to density (negative = inside = dense)
+                t += abs(d) * 0.9;
+              } else {
+                // Volume mode - accumulate density
                 float density = max(0.0, -d * 2.0);
                 colVol += trans * scene.yzw * density * stepSize;
                 trans *= exp(-density * stepSize * 3.0);
-              } else {
-                // Surface mode - exit early on hit
-                if (hitSurf) {
-                  return vec4(colSurf, 1.0);
-                }
-              }
-
-              // Advance ray
-              if (u_volumeRender > 0.5) {
                 t += stepSize;
-              } else {
-                t += abs(d) * 0.9;
               }
             }
 
-            // Return appropriate color based on mode
+            // Return background or accumulated volume
             if (u_volumeRender > 0.5) {
-              return vec4(colVol + trans * colSurf, 1.0);
-            } else {
-              return vec4(0.0);
+              return vec4(colVol, 1.0);
             }
+            return vec4(0.0);
           }
 
           void main() {
