@@ -872,10 +872,16 @@ out = tower`,
 
                 t += abs(d) * 0.9;
               } else {
-                // Volume mode - accumulate density
-                float density = max(0.0, -d * 2.0);
-                colVol += trans * scene.yzw * density * stepSize;
-                trans *= exp(-density * stepSize * 3.0);
+                // Volume mode - accumulate density near surface
+                // Use smooth density falloff instead of hard inside/outside
+                float density = exp(-abs(d) * 5.0); // Density peaks at surface (d=0)
+
+                // Accumulate color with proper weighting
+                float absorption = density * stepSize * 8.0;
+                colVol += trans * scene.yzw * absorption;
+                trans *= 1.0 - absorption; // Reduce transmission
+
+                // Fixed step size for consistent appearance
                 t += stepSize;
               }
             }
