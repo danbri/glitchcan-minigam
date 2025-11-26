@@ -313,7 +313,8 @@
   </div>
 
   <div class="camera-hint">
-    🖱️ Drag to orbit • Scroll to zoom
+    🖱️ Drag to orbit • Scroll to zoom<br>
+    📱 Two-finger drag to orbit • Pinch to zoom
   </div>
 
   <div class="demo-container">
@@ -480,25 +481,49 @@ out = chain`,
       },
       {
         title: "Space Invaders",
-        subtitle: "Multiple instances in a grid",
-        dsl: `# Grid of spheres - classic arcade formation
-i1 = sphere(r=0.3, center=[-1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-i2 = sphere(r=0.3, center=[-0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-i3 = sphere(r=0.3, center=[0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-i4 = sphere(r=0.3, center=[1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+        subtitle: "CSG aliens in formation",
+        dsl: `# Invader shape using CSG operations
+# Body parts (reusable)
+body1 = box(size=[0.4, 0.3, 0.2], center=[-1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+eye1a = sphere(r=0.08, center=[-1.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+eye1b = sphere(r=0.08, center=[-1.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+inv1 = subtract(subtract(body1, eye1a), eye1b)
 
-i5 = sphere(r=0.3, center=[-1.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
-i6 = sphere(r=0.3, center=[-0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
-i7 = sphere(r=0.3, center=[0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
-i8 = sphere(r=0.3, center=[1.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+body2 = box(size=[0.4, 0.3, 0.2], center=[-0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+eye2a = sphere(r=0.08, center=[-0.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+eye2b = sphere(r=0.08, center=[-0.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+inv2 = subtract(subtract(body2, eye2a), eye2b)
 
-i9 = sphere(r=0.3, center=[-1.0, -1.0, 0.0], color=[1.0, 1.0, 0.3])
-i10 = sphere(r=0.3, center=[0.0, -1.0 + sin(time)*0.2, 0.0], color=[1.0, 1.0, 0.3])
-i11 = sphere(r=0.3, center=[1.0, -1.0, 0.0], color=[1.0, 1.0, 0.3])
+body3 = box(size=[0.4, 0.3, 0.2], center=[0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+eye3a = sphere(r=0.08, center=[0.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+eye3b = sphere(r=0.08, center=[0.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+inv3 = subtract(subtract(body3, eye3a), eye3b)
 
-grid = union(i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11)
-out = grid`,
-        description: "Multiple sphere instances arranged in a grid formation. The middle bottom sphere animates, demonstrating individual control. Shows the system can handle many primitives efficiently."
+body4 = box(size=[0.4, 0.3, 0.2], center=[1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
+eye4a = sphere(r=0.08, center=[1.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+eye4b = sphere(r=0.08, center=[1.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
+inv4 = subtract(subtract(body4, eye4a), eye4b)
+
+# Middle row - different color
+body5 = box(size=[0.4, 0.3, 0.2], center=[-0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+eye5a = sphere(r=0.08, center=[-0.6, -0.15, 0.1], color=[0.0, 0.0, 0.0])
+eye5b = sphere(r=0.08, center=[-0.4, -0.15, 0.1], color=[0.0, 0.0, 0.0])
+inv5 = subtract(subtract(body5, eye5a), eye5b)
+
+body6 = box(size=[0.4, 0.3, 0.2], center=[0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
+eye6a = sphere(r=0.08, center=[0.4, -0.15, 0.1], color=[0.0, 0.0, 0.0])
+eye6b = sphere(r=0.08, center=[0.6, -0.15, 0.1], color=[0.0, 0.0, 0.0])
+inv6 = subtract(subtract(body6, eye6a), eye6b)
+
+# Bottom row - animated one
+body7 = box(size=[0.4, 0.3, 0.2], center=[0.0, -1.0 + sin(time)*0.2, 0.0], color=[1.0, 1.0, 0.3])
+eye7a = sphere(r=0.08, center=[-0.1, -0.95 + sin(time)*0.2, 0.1], color=[0.0, 0.0, 0.0])
+eye7b = sphere(r=0.08, center=[0.1, -0.95 + sin(time)*0.2, 0.1], color=[0.0, 0.0, 0.0])
+inv7 = subtract(subtract(body7, eye7a), eye7b)
+
+formation = union(inv1, inv2, inv3, inv4, inv5, inv6, inv7)
+out = formation`,
+        description: "Alien invaders created with CSG operations - box bodies with sphere eyes carved out using subtraction. Seven invaders in formation, with the bottom one animating. Demonstrates complex multi-instance assemblies."
       },
       {
         title: "Cylinder Tower",
@@ -824,23 +849,77 @@ out = tower`,
         codePanel.classList.remove('open');
       });
 
-      // Touch swipe support
+      // Touch controls - single finger swipe OR two-finger orbit
       let touchStartX = 0;
       let touchStartY = 0;
       let touchEndX = 0;
       let touchEndY = 0;
+      let lastTouchX = 0;
+      let lastTouchY = 0;
+      let lastPinchDistance = 0;
+      let isTwoFingerDrag = false;
 
       const demoContainer = document.querySelector('.demo-container');
 
       demoContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+        if (e.touches.length === 1) {
+          // Single finger - prepare for swipe
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          isTwoFingerDrag = false;
+        } else if (e.touches.length === 2) {
+          // Two fingers - orbit mode
+          isTwoFingerDrag = true;
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          lastTouchX = (touch1.clientX + touch2.clientX) / 2;
+          lastTouchY = (touch1.clientY + touch2.clientY) / 2;
+
+          // Calculate initial pinch distance
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+        }
+      }, { passive: true });
+
+      demoContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && isTwoFingerDrag) {
+          // Two-finger drag for orbit
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          const centerX = (touch1.clientX + touch2.clientX) / 2;
+          const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+          const deltaX = centerX - lastTouchX;
+          const deltaY = centerY - lastTouchY;
+
+          renderer.camera.theta -= deltaX * 0.01;
+          renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - deltaY * 0.01));
+
+          lastTouchX = centerX;
+          lastTouchY = centerY;
+
+          // Pinch to zoom
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          const pinchDistance = Math.sqrt(dx * dx + dy * dy);
+          const pinchDelta = pinchDistance - lastPinchDistance;
+
+          renderer.camera.distance = Math.max(2.0, Math.min(10.0, renderer.camera.distance - pinchDelta * 0.01));
+          lastPinchDistance = pinchDistance;
+        }
       }, { passive: true });
 
       demoContainer.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
+        if (e.touches.length === 0 && !isTwoFingerDrag) {
+          // Single finger swipe ended
+          touchEndX = e.changedTouches[0].clientX;
+          touchEndY = e.changedTouches[0].clientY;
+          handleSwipe();
+        }
+        if (e.touches.length < 2) {
+          isTwoFingerDrag = false;
+        }
       }, { passive: true });
 
       function handleSwipe() {
