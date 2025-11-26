@@ -218,6 +218,61 @@
       z-index: 200;
     }
 
+    /* View Controls */
+    .view-controls {
+      position: fixed;
+      bottom: 80px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+      font-size: 13px;
+    }
+
+    .view-controls label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+      color: #e5e7eb;
+      user-select: none;
+    }
+
+    .view-controls label:hover {
+      color: #22d3ee;
+    }
+
+    .view-controls input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #22d3ee;
+    }
+
+    .camera-hint {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+      font-size: 11px;
+      color: #9ca3af;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .camera-hint:hover {
+      opacity: 1;
+    }
+
     @media (max-width: 768px) {
       .code-panel {
         width: 100vw;
@@ -249,6 +304,17 @@
   </div>
 
   <button class="code-toggle" title="View DSL Code">{ }</button>
+
+  <div class="view-controls">
+    <label>
+      <input type="checkbox" id="groundPlaneToggle" checked>
+      Ground Plane
+    </label>
+  </div>
+
+  <div class="camera-hint">
+    🖱️ Drag to orbit • Scroll to zoom
+  </div>
 
   <div class="demo-container">
     <canvas id="canvas"></canvas>
@@ -408,6 +474,16 @@ out = carved`,
         this.program = null;
         this.startTime = performance.now();
 
+        // Camera orbit controls
+        this.camera = {
+          distance: 4.0,
+          theta: 0.0,      // horizontal angle
+          phi: Math.PI / 4, // vertical angle (45 degrees)
+          target: [0, 0, 0]
+        };
+
+        this.showGroundPlane = true;
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
       }
@@ -440,8 +516,26 @@ out = carved`,
           precision highp float;
           uniform vec2 u_resolution;
           uniform float u_time;
+          uniform vec3 u_cameraPos;
+          uniform vec3 u_cameraTarget;
+          uniform float u_showGroundPlane;
 
           ${this.currentGlsl}
+
+          // Ground plane SDF with checkerboard pattern
+          float sdGroundPlane(vec3 p) {
+            return p.y + 1.5; // Plane at y = -1.5
+          }
+
+          vec3 getGroundColor(vec3 p) {
+            // Checkerboard pattern
+            float scale = 0.5;
+            vec2 q = floor(p.xz / scale);
+            float checker = mod(q.x + q.y, 2.0);
+            vec3 color1 = vec3(0.15, 0.15, 0.2);
+            vec3 color2 = vec3(0.25, 0.25, 0.3);
+            return mix(color1, color2, checker);
+          }
 
           vec3 calcNormal(vec3 p) {
             vec2 e = vec2(0.001, 0.0);
@@ -455,13 +549,27 @@ out = carved`,
           vec4 raymarch(vec3 ro, vec3 rd) {
             float t = 0.0;
             vec3 col = vec3(0.0);
+            bool hitGround = false;
+            vec3 hitPos = vec3(0.0);
 
             for (int i = 0; i < 100; i++) {
               vec3 p = ro + rd * t;
               vec4 scene = g_df_scene(p);
               float d = scene.x;
 
-              if (abs(d) < 0.001) {
+              // Check ground plane if enabled
+              if (u_showGroundPlane > 0.5) {
+                float dGround = sdGroundPlane(p);
+                if (dGround < d) {
+                  d = dGround;
+                  if (abs(d) < 0.001) {
+                    hitGround = true;
+                    hitPos = p;
+                  }
+                }
+              }
+
+              if (abs(d) < 0.001 && !hitGround) {
                 vec3 normal = calcNormal(p);
                 vec3 light = normalize(vec3(1.0, 1.0, -1.0));
                 float diff = max(dot(normal, light), 0.0);
@@ -469,6 +577,16 @@ out = carved`,
                 float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
 
                 col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+                return vec4(col, 1.0);
+              }
+
+              if (hitGround) {
+                // Render ground plane
+                vec3 normal = vec3(0.0, 1.0, 0.0);
+                vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                float diff = max(dot(normal, light), 0.0);
+                float amb = 0.3;
+                col = getGroundColor(hitPos) * (amb + diff * 0.7);
                 return vec4(col, 1.0);
               }
 
@@ -482,8 +600,12 @@ out = carved`,
           void main() {
             vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
 
-            vec3 ro = vec3(0.0, 0.0, -4.0);
-            vec3 rd = normalize(vec3(uv, 1.0));
+            // Camera setup with orbit controls
+            vec3 ro = u_cameraPos;
+            vec3 forward = normalize(u_cameraTarget - u_cameraPos);
+            vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
+            vec3 up = cross(forward, right);
+            vec3 rd = normalize(forward + uv.x * right + uv.y * up);
 
             vec4 col = raymarch(ro, rd);
 
@@ -551,6 +673,15 @@ out = carved`,
         gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
       }
 
+      getCameraPosition() {
+        const { distance, theta, phi, target } = this.camera;
+        return [
+          target[0] + distance * Math.sin(phi) * Math.sin(theta),
+          target[1] + distance * Math.cos(phi),
+          target[2] + distance * Math.sin(phi) * Math.cos(theta)
+        ];
+      }
+
       render() {
         if (!this.program) return;
 
@@ -563,6 +694,17 @@ out = carved`,
         const timeLocation = gl.getUniformLocation(this.program, 'u_time');
         const time = (performance.now() - this.startTime) / 1000.0;
         gl.uniform1f(timeLocation, time);
+
+        // Camera uniforms
+        const cameraPos = this.getCameraPosition();
+        const cameraPosLocation = gl.getUniformLocation(this.program, 'u_cameraPos');
+        gl.uniform3f(cameraPosLocation, cameraPos[0], cameraPos[1], cameraPos[2]);
+
+        const cameraTargetLocation = gl.getUniformLocation(this.program, 'u_cameraTarget');
+        gl.uniform3f(cameraTargetLocation, this.camera.target[0], this.camera.target[1], this.camera.target[2]);
+
+        const groundPlaneLocation = gl.getUniformLocation(this.program, 'u_showGroundPlane');
+        gl.uniform1f(groundPlaneLocation, this.showGroundPlane ? 1.0 : 0.0);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
@@ -636,6 +778,50 @@ out = carved`,
           }
         }
       }
+
+      // Orbit controls
+      let isDragging = false;
+      let lastMouseX = 0;
+      let lastMouseY = 0;
+
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+
+        renderer.camera.theta -= deltaX * 0.01;
+        renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - deltaY * 0.01));
+
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      });
+
+      canvas.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isDragging = false;
+      });
+
+      // Zoom with mouse wheel
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        renderer.camera.distance = Math.max(2.0, Math.min(10.0, renderer.camera.distance + e.deltaY * 0.01));
+      }, { passive: false });
+
+      // Ground plane toggle
+      const groundPlaneToggle = document.getElementById('groundPlaneToggle');
+      groundPlaneToggle.addEventListener('change', (e) => {
+        renderer.showGroundPlane = e.target.checked;
+      });
 
       // Load first demo
       switchDemo(0);
