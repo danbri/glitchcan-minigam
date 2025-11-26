@@ -3,6 +3,7 @@
  */
 
 import { log } from './app-context.js';
+import { splitArgs } from './dsl-parser.js';
 
 export function generateGlslFromSceneGraph(sceneGraph) {
   const sg = Array.isArray(sceneGraph) ? sceneGraph : [];
