@@ -442,6 +442,10 @@
       <input type="checkbox" id="groundPlaneToggle" checked>
       Ground Plane
     </label>
+    <label>
+      <input type="checkbox" id="volumeRenderToggle">
+      Volume Rendering
+    </label>
   </div>
 
   <div class="camera-hint">
@@ -752,6 +756,7 @@ out = tower`,
         };
 
         this.showGroundPlane = true;
+        this.volumeRender = false;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -788,6 +793,7 @@ out = tower`,
           uniform vec3 u_cameraPos;
           uniform vec3 u_cameraTarget;
           uniform float u_showGroundPlane;
+          uniform float u_volumeRender;
 
           ${this.currentGlsl}
 
@@ -817,11 +823,17 @@ out = tower`,
 
           vec4 raymarch(vec3 ro, vec3 rd) {
             float t = 0.0;
-            vec3 col = vec3(0.0);
+            vec3 colVol = vec3(0.0);
+            vec3 colSurf = vec3(0.0);
+            float trans = 1.0;
             bool hitGround = false;
+            bool hitSurf = false;
             vec3 hitPos = vec3(0.0);
+            float stepSize = 0.05;
 
             for (int i = 0; i < 100; i++) {
+              if (t > 50.0 || trans < 0.01) break;
+
               vec3 p = ro + rd * t;
               vec4 scene = g_df_scene(p);
               float d = scene.x;
@@ -838,32 +850,54 @@ out = tower`,
                 }
               }
 
-              if (abs(d) < 0.001 && !hitGround) {
+              // Surface hit detection
+              if (abs(d) < 0.001 && !hitGround && !hitSurf) {
+                hitSurf = true;
                 vec3 normal = calcNormal(p);
                 vec3 light = normalize(vec3(1.0, 1.0, -1.0));
                 float diff = max(dot(normal, light), 0.0);
                 float amb = 0.3;
                 float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
-
-                col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
-                return vec4(col, 1.0);
+                colSurf = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
               }
 
-              if (hitGround) {
-                // Render ground plane
+              // Ground plane rendering
+              if (hitGround && !hitSurf) {
                 vec3 normal = vec3(0.0, 1.0, 0.0);
                 vec3 light = normalize(vec3(1.0, 1.0, -1.0));
                 float diff = max(dot(normal, light), 0.0);
                 float amb = 0.3;
-                col = getGroundColor(hitPos) * (amb + diff * 0.7);
-                return vec4(col, 1.0);
+                colSurf = getGroundColor(hitPos) * (amb + diff * 0.7);
+                hitSurf = true;
               }
 
-              if (t > 50.0) break;
-              t += abs(d) * 0.9;
+              // Volume rendering accumulation
+              if (u_volumeRender > 0.5) {
+                // Convert SDF to density (negative = inside = dense)
+                float density = max(0.0, -d * 2.0);
+                colVol += trans * scene.yzw * density * stepSize;
+                trans *= exp(-density * stepSize * 3.0);
+              } else {
+                // Surface mode - exit early on hit
+                if (hitSurf) {
+                  return vec4(colSurf, 1.0);
+                }
+              }
+
+              // Advance ray
+              if (u_volumeRender > 0.5) {
+                t += stepSize;
+              } else {
+                t += abs(d) * 0.9;
+              }
             }
 
-            return vec4(0.0);
+            // Return appropriate color based on mode
+            if (u_volumeRender > 0.5) {
+              return vec4(colVol + trans * colSurf, 1.0);
+            } else {
+              return vec4(0.0);
+            }
           }
 
           void main() {
@@ -974,6 +1008,9 @@ out = tower`,
 
         const groundPlaneLocation = gl.getUniformLocation(this.program, 'u_showGroundPlane');
         gl.uniform1f(groundPlaneLocation, this.showGroundPlane ? 1.0 : 0.0);
+
+        const volumeRenderLocation = gl.getUniformLocation(this.program, 'u_volumeRender');
+        gl.uniform1f(volumeRenderLocation, this.volumeRender ? 1.0 : 0.0);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
@@ -1203,6 +1240,12 @@ out = tower`,
       const groundPlaneToggle = document.getElementById('groundPlaneToggle');
       groundPlaneToggle.addEventListener('change', (e) => {
         renderer.showGroundPlane = e.target.checked;
+      });
+
+      // Volume rendering toggle
+      const volumeRenderToggle = document.getElementById('volumeRenderToggle');
+      volumeRenderToggle.addEventListener('change', (e) => {
+        renderer.volumeRender = e.target.checked;
       });
 
       // Load first demo
