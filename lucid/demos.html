@@ -26,12 +26,14 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: none; /* Disable browser touch gestures */
     }
 
     canvas {
       width: 100%;
       height: 100%;
       display: block;
+      touch-action: none; /* Prevent iOS Safari pinch-zoom */
     }
 
     /* Navigation */
@@ -313,7 +315,8 @@
   </div>
 
   <div class="camera-hint">
-    🖱️ Drag to orbit • Scroll to zoom
+    🖱️ Drag to orbit • Scroll to zoom<br>
+    📱 Two-finger drag to orbit • Pinch to zoom
   </div>
 
   <div class="demo-container">
@@ -417,8 +420,8 @@ out = combo`,
         description: "A golden box bobbing vertically while a cyan sphere orbits around it. Demonstrates the union operator combining different primitive shapes."
       },
       {
-        title: "Capsule Chain",
-        subtitle: "Connected segments in motion",
+        title: "Animated Capsule",
+        subtitle: "Single segment with moving endpoints",
         dsl: `# Capsule with dynamic endpoints
 cap = capsule(
   a = [0.0, sin(time)*0.5, 0.0],
@@ -427,7 +430,7 @@ cap = capsule(
   color = [0.8, 1.0, 0.3]
 )
 out = cap`,
-        description: "A capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules are perfect for limbs, ropes, or organic connections."
+        description: "A single capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules define line segments perfect for limbs and connections."
       },
       {
         title: "Smooth Subtract",
@@ -448,6 +451,112 @@ s2 = sphere(
 carved = smoothSubtract(a=s1, b=s2, k=0.3)
 out = carved`,
         description: "A sphere being carved by another moving sphere using smooth subtraction. Creates organic indentations that move across the surface."
+      },
+      {
+        title: "Capsule Chain",
+        subtitle: "Multiple connected segments",
+        dsl: `# Real capsule chain with multiple segments
+c1 = capsule(
+  a = [-1.0, 0.0, 0.0],
+  b = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  radius = 0.15,
+  color = [1.0, 0.3, 0.3]
+)
+
+c2 = capsule(
+  a = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  b = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  radius = 0.15,
+  color = [0.3, 1.0, 0.3]
+)
+
+c3 = capsule(
+  a = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  b = [1.0, 0.0, 0.0],
+  radius = 0.15,
+  color = [0.3, 0.3, 1.0]
+)
+
+chain = union(c1, c2, c3)
+out = chain`,
+        description: "Three capsules connected end-to-end forming an animated chain. Each segment moves independently creating a flowing, rope-like motion. Demonstrates multi-part construction."
+      },
+      (() => {
+        // Helper function to generate invader DSL
+        function makeInvader(id, x, y, z, color) {
+          return `
+body${id} = box(size=[0.4, 0.3, 0.2], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
+eye${id}a = sphere(r=0.08, center=[${x-0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
+eye${id}b = sphere(r=0.08, center=[${x+0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
+inv${id} = subtract(subtract(body${id}, eye${id}a), eye${id}b)`;
+        }
+
+        // Define grid of invaders
+        const invaders = [
+          // Top row - green
+          { x: -1.8, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: -1.0, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: -0.2, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: 0.6, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: 1.4, y: 0.8, color: [0.0, 1.0, 0.5] },
+          // Middle row - pink
+          { x: -1.4, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: -0.6, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: 0.2, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: 1.0, y: 0.0, color: [1.0, 0.3, 0.8] },
+          // Bottom row - yellow
+          { x: -1.0, y: -0.8, color: [1.0, 1.0, 0.3] },
+          { x: -0.2, y: -0.8, color: [1.0, 1.0, 0.3] },
+          { x: 0.6, y: -0.8, color: [1.0, 1.0, 0.3] },
+        ];
+
+        // Generate DSL for all invaders
+        const invaderDefs = invaders.map((inv, i) =>
+          makeInvader(i + 1, inv.x, inv.y, 0.0, inv.color)
+        ).join('\n');
+
+        const invaderIds = invaders.map((_, i) => `inv${i + 1}`).join(', ');
+
+        return {
+          title: "Space Invaders",
+          subtitle: "CSG aliens - 12 instances generated",
+          dsl: `# Invader grid - programmatically generated
+${invaderDefs}
+
+formation = union(${invaderIds})
+out = formation`,
+          description: "12 alien invaders generated programmatically using JavaScript template strings. Each invader is a CSG construction (box body with carved sphere eyes). Demonstrates efficient multi-instance creation."
+        };
+      })(),
+      {
+        title: "Cylinder Tower",
+        subtitle: "Stacked geometric primitives",
+        dsl: `# Tower of cylinders and cone top
+base = cylinder(
+  r = 0.5,
+  h = 0.3,
+  center = [0.0, -0.8, 0.0],
+  color = [0.8, 0.4, 0.2]
+)
+
+mid = cylinder(
+  r = 0.4,
+  h = 0.3,
+  center = [0.0, -0.3, 0.0],
+  rot = [0.0, time*0.5, 0.0],
+  color = [0.4, 0.7, 0.9]
+)
+
+top = cone(
+  r = 0.5,
+  h = 0.6,
+  center = [0.0, 0.4, 0.0],
+  color = [1.0, 0.8, 0.2]
+)
+
+tower = union(base, mid, top)
+out = tower`,
+        description: "A tower made from cylinders and a cone. The middle cylinder rotates independently. Demonstrates cylinder and cone primitives with rotation transforms."
       }
     ];
 
@@ -743,23 +852,77 @@ out = carved`,
         codePanel.classList.remove('open');
       });
 
-      // Touch swipe support
+      // Touch controls - single finger swipe OR two-finger orbit
       let touchStartX = 0;
       let touchStartY = 0;
       let touchEndX = 0;
       let touchEndY = 0;
+      let lastTouchX = 0;
+      let lastTouchY = 0;
+      let lastPinchDistance = 0;
+      let isTwoFingerDrag = false;
 
       const demoContainer = document.querySelector('.demo-container');
 
       demoContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+        if (e.touches.length === 1) {
+          // Single finger - prepare for swipe
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          isTwoFingerDrag = false;
+        } else if (e.touches.length === 2) {
+          // Two fingers - orbit mode
+          isTwoFingerDrag = true;
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          lastTouchX = (touch1.clientX + touch2.clientX) / 2;
+          lastTouchY = (touch1.clientY + touch2.clientY) / 2;
+
+          // Calculate initial pinch distance
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+        }
+      }, { passive: true });
+
+      demoContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && isTwoFingerDrag) {
+          // Two-finger drag for orbit
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          const centerX = (touch1.clientX + touch2.clientX) / 2;
+          const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+          const deltaX = centerX - lastTouchX;
+          const deltaY = centerY - lastTouchY;
+
+          renderer.camera.theta -= deltaX * 0.01;
+          renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - deltaY * 0.01));
+
+          lastTouchX = centerX;
+          lastTouchY = centerY;
+
+          // Pinch to zoom
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          const pinchDistance = Math.sqrt(dx * dx + dy * dy);
+          const pinchDelta = pinchDistance - lastPinchDistance;
+
+          renderer.camera.distance = Math.max(2.0, Math.min(10.0, renderer.camera.distance - pinchDelta * 0.01));
+          lastPinchDistance = pinchDistance;
+        }
       }, { passive: true });
 
       demoContainer.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
+        if (e.touches.length === 0 && !isTwoFingerDrag) {
+          // Single finger swipe ended
+          touchEndX = e.changedTouches[0].clientX;
+          touchEndY = e.changedTouches[0].clientY;
+          handleSwipe();
+        }
+        if (e.touches.length < 2) {
+          isTwoFingerDrag = false;
+        }
       }, { passive: true });
 
       function handleSwipe() {
