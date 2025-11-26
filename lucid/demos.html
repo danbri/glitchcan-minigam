@@ -275,6 +275,135 @@
       opacity: 1;
     }
 
+    /* Edit Mode */
+    .edit-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .edit-panel.active {
+      display: flex;
+    }
+
+    .edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .edit-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #22d3ee;
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .edit-button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .edit-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #22d3ee;
+    }
+
+    .edit-button.primary {
+      background: #22d3ee;
+      border-color: #22d3ee;
+      color: #000;
+      font-weight: 600;
+    }
+
+    .edit-button.primary:hover {
+      background: #06b6d4;
+    }
+
+    .edit-textarea {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      color: #e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    .edit-textarea:focus {
+      border-color: #22d3ee;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .edit-error {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 13px;
+      font-family: ui-monospace, monospace;
+      display: none;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .edit-error.visible {
+      display: block;
+    }
+
+    .edit-toggle {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #22d3ee;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      transition: all 0.3s ease;
+    }
+
+    .edit-toggle:hover {
+      background: rgba(34, 211, 238, 0.2);
+      transform: scale(1.1);
+    }
+
     @media (max-width: 768px) {
       .code-panel {
         width: 100vw;
@@ -306,6 +435,7 @@
   </div>
 
   <button class="code-toggle" title="View DSL Code">{ }</button>
+  <button class="edit-toggle" title="Edit DSL">✏️</button>
 
   <div class="view-controls">
     <label>
@@ -341,6 +471,18 @@
       </div>
     </div>
   </aside>
+
+  <div class="edit-panel" id="editPanel">
+    <div class="edit-header">
+      <span class="edit-title">Edit DSL Source</span>
+      <div class="edit-actions">
+        <button class="edit-button" id="editCancel">Cancel</button>
+        <button class="edit-button primary" id="editApply">Apply Changes</button>
+      </div>
+    </div>
+    <textarea class="edit-textarea" id="editTextarea" placeholder="Enter DSL code here..."></textarea>
+    <div class="edit-error" id="editError"></div>
+  </div>
 
   <script type="module">
     import {
@@ -485,48 +627,41 @@ out = chain`,
         // Helper function to generate invader DSL
         function makeInvader(id, x, y, z, color) {
           return `
-body${id} = box(size=[0.4, 0.3, 0.2], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
-eye${id}a = sphere(r=0.08, center=[${x-0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
-eye${id}b = sphere(r=0.08, center=[${x+0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
+body${id} = box(size=[0.5, 0.4, 0.3], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
+eye${id}a = sphere(r=0.1, center=[${x-0.12}, ${y+0.08}, ${z+0.2}], color=[0.0, 0.0, 0.0])
+eye${id}b = sphere(r=0.1, center=[${x+0.12}, ${y+0.08}, ${z+0.2}], color=[0.0, 0.0, 0.0])
 temp${id} = subtract(a=body${id}, b=eye${id}a)
 inv${id} = subtract(a=temp${id}, b=eye${id}b)`;
         }
 
-        // Define grid of invaders
+        // Define grid of invaders - reduced to 6 for better performance
         const invaders = [
           // Top row - green
-          { x: -1.8, y: 0.8, color: [0.0, 1.0, 0.5] },
-          { x: -1.0, y: 0.8, color: [0.0, 1.0, 0.5] },
-          { x: -0.2, y: 0.8, color: [0.0, 1.0, 0.5] },
-          { x: 0.6, y: 0.8, color: [0.0, 1.0, 0.5] },
-          { x: 1.4, y: 0.8, color: [0.0, 1.0, 0.5] },
-          // Middle row - pink
-          { x: -1.4, y: 0.0, color: [1.0, 0.3, 0.8] },
-          { x: -0.6, y: 0.0, color: [1.0, 0.3, 0.8] },
-          { x: 0.2, y: 0.0, color: [1.0, 0.3, 0.8] },
-          { x: 1.0, y: 0.0, color: [1.0, 0.3, 0.8] },
-          // Bottom row - yellow
-          { x: -1.0, y: -0.8, color: [1.0, 1.0, 0.3] },
-          { x: -0.2, y: -0.8, color: [1.0, 1.0, 0.3] },
-          { x: 0.6, y: -0.8, color: [1.0, 1.0, 0.3] },
+          { x: -1.5, y: 0.6, z: 0.3, color: [0.0, 1.0, 0.5] },
+          { x: 0.0, y: 0.6, z: 0.0, color: [0.0, 1.0, 0.5] },
+          { x: 1.5, y: 0.6, z: -0.3, color: [0.0, 1.0, 0.5] },
+          // Bottom row - pink
+          { x: -1.5, y: -0.6, z: -0.2, color: [1.0, 0.3, 0.8] },
+          { x: 0.0, y: -0.6, z: 0.1, color: [1.0, 0.3, 0.8] },
+          { x: 1.5, y: -0.6, z: 0.4, color: [1.0, 0.3, 0.8] },
         ];
 
         // Generate DSL for all invaders
         const invaderDefs = invaders.map((inv, i) =>
-          makeInvader(i + 1, inv.x, inv.y, 0.0, inv.color)
+          makeInvader(i + 1, inv.x, inv.y, inv.z, inv.color)
         ).join('\n');
 
         const invaderIds = invaders.map((_, i) => `inv${i + 1}`).join(', ');
 
         return {
           title: "Space Invaders",
-          subtitle: "CSG aliens - 12 instances generated",
-          dsl: `# Invader grid - programmatically generated
+          subtitle: "CSG aliens - 6 instances with staggered depth",
+          dsl: `# Invader grid - programmatically generated with reduced count
 ${invaderDefs}
 
 formation = union(${invaderIds})
 out = formation`,
-          description: "12 alien invaders generated programmatically using JavaScript template strings. Each invader is a CSG construction (box body with carved sphere eyes). Demonstrates efficient multi-instance creation."
+          description: "6 alien invaders generated programmatically using JavaScript template strings. Each invader is a CSG construction (box body with carved sphere eyes). Reduced count and staggered Z-depth prevent GLSL bloat and rendering artifacts."
         };
       })(),
       {
@@ -851,6 +986,65 @@ out = tower`,
 
       codeClose.addEventListener('click', () => {
         codePanel.classList.remove('open');
+      });
+
+      // Edit panel toggle
+      const editToggle = document.querySelector('.edit-toggle');
+      const editPanel = document.getElementById('editPanel');
+      const editTextarea = document.getElementById('editTextarea');
+      const editApply = document.getElementById('editApply');
+      const editCancel = document.getElementById('editCancel');
+      const editError = document.getElementById('editError');
+
+      editToggle.addEventListener('click', () => {
+        editPanel.classList.add('active');
+        editTextarea.value = demos[currentDemo].dsl;
+        editError.classList.remove('visible');
+        editTextarea.focus();
+      });
+
+      editCancel.addEventListener('click', () => {
+        editPanel.classList.remove('active');
+        editError.classList.remove('visible');
+      });
+
+      editApply.addEventListener('click', () => {
+        const newDsl = editTextarea.value;
+
+        try {
+          // Parse the new DSL
+          const parsed = parseDslToSceneGraph(newDsl);
+
+          if (parsed.errors.length > 0) {
+            // Show parse errors
+            editError.textContent = 'Parse Errors:\n' + parsed.errors.map(e => `  • ${e}`).join('\n');
+            editError.classList.add('visible');
+            return;
+          }
+
+          // Generate GLSL
+          const glsl = generateGlslFromSceneGraph(parsed.nodes);
+          console.log('=== Custom DSL Applied ===');
+          console.log('Parsed nodes:', parsed.nodes);
+          console.log('Generated GLSL:\n', glsl);
+
+          // Update renderer
+          renderer.updateScene(glsl);
+
+          // Update the demo object with new DSL
+          demos[currentDemo].dsl = newDsl;
+          document.getElementById('dslCode').textContent = newDsl;
+
+          // Close edit panel
+          editPanel.classList.remove('active');
+          editError.classList.remove('visible');
+
+        } catch (error) {
+          // Show compilation errors
+          editError.textContent = 'Compilation Error:\n  ' + error.message;
+          editError.classList.add('visible');
+          console.error('Edit error:', error);
+        }
       });
 
       // Touch controls - single finger swipe OR two-finger orbit
