@@ -100,18 +100,25 @@ export function extractMacros(text) {
 export function expandMacros(text, macros) {
   const lines = text.split(/\r?\n/);
   const expanded = [];
+  let inMacroDef = false;
 
   for (let line of lines) {
     const trimmed = line.trim();
 
-    // Skip macro definitions (they've already been extracted)
+    // Track when we're inside a macro definition
     if (trimmed.startsWith('def ')) {
-      continue;
+      inMacroDef = true;
+      continue;  // Skip the def line itself
     }
 
-    // Skip indented lines (macro bodies)
-    if (line.match(/^\s+/) && !line.match(/^\s*$/)) {
-      continue;
+    // Skip indented lines ONLY if they're macro bodies (after a def)
+    if (inMacroDef && line.match(/^\s+/) && !line.match(/^\s*$/)) {
+      continue;  // This is a macro body line
+    }
+
+    // End of macro definition (non-indented line or empty line)
+    if (inMacroDef && !line.match(/^\s+/)) {
+      inMacroDef = false;
     }
 
     // Check for macro calls: id = macroName(args) or macroName(args)
@@ -160,22 +167,51 @@ export function expandMacros(text, macros) {
               returnExpr = returnExpr.replace(paramRegex, value);
             }
 
+            // Also prefix any local variable references with the unique ID
+            if (id) {
+              // Find all variable names created in the macro body
+              const localVars = macro.body
+                .map(line => line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=/))
+                .filter(m => m && !m[0].startsWith('return'))
+                .map(m => m[1]);
+
+              // Replace references to local vars with prefixed versions
+              for (let localVar of localVars) {
+                const localVarRegex = new RegExp('\\b' + localVar + '\\b', 'g');
+                returnExpr = returnExpr.replace(localVarRegex, `${id}_${localVar}`);
+              }
+            }
+
             if (id) {
               return `${id} = ${returnExpr}`;
             } else {
               return returnExpr;
             }
           } else {
-            // Regular body line - generate unique ID
-            const uniqueId = id ? `${id}_` : '_tmp_';
+            // Regular body line - prefix variable with unique ID
+            // Parse: varName = expression
+            const varMatch = result.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+            if (varMatch && id) {
+              const varName = varMatch[1];
+              const varExpr = varMatch[2];
 
-            // Substitute parameters
-            for (let [param, value] of Object.entries(substMap)) {
-              const paramRegex = new RegExp('\\b' + param + '\\b', 'g');
-              result = result.replace(paramRegex, value);
+              // Substitute parameters
+              let substituted = varExpr;
+              for (let [param, value] of Object.entries(substMap)) {
+                const paramRegex = new RegExp('\\b' + param + '\\b', 'g');
+                substituted = substituted.replace(paramRegex, value);
+              }
+
+              // Prefix variable name to make it unique
+              return `${id}_${varName} = ${substituted}`;
+            } else {
+              // Fallback: just substitute parameters
+              for (let [param, value] of Object.entries(substMap)) {
+                const paramRegex = new RegExp('\\b' + param + '\\b', 'g');
+                result = result.replace(paramRegex, value);
+              }
+              return result;
             }
-
-            return result;
           }
         });
 
