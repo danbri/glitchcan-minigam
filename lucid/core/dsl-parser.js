@@ -114,11 +114,13 @@ export function extractMacros(text) {
 
 /**
  * Expand macro calls in raw DSL text
- * Returns expanded text (still raw, will be normalized later)
+ * Returns { expandedText, templateInfo }
+ * templateInfo tracks which nodes came from which templates for GLSL optimization
  */
 export function expandMacros(text, macros) {
   const lines = text.split(/\r?\n/);
   const expanded = [];
+  const templateInfo = {}; // Track template instances: { nodeId: { template, params } }
   let inMacroDef = false;
 
   for (let line of lines) {
@@ -165,6 +167,15 @@ export function expandMacros(text, macros) {
             substMap[param] = args[idx];
           }
         });
+
+        // Track template usage for GLSL optimization
+        if (id) {
+          templateInfo[id] = {
+            template: funcName,
+            params: substMap,
+            macro: macro // Store macro definition for function generation
+          };
+        }
 
         // Expand macro body with parameter substitution
         const expandedBody = macro.body.map(bodyLine => {
@@ -230,7 +241,10 @@ export function expandMacros(text, macros) {
     }
   }
 
-  return expanded.join('\n');
+  return {
+    expandedText: expanded.join('\n'),
+    templateInfo // Pass template metadata for GLSL optimization
+  };
 }
 
 // ---------- Legacy IR parser (current source of truth) ----------
@@ -259,14 +273,26 @@ export function splitArgs(argsStr) {
 }
 
 export function parseDslToSceneGraph(text) {
-  // First pass: Extract and expand macros (requires raw text for indentation)
+  // First pass: Extract macros as template definitions
   const macros = extractMacros(text);
-  const expandedText = expandMacros(text, macros);
 
-  // Second pass: Normalize the expanded text (handle multi-line function calls)
+  // Store templates as IR nodes for GLSL function generation
+  const templateNodes = Object.keys(macros).map(templateName => ({
+    id: `__template_${templateName}`,
+    type: 'template',
+    templateName: templateName,
+    params: macros[templateName].params,
+    body: macros[templateName].body,
+    _isTemplate: true // Mark as template definition
+  }));
+
+  // Second pass: Expand macros but track template instances
+  const { expandedText, templateInfo } = expandMacros(text, macros);
+
+  // Third pass: Normalize the expanded text (handle multi-line function calls)
   const lines = normalizeDslText(expandedText);
 
-  // Third pass: Parse the normalized lines into scene graph
+  // Fourth pass: Parse the normalized lines into scene graph
   const nodes = [];
   const ids = new Set();
   const errors = [];
@@ -474,7 +500,17 @@ export function parseDslToSceneGraph(text) {
     nodes.push(node);
   });
 
-  return { nodes, errors };
+  // Attach template metadata to nodes for GLSL optimization
+  nodes.forEach(node => {
+    if (templateInfo[node.id]) {
+      node._template = templateInfo[node.id];
+    }
+  });
+
+  // Prepend template definitions to node list for GLSL generation
+  const allNodes = [...templateNodes, ...nodes];
+
+  return { nodes: allNodes, errors, templateInfo };
 }
 
 // ---------- Shadow Mode Parser (AST-only, no effect on IR/GLSL) ----------

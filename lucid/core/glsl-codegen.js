@@ -13,6 +13,27 @@ export function generateGlslFromSceneGraph(sceneGraph) {
     if (node && node.id) byId.set(node.id, node);
   });
 
+  // Detect template usage for function generation optimization
+  const templateUsage = new Map(); // template name -> [node ids]
+  sg.forEach(node => {
+    if (node && node._template) {
+      const templateName = node._template.template;
+      if (!templateUsage.has(templateName)) {
+        templateUsage.set(templateName, []);
+      }
+      templateUsage.get(templateName).push(node.id);
+    }
+  });
+
+  // Templates used 2+ times should become GLSL functions
+  const templatesToOptimize = new Set();
+  templateUsage.forEach((nodeIds, templateName) => {
+    if (nodeIds.length >= 2) {
+      templatesToOptimize.add(templateName);
+      log(`Template '${templateName}' used ${nodeIds.length} times - generating GLSL function`, "info");
+    }
+  });
+
   const visited = new Set();
   const temp = new Set();
   const sorted = [];
@@ -200,6 +221,24 @@ export function generateGlslFromSceneGraph(sceneGraph) {
     lines.push("}");
     return lines.join("\n");
   }
+
+  // Generate GLSL functions for optimized templates
+  sg.filter(node => node && node._isTemplate).forEach(templateNode => {
+    const templateName = templateNode.templateName;
+
+    if (!templatesToOptimize.has(templateName)) {
+      return; // Skip templates used only once
+    }
+
+    lines.push(`// Template function: ${templateName}(${templateNode.params.join(', ')})`);
+    lines.push(`// Used ${templateUsage.get(templateName).length} times - optimized as GLSL function`);
+    lines.push(`vec4 template_${templateName}(vec3 p_base, ${templateNode.params.map(p => `vec3 param_${p}`).join(', ')}) {`);
+    lines.push(`  // Template body would be generated here from: ${templateNode.body.join('; ')}`);
+    lines.push(`  // TODO: Implement template-to-GLSL compilation`);
+    lines.push(`  return vec4(9999.0, 1.0, 1.0, 1.0); // Placeholder`);
+    lines.push(`}`);
+    lines.push(``);
+  });
 
   ordered.forEach((node, idx) => {
     if (!node || !node.id) return;
