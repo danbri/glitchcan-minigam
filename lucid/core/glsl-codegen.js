@@ -232,16 +232,196 @@ export function generateGlslFromSceneGraph(sceneGraph) {
 
     lines.push(`// Template function: ${templateName}(${templateNode.params.join(', ')})`);
     lines.push(`// Used ${templateUsage.get(templateName).length} times - optimized as GLSL function`);
-    lines.push(`vec4 template_${templateName}(vec3 p_base, ${templateNode.params.map(p => `vec3 param_${p}`).join(', ')}) {`);
-    lines.push(`  // Template body would be generated here from: ${templateNode.body.join('; ')}`);
-    lines.push(`  // TODO: Implement template-to-GLSL compilation`);
-    lines.push(`  return vec4(9999.0, 1.0, 1.0, 1.0); // Placeholder`);
+
+    // Generate function signature with proper parameter types
+    const paramDecls = templateNode.params.map(p => {
+      // Infer type from parameter usage in body
+      const bodyStr = templateNode.body.join(' ');
+      if (bodyStr.includes(`[${p}`)) return `vec3 ${p}`; // Used in array context
+      return `float ${p}`; // Default to float
+    });
+
+    lines.push(`vec4 template_${templateName}(vec3 p ${paramDecls.length > 0 ? ', ' + paramDecls.join(', ') : ''}) {`);
+
+    // Compile template body statements to GLSL
+    const bodyLines = compileTemplateBodyToGLSL(templateNode.body, templateNode.params);
+    bodyLines.forEach(line => lines.push(`  ${line}`));
+
     lines.push(`}`);
     lines.push(``);
   });
 
+  // Helper function to compile template body DSL to GLSL
+  function compileTemplateBodyToGLSL(bodyStatements, templateParams) {
+    const glslLines = [];
+    const localVars = new Map(); // Track local variable types
+
+    bodyStatements.forEach(stmt => {
+      const returnMatch = stmt.match(/^return\s+(.+)$/);
+      if (returnMatch) {
+        // Return statement - compile expression and return
+        const expr = returnMatch[1];
+        const glslExpr = compileExpressionToGLSL(expr, templateParams, localVars);
+        glslLines.push(`return ${glslExpr};`);
+        return;
+      }
+
+      // Regular assignment: varName = funcCall(...)
+      const assignMatch = stmt.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+      if (assignMatch) {
+        const varName = assignMatch[1];
+        const expr = assignMatch[2];
+        const glslExpr = compileExpressionToGLSL(expr, templateParams, localVars);
+        glslLines.push(`vec4 ${varName} = ${glslExpr};`);
+        localVars.set(varName, 'vec4');
+      }
+    });
+
+    return glslLines;
+  }
+
+  // Helper to compile a single expression to GLSL
+  function compileExpressionToGLSL(expr, templateParams, localVars) {
+    // Parse function call: funcName(arg1=val1, arg2=val2)
+    const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)$/);
+    if (!callMatch) {
+      // Simple variable reference
+      if (localVars.has(expr)) return expr;
+      if (templateParams.includes(expr)) return expr;
+      return expr;
+    }
+
+    const funcName = callMatch[1];
+    const argsStr = callMatch[2];
+
+    // Map DSL functions to GLSL functions
+    const glslFuncMap = {
+      'sphere': 'g_sdSphere',
+      'box': 'g_sdBox',
+      'subtract': 'g_opSubtract',
+      'union': 'min',
+      'smoothUnion': 'g_opSmoothUnion',
+      'capsule': 'g_sdCapsule',
+      'plane': 'g_sdPlane',
+      'torus': 'g_sdTorus',
+      'cylinder': 'g_sdCylinder',
+      'cone': 'g_sdCone'
+    };
+
+    const glslFunc = glslFuncMap[funcName] || funcName;
+
+    // Parse arguments
+    const args = parseTemplateArgs(argsStr);
+
+    // Generate GLSL based on function type
+    if (funcName === 'sphere') {
+      const r = args.r || args.radius || '1.0';
+      const center = args.center || '[0.0, 0.0, 0.0]';
+      const color = args.color || '[1.0, 1.0, 1.0]';
+      const centerVec = compileValueToGLSL(center, templateParams);
+      const colorVec = compileValueToGLSL(color, templateParams);
+      return `vec4(${glslFunc}(p - ${centerVec}, ${r}), ${colorVec})`;
+    } else if (funcName === 'box') {
+      const size = args.size || args.s || '[1.0, 1.0, 1.0]';
+      const center = args.center || '[0.0, 0.0, 0.0]';
+      const color = args.color || '[1.0, 1.0, 1.0]';
+      const sizeVec = compileValueToGLSL(size, templateParams);
+      const centerVec = compileValueToGLSL(center, templateParams);
+      const colorVec = compileValueToGLSL(color, templateParams);
+      return `vec4(${glslFunc}(p - ${centerVec}, ${sizeVec}), ${colorVec})`;
+    } else if (funcName === 'subtract') {
+      const a = args.a;
+      const b = args.b;
+      return `vec4(${glslFunc}(${a}.x, ${b}.x), ${a}.yzw)`;
+    } else {
+      // Generic fallback
+      return `vec4(9999.0, 1.0, 1.0, 1.0) /* Unknown: ${funcName} */`;
+    }
+  }
+
+  // Helper to parse template function arguments
+  function parseTemplateArgs(argsStr) {
+    const args = {};
+    const parts = splitArgs(argsStr);
+    parts.forEach(part => {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx !== -1) {
+        const key = part.slice(0, eqIdx).trim();
+        const val = part.slice(eqIdx + 1).trim();
+        args[key] = val;
+      }
+    });
+    return args;
+  }
+
+  // Helper to compile a value (array or expression) to GLSL
+  function compileValueToGLSL(value, templateParams) {
+    // Array literal: [x, y, z]
+    if (value.startsWith('[') && value.endsWith(']')) {
+      const inner = value.slice(1, -1);
+      const parts = inner.split(',').map(p => {
+        const trimmed = p.trim();
+        return templateParams.includes(trimmed) ? trimmed : trimmed;
+      });
+      return `vec3(${parts.join(', ')})`;
+    }
+    // Template parameter or expression
+    return value;
+  }
+
+  // Build set of intermediate template nodes to skip
+  const templateIntermediateNodes = new Set();
+  sg.forEach(node => {
+    if (node && node._template && templatesToOptimize.has(node._template.template)) {
+      // This is a template root node (e.g., i1)
+      // Mark all nodes with IDs starting with this prefix as intermediate nodes
+      const prefix = node.id + '_';
+      sg.forEach(n => {
+        if (n && n.id && n.id.startsWith(prefix)) {
+          templateIntermediateNodes.add(n.id);
+        }
+      });
+    }
+  });
+
   ordered.forEach((node, idx) => {
     if (!node || !node.id) return;
+
+    // Skip template definition nodes (already processed above)
+    if (node._isTemplate) return;
+
+    // Skip intermediate template nodes (e.g., i1_body, i1_eye1)
+    if (templateIntermediateNodes.has(node.id)) {
+      lines.push(`// Skipping intermediate template node: ${node.id}`);
+      lines.push(``);
+      return;
+    }
+
+    // Check if this node is a template instance that should use optimized function
+    if (node._template && templatesToOptimize.has(node._template.template)) {
+      const templateName = node._template.template;
+      const fn = funcNameById.get(node.id);
+      const params = node._template.params;
+
+      lines.push(`// node ${idx}: template instance of '${templateName}' id=${node.id}`);
+      lines.push(`vec4 ${fn}(vec3 p) {`);
+
+      // Generate function call with template parameters
+      const paramValues = Object.keys(params).map(paramName => {
+        const paramValue = params[paramName];
+        // Compile parameter values to GLSL
+        if (paramValue.startsWith('[') && paramValue.endsWith(']')) {
+          return compileValueToGLSL(paramValue, []);
+        }
+        return exprToGLSL(paramValue, paramValue);
+      });
+
+      lines.push(`  return template_${templateName}(p${paramValues.length > 0 ? ', ' + paramValues.join(', ') : ''});`);
+      lines.push(`}`);
+      lines.push(``);
+      return;
+    }
+
     const fn = funcNameById.get(node.id);
     const type = node.type || "unknown";
     const params = node.params || {};
