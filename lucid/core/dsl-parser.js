@@ -39,6 +39,195 @@ export function normalizeDslText(text) {
   return normalized;
 }
 
+// ============================================================
+// Macro System
+// ============================================================
+
+/**
+ * Parse macro definitions from DSL text
+ * Syntax: def macroName(param1, param2, ...):
+ *   body line 1
+ *   body line 2
+ *   return expression
+ */
+export function extractMacros(text) {
+  const lines = text.split(/\r?\n/);
+  const macros = {};
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+
+    // Match: def name(params):
+    const defMatch = line.match(/^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*:$/);
+
+    if (defMatch) {
+      const macroName = defMatch[1];
+      const paramsStr = defMatch[2].trim();
+      const params = paramsStr ? paramsStr.split(',').map(p => p.trim()) : [];
+
+      // Collect indented body lines
+      const body = [];
+      i++;
+
+      while (i < lines.length) {
+        const bodyLine = lines[i];
+        // Check if line is indented (starts with spaces/tabs)
+        if (bodyLine.match(/^\s+/) && bodyLine.trim()) {
+          body.push(bodyLine.trim());
+          i++;
+        } else if (!bodyLine.trim()) {
+          // Empty line - skip but continue
+          i++;
+        } else {
+          // Non-indented line - end of macro
+          break;
+        }
+      }
+
+      macros[macroName] = { params, body };
+    } else {
+      i++;
+    }
+  }
+
+  return macros;
+}
+
+/**
+ * Expand macro calls in DSL text
+ */
+export function expandMacros(text, macros) {
+  const lines = text.split(/\r?\n/);
+  const expanded = [];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+
+    // Skip macro definitions (they've already been extracted)
+    if (trimmed.startsWith('def ')) {
+      continue;
+    }
+
+    // Skip indented lines (macro bodies)
+    if (line.match(/^\s+/) && !line.match(/^\s*$/)) {
+      continue;
+    }
+
+    // Check for macro calls: id = macroName(args) or macroName(args)
+    const assignMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+    let id = null;
+    let expr = trimmed;
+
+    if (assignMatch) {
+      id = assignMatch[1];
+      expr = assignMatch[2].trim();
+    }
+
+    // Check if expr is a macro call
+    const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)$/);
+
+    if (callMatch) {
+      const funcName = callMatch[1];
+      const argsStr = callMatch[2];
+
+      if (macros[funcName]) {
+        // This is a macro call - expand it
+        const macro = macros[funcName];
+        const args = parseCallArgs(argsStr);
+
+        // Build parameter substitution map
+        const substMap = {};
+        macro.params.forEach((param, idx) => {
+          if (idx < args.length) {
+            substMap[param] = args[idx];
+          }
+        });
+
+        // Expand macro body with substitutions
+        const expandedBody = macro.body.map(bodyLine => {
+          let result = bodyLine;
+
+          // Find the return statement
+          const returnMatch = result.match(/^return\s+(.+)$/);
+          if (returnMatch) {
+            // This is the return value - assign it to the id
+            let returnExpr = returnMatch[1];
+
+            // Substitute parameters
+            for (let [param, value] of Object.entries(substMap)) {
+              const paramRegex = new RegExp('\\b' + param + '\\b', 'g');
+              returnExpr = returnExpr.replace(paramRegex, value);
+            }
+
+            if (id) {
+              return `${id} = ${returnExpr}`;
+            } else {
+              return returnExpr;
+            }
+          } else {
+            // Regular body line - generate unique ID
+            const uniqueId = id ? `${id}_` : '_tmp_';
+
+            // Substitute parameters
+            for (let [param, value] of Object.entries(substMap)) {
+              const paramRegex = new RegExp('\\b' + param + '\\b', 'g');
+              result = result.replace(paramRegex, value);
+            }
+
+            return result;
+          }
+        });
+
+        // Add expanded lines
+        expandedBody.forEach(l => expanded.push(l));
+        continue;
+      }
+    }
+
+    // Not a macro call or definition - keep as is
+    if (!trimmed.startsWith('def ') && trimmed) {
+      expanded.push(trimmed);
+    }
+  }
+
+  return expanded.join('\n');
+}
+
+/**
+ * Parse function call arguments, handling nested parentheses and brackets
+ */
+function parseCallArgs(argsStr) {
+  if (!argsStr.trim()) return [];
+
+  const args = [];
+  let current = '';
+  let depth = 0;
+
+  for (let i = 0; i < argsStr.length; i++) {
+    const c = argsStr[i];
+
+    if (c === '(' || c === '[') {
+      depth++;
+      current += c;
+    } else if (c === ')' || c === ']') {
+      depth--;
+      current += c;
+    } else if (c === ',' && depth === 0) {
+      args.push(current.trim());
+      current = '';
+    } else {
+      current += c;
+    }
+  }
+
+  if (current.trim()) {
+    args.push(current.trim());
+  }
+
+  return args;
+}
+
 // ---------- Legacy IR parser (current source of truth) ----------
 
 export function splitArgs(argsStr) {
@@ -65,7 +254,12 @@ export function splitArgs(argsStr) {
 }
 
 export function parseDslToSceneGraph(text) {
-  const lines = normalizeDslText(text);
+  // First pass: Extract and expand macros
+  const macros = extractMacros(text);
+  const expandedText = expandMacros(text, macros);
+
+  // Now parse the expanded text
+  const lines = normalizeDslText(expandedText);
   const nodes = [];
   const ids = new Set();
   const errors = [];
