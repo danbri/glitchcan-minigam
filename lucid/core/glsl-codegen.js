@@ -133,6 +133,25 @@ export function generateGlslFromSceneGraph(sceneGraph) {
   lines.push("float g_sdPlane(vec3 p, vec3 n, float d) {");
   lines.push("  return dot(p, normalize(n)) + d;");
   lines.push("}");
+  lines.push("float g_sdTorus(vec3 p, float majorR, float minorR) {");
+  lines.push("  vec2 q = vec2(length(p.xz) - majorR, p.y);");
+  lines.push("  return length(q) - minorR;");
+  lines.push("}");
+  lines.push("float g_sdCylinder(vec3 p, float r, float h) {");
+  lines.push("  vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);");
+  lines.push("  return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));");
+  lines.push("}");
+  lines.push("float g_sdCone(vec3 p, float r, float h) {");
+  lines.push("  vec2 q = vec2(length(p.xz), p.y);");
+  lines.push("  vec2 tip = q - vec2(0.0, h);");
+  lines.push("  vec2 mantle = vec2(sin(atan(r, h)), -cos(atan(r, h)));");
+  lines.push("  float d = max(dot(tip, tip), dot(q, mantle));");
+  lines.push("  return sqrt(max(d, 0.0));");
+  lines.push("}");
+  lines.push("float g_opSmoothSubtract(float d1, float d2, float k) {");
+  lines.push("  float h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);");
+  lines.push("  return mix(d2, -d1, h) + k * h * (1.0 - h);");
+  lines.push("}");
   lines.push("");
   // quaternion helpers
   lines.push("vec4 g_quat(float w, float x, float y, float z) {");
@@ -243,6 +262,24 @@ export function generateGlslFromSceneGraph(sceneGraph) {
       lines.push("  float d = g_sdPlane(q, " + nExpr + ", " + dExpr + ");");
       lines.push("  vec3 color = clamp(" + col + ", 0.0, 1.0);");
       lines.push("  return vec4(d, color);");
+    } else if (type === "torus") {
+      const majorRExpr = exprToGLSL(params.majorR || params.r1, "1.0");
+      const minorRExpr = exprToGLSL(params.minorR || params.r2, "0.3");
+      lines.push("  float d = g_sdTorus(q, " + majorRExpr + ", " + minorRExpr + ");");
+      lines.push("  vec3 color = clamp(" + col + ", 0.0, 1.0);");
+      lines.push("  return vec4(d, color);");
+    } else if (type === "cylinder") {
+      const rExpr = exprToGLSL(params.r || params.radius, "0.5");
+      const hExpr = exprToGLSL(params.h || params.height, "1.0");
+      lines.push("  float d = g_sdCylinder(q, " + rExpr + ", " + hExpr + ");");
+      lines.push("  vec3 color = clamp(" + col + ", 0.0, 1.0);");
+      lines.push("  return vec4(d, color);");
+    } else if (type === "cone") {
+      const rExpr = exprToGLSL(params.r || params.radius, "1.0");
+      const hExpr = exprToGLSL(params.h || params.height, "1.0");
+      lines.push("  float d = g_sdCone(q, " + rExpr + ", " + hExpr + ");");
+      lines.push("  vec3 color = clamp(" + col + ", 0.0, 1.0);");
+      lines.push("  return vec4(d, color);");
     } else if (type === "union") {
       const calls = getInputCalls(node);
       if (!calls.length) {
@@ -283,6 +320,19 @@ export function generateGlslFromSceneGraph(sceneGraph) {
           lines.push("  if (v" + i + ".x < best.x) best = v" + i + ";");
         }
         lines.push("  return vec4(d, best.yzw);");
+      }
+    } else if (type === "smoothSubtract") {
+      const calls = getInputCalls(node);
+      const kExpr = exprToGLSL(params.k, "0.2");
+      if (!calls.length) {
+        lines.push("  return vec4(9999.0, " + col + ");");
+      } else {
+        calls.forEach((c, i) => lines.push("  vec4 v" + i + " = " + c + ";"));
+        lines.push("  float d = v0.x;");
+        for (let i = 1; i < calls.length; i++) {
+          lines.push("  d = g_opSmoothSubtract(d, v" + i + ".x, " + kExpr + ");");
+        }
+        lines.push("  return vec4(d, v0.yzw);");
       }
     } else if (type === "alias") {
       const calls = getInputCalls(node);
