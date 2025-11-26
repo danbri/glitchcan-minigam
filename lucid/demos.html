@@ -26,12 +26,14 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: none; /* Disable browser touch gestures */
     }
 
     canvas {
       width: 100%;
       height: 100%;
       display: block;
+      touch-action: none; /* Prevent iOS Safari pinch-zoom */
     }
 
     /* Navigation */
@@ -479,52 +481,53 @@ chain = union(c1, c2, c3)
 out = chain`,
         description: "Three capsules connected end-to-end forming an animated chain. Each segment moves independently creating a flowing, rope-like motion. Demonstrates multi-part construction."
       },
-      {
-        title: "Space Invaders",
-        subtitle: "CSG aliens in formation",
-        dsl: `# Invader shape using CSG operations
-# Body parts (reusable)
-body1 = box(size=[0.4, 0.3, 0.2], center=[-1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-eye1a = sphere(r=0.08, center=[-1.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-eye1b = sphere(r=0.08, center=[-1.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-inv1 = subtract(subtract(body1, eye1a), eye1b)
+      (() => {
+        // Helper function to generate invader DSL
+        function makeInvader(id, x, y, z, color) {
+          return `
+body${id} = box(size=[0.4, 0.3, 0.2], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
+eye${id}a = sphere(r=0.08, center=[${x-0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
+eye${id}b = sphere(r=0.08, center=[${x+0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
+inv${id} = subtract(subtract(body${id}, eye${id}a), eye${id}b)`;
+        }
 
-body2 = box(size=[0.4, 0.3, 0.2], center=[-0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-eye2a = sphere(r=0.08, center=[-0.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-eye2b = sphere(r=0.08, center=[-0.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-inv2 = subtract(subtract(body2, eye2a), eye2b)
+        // Define grid of invaders
+        const invaders = [
+          // Top row - green
+          { x: -1.8, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: -1.0, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: -0.2, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: 0.6, y: 0.8, color: [0.0, 1.0, 0.5] },
+          { x: 1.4, y: 0.8, color: [0.0, 1.0, 0.5] },
+          // Middle row - pink
+          { x: -1.4, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: -0.6, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: 0.2, y: 0.0, color: [1.0, 0.3, 0.8] },
+          { x: 1.0, y: 0.0, color: [1.0, 0.3, 0.8] },
+          // Bottom row - yellow
+          { x: -1.0, y: -0.8, color: [1.0, 1.0, 0.3] },
+          { x: -0.2, y: -0.8, color: [1.0, 1.0, 0.3] },
+          { x: 0.6, y: -0.8, color: [1.0, 1.0, 0.3] },
+        ];
 
-body3 = box(size=[0.4, 0.3, 0.2], center=[0.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-eye3a = sphere(r=0.08, center=[0.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-eye3b = sphere(r=0.08, center=[0.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-inv3 = subtract(subtract(body3, eye3a), eye3b)
+        // Generate DSL for all invaders
+        const invaderDefs = invaders.map((inv, i) =>
+          makeInvader(i + 1, inv.x, inv.y, 0.0, inv.color)
+        ).join('\n');
 
-body4 = box(size=[0.4, 0.3, 0.2], center=[1.5, 0.6, 0.0], color=[0.0, 1.0, 0.5])
-eye4a = sphere(r=0.08, center=[1.4, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-eye4b = sphere(r=0.08, center=[1.6, 0.65, 0.1], color=[0.0, 0.0, 0.0])
-inv4 = subtract(subtract(body4, eye4a), eye4b)
+        const invaderIds = invaders.map((_, i) => `inv${i + 1}`).join(', ');
 
-# Middle row - different color
-body5 = box(size=[0.4, 0.3, 0.2], center=[-0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
-eye5a = sphere(r=0.08, center=[-0.6, -0.15, 0.1], color=[0.0, 0.0, 0.0])
-eye5b = sphere(r=0.08, center=[-0.4, -0.15, 0.1], color=[0.0, 0.0, 0.0])
-inv5 = subtract(subtract(body5, eye5a), eye5b)
+        return {
+          title: "Space Invaders",
+          subtitle: "CSG aliens - 12 instances generated",
+          dsl: `# Invader grid - programmatically generated
+${invaderDefs}
 
-body6 = box(size=[0.4, 0.3, 0.2], center=[0.5, -0.2, 0.0], color=[1.0, 0.3, 0.8])
-eye6a = sphere(r=0.08, center=[0.4, -0.15, 0.1], color=[0.0, 0.0, 0.0])
-eye6b = sphere(r=0.08, center=[0.6, -0.15, 0.1], color=[0.0, 0.0, 0.0])
-inv6 = subtract(subtract(body6, eye6a), eye6b)
-
-# Bottom row - animated one
-body7 = box(size=[0.4, 0.3, 0.2], center=[0.0, -1.0 + sin(time)*0.2, 0.0], color=[1.0, 1.0, 0.3])
-eye7a = sphere(r=0.08, center=[-0.1, -0.95 + sin(time)*0.2, 0.1], color=[0.0, 0.0, 0.0])
-eye7b = sphere(r=0.08, center=[0.1, -0.95 + sin(time)*0.2, 0.1], color=[0.0, 0.0, 0.0])
-inv7 = subtract(subtract(body7, eye7a), eye7b)
-
-formation = union(inv1, inv2, inv3, inv4, inv5, inv6, inv7)
+formation = union(${invaderIds})
 out = formation`,
-        description: "Alien invaders created with CSG operations - box bodies with sphere eyes carved out using subtraction. Seven invaders in formation, with the bottom one animating. Demonstrates complex multi-instance assemblies."
-      },
+          description: "12 alien invaders generated programmatically using JavaScript template strings. Each invader is a CSG construction (box body with carved sphere eyes). Demonstrates efficient multi-instance creation."
+        };
+      })(),
       {
         title: "Cylinder Tower",
         subtitle: "Stacked geometric primitives",
