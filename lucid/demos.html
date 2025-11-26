@@ -488,7 +488,8 @@ out = chain`,
 body${id} = box(size=[0.4, 0.3, 0.2], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
 eye${id}a = sphere(r=0.08, center=[${x-0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
 eye${id}b = sphere(r=0.08, center=[${x+0.1}, ${y+0.05}, ${z+0.1}], color=[0.0, 0.0, 0.0])
-inv${id} = subtract(subtract(body${id}, eye${id}a), eye${id}b)`;
+temp${id} = subtract(a=body${id}, b=eye${id}a)
+inv${id} = subtract(a=temp${id}, b=eye${id}b)`;
         }
 
         // Define grid of invaders
