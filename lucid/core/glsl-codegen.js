@@ -266,18 +266,35 @@ export function generateGlslFromSceneGraph(sceneGraph) {
         return;
       }
 
-      // Regular assignment: varName = funcCall(...)
+      // Regular assignment: varName = expression
       const assignMatch = stmt.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
       if (assignMatch) {
         const varName = assignMatch[1];
         const expr = assignMatch[2];
         const glslExpr = compileExpressionToGLSL(expr, templateParams, localVars);
-        glslLines.push(`vec4 ${varName} = ${glslExpr};`);
-        localVars.set(varName, 'vec4');
+
+        // Infer variable type from expression
+        const varType = inferExpressionType(expr, glslExpr);
+        glslLines.push(`${varType} ${varName} = ${glslExpr};`);
+        localVars.set(varName, varType);
       }
     });
 
     return glslLines;
+  }
+
+  // Helper to infer GLSL type from expression
+  function inferExpressionType(dslExpr, glslExpr) {
+    // Check if expression is a function call that returns vec4
+    if (dslExpr.match(/^(sphere|box|capsule|ellipsoid|plane|torus|cylinder|cone|subtract|union|smoothUnion|smoothSubtract)\s*\(/)) {
+      return 'vec4';
+    }
+    // Check if result looks like vec3 or vec4
+    if (glslExpr.startsWith('vec3(') || glslExpr.startsWith('vec4(')) {
+      return glslExpr.startsWith('vec3(') ? 'vec3' : 'vec4';
+    }
+    // Default to float for arithmetic expressions
+    return 'float';
   }
 
   // Helper to compile a single expression to GLSL
@@ -285,10 +302,9 @@ export function generateGlslFromSceneGraph(sceneGraph) {
     // Parse function call: funcName(arg1=val1, arg2=val2)
     const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)$/);
     if (!callMatch) {
-      // Simple variable reference
-      if (localVars.has(expr)) return expr;
-      if (templateParams.includes(expr)) return expr;
-      return expr;
+      // Not a function call - could be variable, arithmetic, etc.
+      // Convert time to u_time and pass through
+      return exprToGLSL(expr, expr);
     }
 
     const funcName = callMatch[1];
@@ -361,12 +377,13 @@ export function generateGlslFromSceneGraph(sceneGraph) {
       const inner = value.slice(1, -1);
       const parts = inner.split(',').map(p => {
         const trimmed = p.trim();
-        return templateParams.includes(trimmed) ? trimmed : trimmed;
+        // Convert time to u_time in array elements
+        return exprToGLSL(trimmed, trimmed);
       });
       return `vec3(${parts.join(', ')})`;
     }
-    // Template parameter or expression
-    return value;
+    // Template parameter or expression - convert time to u_time
+    return exprToGLSL(value, value);
   }
 
   // Build set of intermediate template nodes to skip
