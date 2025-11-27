@@ -14,3 +14,8 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+
+# Test artifacts
+playwright-report/
+test-results/
+test-results.json
