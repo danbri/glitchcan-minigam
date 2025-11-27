@@ -423,6 +423,12 @@ export function parseDslToSceneGraph(text) {
 
     const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)$/);
     if (!callMatch) {
+      // Skip arithmetic expressions (e.g., pulse = 0.3 + sin(time))
+      // These are intermediate template variables handled in GLSL compilation
+      if (id && id.includes('_')) {
+        // Looks like an intermediate template variable (e.g., i1_pulse)
+        return; // Skip silently
+      }
       addError(lineNo, "Expected function call like: sphere(r=1.0)");
       return;
     }
