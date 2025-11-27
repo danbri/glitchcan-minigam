@@ -151,7 +151,7 @@ export function expandMacros(text, macros) {
       expr = assignMatch[2].trim();
     }
 
-    const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)$/);
+    const callMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)$/);
 
     if (callMatch) {
       const funcName = callMatch[1];
