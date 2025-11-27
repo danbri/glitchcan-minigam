@@ -235,11 +235,29 @@ export function generateGlslFromSceneGraph(sceneGraph) {
     lines.push(`// Used ${templateUsage.get(templateName).length} times - optimized as GLSL function`);
 
     // Generate function signature with proper parameter types
+    // Infer types by analyzing actual call sites
+    const paramTypes = new Map();
+    templateNode.params.forEach(p => paramTypes.set(p, 'float')); // Default to float
+
+    // Analyze all instances of this template to infer parameter types
+    const instanceNodes = templateUsage.get(templateName) || [];
+    instanceNodes.forEach(nodeId => {
+      const instanceNode = byId.get(nodeId);
+      if (!instanceNode || !instanceNode._template) return;
+
+      const params = instanceNode._template.params;
+      Object.keys(params).forEach(paramName => {
+        const paramValue = params[paramName];
+        // If ANY instance passes a vec3 (array literal), parameter must be vec3
+        if (paramValue.startsWith('[') && paramValue.endsWith(']')) {
+          paramTypes.set(paramName, 'vec3');
+        }
+      });
+    });
+
     const paramDecls = templateNode.params.map(p => {
-      // Infer type from parameter usage in body
-      const bodyStr = templateNode.body.join(' ');
-      if (bodyStr.includes(`[${p}`)) return `vec3 ${p}`; // Used in array context
-      return `float ${p}`; // Default to float
+      const type = paramTypes.get(p) || 'float';
+      return `${type} ${p}`;
     });
 
     lines.push(`vec4 template_${templateName}(vec3 p ${paramDecls.length > 0 ? ', ' + paramDecls.join(', ') : ''}) {`);
