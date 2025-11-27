@@ -123,15 +123,22 @@ export class DemoViewer {
 
   loadDsl(dsl) {
     try {
+      console.log('📝 Parsing DSL:', dsl.substring(0, 100) + '...');
+
       // Parse DSL to scene graph
       const sceneGraph = parseDslToSceneGraph(dsl);
+      console.log('✅ Scene graph generated:', sceneGraph);
 
       // Generate GLSL from scene graph
       const glslCode = generateGlslFromSceneGraph(sceneGraph);
+      console.log('✅ GLSL generated, length:', glslCode.length);
+      console.log('GLSL preview:', glslCode.substring(0, 200) + '...');
 
       // Update renderer
       if (this.renderer) {
         this.renderer.updateScene(glslCode);
+      } else {
+        console.warn('⚠️ No renderer available');
       }
 
       // Store values
@@ -143,10 +150,10 @@ export class DemoViewer {
       this.updateCodeDisplay();
 
       console.log('✅ Scene loaded successfully');
-      console.log('Scene graph:', sceneGraph);
 
     } catch (error) {
       console.error('❌ Failed to load scene:', error);
+      console.error('Stack trace:', error.stack);
       throw error;
     }
   }

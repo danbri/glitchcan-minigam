@@ -53,6 +53,13 @@ export class SimpleRaymarcher {
   compileShaders() {
     const gl = this.gl;
 
+    // Log what GLSL we're about to compile
+    console.log('📝 Compiling with GLSL code length:', this.currentGlsl.length);
+    if (this.currentGlsl.length === 0) {
+      console.error('❌ No GLSL code provided to renderer!');
+      return;
+    }
+
     const vertexShaderSource = `
       attribute vec4 a_position;
       void main() {
