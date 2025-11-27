@@ -155,6 +155,127 @@ This makes definitions more like macros or functions. An alternative is to keep 
 
 **Instancing semantics**: Is `use` a true instance (shared geometry in compiled output) or just syntactic sugar for copy-paste? For SDF compilation, true instancing requires care to avoid re-evaluating the same SDF multiple times.
 
+## Instancing in Practice: Shadertoy Example
+
+The following Shadertoy example demonstrates one approach to instancing—evaluating the SDF once and reusing it across multiple world positions:
+
+```glsl
+// ----------------- CSG INVADER (11x8) -----------------
+
+float boxSDF(vec2 p, vec2 c, vec2 h){
+    vec2 d = abs(p - c) - h;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+}
+
+float invaderSDF(vec2 pix) {
+    float d = 1e9;
+    #define R(x0,x1,y0,y1) d = min(d, boxSDF(pix, vec2((x0+x1)*0.5,(y0+y1)*0.5), vec2((x1-x0)*0.5,(y1-y0)*0.5)));
+    R(2.,3.,0.,1.);  R(8.,9.,0.,1.);
+    R(3.,4.,1.,2.);  R(6.,7.,1.,2.);
+    R(2.,9.,2.,3.);
+    R(1.,3.,3.,4.);  R(4.,7.,3.,4.);  R(8.,10.,3.,4.);
+    R(0.,11.,4.,5.);
+    R(0.,1.,5.,6.);  R(2.,9.,5.,6.);  R(10.,11.,5.,6.);
+    R(0.,1.,6.,7.);  R(2.,3.,6.,7.);  R(8.,9.,6.,7.);  R(10.,11.,6.,7.);
+    R(3.,5.,7.,8.);  R(6.,8.,7.,8.);
+    #undef R
+    return d;
+}
+
+// ------------------------------------------------------------------------
+
+void mainImage(out vec4 fragColor, vec2 fragCoord)
+{
+    float T = iTime;
+
+    // Normalised screen coords
+    vec2 uv = (fragCoord - 0.5*iResolution.xy) / iResolution.y;
+
+    // World scaling — main zoom control
+    float worldScale = 0.007;   // ↓ reduce to zoom out, ↑ to zoom in
+    vec2 p = uv / worldScale;
+
+    // Fleet dimensions
+    const int COLS = 11;
+    const int ROWS = 5;
+
+    // World spacing BEFORE scaling
+    float sx = 18.0;
+    float sy = 15.0;
+
+    // Classic left-right oscillation
+    float fleetShift = 8.0 * sin(T * 1.2);
+
+    vec3 col = vec3(0.0);
+
+    for (int r = 0; r < ROWS; r++) {
+        for (int c = 0; c < COLS; c++) {
+
+            // position in world (unscaled) coordinates
+            float cf = float(c);
+            float rf = float(r);
+
+            vec2 base = vec2(
+                (cf - float(COLS - 1) * 0.5) * sx + fleetShift,
+                (rf - float(ROWS - 1) * 0.5) * -sy
+            );
+
+            // local position inside invader pixel space
+            vec2 lp = p - base;
+
+            float d = invaderSDF(lp);
+            float edge = smoothstep(0.5, 0.0, d);
+
+            if (edge > 0.0) {
+
+                // row-dependent colour, all float
+                vec3 rc = vec3(
+                    0.3 + 0.1 * rf,
+                    1.0 - 0.15 * rf,
+                    0.5 + 0.05 * rf
+                );
+
+                float glow = exp(-6.0 * abs(d)) * 0.25;
+
+                col += rc * (edge + glow);
+            }
+        }
+    }
+
+    fragColor = vec4(col, 1.0);
+}
+```
+
+### Efficiency Considerations
+
+This approach works well for Shadertoy but reveals important tradeoffs:
+
+**Advantages:**
+- **True instancing**: `invaderSDF()` is compiled once and called 55 times (11×5 grid)
+- **Compact code**: Definition is ~300 chars, total shader ~1.5KB
+- **Easy to modify**: Change the SDF definition, all instances update
+- **GPU-friendly**: Loop unrolling and function inlining happen automatically
+
+**Limitations:**
+- **Per-pixel cost**: Every pixel evaluates the loop and calls `invaderSDF()` up to 55 times
+- **Early exit helps**: The `if (edge > 0.0)` check skips color computation but the SDF is still evaluated
+- **Spatial culling missing**: No bounding volumes or acceleration structures
+- **2D example**: In 3D raymarching, cost multiplies by raymarch steps (~100×)
+
+**Scaling Issues:**
+- **100 instances**: Acceptable on modern GPUs (~5-10ms per frame)
+- **1000 instances**: Starts to struggle (~50-100ms, frame drops)
+- **10000 instances**: Impractical without spatial acceleration
+
+**Optimization Strategies:**
+1. **Bounding volumes**: Test cheap bounding sphere/box before expensive SDF
+2. **Spatial partitioning**: Octree or grid to skip distant instances
+3. **LOD**: Simpler SDF for distant instances
+4. **Instanced raymarch**: Separate ray loop per instance with early termination
+5. **Hybrid rendering**: Rasterize distant instances, raymarch close ones
+
+For a compiled DSL, the challenge is generating efficient GLSL that includes these optimizations while maintaining the expressiveness of the scene graph API. The balance between code size (unrolling instances) and execution time (function call overhead) depends on the target platform and scene complexity.
+
 ## References
 
 - Inigo Quilez, SDF functions and operations: https://iquilezles.org/articles/distfunctions/
