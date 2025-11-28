@@ -1128,16 +1128,33 @@
 
       {
         title: "Radial Invaders",
-        subtitle: "6 invaders from radial symmetry",
+        subtitle: "6 detailed invaders from radial symmetry",
         json: {
           "version": "1.0",
           "defs": {
             "invader": {
               "type": "subtract",
               "children": [
-                { "type": "box", "params": { "size": [0.4, 0.3, 0.15] } },
-                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [-0.12, 0.08, 0.15] } },
-                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [0.12, 0.08, 0.15] } }
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
+                  ]
+                },
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
+                  ]
+                }
               ]
             }
           },
@@ -1152,7 +1169,7 @@
                 "type": "transform",
                 "transform": {
                   "translate": [
-                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [0.2, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+                    { "expr": "add", "args": [1.8, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
                     0,
                     0
                   ]
