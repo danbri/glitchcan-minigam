@@ -132,6 +132,85 @@
       outline: none;
     }
 
+    /* Scrubber Panel */
+    .scrubber-panel {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(244, 114, 182, 0.1));
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .scrubber-panel.visible {
+      display: flex;
+    }
+
+    .scrubber-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      min-width: 4rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    #scrubber-slider {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    #scrubber-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    #scrubber-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    #scrubber-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+    }
+
+    .scrubber-value {
+      font-size: 0.75rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--accent);
+      min-width: 4rem;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .scrubber-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .scrubber-close:hover {
+      color: var(--error);
+    }
+
     .editor-actions {
       padding: 0.75rem 1rem;
       border-top: 1px solid var(--border);
@@ -549,7 +628,19 @@
       <div class="editor-panel" id="editor-panel">
         <div class="editor-header">
           <h3>JSON Editor</h3>
-          <button class="btn" id="btn-format">Format</button>
+          <div style="display: flex; gap: 0.25rem;">
+            <button class="btn" id="btn-select-all" title="Select All (Ctrl+A)">All</button>
+            <button class="btn" id="btn-cut" title="Cut (Ctrl+X)">Cut</button>
+            <button class="btn" id="btn-copy-sel" title="Copy (Ctrl+C)">Copy</button>
+            <button class="btn" id="btn-format">Format</button>
+          </div>
+        </div>
+        <!-- Scalar Scrubber Panel -->
+        <div class="scrubber-panel" id="scrubber-panel">
+          <span class="scrubber-label" id="scrubber-label">value</span>
+          <input type="range" id="scrubber-slider" min="0" max="1" step="0.01" value="0.5">
+          <span class="scrubber-value" id="scrubber-value">0.5</span>
+          <button class="scrubber-close" id="scrubber-close" title="Close scrubber">×</button>
         </div>
         <div class="editor-content">
           <textarea class="json-textarea" id="json-editor" spellcheck="false"></textarea>
@@ -1128,16 +1219,33 @@
 
       {
         title: "Radial Invaders",
-        subtitle: "6 invaders from radial symmetry",
+        subtitle: "6 detailed invaders from radial symmetry",
         json: {
           "version": "1.0",
           "defs": {
             "invader": {
               "type": "subtract",
               "children": [
-                { "type": "box", "params": { "size": [0.4, 0.3, 0.15] } },
-                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [-0.12, 0.08, 0.15] } },
-                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [0.12, 0.08, 0.15] } }
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
+                  ]
+                },
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
+                  ]
+                }
               ]
             }
           },
@@ -1152,13 +1260,99 @@
                 "type": "transform",
                 "transform": {
                   "translate": [
-                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [0.2, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+                    { "expr": "add", "args": [1.8, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
                     0,
                     0
                   ]
                 },
                 "child": { "type": "ref", "id": "invader" }
               }
+            }
+          }
+        }
+      },
+
+      {
+        title: "Sunflower",
+        subtitle: "Radial petals with layered center",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "smoothUnion",
+                "k": 0.15,
+                "children": [
+                  { "type": "sphere", "params": { "r": 0.35, "color": [0.4, 0.25, 0.1] } },
+                  { "type": "sphere", "params": { "r": 0.25, "color": [0.6, 0.4, 0.15] }, "transform": { "translate": [0, 0.15, 0] } }
+                ]
+              },
+              {
+                "type": "radial",
+                "count": 16,
+                "axis": "z",
+                "child": {
+                  "type": "smoothUnion",
+                  "k": 0.1,
+                  "children": [
+                    {
+                      "type": "sphere",
+                      "params": { "r": 0.18, "color": [1.0, 0.85, 0.1] },
+                      "transform": { "translate": [0.5, 0, 0] }
+                    },
+                    {
+                      "type": "sphere",
+                      "params": { "r": 0.12, "color": [1.0, 0.75, 0.0] },
+                      "transform": { "translate": [0.7, 0, 0] }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Sunflower Field",
+        subtitle: "Infinite flowers via repeat + radial",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "sunflower": {
+              "type": "union",
+              "children": [
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.25, "color": [0.45, 0.3, 0.1] }
+                },
+                {
+                  "type": "radial",
+                  "count": 12,
+                  "axis": "z",
+                  "child": {
+                    "type": "sphere",
+                    "params": { "r": 0.12, "color": [1.0, 0.8, 0.1] },
+                    "transform": { "translate": [0.35, 0, 0] }
+                  }
+                }
+              ]
+            }
+          },
+          "root": {
+            "type": "repeat",
+            "period": [2.5, 0, 2.5],
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [
+                  0,
+                  { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] },
+                  0
+                ]
+              },
+              "child": { "type": "ref", "id": "sunflower" }
             }
           }
         }
@@ -1188,6 +1382,17 @@
       cameraDistance: 4
     };
 
+    // Scrubber state
+    let scrubberState = {
+      visible: false,
+      selectionStart: 0,
+      selectionEnd: 0,
+      originalValue: 0,
+      min: 0,
+      max: 1,
+      step: 0.01
+    };
+
     // ============================================
     // DOM REFERENCES
     // ============================================
@@ -1207,6 +1412,10 @@
     const debugPanel = $('debug-panel');
     const edgeLeft = $('edge-left');
     const edgeRight = $('edge-right');
+    const scrubberPanel = $('scrubber-panel');
+    const scrubberSlider = $('scrubber-slider');
+    const scrubberLabel = $('scrubber-label');
+    const scrubberValue = $('scrubber-value');
 
     // ============================================
     // INITIALIZATION
@@ -1361,6 +1570,159 @@
       a.click();
       URL.revokeObjectURL(url);
       showStatus('Downloaded', 'success');
+    }
+
+    // ============================================
+    // EDITOR BUTTON FUNCTIONS
+    // ============================================
+    function selectAllText() {
+      jsonEditor.focus();
+      jsonEditor.select();
+    }
+
+    function cutSelection() {
+      const start = jsonEditor.selectionStart;
+      const end = jsonEditor.selectionEnd;
+      if (start !== end) {
+        const selectedText = jsonEditor.value.substring(start, end);
+        navigator.clipboard.writeText(selectedText).then(() => {
+          jsonEditor.value = jsonEditor.value.substring(0, start) + jsonEditor.value.substring(end);
+          jsonEditor.selectionStart = jsonEditor.selectionEnd = start;
+          showStatus('Cut to clipboard', 'success');
+        });
+      }
+    }
+
+    function copySelection() {
+      const start = jsonEditor.selectionStart;
+      const end = jsonEditor.selectionEnd;
+      if (start !== end) {
+        const selectedText = jsonEditor.value.substring(start, end);
+        navigator.clipboard.writeText(selectedText).then(() => {
+          showStatus('Copied selection', 'success');
+        });
+      } else {
+        copyJson(); // Copy all if nothing selected
+      }
+    }
+
+    // ============================================
+    // SCALAR SCRUBBER FUNCTIONS
+    // ============================================
+    function detectScalarSelection() {
+      const start = jsonEditor.selectionStart;
+      const end = jsonEditor.selectionEnd;
+
+      if (start === end) {
+        hideScrubber();
+        return;
+      }
+
+      const selectedText = jsonEditor.value.substring(start, end).trim();
+
+      // Check if selection is a valid number (integer or decimal)
+      // Match: 0.5, -1.2, 3, -4, .5, -.3
+      const numberRegex = /^-?\d*\.?\d+$/;
+      if (!numberRegex.test(selectedText)) {
+        hideScrubber();
+        return;
+      }
+
+      const value = parseFloat(selectedText);
+      if (isNaN(value)) {
+        hideScrubber();
+        return;
+      }
+
+      // Determine appropriate range based on value
+      let min, max, step;
+      const absValue = Math.abs(value);
+
+      if (absValue <= 1 && value >= 0) {
+        // 0 to 1 range (common for colors, blend factors)
+        min = 0;
+        max = 1;
+        step = 0.01;
+      } else if (absValue <= 1) {
+        // -1 to 1 range (common for normalized values)
+        min = -1;
+        max = 1;
+        step = 0.01;
+      } else if (absValue <= 5) {
+        // Smaller range for sizes/positions
+        min = value < 0 ? -5 : 0;
+        max = 5;
+        step = 0.05;
+      } else {
+        // Larger values - scale range appropriately
+        min = value < 0 ? value * 2 : 0;
+        max = Math.max(absValue * 2, 10);
+        step = 0.1;
+      }
+
+      // Store state
+      scrubberState = {
+        visible: true,
+        selectionStart: start,
+        selectionEnd: end,
+        originalValue: value,
+        min,
+        max,
+        step
+      };
+
+      // Update slider
+      scrubberSlider.min = min;
+      scrubberSlider.max = max;
+      scrubberSlider.step = step;
+      scrubberSlider.value = value;
+
+      // Update display
+      scrubberLabel.textContent = `[${min}, ${max}]`;
+      scrubberValue.textContent = formatNumber(value);
+
+      // Show panel
+      scrubberPanel.classList.add('visible');
+    }
+
+    function formatNumber(num) {
+      // Format to reasonable precision
+      if (Number.isInteger(num)) return num.toString();
+      const formatted = num.toFixed(3);
+      // Remove trailing zeros but keep at least one decimal
+      return formatted.replace(/\.?0+$/, '') || '0';
+    }
+
+    function updateScrubberValue(newValue) {
+      const formatted = formatNumber(newValue);
+      scrubberValue.textContent = formatted;
+
+      // Update the text in the editor
+      const text = jsonEditor.value;
+      const before = text.substring(0, scrubberState.selectionStart);
+      const after = text.substring(scrubberState.selectionEnd);
+
+      jsonEditor.value = before + formatted + after;
+
+      // Update selection to match new value length
+      const newEnd = scrubberState.selectionStart + formatted.length;
+      jsonEditor.selectionStart = scrubberState.selectionStart;
+      jsonEditor.selectionEnd = newEnd;
+      scrubberState.selectionEnd = newEnd;
+
+      // Try to apply changes live
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        demos[currentDemo].json = json;
+        renderJson(json);
+      } catch (e) {
+        // Invalid JSON during scrub - ignore
+      }
+    }
+
+    function hideScrubber() {
+      scrubberState.visible = false;
+      scrubberPanel.classList.remove('visible');
     }
 
     // ============================================
@@ -1655,6 +2017,32 @@
       $('btn-format').addEventListener('click', formatJson);
       $('btn-copy').addEventListener('click', copyJson);
       $('btn-download').addEventListener('click', downloadJson);
+
+      // Editor header buttons
+      $('btn-select-all').addEventListener('click', selectAllText);
+      $('btn-cut').addEventListener('click', cutSelection);
+      $('btn-copy-sel').addEventListener('click', copySelection);
+
+      // Scrubber controls
+      $('scrubber-close').addEventListener('click', hideScrubber);
+      scrubberSlider.addEventListener('input', (e) => {
+        updateScrubberValue(parseFloat(e.target.value));
+      });
+
+      // Detect scalar selection on selection change
+      jsonEditor.addEventListener('mouseup', detectScalarSelection);
+      jsonEditor.addEventListener('keyup', (e) => {
+        // Only check on arrow keys, shift+arrow, or after typing
+        if (e.shiftKey || ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+          detectScalarSelection();
+        }
+      });
+
+      // Double-click to select number and show scrubber
+      jsonEditor.addEventListener('dblclick', () => {
+        // Small delay to let browser selection complete
+        setTimeout(detectScalarSelection, 10);
+      });
 
       // Ctrl+Enter to apply
       jsonEditor.addEventListener('keydown', (e) => {

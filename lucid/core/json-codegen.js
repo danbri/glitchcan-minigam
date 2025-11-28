@@ -451,6 +451,15 @@ function generateMaterial(node, ctx) {
  */
 function generateMirror(node, ctx) {
   const axis = node.axis || 'x';
+
+  // First, wrap the child in its own helper function
+  const childFuncName = `mirror_child_${ctx.helperCounter++}`;
+  const childExpr = walkNode(node.child, ctx);
+  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  return ${childExpr};
+}`);
+
+  // Now generate the mirror wrapper
   const funcName = `mirror_${ctx.helperCounter++}`;
 
   // Build the mirror transform
@@ -462,16 +471,9 @@ function generateMirror(node, ctx) {
   // Apply any transform from the mirror node itself
   const p = applyTransform('p', node.transform, ctx);
 
-  // Generate child with mirrored position
-  const childWithQ = { ...node.child };
-  const childExpr = walkNode(childWithQ, ctx);
-
-  // Replace 'p' with 'q' in child expression
-  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
-
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec3 q = ${p};
-${mirrorCode}  return ${childExprWithQ};
+${mirrorCode}  return ${childFuncName}(q);
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -486,14 +488,19 @@ ${mirrorCode}  return ${childExprWithQ};
 function generateRadial(node, ctx) {
   const count = node.count || 6;
   const axis = node.axis || 'y';
+
+  // First, wrap the child in its own helper function
+  const childFuncName = `radial_child_${ctx.helperCounter++}`;
+  const childExpr = walkNode(node.child, ctx);
+  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  return ${childExpr};
+}`);
+
+  // Now generate the radial wrapper
   const funcName = `radial_${ctx.helperCounter++}`;
 
   // Apply any transform from the radial node itself
   const p = applyTransform('p', node.transform, ctx);
-
-  // Generate child expression
-  const childExpr = walkNode(node.child, ctx);
-  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
 
   // TAU = 2*PI
   const segment = (2 * Math.PI / count).toFixed(6);
@@ -523,7 +530,7 @@ function generateRadial(node, ctx) {
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec3 q = ${p};
 ${radialCode}
-  return ${childExprWithQ};
+  return ${childFuncName}(q);
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -536,18 +543,22 @@ ${radialCode}
  */
 function generateRepeat(node, ctx) {
   const period = node.period || [2, 0, 2];
+
+  // First, wrap the child in its own helper function
+  const childFuncName = `repeat_child_${ctx.helperCounter++}`;
+  const childExpr = walkNode(node.child, ctx);
+  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  return ${childExpr};
+}`);
+
+  // Now generate the repeat wrapper
   const funcName = `repeat_${ctx.helperCounter++}`;
 
   // Apply any transform from the repeat node itself
   const p = applyTransform('p', node.transform, ctx);
 
-  // Generate child expression
-  const childExpr = walkNode(node.child, ctx);
-  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
-
   // Build repeat code - only repeat on non-zero axes
-  let repeatCode = `  vec3 q = ${p};\n`;
-
+  let repeatCode = '';
   if (period[0] > 0) {
     repeatCode += `  q.x = mod(q.x + ${(period[0]/2).toFixed(4)}, ${period[0].toFixed(4)}) - ${(period[0]/2).toFixed(4)};\n`;
   }
@@ -559,7 +570,8 @@ function generateRepeat(node, ctx) {
   }
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-${repeatCode}  return ${childExprWithQ};
+  vec3 q = ${p};
+${repeatCode}  return ${childFuncName}(q);
 }`;
 
   ctx.helpers.push(helperFunc);
