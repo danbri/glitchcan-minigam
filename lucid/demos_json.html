@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>JSON SDF Demos – Lucid</title>
+  <title>SDF JSON Demos</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -233,13 +233,7 @@
     .header-left {
       display: flex;
       align-items: center;
-      gap: 1rem;
-    }
-
-    .logo {
-      font-weight: 700;
-      color: var(--accent);
-      font-size: 1rem;
+      gap: 0.5rem;
     }
 
     .demo-info h1 {
@@ -605,14 +599,13 @@
     <!-- Header -->
     <header class="header">
       <div class="header-left">
-        <a href="README.html" class="logo">Lucid</a>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
           <p id="subtitle">JSON SDF Demo</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn" id="btn-gallery" title="Template Gallery">Templates</button>
+        <button class="btn" id="btn-gallery" title="Template Gallery">☰</button>
         <button class="btn" id="btn-load-url" title="Load from URL">URL</button>
         <button class="btn" id="btn-load-file" title="Load JSON File">File</button>
         <button class="btn btn-icon" id="btn-editor" title="Toggle Editor">{ }</button>
@@ -751,7 +744,7 @@
     const templates = [
       {
         title: "Primitives Catalogue",
-        subtitle: "All available SDF primitives",
+        subtitle: "All 7 SDF primitives + smooth blend",
         json: {
           "version": "1.0",
           "root": {
@@ -759,46 +752,46 @@
             "children": [
               {
                 "type": "sphere",
-                "params": { "r": 0.4, "color": [1.0, 0.4, 0.4] },
-                "transform": { "translate": [-2.5, 1.2, 0] }
+                "params": { "r": 0.35, "color": [1.0, 0.4, 0.4] },
+                "transform": { "translate": [-1.8, 0.8, 0] }
               },
               {
                 "type": "box",
-                "params": { "size": [0.35, 0.35, 0.35], "color": [0.4, 1.0, 0.4] },
-                "transform": { "translate": [-1.0, 1.2, 0] }
+                "params": { "size": [0.28, 0.28, 0.28], "color": [0.4, 1.0, 0.4] },
+                "transform": { "translate": [-0.6, 0.8, 0] }
               },
               {
                 "type": "cylinder",
-                "params": { "h": 0.35, "r": 0.25, "color": [0.4, 0.4, 1.0] },
-                "transform": { "translate": [0.5, 1.2, 0] }
+                "params": { "h": 0.3, "r": 0.2, "color": [0.4, 0.6, 1.0] },
+                "transform": { "translate": [0.6, 0.8, 0] }
               },
               {
                 "type": "torus",
-                "params": { "major": 0.3, "minor": 0.1, "color": [1.0, 1.0, 0.3] },
-                "transform": { "translate": [2.0, 1.2, 0] }
+                "params": { "major": 0.25, "minor": 0.08, "color": [1.0, 0.9, 0.3] },
+                "transform": { "translate": [1.8, 0.8, 0] }
               },
               {
                 "type": "capsule",
-                "params": { "h": 0.3, "r": 0.15, "color": [1.0, 0.5, 0.0] },
-                "transform": { "translate": [-1.75, -0.3, 0] }
+                "params": { "h": 0.25, "r": 0.12, "color": [1.0, 0.5, 0.2] },
+                "transform": { "translate": [-1.8, -0.2, 0] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [0.5, 0.25, 0.25], "color": [0.8, 0.3, 1.0] },
-                "transform": { "translate": [0.0, -0.3, 0] }
-              },
-              {
-                "type": "plane",
-                "params": { "normal": [0, 1, 0], "h": 1.5, "color": [0.25, 0.25, 0.3] }
+                "params": { "radii": [0.4, 0.2, 0.2], "color": [0.8, 0.4, 1.0] },
+                "transform": { "translate": [-0.6, -0.2, 0] }
               },
               {
                 "type": "smoothUnion",
-                "k": 0.3,
+                "k": 0.2,
                 "children": [
-                  { "type": "sphere", "params": { "r": 0.3, "color": [0.2, 0.8, 0.8] } },
-                  { "type": "box", "params": { "size": [0.25, 0.25, 0.25], "color": [0.8, 0.2, 0.8] }, "transform": { "translate": [0.3, 0, 0] } }
+                  { "type": "sphere", "params": { "r": 0.22, "color": [0.3, 0.9, 0.8] } },
+                  { "type": "box", "params": { "size": [0.18, 0.18, 0.18], "color": [0.9, 0.4, 0.8] }, "transform": { "translate": [0.25, 0, 0] } }
                 ],
-                "transform": { "translate": [1.75, -0.3, 0] }
+                "transform": { "translate": [0.6, -0.2, 0] }
+              },
+              {
+                "type": "plane",
+                "params": { "normal": [0, 1, 0], "h": 0.8, "color": [0.35, 0.35, 0.4] }
               }
             ]
           }
@@ -1705,7 +1698,7 @@
         // Display version
         $('version-display').textContent = `v${VERSION} (${BUILD_DATE})`;
 
-        console.log(`Lucid JSON Demos v${VERSION} initialized`);
+        console.log(`SDF JSON Demos v${VERSION} initialized`);
         console.log(`${demos.length} demos available`);
 
       } catch (error) {
@@ -2178,17 +2171,21 @@
           $('slider-distance').value = renderer.camera.distance;
         }
 
-        // Edge swipe navigation
-        if (isEdgeSwipe && e.changedTouches.length > 0) {
+        // Swipe navigation - works anywhere on canvas
+        if (e.changedTouches.length > 0 && activeTouches === 1) {
           const touch = e.changedTouches[0];
           const dx = touch.clientX - touchStartX;
+          const dy = touch.clientY - touchStartY;
           const elapsed = Date.now() - touchStartTime;
 
-          if (Math.abs(dx) > 50 && elapsed < 500) {
-            if (dx > 0 && isInEdge(touchStartX, 'left')) {
-              switchDemo((currentDemo - 1 + demos.length) % demos.length);
-            } else if (dx < 0 && isInEdge(touchStartX, 'right')) {
+          // Horizontal swipe detection: fast, mostly horizontal
+          if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
+            if (dx < 0) {
+              // Swipe left = next demo
               switchDemo((currentDemo + 1) % demos.length);
+            } else {
+              // Swipe right = previous demo
+              switchDemo((currentDemo - 1 + demos.length) % demos.length);
             }
           }
         }
