@@ -632,6 +632,7 @@
             <button class="btn" id="btn-select-all" title="Select All (Ctrl+A)">All</button>
             <button class="btn" id="btn-cut" title="Cut (Ctrl+X)">Cut</button>
             <button class="btn" id="btn-copy-sel" title="Copy (Ctrl+C)">Copy</button>
+            <button class="btn" id="btn-paste" title="Paste (Ctrl+V)">Paste</button>
             <button class="btn" id="btn-format">Format</button>
           </div>
         </div>
@@ -699,8 +700,24 @@
         <div class="toggle active" id="toggle-ground"></div>
       </div>
       <div class="debug-row">
+        <span class="debug-label">Show Edges</span>
+        <div class="toggle active" id="toggle-edges"></div>
+      </div>
+      <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
         <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;">
+      </div>
+      <div class="debug-row" id="volume-controls" style="display: none; flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Step Size</span>
+          <input type="range" min="0.01" max="0.15" step="0.01" value="0.05" id="slider-step-size" style="width: 100px;">
+          <span id="step-size-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.05</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Density</span>
+          <input type="range" min="1" max="20" step="1" value="8" id="slider-density" style="width: 100px;">
+          <span id="density-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">8</span>
+        </div>
       </div>
       <div class="debug-row" style="border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.75rem;">
         <span class="debug-label">Version</span>
@@ -725,7 +742,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.2.0
-    const VERSION = '0.3.0';
+    const VERSION = '0.4.0';
     const BUILD_DATE = '2025-11-28';
 
     // ============================================
@@ -760,27 +777,27 @@
           "version": "1.0",
           "root": {
             "type": "smoothUnion",
-            "k": 0.3,
+            "k": 0.5,
             "children": [
               {
                 "type": "sphere",
-                "params": { "r": 0.8, "color": [1.0, 0.7, 0.2] },
+                "params": { "r": 0.8, "color": [1, 0.7, 0.2] },
                 "transform": {
                   "translate": [
-                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.5] },
-                    0.3,
-                    0.0
+                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 1.7] },
+                    0.7,
+                    0.5
                   ]
                 }
               },
               {
                 "type": "sphere",
-                "params": { "r": 0.8, "color": [0.5, 0.2, 1.0] },
+                "params": { "r": 0.8, "color": [0.5, 0.2, 1] },
                 "transform": {
                   "translate": [
                     { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, -0.5] },
                     -0.3,
-                    0.0
+                    0
                   ]
                 }
               }
@@ -1606,6 +1623,22 @@
       }
     }
 
+    function pasteFromClipboard() {
+      navigator.clipboard.readText().then(text => {
+        const start = jsonEditor.selectionStart;
+        const end = jsonEditor.selectionEnd;
+        const before = jsonEditor.value.substring(0, start);
+        const after = jsonEditor.value.substring(end);
+        jsonEditor.value = before + text + after;
+        jsonEditor.selectionStart = jsonEditor.selectionEnd = start + text.length;
+        jsonEditor.focus();
+        showStatus('Pasted from clipboard', 'success');
+      }).catch(err => {
+        showStatus('Paste failed - check permissions', 'error');
+        console.error('Paste failed:', err);
+      });
+    }
+
     // ============================================
     // SCALAR SCRUBBER FUNCTIONS
     // ============================================
@@ -1948,6 +1981,10 @@
         this.classList.toggle('active');
         debugSettings.volumeRender = this.classList.contains('active');
         renderer.volumeRender = debugSettings.volumeRender;
+        // Show/hide volume controls
+        $('volume-controls').style.display = debugSettings.volumeRender ? 'flex' : 'none';
+        // Need to recompile shader when switching modes
+        renderer.compileShaders();
       });
 
       // Ground plane toggle
@@ -1957,10 +1994,30 @@
         renderer.showGroundPlane = debugSettings.showGround;
       });
 
+      // Edge toggle
+      $('toggle-edges').addEventListener('click', function() {
+        this.classList.toggle('active');
+        renderer.showEdges = this.classList.contains('active');
+      });
+
       // Camera distance slider
       $('slider-distance').addEventListener('input', function() {
         debugSettings.cameraDistance = parseFloat(this.value);
         renderer.camera.distance = debugSettings.cameraDistance;
+      });
+
+      // Volume step size slider
+      $('slider-step-size').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeStepSize = val;
+        $('step-size-val').textContent = val.toFixed(2);
+      });
+
+      // Volume density slider
+      $('slider-density').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeDensity = val;
+        $('density-val').textContent = val;
       });
     }
 
@@ -2022,6 +2079,7 @@
       $('btn-select-all').addEventListener('click', selectAllText);
       $('btn-cut').addEventListener('click', cutSelection);
       $('btn-copy-sel').addEventListener('click', copySelection);
+      $('btn-paste').addEventListener('click', pasteFromClipboard);
 
       // Scrubber controls
       $('scrubber-close').addEventListener('click', hideScrubber);
