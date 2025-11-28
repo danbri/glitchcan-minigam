@@ -22,10 +22,14 @@ export function generateGlslFromJson(scene) {
   // Build final shader
   let glsl = '';
 
-  // Add uniforms
-  if (ctx.uniforms.size > 0) {
-    glsl += '// Uniforms\n';
-    for (const uniform of ctx.uniforms) {
+  // Note: u_time, u_resolution, u_cameraPos etc. are already declared
+  // by raymarcher.js - we only declare additional custom uniforms here
+  const builtinUniforms = new Set(['u_time', 'u_resolution', 'u_cameraPos', 'u_cameraTarget', 'u_showGroundPlane', 'u_volumeRender']);
+  const customUniforms = [...ctx.uniforms].filter(u => !builtinUniforms.has(u));
+
+  if (customUniforms.length > 0) {
+    glsl += '// Custom uniforms\n';
+    for (const uniform of customUniforms) {
       glsl += `uniform float ${uniform};\n`;
     }
     glsl += '\n';
@@ -152,6 +156,24 @@ function generateCylinder(node, ctx) {
 }
 
 /**
+ * Chain binary min() calls for GLSL (which only accepts 2 args)
+ */
+function chainedMin(values) {
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `min(${values[0]}, ${values[1]})`;
+  return `min(${values[0]}, ${chainedMin(values.slice(1))})`;
+}
+
+/**
+ * Chain binary max() calls for GLSL (which only accepts 2 args)
+ */
+function chainedMax(values) {
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `max(${values[0]}, ${values[1]})`;
+  return `max(${values[0]}, ${chainedMax(values.slice(1))})`;
+}
+
+/**
  * Generate union - FIXED: No JavaScript functions
  */
 function generateUnion(node, ctx) {
@@ -172,12 +194,14 @@ function generateUnion(node, ctx) {
     return `  vec4 c${i};\n  { ${childCode} }\n  c${i} = result;`;
   }).join('\n');
 
-  const minOp = children.map((_, i) => `c${i}.x`).join(', ');
+  // Chain min() calls for GLSL compatibility (only 2 args per call)
+  const distValues = children.map((_, i) => `c${i}.x`);
+  const minOp = chainedMin(distValues);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec4 result;
 ${childCalls}
-  float d = min(${minOp});
+  float d = ${minOp};
   return vec4(d, c0.yzw);
 }`;
 
@@ -244,12 +268,14 @@ function generateIntersect(node, ctx) {
     return `  vec4 c${i};\n  { ${childCode} }\n  c${i} = result;`;
   }).join('\n');
 
-  const maxOp = children.map((_, i) => `c${i}.x`).join(', ');
+  // Chain max() calls for GLSL compatibility (only 2 args per call)
+  const distValues = children.map((_, i) => `c${i}.x`);
+  const maxOp = chainedMax(distValues);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec4 result;
 ${childCalls}
-  float d = max(${maxOp});
+  float d = ${maxOp};
   return vec4(d, c0.yzw);
 }`;
 
@@ -354,7 +380,12 @@ function valueToGlsl(value, ctx) {
 
   switch (value.type) {
     case 'const':
-      return String(value.value);
+      // Ensure floats have decimal point for GLSL
+      const num = value.value;
+      if (Number.isInteger(num)) {
+        return num + '.0';
+      }
+      return String(num);
 
     case 'var':
       ctx.uniforms.add(`u_${value.name}`);
