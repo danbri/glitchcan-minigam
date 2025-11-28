@@ -27,9 +27,9 @@ export function loadJsonScene(json) {
     root: null
   };
 
-  // Register all definitions
+  // Register and process all definitions
   for (const [id, defNode] of Object.entries(defs)) {
-    nodeRegistry.defs.set(id, defNode);
+    nodeRegistry.defs.set(id, processNode(defNode, nodeRegistry));
   }
 
   // Process root node
