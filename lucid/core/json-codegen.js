@@ -1,9 +1,7 @@
 /**
  * JSON to GLSL Codegen - Generate GLSL from JSON node IR
- * FIXED: Removed JavaScript function() syntax, generates proper GLSL
+ * Refactored: walkNode returns expressions, not return statements
  */
-
-let helperCounter = 0;
 
 /**
  * Generate GLSL code from processed JSON scene
@@ -16,8 +14,8 @@ export function generateGlslFromJson(scene) {
     helperCounter: 0
   };
 
-  // Generate main scene function
-  const sceneCode = walkNode(scene.root, ctx);
+  // Generate main scene expression
+  const sceneExpr = walkNode(scene.root, ctx);
 
   // Build final shader
   let glsl = '';
@@ -48,17 +46,18 @@ export function generateGlslFromJson(scene) {
     glsl += '\n\n';
   }
 
-  // Add main scene function
+  // Add main scene function - wrap expression with return
   glsl += '// Main scene SDF\n';
   glsl += 'vec4 g_df_scene(vec3 p) {\n';
-  glsl += `  ${sceneCode}\n`;
+  glsl += `  return ${sceneExpr};\n`;
   glsl += '}\n';
 
   return glsl;
 }
 
 /**
- * Walk node and generate inline GLSL code
+ * Walk node and generate GLSL expression (not a statement)
+ * Returns a string that evaluates to vec4(distance, r, g, b)
  */
 function walkNode(node, ctx) {
   switch (node.type) {
@@ -96,17 +95,16 @@ function walkNode(node, ctx) {
       return generateMaterial(node, ctx);
 
     case 'ref':
-      // Expand ref and generate
-      return walkNode(node.def || node, ctx);
+      return generateRef(node, ctx);
 
     default:
       console.warn(`Unhandled node type: ${node.type}`);
-      return 'return vec4(1000.0, 1.0, 0.0, 1.0);';
+      return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 }
 
 /**
- * Generate sphere
+ * Generate sphere - returns expression
  */
 function generateSphere(node, ctx) {
   const params = node.params || {};
@@ -114,11 +112,11 @@ function generateSphere(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `return vec4(sdSphere(${p}, ${r}), ${color});`;
+  return `vec4(sdSphere(${p}, ${r}), ${color})`;
 }
 
 /**
- * Generate box
+ * Generate box - returns expression
  */
 function generateBox(node, ctx) {
   const params = node.params || {};
@@ -126,11 +124,11 @@ function generateBox(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `return vec4(sdBox(${p}, ${size}), ${color});`;
+  return `vec4(sdBox(${p}, ${size}), ${color})`;
 }
 
 /**
- * Generate torus
+ * Generate torus - returns expression
  */
 function generateTorus(node, ctx) {
   const params = node.params || {};
@@ -139,11 +137,11 @@ function generateTorus(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `return vec4(sdTorus(${p}, vec2(${major}, ${minor})), ${color});`;
+  return `vec4(sdTorus(${p}, vec2(${major}, ${minor})), ${color})`;
 }
 
 /**
- * Generate cylinder
+ * Generate cylinder - returns expression
  */
 function generateCylinder(node, ctx) {
   const params = node.params || {};
@@ -152,7 +150,7 @@ function generateCylinder(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `return vec4(sdCylinder(${p}, ${h}, ${r}), ${color});`;
+  return `vec4(sdCylinder(${p}, ${h}, ${r}), ${color})`;
 }
 
 /**
@@ -174,13 +172,13 @@ function chainedMax(values) {
 }
 
 /**
- * Generate union - FIXED: No JavaScript functions
+ * Generate union - creates helper function, returns call expression
  */
 function generateUnion(node, ctx) {
   const children = node.children || [];
 
   if (children.length === 0) {
-    return 'return vec4(1000.0, 1.0, 0.0, 1.0);';
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
   if (children.length === 1) {
@@ -189,35 +187,38 @@ function generateUnion(node, ctx) {
 
   // Generate helper function for this union
   const funcName = `union_${ctx.helperCounter++}`;
-  const childCalls = children.map((child, i) => {
-    const childCode = walkNode(child, ctx);
-    return `  vec4 c${i};\n  { ${childCode} }\n  c${i} = result;`;
+
+  // Generate child expressions as direct assignments
+  const childAssignments = children.map((child, i) => {
+    const childExpr = walkNode(child, ctx);
+    return `  vec4 c${i} = ${childExpr};`;
   }).join('\n');
 
   // Chain min() calls for GLSL compatibility (only 2 args per call)
   const distValues = children.map((_, i) => `c${i}.x`);
   const minOp = chainedMin(distValues);
 
+  // Find closest child for color
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 result;
-${childCalls}
+${childAssignments}
   float d = ${minOp};
+  // Use color from first child (simplified)
   return vec4(d, c0.yzw);
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `return ${funcName}(p);`;
+  return `${funcName}(p)`;
 }
 
 /**
- * Generate subtract - FIXED: No JavaScript functions
+ * Generate subtract - creates helper function, returns call expression
  */
 function generateSubtract(node, ctx) {
   const children = node.children || [];
 
   if (children.length === 0) {
-    return 'return vec4(1000.0, 1.0, 0.0, 1.0);';
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
   if (children.length === 1) {
@@ -227,34 +228,32 @@ function generateSubtract(node, ctx) {
   // Generate helper function
   const funcName = `subtract_${ctx.helperCounter++}`;
 
-  const baseCode = walkNode(children[0], ctx);
-  let childCalls = `  vec4 base;\n  { ${baseCode} }\n  base = result;\n`;
+  const baseExpr = walkNode(children[0], ctx);
+  let body = `  vec4 base = ${baseExpr};\n`;
 
   for (let i = 1; i < children.length; i++) {
-    const subCode = walkNode(children[i], ctx);
-    childCalls += `  vec4 sub${i};\n  { ${subCode} }\n  sub${i} = result;\n`;
-    childCalls += `  base.x = max(base.x, -sub${i}.x);\n`;
+    const subExpr = walkNode(children[i], ctx);
+    body += `  vec4 sub${i} = ${subExpr};\n`;
+    body += `  base.x = max(base.x, -sub${i}.x);\n`;
   }
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 result;
-${childCalls}
-  return base;
+${body}  return base;
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `return ${funcName}(p);`;
+  return `${funcName}(p)`;
 }
 
 /**
- * Generate intersect - FIXED: No JavaScript functions
+ * Generate intersect - creates helper function, returns call expression
  */
 function generateIntersect(node, ctx) {
   const children = node.children || [];
 
   if (children.length === 0) {
-    return 'return vec4(1000.0, 1.0, 0.0, 1.0);';
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
   if (children.length === 1) {
@@ -263,9 +262,10 @@ function generateIntersect(node, ctx) {
 
   // Generate helper function
   const funcName = `intersect_${ctx.helperCounter++}`;
-  const childCalls = children.map((child, i) => {
-    const childCode = walkNode(child, ctx);
-    return `  vec4 c${i};\n  { ${childCode} }\n  c${i} = result;`;
+
+  const childAssignments = children.map((child, i) => {
+    const childExpr = walkNode(child, ctx);
+    return `  vec4 c${i} = ${childExpr};`;
   }).join('\n');
 
   // Chain max() calls for GLSL compatibility (only 2 args per call)
@@ -273,26 +273,25 @@ function generateIntersect(node, ctx) {
   const maxOp = chainedMax(distValues);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 result;
-${childCalls}
+${childAssignments}
   float d = ${maxOp};
   return vec4(d, c0.yzw);
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `return ${funcName}(p);`;
+  return `${funcName}(p)`;
 }
 
 /**
- * Generate smooth union - FIXED: No JavaScript functions
+ * Generate smooth union - creates helper function, returns call expression
  */
 function generateSmoothUnion(node, ctx) {
   const children = node.children || [];
   const k = valueToGlsl(node.k || { type: 'const', value: 0.1 }, ctx);
 
   if (children.length === 0) {
-    return 'return vec4(1000.0, 1.0, 0.0, 1.0);';
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
   if (children.length === 1) {
@@ -302,36 +301,54 @@ function generateSmoothUnion(node, ctx) {
   // Generate helper function
   const funcName = `smoothUnion_${ctx.helperCounter++}`;
 
-  const child0Code = walkNode(children[0], ctx);
-  const child1Code = walkNode(children[1], ctx);
+  const child0Expr = walkNode(children[0], ctx);
+  const child1Expr = walkNode(children[1], ctx);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 result;
-  vec4 a;
-  { ${child0Code} }
-  a = result;
-  vec4 b;
-  { ${child1Code} }
-  b = result;
+  vec4 a = ${child0Expr};
+  vec4 b = ${child1Expr};
   float d = smin(a.x, b.x, ${k});
   return vec4(d, a.yzw);
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `return ${funcName}(p);`;
+  return `${funcName}(p)`;
 }
 
 /**
- * Generate transform wrapper
+ * Generate transform wrapper - propagates transform to child
  */
 function generateTransform(node, ctx) {
-  // Apply transform and evaluate child
+  // Combine transforms and apply to child
   const childWithTransform = {
     ...node.child,
     transform: combineTransforms(node.child.transform, node.transform)
   };
   return walkNode(childWithTransform, ctx);
+}
+
+/**
+ * Generate ref - expand definition with any parent transform
+ */
+function generateRef(node, ctx) {
+  // Get the processed definition
+  const def = node.def;
+  if (!def) {
+    console.warn(`Ref node missing definition: ${node.refId}`);
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // If this ref has a transform from parent, apply it to the def
+  if (node.transform) {
+    const defWithTransform = {
+      ...def,
+      transform: combineTransforms(def.transform, node.transform)
+    };
+    return walkNode(defWithTransform, ctx);
+  }
+
+  return walkNode(def, ctx);
 }
 
 /**
@@ -349,10 +366,10 @@ function generateGroup(node, ctx) {
 }
 
 /**
- * Generate material wrapper
+ * Generate material wrapper - creates helper to override color
  */
 function generateMaterial(node, ctx) {
-  const childCode = walkNode(node.child, ctx);
+  const childExpr = walkNode(node.child, ctx);
 
   if (node.params && node.params.color) {
     const color = valueToGlsl(node.params.color, ctx);
@@ -360,16 +377,14 @@ function generateMaterial(node, ctx) {
     // Generate helper to override color
     const funcName = `material_${ctx.helperCounter++}`;
     const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 result;
-  { ${childCode} }
-  result = vec4(result.x, ${color});
-  return result;
+  vec4 c = ${childExpr};
+  return vec4(c.x, ${color});
 }`;
     ctx.helpers.push(helperFunc);
-    return `return ${funcName}(p);`;
+    return `${funcName}(p)`;
   }
 
-  return childCode;
+  return childExpr;
 }
 
 /**
