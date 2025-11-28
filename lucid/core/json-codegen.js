@@ -496,14 +496,49 @@ function applyTransform(pVar, transform, ctx) {
 }
 
 /**
- * Combine two transforms
+ * Combine two transforms - translations are added, others merged
  */
 function combineTransforms(child, parent) {
   if (!parent) return child;
   if (!child) return parent;
 
-  // Simple merge for now (TODO: proper composition)
-  return { ...parent, ...child };
+  const combined = { ...parent };
+
+  // Combine translations additively
+  if (parent.translate && child.translate) {
+    combined.translate = addValues(parent.translate, child.translate);
+  } else if (child.translate) {
+    combined.translate = child.translate;
+  }
+
+  // TODO: Proper rotation/scale composition
+  if (child.rotate) combined.rotate = child.rotate;
+  if (child.scale) combined.scale = child.scale;
+
+  return combined;
+}
+
+/**
+ * Add two IR values (creates expression node for GLSL addition)
+ */
+function addValues(a, b) {
+  // Both are array type with values
+  if (a.type === 'array' && b.type === 'array') {
+    return {
+      type: 'array',
+      values: a.values.map((av, i) => ({
+        type: 'expr',
+        op: 'add',
+        args: [av, b.values[i]]
+      }))
+    };
+  }
+  // Fallback for scalar addition
+  return {
+    type: 'expr',
+    op: 'add',
+    args: [a, b]
+  };
 }
 
 /**
