@@ -634,7 +634,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.2.0
-    const VERSION = '0.2.1';
+    const VERSION = '0.3.0';
     const BUILD_DATE = '2025-11-28';
 
     // ============================================
@@ -1046,6 +1046,120 @@
                 }
               }
             ]
+          }
+        }
+      },
+
+      {
+        title: "Radial Flower",
+        subtitle: "12 petals from one sphere (O(1) cost!)",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "sphere",
+                "params": { "r": 0.4, "color": [1.0, 0.8, 0.2] }
+              },
+              {
+                "type": "radial",
+                "count": 12,
+                "axis": "y",
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.25, "color": [1.0, 0.4, 0.6] },
+                  "transform": { "translate": [0.7, 0, 0] }
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Mirror Symmetry",
+        subtitle: "XZ mirror - define quarter, get whole",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "mirror",
+            "axis": "xz",
+            "child": {
+              "type": "union",
+              "children": [
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.5, "color": [0.3, 0.8, 1.0] },
+                  "transform": { "translate": [0.8, 0, 0.8] }
+                },
+                {
+                  "type": "box",
+                  "params": { "size": [0.3, 0.8, 0.3], "color": [1.0, 0.5, 0.3] },
+                  "transform": { "translate": [0.5, 0, 0.5] }
+                }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        title: "Infinite Field",
+        subtitle: "Tiled spheres extending to infinity",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "repeat",
+            "period": [3, 0, 3],
+            "child": {
+              "type": "sphere",
+              "params": {
+                "r": {
+                  "expr": "add",
+                  "args": [0.4, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }]
+                },
+                "color": [0.6, 0.9, 0.4]
+              }
+            }
+          }
+        }
+      },
+
+      {
+        title: "Radial Invaders",
+        subtitle: "6 invaders from radial symmetry",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "invader": {
+              "type": "subtract",
+              "children": [
+                { "type": "box", "params": { "size": [0.4, 0.3, 0.15] } },
+                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [-0.12, 0.08, 0.15] } },
+                { "type": "sphere", "params": { "r": 0.08 }, "transform": { "translate": [0.12, 0.08, 0.15] } }
+              ]
+            }
+          },
+          "root": {
+            "type": "radial",
+            "count": 6,
+            "axis": "y",
+            "child": {
+              "type": "material",
+              "params": { "color": [0, 1, 0.5] },
+              "child": {
+                "type": "transform",
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [0.2, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+                    0,
+                    0
+                  ]
+                },
+                "child": { "type": "ref", "id": "invader" }
+              }
+            }
           }
         }
       }

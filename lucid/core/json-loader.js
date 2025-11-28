@@ -105,6 +105,25 @@ function processNode(node, registry) {
       processed.child = processNode(node.child, registry);
       break;
 
+    // Mirror symmetry
+    case 'mirror':
+      processed.axis = node.axis || 'x';
+      processed.child = processNode(node.child, registry);
+      break;
+
+    // Radial symmetry
+    case 'radial':
+      processed.count = node.count || 6;
+      processed.axis = node.axis || 'y';
+      processed.child = processNode(node.child, registry);
+      break;
+
+    // Infinite repeat/tiling
+    case 'repeat':
+      processed.period = node.period || [2, 0, 2];
+      processed.child = processNode(node.child, registry);
+      break;
+
     // Reference to definition
     case 'ref':
       if (!node.id) {

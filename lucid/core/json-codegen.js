@@ -97,6 +97,15 @@ function walkNode(node, ctx) {
     case 'ref':
       return generateRef(node, ctx);
 
+    case 'mirror':
+      return generateMirror(node, ctx);
+
+    case 'radial':
+      return generateRadial(node, ctx);
+
+    case 'repeat':
+      return generateRepeat(node, ctx);
+
     default:
       console.warn(`Unhandled node type: ${node.type}`);
       return 'vec4(1000.0, 1.0, 0.0, 1.0)';
@@ -434,6 +443,127 @@ function generateMaterial(node, ctx) {
   }
 
   return childExpr;
+}
+
+/**
+ * Generate mirror - reflection symmetry
+ * axis can be "x", "y", "z", "xy", "xz", "yz", "xyz"
+ */
+function generateMirror(node, ctx) {
+  const axis = node.axis || 'x';
+  const funcName = `mirror_${ctx.helperCounter++}`;
+
+  // Build the mirror transform
+  let mirrorCode = '';
+  if (axis.includes('x')) mirrorCode += '  q.x = abs(q.x);\n';
+  if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
+  if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
+
+  // Apply any transform from the mirror node itself
+  const p = applyTransform('p', node.transform, ctx);
+
+  // Generate child with mirrored position
+  const childWithQ = { ...node.child };
+  const childExpr = walkNode(childWithQ, ctx);
+
+  // Replace 'p' with 'q' in child expression
+  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec3 q = ${p};
+${mirrorCode}  return ${childExprWithQ};
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
+ * Generate radial - rotational symmetry around an axis
+ * count: number of repetitions
+ * axis: "x", "y", or "z" (default "y")
+ */
+function generateRadial(node, ctx) {
+  const count = node.count || 6;
+  const axis = node.axis || 'y';
+  const funcName = `radial_${ctx.helperCounter++}`;
+
+  // Apply any transform from the radial node itself
+  const p = applyTransform('p', node.transform, ctx);
+
+  // Generate child expression
+  const childExpr = walkNode(node.child, ctx);
+  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
+
+  // TAU = 2*PI
+  const segment = (2 * Math.PI / count).toFixed(6);
+
+  // Build radial fold code based on axis
+  let radialCode;
+  if (axis === 'y') {
+    radialCode = `  float angle = atan(q.z, q.x);
+  float segment = ${segment};
+  angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
+  float r = length(q.xz);
+  q = vec3(r * cos(angle), q.y, r * sin(angle));`;
+  } else if (axis === 'x') {
+    radialCode = `  float angle = atan(q.z, q.y);
+  float segment = ${segment};
+  angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
+  float r = length(q.yz);
+  q = vec3(q.x, r * cos(angle), r * sin(angle));`;
+  } else { // z
+    radialCode = `  float angle = atan(q.y, q.x);
+  float segment = ${segment};
+  angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
+  float r = length(q.xy);
+  q = vec3(r * cos(angle), r * sin(angle), q.z);`;
+  }
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec3 q = ${p};
+${radialCode}
+  return ${childExprWithQ};
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
+ * Generate repeat - infinite tiling
+ * period: [x, y, z] - spacing between repetitions (0 = no repeat on that axis)
+ */
+function generateRepeat(node, ctx) {
+  const period = node.period || [2, 0, 2];
+  const funcName = `repeat_${ctx.helperCounter++}`;
+
+  // Apply any transform from the repeat node itself
+  const p = applyTransform('p', node.transform, ctx);
+
+  // Generate child expression
+  const childExpr = walkNode(node.child, ctx);
+  const childExprWithQ = childExpr.replace(/\(p\)/g, '(q)');
+
+  // Build repeat code - only repeat on non-zero axes
+  let repeatCode = `  vec3 q = ${p};\n`;
+
+  if (period[0] > 0) {
+    repeatCode += `  q.x = mod(q.x + ${(period[0]/2).toFixed(4)}, ${period[0].toFixed(4)}) - ${(period[0]/2).toFixed(4)};\n`;
+  }
+  if (period[1] > 0) {
+    repeatCode += `  q.y = mod(q.y + ${(period[1]/2).toFixed(4)}, ${period[1].toFixed(4)}) - ${(period[1]/2).toFixed(4)};\n`;
+  }
+  if (period[2] > 0) {
+    repeatCode += `  q.z = mod(q.z + ${(period[2]/2).toFixed(4)}, ${period[2].toFixed(4)}) - ${(period[2]/2).toFixed(4)};\n`;
+  }
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+${repeatCode}  return ${childExprWithQ};
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
 }
 
 /**
