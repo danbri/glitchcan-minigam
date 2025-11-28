@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>JSON SDF Demos – Lucid</title>
   <style>
+    :root {
+      --bg: #0d1117;
+      --panel-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-dim: #8b949e;
+      --accent: #22d3ee;
+      --accent-alt: #f472b6;
+      --success: #3fb950;
+      --error: #f85149;
+      --code-bg: #1c2128;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -13,20 +26,34 @@
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #000;
-      color: #fff;
+      background: var(--bg);
+      color: var(--text);
       overflow: hidden;
       height: 100vh;
+      height: 100dvh;
     }
 
-    .demo-container {
+    /* Main Layout */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .main-area {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* Render Panel */
+    .render-panel {
+      flex: 1;
       position: relative;
-      width: 100vw;
-      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      touch-action: none;
+      background: #000;
     }
 
     canvas {
@@ -34,6 +61,166 @@
       height: 100%;
       display: block;
       touch-action: none;
+    }
+
+    /* Editor Panel */
+    .editor-panel {
+      width: 0;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease;
+      overflow: hidden;
+    }
+
+    .editor-panel.open {
+      width: 400px;
+    }
+
+    @media (max-width: 768px) {
+      .main-area {
+        flex-direction: column;
+      }
+      .render-panel {
+        height: 50%;
+      }
+      .editor-panel {
+        width: 100%;
+        height: 0;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+      .editor-panel.open {
+        width: 100%;
+        height: 50%;
+      }
+    }
+
+    .editor-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .editor-header h3 {
+      font-size: 0.875rem;
+      color: var(--accent);
+    }
+
+    .editor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .json-textarea {
+      flex: 1;
+      width: 100%;
+      background: var(--code-bg);
+      border: none;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 1rem;
+      resize: none;
+      outline: none;
+    }
+
+    .editor-actions {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    /* Header Bar */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1rem;
+    }
+
+    .demo-info h1 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .demo-info p {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: #3d4450;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn.success {
+      background: var(--success);
+      color: var(--bg);
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
     }
 
     /* Navigation */
@@ -47,6 +234,7 @@
       z-index: 100;
       background: rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       padding: 8px 12px;
       border-radius: 24px;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -62,7 +250,7 @@
     }
 
     .nav-dot.active {
-      background: #22d3ee;
+      background: var(--accent);
       transform: scale(1.3);
     }
 
@@ -70,79 +258,229 @@
       background: rgba(255, 255, 255, 0.6);
     }
 
-    /* Demo Title */
-    .demo-title {
+    /* Template Gallery */
+    .template-gallery {
       position: fixed;
-      top: 20px;
-      left: 20px;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(10px);
-      padding: 12px 20px;
+      top: 60px;
+      left: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      z-index: 90;
+      max-width: 200px;
+      display: none;
+    }
+
+    .template-gallery.open {
+      display: block;
+    }
+
+    .template-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .template-item:hover {
+      background: var(--border);
+    }
+
+    .template-item.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    /* URL Input Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+      display: none;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      z-index: 60;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 500px;
     }
 
-    .demo-title h1 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 2px;
-      color: #22d3ee;
+    .modal h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
     }
 
-    .demo-title p {
-      font-size: 12px;
-      color: #9ca3af;
+    .input-group {
+      margin-bottom: 1rem;
     }
 
+    .input-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Status Messages */
+    .status {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .status.visible {
+      opacity: 1;
+    }
+
+    .status.error {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .status.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* Loading */
     .loading {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 18px;
-      color: #22d3ee;
-      z-index: 1000;
+      font-size: 1rem;
+      color: var(--accent);
+      z-index: 300;
     }
 
-    .error {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(239, 68, 68, 0.9);
-      color: #fff;
-      padding: 20px 30px;
-      border-radius: 12px;
-      max-width: 80%;
-      z-index: 1000;
-      font-family: monospace;
-      font-size: 12px;
-      white-space: pre-wrap;
+    /* Hidden file input */
+    .hidden-input {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="loading">Loading JSON demos...</div>
+  <div class="loading" id="loading">Loading...</div>
 
-  <div class="demo-container">
-    <canvas id="canvas"></canvas>
+  <div class="app" id="app" style="display: none;">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <a href="README.html" class="logo">Lucid</a>
+        <div class="demo-info">
+          <h1 id="title">Loading...</h1>
+          <p id="subtitle">JSON SDF Demo</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="btn-gallery" title="Template Gallery">Templates</button>
+        <button class="btn" id="btn-load-url" title="Load from URL">URL</button>
+        <button class="btn" id="btn-load-file" title="Load JSON File">File</button>
+        <button class="btn btn-icon" id="btn-editor" title="Toggle Editor">{ }</button>
+      </div>
+    </header>
+
+    <!-- Main Area -->
+    <div class="main-area">
+      <div class="render-panel">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="editor-panel" id="editor-panel">
+        <div class="editor-header">
+          <h3>JSON Editor</h3>
+          <button class="btn" id="btn-format">Format</button>
+        </div>
+        <div class="editor-content">
+          <textarea class="json-textarea" id="json-editor" spellcheck="false"></textarea>
+        </div>
+        <div class="editor-actions">
+          <button class="btn primary" id="btn-apply">Apply Changes</button>
+          <button class="btn" id="btn-copy">Copy JSON</button>
+          <button class="btn" id="btn-download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Dots -->
+    <div class="nav" id="nav"></div>
   </div>
 
-  <div class="demo-title">
-    <h1 id="title">Loading...</h1>
-    <p id="subtitle">JSON Node Format</p>
+  <!-- Template Gallery -->
+  <div class="template-gallery" id="template-gallery">
+    <!-- Populated by JS -->
   </div>
 
-  <div class="nav" id="nav"></div>
+  <!-- URL Modal -->
+  <div class="modal" id="url-modal">
+    <div class="modal-content">
+      <h2>Load JSON from URL</h2>
+      <div class="input-group">
+        <label>JSON URL</label>
+        <input type="url" id="url-input" placeholder="https://example.com/scene.sdf.json" />
+      </div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn" id="btn-modal-cancel">Cancel</button>
+        <button class="btn primary" id="btn-modal-load">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input -->
+  <input type="file" class="hidden-input" id="file-input" accept=".json,.sdf.json" />
+
+  <!-- Status Message -->
+  <div class="status" id="status"></div>
 
   <script type="module">
     import { SimpleRaymarcher } from './ui/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
 
-    // JSON Scene Definitions
-    const demos = [
+    // ============================================
+    // DEMO TEMPLATES
+    // ============================================
+    const templates = [
       {
         title: "Pulsing Sphere",
         subtitle: "Animated radius with time expression",
@@ -155,13 +493,7 @@
                 "expr": "add",
                 "args": [
                   1.0,
-                  {
-                    "expr": "mul",
-                    "args": [
-                      0.3,
-                      { "expr": "sin", "args": [{ "var": "time" }] }
-                    ]
-                  }
+                  { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "var": "time" }] }] }
                 ]
               },
               "color": [0.4, 0.8, 1.0]
@@ -207,8 +539,8 @@
       },
 
       {
-        title: "Box and Torus",
-        subtitle: "CSG subtraction",
+        title: "Box & Torus Subtract",
+        subtitle: "CSG subtraction operation",
         json: {
           "version": "1.0",
           "root": {
@@ -236,80 +568,21 @@
             "invader": {
               "type": "subtract",
               "children": [
-                {
-                  "type": "box",
-                  "params": { "size": [0.5, 0.4, 0.3] }
-                },
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.1 },
-                  "transform": { "translate": [-0.12, 0.08, 0.2] }
-                },
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.1 },
-                  "transform": { "translate": [0.12, 0.08, 0.2] }
-                }
+                { "type": "box", "params": { "size": [0.5, 0.4, 0.3] } },
+                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [-0.12, 0.08, 0.2] } },
+                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0.12, 0.08, 0.2] } }
               ]
             }
           },
           "root": {
             "type": "union",
             "children": [
-              {
-                "type": "material",
-                "params": { "color": [0.0, 1.0, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [-1.5, 0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0.0, 1.0, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [0.0, 0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0.0, 1.0, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [1.5, 0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [-1.5, -0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [0.0, -0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [1.5, -0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              }
+              { "type": "material", "params": { "color": [0.0, 1.0, 0.5] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
+              { "type": "material", "params": { "color": [0.0, 1.0, 0.5] }, "child": { "type": "transform", "transform": { "translate": [0.0, 0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
+              { "type": "material", "params": { "color": [0.0, 1.0, 0.5] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
+              { "type": "material", "params": { "color": [1.0, 0.3, 0.8] }, "child": { "type": "transform", "transform": { "translate": [-1.5, -0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
+              { "type": "material", "params": { "color": [1.0, 0.3, 0.8] }, "child": { "type": "transform", "transform": { "translate": [0.0, -0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
+              { "type": "material", "params": { "color": [1.0, 0.3, 0.8] }, "child": { "type": "transform", "transform": { "translate": [1.5, -0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } }
             ]
           }
         }
@@ -317,27 +590,16 @@
 
       {
         title: "Animated Invaders",
-        subtitle: "Template reuse with time-based animation",
+        subtitle: "Template reuse with time animation",
         json: {
           "version": "1.0",
           "defs": {
             "invader": {
               "type": "subtract",
               "children": [
-                {
-                  "type": "box",
-                  "params": { "size": [0.5, 0.4, 0.3] }
-                },
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.1 },
-                  "transform": { "translate": [-0.12, 0.08, 0.2] }
-                },
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.1 },
-                  "transform": { "translate": [0.12, 0.08, 0.2] }
-                }
+                { "type": "box", "params": { "size": [0.5, 0.4, 0.3] } },
+                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [-0.12, 0.08, 0.2] } },
+                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0.12, 0.08, 0.2] } }
               ]
             }
           },
@@ -351,13 +613,7 @@
                   "type": "transform",
                   "transform": {
                     "translate": [
-                      {
-                        "expr": "add",
-                        "args": [
-                          -1.5,
-                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }
-                        ]
-                      },
+                      { "expr": "add", "args": [-1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
                       0.6,
                       0.0
                     ]
@@ -373,13 +629,7 @@
                   "transform": {
                     "translate": [
                       0.0,
-                      {
-                        "expr": "add",
-                        "args": [
-                          0.6,
-                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1.0] }] }, 0.2] }
-                        ]
-                      },
+                      { "expr": "add", "args": [0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1.0] }] }, 0.2] }] },
                       0.0
                     ]
                   },
@@ -393,13 +643,7 @@
                   "type": "transform",
                   "transform": {
                     "translate": [
-                      {
-                        "expr": "add",
-                        "args": [
-                          1.5,
-                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }
-                        ]
-                      },
+                      { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
                       0.6,
                       0.0
                     ]
@@ -407,15 +651,7 @@
                   "child": { "type": "ref", "id": "invader" }
                 }
               },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [-1.5, -0.6, 0.0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
+              { "type": "material", "params": { "color": [1.0, 0.3, 0.8] }, "child": { "type": "transform", "transform": { "translate": [-1.5, -0.6, 0.0] }, "child": { "type": "ref", "id": "invader" } } },
               {
                 "type": "material",
                 "params": { "color": [1.0, 0.3, 0.8] },
@@ -423,10 +659,7 @@
                   "type": "transform",
                   "transform": {
                     "translate": [
-                      {
-                        "expr": "mul",
-                        "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3]
-                      },
+                      { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] },
                       -0.6,
                       0.0
                     ]
@@ -442,13 +675,7 @@
                   "transform": {
                     "translate": [
                       1.5,
-                      {
-                        "expr": "add",
-                        "args": [
-                          -0.6,
-                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 3.0] }] }, 0.2] }
-                        ]
-                      },
+                      { "expr": "add", "args": [-0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 3.0] }] }, 0.2] }] },
                       0.0
                     ]
                   },
@@ -458,26 +685,127 @@
             ]
           }
         }
+      },
+
+      {
+        title: "Nested CSG",
+        subtitle: "Union of intersections",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "intersect",
+                "children": [
+                  { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [1.0, 0.4, 0.3] } },
+                  { "type": "sphere", "params": { "r": 1.2, "color": [1.0, 0.4, 0.3] } }
+                ],
+                "transform": { "translate": [-1.2, 0.0, 0.0] }
+              },
+              {
+                "type": "intersect",
+                "children": [
+                  { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [0.3, 0.8, 0.5] } },
+                  { "type": "sphere", "params": { "r": 1.2, "color": [0.3, 0.8, 0.5] } }
+                ],
+                "transform": { "translate": [1.2, 0.0, 0.0] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Cylinder Array",
+        subtitle: "Multiple cylinders in formation",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "pillar": {
+              "type": "cylinder",
+              "params": { "h": 2.0, "r": 0.2 }
+            }
+          },
+          "root": {
+            "type": "union",
+            "children": [
+              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+              {
+                "type": "box",
+                "params": { "size": [2.0, 0.1, 2.0], "color": [0.5, 0.5, 0.6] },
+                "transform": { "translate": [0.0, 2.0, 0.0] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Breathing Torus",
+        subtitle: "Animated minor radius",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "torus",
+            "params": {
+              "major": 1.2,
+              "minor": {
+                "expr": "add",
+                "args": [
+                  0.25,
+                  { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] }
+                ]
+              },
+              "color": [0.9, 0.4, 0.6]
+            }
+          }
+        }
       }
     ];
 
-    // State
+    // ============================================
+    // STATE
+    // ============================================
     let currentDemo = 0;
+    let demos = [...templates]; // Copy templates as demos
     let renderer = null;
+    let editorOpen = false;
+    let galleryOpen = false;
 
+    // ============================================
+    // DOM REFERENCES
+    // ============================================
+    const $ = id => document.getElementById(id);
+    const loadingEl = $('loading');
+    const appEl = $('app');
+    const titleEl = $('title');
+    const subtitleEl = $('subtitle');
+    const navEl = $('nav');
+    const editorPanel = $('editor-panel');
+    const jsonEditor = $('json-editor');
+    const templateGallery = $('template-gallery');
+    const urlModal = $('url-modal');
+    const urlInput = $('url-input');
+    const statusEl = $('status');
+    const fileInput = $('file-input');
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
     function init() {
       try {
-        const canvas = document.getElementById('canvas');
+        const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
 
-        // Create navigation dots
-        const nav = document.getElementById('nav');
-        demos.forEach((demo, i) => {
-          const dot = document.createElement('div');
-          dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
-          dot.addEventListener('click', () => switchDemo(i));
-          nav.appendChild(dot);
-        });
+        // Build navigation dots
+        buildNav();
+
+        // Build template gallery
+        buildGallery();
 
         // Load first demo
         switchDemo(0);
@@ -489,27 +817,34 @@
         }
         renderLoop();
 
-        // Hide loading
-        document.querySelector('.loading').style.display = 'none';
+        // Hide loading, show app
+        loadingEl.style.display = 'none';
+        appEl.style.display = 'flex';
 
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'ArrowRight' || e.key === ' ') {
-            e.preventDefault();
-            switchDemo((currentDemo + 1) % demos.length);
-          } else if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            switchDemo((currentDemo - 1 + demos.length) % demos.length);
-          }
-        });
+        // Setup event listeners
+        setupEventListeners();
 
-        console.log('✅ JSON demos loaded');
+        console.log('Lucid JSON Demos initialized');
         console.log(`${demos.length} demos available`);
 
       } catch (error) {
-        console.error('❌ Initialization failed:', error);
-        showError(error);
+        console.error('Init failed:', error);
+        loadingEl.textContent = `Error: ${error.message}`;
+        loadingEl.style.color = '#f85149';
       }
+    }
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    function buildNav() {
+      navEl.innerHTML = '';
+      demos.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentDemo ? ' active' : '');
+        dot.addEventListener('click', () => switchDemo(i));
+        navEl.appendChild(dot);
+      });
     }
 
     function switchDemo(index) {
@@ -518,45 +853,269 @@
         const demo = demos[index];
 
         // Update UI
-        document.getElementById('title').textContent = demo.title;
-        document.getElementById('subtitle').textContent = demo.subtitle;
+        titleEl.textContent = demo.title;
+        subtitleEl.textContent = demo.subtitle;
 
         // Update nav dots
-        document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        navEl.querySelectorAll('.nav-dot').forEach((dot, i) => {
           dot.classList.toggle('active', i === index);
         });
 
-        console.log(`\n📦 Loading demo ${index + 1}/${demos.length}: ${demo.title}`);
-        console.log('JSON scene:', demo.json);
+        // Update editor
+        jsonEditor.value = JSON.stringify(demo.json, null, 2);
 
-        // Parse JSON to IR
-        const scene = loadJsonScene(demo.json);
-        console.log('✅ Scene parsed:', scene);
+        // Parse and render
+        renderJson(demo.json);
 
-        // Generate GLSL
-        const glslCode = generateGlslFromJson(scene);
-        console.log('✅ GLSL generated, length:', glslCode.length);
-        console.log('GLSL preview:\n', glslCode.substring(0, 500) + '...\n');
+        // Update gallery selection
+        templateGallery.querySelectorAll('.template-item').forEach((item, i) => {
+          item.classList.toggle('active', i === index);
+        });
 
-        // Update renderer
-        renderer.updateScene(glslCode);
-
-        console.log('✅ Demo loaded successfully');
+        console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
 
       } catch (error) {
-        console.error('❌ Failed to switch demo:', error);
-        console.error('Stack:', error.stack);
-        showError(error);
+        console.error('Failed to switch demo:', error);
+        showStatus(`Error: ${error.message}`, 'error');
       }
     }
 
-    function showError(error) {
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'error';
-      errorDiv.textContent = `Error: ${error.message}\n\nStack:\n${error.stack}`;
-      document.body.appendChild(errorDiv);
+    function renderJson(json) {
+      const scene = loadJsonScene(json);
+      const glsl = generateGlslFromJson(scene);
+      renderer.updateScene(glsl);
     }
 
+    // ============================================
+    // TEMPLATE GALLERY
+    // ============================================
+    function buildGallery() {
+      templateGallery.innerHTML = '';
+      demos.forEach((demo, i) => {
+        const item = document.createElement('div');
+        item.className = 'template-item' + (i === currentDemo ? ' active' : '');
+        item.textContent = demo.title;
+        item.addEventListener('click', () => {
+          switchDemo(i);
+          galleryOpen = false;
+          templateGallery.classList.remove('open');
+        });
+        templateGallery.appendChild(item);
+      });
+    }
+
+    // ============================================
+    // EDITOR FUNCTIONS
+    // ============================================
+    function applyEditorChanges() {
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        demos[currentDemo].json = json;
+        renderJson(json);
+        showStatus('Changes applied', 'success');
+      } catch (error) {
+        showStatus(`JSON Error: ${error.message}`, 'error');
+      }
+    }
+
+    function formatJson() {
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        jsonEditor.value = JSON.stringify(json, null, 2);
+        showStatus('Formatted', 'success');
+      } catch (error) {
+        showStatus(`JSON Error: ${error.message}`, 'error');
+      }
+    }
+
+    function copyJson() {
+      navigator.clipboard.writeText(jsonEditor.value).then(() => {
+        showStatus('Copied to clipboard', 'success');
+      });
+    }
+
+    function downloadJson() {
+      const blob = new Blob([jsonEditor.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${demos[currentDemo].title.toLowerCase().replace(/\s+/g, '-')}.sdf.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showStatus('Downloaded', 'success');
+    }
+
+    // ============================================
+    // EXTERNAL LOADING
+    // ============================================
+    async function loadFromUrl(url) {
+      try {
+        showStatus('Loading...', '');
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        addExternalDemo(json, url);
+        showStatus('Loaded from URL', 'success');
+      } catch (error) {
+        showStatus(`Load failed: ${error.message}`, 'error');
+      }
+    }
+
+    function loadFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const json = JSON.parse(e.target.result);
+          addExternalDemo(json, file.name);
+          showStatus(`Loaded: ${file.name}`, 'success');
+        } catch (error) {
+          showStatus(`Parse error: ${error.message}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function addExternalDemo(json, source) {
+      const title = json.title || source.split('/').pop() || 'Loaded Scene';
+      const subtitle = json.description || 'External JSON';
+
+      demos.push({ title, subtitle, json });
+      buildNav();
+      buildGallery();
+      switchDemo(demos.length - 1);
+    }
+
+    // ============================================
+    // UI HELPERS
+    // ============================================
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status visible' + (type ? ` ${type}` : '');
+      setTimeout(() => {
+        statusEl.classList.remove('visible');
+      }, 2500);
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    function setupEventListeners() {
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.target === jsonEditor) return; // Don't capture when typing
+
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          switchDemo((currentDemo + 1) % demos.length);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          switchDemo((currentDemo - 1 + demos.length) % demos.length);
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          editorOpen = !editorOpen;
+          editorPanel.classList.toggle('open', editorOpen);
+        } else if (e.key === 'Escape') {
+          urlModal.classList.remove('open');
+          galleryOpen = false;
+          templateGallery.classList.remove('open');
+        }
+      });
+
+      // Touch swipe (simple)
+      let touchStartX = 0;
+      const canvas = $('canvas');
+      canvas.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+      canvas.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) {
+            switchDemo((currentDemo - 1 + demos.length) % demos.length);
+          } else {
+            switchDemo((currentDemo + 1) % demos.length);
+          }
+        }
+      }, { passive: true });
+
+      // Editor toggle
+      $('btn-editor').addEventListener('click', () => {
+        editorOpen = !editorOpen;
+        editorPanel.classList.toggle('open', editorOpen);
+      });
+
+      // Gallery toggle
+      $('btn-gallery').addEventListener('click', () => {
+        galleryOpen = !galleryOpen;
+        templateGallery.classList.toggle('open', galleryOpen);
+      });
+
+      // Editor actions
+      $('btn-apply').addEventListener('click', applyEditorChanges);
+      $('btn-format').addEventListener('click', formatJson);
+      $('btn-copy').addEventListener('click', copyJson);
+      $('btn-download').addEventListener('click', downloadJson);
+
+      // Ctrl+Enter to apply
+      jsonEditor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          applyEditorChanges();
+        }
+      });
+
+      // URL modal
+      $('btn-load-url').addEventListener('click', () => {
+        urlModal.classList.add('open');
+        urlInput.focus();
+      });
+
+      $('btn-modal-cancel').addEventListener('click', () => {
+        urlModal.classList.remove('open');
+      });
+
+      $('btn-modal-load').addEventListener('click', () => {
+        const url = urlInput.value.trim();
+        if (url) {
+          loadFromUrl(url);
+          urlModal.classList.remove('open');
+          urlInput.value = '';
+        }
+      });
+
+      urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          $('btn-modal-load').click();
+        } else if (e.key === 'Escape') {
+          urlModal.classList.remove('open');
+        }
+      });
+
+      // File loading
+      $('btn-load-file').addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          loadFromFile(e.target.files[0]);
+          e.target.value = ''; // Reset for same file
+        }
+      });
+
+      // Click outside to close gallery
+      document.addEventListener('click', (e) => {
+        if (galleryOpen && !templateGallery.contains(e.target) && e.target.id !== 'btn-gallery') {
+          galleryOpen = false;
+          templateGallery.classList.remove('open');
+        }
+      });
+    }
+
+    // ============================================
+    // START
+    // ============================================
     init();
   </script>
 </body>
