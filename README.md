@@ -4,6 +4,12 @@ A halfbaked [collection](https://danbri.github.io/glitchcan-minigam/) of very ex
 
 ## Experiments
 
+### Lucid (SDF/CSG System)
+WebGL raymarching with JSON-defined Signed Distance Function scenes. Mobile-first, webkit/iOS compatible.
+- [Live Demo](https://danbri.github.io/glitchcan-minigam/lucid/demos_json.html)
+- [Documentation](lucid/README.html)
+- [Developer Guide](lucid/CLAUDE.md)
+
 ### Thumbwar
 A fluid dynamics game where players use their thumbs to bend fluid streams and catch targets. Play on a touchscreen device for the best experience.
 
