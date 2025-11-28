@@ -73,6 +73,15 @@ function walkNode(node, ctx) {
     case 'cylinder':
       return generateCylinder(node, ctx);
 
+    case 'capsule':
+      return generateCapsule(node, ctx);
+
+    case 'ellipsoid':
+      return generateEllipsoid(node, ctx);
+
+    case 'plane':
+      return generatePlane(node, ctx);
+
     case 'union':
       return generateUnion(node, ctx);
 
@@ -160,6 +169,47 @@ function generateCylinder(node, ctx) {
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
   return `vec4(sdCylinder(${p}, ${h}, ${r}), ${color})`;
+}
+
+/**
+ * Generate capsule - returns expression
+ * A capsule is a cylinder with hemispherical caps
+ */
+function generateCapsule(node, ctx) {
+  const params = node.params || {};
+  const h = valueToGlsl(params.h || { type: 'const', value: 1.0 }, ctx);
+  const r = valueToGlsl(params.r || { type: 'const', value: 0.25 }, ctx);
+  const p = applyTransform('p', node.transform, ctx);
+  const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
+
+  return `vec4(sdCapsule(${p}, ${h}, ${r}), ${color})`;
+}
+
+/**
+ * Generate ellipsoid - returns expression
+ * An ellipsoid with different radii on each axis
+ */
+function generateEllipsoid(node, ctx) {
+  const params = node.params || {};
+  const radii = valueToGlsl(params.radii || { type: 'array', values: [1, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
+  const p = applyTransform('p', node.transform, ctx);
+  const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
+
+  return `vec4(sdEllipsoid(${p}, ${radii}), ${color})`;
+}
+
+/**
+ * Generate plane - returns expression
+ * An infinite plane defined by normal and height
+ */
+function generatePlane(node, ctx) {
+  const params = node.params || {};
+  const normal = valueToGlsl(params.normal || { type: 'array', values: [0, 1, 0].map(v => ({ type: 'const', value: v })) }, ctx);
+  const h = valueToGlsl(params.h || { type: 'const', value: 0 }, ctx);
+  const p = applyTransform('p', node.transform, ctx);
+  const color = valueToGlsl(params.color || { type: 'array', values: [0.5, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
+
+  return `vec4(sdPlane(${p}, ${normal}, ${h}), ${color})`;
 }
 
 /**
@@ -805,6 +855,21 @@ float sdTorus(vec3 p, vec2 t) {
 float sdCylinder(vec3 p, float h, float r) {
   vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
   return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+
+float sdCapsule(vec3 p, float h, float r) {
+  p.y -= clamp(p.y, -h, h);
+  return length(p) - r;
+}
+
+float sdEllipsoid(vec3 p, vec3 r) {
+  float k0 = length(p / r);
+  float k1 = length(p / (r * r));
+  return k0 * (k0 - 1.0) / k1;
+}
+
+float sdPlane(vec3 p, vec3 n, float h) {
+  return dot(p, normalize(n)) + h;
 }
 
 `;
