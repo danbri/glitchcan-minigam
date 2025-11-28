@@ -1,8 +1,62 @@
 # CLAUDE.md - Lucid SDF/CSG System
 
-## Overview
-WebGL raymarching SDF (Signed Distance Function) system with JSON scene description.
-Mobile-first, webkit/iOS compatible. Future WebGPU support planned.
+## Related Documentation
+
+**In this folder:**
+- [README.html](README.html) - Full documentation with examples
+- [ASSESSMENT.md](ASSESSMENT.md) - Architecture deep-dive
+- [COMPONENTS.md](COMPONENTS.md) - Web component API
+- [TESTING-STRATEGY.md](TESTING-STRATEGY.md) - Testing approach
+- [SCOPE-AND-GAMES.md](SCOPE-AND-GAMES.md) - Project scope and game designs
+
+**Project root:**
+- [../CLAUDE.md](../CLAUDE.md) - Main project instructions
+- [../README.md](../README.md) - Project overview
+
+## Purpose
+
+This project defines a node-based CSG/SDF scene language and a minimal ray-marched WebGL implementation capable of rendering scenes described in that language.
+
+The language must:
+1. Be simple enough to parse, transform, and statically analyse.
+2. Compile deterministically to WebGL fragment-shader code.
+3. Avoid pathological shader expansion (e.g. deeply nested min chains).
+4. Support reusable definitions, transforms, materials, and animation expressions.
+5. Render correctly on mobile-class WebGL implementations (no WebGPU required).
+
+A small animated Space Invaders scene is required as a provocation test for the language: multiple instantiations of a reusable invader node, each animated via time-based expressions, rendered with CSG/SDF operations.
+
+## Requirements Summary
+
+### Node Language
+- Tree-structured JSON representation
+- Nodes: `box`, `sphere`, `cylinder`, `torus`, `union`, `subtract`, `intersection`, `transform`, `material`, `ref`
+- Expressions: `sin`, `add`, `mul`, etc., evaluated per-frame
+- Reusable definitions under `defs`
+
+### Compiler Constraints
+- Stateless SDF evaluation via raymarching
+- Each node compiles to a pure function or inline expression
+- Limit child count in union/subtract to avoid GLSL blow-ups
+- Predictable shader size and rendering cost per pixel
+
+### Execution Model
+- Single WebGL fragment program (WebGL 1 or 2)
+- Per-pixel raymarcher with configurable max steps and epsilon
+- Mobile-friendly: must run on iOS Safari, avoid GPU watchdog resets
+
+### Best-Practice Guidelines
+- Use small, shallow SDF trees
+- Avoid union nodes with >8 children
+- Avoid subtract nodes applied to large unions
+- Prefer few large primitives over many micro-voxels
+
+### Space Invader Test Requirements
+- Reusable invader definition
+- At least 6 simultaneous invader instances
+- Time-based animation transforms
+- Two material variants (green and magenta)
+- Must run >30 FPS on mobile Safari
 
 ## Key Files
 
@@ -12,7 +66,7 @@ Mobile-first, webkit/iOS compatible. Future WebGPU support planned.
 - `ui/raymarcher.js` - WebGL raymarcher with orbit camera
 
 ### Demos
-- `demos_json.html` - Main demo app with 8 built-in templates
+- `demos_json.html` - Main demo app with 8 built-in templates (v0.2.0)
 - `README.html` - Documentation and architecture overview
 
 ## Version Management
@@ -131,3 +185,10 @@ GLSL Fragment Shader
     ↓ (raymarcher.js)
 WebGL Render
 ```
+
+## Future Directions
+
+- Optional WebGPU compute shader backend
+- Automatic SDF tree optimisation (node hoisting, union flattening)
+- Visual node graph editor generating the JSON schema
+- Templates for common shapes (characters, terrain, volumetric assets)
