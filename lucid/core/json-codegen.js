@@ -206,12 +206,21 @@ function generateUnion(node, ctx) {
   const distValues = children.map((_, i) => `c${i}.x`);
   const minOp = chainedMin(distValues);
 
-  // Find closest child for color
+  // Select color from closest child (smallest distance)
+  let colorSelect;
+  if (children.length === 2) {
+    colorSelect = 'c0.x < c1.x ? c0 : c1';
+  } else {
+    // Chain comparisons for N children
+    colorSelect = 'c0';
+    for (let i = 1; i < children.length; i++) {
+      colorSelect = `(${colorSelect}).x < c${i}.x ? (${colorSelect}) : c${i}`;
+    }
+  }
+
   const helperFunc = `vec4 ${funcName}(vec3 p) {
 ${childAssignments}
-  float d = ${minOp};
-  // Use color from first child (simplified)
-  return vec4(d, c0.yzw);
+  return ${colorSelect};
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -296,10 +305,21 @@ function generateIntersect(node, ctx) {
   const distValues = children.map((_, i) => `c${i}.x`);
   const maxOp = chainedMax(distValues);
 
+  // Select color from child with largest distance (determines intersection surface)
+  let colorSelect;
+  if (children.length === 2) {
+    colorSelect = 'c0.x > c1.x ? c0 : c1';
+  } else {
+    // Chain comparisons for N children
+    colorSelect = 'c0';
+    for (let i = 1; i < children.length; i++) {
+      colorSelect = `(${colorSelect}).x > c${i}.x ? (${colorSelect}) : c${i}`;
+    }
+  }
+
   const helperFunc = `vec4 ${funcName}(vec3 p) {
 ${childAssignments}
-  float d = ${maxOp};
-  return vec4(d, c0.yzw);
+  return ${colorSelect};
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -336,11 +356,14 @@ function generateSmoothUnion(node, ctx) {
   const child0Expr = walkNode(children[0], ctx);
   const child1Expr = walkNode(children[1], ctx);
 
+  // Blend colors based on smooth union blend factor
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec4 a = ${child0Expr};
   vec4 b = ${child1Expr};
-  float d = smin(a.x, b.x, ${k});
-  return vec4(d, a.yzw);
+  float h = clamp(0.5 + 0.5 * (b.x - a.x) / ${k}, 0.0, 1.0);
+  float d = mix(b.x, a.x, h) - ${k} * h * (1.0 - h);
+  vec3 col = mix(b.yzw, a.yzw, h);
+  return vec4(d, col);
 }`;
 
   ctx.helpers.push(helperFunc);
