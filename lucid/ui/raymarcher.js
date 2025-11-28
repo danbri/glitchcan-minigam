@@ -14,7 +14,7 @@ export class SimpleRaymarcher {
       maxSteps: 100,
       maxDist: 50.0,
       surfDist: 0.001,
-      stepSize: 1.0
+      stepSize: 0.05
     };
 
     this.currentGlsl = '';
@@ -31,6 +31,9 @@ export class SimpleRaymarcher {
 
     this.showGroundPlane = true;
     this.volumeRender = false;
+    this.showEdges = true;
+    this.volumeStepSize = 0.05;
+    this.volumeDensity = 8.0;
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -75,6 +78,9 @@ export class SimpleRaymarcher {
       uniform vec3 u_cameraTarget;
       uniform float u_showGroundPlane;
       uniform float u_volumeRender;
+      uniform float u_showEdges;
+      uniform float u_volumeStepSize;
+      uniform float u_volumeDensity;
 
       ${this.currentGlsl}
 
@@ -107,10 +113,13 @@ export class SimpleRaymarcher {
         vec3 colVol = vec3(0.0);
         float trans = 1.0;
         bool hitGround = false;
+        bool hitSurface = false;
         vec3 hitPos = vec3(0.0);
-        float stepSize = 0.05;
+        vec3 surfaceColor = vec3(0.0);
+        vec3 surfaceNormal = vec3(0.0);
+        float surfaceT = 0.0;
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 150; i++) {
           if (t > 50.0) break;
           if (u_volumeRender > 0.5 && trans < 0.01) break;
 
@@ -139,6 +148,13 @@ export class SimpleRaymarcher {
               float amb = 0.3;
               float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
               vec3 col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+
+              // Edge rendering - darken silhouette edges
+              if (u_showEdges > 0.5) {
+                float edge = pow(1.0 - abs(dot(normal, -rd)), 2.0);
+                col = mix(col, vec3(0.0), edge * 0.7);
+              }
+
               return vec4(col, 1.0);
             }
 
@@ -154,13 +170,23 @@ export class SimpleRaymarcher {
             t += abs(d) * 0.9;
           } else {
             // Volume mode - accumulate density near surface
-            // Use smooth density falloff instead of hard inside/outside
-            float density = exp(-abs(d) * 5.0); // Density peaks at surface (d=0)
+            float stepSize = u_volumeStepSize;
+
+            // Density peaks at surface (d=0) with smooth falloff
+            float density = exp(-abs(d) * 5.0);
 
             // Accumulate color with proper weighting
-            float absorption = density * stepSize * 8.0;
+            float absorption = density * stepSize * u_volumeDensity;
             colVol += trans * scene.yzw * absorption;
-            trans *= 1.0 - absorption; // Reduce transmission
+            trans *= exp(-absorption * 2.0); // Exponential falloff for transmission
+
+            // Track first surface hit for edge rendering
+            if (!hitSurface && d < 0.01) {
+              hitSurface = true;
+              surfaceT = t;
+              surfaceColor = scene.yzw;
+              surfaceNormal = calcNormal(p);
+            }
 
             // Fixed step size for consistent appearance
             t += stepSize;
@@ -169,7 +195,19 @@ export class SimpleRaymarcher {
 
         // Return background or accumulated volume
         if (u_volumeRender > 0.5) {
-          return vec4(colVol, 1.0);
+          vec3 col = colVol;
+
+          // Apply edge darkening in volume mode too
+          if (u_showEdges > 0.5 && hitSurface) {
+            float edge = pow(1.0 - abs(dot(surfaceNormal, -rd)), 2.0);
+            col = mix(col, col * 0.3, edge * 0.5);
+          }
+
+          // Tone mapping
+          col = col / (1.0 + col);
+          col = pow(col, vec3(0.4545)); // Gamma correction
+
+          return vec4(col, 1.0);
         }
         return vec4(0.0);
       }
@@ -285,6 +323,15 @@ export class SimpleRaymarcher {
 
     const volumeRenderLocation = gl.getUniformLocation(this.program, 'u_volumeRender');
     gl.uniform1f(volumeRenderLocation, this.volumeRender ? 1.0 : 0.0);
+
+    const showEdgesLocation = gl.getUniformLocation(this.program, 'u_showEdges');
+    gl.uniform1f(showEdgesLocation, this.showEdges ? 1.0 : 0.0);
+
+    const volumeStepSizeLocation = gl.getUniformLocation(this.program, 'u_volumeStepSize');
+    gl.uniform1f(volumeStepSizeLocation, this.volumeStepSize);
+
+    const volumeDensityLocation = gl.getUniformLocation(this.program, 'u_volumeDensity');
+    gl.uniform1f(volumeDensityLocation, this.volumeDensity);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
