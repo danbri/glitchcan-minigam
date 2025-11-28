@@ -741,8 +741,8 @@
     // ============================================
     // VERSION INFO
     // ============================================
-    // Best practice: Update VERSION on releases, tag with: git tag v0.2.0
-    const VERSION = '0.4.0';
+    // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
+    const VERSION = '0.5.0';
     const BUILD_DATE = '2025-11-28';
 
     // ============================================
@@ -1371,6 +1371,92 @@
               },
               "child": { "type": "ref", "id": "sunflower" }
             }
+          }
+        }
+      },
+
+      {
+        title: "Poppy Field",
+        subtitle: "Rotated disk faces with centralized head angle",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "poppy_head": {
+              "type": "union",
+              "comment": "Head angle is defined ONCE here - rotate X by ~75° to tilt disk face",
+              "children": [
+                {
+                  "type": "cylinder",
+                  "params": { "h": 0.02, "r": 0.15, "color": [0.35, 0.2, 0.1] },
+                  "transform": { "rotate": [1.3, 0, 0] }
+                },
+                {
+                  "type": "radial",
+                  "count": 8,
+                  "axis": "z",
+                  "child": {
+                    "type": "sphere",
+                    "params": { "r": 0.12, "color": [0.9, 0.15, 0.1] },
+                    "transform": { "translate": [0.18, 0, 0], "rotate": [1.3, 0, 0] }
+                  }
+                }
+              ],
+              "transform": { "translate": [0, 0.8, 0] }
+            },
+            "stem": {
+              "type": "cylinder",
+              "params": { "h": 0.8, "r": 0.03, "color": [0.2, 0.5, 0.15] }
+            },
+            "poppy": {
+              "type": "union",
+              "children": [
+                { "type": "ref", "id": "stem" },
+                { "type": "ref", "id": "poppy_head" }
+              ]
+            }
+          },
+          "root": {
+            "type": "repeat",
+            "period": [1.8, 0, 1.8],
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [
+                  0,
+                  { "expr": "mul", "args": [0.05, { "expr": "sin", "args": [{ "var": "time" }] }] },
+                  0
+                ]
+              },
+              "child": { "type": "ref", "id": "poppy" }
+            }
+          }
+        }
+      },
+
+      {
+        title: "Rotation Demo",
+        subtitle: "Cylinders rotated around different axes",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "cylinder",
+                "params": { "h": 0.8, "r": 0.15, "color": [1, 0.3, 0.3] },
+                "transform": { "translate": [-1.5, 0, 0] }
+              },
+              {
+                "type": "cylinder",
+                "params": { "h": 0.8, "r": 0.15, "color": [0.3, 1, 0.3] },
+                "transform": { "translate": [0, 0, 0], "rotate": [0, 0, 1.57] }
+              },
+              {
+                "type": "cylinder",
+                "params": { "h": 0.8, "r": 0.15, "color": [0.3, 0.3, 1] },
+                "transform": { "translate": [1.5, 0, 0], "rotate": [1.57, 0, 0] }
+              }
+            ]
           }
         }
       }

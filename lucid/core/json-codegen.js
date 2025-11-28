@@ -636,26 +636,50 @@ function exprToGlsl(expr, ctx) {
 
 /**
  * Apply transform to position variable
+ * Order: translate first, then rotate (applied in reverse for SDF)
  */
 function applyTransform(pVar, transform, ctx) {
   if (!transform) return pVar;
 
   let result = pVar;
 
-  // Apply translate
+  // Apply translate first (subtract from position)
   if (transform.translate) {
     const t = valueToGlsl(transform.translate, ctx);
     result = `(${result} - ${t})`;
   }
 
+  // Apply rotation (Euler angles in radians: [rx, ry, rz])
+  // Rotation order: Z, then Y, then X (common convention)
+  if (transform.rotate) {
+    const rot = transform.rotate;
+    // Handle both static and expression-based rotations
+    if (rot.type === 'array' && rot.values) {
+      const rx = valueToGlsl(rot.values[0], ctx);
+      const ry = valueToGlsl(rot.values[1], ctx);
+      const rz = valueToGlsl(rot.values[2], ctx);
+      // Apply rotations in ZYX order
+      result = `rotZ(${result}, ${rz})`;
+      result = `rotY(${result}, ${ry})`;
+      result = `rotX(${result}, ${rx})`;
+    } else if (Array.isArray(rot)) {
+      // Static rotation values
+      const rx = valueToGlsl({ type: 'const', value: rot[0] || 0 }, ctx);
+      const ry = valueToGlsl({ type: 'const', value: rot[1] || 0 }, ctx);
+      const rz = valueToGlsl({ type: 'const', value: rot[2] || 0 }, ctx);
+      result = `rotZ(${result}, ${rz})`;
+      result = `rotY(${result}, ${ry})`;
+      result = `rotX(${result}, ${rx})`;
+    }
+  }
+
   // Apply scale (TODO: implement)
-  // Apply rotate (TODO: implement)
 
   return result;
 }
 
 /**
- * Combine two transforms - translations are added, others merged
+ * Combine two transforms - translations are added, rotations are composed
  */
 function combineTransforms(child, parent) {
   if (!parent) return child;
@@ -670,11 +694,58 @@ function combineTransforms(child, parent) {
     combined.translate = child.translate;
   }
 
-  // TODO: Proper rotation/scale composition
-  if (child.rotate) combined.rotate = child.rotate;
+  // Combine rotations additively (Euler angle composition)
+  // This is an approximation that works well for small angles
+  if (parent.rotate && child.rotate) {
+    combined.rotate = addRotations(parent.rotate, child.rotate);
+  } else if (child.rotate) {
+    combined.rotate = child.rotate;
+  }
+
+  // Scale: child takes precedence (TODO: proper scale composition)
   if (child.scale) combined.scale = child.scale;
 
   return combined;
+}
+
+/**
+ * Add two rotation arrays (Euler angles)
+ */
+function addRotations(a, b) {
+  // Handle both raw arrays and IR objects
+  const aVals = Array.isArray(a) ? a : (a.values || [0, 0, 0]);
+  const bVals = Array.isArray(b) ? b : (b.values || [0, 0, 0]);
+
+  // If both are simple arrays of numbers, add directly
+  if (aVals.every(v => typeof v === 'number') && bVals.every(v => typeof v === 'number')) {
+    return [
+      (aVals[0] || 0) + (bVals[0] || 0),
+      (aVals[1] || 0) + (bVals[1] || 0),
+      (aVals[2] || 0) + (bVals[2] || 0)
+    ];
+  }
+
+  // If they contain expressions, create additive expressions
+  return {
+    type: 'array',
+    values: [0, 1, 2].map(i => ({
+      type: 'expr',
+      op: 'add',
+      args: [
+        normalizeRotationComponent(aVals[i]),
+        normalizeRotationComponent(bVals[i])
+      ]
+    }))
+  };
+}
+
+/**
+ * Normalize a rotation component to IR format
+ */
+function normalizeRotationComponent(val) {
+  if (val === undefined || val === null) return { type: 'const', value: 0 };
+  if (typeof val === 'number') return { type: 'const', value: val };
+  return val; // Already an IR object
 }
 
 /**
@@ -737,6 +808,22 @@ function generateHelperFunctions() {
 float smin(float a, float b, float k) {
   float h = max(k - abs(a - b), 0.0) / k;
   return min(a, b) - h * h * k * 0.25;
+}
+
+// Rotation matrices - rotate point around axis by angle (radians)
+vec3 rotX(vec3 p, float a) {
+  float c = cos(a), s = sin(a);
+  return vec3(p.x, c*p.y - s*p.z, s*p.y + c*p.z);
+}
+
+vec3 rotY(vec3 p, float a) {
+  float c = cos(a), s = sin(a);
+  return vec3(c*p.x + s*p.z, p.y, -s*p.x + c*p.z);
+}
+
+vec3 rotZ(vec3 p, float a) {
+  float c = cos(a), s = sin(a);
+  return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z);
 }
 
 `;
