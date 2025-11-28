@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>JSON SDF Demos – Lucid</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .demo-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-dot.active {
+      background: #22d3ee;
+      transform: scale(1.3);
+    }
+
+    .nav-dot:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Demo Title */
+    .demo-title {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+    }
+
+    .demo-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      color: #22d3ee;
+    }
+
+    .demo-title p {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      color: #22d3ee;
+      z-index: 1000;
+    }
+
+    .error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(239, 68, 68, 0.9);
+      color: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      max-width: 80%;
+      z-index: 1000;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">Loading JSON demos...</div>
+
+  <div class="demo-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="demo-title">
+    <h1 id="title">Loading...</h1>
+    <p id="subtitle">JSON Node Format</p>
+  </div>
+
+  <div class="nav" id="nav"></div>
+
+  <script type="module">
+    import { SimpleRaymarcher } from './ui/raymarcher.js';
+    import { loadJsonScene } from './core/json-loader.js';
+    import { generateGlslFromJson } from './core/json-codegen.js';
+
+    // JSON Scene Definitions
+    const demos = [
+      {
+        title: "Pulsing Sphere",
+        subtitle: "Animated radius with time expression",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "sphere",
+            "params": {
+              "r": {
+                "expr": "add",
+                "args": [
+                  1.0,
+                  {
+                    "expr": "mul",
+                    "args": [
+                      0.3,
+                      { "expr": "sin", "args": [{ "var": "time" }] }
+                    ]
+                  }
+                ]
+              },
+              "color": [0.4, 0.8, 1.0]
+            }
+          }
+        }
+      },
+
+      {
+        title: "Smooth Union",
+        subtitle: "Two spheres with smooth blending",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "smoothUnion",
+            "k": 0.3,
+            "children": [
+              {
+                "type": "sphere",
+                "params": { "r": 0.8, "color": [0.3, 0.8, 1.0] },
+                "transform": {
+                  "translate": [
+                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.5] },
+                    0.3,
+                    0.0
+                  ]
+                }
+              },
+              {
+                "type": "sphere",
+                "params": { "r": 0.8, "color": [1.0, 0.3, 0.8] },
+                "transform": {
+                  "translate": [
+                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, -0.5] },
+                    -0.3,
+                    0.0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Box and Torus",
+        subtitle: "CSG subtraction",
+        json: {
+          "version": "1.0",
+          "root": {
+            "type": "subtract",
+            "children": [
+              {
+                "type": "box",
+                "params": { "size": [1.5, 1.5, 1.5], "color": [0.9, 0.6, 0.3] }
+              },
+              {
+                "type": "torus",
+                "params": { "major": 1.0, "minor": 0.3, "color": [0.2, 0.2, 0.2] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Space Invaders (Template)",
+        subtitle: "Using defs/refs for instancing",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "invader": {
+              "type": "subtract",
+              "children": [
+                {
+                  "type": "box",
+                  "params": { "size": [0.5, 0.4, 0.3] }
+                },
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.1 },
+                  "transform": { "translate": [-0.12, 0.08, 0.2] }
+                },
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.1 },
+                  "transform": { "translate": [0.12, 0.08, 0.2] }
+                }
+              ]
+            }
+          },
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [-1.5, 0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [0.0, 0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [1.5, 0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [-1.5, -0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [0.0, -0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [1.5, -0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "Animated Invaders",
+        subtitle: "Template reuse with time-based animation",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "invader": {
+              "type": "subtract",
+              "children": [
+                {
+                  "type": "box",
+                  "params": { "size": [0.5, 0.4, 0.3] }
+                },
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.1 },
+                  "transform": { "translate": [-0.12, 0.08, 0.2] }
+                },
+                {
+                  "type": "sphere",
+                  "params": { "r": 0.1 },
+                  "transform": { "translate": [0.12, 0.08, 0.2] }
+                }
+              ]
+            }
+          },
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      {
+                        "expr": "add",
+                        "args": [
+                          -1.5,
+                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }
+                        ]
+                      },
+                      0.6,
+                      0.0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      0.0,
+                      {
+                        "expr": "add",
+                        "args": [
+                          0.6,
+                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1.0] }] }, 0.2] }
+                        ]
+                      },
+                      0.0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.0, 1.0, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      {
+                        "expr": "add",
+                        "args": [
+                          1.5,
+                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }
+                        ]
+                      },
+                      0.6,
+                      0.0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [-1.5, -0.6, 0.0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      {
+                        "expr": "mul",
+                        "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3]
+                      },
+                      -0.6,
+                      0.0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      1.5,
+                      {
+                        "expr": "add",
+                        "args": [
+                          -0.6,
+                          { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 3.0] }] }, 0.2] }
+                        ]
+                      },
+                      0.0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ];
+
+    // State
+    let currentDemo = 0;
+    let renderer = null;
+
+    function init() {
+      try {
+        const canvas = document.getElementById('canvas');
+        renderer = new SimpleRaymarcher(canvas);
+
+        // Create navigation dots
+        const nav = document.getElementById('nav');
+        demos.forEach((demo, i) => {
+          const dot = document.createElement('div');
+          dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+          dot.addEventListener('click', () => switchDemo(i));
+          nav.appendChild(dot);
+        });
+
+        // Load first demo
+        switchDemo(0);
+
+        // Render loop
+        function renderLoop() {
+          renderer.render();
+          requestAnimationFrame(renderLoop);
+        }
+        renderLoop();
+
+        // Hide loading
+        document.querySelector('.loading').style.display = 'none';
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight' || e.key === ' ') {
+            e.preventDefault();
+            switchDemo((currentDemo + 1) % demos.length);
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            switchDemo((currentDemo - 1 + demos.length) % demos.length);
+          }
+        });
+
+        console.log('✅ JSON demos loaded');
+        console.log(`${demos.length} demos available`);
+
+      } catch (error) {
+        console.error('❌ Initialization failed:', error);
+        showError(error);
+      }
+    }
+
+    function switchDemo(index) {
+      try {
+        currentDemo = index;
+        const demo = demos[index];
+
+        // Update UI
+        document.getElementById('title').textContent = demo.title;
+        document.getElementById('subtitle').textContent = demo.subtitle;
+
+        // Update nav dots
+        document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+          dot.classList.toggle('active', i === index);
+        });
+
+        console.log(`\n📦 Loading demo ${index + 1}/${demos.length}: ${demo.title}`);
+        console.log('JSON scene:', demo.json);
+
+        // Parse JSON to IR
+        const scene = loadJsonScene(demo.json);
+        console.log('✅ Scene parsed:', scene);
+
+        // Generate GLSL
+        const glslCode = generateGlslFromJson(scene);
+        console.log('✅ GLSL generated, length:', glslCode.length);
+        console.log('GLSL preview:\n', glslCode.substring(0, 500) + '...\n');
+
+        // Update renderer
+        renderer.updateScene(glslCode);
+
+        console.log('✅ Demo loaded successfully');
+
+      } catch (error) {
+        console.error('❌ Failed to switch demo:', error);
+        console.error('Stack:', error.stack);
+        showError(error);
+      }
+    }
+
+    function showError(error) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error';
+      errorDiv.textContent = `Error: ${error.message}\n\nStack:\n${error.stack}`;
+      document.body.appendChild(errorDiv);
+    }
+
+    init();
+  </script>
+</body>
+</html>
