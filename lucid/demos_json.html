@@ -924,6 +924,130 @@
             }
           }
         }
+      },
+
+      {
+        title: "Distance Field Invaders",
+        subtitle: "Detailed invaders with body parts",
+        json: {
+          "version": "1.0",
+          "defs": {
+            "invader": {
+              "type": "subtract",
+              "children": [
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
+                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
+                  ]
+                },
+                {
+                  "type": "union",
+                  "children": [
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
+                    { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
+                  ]
+                }
+              ]
+            }
+          },
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "material",
+                "params": { "color": [0, 1, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      { "expr": "add", "args": [-1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
+                      0.6,
+                      0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0, 1, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      0,
+                      { "expr": "add", "args": [0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1] }] }, 0.2] }] },
+                      0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0, 1, 0.5] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
+                      0.6,
+                      0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": { "translate": [-1.5, -0.6, 0] },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] },
+                      -0.6,
+                      0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1, 0.3, 0.8] },
+                "child": {
+                  "type": "transform",
+                  "transform": {
+                    "translate": [
+                      1.5,
+                      { "expr": "add", "args": [-0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 3] }] }, 0.2] }] },
+                      0
+                    ]
+                  },
+                  "child": { "type": "ref", "id": "invader" }
+                }
+              }
+            ]
+          }
+        }
       }
     ];
 
