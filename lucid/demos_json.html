@@ -611,6 +611,10 @@
         <span class="debug-label">Camera Distance</span>
         <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;">
       </div>
+      <div class="debug-row" style="border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.75rem;">
+        <span class="debug-label">Version</span>
+        <span id="version-display" style="font-size: 0.75rem; color: var(--text-dim); font-family: monospace;"></span>
+      </div>
     </div>
   </div>
 
@@ -625,6 +629,13 @@
     import { SimpleRaymarcher } from './ui/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
+
+    // ============================================
+    // VERSION INFO
+    // ============================================
+    // Best practice: Update VERSION on releases, tag with: git tag v0.2.0
+    const VERSION = '0.2.0';
+    const BUILD_DATE = '2025-11-28';
 
     // ============================================
     // DEMO TEMPLATES
@@ -662,7 +673,7 @@
             "children": [
               {
                 "type": "sphere",
-                "params": { "r": 0.8, "color": [0.3, 0.8, 1.0] },
+                "params": { "r": 0.8, "color": [1.0, 0.7, 0.2] },
                 "transform": {
                   "translate": [
                     { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.5] },
@@ -673,7 +684,7 @@
               },
               {
                 "type": "sphere",
-                "params": { "r": 0.8, "color": [1.0, 0.3, 0.8] },
+                "params": { "r": 0.8, "color": [0.5, 0.2, 1.0] },
                 "transform": {
                   "translate": [
                     { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, -0.5] },
@@ -990,7 +1001,10 @@
         // Setup event listeners
         setupEventListeners();
 
-        console.log('Lucid JSON Demos initialized');
+        // Display version
+        $('version-display').textContent = `v${VERSION} (${BUILD_DATE})`;
+
+        console.log(`Lucid JSON Demos v${VERSION} initialized`);
         console.log(`${demos.length} demos available`);
 
       } catch (error) {
