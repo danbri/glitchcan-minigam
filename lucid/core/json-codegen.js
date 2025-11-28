@@ -649,24 +649,26 @@ function applyTransform(pVar, transform, ctx) {
     result = `(${result} - ${t})`;
   }
 
-  // Apply rotation (Euler angles in radians: [rx, ry, rz])
-  // Rotation order: Z, then Y, then X (common convention)
+  // Apply rotation (Euler angles in DEGREES: [rx, ry, rz])
+  // Converted to radians for GLSL. Rotation order: Z, then Y, then X
   if (transform.rotate) {
     const rot = transform.rotate;
     // Handle both static and expression-based rotations
     if (rot.type === 'array' && rot.values) {
-      const rx = valueToGlsl(rot.values[0], ctx);
-      const ry = valueToGlsl(rot.values[1], ctx);
-      const rz = valueToGlsl(rot.values[2], ctx);
+      // Expression-based rotation - wrap in radians conversion
+      const rx = wrapDegreesToRadians(valueToGlsl(rot.values[0], ctx));
+      const ry = wrapDegreesToRadians(valueToGlsl(rot.values[1], ctx));
+      const rz = wrapDegreesToRadians(valueToGlsl(rot.values[2], ctx));
       // Apply rotations in ZYX order
       result = `rotZ(${result}, ${rz})`;
       result = `rotY(${result}, ${ry})`;
       result = `rotX(${result}, ${rx})`;
     } else if (Array.isArray(rot)) {
-      // Static rotation values
-      const rx = valueToGlsl({ type: 'const', value: rot[0] || 0 }, ctx);
-      const ry = valueToGlsl({ type: 'const', value: rot[1] || 0 }, ctx);
-      const rz = valueToGlsl({ type: 'const', value: rot[2] || 0 }, ctx);
+      // Static rotation values - convert degrees to radians at compile time
+      const DEG2RAD = Math.PI / 180;
+      const rx = ((rot[0] || 0) * DEG2RAD).toFixed(6);
+      const ry = ((rot[1] || 0) * DEG2RAD).toFixed(6);
+      const rz = ((rot[2] || 0) * DEG2RAD).toFixed(6);
       result = `rotZ(${result}, ${rz})`;
       result = `rotY(${result}, ${ry})`;
       result = `rotX(${result}, ${rx})`;
@@ -676,6 +678,15 @@ function applyTransform(pVar, transform, ctx) {
   // Apply scale (TODO: implement)
 
   return result;
+}
+
+/**
+ * Wrap a GLSL expression with degrees-to-radians conversion
+ */
+function wrapDegreesToRadians(glslExpr) {
+  // If it's a constant 0, skip the conversion
+  if (glslExpr === '0.0' || glslExpr === '0') return '0.0';
+  return `(${glslExpr} * 0.017453)`;  // π/180 ≈ 0.017453
 }
 
 /**
