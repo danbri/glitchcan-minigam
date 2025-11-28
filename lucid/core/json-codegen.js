@@ -175,10 +175,18 @@ function chainedMax(values) {
  * Generate union - creates helper function, returns call expression
  */
 function generateUnion(node, ctx) {
-  const children = node.children || [];
+  let children = node.children || [];
 
   if (children.length === 0) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Propagate node's transform to all children
+  if (node.transform) {
+    children = children.map(child => ({
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    }));
   }
 
   if (children.length === 1) {
@@ -215,10 +223,18 @@ ${childAssignments}
  * Generate subtract - creates helper function, returns call expression
  */
 function generateSubtract(node, ctx) {
-  const children = node.children || [];
+  let children = node.children || [];
 
   if (children.length === 0) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Propagate node's transform to all children
+  if (node.transform) {
+    children = children.map(child => ({
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    }));
   }
 
   if (children.length === 1) {
@@ -250,10 +266,18 @@ ${body}  return base;
  * Generate intersect - creates helper function, returns call expression
  */
 function generateIntersect(node, ctx) {
-  const children = node.children || [];
+  let children = node.children || [];
 
   if (children.length === 0) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Propagate node's transform to all children
+  if (node.transform) {
+    children = children.map(child => ({
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    }));
   }
 
   if (children.length === 1) {
@@ -287,11 +311,19 @@ ${childAssignments}
  * Generate smooth union - creates helper function, returns call expression
  */
 function generateSmoothUnion(node, ctx) {
-  const children = node.children || [];
+  let children = node.children || [];
   const k = valueToGlsl(node.k || { type: 'const', value: 0.1 }, ctx);
 
   if (children.length === 0) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Propagate node's transform to all children
+  if (node.transform) {
+    children = children.map(child => ({
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    }));
   }
 
   if (children.length === 1) {
