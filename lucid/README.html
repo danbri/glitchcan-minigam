@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucid SDF System - Documentation</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-dim: #8b949e;
+      --accent: #22d3ee;
+      --accent-alt: #f472b6;
+      --code-bg: #1c2128;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+    h2 {
+      font-size: 1.4rem;
+      margin: 2rem 0 1rem;
+      color: var(--accent-alt);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.5rem;
+      color: var(--text);
+    }
+    p { margin-bottom: 1rem; }
+    .subtitle {
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    code {
+      background: var(--code-bg);
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    .tag {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .tag.alt { background: var(--accent-alt); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+    th {
+      background: var(--card-bg);
+      color: var(--accent);
+    }
+    ul, ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    li { margin-bottom: 0.5rem; }
+    .demo-link {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .demo-link:hover {
+      text-decoration: none;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Lucid SDF System</h1>
+<p class="subtitle">WebGL Raymarching with JSON-defined Signed Distance Function scenes</p>
+
+<div class="card">
+  <h3>Quick Links</h3>
+  <a href="demos_json.html" class="demo-link">JSON Demos Viewer</a>
+  <a href="demos.html" class="demo-link">DSL Editor</a>
+  <a href="index.html" class="demo-link">Full Raymarcher App</a>
+</div>
+
+<h2>Architecture Overview</h2>
+
+<p>Lucid is a modular SDF (Signed Distance Function) rendering system for creating 3D graphics using raymarching in WebGL fragment shaders. The system supports multiple input formats that compile to GLSL.</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>JSON Format</h3>
+    <p>Declarative scene description in JSON. Best for serialization, interchange, and programmatic generation.</p>
+    <code>.sdf.json</code> files
+  </div>
+  <div class="card">
+    <h3>DSL Format</h3>
+    <p>Human-friendly text DSL for rapid prototyping and manual scene authoring.</p>
+    <code>sphere(r:1.0)</code>
+  </div>
+  <div class="card">
+    <h3>GLSL Output</h3>
+    <p>Generated shader code compiled by WebGL. Uses <code>g_df_scene(vec3 p)</code> as entry point.</p>
+  </div>
+</div>
+
+<h2>JSON Scene Format</h2>
+
+<h3>Top-Level Structure</h3>
+<pre><code>{
+  "version": "1.0",
+  "defs": {
+    "myTemplate": { /* reusable node definition */ }
+  },
+  "root": { /* main scene node */ }
+}</code></pre>
+
+<h3>Node Types</h3>
+
+<table>
+  <tr>
+    <th>Type</th>
+    <th>Description</th>
+    <th>Key Properties</th>
+  </tr>
+  <tr>
+    <td><code>sphere</code></td>
+    <td>SDF sphere primitive</td>
+    <td><code>params.r</code> (radius), <code>params.color</code></td>
+  </tr>
+  <tr>
+    <td><code>box</code></td>
+    <td>SDF box primitive</td>
+    <td><code>params.size</code> (vec3)</td>
+  </tr>
+  <tr>
+    <td><code>torus</code></td>
+    <td>SDF torus primitive</td>
+    <td><code>params.major</code>, <code>params.minor</code></td>
+  </tr>
+  <tr>
+    <td><code>cylinder</code></td>
+    <td>SDF cylinder primitive</td>
+    <td><code>params.h</code> (height), <code>params.r</code> (radius)</td>
+  </tr>
+  <tr>
+    <td><code>union</code></td>
+    <td>CSG union of children</td>
+    <td><code>children</code> array</td>
+  </tr>
+  <tr>
+    <td><code>subtract</code></td>
+    <td>CSG subtraction</td>
+    <td><code>children</code> (first - rest)</td>
+  </tr>
+  <tr>
+    <td><code>intersect</code></td>
+    <td>CSG intersection</td>
+    <td><code>children</code> array</td>
+  </tr>
+  <tr>
+    <td><code>smoothUnion</code></td>
+    <td>Smooth blend union</td>
+    <td><code>children</code>, <code>k</code> (smoothness)</td>
+  </tr>
+  <tr>
+    <td><code>transform</code></td>
+    <td>Position/rotate/scale wrapper</td>
+    <td><code>transform</code>, <code>child</code></td>
+  </tr>
+  <tr>
+    <td><code>material</code></td>
+    <td>Color override wrapper</td>
+    <td><code>params.color</code>, <code>child</code></td>
+  </tr>
+  <tr>
+    <td><code>ref</code></td>
+    <td>Reference to a <code>defs</code> template</td>
+    <td><code>id</code> (name of def)</td>
+  </tr>
+</table>
+
+<h3>Value Types</h3>
+
+<pre><code>// Constant number
+1.0
+
+// Array (for vec2, vec3, vec4)
+[0.4, 0.8, 1.0]
+
+// Variable reference (becomes uniform)
+{ "var": "time" }
+
+// Expression tree
+{
+  "expr": "add",
+  "args": [
+    1.0,
+    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "var": "time" }] }] }
+  ]
+}</code></pre>
+
+<h3>Expression Operations</h3>
+
+<table>
+  <tr><th>Op</th><th>Args</th><th>Description</th></tr>
+  <tr><td><code>add</code></td><td>2+</td><td>Sum of arguments</td></tr>
+  <tr><td><code>sub</code></td><td>2</td><td>a - b</td></tr>
+  <tr><td><code>mul</code></td><td>2+</td><td>Product of arguments</td></tr>
+  <tr><td><code>div</code></td><td>2</td><td>a / b</td></tr>
+  <tr><td><code>sin</code></td><td>1</td><td>Sine function</td></tr>
+  <tr><td><code>cos</code></td><td>1</td><td>Cosine function</td></tr>
+  <tr><td><code>min</code></td><td>2+</td><td>Minimum value</td></tr>
+  <tr><td><code>max</code></td><td>2+</td><td>Maximum value</td></tr>
+  <tr><td><code>neg</code></td><td>1</td><td>Negate</td></tr>
+  <tr><td><code>clamp</code></td><td>3</td><td>Clamp(val, min, max)</td></tr>
+</table>
+
+<h3>Transform System</h3>
+
+<pre><code>{
+  "transform": {
+    "translate": [1.0, 2.0, 0.0],
+    "rotate": [0, 45, 0],        // degrees (TODO: implement)
+    "scale": [1, 1, 1]           // uniform or per-axis (TODO: implement)
+  }
+}</code></pre>
+
+<h2>Template System (defs/ref)</h2>
+
+<p>The <code>defs</code> system enables reusable components. Define a shape once, reference it many times with different transforms or materials.</p>
+
+<pre><code>{
+  "version": "1.0",
+  "defs": {
+    "invader": {
+      "type": "subtract",
+      "children": [
+        { "type": "box", "params": { "size": [0.5, 0.4, 0.3] } },
+        { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [-0.12, 0.08, 0.2] } },
+        { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0.12, 0.08, 0.2] } }
+      ]
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "material",
+        "params": { "color": [0.0, 1.0, 0.5] },
+        "child": {
+          "type": "transform",
+          "transform": { "translate": [-1.5, 0.6, 0.0] },
+          "child": { "type": "ref", "id": "invader" }
+        }
+      },
+      {
+        "type": "material",
+        "params": { "color": [1.0, 0.3, 0.8] },
+        "child": {
+          "type": "transform",
+          "transform": { "translate": [1.5, -0.6, 0.0] },
+          "child": { "type": "ref", "id": "invader" }
+        }
+      }
+    ]
+  }
+}</code></pre>
+
+<h2>File Structure</h2>
+
+<pre><code>lucid/
+├── README.html           # This documentation
+├── demos_json.html       # JSON demos viewer with editor
+├── demos.html            # DSL editor interface
+├── index.html            # Full raymarcher app
+├── invader.sdf.json      # Example JSON scene file
+│
+├── core/
+│   ├── index.js          # Module exports
+│   ├── app-context.js    # Global state management
+│   ├── dsl-parser.js     # DSL text → Scene IR
+│   ├── glsl-codegen.js   # Scene IR → GLSL (from DSL)
+│   ├── json-loader.js    # JSON → Scene IR
+│   ├── json-codegen.js   # Scene IR → GLSL (from JSON)
+│   └── default-scene.js  # Example scenes
+│
+├── ui/
+│   ├── raymarcher.js     # SimpleRaymarcher WebGL class
+│   └── demo-viewer.js    # Demo gallery UI
+│
+└── components.js         # Web component registry</code></pre>
+
+<h2>Code Pipeline</h2>
+
+<div class="card">
+<pre><code>JSON File (.sdf.json)
+       ↓
+ loadJsonScene()        [core/json-loader.js]
+       ↓
+ Internal IR (Scene Graph)
+       ↓
+ generateGlslFromJson() [core/json-codegen.js]
+       ↓
+ GLSL Fragment Shader
+       ↓
+ SimpleRaymarcher       [ui/raymarcher.js]
+       ↓
+ WebGL Canvas Rendering</code></pre>
+</div>
+
+<h2>Usage Examples</h2>
+
+<h3>Loading a JSON Scene Programmatically</h3>
+<pre><code>import { SimpleRaymarcher } from './ui/raymarcher.js';
+import { loadJsonScene } from './core/json-loader.js';
+import { generateGlslFromJson } from './core/json-codegen.js';
+
+const canvas = document.getElementById('canvas');
+const renderer = new SimpleRaymarcher(canvas);
+
+// Load JSON scene
+const json = await fetch('invader.sdf.json').then(r => r.json());
+const scene = loadJsonScene(json);
+const glsl = generateGlslFromJson(scene);
+
+// Render
+renderer.updateScene(glsl);
+
+function animate() {
+  renderer.render();
+  requestAnimationFrame(animate);
+}
+animate();</code></pre>
+
+<h3>Creating Animated Scenes</h3>
+<pre><code>{
+  "type": "sphere",
+  "params": {
+    "r": {
+      "expr": "add",
+      "args": [
+        1.0,
+        { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "var": "time" }] }] }
+      ]
+    },
+    "color": [0.4, 0.8, 1.0]
+  }
+}</code></pre>
+
+<h2>Design Considerations</h2>
+
+<h3>Mobile First</h3>
+<ul>
+  <li>Touch-friendly controls with large tap targets</li>
+  <li>Responsive layouts that work on small screens</li>
+  <li>WebKit/iOS compatible (tested on Safari)</li>
+  <li>Performance-conscious shader complexity</li>
+</ul>
+
+<h3>Future: WebGPU</h3>
+<ul>
+  <li>Current implementation uses WebGL 2.0</li>
+  <li>Architecture designed for WebGPU migration</li>
+  <li>Shader generation layer abstracts GPU API</li>
+</ul>
+
+<h2>Known Limitations</h2>
+
+<ul>
+  <li><span class="tag alt">TODO</span> Rotation transform not yet implemented in codegen</li>
+  <li><span class="tag alt">TODO</span> Scale transform not yet implemented</li>
+  <li><span class="tag alt">TODO</span> Parameter overrides in refs not fully implemented</li>
+  <li>Smooth operations (smoothSubtract, smoothIntersect) partially implemented</li>
+  <li>No capsule, ellipsoid, plane primitives in codegen yet</li>
+</ul>
+
+<h2>Related Documentation</h2>
+
+<ul>
+  <li><a href="ASSESSMENT.md">ASSESSMENT.md</a> - Architecture deep-dive</li>
+  <li><a href="COMPONENTS.md">COMPONENTS.md</a> - Web component API</li>
+  <li><a href="TESTING-STRATEGY.md">TESTING-STRATEGY.md</a> - Testing approach</li>
+  <li><a href="SCOPE-AND-GAMES.md">SCOPE-AND-GAMES.md</a> - Project scope and game designs</li>
+</ul>
+
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+<p style="color: var(--text-dim); font-size: 0.9rem;">
+  Lucid SDF System - Part of the <a href="../index.html">Glitchcan Minigames</a> project.
+</p>
+
+</body>
+</html>
