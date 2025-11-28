@@ -51,6 +51,22 @@ A small animated Space Invaders scene is required as a provocation test for the 
 - Avoid subtract nodes applied to large unions
 - Prefer few large primitives over many micro-voxels
 
+### ⚠️ Performance Warning: Voxel Art
+**DO NOT** create voxel-style models with many small boxes. Example of what NOT to do:
+```json
+{
+  "type": "subtract",
+  "children": [
+    { "type": "union", "children": [ /* 17 voxel boxes */ ] },
+    { "type": "sphere" },  // eyes
+    { "type": "sphere" }
+  ]
+}
+```
+This creates O(n) SDF evaluations per ray step × ~100 steps × HD resolution = GPU meltdown.
+
+**Instead**: Use 2-5 large primitives with CSG operations. The simple invader (box minus 2 spheres for eyes) works well.
+
 ### Space Invader Test Requirements
 - Reusable invader definition
 - At least 6 simultaneous invader instances

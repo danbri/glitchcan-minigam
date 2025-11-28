@@ -202,25 +202,22 @@ function generateUnion(node, ctx) {
     return `  vec4 c${i} = ${childExpr};`;
   }).join('\n');
 
-  // Chain min() calls for GLSL compatibility (only 2 args per call)
-  const distValues = children.map((_, i) => `c${i}.x`);
-  const minOp = chainedMin(distValues);
-
-  // Select color from closest child (smallest distance)
+  // Select color from closest child using sequential comparisons (O(n) code size)
+  // Avoids exponential growth from nested ternaries
   let colorSelect;
   if (children.length === 2) {
-    colorSelect = 'c0.x < c1.x ? c0 : c1';
+    colorSelect = '\n  return c0.x < c1.x ? c0 : c1;';
   } else {
-    // Chain comparisons for N children
-    colorSelect = 'c0';
+    // Sequential comparisons - each line is O(1), total O(n)
+    colorSelect = '\n  vec4 nearest = c0;';
     for (let i = 1; i < children.length; i++) {
-      colorSelect = `(${colorSelect}).x < c${i}.x ? (${colorSelect}) : c${i}`;
+      colorSelect += `\n  nearest = nearest.x < c${i}.x ? nearest : c${i};`;
     }
+    colorSelect += '\n  return nearest;';
   }
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-${childAssignments}
-  return ${colorSelect};
+${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -301,25 +298,22 @@ function generateIntersect(node, ctx) {
     return `  vec4 c${i} = ${childExpr};`;
   }).join('\n');
 
-  // Chain max() calls for GLSL compatibility (only 2 args per call)
-  const distValues = children.map((_, i) => `c${i}.x`);
-  const maxOp = chainedMax(distValues);
-
-  // Select color from child with largest distance (determines intersection surface)
+  // Select color from child with largest distance using sequential comparisons (O(n) code size)
+  // Avoids exponential growth from nested ternaries
   let colorSelect;
   if (children.length === 2) {
-    colorSelect = 'c0.x > c1.x ? c0 : c1';
+    colorSelect = '\n  return c0.x > c1.x ? c0 : c1;';
   } else {
-    // Chain comparisons for N children
-    colorSelect = 'c0';
+    // Sequential comparisons - each line is O(1), total O(n)
+    colorSelect = '\n  vec4 farthest = c0;';
     for (let i = 1; i < children.length; i++) {
-      colorSelect = `(${colorSelect}).x > c${i}.x ? (${colorSelect}) : c${i}`;
+      colorSelect += `\n  farthest = farthest.x > c${i}.x ? farthest : c${i};`;
     }
+    colorSelect += '\n  return farthest;';
   }
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
-${childAssignments}
-  return ${colorSelect};
+${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
