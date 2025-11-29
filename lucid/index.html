@@ -891,6 +891,10 @@
         <div class="toggle active" id="toggle-edges"></div>
       </div>
       <div class="debug-row">
+        <span class="debug-label">Show CSG Cutters</span>
+        <div class="toggle" id="toggle-cutters" title="Debug: Show subtract cutters as visible shapes"></div>
+      </div>
+      <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
         <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;">
       </div>
@@ -2422,6 +2426,7 @@
     const debugSettings = {
       volumeRender: false,
       showGround: true,
+      showCutters: false,
       cameraDistance: 4
     };
 
@@ -2582,7 +2587,7 @@
 
     function renderJson(json) {
       const scene = loadJsonScene(json);
-      const glsl = generateGlslFromJson(scene);
+      const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       renderer.updateScene(glsl);
     }
 
@@ -3361,6 +3366,15 @@
       $('toggle-edges').addEventListener('click', function() {
         this.classList.toggle('active');
         renderer.showEdges = this.classList.contains('active');
+      });
+
+      // Show CSG cutters toggle (debug mode)
+      $('toggle-cutters').addEventListener('click', function() {
+        this.classList.toggle('active');
+        debugSettings.showCutters = this.classList.contains('active');
+        // Re-render with updated codegen options
+        const json = demos[currentDemo]?.json;
+        if (json) renderJson(json);
       });
 
       // Camera distance slider
