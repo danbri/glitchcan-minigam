@@ -2401,6 +2401,31 @@
             ]
           }
         }
+      },
+
+      {
+        title: "🧬 Custom GLSL",
+        subtitle: "Raw GLSL expression (base64 encoded)",
+        json: {
+          "version": "1.0",
+          "notes": "customExpr node allows raw GLSL stored as base64. The 'glsl' field decodes to a vec4(dist, r, g, b) expression. Use 'p' for position, 'u_time' for animation. Encode with: echo -n 'vec4(...)' | base64",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "customExpr",
+                "notes": "Gyroid surface - a triply periodic minimal surface",
+                "glsl": "dmVjNChhYnMoc2luKHAueCozLjE0KSpjb3MocC55KjMuMTQpICsgc2luKHAueSozLjE0KSpjb3MocC56KjMuMTQpICsgc2luKHAueiozLjE0KSpjb3MocC54KjMuMTQpKSAtIDAuMywgMC45LCAwLjQsIDAuNyk="
+              },
+              {
+                "type": "customExpr",
+                "notes": "Pulsing sphere using u_time",
+                "glsl": "dmVjNChsZW5ndGgocCkgLSAwLjggLSAwLjIgKiBzaW4odV90aW1lICogMi4wKSwgMC4yLCAwLjgsIDEuMCk=",
+                "transform": { "translate": [3, 0, 0] }
+              }
+            ]
+          }
+        }
       }
     ];
 
