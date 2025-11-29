@@ -21,7 +21,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- iOS Safari specific -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
   <title>SDF JSON Demos</title>
   <style>
     :root {
@@ -50,6 +54,32 @@
       overflow: hidden;
       height: 100vh;
       height: 100dvh;
+      /* iOS WebKit UI suppression */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* iOS-specific: Suppress select all, resize handles, etc. */
+    *:not(input):not(textarea) {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Allow text selection in editor areas */
+    .json-textarea,
+    input[type="text"],
+    input[type="url"] {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+
+    /* Prevent iOS keyboard zoom on inputs */
+    input, textarea, select {
+      font-size: 16px !important;
     }
 
     /* Main Layout */
@@ -2813,6 +2843,17 @@
     // DOM REFERENCES
     // ============================================
     const $ = id => document.getElementById(id);
+    // Safe event listener helper - won't throw if element missing
+    const addClick = (id, handler) => {
+      const el = $(id);
+      if (el) el.addEventListener('click', handler);
+      else console.warn(`Element #${id} not found`);
+    };
+    const addEvent = (id, event, handler) => {
+      const el = $(id);
+      if (el) el.addEventListener(event, handler);
+      else console.warn(`Element #${id} not found for ${event}`);
+    };
     const loadingEl = $('loading');
     const appEl = $('app');
     const titleEl = $('title');
@@ -4026,39 +4067,41 @@
     // DEBUG PANEL
     // ============================================
     function setupDebugPanel() {
+      try {
       // Close button inside debug panel
-      $('btn-debug-close').addEventListener('click', () => {
+      addClick('btn-debug-close', () => {
         debugOpen = false;
         debugPanel.classList.remove('open');
         $('btn-debug').classList.remove('active');
       });
 
       // Volume render toggle
-      $('toggle-volume').addEventListener('click', function() {
+      addClick('toggle-volume', function() {
         this.classList.toggle('active');
         debugSettings.volumeRender = this.classList.contains('active');
         renderer.volumeRender = debugSettings.volumeRender;
         // Show/hide volume controls
-        $('volume-controls').style.display = debugSettings.volumeRender ? 'flex' : 'none';
+        const vc = $('volume-controls');
+        if (vc) vc.style.display = debugSettings.volumeRender ? 'flex' : 'none';
         // Need to recompile shader when switching modes
         renderer.compileShaders();
       });
 
       // Ground plane toggle
-      $('toggle-ground').addEventListener('click', function() {
+      addClick('toggle-ground', function() {
         this.classList.toggle('active');
         debugSettings.showGround = this.classList.contains('active');
         renderer.showGroundPlane = debugSettings.showGround;
       });
 
       // Edge toggle
-      $('toggle-edges').addEventListener('click', function() {
+      addClick('toggle-edges', function() {
         this.classList.toggle('active');
         renderer.showEdges = this.classList.contains('active');
       });
 
       // Show CSG cutters toggle (debug mode)
-      $('toggle-cutters').addEventListener('click', function() {
+      addClick('toggle-cutters', function() {
         this.classList.toggle('active');
         debugSettings.showCutters = this.classList.contains('active');
         // Re-render with updated codegen options
@@ -4067,119 +4110,133 @@
       });
 
       // Axes toggle
-      $('toggle-axes').addEventListener('click', function() {
+      addClick('toggle-axes', function() {
         this.classList.toggle('active');
         debugSettings.showAxes = this.classList.contains('active');
         renderer.showAxes = debugSettings.showAxes;
       });
 
       // Camera distance slider
-      $('slider-distance').addEventListener('input', function() {
+      addEvent('slider-distance', 'input', function() {
         debugSettings.cameraDistance = parseFloat(this.value);
         renderer.camera.distance = debugSettings.cameraDistance;
       });
 
       // Volume step size slider
-      $('slider-step-size').addEventListener('input', function() {
+      addEvent('slider-step-size', 'input', function() {
         const val = parseFloat(this.value);
         renderer.volumeStepSize = val;
-        $('step-size-val').textContent = val.toFixed(2);
+        const el = $('step-size-val');
+        if (el) el.textContent = val.toFixed(2);
       });
 
       // Volume density slider
-      $('slider-density').addEventListener('input', function() {
+      addEvent('slider-density', 'input', function() {
         const val = parseFloat(this.value);
         renderer.volumeDensity = val;
-        $('density-val').textContent = val;
+        const el = $('density-val');
+        if (el) el.textContent = val;
       });
 
       // Volume mode select
-      $('select-volume-mode').addEventListener('change', function() {
+      addEvent('select-volume-mode', 'change', function() {
         renderer.volumeMode = parseInt(this.value);
         renderer.compileShaders();
       });
 
       // Volume color mode select
-      $('select-volume-color').addEventListener('change', function() {
+      addEvent('select-volume-color', 'change', function() {
         renderer.volumeColorMode = parseInt(this.value);
         renderer.compileShaders();
       });
 
       // Edge focus slider
-      $('slider-edge-focus').addEventListener('input', function() {
+      addEvent('slider-edge-focus', 'input', function() {
         const val = parseFloat(this.value);
         renderer.edgeFocus = val;
-        $('edge-focus-val').textContent = val.toFixed(2);
+        const el = $('edge-focus-val');
+        if (el) el.textContent = val.toFixed(2);
       });
 
       // Composite slider
-      $('slider-composite').addEventListener('input', function() {
+      addEvent('slider-composite', 'input', function() {
         const val = parseFloat(this.value);
         renderer.volumeComposite = val;
-        $('composite-val').textContent = val.toFixed(2);
+        const el = $('composite-val');
+        if (el) el.textContent = val.toFixed(2);
       });
+      } catch (e) { console.error('setupDebugPanel error:', e); }
     }
 
     // ============================================
     // LIGHTING PANEL
     // ============================================
     function setupLightingPanel() {
+      try {
       // Close button
-      $('btn-lighting-close').addEventListener('click', () => {
+      addClick('btn-lighting-close', () => {
         lightingOpen = false;
-        lightingPanel.classList.remove('open');
+        if (lightingPanel) lightingPanel.classList.remove('open');
       });
 
       // Light direction sliders
-      $('slider-light-x').addEventListener('input', function() {
+      addEvent('slider-light-x', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.lightDir[0] = val;
-        $('light-x-val').textContent = val.toFixed(1);
+        const el = $('light-x-val');
+        if (el) el.textContent = val.toFixed(1);
         updateLighting();
       });
 
-      $('slider-light-y').addEventListener('input', function() {
+      addEvent('slider-light-y', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.lightDir[1] = val;
-        $('light-y-val').textContent = val.toFixed(1);
+        const el = $('light-y-val');
+        if (el) el.textContent = val.toFixed(1);
         updateLighting();
       });
 
-      $('slider-light-z').addEventListener('input', function() {
+      addEvent('slider-light-z', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.lightDir[2] = val;
-        $('light-z-val').textContent = val.toFixed(1);
+        const el = $('light-z-val');
+        if (el) el.textContent = val.toFixed(1);
         updateLighting();
       });
 
       // Lighting coefficient sliders
-      $('slider-ambient').addEventListener('input', function() {
+      addEvent('slider-ambient', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.ambient = val;
-        $('ambient-val').textContent = val.toFixed(2);
+        const el = $('ambient-val');
+        if (el) el.textContent = val.toFixed(2);
         updateLighting();
       });
 
-      $('slider-diffuse').addEventListener('input', function() {
+      addEvent('slider-diffuse', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.diffuse = val;
-        $('diffuse-val').textContent = val.toFixed(2);
+        const el = $('diffuse-val');
+        if (el) el.textContent = val.toFixed(2);
         updateLighting();
       });
 
-      $('slider-specular').addEventListener('input', function() {
+      addEvent('slider-specular', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.specular = val;
-        $('specular-val').textContent = val.toFixed(2);
+        const el = $('specular-val');
+        if (el) el.textContent = val.toFixed(2);
         updateLighting();
       });
 
-      $('slider-shininess').addEventListener('input', function() {
+      addEvent('slider-shininess', 'input', function() {
         const val = parseFloat(this.value);
         lightingSettings.shininess = val;
-        $('shininess-val').textContent = val.toFixed(0);
+        const el = $('shininess-val');
+        if (el) el.textContent = val.toFixed(0);
         updateLighting();
       });
+      } catch (e) { console.error('setupLightingPanel error:', e); }
     }
 
     function updateLighting() {
@@ -4192,6 +4249,7 @@
     // EVENT LISTENERS
     // ============================================
     function setupEventListeners() {
+      try {
       // Keyboard navigation
       document.addEventListener('keydown', (e) => {
         if (e.target === jsonEditor) return;
@@ -4266,20 +4324,20 @@
       setupLightingPanel();
 
       // Editor toggle
-      $('btn-editor').addEventListener('click', () => {
+      addClick('btn-editor', () => {
         editorOpen = !editorOpen;
         editorPanel.classList.toggle('open', editorOpen);
         $('btn-editor').classList.toggle('active', editorOpen);
       });
 
       // Auto-rotate toggle
-      $('btn-auto-rotate').addEventListener('click', () => {
+      addClick('btn-auto-rotate', () => {
         autoRotate = !autoRotate;
         $('btn-auto-rotate').classList.toggle('active', autoRotate);
       });
 
       // Animation state toggle (cycles: playing → paused → frozen → playing)
-      $('btn-anim').addEventListener('click', () => {
+      addClick('btn-anim', () => {
         if (animState === 'playing') {
           animState = 'paused';
         } else if (animState === 'paused') {
@@ -4293,7 +4351,7 @@
       });
 
       // Paste & Apply - one click to paste JSON and render
-      $('btn-paste-apply').addEventListener('click', async () => {
+      addClick('btn-paste-apply', async () => {
         try {
           const text = await navigator.clipboard.readText();
           const json = JSON.parse(text);
@@ -4325,7 +4383,7 @@
       });
 
       // Debug panel toggle (from header button)
-      $('btn-debug').addEventListener('click', () => {
+      addClick('btn-debug', () => {
         debugOpen = !debugOpen;
         debugPanel.classList.toggle('open', debugOpen);
         $('btn-debug').classList.toggle('active', debugOpen);
@@ -4333,22 +4391,22 @@
 
       // Tree panel toggle
       const treePanel = $('tree-panel');
-      $('btn-tree').addEventListener('click', () => {
+      addClick('btn-tree', () => {
         treeOpen = !treeOpen;
         if (treeOpen) updateTreeView();
-        treePanel.classList.toggle('open', treeOpen);
+        if (treePanel) treePanel.classList.toggle('open', treeOpen);
         $('btn-tree').classList.toggle('active', treeOpen);
       });
 
-      $('btn-tree-close').addEventListener('click', () => {
+      addClick('btn-tree-close', () => {
         treeOpen = false;
-        treePanel.classList.remove('open');
+        if (treePanel) treePanel.classList.remove('open');
         $('btn-tree').classList.remove('active');
       });
 
       // Tree navigation buttons
-      $('btn-tree-prev').addEventListener('click', navigateTreePrev);
-      $('btn-tree-next').addEventListener('click', navigateTreeNext);
+      addClick('btn-tree-prev', navigateTreePrev);
+      addClick('btn-tree-next', navigateTreeNext);
 
       // Tree slider for numeric value editing
       const treeSlider = $('tree-slider');
@@ -4364,7 +4422,7 @@
       }
 
       // Main menu toggle
-      $('btn-menu').addEventListener('click', () => {
+      addClick('btn-menu', () => {
         menuOpen = !menuOpen;
         mainMenu.classList.toggle('open', menuOpen);
         $('btn-menu').classList.toggle('active', menuOpen);
@@ -4376,7 +4434,7 @@
 
       // Menu items
       // New Demo - create fresh entry in demos list
-      $('menu-new-demo').addEventListener('click', () => {
+      addClick('menu-new-demo', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         $('btn-menu').classList.remove('active');
@@ -4407,27 +4465,27 @@
         showStatus('✨ New demo created! Edit the JSON.', 'success');
       });
 
-      $('menu-load-url').addEventListener('click', () => {
+      addClick('menu-load-url', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         urlModal.classList.add('open');
         urlInput.focus();
       });
 
-      $('menu-load-file').addEventListener('click', () => {
+      addClick('menu-load-file', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         fileInput.click();
       });
 
-      $('menu-lighting').addEventListener('click', () => {
+      addClick('menu-lighting', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         lightingOpen = true;
         lightingPanel.classList.add('open');
       });
 
-      $('menu-settings').addEventListener('click', () => {
+      addClick('menu-settings', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         debugOpen = true;
@@ -4436,27 +4494,27 @@
 
       // About modal
       const aboutModal = $('about-modal');
-      $('menu-about').addEventListener('click', () => {
+      addClick('menu-about', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
         $('btn-menu').classList.remove('active');
         $('about-version').textContent = `v${VERSION} (${BUILD_DATE})`;
-        aboutModal.classList.add('open');
+        if (aboutModal) aboutModal.classList.add('open');
       });
 
-      $('btn-about-close').addEventListener('click', () => {
-        aboutModal.classList.remove('open');
+      addClick('btn-about-close', () => {
+        if (aboutModal) aboutModal.classList.remove('open');
       });
 
       // Close about modal on outside click
-      aboutModal.addEventListener('click', (e) => {
+      if (aboutModal) aboutModal.addEventListener('click', (e) => {
         if (e.target === aboutModal) {
           aboutModal.classList.remove('open');
         }
       });
 
       // Mobile submenu toggle
-      $('menu-demos').addEventListener('click', function(e) {
+      addClick('menu-demos', function(e) {
         if (window.innerWidth <= 768) {
           e.stopPropagation();
           this.classList.toggle('submenu-open');
@@ -4464,87 +4522,89 @@
       });
 
       // Close submenu when clicking elsewhere in menu
-      mainMenu.addEventListener('click', function(e) {
+      if (mainMenu) mainMenu.addEventListener('click', function(e) {
         const menuDemos = $('menu-demos');
-        if (!menuDemos.contains(e.target)) {
+        if (menuDemos && !menuDemos.contains(e.target)) {
           menuDemos.classList.remove('submenu-open');
         }
       });
 
       // Editor actions
-      $('btn-apply').addEventListener('click', applyEditorChanges);
-      $('btn-format').addEventListener('click', formatJson);
-      $('btn-copy').addEventListener('click', copyJson);
-      $('btn-download').addEventListener('click', downloadJson);
+      addClick('btn-apply', applyEditorChanges);
+      addClick('btn-format', formatJson);
+      addClick('btn-copy', copyJson);
+      addClick('btn-download', downloadJson);
 
       // Editor header buttons
-      $('btn-select-all').addEventListener('click', selectAllText);
-      $('btn-cut').addEventListener('click', cutSelection);
-      $('btn-copy-sel').addEventListener('click', copySelection);
-      $('btn-paste').addEventListener('click', pasteFromClipboard);
+      addClick('btn-select-all', selectAllText);
+      addClick('btn-cut', cutSelection);
+      addClick('btn-copy-sel', copySelection);
+      addClick('btn-paste', pasteFromClipboard);
 
       // Scrubber controls
-      $('scrubber-close').addEventListener('click', () => {
+      addClick('scrubber-close', () => {
         hideScrubber();
         treeEditState.path = null; // Clear tree edit state
       });
-      scrubberSlider.addEventListener('input', (e) => {
+      if (scrubberSlider) scrubberSlider.addEventListener('input', (e) => {
         const newValue = parseFloat(e.target.value);
         // Editor scrubber only - tree uses its own slider now
         updateScrubberValue(newValue);
       });
 
       // Detect scalar selection on cursor position change
-      jsonEditor.addEventListener('mouseup', detectScalarSelection);
-      jsonEditor.addEventListener('click', () => {
-        // Small delay to let cursor position settle
-        setTimeout(detectScalarSelection, 10);
-      });
-      jsonEditor.addEventListener('keyup', (e) => {
-        // Check on arrow keys, shift+arrow, or other navigation
-        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
-          detectScalarSelection();
-        }
-      });
+      if (jsonEditor) {
+        jsonEditor.addEventListener('mouseup', detectScalarSelection);
+        jsonEditor.addEventListener('click', () => {
+          // Small delay to let cursor position settle
+          setTimeout(detectScalarSelection, 10);
+        });
+        jsonEditor.addEventListener('keyup', (e) => {
+          // Check on arrow keys, shift+arrow, or other navigation
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            detectScalarSelection();
+          }
+        });
 
-      // Double-click to select number and show scrubber
-      jsonEditor.addEventListener('dblclick', () => {
-        // Small delay to let browser selection complete
-        setTimeout(detectScalarSelection, 10);
-      });
+        // Double-click to select number and show scrubber
+        jsonEditor.addEventListener('dblclick', () => {
+          // Small delay to let browser selection complete
+          setTimeout(detectScalarSelection, 10);
+        });
 
-      // Ctrl+Enter to apply
-      jsonEditor.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-          e.preventDefault();
-          applyEditorChanges();
-        }
-      });
+        // Ctrl+Enter to apply
+        jsonEditor.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            applyEditorChanges();
+          }
+        });
+      }
 
       // URL modal
-      $('btn-modal-cancel').addEventListener('click', () => {
-        urlModal.classList.remove('open');
+      addClick('btn-modal-cancel', () => {
+        if (urlModal) urlModal.classList.remove('open');
       });
 
-      $('btn-modal-load').addEventListener('click', () => {
-        const url = urlInput.value.trim();
+      addClick('btn-modal-load', () => {
+        const url = urlInput?.value?.trim();
         if (url) {
           loadFromUrl(url);
-          urlModal.classList.remove('open');
-          urlInput.value = '';
+          if (urlModal) urlModal.classList.remove('open');
+          if (urlInput) urlInput.value = '';
         }
       });
 
-      urlInput.addEventListener('keydown', (e) => {
+      if (urlInput) urlInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-          $('btn-modal-load').click();
+          $('btn-modal-load')?.click();
         } else if (e.key === 'Escape') {
-          urlModal.classList.remove('open');
+          if (urlModal) urlModal.classList.remove('open');
         }
       });
 
       // File loading
-      fileInput.addEventListener('change', (e) => {
+      if (fileInput) fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
           loadFromFile(e.target.files[0]);
           e.target.value = '';
@@ -4553,12 +4613,13 @@
 
       // Click outside to close panels
       document.addEventListener('click', (e) => {
-        if (menuOpen && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
+        if (menuOpen && mainMenu && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
           menuOpen = false;
           mainMenu.classList.remove('open');
-          $('menu-demos').classList.remove('submenu-open');
+          $('menu-demos')?.classList.remove('submenu-open');
         }
       });
+      } catch (e) { console.error('setupEventListeners error:', e); }
     }
 
     // ============================================
