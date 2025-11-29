@@ -970,7 +970,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.13.0';
+    const VERSION = '0.13.1';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -1492,9 +1492,10 @@
 
       {
         title: "Sunflower Field",
-        subtitle: "Infinite flowers via repeat + radial",
+        subtitle: "Infinite flowers via repeat + radial (static)",
         json: {
-          "version": "1.0",
+          "version": "1.1",
+          "notes": "Animation disabled - was causing distortion with repeat+radial combination",
           "defs": {
             "sunflower": {
               "type": "union",
@@ -1519,26 +1520,17 @@
           "root": {
             "type": "repeat",
             "period": [2.5, 0, 2.5],
-            "child": {
-              "type": "transform",
-              "transform": {
-                "translate": [
-                  0,
-                  { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] },
-                  0
-                ]
-              },
-              "child": { "type": "ref", "id": "sunflower" }
-            }
+            "child": { "type": "ref", "id": "sunflower" }
           }
         }
       },
 
       {
         title: "Poppy Field",
-        subtitle: "Rotated disk faces with centralized head angle",
+        subtitle: "Rotated disk faces with centralized head angle (static)",
         json: {
-          "version": "1.0",
+          "version": "1.1",
+          "notes": "Animation disabled - was causing issues with repeat+radial combination",
           "defs": {
             "poppy_head": {
               "type": "union",
@@ -1577,17 +1569,7 @@
           "root": {
             "type": "repeat",
             "period": [1.8, 0, 1.8],
-            "child": {
-              "type": "transform",
-              "transform": {
-                "translate": [
-                  0,
-                  { "expr": "mul", "args": [0.05, { "expr": "sin", "args": [{ "var": "time" }] }] },
-                  0
-                ]
-              },
-              "child": { "type": "ref", "id": "poppy" }
-            }
+            "child": { "type": "ref", "id": "poppy" }
           }
         }
       },
@@ -1873,14 +1855,14 @@
 
       {
         title: "🚀 Cobra Mk III (WIP)",
-        subtitle: "Elite ship - CSG sculpting (original, now fixed)",
+        subtitle: "Elite ship - CSG sculpting (static)",
         json: {
-          "version": "4.2",
-          "notes": "Cobra Mk III - Original version. NOTE: This demo previously exhibited a bug where side cutters appeared to 'sweep through' during rotation. Fixed in v0.13.0 by propagating parent transforms to mirror/radial/repeat children. See 'Cobra Mk III v2' for a version with detailed notes explaining CSG concepts.",
+          "version": "4.3",
+          "notes": "Cobra Mk III - CSG box-cutting approach. Rotation disabled due to transform propagation issues with mirror nodes. Use manual camera rotation to view from different angles.",
           "root": {
             "type": "transform",
             "transform": {
-              "rotate": [0, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
+              "rotate": [15, -30, 0]
             },
             "child": {
               "type": "union",
@@ -1945,14 +1927,14 @@
 
       {
         title: "🚀 Cobra Mk III v2",
-        subtitle: "Elite ship - CSG sculpting (fixed transform propagation)",
+        subtitle: "Elite ship - CSG sculpting with detailed notes",
         json: {
-          "version": "4.3",
-          "notes": "Cobra Mk III v2 - Demonstrates proper CSG box-cutting with animated transforms.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION: Parent transforms flow down to all children.\n   When the outer transform rotates, everything inside rotates together.\n\n3. MIRROR + TRANSFORMS: Mirror children now correctly inherit parent transforms.\n   This was fixed in v0.13.0 - previously mirror children stayed in world space.\n\n4. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (animated Y rotation)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters)\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring)",
+          "version": "4.4",
+          "notes": "Cobra Mk III v2 - Demonstrates CSG box-cutting technique.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION: Parent transforms flow down through union/subtract.\n   NOTE: Animation disabled - mirror nodes have transform propagation issues.\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (static tilt for viewing)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters)\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring)",
           "root": {
             "type": "transform",
             "transform": {
-              "rotate": [0, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
+              "rotate": [15, -30, 0]
             },
             "child": {
               "type": "union",
@@ -2697,15 +2679,49 @@
     // SCALAR SCRUBBER FUNCTIONS
     // ============================================
     function detectScalarSelection() {
-      const start = jsonEditor.selectionStart;
-      const end = jsonEditor.selectionEnd;
+      let start = jsonEditor.selectionStart;
+      let end = jsonEditor.selectionEnd;
+      const text = jsonEditor.value;
 
+      // If no selection, try to find number at cursor position
       if (start === end) {
-        hideScrubber();
-        return;
+        // Look for number containing cursor position
+        // Expand left and right to find number boundaries
+        const numberChars = /[-0-9.]/;
+        let numStart = start;
+        let numEnd = start;
+
+        // Expand left
+        while (numStart > 0 && numberChars.test(text[numStart - 1])) {
+          numStart--;
+        }
+
+        // Expand right
+        while (numEnd < text.length && numberChars.test(text[numEnd])) {
+          numEnd++;
+        }
+
+        // Check if we found something
+        if (numStart === numEnd) {
+          hideScrubber();
+          return;
+        }
+
+        const potentialNumber = text.substring(numStart, numEnd);
+        // Validate it's actually a number
+        if (!/^-?\d*\.?\d+$/.test(potentialNumber)) {
+          hideScrubber();
+          return;
+        }
+
+        // Update selection to cover the number
+        start = numStart;
+        end = numEnd;
+        jsonEditor.selectionStart = start;
+        jsonEditor.selectionEnd = end;
       }
 
-      const selectedText = jsonEditor.value.substring(start, end).trim();
+      const selectedText = text.substring(start, end).trim();
 
       // Check if selection is a valid number (integer or decimal)
       // Match: 0.5, -1.2, 3, -4, .5, -.3
@@ -3489,11 +3505,15 @@
         updateScrubberValue(parseFloat(e.target.value));
       });
 
-      // Detect scalar selection on selection change
+      // Detect scalar selection on cursor position change
       jsonEditor.addEventListener('mouseup', detectScalarSelection);
+      jsonEditor.addEventListener('click', () => {
+        // Small delay to let cursor position settle
+        setTimeout(detectScalarSelection, 10);
+      });
       jsonEditor.addEventListener('keyup', (e) => {
-        // Only check on arrow keys, shift+arrow, or after typing
-        if (e.shiftKey || ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        // Check on arrow keys, shift+arrow, or other navigation
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
           detectScalarSelection();
         }
       });
