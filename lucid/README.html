@@ -287,7 +287,8 @@
       "axis": [x, y, z],          // Normalized axis vector
       "angle": 45                 // Angle in DEGREES
     },
-    "scale": [1, 1, 1]            // TODO: not yet implemented
+    "scale": 2.0                  // Uniform scale (number or [s,s,s])
+    // or "scale": [sx, sy, sz]   // Non-uniform scale
   }
 }</code></pre>
 
@@ -316,6 +317,29 @@
 </table>
 
 <p><strong>Priority:</strong> If multiple rotation properties are present, <code>rotateQ</code> takes precedence, then <code>rotateAxis</code>, then <code>rotate</code>.</p>
+
+<h4>Scale Transform</h4>
+
+<table>
+  <tr><th>Format</th><th>Example</th><th>Notes</th></tr>
+  <tr>
+    <td>Uniform (number)</td>
+    <td><code>"scale": 2.0</code></td>
+    <td>Scale equally in all directions</td>
+  </tr>
+  <tr>
+    <td>Uniform (array)</td>
+    <td><code>"scale": [2, 2, 2]</code></td>
+    <td>Same as above</td>
+  </tr>
+  <tr>
+    <td>Non-uniform</td>
+    <td><code>"scale": [1, 2, 0.5]</code></td>
+    <td>Stretch/squash along different axes</td>
+  </tr>
+</table>
+
+<p><strong>Note:</strong> For SDF correctness, non-uniform scale uses <code>min(sx, sy, sz)</code> for distance correction, which is an approximation.</p>
 
 <h4>Notes Field</h4>
 
@@ -469,13 +493,13 @@ animate();</code></pre>
 <h2>Known Limitations</h2>
 
 <ul>
-  <li><span class="tag alt">TODO</span> Scale transform not yet implemented</li>
   <li><span class="tag alt">TODO</span> Parameter overrides in refs not fully implemented</li>
   <li><span class="tag alt">TODO</span> smoothIntersect operator not yet implemented</li>
 </ul>
 
 <h3>Recently Implemented</h3>
 <ul>
+  <li>✅ Scale transforms (uniform and non-uniform)</li>
   <li>✅ Rotation transforms (Euler, quaternion, axis-angle)</li>
   <li>✅ Capsule, ellipsoid, plane primitives</li>
   <li>✅ Mirror, radial, repeat symmetry operations</li>

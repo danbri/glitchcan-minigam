@@ -1410,6 +1410,44 @@
       },
 
       {
+        title: "Scale Transform",
+        subtitle: "Uniform and non-uniform scaling",
+        json: {
+          "version": "1.0",
+          "notes": "Demonstrates scale transform: uniform (number), uniform (array), and non-uniform",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "notes": "Original size sphere (reference)",
+                "type": "sphere",
+                "params": { "r": 0.3, "color": [0.5, 0.5, 0.5] },
+                "transform": { "translate": [-2, 0, 0] }
+              },
+              {
+                "notes": "Uniform scale 2x (number)",
+                "type": "sphere",
+                "params": { "r": 0.3, "color": [0.3, 0.8, 0.3] },
+                "transform": { "translate": [-0.7, 0, 0], "scale": 2 }
+              },
+              {
+                "notes": "Non-uniform scale: stretched tall",
+                "type": "sphere",
+                "params": { "r": 0.3, "color": [0.8, 0.3, 0.3] },
+                "transform": { "translate": [0.7, 0, 0], "scale": [1, 2, 1] }
+              },
+              {
+                "notes": "Non-uniform scale: flattened",
+                "type": "box",
+                "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 0.3, 0.8] },
+                "transform": { "translate": [2, 0, 0], "scale": [2, 0.5, 1] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
         title: "Spirit Creatures",
         subtitle: "Rotating ghost-like beings with tentacles",
         json: {

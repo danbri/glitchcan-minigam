@@ -127,10 +127,11 @@ function walkNode(node, ctx) {
 function generateSphere(node, ctx) {
   const params = node.params || {};
   const r = valueToGlsl(params.r || { type: 'const', value: 1.0 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdSphere(${p}, ${r}), ${color})`;
+  const dist = scale === '1.0' ? `sdSphere(${p}, ${r})` : `(sdSphere(${p}, ${r}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -139,10 +140,11 @@ function generateSphere(node, ctx) {
 function generateBox(node, ctx) {
   const params = node.params || {};
   const size = valueToGlsl(params.size || { type: 'array', values: [1, 1, 1].map(v => ({ type: 'const', value: v })) }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdBox(${p}, ${size}), ${color})`;
+  const dist = scale === '1.0' ? `sdBox(${p}, ${size})` : `(sdBox(${p}, ${size}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -152,10 +154,11 @@ function generateTorus(node, ctx) {
   const params = node.params || {};
   const major = valueToGlsl(params.major || { type: 'const', value: 1.0 }, ctx);
   const minor = valueToGlsl(params.minor || { type: 'const', value: 0.3 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdTorus(${p}, vec2(${major}, ${minor})), ${color})`;
+  const dist = scale === '1.0' ? `sdTorus(${p}, vec2(${major}, ${minor}))` : `(sdTorus(${p}, vec2(${major}, ${minor})) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -165,10 +168,11 @@ function generateCylinder(node, ctx) {
   const params = node.params || {};
   const h = valueToGlsl(params.h || { type: 'const', value: 1.0 }, ctx);
   const r = valueToGlsl(params.r || { type: 'const', value: 0.5 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdCylinder(${p}, ${h}, ${r}), ${color})`;
+  const dist = scale === '1.0' ? `sdCylinder(${p}, ${h}, ${r})` : `(sdCylinder(${p}, ${h}, ${r}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -179,10 +183,11 @@ function generateCapsule(node, ctx) {
   const params = node.params || {};
   const h = valueToGlsl(params.h || { type: 'const', value: 1.0 }, ctx);
   const r = valueToGlsl(params.r || { type: 'const', value: 0.25 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdCapsule(${p}, ${h}, ${r}), ${color})`;
+  const dist = scale === '1.0' ? `sdCapsule(${p}, ${h}, ${r})` : `(sdCapsule(${p}, ${h}, ${r}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -192,10 +197,11 @@ function generateCapsule(node, ctx) {
 function generateEllipsoid(node, ctx) {
   const params = node.params || {};
   const radii = valueToGlsl(params.radii || { type: 'array', values: [1, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdEllipsoid(${p}, ${radii}), ${color})`;
+  const dist = scale === '1.0' ? `sdEllipsoid(${p}, ${radii})` : `(sdEllipsoid(${p}, ${radii}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -206,10 +212,11 @@ function generatePlane(node, ctx) {
   const params = node.params || {};
   const normal = valueToGlsl(params.normal || { type: 'array', values: [0, 1, 0].map(v => ({ type: 'const', value: v })) }, ctx);
   const h = valueToGlsl(params.h || { type: 'const', value: 0 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const { pos: p, scale } = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.5, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdPlane(${p}, ${normal}, ${h}), ${color})`;
+  const dist = scale === '1.0' ? `sdPlane(${p}, ${normal}, ${h})` : `(sdPlane(${p}, ${normal}, ${h}) * ${scale})`;
+  return `vec4(${dist}, ${color})`;
 }
 
 /**
@@ -519,7 +526,8 @@ function generateMirror(node, ctx) {
   if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
 
   // Apply any transform from the mirror node itself
-  const p = applyTransform('p', node.transform, ctx);
+  // Note: scale is handled by primitives inside the child
+  const { pos: p } = applyTransform('p', node.transform, ctx);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec3 q = ${p};
@@ -550,7 +558,8 @@ function generateRadial(node, ctx) {
   const funcName = `radial_${ctx.helperCounter++}`;
 
   // Apply any transform from the radial node itself
-  const p = applyTransform('p', node.transform, ctx);
+  // Note: scale is handled by primitives inside the child
+  const { pos: p } = applyTransform('p', node.transform, ctx);
 
   // TAU = 2*PI
   const segment = (2 * Math.PI / count).toFixed(6);
@@ -605,7 +614,8 @@ function generateRepeat(node, ctx) {
   const funcName = `repeat_${ctx.helperCounter++}`;
 
   // Apply any transform from the repeat node itself
-  const p = applyTransform('p', node.transform, ctx);
+  // Note: scale is handled by primitives inside the child
+  const { pos: p } = applyTransform('p', node.transform, ctx);
 
   // Build repeat code - only repeat on non-zero axes
   let repeatCode = '';
@@ -686,17 +696,22 @@ function exprToGlsl(expr, ctx) {
 
 /**
  * Apply transform to position variable
- * Order: translate first, then rotate (applied in reverse for SDF)
+ * Order: translate first, then rotate, then scale (applied in reverse for SDF)
  *
  * Rotation priority: rotateQ > rotateAxis > rotate
  * - rotateQ: quaternion [x, y, z, w] (glTF convention)
  * - rotateAxis: { axis: [x, y, z], angle: degrees }
  * - rotate: Euler angles [rx, ry, rz] in degrees, XYZ order
+ *
+ * Returns: { pos: glslExpr, scale: glslExpr }
+ * - pos: transformed position expression
+ * - scale: scale correction factor for distance (multiply SDF result by this)
  */
 function applyTransform(pVar, transform, ctx) {
-  if (!transform) return pVar;
+  if (!transform) return { pos: pVar, scale: '1.0' };
 
   let result = pVar;
+  let scaleCorrection = '1.0';
 
   // Apply translate first (subtract from position)
   if (transform.translate) {
@@ -783,9 +798,48 @@ function applyTransform(pVar, transform, ctx) {
     }
   }
 
-  // Apply scale (TODO: implement)
+  // Apply scale: divide position, track correction factor
+  // For SDF: sdf(p/s) * s gives correct distance
+  // For non-uniform scale, use min(s) as approximation
+  if (transform.scale) {
+    const s = transform.scale;
+    if (typeof s === 'number') {
+      // Uniform scale (single number)
+      const sv = s.toFixed(6);
+      result = `(${result} / ${sv})`;
+      scaleCorrection = sv;
+    } else if (Array.isArray(s)) {
+      // Check if uniform (all same) or non-uniform
+      if (s.length === 1 || (s[0] === s[1] && s[1] === s[2])) {
+        // Uniform scale
+        const sv = (s[0] || 1).toFixed(6);
+        result = `(${result} / ${sv})`;
+        scaleCorrection = sv;
+      } else {
+        // Non-uniform scale - divide by vec3, use min for distance correction
+        const sx = (s[0] || 1).toFixed(6);
+        const sy = (s[1] || 1).toFixed(6);
+        const sz = (s[2] || 1).toFixed(6);
+        result = `(${result} / vec3(${sx}, ${sy}, ${sz}))`;
+        const minS = Math.min(s[0] || 1, s[1] || 1, s[2] || 1).toFixed(6);
+        scaleCorrection = minS;
+      }
+    } else if (s.type === 'array' && s.values) {
+      // Expression-based scale
+      const sx = valueToGlsl(s.values[0], ctx);
+      const sy = valueToGlsl(s.values[1], ctx);
+      const sz = valueToGlsl(s.values[2], ctx);
+      result = `(${result} / vec3(${sx}, ${sy}, ${sz}))`;
+      scaleCorrection = `min(min(${sx}, ${sy}), ${sz})`;
+    } else if (typeof s === 'object' && s.expr) {
+      // Single expression for uniform scale
+      const sv = valueToGlsl(s, ctx);
+      result = `(${result} / ${sv})`;
+      scaleCorrection = sv;
+    }
+  }
 
-  return result;
+  return { pos: result, scale: scaleCorrection };
 }
 
 /**
@@ -839,10 +893,34 @@ function combineTransforms(child, parent) {
     combined.rotate = child.rotate;
   }
 
-  // Scale: child takes precedence (TODO: proper scale composition)
-  if (child.scale) combined.scale = child.scale;
+  // Scale: multiply scales together
+  if (parent.scale && child.scale) {
+    combined.scale = multiplyScales(parent.scale, child.scale);
+  } else if (child.scale) {
+    combined.scale = child.scale;
+  }
 
   return combined;
+}
+
+/**
+ * Multiply two scale values
+ */
+function multiplyScales(a, b) {
+  // Handle uniform scales (numbers)
+  if (typeof a === 'number' && typeof b === 'number') {
+    return a * b;
+  }
+
+  // Normalize to arrays
+  const aArr = typeof a === 'number' ? [a, a, a] : (Array.isArray(a) ? a : [1, 1, 1]);
+  const bArr = typeof b === 'number' ? [b, b, b] : (Array.isArray(b) ? b : [1, 1, 1]);
+
+  return [
+    (aArr[0] || 1) * (bArr[0] || 1),
+    (aArr[1] || 1) * (bArr[1] || 1),
+    (aArr[2] || 1) * (bArr[2] || 1)
+  ];
 }
 
 /**
