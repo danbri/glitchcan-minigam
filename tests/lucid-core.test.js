@@ -1,0 +1,511 @@
+/**
+ * Unit tests for Lucid SDF-CSG core modules
+ * Run with: npx vitest run tests/lucid-core.test.js
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+
+// Mock browser environment for modules
+globalThis.window = globalThis;
+globalThis.document = { createElement: () => ({}) };
+
+// Import after setting up globals
+const { loadJsonScene } = await import('../lucid/core/json-loader.js');
+const { generateGlslFromJson } = await import('../lucid/core/json-codegen.js');
+
+describe('json-loader.js', () => {
+  describe('loadJsonScene', () => {
+    it('should load a simple sphere', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'sphere',
+          params: { r: 1.0, color: [1, 0, 0] }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene).toBeDefined();
+      expect(scene.root).toBeDefined();
+      expect(scene.root.type).toBe('sphere');
+    });
+
+    it('should load a box with transform', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'box',
+          params: { size: [1, 2, 3], color: [0, 1, 0] },
+          transform: { translate: [1, 2, 3] }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('box');
+      expect(scene.root.transform.translate).toEqual([1, 2, 3]);
+    });
+
+    it('should load union of multiple children', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'union',
+          children: [
+            { type: 'sphere', params: { r: 1.0 } },
+            { type: 'box', params: { size: [1, 1, 1] } }
+          ]
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('union');
+      expect(scene.root.children.length).toBe(2);
+    });
+
+    it('should resolve refs to defs', () => {
+      const json = {
+        version: '1.0',
+        defs: {
+          mySphere: { type: 'sphere', params: { r: 0.5 } }
+        },
+        root: {
+          type: 'ref',
+          id: 'mySphere'
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('sphere');
+      expect(scene.root.params.r).toBe(0.5);
+    });
+
+    it('should process expression values', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'sphere',
+          params: {
+            r: { expr: 'add', args: [1.0, { expr: 'sin', args: [{ var: 'time' }] }] },
+            color: [1, 0, 0]
+          }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.params.r.type).toBe('expr');
+      expect(scene.root.params.r.op).toBe('add');
+    });
+
+    it('should process variable references', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'sphere',
+          params: {
+            r: { var: 'time' },
+            color: [1, 0, 0]
+          }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.params.r.type).toBe('var');
+      expect(scene.root.params.r.name).toBe('time');
+    });
+
+    it('should process all primitive types', () => {
+      const primitives = ['sphere', 'box', 'torus', 'cylinder', 'capsule', 'ellipsoid', 'plane'];
+      primitives.forEach(primType => {
+        const json = {
+          version: '1.0',
+          root: { type: primType, params: {} }
+        };
+        const scene = loadJsonScene(json);
+        expect(scene.root.type).toBe(primType);
+      });
+    });
+
+    it('should process CSG operations', () => {
+      const ops = ['union', 'subtract', 'intersect', 'smoothUnion', 'smoothSubtract', 'smoothIntersect'];
+      ops.forEach(opType => {
+        const json = {
+          version: '1.0',
+          root: {
+            type: opType,
+            children: [
+              { type: 'sphere', params: { r: 1 } },
+              { type: 'sphere', params: { r: 0.5 } }
+            ],
+            k: 0.2
+          }
+        };
+        const scene = loadJsonScene(json);
+        expect(scene.root.type).toBe(opType);
+      });
+    });
+
+    it('should process radial modifier', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'radial',
+          count: 8,
+          axis: 'y',
+          child: { type: 'sphere', params: { r: 0.2 } }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('radial');
+      expect(scene.root.count).toBe(8);
+    });
+
+    it('should process mirror modifier', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'mirror',
+          axis: 'xz',
+          child: { type: 'sphere', params: { r: 0.5 } }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('mirror');
+      expect(scene.root.axis).toBe('xz');
+    });
+
+    it('should process repeat modifier', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'repeat',
+          period: [2, 0, 2],
+          child: { type: 'sphere', params: { r: 0.3 } }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.type).toBe('repeat');
+      expect(scene.root.period).toEqual([2, 0, 2]);
+    });
+
+    it('should process Euler rotation', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'box',
+          params: { size: [1, 1, 1] },
+          transform: { rotate: [45, 90, 0] }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.transform.rotate).toEqual([45, 90, 0]);
+    });
+
+    it('should process quaternion rotation', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'box',
+          params: { size: [1, 1, 1] },
+          transform: { rotateQ: [0, 0.7071, 0, 0.7071] }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.transform.rotateQ).toEqual([0, 0.7071, 0, 0.7071]);
+    });
+
+    it('should process axis-angle rotation', () => {
+      const json = {
+        version: '1.0',
+        root: {
+          type: 'box',
+          params: { size: [1, 1, 1] },
+          transform: { rotateAxis: { axis: [1, 1, 0], angle: 60 } }
+        }
+      };
+      const scene = loadJsonScene(json);
+      expect(scene.root.transform.rotateAxis.axis).toEqual([1, 1, 0]);
+      expect(scene.root.transform.rotateAxis.angle).toBe(60);
+    });
+  });
+});
+
+describe('json-codegen.js', () => {
+  describe('generateGlslFromJson', () => {
+    it('should generate GLSL for a sphere', () => {
+      const scene = {
+        root: {
+          type: 'sphere',
+          params: { r: 1.0, color: [1, 0, 0] },
+          transform: { translate: [0, 0, 0], rotate: [0, 0, 0] }
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('sdSphere');
+      expect(glsl).toContain('g_df_scene');
+    });
+
+    it('should generate GLSL for a box', () => {
+      const scene = {
+        root: {
+          type: 'box',
+          params: { size: [1, 1, 1], color: [0, 1, 0] },
+          transform: { translate: [0, 0, 0], rotate: [0, 0, 0] }
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('sdBox');
+    });
+
+    it('should generate GLSL for union', () => {
+      const scene = {
+        root: {
+          type: 'union',
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.5, 0.5, 0.5], color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('min(');
+    });
+
+    it('should generate GLSL for smoothUnion with k parameter', () => {
+      const scene = {
+        root: {
+          type: 'smoothUnion',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'sphere', params: { r: 0.5, color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('smin');
+    });
+
+    it('should generate GLSL for subtract', () => {
+      const scene = {
+        root: {
+          type: 'subtract',
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.5, 0.5, 0.5], color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('max(');
+    });
+
+    it('should generate GLSL for intersect', () => {
+      const scene = {
+        root: {
+          type: 'intersect',
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.8, 0.8, 0.8], color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('max(');
+    });
+
+    it('should generate rotation helper functions', () => {
+      const scene = {
+        root: {
+          type: 'box',
+          params: { size: [1, 1, 1], color: [1, 0, 0] },
+          transform: { translate: [0, 0, 0], rotate: [45, 0, 0] }
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('rotX');
+    });
+
+    it('should generate time variable reference', () => {
+      const scene = {
+        root: {
+          type: 'sphere',
+          params: {
+            r: { type: 'expr', op: 'sin', args: [{ type: 'var', name: 'time' }] },
+            color: [1, 0, 0]
+          },
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('u_time');
+    });
+
+    it('should generate expression operators', () => {
+      const scene = {
+        root: {
+          type: 'sphere',
+          params: {
+            r: { type: 'expr', op: 'add', args: [1.0, { type: 'expr', op: 'mul', args: [0.3, { type: 'var', name: 'time' }] }] },
+            color: [1, 0, 0]
+          },
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toMatch(/\(.*\+.*\)/);  // Should contain addition
+      expect(glsl).toMatch(/\(.*\*.*\)/);  // Should contain multiplication
+    });
+
+    it('should generate GLSL for radial modifier', () => {
+      const scene = {
+        root: {
+          type: 'radial',
+          count: 6,
+          axis: 'y',
+          child: {
+            type: 'sphere',
+            params: { r: 0.2, color: [1, 0, 0] },
+            transform: { translate: [1, 0, 0] }
+          },
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      // Radial should generate angle-based repetition
+      expect(glsl).toContain('atan');
+    });
+
+    it('should generate GLSL for mirror modifier', () => {
+      const scene = {
+        root: {
+          type: 'mirror',
+          axis: 'x',
+          child: {
+            type: 'sphere',
+            params: { r: 0.5, color: [1, 0, 0] },
+            transform: { translate: [1, 0, 0] }
+          },
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('abs');
+    });
+
+    it('should generate GLSL for repeat modifier', () => {
+      const scene = {
+        root: {
+          type: 'repeat',
+          period: [2, 0, 2],
+          child: {
+            type: 'sphere',
+            params: { r: 0.3, color: [1, 0, 0] },
+            transform: {}
+          },
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('mod');
+    });
+
+    it('should generate all primitive SDF functions', () => {
+      const primitiveParams = {
+        sphere: { r: 1.0, color: [1, 0, 0] },
+        box: { size: [1, 1, 1], color: [1, 0, 0] },
+        torus: { major: 1.0, minor: 0.3, color: [1, 0, 0] },
+        cylinder: { h: 1.0, r: 0.5, color: [1, 0, 0] },
+        capsule: { h: 1.0, r: 0.2, color: [1, 0, 0] },
+        ellipsoid: { radii: [1, 0.5, 0.3], color: [1, 0, 0] },
+        plane: { normal: [0, 1, 0], h: 0, color: [1, 0, 0] }
+      };
+
+      Object.entries(primitiveParams).forEach(([primType, params]) => {
+        const scene = {
+          root: {
+            type: primType,
+            params,
+            transform: {}
+          }
+        };
+        const glsl = generateGlslFromJson(scene);
+        expect(glsl).toContain('g_df_scene');
+        expect(glsl.length).toBeGreaterThan(100);
+      });
+    });
+  });
+});
+
+describe('Integration: loadJsonScene -> generateGlslFromJson', () => {
+  it('should produce valid GLSL from JSON input', () => {
+    const json = {
+      version: '1.0',
+      root: {
+        type: 'smoothUnion',
+        k: 0.2,
+        children: [
+          { type: 'sphere', params: { r: 0.8, color: [1, 0.5, 0.2] } },
+          { type: 'box', params: { size: [0.5, 0.5, 0.5], color: [0.2, 0.5, 1] }, transform: { translate: [0.5, 0, 0] } }
+        ]
+      }
+    };
+    const scene = loadJsonScene(json);
+    const glsl = generateGlslFromJson(scene);
+
+    // Should have all required components
+    expect(glsl).toContain('vec4 g_df_scene(vec3 p)');
+    expect(glsl).toContain('return');
+    expect(glsl).not.toContain('undefined');
+    expect(glsl).not.toContain('NaN');
+  });
+
+  it('should handle complex nested scenes', () => {
+    const json = {
+      version: '1.0',
+      defs: {
+        petal: { type: 'sphere', params: { r: 0.15, color: [1, 0.4, 0.4] } }
+      },
+      root: {
+        type: 'union',
+        children: [
+          { type: 'sphere', params: { r: 0.3, color: [1, 0.8, 0.2] } },
+          {
+            type: 'radial',
+            count: 8,
+            axis: 'y',
+            child: {
+              type: 'ref',
+              id: 'petal',
+              transform: { translate: [0.5, 0, 0] }
+            }
+          }
+        ]
+      }
+    };
+    const scene = loadJsonScene(json);
+    const glsl = generateGlslFromJson(scene);
+
+    expect(glsl).toContain('g_df_scene');
+    expect(glsl.length).toBeGreaterThan(200);
+  });
+
+  it('should handle animated expressions', () => {
+    const json = {
+      version: '1.0',
+      root: {
+        type: 'sphere',
+        params: {
+          r: { expr: 'add', args: [1.0, { expr: 'mul', args: [0.3, { expr: 'sin', args: [{ var: 'time' }] }] }] },
+          color: [
+            { expr: 'add', args: [0.5, { expr: 'mul', args: [0.5, { expr: 'sin', args: [{ var: 'time' }] }] }] },
+            0.5,
+            1.0
+          ]
+        }
+      }
+    };
+    const scene = loadJsonScene(json);
+    const glsl = generateGlslFromJson(scene);
+
+    expect(glsl).toContain('u_time');
+    expect(glsl).toContain('sin');
+  });
+});
