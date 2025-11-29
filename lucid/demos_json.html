@@ -699,6 +699,7 @@
       <div class="header-left">
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
+          <button class="icon-btn" id="btn-paste-apply" title="Paste & Apply (V)">📋</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
@@ -760,6 +761,9 @@
       </div>
     </div>
     <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-new-demo">
+      <span>✨ New Demo</span>
+    </div>
     <div class="menu-item" id="menu-load-url">
       <span>🔗 Load from URL</span>
     </div>
@@ -902,7 +906,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.8.0';
+    const VERSION = '0.9.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -2842,6 +2846,15 @@
           e.preventDefault();
           autoRotate = !autoRotate;
           $('btn-auto-rotate').classList.toggle('active', autoRotate);
+        } else if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          $('btn-paste-apply').click(); // Trigger paste & apply
+        } else if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          $('menu-new-demo').click(); // Create new demo
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          $('btn-menu').click(); // Toggle menu
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -2872,6 +2885,38 @@
         $('btn-auto-rotate').classList.toggle('active', autoRotate);
       });
 
+      // Paste & Apply - one click to paste JSON and render
+      $('btn-paste-apply').addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          const json = JSON.parse(text);
+
+          // Update current demo
+          demos[currentDemo] = {
+            title: json.notes ? json.notes.substring(0, 30) + '...' : 'Pasted Demo',
+            subtitle: 'From clipboard',
+            json: json
+          };
+
+          // Render and update UI
+          renderJson(json);
+          $('title').textContent = demos[currentDemo].title;
+          $('subtitle').textContent = demos[currentDemo].subtitle;
+          jsonEditor.value = JSON.stringify(json, null, 2);
+
+          showStatus('✓ Pasted and applied!', 'success');
+        } catch (err) {
+          if (err.name === 'NotAllowedError') {
+            showStatus('Clipboard access denied - try editor paste', 'error');
+          } else if (err instanceof SyntaxError) {
+            showStatus('Invalid JSON in clipboard', 'error');
+          } else {
+            showStatus('Paste failed: ' + err.message, 'error');
+          }
+          console.error('Paste error:', err);
+        }
+      });
+
       // Debug panel toggle (from header button)
       $('btn-debug').addEventListener('click', () => {
         debugOpen = !debugOpen;
@@ -2887,6 +2932,38 @@
       });
 
       // Menu items
+      // New Demo - create fresh entry in demos list
+      $('menu-new-demo').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+
+        const newDemo = {
+          title: `My Demo ${demos.length + 1}`,
+          subtitle: 'New custom demo',
+          json: {
+            "version": "1.0",
+            "notes": "Your custom SDF scene. Edit the JSON to create shapes!",
+            "root": {
+              "type": "sphere",
+              "params": { "r": 1.0, "color": [0.4, 0.8, 1.0] }
+            }
+          }
+        };
+
+        // Add to demos and switch to it
+        demos.push(newDemo);
+        buildDemosSubmenu(); // Rebuild menu to include new entry
+        switchDemo(demos.length - 1);
+
+        // Open editor for immediate editing
+        editorOpen = true;
+        editorPanel.classList.add('open');
+        $('btn-editor').classList.add('active');
+
+        showStatus('✨ New demo created! Edit the JSON.', 'success');
+      });
+
       $('menu-load-url').addEventListener('click', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
