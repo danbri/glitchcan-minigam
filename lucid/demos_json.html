@@ -1637,17 +1637,11 @@
         subtitle: "ZX Spectrum style spaceship with mirror symmetry",
         json: {
           "version": "1.0",
-          "comment": "Cobra-style ship using thin capsules for wireframe edges, X mirror for efficiency",
-          "defs": {
-            "strut": {
-              "type": "capsule",
-              "params": { "h": 0.5, "r": 0.025, "color": [0.2, 1.0, 0.3] }
-            }
-          },
+          "notes": "Cobra-style ship. Capsules are Y-aligned by default, so [90,θ,0] lays them flat in XZ plane at angle θ",
           "root": {
             "type": "transform",
             "transform": {
-              "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
+              "rotate": [0, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
             },
             "child": {
               "type": "mirror",
@@ -1656,64 +1650,64 @@
                 "type": "union",
                 "children": [
                   {
+                    "notes": "Nose to wing tip - diagonal in XZ plane",
                     "type": "capsule",
-                    "comment": "Nose to cockpit top",
-                    "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0, 0.15, 1.2], "rotate": [25, 0, 0] }
+                    "params": { "h": 0.9, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0.45, 0, 0.3], "rotate": [90, -60, 0] }
                   },
                   {
+                    "notes": "Wing tip to rear corner - along Z",
                     "type": "capsule",
-                    "comment": "Nose to wing tip",
-                    "params": { "h": 1.0, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.5, 0, 0.4], "rotate": [0, 55, 0] }
-                  },
-                  {
-                    "type": "capsule",
-                    "comment": "Wing leading edge",
-                    "params": { "h": 0.7, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.7, 0, -0.3], "rotate": [0, 20, 0] }
-                  },
-                  {
-                    "type": "capsule",
-                    "comment": "Wing trailing edge to engine",
                     "params": { "h": 0.5, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.6, 0, -0.9], "rotate": [0, -30, 0] }
+                    "transform": { "translate": [0.9, 0, -0.3], "rotate": [90, 0, 0] }
                   },
                   {
+                    "notes": "Rear corner to center rear - along X",
                     "type": "capsule",
-                    "comment": "Engine to center rear",
-                    "params": { "h": 0.4, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.2, 0, -1.1], "rotate": [0, 90, 0] }
+                    "params": { "h": 0.45, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0.45, 0, -0.8], "rotate": [0, 0, 90] }
                   },
                   {
+                    "notes": "Center rear spine - along Z",
                     "type": "capsule",
-                    "comment": "Cockpit side",
+                    "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0, 0, 0.5], "rotate": [90, 0, 0] }
+                  },
+                  {
+                    "notes": "Cockpit front strut - angled up from nose",
+                    "type": "capsule",
+                    "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0, 0.12, 0.85], "rotate": [30, 0, 0] }
+                  },
+                  {
+                    "notes": "Cockpit top - along Z",
+                    "type": "capsule",
                     "params": { "h": 0.35, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.18, 0.12, 0.6], "rotate": [0, 0, 0] }
+                    "transform": { "translate": [0, 0.2, 0.35], "rotate": [90, 0, 0] }
                   },
                   {
+                    "notes": "Cockpit rear strut - angled down",
                     "type": "capsule",
-                    "comment": "Cockpit top to rear",
-                    "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.15, 0.1, 0], "rotate": [-10, 0, 0] }
+                    "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0, 0.1, -0.1], "rotate": [-30, 0, 0] }
                   },
                   {
+                    "notes": "Cockpit side - along X from center",
                     "type": "capsule",
-                    "comment": "Lower nose to wing",
-                    "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.35, -0.08, 0.5], "rotate": [0, 35, 10] }
-                  },
-                  {
-                    "type": "capsule",
-                    "comment": "Engine nacelle vertical",
                     "params": { "h": 0.15, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.4, 0, -1.0], "rotate": [90, 0, 0] }
+                    "transform": { "translate": [0.08, 0.2, 0.5], "rotate": [0, 0, 90] }
                   },
                   {
+                    "notes": "Engine strut - vertical",
+                    "type": "capsule",
+                    "params": { "h": 0.12, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+                    "transform": { "translate": [0.5, 0, -0.7] }
+                  },
+                  {
+                    "notes": "Engine glow ring",
                     "type": "torus",
-                    "comment": "Engine glow ring",
-                    "params": { "major": 0.08, "minor": 0.015, "color": [1.0, 0.5, 0.1] },
-                    "transform": { "translate": [0.4, 0, -1.15], "rotate": [90, 0, 0] }
+                    "params": { "major": 0.1, "minor": 0.02, "color": [1.0, 0.5, 0.1] },
+                    "transform": { "translate": [0.5, 0, -0.85], "rotate": [90, 0, 0] }
                   }
                 ]
               }
