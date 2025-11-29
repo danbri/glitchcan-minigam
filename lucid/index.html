@@ -876,8 +876,16 @@
         <button class="btn" id="btn-tree-close" style="margin-left:0.5rem;">Close</button>
       </div>
     </div>
-    <!-- GLSL display area for mobile (shows decoded GLSL when selected) -->
-    <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.7rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;">
+    <!-- GLSL/Expression display area (readonly popup for code) -->
+    <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.75rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;">
+    </div>
+    <!-- Tree slider widget for numeric values -->
+    <div id="tree-slider-panel" style="display:none;padding:0.5rem 0.75rem;background:#1a1f26;border-bottom:1px solid #333;">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <span id="tree-slider-label" style="font-size:0.75rem;color:#fbbf24;min-width:4rem;"></span>
+        <input type="range" id="tree-slider" style="flex:1;min-width:100px;accent-color:#fbbf24;">
+        <span id="tree-slider-value" style="font-size:0.8rem;color:#fbbf24;min-width:3.5rem;text-align:right;font-family:monospace;"></span>
+      </div>
     </div>
     <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
       <!-- Tree structure rendered here -->
@@ -3654,6 +3662,9 @@
       treeNavState.currentIndex = navIndex;
       updateTreeNavIndicator();
 
+      // Hide tree slider when showing GLSL
+      hideTreeSlider();
+
       // Show full decoded GLSL in dedicated display area (mobile-friendly)
       const decoded = item.decoded || '(unable to decode)';
       const glslDisplay = $('glsl-display');
@@ -3677,6 +3688,9 @@
 
       treeNavState.currentIndex = navIndex;
       updateTreeNavIndicator();
+
+      // Hide tree slider when showing expression
+      hideTreeSlider();
 
       // Highlight the selected element
       const treeContent = $('tree-content');
@@ -3707,6 +3721,12 @@
     function hideGlslDisplay() {
       const glslDisplay = $('glsl-display');
       if (glslDisplay) glslDisplay.style.display = 'none';
+    }
+
+    // Hide all tree popups (GLSL display and slider)
+    function hideTreePopups() {
+      hideGlslDisplay();
+      hideTreeSlider();
     }
 
     // Global function for tree value editing
@@ -3744,34 +3764,42 @@
         step = absValue > 100 ? 1 : 0.5;
       }
 
-      scrubberState = {
-        visible: true,
-        selectionStart: 0,
-        selectionEnd: 0,
-        originalValue: value,
-        min,
-        max,
-        step
-      };
+      // Store state for tree editing
+      treeEditState.min = min;
+      treeEditState.max = max;
+      treeEditState.step = step;
+      treeEditState.value = value;
 
-      scrubberSlider.min = min;
-      scrubberSlider.max = max;
-      scrubberSlider.step = step;
-      scrubberSlider.value = value;
+      // Use tree-specific slider (not editor scrubber)
+      const treeSliderPanel = $('tree-slider-panel');
+      const treeSlider = $('tree-slider');
+      const treeSliderLabel = $('tree-slider-label');
+      const treeSliderValue = $('tree-slider-value');
 
-      // Show param name and notes in label
-      const labelText = nodeNotes ? `${paramName} (${nodeNotes})` : paramName;
-      scrubberLabel.textContent = labelText.substring(0, 30);
-      scrubberValue.textContent = formatNumber(value);
+      if (treeSliderPanel && treeSlider) {
+        treeSlider.min = min;
+        treeSlider.max = max;
+        treeSlider.step = step;
+        treeSlider.value = value;
 
-      scrubberPanel.classList.add('visible');
+        // Show param name and notes in label
+        const labelText = nodeNotes ? `${paramName}` : paramName;
+        treeSliderLabel.textContent = labelText.substring(0, 20);
+        treeSliderValue.textContent = formatNumber(value);
+
+        treeSliderPanel.style.display = 'block';
+
+        // Hide GLSL display when showing slider
+        hideGlslDisplay();
+      }
     };
 
-    function updateTreeScrubberValue(newValue) {
+    function updateTreeSliderValue(newValue) {
       if (!treeEditState.path) return;
 
       const formatted = formatNumber(newValue);
-      scrubberValue.textContent = formatted;
+      const treeSliderValue = $('tree-slider-value');
+      if (treeSliderValue) treeSliderValue.textContent = formatted;
 
       // Update JSON using path
       const json = demos[currentDemo].json;
@@ -3783,10 +3811,16 @@
       // Re-render
       try {
         renderJson(json);
-        updateTreeView();
+        // Don't update tree view while scrubbing - too slow
       } catch (e) {
-        console.warn('Tree scrub render error:', e);
+        console.warn('Tree slider render error:', e);
       }
+    }
+
+    // Hide tree slider panel
+    function hideTreeSlider() {
+      const treeSliderPanel = $('tree-slider-panel');
+      if (treeSliderPanel) treeSliderPanel.style.display = 'none';
     }
 
     function setValueByPath(obj, path, value) {
@@ -4316,6 +4350,19 @@
       $('btn-tree-prev').addEventListener('click', navigateTreePrev);
       $('btn-tree-next').addEventListener('click', navigateTreeNext);
 
+      // Tree slider for numeric value editing
+      const treeSlider = $('tree-slider');
+      if (treeSlider) {
+        treeSlider.addEventListener('input', (e) => {
+          const newValue = parseFloat(e.target.value);
+          updateTreeSliderValue(newValue);
+        });
+        // Update tree view when slider interaction ends
+        treeSlider.addEventListener('change', () => {
+          updateTreeView();
+        });
+      }
+
       // Main menu toggle
       $('btn-menu').addEventListener('click', () => {
         menuOpen = !menuOpen;
@@ -4443,13 +4490,8 @@
       });
       scrubberSlider.addEventListener('input', (e) => {
         const newValue = parseFloat(e.target.value);
-        if (treeEditState.path) {
-          // Editing from tree view
-          updateTreeScrubberValue(newValue);
-        } else {
-          // Editing from text editor
-          updateScrubberValue(newValue);
-        }
+        // Editor scrubber only - tree uses its own slider now
+        updateScrubberValue(newValue);
       });
 
       // Detect scalar selection on cursor position change
