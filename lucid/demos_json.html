@@ -893,6 +893,22 @@
       </div>
       <div class="debug-row" id="volume-controls" style="display: none; flex-direction: column; gap: 0.5rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Mode</span>
+          <select id="select-volume-mode" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Jelly</option>
+            <option value="1">X-Ray</option>
+            <option value="2">Heatmap</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Color</span>
+          <select id="select-volume-color" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Material</option>
+            <option value="1">Rainbow</option>
+            <option value="2">Depth</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
           <span class="debug-label">Step Size</span>
           <input type="range" min="0.01" max="0.15" step="0.01" value="0.05" id="slider-step-size" style="width: 100px;">
           <span id="step-size-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.05</span>
@@ -901,6 +917,16 @@
           <span class="debug-label">Density</span>
           <input type="range" min="1" max="20" step="1" value="8" id="slider-density" style="width: 100px;">
           <span id="density-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">8</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Edge Focus</span>
+          <input type="range" min="0" max="1" step="0.05" value="0.5" id="slider-edge-focus" style="width: 100px;">
+          <span id="edge-focus-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.50</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Composite</span>
+          <input type="range" min="0" max="1" step="0.05" value="0" id="slider-composite" style="width: 100px;">
+          <span id="composite-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.00</span>
         </div>
       </div>
       <div class="debug-row" style="border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.75rem;">
@@ -970,7 +996,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.14.0';
+    const VERSION = '0.16.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -2745,29 +2771,35 @@
       }
 
       // Determine appropriate range based on value
+      // Key: never trap users - always allow going beyond current value
       let min, max, step;
       const absValue = Math.abs(value);
 
-      if (absValue <= 1 && value >= 0) {
-        // 0 to 1 range (common for colors, blend factors)
-        min = 0;
-        max = 1;
-        step = 0.01;
-      } else if (absValue <= 1) {
-        // -1 to 1 range (common for normalized values)
-        min = -1;
-        max = 1;
-        step = 0.01;
-      } else if (absValue <= 5) {
-        // Smaller range for sizes/positions
-        min = value < 0 ? -5 : 0;
+      if (absValue === 0) {
+        // Zero value: allow reasonable range both ways
+        min = -2;
+        max = 2;
+        step = 0.05;
+      } else if (absValue < 0.5) {
+        // Small values: allow going larger
+        min = value < 0 ? -2 : -0.5;
+        max = 2;
+        step = 0.02;
+      } else if (absValue <= 2) {
+        // Medium values: wider range
+        min = value < 0 ? -5 : -1;
         max = 5;
         step = 0.05;
-      } else {
-        // Larger values - scale range appropriately
-        min = value < 0 ? value * 2 : 0;
-        max = Math.max(absValue * 2, 10);
+      } else if (absValue <= 10) {
+        // Moderate values
+        min = value < 0 ? -20 : -2;
+        max = 20;
         step = 0.1;
+      } else {
+        // Large values - scale range appropriately
+        min = value < 0 ? value * 3 : -absValue;
+        max = absValue * 3;
+        step = absValue > 100 ? 1 : 0.5;
       }
 
       // Store state
@@ -2889,6 +2921,13 @@
     // ============================================
     // TREE VIEWER
     // ============================================
+    // Tree view state for editable values
+    let treeEditState = {
+      path: null,
+      paramName: '',
+      nodeNotes: ''
+    };
+
     function generateTreeView(json) {
       const lines = [];
       const colors = {
@@ -2913,26 +2952,61 @@
         return icons[type] || '◇';
       }
 
-      function walkNode(node, prefix = '', isLast = true) {
+      // Create clickable number span for tree editing
+      function makeClickableValue(value, path, paramName, nodeNotes) {
+        if (typeof value !== 'number') return formatValue(value);
+        const escapedPath = path.replace(/'/g, "\\'");
+        const escapedParam = paramName.replace(/'/g, "\\'");
+        const escapedNotes = (nodeNotes || '').replace(/'/g, "\\'");
+        return `<span class="tree-editable" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+      }
+
+      function walkNode(node, prefix = '', isLast = true, path = 'root') {
         if (!node || !node.type) return;
 
         const connector = isLast ? '└─' : '├─';
         const icon = getNodeIcon(node.type);
         const color = colors[node.type] || '#c9d1d9';
+        const nodeNotes = node.notes || '';
 
         let label = `<span style="color:${color}">${icon} ${node.type}</span>`;
 
-        // Add key params inline
+        // Add key params inline with clickable values
         if (node.params) {
           const params = [];
-          if (node.params.r !== undefined) params.push(`r=${formatValue(node.params.r)}`);
-          if (node.params.size) params.push(`size=[${node.params.size.map(formatValue).join(',')}]`);
-          if (node.params.h !== undefined) params.push(`h=${formatValue(node.params.h)}`);
-          if (node.params.major !== undefined) params.push(`R=${formatValue(node.params.major)}`);
+          if (node.params.r !== undefined) {
+            params.push(`r=${makeClickableValue(node.params.r, path + '.params.r', 'radius', nodeNotes)}`);
+          }
+          if (node.params.size) {
+            const sizeVals = node.params.size.map((v, i) =>
+              makeClickableValue(v, path + '.params.size.' + i, 'size[' + i + ']', nodeNotes)
+            );
+            params.push(`size=[${sizeVals.join(',')}]`);
+          }
+          if (node.params.h !== undefined) {
+            params.push(`h=${makeClickableValue(node.params.h, path + '.params.h', 'height', nodeNotes)}`);
+          }
+          if (node.params.major !== undefined) {
+            params.push(`R=${makeClickableValue(node.params.major, path + '.params.major', 'major radius', nodeNotes)}`);
+          }
+          if (node.params.minor !== undefined) {
+            params.push(`r=${makeClickableValue(node.params.minor, path + '.params.minor', 'minor radius', nodeNotes)}`);
+          }
+          if (node.params.amount !== undefined) {
+            params.push(`amt=${makeClickableValue(node.params.amount, path + '.params.amount', 'amount', nodeNotes)}`);
+          }
+          if (node.params.thickness !== undefined) {
+            params.push(`t=${makeClickableValue(node.params.thickness, path + '.params.thickness', 'thickness', nodeNotes)}`);
+          }
           if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
           if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
         }
-        if (node.k !== undefined) label += ` <span style="color:#8b949e">k=${node.k}</span>`;
+        if (node.k !== undefined) {
+          label += ` <span style="color:#8b949e">k=${makeClickableValue(node.k, path + '.k', 'blend factor', nodeNotes)}</span>`;
+        }
+        if (node.r !== undefined) {
+          label += ` <span style="color:#8b949e">r=${makeClickableValue(node.r, path + '.r', 'round radius', nodeNotes)}</span>`;
+        }
         if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
         if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
 
@@ -2943,11 +3017,11 @@
         // Handle children
         if (node.children) {
           node.children.forEach((child, i) => {
-            walkNode(child, childPrefix, i === node.children.length - 1);
+            walkNode(child, childPrefix, i === node.children.length - 1, path + '.children.' + i);
           });
         }
         if (node.child) {
-          walkNode(node.child, childPrefix, true);
+          walkNode(node.child, childPrefix, true, path + '.child');
         }
       }
 
@@ -2963,14 +3037,14 @@
         lines.push(`<span style="color:#f472b6;font-weight:bold">📦 Definitions:</span>`);
         for (const [id, def] of Object.entries(json.defs)) {
           lines.push(`<span style="color:#a371f7">  ⊳ ${id}</span>`);
-          walkNode(def, '    ', true);
+          walkNode(def, '    ', true, 'defs.' + id);
         }
         lines.push('');
       }
 
       // Show root
       lines.push(`<span style="color:#22d3ee;font-weight:bold">🌳 Scene Root:</span>`);
-      walkNode(json.root, '', true);
+      walkNode(json.root, '', true, 'root');
 
       // Notes if present
       if (json.notes) {
@@ -2979,6 +3053,98 @@
       }
 
       return lines.join('\n');
+    }
+
+    // Global function for tree value editing
+    window.editTreeValue = function(path, value, paramName, nodeNotes) {
+      treeEditState.path = path;
+      treeEditState.paramName = paramName;
+      treeEditState.nodeNotes = nodeNotes;
+
+      // Calculate appropriate range - never trap between 0-1
+      const absValue = Math.abs(value);
+      let min, max, step;
+
+      if (absValue === 0) {
+        min = -2;
+        max = 2;
+        step = 0.05;
+      } else if (absValue < 0.5) {
+        // Small values: allow going larger
+        min = value < 0 ? -2 : -0.5;
+        max = 2;
+        step = 0.02;
+      } else if (absValue <= 2) {
+        // Medium values: wider range
+        min = value < 0 ? -5 : -1;
+        max = 5;
+        step = 0.05;
+      } else if (absValue <= 10) {
+        min = value < 0 ? -20 : -2;
+        max = 20;
+        step = 0.1;
+      } else {
+        // Large values
+        min = value < 0 ? value * 3 : -absValue;
+        max = absValue * 3;
+        step = absValue > 100 ? 1 : 0.5;
+      }
+
+      scrubberState = {
+        visible: true,
+        selectionStart: 0,
+        selectionEnd: 0,
+        originalValue: value,
+        min,
+        max,
+        step
+      };
+
+      scrubberSlider.min = min;
+      scrubberSlider.max = max;
+      scrubberSlider.step = step;
+      scrubberSlider.value = value;
+
+      // Show param name and notes in label
+      const labelText = nodeNotes ? `${paramName} (${nodeNotes})` : paramName;
+      scrubberLabel.textContent = labelText.substring(0, 30);
+      scrubberValue.textContent = formatNumber(value);
+
+      scrubberPanel.classList.add('visible');
+    };
+
+    function updateTreeScrubberValue(newValue) {
+      if (!treeEditState.path) return;
+
+      const formatted = formatNumber(newValue);
+      scrubberValue.textContent = formatted;
+
+      // Update JSON using path
+      const json = demos[currentDemo].json;
+      setValueByPath(json, treeEditState.path, newValue);
+
+      // Update editor text
+      jsonEditor.value = JSON.stringify(json, null, 2);
+
+      // Re-render
+      try {
+        renderJson(json);
+        updateTreeView();
+      } catch (e) {
+        console.warn('Tree scrub render error:', e);
+      }
+    }
+
+    function setValueByPath(obj, path, value) {
+      const parts = path.split('.');
+      let current = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        if (current[part] === undefined) return;
+        current = current[part];
+      }
+      const lastPart = parts[parts.length - 1];
+      current[lastPart] = value;
     }
 
     function updateTreeView() {
@@ -3221,6 +3387,32 @@
         const val = parseFloat(this.value);
         renderer.volumeDensity = val;
         $('density-val').textContent = val;
+      });
+
+      // Volume mode select
+      $('select-volume-mode').addEventListener('change', function() {
+        renderer.volumeMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Volume color mode select
+      $('select-volume-color').addEventListener('change', function() {
+        renderer.volumeColorMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Edge focus slider
+      $('slider-edge-focus').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.edgeFocus = val;
+        $('edge-focus-val').textContent = val.toFixed(2);
+      });
+
+      // Composite slider
+      $('slider-composite').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeComposite = val;
+        $('composite-val').textContent = val.toFixed(2);
       });
     }
 
@@ -3531,9 +3723,19 @@
       $('btn-paste').addEventListener('click', pasteFromClipboard);
 
       // Scrubber controls
-      $('scrubber-close').addEventListener('click', hideScrubber);
+      $('scrubber-close').addEventListener('click', () => {
+        hideScrubber();
+        treeEditState.path = null; // Clear tree edit state
+      });
       scrubberSlider.addEventListener('input', (e) => {
-        updateScrubberValue(parseFloat(e.target.value));
+        const newValue = parseFloat(e.target.value);
+        if (treeEditState.path) {
+          // Editing from tree view
+          updateTreeScrubberValue(newValue);
+        } else {
+          // Editing from text editor
+          updateScrubberValue(newValue);
+        }
       });
 
       // Detect scalar selection on cursor position change
