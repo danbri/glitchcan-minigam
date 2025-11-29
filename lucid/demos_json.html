@@ -605,7 +605,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn" id="btn-gallery" title="Template Gallery">☰</button>
+        <button class="btn" id="btn-gallery" title="Demo Gallery">☰</button>
         <button class="btn" id="btn-load-url" title="Load from URL">URL</button>
         <button class="btn" id="btn-load-file" title="Load JSON File">File</button>
         <button class="btn btn-icon" id="btn-editor" title="Toggle Editor">{ }</button>
@@ -620,7 +620,7 @@
 
       <div class="editor-panel" id="editor-panel">
         <div class="editor-header">
-          <h3>JSON Editor</h3>
+          <button class="btn primary" id="btn-apply" title="Apply Changes (Ctrl+Enter)">Save</button>
           <div style="display: flex; gap: 0.25rem;">
             <button class="btn" id="btn-select-all" title="Select All (Ctrl+A)">All</button>
             <button class="btn" id="btn-cut" title="Cut (Ctrl+X)">Cut</button>
@@ -640,8 +640,7 @@
           <textarea class="json-textarea" id="json-editor" spellcheck="false"></textarea>
         </div>
         <div class="editor-actions">
-          <button class="btn primary" id="btn-apply">Apply Changes</button>
-          <button class="btn" id="btn-copy">Copy JSON</button>
+          <button class="btn" id="btn-copy">Copy</button>
           <button class="btn" id="btn-download">Download</button>
         </div>
       </div>
@@ -651,7 +650,7 @@
     <div class="nav" id="nav"></div>
   </div>
 
-  <!-- Template Gallery -->
+  <!-- Demo Gallery -->
   <div class="template-gallery" id="template-gallery">
     <!-- Populated by JS -->
   </div>
