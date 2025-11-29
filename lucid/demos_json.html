@@ -970,7 +970,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.11.0';
+    const VERSION = '0.12.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -1872,6 +1872,78 @@
       },
 
       {
+        title: "🚀 Cobra Mk III (WIP)",
+        subtitle: "Elite ship - CSG sculpting (buggy)",
+        json: {
+          "version": "4.2",
+          "notes": "Cobra Mk III - CSG box cutting approach. STATUS: Work in progress, some CSG artifacts. Moving cutters outward to preserve hull volume.",
+          "root": {
+            "type": "transform",
+            "transform": {
+              "rotate": [0, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
+            },
+            "child": {
+              "type": "union",
+              "children": [
+                {
+                  "type": "subtract",
+                  "children": [
+                    {
+                      "type": "box",
+                      "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
+                    },
+                    {
+                      "type": "mirror",
+                      "axis": "x",
+                      "child": {
+                        "type": "box",
+                        "params": {"size": [2.0, 2.0, 4.0], "color": [1, 0, 0]},
+                        "transform": {"translate": [3.2, 0, 0.2], "rotate": [0, 68, 0]}
+                      }
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 1, 0]},
+                      "transform": {"translate": [0, 1.35, 1.0], "rotate": [12, 0, 0]}
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 0, 1]},
+                      "transform": {"translate": [0, -1.35, 1.0], "rotate": [-12, 0, 0]}
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [2.0, 1.0, 1.0], "color": [1, 1, 0]},
+                      "transform": {"translate": [0, 0, -2.1], "rotate": [-15, 0, 0]}
+                    }
+                  ]
+                },
+                {
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "union",
+                    "children": [
+                      {
+                        "type": "cylinder",
+                        "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
+                        "transform": {"translate": [0.5, 0, -1.2], "rotate": [90, 0, 0]}
+                      },
+                      {
+                        "type": "torus",
+                        "params": {"major": 0.14, "minor": 0.03, "color": [1.0, 0.6, 0.1]},
+                        "transform": {"translate": [0.5, 0, -1.4], "rotate": [90, 0, 0]}
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+
+      {
         title: "Elite Wireframe",
         subtitle: "ZX Spectrum style spaceship with mirror symmetry",
         json: {
@@ -2130,6 +2202,112 @@
                   "params": { "r": 0.4, "color": [0.2, 0.5, 0.9] }
                 },
                 "transform": { "translate": [1.2, 0.5, 0] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "🌊 Alien Planet",
+        subtitle: "Animated noise displacement",
+        json: {
+          "version": "1.0",
+          "notes": "DISPLACE modifier uses noise to distort surfaces. Params: amount (strength), scale (frequency), octaves (detail), noiseType ('fbm', 'turbulence', 'noise'), animate (true for moving noise). Creates organic, alien textures.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "displace",
+                "amount": 0.15,
+                "scale": 4.0,
+                "octaves": 5,
+                "noiseType": "fbm",
+                "animate": true,
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.9, "color": [0.3, 0.6, 0.9] }
+                },
+                "transform": { "translate": [0, 0.5, 0] }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.8, 0.3], "emit": 0.8 },
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.15 },
+                  "transform": { "translate": [1.5, 1.0, -0.5] }
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "🪨 Rocky Asteroid",
+        subtitle: "Turbulent noise for rough surfaces",
+        json: {
+          "version": "1.0",
+          "notes": "Turbulence noise creates sharper, more rocky features than FBM. Great for asteroids, terrain, and weathered surfaces. Higher octaves = more detail but more GPU cost.",
+          "root": {
+            "type": "displace",
+            "amount": 0.2,
+            "scale": 3.0,
+            "octaves": 4,
+            "noiseType": "turbulence",
+            "animate": false,
+            "child": {
+              "type": "smoothUnion",
+              "k": 0.3,
+              "children": [
+                { "type": "sphere", "params": { "r": 0.7, "color": [0.5, 0.4, 0.35] } },
+                { "type": "sphere", "params": { "r": 0.5, "color": [0.6, 0.5, 0.4] }, "transform": { "translate": [0.4, 0.3, 0.2] } },
+                { "type": "sphere", "params": { "r": 0.4, "color": [0.55, 0.45, 0.38] }, "transform": { "translate": [-0.3, -0.2, 0.4] } }
+              ]
+            },
+            "transform": { "translate": [0, 0.5, 0] }
+          }
+        }
+      },
+
+      {
+        title: "✨ Glowing Orb",
+        subtitle: "Emission + shell + noise",
+        json: {
+          "version": "1.0",
+          "notes": "Combining effects: shell creates hollow sphere, displace adds organic texture, material with emit creates glow. Layer effects for complex results.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "displace",
+                "amount": 0.08,
+                "scale": 5.0,
+                "octaves": 3,
+                "animate": true,
+                "child": {
+                  "type": "shell",
+                  "thickness": 0.04,
+                  "child": {
+                    "type": "material",
+                    "params": { "color": [0.2, 0.8, 1.0], "emit": 0.6 },
+                    "child": {
+                      "type": "sphere",
+                      "params": { "r": 0.8 }
+                    }
+                  }
+                },
+                "transform": { "translate": [0, 0.5, 0] }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 1.0, 1.0], "emit": 1.0 },
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.2 },
+                  "transform": { "translate": [0, 0.5, 0] }
+                }
               }
             ]
           }
@@ -2615,7 +2793,8 @@
         union: '#3fb950', subtract: '#f85149', intersect: '#f0883e',
         smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
         transform: '#a371f7', material: '#f472b6', group: '#ffd700',
-        ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922'
+        ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922',
+        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1'
       };
 
       function getNodeIcon(type) {
@@ -2624,7 +2803,7 @@
           union: '∪', subtract: '−', intersect: '∩',
           smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
           transform: '↻', material: '◆', group: '⊞', ref: '→',
-          round: '○', shell: '◯', mirror: '⊥'
+          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮'
         };
         return icons[type] || '◇';
       }
