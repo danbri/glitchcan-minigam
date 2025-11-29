@@ -682,6 +682,33 @@
       background: rgba(34, 211, 238, 0.15);
     }
 
+    /* Animation control states */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .anim-playing {
+      color: #4ade80 !important;  /* Green for playing */
+    }
+
+    .anim-playing #anim-icon {
+      animation: spin 1.5s linear infinite;
+    }
+
+    .anim-paused {
+      color: #facc15 !important;  /* Yellow for paused (time still runs) */
+    }
+
+    .anim-frozen {
+      color: #6b7280 !important;  /* Grey for frozen */
+    }
+
+    .anim-frozen #anim-icon {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
     /* Edge indicators (visual feedback) */
     .edge-indicator {
       position: fixed;
@@ -722,6 +749,9 @@
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+          <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
+            <span id="anim-icon" style="display:inline-block;">▶</span>
+          </button>
           <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
         </div>
         <div class="demo-info">
@@ -901,6 +931,10 @@
       <div class="debug-row">
         <span class="debug-label">Show CSG Cutters</span>
         <div class="toggle" id="toggle-cutters" title="Debug: Show subtract cutters as visible shapes"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Axes (RGB)</span>
+        <div class="toggle" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
@@ -2438,80 +2472,79 @@
 
       {
         title: "🐉 Draggo",
-        subtitle: "Terrifying beast of darkness",
-        camera: { distance: 7, phi: 0.3, theta: 0.4, target: [0, 0.2, 0] },
+        subtitle: "Sharp-edged terror with cones and boxes",
+        camera: { distance: 6, phi: 0.25, theta: 0.3, target: [0, 0, 0] },
         json: {
           "version": "1.0",
-          "notes": "Draggo - A terrifying dragon with obsidian scales, glowing eyes, horns, and spine ridges. Dark charcoal body with crimson accents.",
+          "notes": "Draggo - Sharp dragon using cones for horns/spikes, boxes for angular skull, hard unions for crisp edges",
           "root": {
             "type": "transform",
             "transform": {
-              "rotate": [0, { "expr": "mul", "args": [12, { "var": "time" }] }, 0]
+              "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
             },
             "child": {
-              "type": "smoothUnion",
-              "k": 0.1,
+              "type": "union",
               "children": [
                 {
-                  "notes": "Body - armored torso",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.55, 0.5, 0.9], "color": [0.08, 0.06, 0.1] }
+                  "notes": "Body core - slightly smoothed for organic feel",
+                  "type": "smoothUnion",
+                  "k": 0.08,
+                  "children": [
+                    {
+                      "notes": "Main body",
+                      "type": "ellipsoid",
+                      "params": { "radii": [0.5, 0.45, 0.8], "color": [0.12, 0.08, 0.1] }
+                    },
+                    {
+                      "notes": "Neck",
+                      "type": "capsule",
+                      "params": { "h": 0.35, "r": 0.2, "color": [0.1, 0.07, 0.09] },
+                      "transform": { "translate": [0, 0.15, 0.75], "rotate": [35, 0, 0] }
+                    }
+                  ]
                 },
                 {
-                  "notes": "Chest - muscular",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.42, 0.4, 0.5], "color": [0.1, 0.08, 0.12] },
-                  "transform": { "translate": [0, -0.05, 0.55] }
+                  "notes": "Angular skull - box-based",
+                  "type": "union",
+                  "children": [
+                    {
+                      "notes": "Skull top",
+                      "type": "box",
+                      "params": { "size": [0.22, 0.15, 0.28], "color": [0.1, 0.06, 0.08] },
+                      "transform": { "translate": [0, 0.42, 1.25], "rotate": [15, 0, 0] }
+                    },
+                    {
+                      "notes": "Snout - angular box",
+                      "type": "box",
+                      "params": { "size": [0.12, 0.08, 0.25], "color": [0.12, 0.07, 0.09] },
+                      "transform": { "translate": [0, 0.32, 1.55], "rotate": [5, 0, 0] }
+                    },
+                    {
+                      "notes": "Lower jaw",
+                      "type": "box",
+                      "params": { "size": [0.1, 0.05, 0.2], "color": [0.08, 0.05, 0.07] },
+                      "transform": { "translate": [0, 0.2, 1.5] }
+                    }
+                  ]
                 },
                 {
-                  "notes": "Belly - scaled underbelly",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.35, 0.25, 0.5], "color": [0.15, 0.05, 0.08] },
-                  "transform": { "translate": [0, -0.3, 0] }
-                },
-                {
-                  "notes": "Neck - thick and powerful",
-                  "type": "capsule",
-                  "params": { "h": 0.45, "r": 0.25, "color": [0.09, 0.07, 0.11] },
-                  "transform": { "translate": [0, 0.2, 0.95], "rotate": [30, 0, 0] }
-                },
-                {
-                  "notes": "Head - angular skull",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.3, 0.25, 0.4], "color": [0.1, 0.08, 0.12] },
-                  "transform": { "translate": [0, 0.45, 1.45] }
-                },
-                {
-                  "notes": "Snout - long and menacing",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.18, 0.12, 0.3], "color": [0.12, 0.08, 0.1] },
-                  "transform": { "translate": [0, 0.35, 1.75] }
-                },
-                {
-                  "notes": "Lower jaw",
-                  "type": "ellipsoid",
-                  "params": { "radii": [0.14, 0.08, 0.22], "color": [0.1, 0.06, 0.08] },
-                  "transform": { "translate": [0, 0.22, 1.65] }
-                },
-                {
-                  "notes": "Horns (mirrored)",
+                  "notes": "SHARP horns - cones (mirrored)",
                   "type": "mirror",
                   "axis": "x",
                   "child": {
-                    "type": "smoothUnion",
-                    "k": 0.03,
+                    "type": "union",
                     "children": [
                       {
-                        "notes": "Main horn",
-                        "type": "capsule",
-                        "params": { "h": 0.25, "r": 0.04, "color": [0.2, 0.15, 0.1] },
-                        "transform": { "translate": [0.18, 0.65, 1.3], "rotate": [-50, 20, 30] }
+                        "notes": "Main horn - sharp cone",
+                        "type": "cone",
+                        "params": { "h": 0.4, "r": 0.06, "color": [0.25, 0.15, 0.1] },
+                        "transform": { "translate": [0.18, 0.55, 1.1], "rotate": [130, 25, 0] }
                       },
                       {
-                        "notes": "Horn tip",
-                        "type": "capsule",
-                        "params": { "h": 0.12, "r": 0.02, "color": [0.25, 0.18, 0.12] },
-                        "transform": { "translate": [0.25, 0.85, 1.15], "rotate": [-60, 25, 35] }
+                        "notes": "Secondary horn",
+                        "type": "cone",
+                        "params": { "h": 0.25, "r": 0.04, "color": [0.3, 0.18, 0.12] },
+                        "transform": { "translate": [0.22, 0.48, 1.0], "rotate": [145, 35, 0] }
                       }
                     ]
                   }
@@ -2522,192 +2555,183 @@
                   "axis": "x",
                   "child": {
                     "type": "material",
-                    "params": { "color": [1.0, 0.2, 0.1], "emit": 1.5 },
+                    "params": { "color": [1.0, 0.15, 0.0], "emit": 2.0 },
                     "child": {
                       "type": "sphere",
-                      "params": { "r": 0.055 },
-                      "transform": { "translate": [0.14, 0.5, 1.55] }
+                      "params": { "r": 0.06 },
+                      "transform": { "translate": [0.12, 0.45, 1.4] }
                     }
                   }
                 },
                 {
-                  "notes": "Eye slits (mirrored)",
+                  "notes": "Sharp fangs - cones (mirrored)",
                   "type": "mirror",
                   "axis": "x",
                   "child": {
-                    "type": "sphere",
-                    "params": { "r": 0.025, "color": [0.02, 0.02, 0.02] },
-                    "transform": { "translate": [0.14, 0.5, 1.58] }
+                    "type": "union",
+                    "children": [
+                      {
+                        "notes": "Upper fang",
+                        "type": "cone",
+                        "params": { "h": 0.12, "r": 0.02, "color": [0.9, 0.85, 0.8] },
+                        "transform": { "translate": [0.06, 0.22, 1.7], "rotate": [180, 0, 5] }
+                      },
+                      {
+                        "notes": "Lower fang",
+                        "type": "cone",
+                        "params": { "h": 0.08, "r": 0.015, "color": [0.9, 0.85, 0.8] },
+                        "transform": { "translate": [0.05, 0.25, 1.65], "rotate": [0, 0, -5] }
+                      }
+                    ]
                   }
                 },
                 {
-                  "notes": "Spine ridges",
+                  "notes": "Spine spikes - sharp cones",
                   "type": "union",
                   "children": [
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.08, "r": 0.03, "color": [0.18, 0.08, 0.1] },
-                      "transform": { "translate": [0, 0.55, 1.2], "rotate": [40, 0, 0] }
+                      "type": "cone",
+                      "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] },
+                      "transform": { "translate": [0, 0.55, 1.0], "rotate": [160, 0, 0] }
                     },
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.1, "r": 0.035, "color": [0.18, 0.08, 0.1] },
-                      "transform": { "translate": [0, 0.52, 0.9], "rotate": [20, 0, 0] }
+                      "type": "cone",
+                      "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] },
+                      "transform": { "translate": [0, 0.52, 0.6], "rotate": [170, 0, 0] }
                     },
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.12, "r": 0.04, "color": [0.18, 0.08, 0.1] },
-                      "transform": { "translate": [0, 0.5, 0.5] }
+                      "type": "cone",
+                      "params": { "h": 0.25, "r": 0.045, "color": [0.2, 0.1, 0.12] },
+                      "transform": { "translate": [0, 0.48, 0.2], "rotate": [175, 0, 0] }
                     },
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.14, "r": 0.045, "color": [0.18, 0.08, 0.1] },
-                      "transform": { "translate": [0, 0.48, 0.1], "rotate": [-10, 0, 0] }
+                      "type": "cone",
+                      "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] },
+                      "transform": { "translate": [0, 0.42, -0.2], "rotate": [170, 0, 0] }
                     },
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.12, "r": 0.04, "color": [0.18, 0.08, 0.1] },
-                      "transform": { "translate": [0, 0.42, -0.3], "rotate": [-20, 0, 0] }
+                      "type": "cone",
+                      "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] },
+                      "transform": { "translate": [0, 0.35, -0.55], "rotate": [165, 0, 0] }
                     }
                   ]
                 },
                 {
-                  "notes": "Tail - long and spiked",
-                  "type": "smoothUnion",
-                  "k": 0.1,
+                  "notes": "Tail with blade",
+                  "type": "union",
                   "children": [
                     {
-                      "type": "capsule",
-                      "params": { "h": 0.4, "r": 0.22, "color": [0.08, 0.06, 0.1] },
-                      "transform": { "translate": [0, -0.1, -1.0], "rotate": [-15, 0, 0] }
-                    },
-                    {
-                      "type": "capsule",
-                      "params": { "h": 0.35, "r": 0.16, "color": [0.09, 0.07, 0.1] },
-                      "transform": { "translate": [0.1, -0.2, -1.7], "rotate": [-25, 12, 0] }
-                    },
-                    {
-                      "type": "capsule",
-                      "params": { "h": 0.3, "r": 0.11, "color": [0.1, 0.07, 0.1] },
-                      "transform": { "translate": [0.25, -0.15, -2.3], "rotate": [-15, 20, 0] }
-                    },
-                    {
-                      "type": "capsule",
-                      "params": { "h": 0.25, "r": 0.07, "color": [0.1, 0.08, 0.1] },
-                      "transform": { "translate": [0.4, -0.05, -2.8], "rotate": [0, 25, 0] }
-                    },
-                    {
-                      "notes": "Tail blade",
+                      "notes": "Tail segments",
                       "type": "smoothUnion",
-                      "k": 0.02,
+                      "k": 0.06,
                       "children": [
                         {
                           "type": "capsule",
-                          "params": { "h": 0.2, "r": 0.025, "color": [0.25, 0.08, 0.1] },
-                          "transform": { "translate": [0.55, 0.1, -3.1], "rotate": [45, 30, 0] }
+                          "params": { "h": 0.35, "r": 0.18, "color": [0.1, 0.07, 0.09] },
+                          "transform": { "translate": [0, -0.05, -0.9], "rotate": [-12, 0, 0] }
                         },
                         {
                           "type": "capsule",
-                          "params": { "h": 0.15, "r": 0.02, "color": [0.3, 0.1, 0.1] },
-                          "transform": { "translate": [0.5, 0.0, -3.15], "rotate": [20, 40, 0] }
+                          "params": { "h": 0.3, "r": 0.12, "color": [0.1, 0.07, 0.09] },
+                          "transform": { "translate": [0, -0.15, -1.5], "rotate": [-18, 0, 0] }
+                        },
+                        {
+                          "type": "capsule",
+                          "params": { "h": 0.25, "r": 0.08, "color": [0.1, 0.07, 0.09] },
+                          "transform": { "translate": [0, -0.2, -2.0], "rotate": [-10, 0, 0] }
                         }
                       ]
+                    },
+                    {
+                      "notes": "Tail blade - sharp box",
+                      "type": "box",
+                      "params": { "size": [0.02, 0.15, 0.2], "color": [0.2, 0.08, 0.1] },
+                      "transform": { "translate": [0, -0.15, -2.4], "rotate": [-5, 0, 0] }
+                    },
+                    {
+                      "notes": "Tail spikes",
+                      "type": "cone",
+                      "params": { "h": 0.12, "r": 0.025, "color": [0.25, 0.1, 0.1] },
+                      "transform": { "translate": [0, -0.05, -2.55], "rotate": [-25, 0, 0] }
                     }
                   ]
                 },
                 {
-                  "notes": "Front legs with claws (mirrored)",
+                  "notes": "Front legs with sharp claws (mirrored)",
                   "type": "mirror",
                   "axis": "x",
                   "child": {
-                    "type": "smoothUnion",
-                    "k": 0.06,
+                    "type": "union",
                     "children": [
                       {
                         "type": "capsule",
-                        "params": { "h": 0.3, "r": 0.12, "color": [0.09, 0.07, 0.1] },
-                        "transform": { "translate": [0.4, -0.55, 0.45], "rotate": [5, 0, 18] }
+                        "params": { "h": 0.28, "r": 0.1, "color": [0.1, 0.07, 0.09] },
+                        "transform": { "translate": [0.35, -0.5, 0.4], "rotate": [8, 0, 15] }
                       },
                       {
-                        "notes": "Claw",
-                        "type": "ellipsoid",
-                        "params": { "radii": [0.1, 0.06, 0.15], "color": [0.1, 0.08, 0.1] },
-                        "transform": { "translate": [0.48, -0.9, 0.5] }
+                        "notes": "Sharp claws",
+                        "type": "cone",
+                        "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] },
+                        "transform": { "translate": [0.4, -0.85, 0.5], "rotate": [170, 0, 10] }
                       },
                       {
-                        "notes": "Talons",
-                        "type": "capsule",
-                        "params": { "h": 0.06, "r": 0.015, "color": [0.2, 0.15, 0.1] },
-                        "transform": { "translate": [0.52, -0.98, 0.6], "rotate": [30, 0, 0] }
+                        "type": "cone",
+                        "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] },
+                        "transform": { "translate": [0.45, -0.85, 0.45], "rotate": [170, 0, 20] }
                       }
                     ]
                   }
                 },
                 {
-                  "notes": "Back legs - powerful haunches (mirrored)",
+                  "notes": "Back legs (mirrored)",
                   "type": "mirror",
                   "axis": "x",
                   "child": {
-                    "type": "smoothUnion",
-                    "k": 0.08,
+                    "type": "union",
                     "children": [
                       {
                         "type": "capsule",
-                        "params": { "h": 0.38, "r": 0.16, "color": [0.09, 0.07, 0.1] },
-                        "transform": { "translate": [0.45, -0.6, -0.55], "rotate": [12, 0, 15] }
+                        "params": { "h": 0.32, "r": 0.12, "color": [0.1, 0.07, 0.09] },
+                        "transform": { "translate": [0.4, -0.55, -0.45], "rotate": [10, 0, 12] }
                       },
                       {
-                        "notes": "Claw",
-                        "type": "ellipsoid",
-                        "params": { "radii": [0.12, 0.07, 0.18], "color": [0.1, 0.08, 0.1] },
-                        "transform": { "translate": [0.55, -1.0, -0.5] }
+                        "notes": "Sharp claws",
+                        "type": "cone",
+                        "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] },
+                        "transform": { "translate": [0.48, -0.92, -0.35], "rotate": [165, 0, 8] }
                       },
                       {
-                        "notes": "Talons",
-                        "type": "capsule",
-                        "params": { "h": 0.08, "r": 0.018, "color": [0.2, 0.15, 0.1] },
-                        "transform": { "translate": [0.6, -1.1, -0.4], "rotate": [35, 0, 0] }
+                        "type": "cone",
+                        "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] },
+                        "transform": { "translate": [0.52, -0.92, -0.4], "rotate": [165, 0, 18] }
                       }
                     ]
                   }
                 },
                 {
-                  "notes": "Wings - massive and bat-like (mirrored)",
+                  "notes": "Angular wings (mirrored)",
                   "type": "mirror",
                   "axis": "x",
                   "child": {
-                    "type": "smoothUnion",
-                    "k": 0.04,
+                    "type": "union",
                     "children": [
                       {
-                        "notes": "Wing shoulder",
-                        "type": "sphere",
-                        "params": { "r": 0.12, "color": [0.1, 0.08, 0.12] },
-                        "transform": { "translate": [0.5, 0.35, 0.2] }
-                      },
-                      {
-                        "notes": "Wing arm",
+                        "notes": "Wing arm bone",
                         "type": "capsule",
-                        "params": { "h": 0.6, "r": 0.05, "color": [0.08, 0.06, 0.1] },
-                        "transform": { "translate": [0.8, 0.4, 0], "rotate": [95, -55, 15] }
+                        "params": { "h": 0.5, "r": 0.045, "color": [0.08, 0.05, 0.07] },
+                        "transform": { "translate": [0.7, 0.35, 0.1], "rotate": [90, -50, 20] }
                       },
                       {
-                        "notes": "Wing finger 1",
-                        "type": "capsule",
-                        "params": { "h": 0.5, "r": 0.025, "color": [0.07, 0.05, 0.09] },
-                        "transform": { "translate": [1.3, 0.35, 0.3], "rotate": [90, -40, 0] }
+                        "notes": "Wing membrane - flat box",
+                        "type": "box",
+                        "params": { "size": [0.6, 0.012, 0.4], "color": [0.15, 0.05, 0.08] },
+                        "transform": { "translate": [1.1, 0.3, -0.05], "rotate": [0, -20, 8] }
                       },
                       {
-                        "notes": "Wing finger 2",
-                        "type": "capsule",
-                        "params": { "h": 0.55, "r": 0.022, "color": [0.07, 0.05, 0.09] },
-                        "transform": { "translate": [1.35, 0.3, -0.1], "rotate": [85, -50, 0] }
-                      },
-                      {
-                        "notes": "Wing membrane",
-                        "type": "ellipsoid",
-                        "params": { "radii": [0.8, 0.015, 0.5], "color": [0.12, 0.04, 0.06] },
-                        "transform": { "translate": [1.2, 0.3, -0.1], "rotate": [0, -25, 12] }
+                        "notes": "Wing claw",
+                        "type": "cone",
+                        "params": { "h": 0.08, "r": 0.015, "color": [0.2, 0.12, 0.1] },
+                        "transform": { "translate": [1.55, 0.28, 0.25], "rotate": [100, -30, 0] }
                       }
                     ]
                   }
@@ -2733,6 +2757,13 @@
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
 
+    // Animation state: 'playing' | 'paused' | 'frozen'
+    // playing = icon spins, time runs
+    // paused = icon static, time still runs (for camera manipulation while scene animates)
+    // frozen = grey/struck, time frozen
+    let animState = 'playing';
+    let frozenTime = 0; // Store time when frozen
+
     // Camera orbit state
     let isDragging = false;
     let lastMouseX = 0;
@@ -2746,6 +2777,7 @@
       volumeRender: false,
       showGround: true,
       showCutters: false,
+      showAxes: false,
       cameraDistance: 4
     };
 
@@ -2824,10 +2856,20 @@
             renderer.camera.theta += autoRotateSpeed * deltaTime;
           }
 
+          // Handle animation state for time control
+          if (animState === 'frozen') {
+            renderer.overrideTime = frozenTime;
+          } else {
+            renderer.overrideTime = null; // Use normal time
+          }
+
           renderer.render();
           requestAnimationFrame(renderLoop);
         }
         renderLoop();
+
+        // Initialize animation button state
+        updateAnimButton();
 
         // Hide loading, show app
         loadingEl.style.display = 'none';
@@ -3234,6 +3276,37 @@
       setTimeout(() => {
         statusEl.classList.remove('visible');
       }, 2500);
+    }
+
+    /**
+     * Update animation button appearance based on animState
+     * Three states: playing (green, spinning), paused (yellow, static), frozen (grey, struck)
+     */
+    function updateAnimButton() {
+      const btn = $('btn-anim');
+      const icon = $('anim-icon');
+      if (!btn || !icon) return;
+
+      // Remove all state classes
+      btn.classList.remove('anim-playing', 'anim-paused', 'anim-frozen');
+
+      switch (animState) {
+        case 'playing':
+          btn.classList.add('anim-playing');
+          icon.textContent = '▶';
+          btn.title = 'Animation: Playing - click to pause (A)';
+          break;
+        case 'paused':
+          btn.classList.add('anim-paused');
+          icon.textContent = '⏸';
+          btn.title = 'Animation: Paused (time runs) - click to freeze (A)';
+          break;
+        case 'frozen':
+          btn.classList.add('anim-frozen');
+          icon.textContent = '⏹';
+          btn.title = 'Animation: Frozen (time stopped) - click to play (A)';
+          break;
+      }
     }
 
     // ============================================
@@ -3833,6 +3906,13 @@
         if (json) renderJson(json);
       });
 
+      // Axes toggle
+      $('toggle-axes').addEventListener('click', function() {
+        this.classList.toggle('active');
+        debugSettings.showAxes = this.classList.contains('active');
+        renderer.showAxes = debugSettings.showAxes;
+      });
+
       // Camera distance slider
       $('slider-distance').addEventListener('input', function() {
         debugSettings.cameraDistance = parseFloat(this.value);
@@ -4002,6 +4082,9 @@
         } else if (e.key === 't' || e.key === 'T') {
           e.preventDefault();
           $('btn-tree').click(); // Toggle tree view
+        } else if (e.key === 'a' || e.key === 'A') {
+          e.preventDefault();
+          $('btn-anim').click(); // Cycle animation state
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -4033,6 +4116,20 @@
       $('btn-auto-rotate').addEventListener('click', () => {
         autoRotate = !autoRotate;
         $('btn-auto-rotate').classList.toggle('active', autoRotate);
+      });
+
+      // Animation state toggle (cycles: playing → paused → frozen → playing)
+      $('btn-anim').addEventListener('click', () => {
+        if (animState === 'playing') {
+          animState = 'paused';
+        } else if (animState === 'paused') {
+          animState = 'frozen';
+          // Capture current time when freezing
+          frozenTime = (performance.now() - renderer.startTime) / 1000.0;
+        } else {
+          animState = 'playing';
+        }
+        updateAnimButton();
       });
 
       // Paste & Apply - one click to paste JSON and render
