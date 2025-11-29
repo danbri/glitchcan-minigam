@@ -115,6 +115,15 @@ function walkNode(node, ctx) {
     case 'repeat':
       return generateRepeat(node, ctx);
 
+    case 'round':
+      return generateRound(node, ctx);
+
+    case 'shell':
+      return generateShell(node, ctx);
+
+    case 'displace':
+      return generateDisplace(node, ctx);
+
     default:
       console.warn(`Unhandled node type: ${node.type}`);
       return 'vec4(1000.0, 1.0, 0.0, 1.0)';
@@ -660,6 +669,89 @@ ${repeatCode}  return ${childFuncName}(q);
 }
 
 /**
+ * Generate round modifier - adds radius to soften edges
+ * round(sdf) = sdf - r
+ */
+function generateRound(node, ctx) {
+  const childExpr = walkNode(node.child, ctx);
+  const r = node.r !== undefined ? valueToGlsl(node.r, ctx) : '0.05';
+
+  const funcName = `round_${ctx.helperCounter++}`;
+  const p = applyTransform('p', node.transform, ctx);
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
+  return vec4(c.x - ${r}, c.yzw);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
+ * Generate shell modifier - hollows out shape with wall thickness
+ * shell(sdf) = abs(sdf) - thickness
+ */
+function generateShell(node, ctx) {
+  const childExpr = walkNode(node.child, ctx);
+  const thickness = node.thickness !== undefined ? valueToGlsl(node.thickness, ctx) : '0.05';
+
+  const funcName = `shell_${ctx.helperCounter++}`;
+  const p = applyTransform('p', node.transform, ctx);
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
+  return vec4(abs(c.x) - ${thickness}, c.yzw);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
+ * Generate displace modifier - displaces surface using noise
+ * Params:
+ *   - amount: displacement strength (default 0.1)
+ *   - scale: noise frequency (default 3.0)
+ *   - octaves: noise detail level (default 4)
+ *   - animate: multiply scale by time for animated noise
+ */
+function generateDisplace(node, ctx) {
+  const childExpr = walkNode(node.child, ctx);
+  const amount = node.amount !== undefined ? valueToGlsl(node.amount, ctx) : '0.1';
+  const scale = node.scale !== undefined ? valueToGlsl(node.scale, ctx) : '3.0';
+  const octaves = node.octaves || 4;
+  const noiseType = node.noiseType || 'fbm'; // 'noise', 'fbm', or 'turbulence'
+
+  const funcName = `displace_${ctx.helperCounter++}`;
+  const p = applyTransform('p', node.transform, ctx);
+
+  // Choose noise function based on type
+  let noiseCall;
+  if (noiseType === 'noise') {
+    noiseCall = `noise3(np)`;
+  } else if (noiseType === 'turbulence') {
+    noiseCall = `turbulence(np, ${octaves})`;
+  } else {
+    noiseCall = `fbm(np, ${octaves})`;
+  }
+
+  // Support animated noise
+  const timeOffset = node.animate ? ' + u_time * 0.5' : '';
+  ctx.uniforms.add('u_time');
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec3 np = (${p}) * ${scale}${timeOffset};
+  float disp = (${noiseCall} - 0.5) * 2.0 * ${amount};
+  vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
+  return vec4(c.x + disp, c.yzw);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
  * Convert a value to GLSL expression
  */
 function valueToGlsl(value, ctx) {
@@ -709,6 +801,11 @@ function exprToGlsl(expr, ctx) {
     case 'neg': return `(-${args[0]})`;
     case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
     case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
+    // Noise functions - demoscene effects
+    case 'noise': return `noise3(vec3(${args.join(', ')}))`;
+    case 'fbm': return `fbm(vec3(${args[0]}, ${args[1]}, ${args[2]}), ${args[3] || '4'})`;
+    case 'turbulence': return `turbulence(vec3(${args[0]}, ${args[1]}, ${args[2]}), ${args[3] || '4'})`;
+    case 'hash': return `hash(${args[0]})`;
     default:
       console.warn(`Unknown expression op: ${expr.op}`);
       return '0.0';
@@ -1067,6 +1164,62 @@ vec3 transformMat4Inverse(vec3 p, mat4 m) {
   // Inverse of affine: first subtract translation, then apply transpose of rotation
   // (Only correct for orthogonal rotation matrices; for scaled/sheared, use full inverse)
   return rotT * (p - trans);
+}
+
+// ========================================
+// Noise functions (demoscene style)
+// ========================================
+
+// Hash function for pseudo-random values
+float hash(float n) {
+  return fract(sin(n) * 43758.5453123);
+}
+
+float hash3(vec3 p) {
+  return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+}
+
+// 3D value noise
+float noise3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f); // smoothstep
+
+  float n = i.x + i.y * 57.0 + i.z * 113.0;
+  return mix(
+    mix(mix(hash(n), hash(n + 1.0), f.x),
+        mix(hash(n + 57.0), hash(n + 58.0), f.x), f.y),
+    mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
+        mix(hash(n + 170.0), hash(n + 171.0), f.x), f.y),
+    f.z);
+}
+
+// Fractal Brownian Motion - layered noise
+float fbm(vec3 p, int octaves) {
+  float value = 0.0;
+  float amplitude = 0.5;
+  float frequency = 1.0;
+  for (int i = 0; i < 6; i++) {
+    if (i >= octaves) break;
+    value += amplitude * noise3(p * frequency);
+    frequency *= 2.0;
+    amplitude *= 0.5;
+  }
+  return value;
+}
+
+// Turbulence - absolute value noise for sharper features
+float turbulence(vec3 p, int octaves) {
+  float value = 0.0;
+  float amplitude = 0.5;
+  float frequency = 1.0;
+  for (int i = 0; i < 6; i++) {
+    if (i >= octaves) break;
+    value += amplitude * abs(noise3(p * frequency) * 2.0 - 1.0);
+    frequency *= 2.0;
+    amplitude *= 0.5;
+  }
+  return value;
 }
 
 `;

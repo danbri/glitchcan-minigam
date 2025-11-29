@@ -719,6 +719,7 @@
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">🌳</button>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -828,6 +829,17 @@
       <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
         <button class="btn primary" id="btn-about-close">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Tree Viewer Panel - slides up from bottom -->
+  <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
+    <div class="debug-header">
+      <h3>🌳 Scene Tree</h3>
+      <button class="btn" id="btn-tree-close">Close</button>
+    </div>
+    <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
+      <!-- Tree structure rendered here -->
     </div>
   </div>
 
@@ -958,7 +970,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.10.0';
+    const VERSION = '0.12.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -1860,6 +1872,78 @@
       },
 
       {
+        title: "🚀 Cobra Mk III (WIP)",
+        subtitle: "Elite ship - CSG sculpting (buggy)",
+        json: {
+          "version": "4.2",
+          "notes": "Cobra Mk III - CSG box cutting approach. STATUS: Work in progress, some CSG artifacts. Moving cutters outward to preserve hull volume.",
+          "root": {
+            "type": "transform",
+            "transform": {
+              "rotate": [0, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
+            },
+            "child": {
+              "type": "union",
+              "children": [
+                {
+                  "type": "subtract",
+                  "children": [
+                    {
+                      "type": "box",
+                      "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
+                    },
+                    {
+                      "type": "mirror",
+                      "axis": "x",
+                      "child": {
+                        "type": "box",
+                        "params": {"size": [2.0, 2.0, 4.0], "color": [1, 0, 0]},
+                        "transform": {"translate": [3.2, 0, 0.2], "rotate": [0, 68, 0]}
+                      }
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 1, 0]},
+                      "transform": {"translate": [0, 1.35, 1.0], "rotate": [12, 0, 0]}
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 0, 1]},
+                      "transform": {"translate": [0, -1.35, 1.0], "rotate": [-12, 0, 0]}
+                    },
+                    {
+                      "type": "box",
+                      "params": {"size": [2.0, 1.0, 1.0], "color": [1, 1, 0]},
+                      "transform": {"translate": [0, 0, -2.1], "rotate": [-15, 0, 0]}
+                    }
+                  ]
+                },
+                {
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "union",
+                    "children": [
+                      {
+                        "type": "cylinder",
+                        "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
+                        "transform": {"translate": [0.5, 0, -1.2], "rotate": [90, 0, 0]}
+                      },
+                      {
+                        "type": "torus",
+                        "params": {"major": 0.14, "minor": 0.03, "color": [1.0, 0.6, 0.1]},
+                        "transform": {"translate": [0.5, 0, -1.4], "rotate": [90, 0, 0]}
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+
+      {
         title: "Elite Wireframe",
         subtitle: "ZX Spectrum style spaceship with mirror symmetry",
         json: {
@@ -2122,6 +2206,112 @@
             ]
           }
         }
+      },
+
+      {
+        title: "🌊 Alien Planet",
+        subtitle: "Animated noise displacement",
+        json: {
+          "version": "1.0",
+          "notes": "DISPLACE modifier uses noise to distort surfaces. Params: amount (strength), scale (frequency), octaves (detail), noiseType ('fbm', 'turbulence', 'noise'), animate (true for moving noise). Creates organic, alien textures.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "displace",
+                "amount": 0.15,
+                "scale": 4.0,
+                "octaves": 5,
+                "noiseType": "fbm",
+                "animate": true,
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.9, "color": [0.3, 0.6, 0.9] }
+                },
+                "transform": { "translate": [0, 0.5, 0] }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 0.8, 0.3], "emit": 0.8 },
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.15 },
+                  "transform": { "translate": [1.5, 1.0, -0.5] }
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "🪨 Rocky Asteroid",
+        subtitle: "Turbulent noise for rough surfaces",
+        json: {
+          "version": "1.0",
+          "notes": "Turbulence noise creates sharper, more rocky features than FBM. Great for asteroids, terrain, and weathered surfaces. Higher octaves = more detail but more GPU cost.",
+          "root": {
+            "type": "displace",
+            "amount": 0.2,
+            "scale": 3.0,
+            "octaves": 4,
+            "noiseType": "turbulence",
+            "animate": false,
+            "child": {
+              "type": "smoothUnion",
+              "k": 0.3,
+              "children": [
+                { "type": "sphere", "params": { "r": 0.7, "color": [0.5, 0.4, 0.35] } },
+                { "type": "sphere", "params": { "r": 0.5, "color": [0.6, 0.5, 0.4] }, "transform": { "translate": [0.4, 0.3, 0.2] } },
+                { "type": "sphere", "params": { "r": 0.4, "color": [0.55, 0.45, 0.38] }, "transform": { "translate": [-0.3, -0.2, 0.4] } }
+              ]
+            },
+            "transform": { "translate": [0, 0.5, 0] }
+          }
+        }
+      },
+
+      {
+        title: "✨ Glowing Orb",
+        subtitle: "Emission + shell + noise",
+        json: {
+          "version": "1.0",
+          "notes": "Combining effects: shell creates hollow sphere, displace adds organic texture, material with emit creates glow. Layer effects for complex results.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "displace",
+                "amount": 0.08,
+                "scale": 5.0,
+                "octaves": 3,
+                "animate": true,
+                "child": {
+                  "type": "shell",
+                  "thickness": 0.04,
+                  "child": {
+                    "type": "material",
+                    "params": { "color": [0.2, 0.8, 1.0], "emit": 0.6 },
+                    "child": {
+                      "type": "sphere",
+                      "params": { "r": 0.8 }
+                    }
+                  }
+                },
+                "transform": { "translate": [0, 0.5, 0] }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1.0, 1.0, 1.0], "emit": 1.0 },
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.2 },
+                  "transform": { "translate": [0, 0.5, 0] }
+                }
+              }
+            ]
+          }
+        }
       }
     ];
 
@@ -2135,6 +2325,7 @@
     let menuOpen = false;
     let debugOpen = false;
     let lightingOpen = false;
+    let treeOpen = false;
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
 
@@ -2286,6 +2477,9 @@
 
         // Update demos submenu selection
         updateDemosSubmenuSelection();
+
+        // Update tree view if open
+        if (treeOpen) updateTreeView();
 
         console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
 
@@ -2585,6 +2779,108 @@
       setTimeout(() => {
         statusEl.classList.remove('visible');
       }, 2500);
+    }
+
+    // ============================================
+    // TREE VIEWER
+    // ============================================
+    function generateTreeView(json) {
+      const lines = [];
+      const colors = {
+        // Node types
+        sphere: '#22d3ee', box: '#22d3ee', cylinder: '#22d3ee', torus: '#22d3ee',
+        capsule: '#22d3ee', ellipsoid: '#22d3ee', plane: '#22d3ee',
+        union: '#3fb950', subtract: '#f85149', intersect: '#f0883e',
+        smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
+        transform: '#a371f7', material: '#f472b6', group: '#ffd700',
+        ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922',
+        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1'
+      };
+
+      function getNodeIcon(type) {
+        const icons = {
+          sphere: '●', box: '■', cylinder: '▬', torus: '◎', capsule: '⬭', ellipsoid: '⬯', plane: '▭',
+          union: '∪', subtract: '−', intersect: '∩',
+          smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
+          transform: '↻', material: '◆', group: '⊞', ref: '→',
+          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮'
+        };
+        return icons[type] || '◇';
+      }
+
+      function walkNode(node, prefix = '', isLast = true) {
+        if (!node || !node.type) return;
+
+        const connector = isLast ? '└─' : '├─';
+        const icon = getNodeIcon(node.type);
+        const color = colors[node.type] || '#c9d1d9';
+
+        let label = `<span style="color:${color}">${icon} ${node.type}</span>`;
+
+        // Add key params inline
+        if (node.params) {
+          const params = [];
+          if (node.params.r !== undefined) params.push(`r=${formatValue(node.params.r)}`);
+          if (node.params.size) params.push(`size=[${node.params.size.map(formatValue).join(',')}]`);
+          if (node.params.h !== undefined) params.push(`h=${formatValue(node.params.h)}`);
+          if (node.params.major !== undefined) params.push(`R=${formatValue(node.params.major)}`);
+          if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+          if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
+        }
+        if (node.k !== undefined) label += ` <span style="color:#8b949e">k=${node.k}</span>`;
+        if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
+        if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
+
+        lines.push(`${prefix}${connector} ${label}`);
+
+        const childPrefix = prefix + (isLast ? '   ' : '│  ');
+
+        // Handle children
+        if (node.children) {
+          node.children.forEach((child, i) => {
+            walkNode(child, childPrefix, i === node.children.length - 1);
+          });
+        }
+        if (node.child) {
+          walkNode(node.child, childPrefix, true);
+        }
+      }
+
+      function formatValue(v) {
+        if (typeof v === 'number') return v.toFixed ? (v % 1 === 0 ? v : v.toFixed(2)) : v;
+        if (typeof v === 'object' && v.expr) return `{${v.expr}(...)}`;
+        if (typeof v === 'object' && v.var) return `{${v.var}}`;
+        return String(v);
+      }
+
+      // Show defs first
+      if (json.defs && Object.keys(json.defs).length > 0) {
+        lines.push(`<span style="color:#f472b6;font-weight:bold">📦 Definitions:</span>`);
+        for (const [id, def] of Object.entries(json.defs)) {
+          lines.push(`<span style="color:#a371f7">  ⊳ ${id}</span>`);
+          walkNode(def, '    ', true);
+        }
+        lines.push('');
+      }
+
+      // Show root
+      lines.push(`<span style="color:#22d3ee;font-weight:bold">🌳 Scene Root:</span>`);
+      walkNode(json.root, '', true);
+
+      // Notes if present
+      if (json.notes) {
+        lines.push('');
+        lines.push(`<span style="color:#8b949e;font-style:italic">📝 ${json.notes}</span>`);
+      }
+
+      return lines.join('\n');
+    }
+
+    function updateTreeView() {
+      const json = demos[currentDemo]?.json;
+      if (json) {
+        $('tree-content').innerHTML = generateTreeView(json);
+      }
     }
 
     // ============================================
@@ -2907,6 +3203,9 @@
         } else if (e.key === 'm' || e.key === 'M') {
           e.preventDefault();
           $('btn-menu').click(); // Toggle menu
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          $('btn-tree').click(); // Toggle tree view
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -2915,6 +3214,9 @@
           debugPanel.classList.remove('open');
           lightingOpen = false;
           lightingPanel.classList.remove('open');
+          treeOpen = false;
+          treePanel.classList.remove('open');
+          $('btn-tree').classList.remove('active');
         }
       });
 
@@ -2974,6 +3276,21 @@
         debugOpen = !debugOpen;
         debugPanel.classList.toggle('open', debugOpen);
         $('btn-debug').classList.toggle('active', debugOpen);
+      });
+
+      // Tree panel toggle
+      const treePanel = $('tree-panel');
+      $('btn-tree').addEventListener('click', () => {
+        treeOpen = !treeOpen;
+        if (treeOpen) updateTreeView();
+        treePanel.classList.toggle('open', treeOpen);
+        $('btn-tree').classList.toggle('active', treeOpen);
+      });
+
+      $('btn-tree-close').addEventListener('click', () => {
+        treeOpen = false;
+        treePanel.classList.remove('open');
+        $('btn-tree').classList.remove('active');
       });
 
       // Main menu toggle

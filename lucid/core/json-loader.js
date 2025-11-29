@@ -124,6 +124,28 @@ function processNode(node, registry) {
       processed.child = processNode(node.child, registry);
       break;
 
+    // Round modifier - soften edges
+    case 'round':
+      processed.r = processValue(node.r !== undefined ? node.r : 0.05);
+      processed.child = processNode(node.child, registry);
+      break;
+
+    // Shell modifier - hollow out shape
+    case 'shell':
+      processed.thickness = processValue(node.thickness !== undefined ? node.thickness : 0.05);
+      processed.child = processNode(node.child, registry);
+      break;
+
+    // Displace modifier - noise-based surface displacement
+    case 'displace':
+      processed.amount = processValue(node.amount !== undefined ? node.amount : 0.1);
+      processed.scale = processValue(node.scale !== undefined ? node.scale : 3.0);
+      processed.octaves = node.octaves || 4;
+      processed.noiseType = node.noiseType || 'fbm';
+      processed.animate = node.animate || false;
+      processed.child = processNode(node.child, registry);
+      break;
+
     // Reference to definition
     case 'ref':
       if (!node.id) {
