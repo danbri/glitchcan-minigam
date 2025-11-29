@@ -1,5 +1,31 @@
 # CLAUDE.md - Lucid SDF/CSG System
 
+## ⚠️ CRITICAL: Version & Branch Management
+
+### VERSION BUMP REQUIRED
+**Every commit that changes demos_json.html MUST bump the VERSION constant!**
+
+```javascript
+// In demos_json.html (~line 961)
+const VERSION = '0.10.0';  // ← INCREMENT THIS
+const BUILD_DATE = '2025-11-29';  // ← UPDATE DATE
+```
+
+### Development Branch
+**Use this branch for ongoing Lucid development:**
+```
+claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT
+```
+
+### GitHub Links
+- **Main Demo**: [demos_json.html](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html)
+- **JSON Loader**: [core/json-loader.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js)
+- **Code Generator**: [core/json-codegen.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js)
+- **Raymarcher**: [ui/raymarcher.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/ui/raymarcher.js)
+- **Current PR/Branch**: [Compare changes](https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT)
+
+---
+
 ## Related Documentation
 
 **In this folder:**
