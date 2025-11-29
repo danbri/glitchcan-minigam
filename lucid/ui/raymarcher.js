@@ -35,6 +35,12 @@ export class SimpleRaymarcher {
     this.volumeStepSize = 0.05;
     this.volumeDensity = 8.0;
 
+    // Enhanced volume rendering options
+    this.volumeMode = 0;        // 0=jelly, 1=xray, 2=heatmap
+    this.edgeFocus = 0.5;       // 0-1: how much to focus density on edges
+    this.volumeComposite = 0.0; // 0-1: blend with surface render
+    this.volumeColorMode = 0;   // 0=material, 1=rainbow, 2=depth
+
     // Lighting settings
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
@@ -98,6 +104,10 @@ export class SimpleRaymarcher {
       uniform float u_showEdges;
       uniform float u_volumeStepSize;
       uniform float u_volumeDensity;
+      uniform int u_volumeMode;        // 0=jelly, 1=xray, 2=heatmap
+      uniform float u_edgeFocus;       // 0-1: edge density focus
+      uniform float u_volumeComposite; // 0-1: blend with surface
+      uniform int u_volumeColorMode;   // 0=material, 1=rainbow, 2=depth
       uniform vec3 u_lightDir;
       uniform float u_ambient;
       uniform float u_diffuse;
@@ -192,15 +202,47 @@ export class SimpleRaymarcher {
             // Volume mode - accumulate density near surface
             float stepSize = u_volumeStepSize;
 
-            // Density peaks at surface (d=0) with smooth falloff
-            float density = exp(-abs(d) * 5.0);
+            // Calculate density based on volume mode
+            float baseDensity;
+            if (u_volumeMode == 0) {
+              // Jelly mode: sharp smoothstep like older code - peaks at surface
+              baseDensity = smoothstep(0.1, -0.1, d) * 0.5;
+            } else if (u_volumeMode == 1) {
+              // X-ray mode: shows internal structure with grid
+              baseDensity = smoothstep(0.15, -0.05, d) * 0.3;
+              // Add grid lines for x-ray effect
+              vec3 grid = abs(mod(p + 0.5, 1.0) - 0.5);
+              float gridLines = min(min(grid.x, grid.y), grid.z);
+              baseDensity += (1.0 - smoothstep(0.0, 0.02, gridLines)) * 0.15;
+            } else {
+              // Heatmap mode: distance-based density falloff
+              baseDensity = exp(-abs(d) * 3.0) * 0.6;
+            }
+
+            // Edge focus: blend between surface-only and full-volume
+            float edgeMask = smoothstep(0.05, -0.02, d);
+            float density = mix(baseDensity, baseDensity * edgeMask, u_edgeFocus);
+
+            // Calculate color based on color mode
+            vec3 volColor;
+            if (u_volumeColorMode == 0) {
+              // Material color from SDF
+              volColor = scene.yzw;
+            } else if (u_volumeColorMode == 1) {
+              // Rainbow based on distance (like jellies demo)
+              volColor = 0.5 + 0.5 * cos(vec3(1.0, 2.0, 3.0) + d * 3.0 + u_time * 0.5);
+            } else {
+              // Depth-based coloring
+              float depthFactor = clamp(t / 20.0, 0.0, 1.0);
+              volColor = mix(vec3(0.2, 0.8, 1.0), vec3(1.0, 0.3, 0.1), depthFactor);
+            }
 
             // Accumulate color with proper weighting
             float absorption = density * stepSize * u_volumeDensity;
-            colVol += trans * scene.yzw * absorption;
-            trans *= exp(-absorption * 2.0); // Exponential falloff for transmission
+            colVol += trans * volColor * absorption;
+            trans *= exp(-absorption * 2.0);
 
-            // Track first surface hit for edge rendering
+            // Track first surface hit for edge rendering and compositing
             if (!hitSurface && d < 0.01) {
               hitSurface = true;
               surfaceT = t;
@@ -217,10 +259,20 @@ export class SimpleRaymarcher {
         if (u_volumeRender > 0.5) {
           vec3 col = colVol;
 
+          // Composite with surface render if enabled
+          if (u_volumeComposite > 0.01 && hitSurface) {
+            vec3 normal = surfaceNormal;
+            vec3 light = normalize(u_lightDir);
+            float diff = max(dot(normal, light), 0.0);
+            float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), u_shininess);
+            vec3 surfLit = surfaceColor * (u_ambient + diff * u_diffuse) + spec * u_specular;
+            col = mix(col, surfLit, u_volumeComposite);
+          }
+
           // Apply edge darkening in volume mode too
           if (u_showEdges > 0.5 && hitSurface) {
             float edge = pow(1.0 - abs(dot(surfaceNormal, -rd)), 2.0);
-            col = mix(col, col * 0.3, edge * 0.5);
+            col = mix(col, col * 0.2, edge * 0.6);
           }
 
           // Tone mapping
@@ -352,6 +404,19 @@ export class SimpleRaymarcher {
 
     const volumeDensityLocation = gl.getUniformLocation(this.program, 'u_volumeDensity');
     gl.uniform1f(volumeDensityLocation, this.volumeDensity);
+
+    // Enhanced volume rendering uniforms
+    const volumeModeLocation = gl.getUniformLocation(this.program, 'u_volumeMode');
+    gl.uniform1i(volumeModeLocation, this.volumeMode);
+
+    const edgeFocusLocation = gl.getUniformLocation(this.program, 'u_edgeFocus');
+    gl.uniform1f(edgeFocusLocation, this.edgeFocus);
+
+    const volumeCompositeLocation = gl.getUniformLocation(this.program, 'u_volumeComposite');
+    gl.uniform1f(volumeCompositeLocation, this.volumeComposite);
+
+    const volumeColorModeLocation = gl.getUniformLocation(this.program, 'u_volumeColorMode');
+    gl.uniform1i(volumeColorModeLocation, this.volumeColorMode);
 
     // Lighting uniforms
     const lightDirLocation = gl.getUniformLocation(this.program, 'u_lightDir');

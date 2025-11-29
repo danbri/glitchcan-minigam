@@ -893,6 +893,22 @@
       </div>
       <div class="debug-row" id="volume-controls" style="display: none; flex-direction: column; gap: 0.5rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Mode</span>
+          <select id="select-volume-mode" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Jelly</option>
+            <option value="1">X-Ray</option>
+            <option value="2">Heatmap</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Color</span>
+          <select id="select-volume-color" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Material</option>
+            <option value="1">Rainbow</option>
+            <option value="2">Depth</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
           <span class="debug-label">Step Size</span>
           <input type="range" min="0.01" max="0.15" step="0.01" value="0.05" id="slider-step-size" style="width: 100px;">
           <span id="step-size-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.05</span>
@@ -901,6 +917,16 @@
           <span class="debug-label">Density</span>
           <input type="range" min="1" max="20" step="1" value="8" id="slider-density" style="width: 100px;">
           <span id="density-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">8</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Edge Focus</span>
+          <input type="range" min="0" max="1" step="0.05" value="0.5" id="slider-edge-focus" style="width: 100px;">
+          <span id="edge-focus-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.50</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Composite</span>
+          <input type="range" min="0" max="1" step="0.05" value="0" id="slider-composite" style="width: 100px;">
+          <span id="composite-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.00</span>
         </div>
       </div>
       <div class="debug-row" style="border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.75rem;">
@@ -970,7 +996,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.14.0';
+    const VERSION = '0.15.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -3221,6 +3247,32 @@
         const val = parseFloat(this.value);
         renderer.volumeDensity = val;
         $('density-val').textContent = val;
+      });
+
+      // Volume mode select
+      $('select-volume-mode').addEventListener('change', function() {
+        renderer.volumeMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Volume color mode select
+      $('select-volume-color').addEventListener('change', function() {
+        renderer.volumeColorMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Edge focus slider
+      $('slider-edge-focus').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.edgeFocus = val;
+        $('edge-focus-val').textContent = val.toFixed(2);
+      });
+
+      // Composite slider
+      $('slider-composite').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeComposite = val;
+        $('composite-val').textContent = val.toFixed(2);
       });
     }
 
