@@ -722,7 +722,7 @@
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
-          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">🌳</button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -837,9 +837,17 @@
 
   <!-- Tree Viewer Panel - slides up from bottom -->
   <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
-    <div class="debug-header">
-      <h3>🌳 Scene Tree</h3>
-      <button class="btn" id="btn-tree-close">Close</button>
+    <div class="debug-header" style="flex-wrap:wrap;">
+      <h3>▹ Scene Tree</h3>
+      <div style="display:flex;gap:0.25rem;align-items:center;">
+        <button class="btn" id="btn-tree-prev" title="Previous value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">◀</button>
+        <span id="tree-nav-indicator" style="font-size:0.85rem;color:#8b949e;min-width:3.5rem;text-align:center;padding:0 0.25rem;">0/0</span>
+        <button class="btn" id="btn-tree-next" title="Next value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">▶</button>
+        <button class="btn" id="btn-tree-close" style="margin-left:0.5rem;">Close</button>
+      </div>
+    </div>
+    <!-- GLSL display area for mobile (shows decoded GLSL when selected) -->
+    <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.7rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;">
     </div>
     <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
       <!-- Tree structure rendered here -->
@@ -2426,6 +2434,168 @@
             ]
           }
         }
+      },
+
+      {
+        title: "🐉 Draggo",
+        subtitle: "Friendly dragon creature",
+        camera: { distance: 6, phi: 0.4, theta: 0.5, target: [0, 0.3, 0] },
+        json: {
+          "version": "1.0",
+          "notes": "Draggo - A friendly dragon built with smooth unions for organic blending. Inspired by raymarched dragon shader. Uses mirror for symmetric wings and legs.",
+          "root": {
+            "type": "transform",
+            "transform": {
+              "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
+            },
+            "child": {
+              "type": "smoothUnion",
+              "k": 0.15,
+              "children": [
+                {
+                  "notes": "Body - main torso",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.5, 0.45, 0.8], "color": [0.18, 0.42, 0.32] }
+                },
+                {
+                  "notes": "Chest - forward bulge",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.38, 0.35, 0.45], "color": [0.2, 0.45, 0.35] },
+                  "transform": { "translate": [0, -0.1, 0.5] }
+                },
+                {
+                  "notes": "Belly - underside",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.4, 0.28, 0.55], "color": [0.25, 0.5, 0.4] },
+                  "transform": { "translate": [0, -0.25, -0.1] }
+                },
+                {
+                  "notes": "Neck",
+                  "type": "capsule",
+                  "params": { "h": 0.4, "r": 0.22, "color": [0.18, 0.4, 0.3] },
+                  "transform": { "translate": [0, 0.15, 0.9], "rotate": [25, 0, 0] }
+                },
+                {
+                  "notes": "Head - skull",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.28, 0.22, 0.35], "color": [0.2, 0.44, 0.33] },
+                  "transform": { "translate": [0, 0.35, 1.35] }
+                },
+                {
+                  "notes": "Snout",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.15, 0.1, 0.22], "color": [0.22, 0.46, 0.35] },
+                  "transform": { "translate": [0, 0.28, 1.6] }
+                },
+                {
+                  "notes": "Eyes (mirrored)",
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "sphere",
+                    "params": { "r": 0.06, "color": [1.0, 0.9, 0.3] },
+                    "transform": { "translate": [0.12, 0.42, 1.4] }
+                  }
+                },
+                {
+                  "notes": "Tail segments",
+                  "type": "smoothUnion",
+                  "k": 0.12,
+                  "children": [
+                    {
+                      "type": "capsule",
+                      "params": { "h": 0.35, "r": 0.2, "color": [0.17, 0.38, 0.28] },
+                      "transform": { "translate": [0, -0.1, -0.9], "rotate": [-15, 0, 0] }
+                    },
+                    {
+                      "type": "capsule",
+                      "params": { "h": 0.3, "r": 0.15, "color": [0.16, 0.36, 0.26] },
+                      "transform": { "translate": [0.1, -0.15, -1.5], "rotate": [-25, 15, 0] }
+                    },
+                    {
+                      "type": "capsule",
+                      "params": { "h": 0.25, "r": 0.1, "color": [0.15, 0.34, 0.24] },
+                      "transform": { "translate": [0.25, -0.1, -2.0], "rotate": [-10, 25, 0] }
+                    },
+                    {
+                      "notes": "Tail spike",
+                      "type": "capsule",
+                      "params": { "h": 0.15, "r": 0.04, "color": [0.8, 0.3, 0.2] },
+                      "transform": { "translate": [0.35, 0.05, -2.35], "rotate": [30, 35, 0] }
+                    }
+                  ]
+                },
+                {
+                  "notes": "Front legs (mirrored)",
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "smoothUnion",
+                    "k": 0.08,
+                    "children": [
+                      {
+                        "type": "capsule",
+                        "params": { "h": 0.25, "r": 0.1, "color": [0.17, 0.38, 0.28] },
+                        "transform": { "translate": [0.35, -0.55, 0.4], "rotate": [0, 0, 15] }
+                      },
+                      {
+                        "notes": "Foot",
+                        "type": "ellipsoid",
+                        "params": { "radii": [0.08, 0.05, 0.12], "color": [0.2, 0.4, 0.3] },
+                        "transform": { "translate": [0.4, -0.85, 0.45] }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "notes": "Back legs (mirrored)",
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "smoothUnion",
+                    "k": 0.1,
+                    "children": [
+                      {
+                        "type": "capsule",
+                        "params": { "h": 0.32, "r": 0.14, "color": [0.17, 0.38, 0.28] },
+                        "transform": { "translate": [0.4, -0.6, -0.5], "rotate": [10, 0, 12] }
+                      },
+                      {
+                        "notes": "Foot",
+                        "type": "ellipsoid",
+                        "params": { "radii": [0.1, 0.06, 0.15], "color": [0.2, 0.4, 0.3] },
+                        "transform": { "translate": [0.48, -0.95, -0.45] }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "notes": "Wings (mirrored)",
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "smoothUnion",
+                    "k": 0.06,
+                    "children": [
+                      {
+                        "notes": "Wing arm",
+                        "type": "capsule",
+                        "params": { "h": 0.5, "r": 0.06, "color": [0.16, 0.35, 0.4] },
+                        "transform": { "translate": [0.6, 0.3, 0.1], "rotate": [90, -50, 20] }
+                      },
+                      {
+                        "notes": "Wing membrane",
+                        "type": "ellipsoid",
+                        "params": { "radii": [0.6, 0.02, 0.35], "color": [0.15, 0.32, 0.38] },
+                        "transform": { "translate": [0.9, 0.25, -0.15], "rotate": [0, -20, 15] }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     ];
 
@@ -2956,8 +3126,19 @@
       nodeNotes: ''
     };
 
+    // Navigation state for editable values
+    let treeNavState = {
+      editableValues: [],  // Array of {path, value, paramName, nodeNotes, type}
+      currentIndex: -1
+    };
+
     function generateTreeView(json) {
       const lines = [];
+
+      // Reset navigation state
+      treeNavState.editableValues = [];
+      treeNavState.currentIndex = -1;
+
       const colors = {
         // Node types
         sphere: '#22d3ee', box: '#22d3ee', cylinder: '#22d3ee', torus: '#22d3ee',
@@ -2966,7 +3147,8 @@
         smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
         transform: '#a371f7', material: '#f472b6', group: '#ffd700',
         ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922',
-        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1'
+        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1',
+        customExpr: '#ff69b4'
       };
 
       function getNodeIcon(type) {
@@ -2975,18 +3157,49 @@
           union: '∪', subtract: '−', intersect: '∩',
           smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
           transform: '↻', material: '◆', group: '⊞', ref: '→',
-          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮'
+          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮',
+          customExpr: '⟨⟩'
         };
         return icons[type] || '◇';
       }
 
-      // Create clickable number span for tree editing
-      function makeClickableValue(value, path, paramName, nodeNotes) {
+      // Create clickable number span for tree editing and register for navigation
+      function makeClickableValue(value, path, paramName, nodeNotes, valueType = 'number') {
         if (typeof value !== 'number') return formatValue(value);
+
+        // Register for navigation
+        treeNavState.editableValues.push({
+          path, value, paramName, nodeNotes: nodeNotes || '', type: valueType
+        });
+
         const escapedPath = path.replace(/'/g, "\\'");
         const escapedParam = paramName.replace(/'/g, "\\'");
         const escapedNotes = (nodeNotes || '').replace(/'/g, "\\'");
-        return `<span class="tree-editable" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+      }
+
+      // Create clickable base64 value for GLSL display
+      function makeClickableGlsl(encoded, path, nodeNotes) {
+        let decoded = '';
+        let summary = encoded.substring(0, 20) + '...';
+        try {
+          decoded = atob(encoded);
+          // Summarize: show first meaningful part
+          summary = decoded.length > 40 ? decoded.substring(0, 40) + '...' : decoded;
+          // Clean up for display
+          summary = summary.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        } catch (e) {
+          summary = '(invalid base64)';
+        }
+
+        // Register for navigation as 'glsl' type
+        treeNavState.editableValues.push({
+          path, value: encoded, paramName: 'glsl', nodeNotes: nodeNotes || '', type: 'glsl', decoded
+        });
+
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" style="cursor:pointer;text-decoration:underline dotted;color:#ff69b4" onclick="window.showGlslValue(${navIndex})" title="${decoded.replace(/"/g, '&quot;')}">${summary}</span>`;
       }
 
       function walkNode(node, prefix = '', isLast = true, path = 'root') {
@@ -3038,6 +3251,11 @@
         if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
         if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
 
+        // Handle customExpr glsl field (base64 encoded GLSL)
+        if (node.glsl) {
+          label += ` <span style="color:#ff69b4">glsl=${makeClickableGlsl(node.glsl, path + '.glsl', nodeNotes)}</span>`;
+        }
+
         lines.push(`${prefix}${connector} ${label}`);
 
         const childPrefix = prefix + (isLast ? '   ' : '│  ');
@@ -3071,7 +3289,7 @@
       }
 
       // Show root
-      lines.push(`<span style="color:#22d3ee;font-weight:bold">🌳 Scene Root:</span>`);
+      lines.push(`<span style="color:#22d3ee;font-weight:bold">▹ Scene Root:</span>`);
       walkNode(json.root, '', true, 'root');
 
       // Notes if present
@@ -3080,7 +3298,96 @@
         lines.push(`<span style="color:#8b949e;font-style:italic">📝 ${json.notes}</span>`);
       }
 
+      // Update navigation indicator
+      updateTreeNavIndicator();
+
       return lines.join('\n');
+    }
+
+    // Update navigation indicator display
+    function updateTreeNavIndicator() {
+      const indicator = $('tree-nav-indicator');
+      if (indicator) {
+        const total = treeNavState.editableValues.length;
+        const current = treeNavState.currentIndex >= 0 ? treeNavState.currentIndex + 1 : 0;
+        indicator.textContent = `${current}/${total}`;
+      }
+    }
+
+    // Navigate to previous editable value
+    function navigateTreePrev() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex--;
+      if (treeNavState.currentIndex < 0) {
+        treeNavState.currentIndex = treeNavState.editableValues.length - 1;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Navigate to next editable value
+    function navigateTreeNext() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex++;
+      if (treeNavState.currentIndex >= treeNavState.editableValues.length) {
+        treeNavState.currentIndex = 0;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Select and activate a tree value by navigation index
+    function selectTreeValue(index) {
+      const item = treeNavState.editableValues[index];
+      if (!item) return;
+
+      updateTreeNavIndicator();
+
+      // Highlight the selected element in the tree
+      const treeContent = $('tree-content');
+      const allEditables = treeContent.querySelectorAll('.tree-editable');
+      allEditables.forEach(el => el.style.background = 'transparent');
+      const targetEl = treeContent.querySelector(`[data-nav-index="${index}"]`);
+      if (targetEl) {
+        targetEl.style.background = 'rgba(251, 191, 36, 0.3)';
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // Handle based on type
+      if (item.type === 'glsl') {
+        window.showGlslValue(index);
+      } else {
+        hideGlslDisplay(); // Hide GLSL panel when selecting numeric values
+        window.editTreeValue(item.path, item.value, item.paramName, item.nodeNotes);
+      }
+    }
+
+    // Global function to show decoded GLSL (mobile-friendly)
+    window.showGlslValue = function(navIndex) {
+      const item = treeNavState.editableValues[navIndex];
+      if (!item || item.type !== 'glsl') return;
+
+      treeNavState.currentIndex = navIndex;
+      updateTreeNavIndicator();
+
+      // Show full decoded GLSL in dedicated display area (mobile-friendly)
+      const decoded = item.decoded || '(unable to decode)';
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) {
+        glslDisplay.style.display = 'block';
+        glslDisplay.textContent = decoded;
+      }
+
+      // Also show abbreviated version in status
+      showStatus(`GLSL: ${decoded.substring(0, 60)}...`, 'info');
+
+      // Log full decoded GLSL to console for copying
+      console.log('Decoded GLSL:', decoded);
+      console.log('Base64:', item.value);
+    };
+
+    // Hide GLSL display when selecting non-GLSL value
+    function hideGlslDisplay() {
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) glslDisplay.style.display = 'none';
     }
 
     // Global function for tree value editing
@@ -3529,6 +3836,17 @@
       document.addEventListener('keydown', (e) => {
         if (e.target === jsonEditor) return;
 
+        // When tree panel is open, arrow keys navigate editable values
+        if (treeOpen && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+          e.preventDefault();
+          if (e.key === 'ArrowRight') {
+            navigateTreeNext();
+          } else {
+            navigateTreePrev();
+          }
+          return;
+        }
+
         if (e.key === 'ArrowRight' || e.key === ' ') {
           e.preventDefault();
           switchDemo((currentDemo + 1) % demos.length);
@@ -3650,6 +3968,10 @@
         treePanel.classList.remove('open');
         $('btn-tree').classList.remove('active');
       });
+
+      // Tree navigation buttons
+      $('btn-tree-prev').addEventListener('click', navigateTreePrev);
+      $('btn-tree-next').addEventListener('click', navigateTreeNext);
 
       // Main menu toggle
       $('btn-menu').addEventListener('click', () => {
