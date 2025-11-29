@@ -280,10 +280,51 @@
 
 <pre><code>{
   "transform": {
-    "translate": [1.0, 2.0, 0.0],
-    "rotate": [0, 45, 0],        // degrees (TODO: implement)
-    "scale": [1, 1, 1]           // uniform or per-axis (TODO: implement)
+    "translate": [x, y, z],       // Translation in world units
+    "rotate": [rx, ry, rz],       // Euler angles in DEGREES, XYZ order
+    "rotateQ": [x, y, z, w],      // Quaternion (glTF convention)
+    "rotateAxis": {               // Axis-angle rotation
+      "axis": [x, y, z],          // Normalized axis vector
+      "angle": 45                 // Angle in DEGREES
+    },
+    "scale": [1, 1, 1]            // TODO: not yet implemented
   }
+}</code></pre>
+
+<h4>Rotation Conventions</h4>
+
+<table>
+  <tr><th>Property</th><th>Format</th><th>Units</th><th>Notes</th></tr>
+  <tr>
+    <td><code>rotate</code></td>
+    <td><code>[rx, ry, rz]</code></td>
+    <td>Degrees</td>
+    <td>Euler angles, applied in <strong>XYZ order</strong> (X first, then Y, then Z). Matches Blender/Three.js default.</td>
+  </tr>
+  <tr>
+    <td><code>rotateQ</code></td>
+    <td><code>[x, y, z, w]</code></td>
+    <td>—</td>
+    <td>Unit quaternion (glTF convention). Avoids gimbal lock. Use for complex rotations or interpolation.</td>
+  </tr>
+  <tr>
+    <td><code>rotateAxis</code></td>
+    <td><code>{axis, angle}</code></td>
+    <td>Degrees</td>
+    <td>Rotate around arbitrary axis. Intuitive for single-axis rotations.</td>
+  </tr>
+</table>
+
+<p><strong>Priority:</strong> If multiple rotation properties are present, <code>rotateQ</code> takes precedence, then <code>rotateAxis</code>, then <code>rotate</code>.</p>
+
+<h4>Notes Field</h4>
+
+<p>Any node can include a <code>"notes"</code> field for documentation. It is ignored by the renderer:</p>
+
+<pre><code>{
+  "type": "sphere",
+  "notes": "This is the player's head - adjust radius for different characters",
+  "params": { "r": 0.5, "color": [1, 0.8, 0.6] }
 }</code></pre>
 
 <h2>Template System (defs/ref)</h2>
@@ -428,11 +469,17 @@ animate();</code></pre>
 <h2>Known Limitations</h2>
 
 <ul>
-  <li><span class="tag alt">TODO</span> Rotation transform not yet implemented in codegen</li>
   <li><span class="tag alt">TODO</span> Scale transform not yet implemented</li>
   <li><span class="tag alt">TODO</span> Parameter overrides in refs not fully implemented</li>
-  <li>Smooth operations (smoothSubtract, smoothIntersect) partially implemented</li>
-  <li>No capsule, ellipsoid, plane primitives in codegen yet</li>
+  <li><span class="tag alt">TODO</span> smoothIntersect operator not yet implemented</li>
+</ul>
+
+<h3>Recently Implemented</h3>
+<ul>
+  <li>✅ Rotation transforms (Euler, quaternion, axis-angle)</li>
+  <li>✅ Capsule, ellipsoid, plane primitives</li>
+  <li>✅ Mirror, radial, repeat symmetry operations</li>
+  <li>✅ smoothUnion operator</li>
 </ul>
 
 <h2>Related Documentation</h2>
