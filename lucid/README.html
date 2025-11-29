@@ -515,7 +515,26 @@ animate();</code></pre>
   <li>✅ Capsule, ellipsoid, plane primitives</li>
   <li>✅ Mirror, radial, repeat symmetry operations</li>
   <li>✅ smoothUnion operator</li>
+  <li>✅ Per-demo camera settings (distance, phi, theta, target)</li>
+  <li>✅ Capsule Chain animated demo</li>
 </ul>
+
+<h2>Potential Work (Postponed)</h2>
+
+<h3>SDF Picking - Click to Select</h3>
+<p>Allow clicking in the viewport to select the primitive under the cursor and highlight it in the tree view.</p>
+
+<p><strong>Implementation approach:</strong></p>
+<ol>
+  <li><strong>Primitive IDs in GLSL</strong> - Each primitive gets a unique float ID. Current <code>vec4(dist, r, g, b)</code> would need a 5th channel or ID encoded separately.</li>
+  <li><strong>Render-to-ID pass</strong> - On click, render single pixel with primitive ID instead of color.</li>
+  <li><strong>ID → tree path mapping</strong> - Maintain JSON path ↔ GLSL ID mapping during codegen.</li>
+  <li><strong>Visual feedback</strong> - Briefly flash selected primitive, scroll tree view to node.</li>
+</ol>
+
+<p><strong>Challenge:</strong> Tracking which primitive "wins" through CSG operations (min/max comparisons). Requires significant codegen changes.</p>
+
+<p><strong>Status:</strong> <span class="tag alt">POSTPONED</span> - Focus on core functionality first.</p>
 
 <h2>Related Documentation</h2>
 

@@ -5,13 +5,17 @@
 
 /**
  * Generate GLSL code from processed JSON scene
+ * @param {Object} scene - The processed scene IR
+ * @param {Object} options - Optional generation options
+ * @param {boolean} options.showCutters - Debug mode: show CSG cutters as union instead of subtract
  */
-export function generateGlslFromJson(scene) {
+export function generateGlslFromJson(scene, options = {}) {
   const ctx = {
     uniforms: new Set(),
     functions: [],
     helpers: [],
-    helperCounter: 0
+    helperCounter: 0,
+    showCutters: options.showCutters || false
   };
 
   // Generate main scene expression
@@ -324,7 +328,13 @@ function generateSubtract(node, ctx) {
   for (let i = 1; i < children.length; i++) {
     const subExpr = walkNode(children[i], ctx);
     body += `  vec4 sub${i} = ${subExpr};\n`;
-    body += `  base.x = max(base.x, -sub${i}.x);\n`;
+    if (ctx.showCutters) {
+      // Debug mode: show cutters as union (min) instead of subtract (max of negated)
+      body += `  if (sub${i}.x < base.x) base = sub${i};\n`;
+    } else {
+      // Normal subtract: base.x = max(base.x, -sub.x)
+      body += `  base.x = max(base.x, -sub${i}.x);\n`;
+    }
   }
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
