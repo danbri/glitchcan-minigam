@@ -687,6 +687,11 @@ function exprToGlsl(expr, ctx) {
 /**
  * Apply transform to position variable
  * Order: translate first, then rotate (applied in reverse for SDF)
+ *
+ * Rotation priority: rotateQ > rotateAxis > rotate
+ * - rotateQ: quaternion [x, y, z, w] (glTF convention)
+ * - rotateAxis: { axis: [x, y, z], angle: degrees }
+ * - rotate: Euler angles [rx, ry, rz] in degrees, XYZ order
  */
 function applyTransform(pVar, transform, ctx) {
   if (!transform) return pVar;
@@ -699,9 +704,60 @@ function applyTransform(pVar, transform, ctx) {
     result = `(${result} - ${t})`;
   }
 
-  // Apply rotation (Euler angles in DEGREES: [rx, ry, rz])
-  // Converted to radians for GLSL. Rotation order: Z, then Y, then X
-  if (transform.rotate) {
+  // Priority 1: Quaternion rotation (rotateQ)
+  // Format: [x, y, z, w] - glTF convention
+  if (transform.rotateQ) {
+    const q = transform.rotateQ;
+    if (q.type === 'array' && q.values) {
+      // Expression-based quaternion
+      const qx = valueToGlsl(q.values[0], ctx);
+      const qy = valueToGlsl(q.values[1], ctx);
+      const qz = valueToGlsl(q.values[2], ctx);
+      const qw = valueToGlsl(q.values[3], ctx);
+      result = `rotQ(${result}, vec4(${qx}, ${qy}, ${qz}, ${qw}))`;
+    } else if (Array.isArray(q) && q.length >= 4) {
+      // Static quaternion values
+      const qx = (q[0] || 0).toFixed(6);
+      const qy = (q[1] || 0).toFixed(6);
+      const qz = (q[2] || 0).toFixed(6);
+      const qw = (q[3] || 1).toFixed(6);
+      result = `rotQ(${result}, vec4(${qx}, ${qy}, ${qz}, ${qw}))`;
+    }
+  }
+  // Priority 2: Axis-angle rotation (rotateAxis)
+  // Format: { axis: [x, y, z], angle: degrees }
+  else if (transform.rotateAxis) {
+    const aa = transform.rotateAxis;
+    const axis = aa.axis || [0, 1, 0];
+    const angle = aa.angle || 0;
+
+    // Handle axis
+    let axisGlsl;
+    if (axis.type === 'array' && axis.values) {
+      const ax = valueToGlsl(axis.values[0], ctx);
+      const ay = valueToGlsl(axis.values[1], ctx);
+      const az = valueToGlsl(axis.values[2], ctx);
+      axisGlsl = `vec3(${ax}, ${ay}, ${az})`;
+    } else if (Array.isArray(axis)) {
+      axisGlsl = `vec3(${(axis[0] || 0).toFixed(6)}, ${(axis[1] || 1).toFixed(6)}, ${(axis[2] || 0).toFixed(6)})`;
+    } else {
+      axisGlsl = 'vec3(0.0, 1.0, 0.0)';
+    }
+
+    // Handle angle (degrees to radians)
+    let angleGlsl;
+    if (typeof angle === 'object') {
+      angleGlsl = wrapDegreesToRadians(valueToGlsl(angle, ctx));
+    } else {
+      const DEG2RAD = Math.PI / 180;
+      angleGlsl = ((angle || 0) * DEG2RAD).toFixed(6);
+    }
+
+    result = `rotAxisAngle(${result}, ${axisGlsl}, ${angleGlsl})`;
+  }
+  // Priority 3: Euler angles (rotate)
+  // Format: [rx, ry, rz] in degrees, applied in XYZ order
+  else if (transform.rotate) {
     const rot = transform.rotate;
     // Handle both static and expression-based rotations
     if (rot.type === 'array' && rot.values) {
@@ -709,7 +765,8 @@ function applyTransform(pVar, transform, ctx) {
       const rx = wrapDegreesToRadians(valueToGlsl(rot.values[0], ctx));
       const ry = wrapDegreesToRadians(valueToGlsl(rot.values[1], ctx));
       const rz = wrapDegreesToRadians(valueToGlsl(rot.values[2], ctx));
-      // Apply rotations in ZYX order
+      // Apply rotations in XYZ order (X first, then Y, then Z)
+      // For SDF point transform: apply in reverse order to the point
       result = `rotZ(${result}, ${rz})`;
       result = `rotY(${result}, ${ry})`;
       result = `rotX(${result}, ${rx})`;
@@ -719,6 +776,7 @@ function applyTransform(pVar, transform, ctx) {
       const rx = ((rot[0] || 0) * DEG2RAD).toFixed(6);
       const ry = ((rot[1] || 0) * DEG2RAD).toFixed(6);
       const rz = ((rot[2] || 0) * DEG2RAD).toFixed(6);
+      // Apply rotations in XYZ order (X first, then Y, then Z)
       result = `rotZ(${result}, ${rz})`;
       result = `rotY(${result}, ${ry})`;
       result = `rotX(${result}, ${rx})`;
@@ -741,6 +799,10 @@ function wrapDegreesToRadians(glslExpr) {
 
 /**
  * Combine two transforms - translations are added, rotations are composed
+ *
+ * Rotation handling:
+ * - rotateQ/rotateAxis: child takes precedence (no composition)
+ * - rotate (Euler): additive composition (approximation for small angles)
  */
 function combineTransforms(child, parent) {
   if (!parent) return child;
@@ -755,9 +817,23 @@ function combineTransforms(child, parent) {
     combined.translate = child.translate;
   }
 
-  // Combine rotations additively (Euler angle composition)
-  // This is an approximation that works well for small angles
-  if (parent.rotate && child.rotate) {
+  // Quaternion rotation: child takes precedence (proper composition is complex)
+  if (child.rotateQ) {
+    combined.rotateQ = child.rotateQ;
+    delete combined.rotateAxis;
+    delete combined.rotate;
+  } else if (parent.rotateQ) {
+    // Keep parent's quaternion
+  }
+  // Axis-angle rotation: child takes precedence
+  else if (child.rotateAxis) {
+    combined.rotateAxis = child.rotateAxis;
+    delete combined.rotate;
+  } else if (parent.rotateAxis) {
+    // Keep parent's axis-angle
+  }
+  // Euler rotations: additive composition (approximation for small angles)
+  else if (parent.rotate && child.rotate) {
     combined.rotate = addRotations(parent.rotate, child.rotate);
   } else if (child.rotate) {
     combined.rotate = child.rotate;
@@ -900,6 +976,28 @@ vec3 rotY(vec3 p, float a) {
 vec3 rotZ(vec3 p, float a) {
   float c = cos(a), s = sin(a);
   return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z);
+}
+
+// Quaternion rotation - q is [x, y, z, w] (glTF convention)
+vec3 rotQ(vec3 p, vec4 q) {
+  // Normalize quaternion
+  q = normalize(q);
+  // Apply rotation: p' = q * p * q^-1
+  vec3 t = 2.0 * cross(q.xyz, p);
+  return p + q.w * t + cross(q.xyz, t);
+}
+
+// Axis-angle rotation - axis should be normalized, angle in radians
+vec3 rotAxisAngle(vec3 p, vec3 axis, float angle) {
+  float c = cos(angle), s = sin(angle);
+  float oc = 1.0 - c;
+  vec3 a = normalize(axis);
+  mat3 m = mat3(
+    oc * a.x * a.x + c,       oc * a.x * a.y - a.z * s, oc * a.x * a.z + a.y * s,
+    oc * a.x * a.y + a.z * s, oc * a.y * a.y + c,       oc * a.y * a.z - a.x * s,
+    oc * a.x * a.z - a.y * s, oc * a.y * a.z + a.x * s, oc * a.z * a.z + c
+  );
+  return m * p;
 }
 
 `;

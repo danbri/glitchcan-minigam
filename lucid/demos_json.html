@@ -734,8 +734,8 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.5.0';
-    const BUILD_DATE = '2025-11-28';
+    const VERSION = '0.6.0';
+    const BUILD_DATE = '2025-11-29';
 
     // ============================================
     // DEMO TEMPLATES
@@ -1354,27 +1354,55 @@
       },
 
       {
-        title: "Rotation Demo",
-        subtitle: "Cylinders rotated around different axes",
+        title: "Rotation Methods",
+        subtitle: "Euler, quaternion, and axis-angle rotation",
         json: {
           "version": "1.0",
+          "notes": "Demonstrates all three rotation methods: Euler angles, quaternions, and axis-angle",
           "root": {
             "type": "union",
             "children": [
               {
-                "type": "cylinder",
-                "params": { "h": 0.8, "r": 0.15, "color": [1, 0.3, 0.3] },
-                "transform": { "translate": [-1.5, 0, 0] }
+                "notes": "Euler rotation: rotate [45, 0, 0] = 45° around X axis",
+                "type": "box",
+                "params": { "size": [0.6, 0.2, 0.2], "color": [1, 0.3, 0.3] },
+                "transform": { "translate": [-1.8, 0.8, 0], "rotate": [45, 0, 0] }
               },
               {
-                "type": "cylinder",
-                "params": { "h": 0.8, "r": 0.15, "color": [0.3, 1, 0.3] },
-                "transform": { "translate": [0, 0, 0], "rotate": [0, 0, 90] }
+                "notes": "Euler rotation: rotate [0, 45, 0] = 45° around Y axis",
+                "type": "box",
+                "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 1, 0.3] },
+                "transform": { "translate": [0, 0.8, 0], "rotate": [0, 45, 0] }
               },
               {
+                "notes": "Euler rotation: rotate [0, 0, 45] = 45° around Z axis",
+                "type": "box",
+                "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 0.3, 1] },
+                "transform": { "translate": [1.8, 0.8, 0], "rotate": [0, 0, 45] }
+              },
+              {
+                "notes": "Quaternion: 90° around Y axis = [0, 0.707, 0, 0.707]",
                 "type": "cylinder",
-                "params": { "h": 0.8, "r": 0.15, "color": [0.3, 0.3, 1] },
-                "transform": { "translate": [1.5, 0, 0], "rotate": [90, 0, 0] }
+                "params": { "h": 0.4, "r": 0.15, "color": [1, 0.8, 0.2] },
+                "transform": { "translate": [-1.2, -0.5, 0], "rotateQ": [0, 0.7071, 0, 0.7071] }
+              },
+              {
+                "notes": "Axis-angle: 60° around diagonal axis [1,1,0]",
+                "type": "cylinder",
+                "params": { "h": 0.4, "r": 0.15, "color": [0.8, 0.2, 1] },
+                "transform": { "translate": [1.2, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 60 } }
+              },
+              {
+                "notes": "Animated axis-angle rotation",
+                "type": "torus",
+                "params": { "major": 0.3, "minor": 0.08, "color": [0.2, 0.9, 0.9] },
+                "transform": {
+                  "translate": [0, -0.5, 0],
+                  "rotateAxis": {
+                    "axis": [0, 1, 0],
+                    "angle": { "expr": "mul", "args": [45, { "var": "time" }] }
+                  }
+                }
               }
             ]
           }
