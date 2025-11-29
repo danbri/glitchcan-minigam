@@ -538,27 +538,13 @@ function generateMaterial(node, ctx) {
 /**
  * Generate mirror - reflection symmetry
  * axis can be "x", "y", "z", "xy", "xz", "yz", "xyz"
- *
- * Transform propagation: Parent transforms (rotation, translation) are propagated
- * to children so that mirrored geometry moves/rotates with its parent. This means
- * children defined in mirror space will correctly follow parent animations.
  */
 function generateMirror(node, ctx) {
   const axis = node.axis || 'x';
 
-  // Propagate parent transform to child so children rotate/move with parent
-  // This ensures that when parent transforms animate, mirrored children follow
-  let child = node.child;
-  if (node.transform) {
-    child = {
-      ...node.child,
-      transform: combineTransforms(node.child.transform, node.transform)
-    };
-  }
-
-  // Wrap the child (with propagated transform) in its own helper function
+  // Wrap the child in its own helper function
   const childFuncName = `mirror_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(child, ctx);
+  const childExpr = walkNode(node.child, ctx);
   ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
   return ${childExpr};
 }`);
@@ -566,14 +552,13 @@ function generateMirror(node, ctx) {
   // Now generate the mirror wrapper
   const funcName = `mirror_${ctx.helperCounter++}`;
 
-  // Build the mirror transform - applied BEFORE child evaluation
+  // Build the mirror transform
   let mirrorCode = '';
   if (axis.includes('x')) mirrorCode += '  q.x = abs(q.x);\n';
   if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
   if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
 
-  // Apply parent transform to position, then mirror, then evaluate child
-  // Order: p -> parent transform -> mirror -> child (which has combined transforms)
+  // Apply any transform from the mirror node itself
   const p = applyTransform('p', node.transform, ctx);
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
@@ -589,26 +574,14 @@ ${mirrorCode}  return ${childFuncName}(q);
  * Generate radial - rotational symmetry around an axis
  * count: number of repetitions
  * axis: "x", "y", or "z" (default "y")
- *
- * Transform propagation: Parent transforms are propagated to children so that
- * radially repeated geometry moves/rotates with its parent during animations.
  */
 function generateRadial(node, ctx) {
   const count = node.count || 6;
   const axis = node.axis || 'y';
 
-  // Propagate parent transform to child so children rotate/move with parent
-  let child = node.child;
-  if (node.transform) {
-    child = {
-      ...node.child,
-      transform: combineTransforms(node.child.transform, node.transform)
-    };
-  }
-
-  // Wrap the child (with propagated transform) in its own helper function
+  // Wrap the child in its own helper function
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(child, ctx);
+  const childExpr = walkNode(node.child, ctx);
   ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
   return ${childExpr};
 }`);
@@ -657,25 +630,13 @@ ${radialCode}
 /**
  * Generate repeat - infinite tiling
  * period: [x, y, z] - spacing between repetitions (0 = no repeat on that axis)
- *
- * Transform propagation: Parent transforms are propagated to children so that
- * repeated geometry moves/rotates with its parent during animations.
  */
 function generateRepeat(node, ctx) {
   const period = node.period || [2, 0, 2];
 
-  // Propagate parent transform to child so children rotate/move with parent
-  let child = node.child;
-  if (node.transform) {
-    child = {
-      ...node.child,
-      transform: combineTransforms(node.child.transform, node.transform)
-    };
-  }
-
-  // Wrap the child (with propagated transform) in its own helper function
+  // Wrap the child in its own helper function
   const childFuncName = `repeat_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(child, ctx);
+  const childExpr = walkNode(node.child, ctx);
   ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
   return ${childExpr};
 }`);
