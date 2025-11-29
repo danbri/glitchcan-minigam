@@ -35,6 +35,15 @@ export class SimpleRaymarcher {
     this.volumeStepSize = 0.05;
     this.volumeDensity = 8.0;
 
+    // Lighting settings
+    this.lighting = {
+      lightDir: [1.0, 1.0, -1.0],
+      ambient: 0.3,
+      diffuse: 0.7,
+      specular: 0.3,
+      shininess: 32
+    };
+
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -51,6 +60,14 @@ export class SimpleRaymarcher {
   updateScene(glslCode) {
     this.currentGlsl = glslCode;
     this.compileShaders();
+  }
+
+  setLighting(settings) {
+    if (settings.lightDir) this.lighting.lightDir = settings.lightDir;
+    if (settings.ambient !== undefined) this.lighting.ambient = settings.ambient;
+    if (settings.diffuse !== undefined) this.lighting.diffuse = settings.diffuse;
+    if (settings.specular !== undefined) this.lighting.specular = settings.specular;
+    if (settings.shininess !== undefined) this.lighting.shininess = settings.shininess;
   }
 
   compileShaders() {
@@ -81,6 +98,11 @@ export class SimpleRaymarcher {
       uniform float u_showEdges;
       uniform float u_volumeStepSize;
       uniform float u_volumeDensity;
+      uniform vec3 u_lightDir;
+      uniform float u_ambient;
+      uniform float u_diffuse;
+      uniform float u_specular;
+      uniform float u_shininess;
 
       ${this.currentGlsl}
 
@@ -143,11 +165,10 @@ export class SimpleRaymarcher {
           if (u_volumeRender < 0.5) {
             if (abs(d) < 0.001 && !hitGround) {
               vec3 normal = calcNormal(p);
-              vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+              vec3 light = normalize(u_lightDir);
               float diff = max(dot(normal, light), 0.0);
-              float amb = 0.3;
-              float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
-              vec3 col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+              float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), u_shininess);
+              vec3 col = scene.yzw * (u_ambient + diff * u_diffuse) + spec * u_specular;
 
               // Edge rendering - darken silhouette edges
               if (u_showEdges > 0.5) {
@@ -160,10 +181,9 @@ export class SimpleRaymarcher {
 
             if (hitGround) {
               vec3 normal = vec3(0.0, 1.0, 0.0);
-              vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+              vec3 light = normalize(u_lightDir);
               float diff = max(dot(normal, light), 0.0);
-              float amb = 0.3;
-              vec3 col = getGroundColor(hitPos) * (amb + diff * 0.7);
+              vec3 col = getGroundColor(hitPos) * (u_ambient + diff * u_diffuse);
               return vec4(col, 1.0);
             }
 
@@ -332,6 +352,22 @@ export class SimpleRaymarcher {
 
     const volumeDensityLocation = gl.getUniformLocation(this.program, 'u_volumeDensity');
     gl.uniform1f(volumeDensityLocation, this.volumeDensity);
+
+    // Lighting uniforms
+    const lightDirLocation = gl.getUniformLocation(this.program, 'u_lightDir');
+    gl.uniform3f(lightDirLocation, this.lighting.lightDir[0], this.lighting.lightDir[1], this.lighting.lightDir[2]);
+
+    const ambientLocation = gl.getUniformLocation(this.program, 'u_ambient');
+    gl.uniform1f(ambientLocation, this.lighting.ambient);
+
+    const diffuseLocation = gl.getUniformLocation(this.program, 'u_diffuse');
+    gl.uniform1f(diffuseLocation, this.lighting.diffuse);
+
+    const specularLocation = gl.getUniformLocation(this.program, 'u_specular');
+    gl.uniform1f(specularLocation, this.lighting.specular);
+
+    const shininessLocation = gl.getUniformLocation(this.program, 'u_shininess');
+    gl.uniform1f(shininessLocation, this.lighting.shininess);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

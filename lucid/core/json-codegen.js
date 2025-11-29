@@ -474,25 +474,56 @@ function generateGroup(node, ctx) {
 }
 
 /**
- * Generate material wrapper - creates helper to override color
+ * Generate material wrapper - creates helper to override color and material properties
+ * Supports: color, emit (emissive), metallic, roughness
+ *
+ * Output format: vec4(distance, r, g, b)
+ * Material properties are encoded in the color channels using the following convention:
+ * - RGB carries base color modulated by (1 + emit) for emission
+ * - Future: Could pack metallic/roughness into alpha or additional output channels
  */
 function generateMaterial(node, ctx) {
   const childExpr = walkNode(node.child, ctx);
+  const params = node.params || {};
 
-  if (node.params && node.params.color) {
-    const color = valueToGlsl(node.params.color, ctx);
-
-    // Generate helper to override color
-    const funcName = `material_${ctx.helperCounter++}`;
-    const helperFunc = `vec4 ${funcName}(vec3 p) {
-  vec4 c = ${childExpr};
-  return vec4(c.x, ${color});
-}`;
-    ctx.helpers.push(helperFunc);
-    return `${funcName}(p)`;
+  // If no material params specified, pass through
+  if (!params.color && params.emit === undefined && params.metallic === undefined && params.roughness === undefined) {
+    return childExpr;
   }
 
-  return childExpr;
+  // Generate helper to apply material
+  const funcName = `material_${ctx.helperCounter++}`;
+
+  const color = params.color
+    ? valueToGlsl(params.color, ctx)
+    : 'c.yzw';
+
+  const emit = params.emit !== undefined
+    ? valueToGlsl(params.emit, ctx)
+    : '0.0';
+
+  // For now, metallic and roughness are stored but not used in the basic shader
+  // They would be used in a PBR renderer
+  const metallic = params.metallic !== undefined
+    ? valueToGlsl(params.metallic, ctx)
+    : '0.0';
+
+  const roughness = params.roughness !== undefined
+    ? valueToGlsl(params.roughness, ctx)
+    : '0.5';
+
+  // Apply emission boost to color (simple additive emission)
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec4 c = ${childExpr};
+  vec3 baseColor = ${color};
+  float emissive = ${emit};
+  // Apply emission as additive boost to color
+  vec3 finalColor = baseColor * (1.0 + emissive * 2.0);
+  return vec4(c.x, finalColor);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
 }
 
 /**
@@ -688,7 +719,8 @@ function exprToGlsl(expr, ctx) {
  * Apply transform to position variable
  * Order: translate first, then rotate (applied in reverse for SDF)
  *
- * Rotation priority: rotateQ > rotateAxis > rotate
+ * Transform priority: mat4 > rotateQ > rotateAxis > rotate
+ * - mat4: 4x4 matrix (16-element array, column-major)
  * - rotateQ: quaternion [x, y, z, w] (glTF convention)
  * - rotateAxis: { axis: [x, y, z], angle: degrees }
  * - rotate: Euler angles [rx, ry, rz] in degrees, XYZ order
@@ -697,6 +729,16 @@ function applyTransform(pVar, transform, ctx) {
   if (!transform) return pVar;
 
   let result = pVar;
+
+  // Priority 0: Direct 4x4 matrix transform (overrides everything else)
+  if (transform.mat4) {
+    const mat = transform.mat4;
+    // mat4 should be 16 values in column-major order
+    // For SDF, we apply the inverse transform to the point
+    // Since we want p' = M^-1 * p, we use transformMat4Inverse
+    const matValues = mat.map(v => valueToGlsl(v, ctx)).join(', ');
+    return `transformMat4Inverse(${pVar}, mat4(${matValues}))`;
+  }
 
   // Apply translate first (subtract from position)
   if (transform.translate) {
@@ -800,7 +842,8 @@ function wrapDegreesToRadians(glslExpr) {
 /**
  * Combine two transforms - translations are added, rotations are composed
  *
- * Rotation handling:
+ * Transform handling:
+ * - mat4: child takes precedence (composition is complex)
  * - rotateQ/rotateAxis: child takes precedence (no composition)
  * - rotate (Euler): additive composition (approximation for small angles)
  */
@@ -809,6 +852,16 @@ function combineTransforms(child, parent) {
   if (!child) return parent;
 
   const combined = { ...parent };
+
+  // mat4 takes highest precedence - if child has mat4, use it exclusively
+  if (child.mat4) {
+    return { mat4: child.mat4 };
+  }
+  // If parent has mat4 and child doesn't have mat4, parent mat4 is overridden by child transforms
+  if (parent.mat4 && !child.mat4) {
+    // Discard parent mat4, use child transforms
+    delete combined.mat4;
+  }
 
   // Combine translations additively
   if (parent.translate && child.translate) {
@@ -998,6 +1051,17 @@ vec3 rotAxisAngle(vec3 p, vec3 axis, float angle) {
     oc * a.x * a.z - a.y * s, oc * a.y * a.z + a.x * s, oc * a.z * a.z + c
   );
   return m * p;
+}
+
+// Transform point by inverse of 4x4 matrix
+// For affine transforms (rotation + translation), inverse = transpose of 3x3 part, then transform
+vec3 transformMat4Inverse(vec3 p, mat4 m) {
+  // Extract rotation (upper-left 3x3) and translation (last column)
+  mat3 rot = mat3(m);
+  vec3 trans = vec3(m[3][0], m[3][1], m[3][2]);
+  // Inverse of affine: first subtract translation, then apply transpose of rotation
+  // (Only correct for orthogonal rotation matrices; for scaled/sheared, use full inverse)
+  return transpose(rot) * (p - trans);
 }
 
 `;

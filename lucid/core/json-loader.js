@@ -203,6 +203,8 @@ function processValue(value) {
 
 /**
  * Process transform object
+ * Supports: translate, rotate (Euler), rotateQ (quaternion),
+ * rotateAxis (axis-angle), scale, mat4
  */
 function processTransform(transform) {
   const processed = {};
@@ -211,16 +213,31 @@ function processTransform(transform) {
     processed.translate = processValue(transform.translate);
   }
 
+  // Euler rotation [rx, ry, rz] in degrees
   if (transform.rotate) {
     processed.rotate = processValue(transform.rotate);
+  }
+
+  // Quaternion rotation [x, y, z, w]
+  if (transform.rotateQ) {
+    processed.rotateQ = processValue(transform.rotateQ);
+  }
+
+  // Axis-angle rotation { axis: [x, y, z], angle: degrees }
+  if (transform.rotateAxis) {
+    processed.rotateAxis = {
+      axis: processValue(transform.rotateAxis.axis),
+      angle: processValue(transform.rotateAxis.angle)
+    };
   }
 
   if (transform.scale) {
     processed.scale = processValue(transform.scale);
   }
 
+  // Direct 4x4 matrix (16-element array, column-major)
   if (transform.mat4) {
-    processed.mat4 = transform.mat4; // 16-element array
+    processed.mat4 = transform.mat4.map(v => processValue(v));
   }
 
   return processed;

@@ -331,8 +331,8 @@
       background: rgba(255, 255, 255, 0.6);
     }
 
-    /* Template Gallery */
-    .template-gallery {
+    /* Main Menu (Hamburger) */
+    .main-menu {
       position: fixed;
       top: 60px;
       left: 1rem;
@@ -341,15 +341,79 @@
       border-radius: 8px;
       padding: 0.5rem;
       z-index: 90;
-      max-width: 200px;
+      min-width: 180px;
       display: none;
     }
 
-    .template-gallery.open {
+    .main-menu.open {
       display: block;
     }
 
-    .template-item {
+    .menu-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .menu-item:hover {
+      background: var(--border);
+    }
+
+    .menu-item.has-submenu::after {
+      content: '▶';
+      font-size: 0.6rem;
+      opacity: 0.6;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0.5rem 0;
+    }
+
+    /* Submenu */
+    .submenu {
+      position: absolute;
+      left: 100%;
+      top: 0;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      min-width: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .menu-item:hover > .submenu {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .submenu {
+        position: static;
+        margin-top: 0.5rem;
+        margin-left: 1rem;
+        border: none;
+        border-left: 2px solid var(--border);
+        border-radius: 0;
+      }
+      .menu-item.has-submenu::after {
+        content: '▼';
+      }
+      .menu-item.submenu-open > .submenu {
+        display: block;
+      }
+    }
+
+    .submenu-item {
       padding: 0.5rem 0.75rem;
       border-radius: 4px;
       cursor: pointer;
@@ -357,13 +421,18 @@
       transition: background 0.2s;
     }
 
-    .template-item:hover {
+    .submenu-item:hover {
       background: var(--border);
     }
 
-    .template-item.active {
+    .submenu-item.active {
       background: var(--accent);
       color: var(--bg);
+    }
+
+    /* Legacy - keep for compatibility */
+    .template-gallery {
+      display: none;
     }
 
     /* URL Input Modal */
@@ -605,9 +674,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn" id="btn-gallery" title="Demo Gallery">☰</button>
-        <button class="btn" id="btn-load-url" title="Load from URL">URL</button>
-        <button class="btn" id="btn-load-file" title="Load JSON File">File</button>
+        <button class="btn" id="btn-menu" title="Menu">☰</button>
         <button class="btn btn-icon" id="btn-editor" title="Toggle Editor">{ }</button>
       </div>
     </header>
@@ -650,9 +717,32 @@
     <div class="nav" id="nav"></div>
   </div>
 
-  <!-- Demo Gallery -->
-  <div class="template-gallery" id="template-gallery">
-    <!-- Populated by JS -->
+  <!-- Main Menu -->
+  <div class="main-menu" id="main-menu">
+    <div class="menu-item has-submenu" id="menu-demos">
+      <span>📦 Demos</span>
+      <div class="submenu" id="demos-submenu">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-load-url">
+      <span>🔗 Load from URL</span>
+    </div>
+    <div class="menu-item" id="menu-load-file">
+      <span>📁 Load File</span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-lighting">
+      <span>💡 Lighting</span>
+    </div>
+    <div class="menu-item" id="menu-settings">
+      <span>⚙️ Settings</span>
+    </div>
+  </div>
+
+  <!-- Legacy gallery for compatibility -->
+  <div class="template-gallery" id="template-gallery" style="display:none;">
   </div>
 
   <!-- URL Modal -->
@@ -718,6 +808,53 @@
     </div>
   </div>
 
+  <!-- Lighting Panel -->
+  <div class="debug-panel" id="lighting-panel">
+    <div class="debug-header">
+      <h3>💡 Lighting</h3>
+      <button class="btn" id="btn-lighting-close">Close</button>
+    </div>
+    <div class="debug-content">
+      <div class="debug-row" style="flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light X</span>
+          <input type="range" min="-2" max="2" step="0.1" value="1" id="slider-light-x" style="width: 100px;">
+          <span id="light-x-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">1.0</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light Y</span>
+          <input type="range" min="-2" max="2" step="0.1" value="1" id="slider-light-y" style="width: 100px;">
+          <span id="light-y-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">1.0</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light Z</span>
+          <input type="range" min="-2" max="2" step="0.1" value="-1" id="slider-light-z" style="width: 100px;">
+          <span id="light-z-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">-1.0</span>
+        </div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Ambient</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.3" id="slider-ambient" style="width: 100px;">
+        <span id="ambient-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.30</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Diffuse</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.7" id="slider-diffuse" style="width: 100px;">
+        <span id="diffuse-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.70</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Specular</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.3" id="slider-specular" style="width: 100px;">
+        <span id="specular-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.30</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Shininess</span>
+        <input type="range" min="1" max="128" step="1" value="32" id="slider-shininess" style="width: 100px;">
+        <span id="shininess-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">32</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Debug Toggle Button -->
   <button class="btn debug-toggle" id="btn-debug">Debug</button>
 
@@ -734,7 +871,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.6.0';
+    const VERSION = '0.7.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -1724,8 +1861,9 @@
     let demos = [...templates]; // Copy templates as demos
     let renderer = null;
     let editorOpen = false;
-    let galleryOpen = false;
+    let menuOpen = false;
     let debugOpen = false;
+    let lightingOpen = false;
 
     // Camera orbit state
     let isDragging = false;
@@ -1738,6 +1876,15 @@
       volumeRender: false,
       showGround: true,
       cameraDistance: 4
+    };
+
+    // Lighting settings
+    const lightingSettings = {
+      lightDir: [1.0, 1.0, -1.0],
+      ambient: 0.3,
+      diffuse: 0.7,
+      specular: 0.3,
+      shininess: 32
     };
 
     // Scrubber state
@@ -1762,12 +1909,14 @@
     const navEl = $('nav');
     const editorPanel = $('editor-panel');
     const jsonEditor = $('json-editor');
-    const templateGallery = $('template-gallery');
+    const mainMenu = $('main-menu');
+    const demosSubmenu = $('demos-submenu');
     const urlModal = $('url-modal');
     const urlInput = $('url-input');
     const statusEl = $('status');
     const fileInput = $('file-input');
     const debugPanel = $('debug-panel');
+    const lightingPanel = $('lighting-panel');
     const edgeLeft = $('edge-left');
     const edgeRight = $('edge-right');
     const scrubberPanel = $('scrubber-panel');
@@ -1786,8 +1935,8 @@
         // Build navigation dots
         buildNav();
 
-        // Build template gallery
-        buildGallery();
+        // Build demos submenu
+        buildDemosSubmenu();
 
         // Load first demo
         switchDemo(0);
@@ -1852,10 +2001,8 @@
         // Parse and render
         renderJson(demo.json);
 
-        // Update gallery selection
-        templateGallery.querySelectorAll('.template-item').forEach((item, i) => {
-          item.classList.toggle('active', i === index);
-        });
+        // Update demos submenu selection
+        updateDemosSubmenuSelection();
 
         console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
 
@@ -1872,20 +2019,27 @@
     }
 
     // ============================================
-    // TEMPLATE GALLERY
+    // DEMOS SUBMENU
     // ============================================
-    function buildGallery() {
-      templateGallery.innerHTML = '';
+    function buildDemosSubmenu() {
+      demosSubmenu.innerHTML = '';
       demos.forEach((demo, i) => {
         const item = document.createElement('div');
-        item.className = 'template-item' + (i === currentDemo ? ' active' : '');
+        item.className = 'submenu-item' + (i === currentDemo ? ' active' : '');
         item.textContent = demo.title;
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
           switchDemo(i);
-          galleryOpen = false;
-          templateGallery.classList.remove('open');
+          menuOpen = false;
+          mainMenu.classList.remove('open');
         });
-        templateGallery.appendChild(item);
+        demosSubmenu.appendChild(item);
+      });
+    }
+
+    function updateDemosSubmenuSelection() {
+      demosSubmenu.querySelectorAll('.submenu-item').forEach((item, i) => {
+        item.classList.toggle('active', i === currentDemo);
       });
     }
 
@@ -2135,7 +2289,7 @@
 
       demos.push({ title, subtitle, json });
       buildNav();
-      buildGallery();
+      buildDemosSubmenu();
       switchDemo(demos.length - 1);
     }
 
@@ -2367,6 +2521,74 @@
     }
 
     // ============================================
+    // LIGHTING PANEL
+    // ============================================
+    function setupLightingPanel() {
+      // Close button
+      $('btn-lighting-close').addEventListener('click', () => {
+        lightingOpen = false;
+        lightingPanel.classList.remove('open');
+      });
+
+      // Light direction sliders
+      $('slider-light-x').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[0] = val;
+        $('light-x-val').textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      $('slider-light-y').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[1] = val;
+        $('light-y-val').textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      $('slider-light-z').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[2] = val;
+        $('light-z-val').textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      // Lighting coefficient sliders
+      $('slider-ambient').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.ambient = val;
+        $('ambient-val').textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      $('slider-diffuse').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.diffuse = val;
+        $('diffuse-val').textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      $('slider-specular').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.specular = val;
+        $('specular-val').textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      $('slider-shininess').addEventListener('input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.shininess = val;
+        $('shininess-val').textContent = val.toFixed(0);
+        updateLighting();
+      });
+    }
+
+    function updateLighting() {
+      if (renderer) {
+        renderer.setLighting(lightingSettings);
+      }
+    }
+
+    // ============================================
     // EVENT LISTENERS
     // ============================================
     function setupEventListeners() {
@@ -2388,12 +2610,18 @@
           e.preventDefault();
           debugOpen = !debugOpen;
           debugPanel.classList.toggle('open', debugOpen);
+        } else if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault();
+          lightingOpen = !lightingOpen;
+          lightingPanel.classList.toggle('open', lightingOpen);
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
-          galleryOpen = false;
-          templateGallery.classList.remove('open');
+          menuOpen = false;
+          mainMenu.classList.remove('open');
           debugOpen = false;
           debugPanel.classList.remove('open');
+          lightingOpen = false;
+          lightingPanel.classList.remove('open');
         }
       });
 
@@ -2401,6 +2629,7 @@
       setupOrbitControls();
       setupTouchControls();
       setupDebugPanel();
+      setupLightingPanel();
 
       // Editor toggle
       $('btn-editor').addEventListener('click', () => {
@@ -2408,10 +2637,46 @@
         editorPanel.classList.toggle('open', editorOpen);
       });
 
-      // Gallery toggle
-      $('btn-gallery').addEventListener('click', () => {
-        galleryOpen = !galleryOpen;
-        templateGallery.classList.toggle('open', galleryOpen);
+      // Main menu toggle
+      $('btn-menu').addEventListener('click', () => {
+        menuOpen = !menuOpen;
+        mainMenu.classList.toggle('open', menuOpen);
+      });
+
+      // Menu items
+      $('menu-load-url').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        urlModal.classList.add('open');
+        urlInput.focus();
+      });
+
+      $('menu-load-file').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        fileInput.click();
+      });
+
+      $('menu-lighting').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        lightingOpen = true;
+        lightingPanel.classList.add('open');
+      });
+
+      $('menu-settings').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        debugOpen = true;
+        debugPanel.classList.add('open');
+      });
+
+      // Mobile submenu toggle
+      $('menu-demos').addEventListener('click', function(e) {
+        if (window.innerWidth <= 768) {
+          e.stopPropagation();
+          this.classList.toggle('submenu-open');
+        }
       });
 
       // Editor actions
@@ -2456,11 +2721,6 @@
       });
 
       // URL modal
-      $('btn-load-url').addEventListener('click', () => {
-        urlModal.classList.add('open');
-        urlInput.focus();
-      });
-
       $('btn-modal-cancel').addEventListener('click', () => {
         urlModal.classList.remove('open');
       });
@@ -2483,10 +2743,6 @@
       });
 
       // File loading
-      $('btn-load-file').addEventListener('click', () => {
-        fileInput.click();
-      });
-
       fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
           loadFromFile(e.target.files[0]);
@@ -2496,9 +2752,9 @@
 
       // Click outside to close panels
       document.addEventListener('click', (e) => {
-        if (galleryOpen && !templateGallery.contains(e.target) && e.target.id !== 'btn-gallery') {
-          galleryOpen = false;
-          templateGallery.classList.remove('open');
+        if (menuOpen && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
+          menuOpen = false;
+          mainMenu.classList.remove('open');
         }
       });
     }
