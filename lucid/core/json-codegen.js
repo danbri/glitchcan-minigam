@@ -128,6 +128,9 @@ function walkNode(node, ctx) {
     case 'displace':
       return generateDisplace(node, ctx);
 
+    case 'customExpr':
+      return generateCustomExpr(node, ctx);
+
     default:
       console.warn(`Unhandled node type: ${node.type}`);
       return 'vec4(1000.0, 1.0, 0.0, 1.0)';
@@ -755,6 +758,50 @@ function generateDisplace(node, ctx) {
   float disp = (${noiseCall} - 0.5) * 2.0 * ${amount};
   vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
   return vec4(c.x + disp, c.yzw);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(p)`;
+}
+
+/**
+ * Generate customExpr - raw GLSL expression stored as base64
+ * The glsl field should contain a base64-encoded string that decodes to valid GLSL
+ * returning vec4(distance, r, g, b)
+ *
+ * Example JSON:
+ * {
+ *   "type": "customExpr",
+ *   "glsl": "dmVjNChsZW5ndGgocCkgLSAwLjUsIDEuMCwgMC41LCAwLjIp"
+ * }
+ * (decodes to: vec4(length(p) - 0.5, 1.0, 0.5, 0.2))
+ */
+function generateCustomExpr(node, ctx) {
+  const encoded = node.glsl || '';
+
+  // Decode base64 to GLSL string
+  let glslCode;
+  try {
+    glslCode = atob(encoded);
+  } catch (e) {
+    console.warn('Failed to decode customExpr base64:', e);
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply any transform from the node
+  const p = applyTransform('p', node.transform, ctx);
+
+  // Generate helper function with the custom code
+  const funcName = `custom_${ctx.helperCounter++}`;
+
+  // If the expression uses u_time, ensure uniform is declared
+  if (glslCode.includes('u_time')) {
+    ctx.uniforms.add('u_time');
+  }
+
+  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec3 q = ${p};
+  return ${glslCode.replace(/\bp\b/g, 'q')};
 }`;
 
   ctx.helpers.push(helperFunc);
