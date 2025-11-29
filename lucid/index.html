@@ -1948,14 +1948,14 @@
 
       {
         title: "🚀 Cobra Mk III",
-        subtitle: "Elite ship - CSG sculpting with pulsing engines",
+        subtitle: "Elite ship - REVEALS MIRROR BUG (cutters don't rotate)",
         json: {
           "version": "4.4",
-          "notes": "Cobra Mk III - Demonstrates CSG box-cutting technique.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION: Parent transforms flow down through union/subtract.\n   NOTE: Root rotation is static due to mirror transform propagation issues.\n   Animation works via engine glow parameter animation (not transforms).\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (static tilt for viewing)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters)\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring - animated pulse)",
+          "notes": "Cobra Mk III - Demonstrates CSG box-cutting AND a platform bug.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION BUG: Watch the animation - the CSG cutters inside\n   mirror nodes don't rotate with the parent! The ship only looks correct\n   at certain angles. Use 'Show CSG Cutters' debug mode to visualize.\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (ANIMATED Y rotation - reveals bug)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters) ← BUG: doesn't rotate\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring - animated pulse)",
           "root": {
             "type": "transform",
             "transform": {
-              "rotate": [15, -30, 0]
+              "rotate": [15, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
             },
             "child": {
               "type": "union",
