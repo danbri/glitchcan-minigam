@@ -1057,11 +1057,16 @@ vec3 rotAxisAngle(vec3 p, vec3 axis, float angle) {
 // For affine transforms (rotation + translation), inverse = transpose of 3x3 part, then transform
 vec3 transformMat4Inverse(vec3 p, mat4 m) {
   // Extract rotation (upper-left 3x3) and translation (last column)
-  mat3 rot = mat3(m);
   vec3 trans = vec3(m[3][0], m[3][1], m[3][2]);
+  // Manual transpose of 3x3 rotation part (WebGL 1 compatible)
+  mat3 rotT = mat3(
+    m[0][0], m[1][0], m[2][0],
+    m[0][1], m[1][1], m[2][1],
+    m[0][2], m[1][2], m[2][2]
+  );
   // Inverse of affine: first subtract translation, then apply transpose of rotation
   // (Only correct for orthogonal rotation matrices; for scaled/sheared, use full inverse)
-  return transpose(rot) * (p - trans);
+  return rotT * (p - trans);
 }
 
 `;
