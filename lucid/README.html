@@ -138,9 +138,9 @@
 
 <div class="card">
   <h3>Quick Links</h3>
-  <a href="demos_json.html" class="demo-link">JSON Demos Viewer</a>
-  <a href="demos.html" class="demo-link">DSL Editor</a>
-  <a href="index.html" class="demo-link">Full Raymarcher App</a>
+  <a href="index.html" class="demo-link">JSON Demos Viewer</a>
+  <a href="initial_test.html" class="demo-link">Full Raymarcher App</a>
+  <a href="demos.html" class="demo-link">DSL Editor (legacy)</a>
 </div>
 
 <h2>Architecture Overview</h2>
@@ -372,9 +372,9 @@
 
 <pre><code>lucid/
 ├── README.html           # This documentation
-├── demos_json.html       # JSON demos viewer with editor
-├── demos.html            # DSL editor interface
-├── index.html            # Full raymarcher app
+├── index.html            # JSON demos viewer with editor (main entry point)
+├── initial_test.html     # Full raymarcher app (DSL-based, experimental)
+├── demos.html            # DSL editor interface (legacy)
 ├── invader.sdf.json      # Example JSON scene file
 │
 ├── core/
@@ -465,6 +465,41 @@ animate();</code></pre>
   <li>Architecture designed for WebGPU migration</li>
   <li>Shader generation layer abstracts GPU API</li>
 </ul>
+
+<h2>Legacy DSL Demos (demos.html)</h2>
+
+<p>The legacy <code>demos.html</code> file contains text DSL demos that showcase features unique to the DSL syntax. While the JSON format (in <code>index.html</code>) is now the primary scene definition format, these DSL concepts are worth noting:</p>
+
+<table>
+  <tr><th>Demo</th><th>Concept</th><th>JSON Equivalent</th></tr>
+  <tr>
+    <td>Space Invaders (Template)</td>
+    <td><code>template invader(x, y, color):</code> syntax</td>
+    <td><code>defs/ref</code> system with <code>material</code> wrapper</td>
+  </tr>
+  <tr>
+    <td>Animated Invaders (Instance-Level)</td>
+    <td>Passing <code>sin(time)</code> to template parameters</td>
+    <td>Expression trees in ref transforms</td>
+  </tr>
+  <tr>
+    <td>Animated Invaders (Template-Level)</td>
+    <td><code>sin(time)</code> inside template definition</td>
+    <td>Expressions inside def node params</td>
+  </tr>
+  <tr>
+    <td>Capsule Chain</td>
+    <td>Multiple connected segments with smooth blending</td>
+    <td>Already implemented in JSON demos</td>
+  </tr>
+  <tr>
+    <td>Rotating Torus</td>
+    <td>Circular orbit using sin/cos</td>
+    <td>Expression-based translate transforms</td>
+  </tr>
+</table>
+
+<p>The DSL's <code>template</code> keyword compiles to GLSL functions when used 2+ times, reducing shader code size. The JSON system achieves similar optimization through the <code>defs</code> mechanism.</p>
 
 <h2>Known Limitations</h2>
 
