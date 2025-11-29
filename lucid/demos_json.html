@@ -1,4 +1,20 @@
 <!DOCTYPE html>
+<!--
+  Lucid SDF-CSG Demo Application
+
+  ⚠️ VERSION BUMP REQUIRED: Update VERSION constant (~line 909) with every commit!
+
+  GitHub: https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html
+  Branch: claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT
+  Compare: https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT
+
+  Key files:
+  - core/json-loader.js  - JSON scene parser
+  - core/json-codegen.js - GLSL code generator
+  - ui/raymarcher.js     - WebGL renderer
+
+  See lucid/CLAUDE.md for full development guide.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -626,12 +642,41 @@
       transform: translateX(20px);
     }
 
-    /* Debug toggle button */
+    /* Debug toggle button - now in header, keep for mobile fallback */
     .debug-toggle {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 100;
+      display: none;
+    }
+
+    /* Header icon buttons */
+    .header-icons {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .icon-btn.active {
+      color: var(--accent);
+      background: rgba(34, 211, 238, 0.15);
     }
 
     /* Edge indicators (visual feedback) */
@@ -668,14 +713,20 @@
     <!-- Header -->
     <header class="header">
       <div class="header-left">
+        <div class="header-icons">
+          <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
+          <button class="icon-btn" id="btn-paste-apply" title="Paste & Apply (V)">📋</button>
+          <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
+          <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
+          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+        </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
           <p id="subtitle">JSON SDF Demo</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn" id="btn-menu" title="Menu">☰</button>
-        <button class="btn btn-icon" id="btn-editor" title="Toggle Editor">{ }</button>
+        <!-- Actions moved to left icons -->
       </div>
     </header>
 
@@ -726,6 +777,9 @@
       </div>
     </div>
     <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-new-demo">
+      <span>✨ New Demo</span>
+    </div>
     <div class="menu-item" id="menu-load-url">
       <span>🔗 Load from URL</span>
     </div>
@@ -738,6 +792,42 @@
     </div>
     <div class="menu-item" id="menu-settings">
       <span>⚙️ Settings</span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-about">
+      <span>ℹ️ About</span>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div class="modal" id="about-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <h2 style="margin-bottom: 0.5rem;">Lucid SDF-CSG</h2>
+      <p style="color: var(--text-dim); font-size: 0.75rem; margin-bottom: 1rem;" id="about-version">v0.9.0</p>
+
+      <div style="font-size: 0.8rem; margin-bottom: 1rem;">
+        <p style="margin-bottom: 0.5rem;">Node-based CSG/SDF scene language with WebGL raymarching.</p>
+      </div>
+
+      <div style="font-size: 0.75rem; margin-bottom: 1rem;">
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent);">GitHub Links:</p>
+        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html" target="_blank" style="color: var(--text); text-decoration: none;">📄 demos_json.html</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-loader.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-codegen.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/ui/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 raymarcher.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/CLAUDE.md" target="_blank" style="color: var(--text); text-decoration: none;">📖 CLAUDE.md</a>
+        </div>
+      </div>
+
+      <div style="font-size: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--code-bg); border-radius: 6px;">
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-alt);">Current Branch:</p>
+        <a href="https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT" target="_blank" style="color: var(--accent); text-decoration: none; word-break: break-all; font-family: monospace; font-size: 0.7rem;">🔀 View PR / Compare Changes</a>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn primary" id="btn-about-close">Close</button>
+      </div>
     </div>
   </div>
 
@@ -855,9 +945,6 @@
     </div>
   </div>
 
-  <!-- Debug Toggle Button -->
-  <button class="btn debug-toggle" id="btn-debug">Debug</button>
-
   <!-- Edge Indicators -->
   <div class="edge-indicator left" id="edge-left"></div>
   <div class="edge-indicator right" id="edge-right"></div>
@@ -871,7 +958,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.7.0';
+    const VERSION = '0.10.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -883,6 +970,7 @@
         subtitle: "All 7 SDF primitives + smooth blend",
         json: {
           "version": "1.0",
+          "notes": "SDF primitives are the building blocks. Each has specific params: sphere(r), box(size[3]), cylinder(h,r), torus(major,minor), capsule(h,r), ellipsoid(radii[3]), plane(normal,h). All primitives support 'color' param and inline 'transform'.",
           "root": {
             "type": "union",
             "children": [
@@ -960,6 +1048,7 @@
         subtitle: "Two spheres with smooth blending",
         json: {
           "version": "1.0",
+          "notes": "CSG ops combine shapes: union (add), subtract (cut), intersect (common). Smooth variants (smoothUnion, smoothSubtract, smoothIntersect) use 'k' param to control blend radius. Higher k = more blending.",
           "root": {
             "type": "smoothUnion",
             "k": 0.5,
@@ -1046,6 +1135,7 @@
         subtitle: "Multiple cylinders in formation",
         json: {
           "version": "1.0",
+          "notes": "TEMPLATING: Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref. This avoids duplicating shape definitions.",
           "defs": {
             "pillar": {
               "type": "cylinder",
@@ -1851,6 +1941,187 @@
             }
           }
         }
+      },
+
+      // ========================================
+      // TUTORIAL DEMOS - Explain key concepts
+      // ========================================
+      {
+        title: "📚 Transforms Tutorial",
+        subtitle: "All transform types explained",
+        json: {
+          "version": "1.0",
+          "notes": "TRANSFORMS move/rotate shapes. Types: 'translate':[x,y,z], 'rotate':[rx,ry,rz] (Euler degrees XYZ order), 'rotateQ':[x,y,z,w] (quaternion), 'rotateAxis':{axis:[x,y,z],angle:deg}, 'mat4':[16 values] (column-major 4x4 matrix). Inline on primitives OR wrap with 'transform' node.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "box",
+                "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 0.3] },
+                "transform": { "translate": [-1.5, 0.5, 0] }
+              },
+              {
+                "type": "box",
+                "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 1, 0.3] },
+                "transform": { "translate": [0, 0.5, 0], "rotate": [0, 45, 0] }
+              },
+              {
+                "type": "box",
+                "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 0.3, 1] },
+                "transform": { "translate": [1.5, 0.5, 0], "rotate": [45, 45, 0] }
+              },
+              {
+                "type": "transform",
+                "transform": { "translate": [-1.5, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 45 } },
+                "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 1, 0.3] } }
+              },
+              {
+                "type": "transform",
+                "transform": { "translate": [0, -0.5, 0], "rotateQ": [0, 0.383, 0, 0.924] },
+                "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 1] } }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "📚 Material & Emission",
+        subtitle: "Color override and glow effects",
+        json: {
+          "version": "1.0",
+          "notes": "MATERIAL node wraps a child and overrides its appearance. Params: 'color':[r,g,b] overrides color, 'emit':0-1 adds glow effect (higher = brighter). Material > transform > shape is the typical pattern for reusable templates.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "material",
+                "params": { "color": [1, 0.2, 0.2] },
+                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [-1.2, 0.5, 0] } }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.2, 1, 0.2], "emit": 0.3 },
+                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [0, 0.5, 0] } }
+              },
+              {
+                "type": "material",
+                "params": { "color": [0.2, 0.5, 1], "emit": 0.8 },
+                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [1.2, 0.5, 0] } }
+              },
+              {
+                "type": "material",
+                "params": { "color": [1, 1, 1], "emit": 1.0 },
+                "child": { "type": "sphere", "params": { "r": 0.25 }, "transform": { "translate": [0, -0.3, 0] } }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "📚 Grouping & Hierarchy",
+        subtitle: "Nested transforms with groups",
+        json: {
+          "version": "1.0",
+          "notes": "GROUP node collects children and applies a shared transform. Unlike union (which combines SDFs), group is purely organizational. Transforms cascade: parent transform applies to all children. Use for logical hierarchy and shared positioning.",
+          "defs": {
+            "arm": {
+              "type": "union",
+              "children": [
+                { "type": "sphere", "params": { "r": 0.15 } },
+                { "type": "capsule", "params": { "h": 0.3, "r": 0.08 }, "transform": { "translate": [0, -0.25, 0] } },
+                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0, -0.5, 0] } }
+              ]
+            }
+          },
+          "root": {
+            "type": "group",
+            "transform": { "translate": [0, 0.5, 0] },
+            "children": [
+              { "type": "sphere", "params": { "r": 0.4, "color": [0.8, 0.6, 0.4] } },
+              { "type": "material", "params": { "color": [0.6, 0.8, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-0.5, 0, 0], "rotate": [0, 0, -30] }, "child": { "type": "ref", "id": "arm" } } },
+              { "type": "material", "params": { "color": [0.6, 0.8, 0.4] }, "child": { "type": "transform", "transform": { "translate": [0.5, 0, 0], "rotate": [0, 0, 30] }, "child": { "type": "ref", "id": "arm" } } },
+              { "type": "sphere", "params": { "r": 0.25, "color": [0.9, 0.8, 0.7] }, "transform": { "translate": [0, 0.55, 0] } }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "📚 Expressions & Animation",
+        subtitle: "Dynamic values with math expressions",
+        json: {
+          "version": "1.0",
+          "notes": "EXPRESSIONS make values dynamic. Use {expr:'op', args:[...]} syntax. Ops: add, sub, mul, div, sin, cos, abs, min, max, mix, clamp, mod, pow, sqrt. Use {var:'time'} for animation, {var:'x/y/z'} for position. Expressions work in any numeric param.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "sphere",
+                "params": {
+                  "r": { "expr": "add", "args": [0.3, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+                  "color": [1, 0.5, 0.2]
+                },
+                "transform": { "translate": [-1, 0.5, 0] }
+              },
+              {
+                "type": "box",
+                "params": { "size": [0.3, 0.3, 0.3], "color": [0.2, 0.8, 1] },
+                "transform": {
+                  "translate": [0, 0.5, 0],
+                  "rotate": [0, { "expr": "mul", "args": [{ "var": "time" }, 45] }, 0]
+                }
+              },
+              {
+                "type": "torus",
+                "params": {
+                  "major": 0.4,
+                  "minor": { "expr": "add", "args": [0.08, { "expr": "mul", "args": [0.04, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 3] }] }] }] },
+                  "color": [0.8, 0.2, 0.8]
+                },
+                "transform": { "translate": [1, 0.5, 0] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        title: "📚 Modifiers: Round & Shell",
+        subtitle: "Post-process SDF shapes",
+        json: {
+          "version": "1.0",
+          "notes": "MODIFIERS alter the SDF after shape calculation. 'round' adds radius to edges (softens corners). 'shell' hollows out shapes with wall thickness. Modifiers wrap any shape or CSG result. Great for organic or manufactured looks.",
+          "root": {
+            "type": "union",
+            "children": [
+              {
+                "type": "box",
+                "params": { "size": [0.35, 0.35, 0.35], "color": [0.8, 0.4, 0.2] },
+                "transform": { "translate": [-1.2, 0.5, 0] }
+              },
+              {
+                "type": "round",
+                "r": 0.08,
+                "child": {
+                  "type": "box",
+                  "params": { "size": [0.35, 0.35, 0.35], "color": [0.4, 0.8, 0.2] }
+                },
+                "transform": { "translate": [0, 0.5, 0] }
+              },
+              {
+                "type": "shell",
+                "thickness": 0.05,
+                "child": {
+                  "type": "sphere",
+                  "params": { "r": 0.4, "color": [0.2, 0.5, 0.9] }
+                },
+                "transform": { "translate": [1.2, 0.5, 0] }
+              }
+            ]
+          }
+        }
       }
     ];
 
@@ -1864,6 +2135,8 @@
     let menuOpen = false;
     let debugOpen = false;
     let lightingOpen = false;
+    let autoRotate = false;
+    let autoRotateSpeed = 0.5; // radians per second
 
     // Camera orbit state
     let isDragging = false;
@@ -1941,8 +2214,18 @@
         // Load first demo
         switchDemo(0);
 
-        // Render loop
+        // Render loop with auto-rotate
+        let lastFrameTime = performance.now();
         function renderLoop() {
+          const now = performance.now();
+          const deltaTime = (now - lastFrameTime) / 1000; // seconds
+          lastFrameTime = now;
+
+          // Auto-rotate camera
+          if (autoRotate && !isDragging) {
+            renderer.camera.theta += autoRotateSpeed * deltaTime;
+          }
+
           renderer.render();
           requestAnimationFrame(renderLoop);
         }
@@ -2464,15 +2747,11 @@
     // DEBUG PANEL
     // ============================================
     function setupDebugPanel() {
-      // Toggle debug panel
-      $('btn-debug').addEventListener('click', () => {
-        debugOpen = !debugOpen;
-        debugPanel.classList.toggle('open', debugOpen);
-      });
-
+      // Close button inside debug panel
       $('btn-debug-close').addEventListener('click', () => {
         debugOpen = false;
         debugPanel.classList.remove('open');
+        $('btn-debug').classList.remove('active');
       });
 
       // Volume render toggle
@@ -2610,10 +2889,24 @@
           e.preventDefault();
           debugOpen = !debugOpen;
           debugPanel.classList.toggle('open', debugOpen);
+          $('btn-debug').classList.toggle('active', debugOpen);
         } else if (e.key === 'l' || e.key === 'L') {
           e.preventDefault();
           lightingOpen = !lightingOpen;
           lightingPanel.classList.toggle('open', lightingOpen);
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          autoRotate = !autoRotate;
+          $('btn-auto-rotate').classList.toggle('active', autoRotate);
+        } else if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          $('btn-paste-apply').click(); // Trigger paste & apply
+        } else if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          $('menu-new-demo').click(); // Create new demo
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          $('btn-menu').click(); // Toggle menu
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -2635,15 +2928,94 @@
       $('btn-editor').addEventListener('click', () => {
         editorOpen = !editorOpen;
         editorPanel.classList.toggle('open', editorOpen);
+        $('btn-editor').classList.toggle('active', editorOpen);
+      });
+
+      // Auto-rotate toggle
+      $('btn-auto-rotate').addEventListener('click', () => {
+        autoRotate = !autoRotate;
+        $('btn-auto-rotate').classList.toggle('active', autoRotate);
+      });
+
+      // Paste & Apply - one click to paste JSON and render
+      $('btn-paste-apply').addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          const json = JSON.parse(text);
+
+          // Update current demo
+          demos[currentDemo] = {
+            title: json.notes ? json.notes.substring(0, 30) + '...' : 'Pasted Demo',
+            subtitle: 'From clipboard',
+            json: json
+          };
+
+          // Render and update UI
+          renderJson(json);
+          $('title').textContent = demos[currentDemo].title;
+          $('subtitle').textContent = demos[currentDemo].subtitle;
+          jsonEditor.value = JSON.stringify(json, null, 2);
+
+          showStatus('✓ Pasted and applied!', 'success');
+        } catch (err) {
+          if (err.name === 'NotAllowedError') {
+            showStatus('Clipboard access denied - try editor paste', 'error');
+          } else if (err instanceof SyntaxError) {
+            showStatus('Invalid JSON in clipboard', 'error');
+          } else {
+            showStatus('Paste failed: ' + err.message, 'error');
+          }
+          console.error('Paste error:', err);
+        }
+      });
+
+      // Debug panel toggle (from header button)
+      $('btn-debug').addEventListener('click', () => {
+        debugOpen = !debugOpen;
+        debugPanel.classList.toggle('open', debugOpen);
+        $('btn-debug').classList.toggle('active', debugOpen);
       });
 
       // Main menu toggle
       $('btn-menu').addEventListener('click', () => {
         menuOpen = !menuOpen;
         mainMenu.classList.toggle('open', menuOpen);
+        $('btn-menu').classList.toggle('active', menuOpen);
       });
 
       // Menu items
+      // New Demo - create fresh entry in demos list
+      $('menu-new-demo').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+
+        const newDemo = {
+          title: `My Demo ${demos.length + 1}`,
+          subtitle: 'New custom demo',
+          json: {
+            "version": "1.0",
+            "notes": "Your custom SDF scene. Edit the JSON to create shapes!",
+            "root": {
+              "type": "sphere",
+              "params": { "r": 1.0, "color": [0.4, 0.8, 1.0] }
+            }
+          }
+        };
+
+        // Add to demos and switch to it
+        demos.push(newDemo);
+        buildDemosSubmenu(); // Rebuild menu to include new entry
+        switchDemo(demos.length - 1);
+
+        // Open editor for immediate editing
+        editorOpen = true;
+        editorPanel.classList.add('open');
+        $('btn-editor').classList.add('active');
+
+        showStatus('✨ New demo created! Edit the JSON.', 'success');
+      });
+
       $('menu-load-url').addEventListener('click', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
@@ -2669,6 +3041,27 @@
         mainMenu.classList.remove('open');
         debugOpen = true;
         debugPanel.classList.add('open');
+      });
+
+      // About modal
+      const aboutModal = $('about-modal');
+      $('menu-about').addEventListener('click', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('about-version').textContent = `v${VERSION} (${BUILD_DATE})`;
+        aboutModal.classList.add('open');
+      });
+
+      $('btn-about-close').addEventListener('click', () => {
+        aboutModal.classList.remove('open');
+      });
+
+      // Close about modal on outside click
+      aboutModal.addEventListener('click', (e) => {
+        if (e.target === aboutModal) {
+          aboutModal.classList.remove('open');
+        }
       });
 
       // Mobile submenu toggle
