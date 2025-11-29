@@ -83,6 +83,9 @@ function walkNode(node, ctx) {
     case 'ellipsoid':
       return generateEllipsoid(node, ctx);
 
+    case 'cone':
+      return generateCone(node, ctx);
+
     case 'plane':
       return generatePlane(node, ctx);
 
@@ -212,6 +215,20 @@ function generateEllipsoid(node, ctx) {
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
   return `vec4(sdEllipsoid(${p}, ${radii}), ${color})`;
+}
+
+/**
+ * Generate cone - returns expression
+ * A cone with height h and base radius r, tip at origin pointing up
+ */
+function generateCone(node, ctx) {
+  const params = node.params || {};
+  const h = valueToGlsl(params.h || { type: 'const', value: 1.0 }, ctx);
+  const r = valueToGlsl(params.r || { type: 'const', value: 0.5 }, ctx);
+  const p = applyTransform('p', node.transform, ctx);
+  const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
+
+  return `vec4(sdCone(${p}, ${h}, ${r}), ${color})`;
 }
 
 /**
@@ -1149,6 +1166,19 @@ float sdEllipsoid(vec3 p, vec3 r) {
   float k0 = length(p / r);
   float k1 = length(p / (r * r));
   return k0 * (k0 - 1.0) / k1;
+}
+
+float sdCone(vec3 p, float h, float r) {
+  // Cone with tip at origin, base at y=-h, base radius r
+  vec2 q = vec2(length(p.xz), -p.y);
+  vec2 tip = vec2(0.0, 0.0);
+  vec2 base = vec2(r, h);
+  vec2 e = base - tip;
+  vec2 w = q - tip;
+  vec2 d1 = q - base * clamp(dot(q, base) / dot(base, base), 0.0, 1.0);
+  vec2 d2 = q - vec2(clamp(q.x, 0.0, r), h);
+  float s = max(dot(w, vec2(e.y, -e.x)), q.y - h);
+  return sqrt(min(dot(d1, d1), dot(d2, d2))) * sign(s);
 }
 
 float sdPlane(vec3 p, vec3 n, float h) {

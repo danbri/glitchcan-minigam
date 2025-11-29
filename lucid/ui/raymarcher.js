@@ -32,6 +32,8 @@ export class SimpleRaymarcher {
     this.showGroundPlane = true;
     this.volumeRender = false;
     this.showEdges = true;
+    this.showAxes = false;
+    this.overrideTime = null; // When set, use this instead of elapsed time
     this.volumeStepSize = 0.05;
     this.volumeDensity = 8.0;
 
@@ -102,6 +104,7 @@ export class SimpleRaymarcher {
       uniform float u_showGroundPlane;
       uniform float u_volumeRender;
       uniform float u_showEdges;
+      uniform float u_showAxes;
       uniform float u_volumeStepSize;
       uniform float u_volumeDensity;
       uniform int u_volumeMode;        // 0=jelly, 1=xray, 2=heatmap
@@ -119,6 +122,48 @@ export class SimpleRaymarcher {
       // Ground plane SDF with checkerboard pattern
       float sdGroundPlane(vec3 p) {
         return p.y + 1.5; // Plane at y = -1.5
+      }
+
+      // Axis arrow SDFs - Blender-style RGB arrows
+      // Returns vec4(distance, r, g, b)
+      vec4 sdAxisArrows(vec3 p) {
+        float arrowLen = 1.5;
+        float shaftR = 0.02;
+        float headR = 0.06;
+        float headH = 0.15;
+
+        // X axis - Red arrow (positive X direction)
+        vec3 px = p - vec3(arrowLen * 0.5, 0.0, 0.0);
+        float dXshaft = length(vec2(length(px.yz), max(abs(px.x) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+        vec3 pxHead = p - vec3(arrowLen, 0.0, 0.0);
+        float dXhead = length(vec2(length(pxHead.yz) - headR * (1.0 - clamp(pxHead.x / headH, 0.0, 1.0)), max(-pxHead.x, pxHead.x - headH)));
+        dXhead = max(dXhead, -pxHead.x);
+        float dX = min(dXshaft, dXhead);
+
+        // Y axis - Green arrow (positive Y direction)
+        vec3 py = p - vec3(0.0, arrowLen * 0.5, 0.0);
+        float dYshaft = length(vec2(length(py.xz), max(abs(py.y) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+        vec3 pyHead = p - vec3(0.0, arrowLen, 0.0);
+        float dYhead = length(vec2(length(pyHead.xz) - headR * (1.0 - clamp(pyHead.y / headH, 0.0, 1.0)), max(-pyHead.y, pyHead.y - headH)));
+        dYhead = max(dYhead, -pyHead.y);
+        float dY = min(dYshaft, dYhead);
+
+        // Z axis - Blue arrow (positive Z direction)
+        vec3 pz = p - vec3(0.0, 0.0, arrowLen * 0.5);
+        float dZshaft = length(vec2(length(pz.xy), max(abs(pz.z) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+        vec3 pzHead = p - vec3(0.0, 0.0, arrowLen);
+        float dZhead = length(vec2(length(pzHead.xy) - headR * (1.0 - clamp(pzHead.z / headH, 0.0, 1.0)), max(-pzHead.z, pzHead.z - headH)));
+        dZhead = max(dZhead, -pzHead.z);
+        float dZ = min(dZshaft, dZhead);
+
+        // Find closest axis and return with color
+        if (dX < dY && dX < dZ) {
+          return vec4(dX, 0.9, 0.2, 0.2);  // Red for X
+        } else if (dY < dZ) {
+          return vec4(dY, 0.2, 0.9, 0.2);  // Green for Y
+        } else {
+          return vec4(dZ, 0.3, 0.4, 0.9);  // Blue for Z
+        }
       }
 
       vec3 getGroundColor(vec3 p) {
@@ -158,12 +203,25 @@ export class SimpleRaymarcher {
           vec3 p = ro + rd * t;
           vec4 scene = g_df_scene(p);
           float d = scene.x;
+          vec3 sceneColor = scene.yzw;
+          bool hitAxes = false;
+
+          // Check axes if enabled
+          if (u_showAxes > 0.5) {
+            vec4 axes = sdAxisArrows(p);
+            if (axes.x < d) {
+              d = axes.x;
+              sceneColor = axes.yzw;
+              hitAxes = true;
+            }
+          }
 
           // Check ground plane if enabled
           if (u_showGroundPlane > 0.5) {
             float dGround = sdGroundPlane(p);
             if (dGround < d) {
               d = dGround;
+              hitAxes = false;
               if (abs(d) < 0.001) {
                 hitGround = true;
                 hitPos = p;
@@ -178,7 +236,7 @@ export class SimpleRaymarcher {
               vec3 light = normalize(u_lightDir);
               float diff = max(dot(normal, light), 0.0);
               float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), u_shininess);
-              vec3 col = scene.yzw * (u_ambient + diff * u_diffuse) + spec * u_specular;
+              vec3 col = sceneColor * (u_ambient + diff * u_diffuse) + spec * u_specular;
 
               // Edge rendering - darken silhouette edges
               if (u_showEdges > 0.5) {
@@ -379,7 +437,9 @@ export class SimpleRaymarcher {
     gl.uniform2f(resolutionLocation, this.canvas.width, this.canvas.height);
 
     const timeLocation = gl.getUniformLocation(this.program, 'u_time');
-    const time = (performance.now() - this.startTime) / 1000.0;
+    const time = this.overrideTime !== null
+      ? this.overrideTime
+      : (performance.now() - this.startTime) / 1000.0;
     gl.uniform1f(timeLocation, time);
 
     // Camera uniforms
@@ -398,6 +458,9 @@ export class SimpleRaymarcher {
 
     const showEdgesLocation = gl.getUniformLocation(this.program, 'u_showEdges');
     gl.uniform1f(showEdgesLocation, this.showEdges ? 1.0 : 0.0);
+
+    const showAxesLocation = gl.getUniformLocation(this.program, 'u_showAxes');
+    gl.uniform1f(showAxesLocation, this.showAxes ? 1.0 : 0.0);
 
     const volumeStepSizeLocation = gl.getUniformLocation(this.program, 'u_volumeStepSize');
     gl.uniform1f(volumeStepSizeLocation, this.volumeStepSize);
