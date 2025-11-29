@@ -3631,6 +3631,10 @@
         menuOpen = !menuOpen;
         mainMenu.classList.toggle('open', menuOpen);
         $('btn-menu').classList.toggle('active', menuOpen);
+        // Close submenu when menu closes
+        if (!menuOpen) {
+          $('menu-demos').classList.remove('submenu-open');
+        }
       });
 
       // Menu items
@@ -3719,6 +3723,14 @@
         if (window.innerWidth <= 768) {
           e.stopPropagation();
           this.classList.toggle('submenu-open');
+        }
+      });
+
+      // Close submenu when clicking elsewhere in menu
+      mainMenu.addEventListener('click', function(e) {
+        const menuDemos = $('menu-demos');
+        if (!menuDemos.contains(e.target)) {
+          menuDemos.classList.remove('submenu-open');
         }
       });
 
@@ -3812,6 +3824,7 @@
         if (menuOpen && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
           menuOpen = false;
           mainMenu.classList.remove('open');
+          $('menu-demos').classList.remove('submenu-open');
         }
       });
     }
