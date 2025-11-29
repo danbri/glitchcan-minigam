@@ -1173,10 +1173,16 @@
 
       {
         title: "Cylinder Array",
-        subtitle: "Multiple cylinders in formation",
+        subtitle: "Simple table with 4 legs",
+        camera: {
+          distance: 7,      // One table-length (~3) out from the table
+          phi: 1.1,         // Slight angle above (looking down ~30°)
+          theta: 0.5,       // Angled to show 3D depth
+          target: [0, 1, 0] // Center on tabletop height
+        },
         json: {
           "version": "1.0",
-          "notes": "TEMPLATING: Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref. This avoids duplicating shape definitions.",
+          "notes": "A simple table demonstrating defs/ref templating. Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref.",
           "defs": {
             "pillar": {
               "type": "cylinder",
@@ -1728,6 +1734,60 @@
       },
 
       {
+        title: "Capsule Chain",
+        subtitle: "Animated rope-like segments",
+        json: {
+          "version": "1.0",
+          "notes": "Three capsules connected end-to-end with smooth blending. Each segment animates independently creating flowing, rope-like motion. smoothUnion eliminates color flickering at joints.",
+          "root": {
+            "type": "smoothUnion",
+            "k": 0.15,
+            "children": [
+              {
+                "type": "capsule",
+                "notes": "Left segment - fixed left end, animated right end",
+                "params": { "h": 0.5, "r": 0.12, "color": [1.0, 0.3, 0.3] },
+                "transform": {
+                  "translate": [
+                    -0.8,
+                    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] },
+                    0
+                  ],
+                  "rotate": [0, 0, 90]
+                }
+              },
+              {
+                "type": "capsule",
+                "notes": "Middle segment - both ends animated",
+                "params": { "h": 0.5, "r": 0.12, "color": [0.3, 1.0, 0.3] },
+                "transform": {
+                  "translate": [
+                    0,
+                    { "expr": "mul", "args": [0.4, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.5] }] }] },
+                    0
+                  ],
+                  "rotate": [0, 0, 90]
+                }
+              },
+              {
+                "type": "capsule",
+                "notes": "Right segment - animated left end, fixed right end",
+                "params": { "h": 0.5, "r": 0.12, "color": [0.3, 0.3, 1.0] },
+                "transform": {
+                  "translate": [
+                    0.8,
+                    { "expr": "mul", "args": [-0.3, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
+                    0
+                  ],
+                  "rotate": [0, 0, 90]
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
         title: "Ellipsoid Demo",
         subtitle: "Stretched spheres with different radii",
         json: {
@@ -1883,83 +1943,11 @@
       },
 
       {
-        title: "🚀 Cobra Mk III (WIP)",
-        subtitle: "Elite ship - CSG sculpting (static)",
-        json: {
-          "version": "4.3",
-          "notes": "Cobra Mk III - CSG box-cutting approach. Rotation disabled due to transform propagation issues with mirror nodes. Use manual camera rotation to view from different angles.",
-          "root": {
-            "type": "transform",
-            "transform": {
-              "rotate": [15, -30, 0]
-            },
-            "child": {
-              "type": "union",
-              "children": [
-                {
-                  "type": "subtract",
-                  "children": [
-                    {
-                      "type": "box",
-                      "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
-                    },
-                    {
-                      "type": "mirror",
-                      "axis": "x",
-                      "child": {
-                        "type": "box",
-                        "params": {"size": [2.0, 2.0, 4.0], "color": [1, 0, 0]},
-                        "transform": {"translate": [3.2, 0, 0.2], "rotate": [0, 68, 0]}
-                      }
-                    },
-                    {
-                      "type": "box",
-                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 1, 0]},
-                      "transform": {"translate": [0, 1.35, 1.0], "rotate": [12, 0, 0]}
-                    },
-                    {
-                      "type": "box",
-                      "params": {"size": [4.0, 1.0, 4.0], "color": [0, 0, 1]},
-                      "transform": {"translate": [0, -1.35, 1.0], "rotate": [-12, 0, 0]}
-                    },
-                    {
-                      "type": "box",
-                      "params": {"size": [2.0, 1.0, 1.0], "color": [1, 1, 0]},
-                      "transform": {"translate": [0, 0, -2.1], "rotate": [-15, 0, 0]}
-                    }
-                  ]
-                },
-                {
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "type": "cylinder",
-                        "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
-                        "transform": {"translate": [0.5, 0, -1.2], "rotate": [90, 0, 0]}
-                      },
-                      {
-                        "type": "torus",
-                        "params": {"major": 0.14, "minor": 0.03, "color": [1.0, 0.6, 0.1]},
-                        "transform": {"translate": [0.5, 0, -1.4], "rotate": [90, 0, 0]}
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        }
-      },
-
-      {
-        title: "🚀 Cobra Mk III v2",
+        title: "🚀 Cobra Mk III",
         subtitle: "Elite ship - CSG sculpting with detailed notes",
         json: {
           "version": "4.4",
-          "notes": "Cobra Mk III v2 - Demonstrates CSG box-cutting technique.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION: Parent transforms flow down through union/subtract.\n   NOTE: Animation disabled - mirror nodes have transform propagation issues.\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (static tilt for viewing)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters)\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring)",
+          "notes": "Cobra Mk III - Demonstrates CSG box-cutting technique.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION: Parent transforms flow down through union/subtract.\n   NOTE: Animation disabled - mirror nodes have transform propagation issues.\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (static tilt for viewing)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters)\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring)",
           "root": {
             "type": "transform",
             "transform": {
@@ -2555,9 +2543,12 @@
         currentDemo = index;
         const demo = demos[index];
 
-        // Reset camera target when switching demos
+        // Reset camera - use demo-specific settings if available
         if (renderer && renderer.camera) {
-          renderer.camera.target = [0, 0, 0];
+          renderer.camera.target = demo.camera?.target || [0, 0, 0];
+          renderer.camera.distance = demo.camera?.distance || debugSettings.cameraDistance;
+          renderer.camera.phi = demo.camera?.phi || Math.PI / 4;
+          renderer.camera.theta = demo.camera?.theta || 0;
         }
 
         // Update UI
