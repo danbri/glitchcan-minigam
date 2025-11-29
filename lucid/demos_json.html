@@ -719,6 +719,7 @@
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">🌳</button>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -828,6 +829,17 @@
       <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
         <button class="btn primary" id="btn-about-close">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Tree Viewer Panel - slides up from bottom -->
+  <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
+    <div class="debug-header">
+      <h3>🌳 Scene Tree</h3>
+      <button class="btn" id="btn-tree-close">Close</button>
+    </div>
+    <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
+      <!-- Tree structure rendered here -->
     </div>
   </div>
 
@@ -958,7 +970,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.10.0';
+    const VERSION = '0.11.0';
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
@@ -2135,6 +2147,7 @@
     let menuOpen = false;
     let debugOpen = false;
     let lightingOpen = false;
+    let treeOpen = false;
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
 
@@ -2286,6 +2299,9 @@
 
         // Update demos submenu selection
         updateDemosSubmenuSelection();
+
+        // Update tree view if open
+        if (treeOpen) updateTreeView();
 
         console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
 
@@ -2585,6 +2601,107 @@
       setTimeout(() => {
         statusEl.classList.remove('visible');
       }, 2500);
+    }
+
+    // ============================================
+    // TREE VIEWER
+    // ============================================
+    function generateTreeView(json) {
+      const lines = [];
+      const colors = {
+        // Node types
+        sphere: '#22d3ee', box: '#22d3ee', cylinder: '#22d3ee', torus: '#22d3ee',
+        capsule: '#22d3ee', ellipsoid: '#22d3ee', plane: '#22d3ee',
+        union: '#3fb950', subtract: '#f85149', intersect: '#f0883e',
+        smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
+        transform: '#a371f7', material: '#f472b6', group: '#ffd700',
+        ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922'
+      };
+
+      function getNodeIcon(type) {
+        const icons = {
+          sphere: '●', box: '■', cylinder: '▬', torus: '◎', capsule: '⬭', ellipsoid: '⬯', plane: '▭',
+          union: '∪', subtract: '−', intersect: '∩',
+          smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
+          transform: '↻', material: '◆', group: '⊞', ref: '→',
+          round: '○', shell: '◯', mirror: '⊥'
+        };
+        return icons[type] || '◇';
+      }
+
+      function walkNode(node, prefix = '', isLast = true) {
+        if (!node || !node.type) return;
+
+        const connector = isLast ? '└─' : '├─';
+        const icon = getNodeIcon(node.type);
+        const color = colors[node.type] || '#c9d1d9';
+
+        let label = `<span style="color:${color}">${icon} ${node.type}</span>`;
+
+        // Add key params inline
+        if (node.params) {
+          const params = [];
+          if (node.params.r !== undefined) params.push(`r=${formatValue(node.params.r)}`);
+          if (node.params.size) params.push(`size=[${node.params.size.map(formatValue).join(',')}]`);
+          if (node.params.h !== undefined) params.push(`h=${formatValue(node.params.h)}`);
+          if (node.params.major !== undefined) params.push(`R=${formatValue(node.params.major)}`);
+          if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+          if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
+        }
+        if (node.k !== undefined) label += ` <span style="color:#8b949e">k=${node.k}</span>`;
+        if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
+        if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
+
+        lines.push(`${prefix}${connector} ${label}`);
+
+        const childPrefix = prefix + (isLast ? '   ' : '│  ');
+
+        // Handle children
+        if (node.children) {
+          node.children.forEach((child, i) => {
+            walkNode(child, childPrefix, i === node.children.length - 1);
+          });
+        }
+        if (node.child) {
+          walkNode(node.child, childPrefix, true);
+        }
+      }
+
+      function formatValue(v) {
+        if (typeof v === 'number') return v.toFixed ? (v % 1 === 0 ? v : v.toFixed(2)) : v;
+        if (typeof v === 'object' && v.expr) return `{${v.expr}(...)}`;
+        if (typeof v === 'object' && v.var) return `{${v.var}}`;
+        return String(v);
+      }
+
+      // Show defs first
+      if (json.defs && Object.keys(json.defs).length > 0) {
+        lines.push(`<span style="color:#f472b6;font-weight:bold">📦 Definitions:</span>`);
+        for (const [id, def] of Object.entries(json.defs)) {
+          lines.push(`<span style="color:#a371f7">  ⊳ ${id}</span>`);
+          walkNode(def, '    ', true);
+        }
+        lines.push('');
+      }
+
+      // Show root
+      lines.push(`<span style="color:#22d3ee;font-weight:bold">🌳 Scene Root:</span>`);
+      walkNode(json.root, '', true);
+
+      // Notes if present
+      if (json.notes) {
+        lines.push('');
+        lines.push(`<span style="color:#8b949e;font-style:italic">📝 ${json.notes}</span>`);
+      }
+
+      return lines.join('\n');
+    }
+
+    function updateTreeView() {
+      const json = demos[currentDemo]?.json;
+      if (json) {
+        $('tree-content').innerHTML = generateTreeView(json);
+      }
     }
 
     // ============================================
@@ -2907,6 +3024,9 @@
         } else if (e.key === 'm' || e.key === 'M') {
           e.preventDefault();
           $('btn-menu').click(); // Toggle menu
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          $('btn-tree').click(); // Toggle tree view
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -2915,6 +3035,9 @@
           debugPanel.classList.remove('open');
           lightingOpen = false;
           lightingPanel.classList.remove('open');
+          treeOpen = false;
+          treePanel.classList.remove('open');
+          $('btn-tree').classList.remove('active');
         }
       });
 
@@ -2974,6 +3097,21 @@
         debugOpen = !debugOpen;
         debugPanel.classList.toggle('open', debugOpen);
         $('btn-debug').classList.toggle('active', debugOpen);
+      });
+
+      // Tree panel toggle
+      const treePanel = $('tree-panel');
+      $('btn-tree').addEventListener('click', () => {
+        treeOpen = !treeOpen;
+        if (treeOpen) updateTreeView();
+        treePanel.classList.toggle('open', treeOpen);
+        $('btn-tree').classList.toggle('active', treeOpen);
+      });
+
+      $('btn-tree-close').addEventListener('click', () => {
+        treeOpen = false;
+        treePanel.classList.remove('open');
+        $('btn-tree').classList.remove('active');
       });
 
       // Main menu toggle
