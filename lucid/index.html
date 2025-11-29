@@ -722,7 +722,7 @@
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
-          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">🌳</button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -838,8 +838,13 @@
   <!-- Tree Viewer Panel - slides up from bottom -->
   <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
     <div class="debug-header">
-      <h3>🌳 Scene Tree</h3>
-      <button class="btn" id="btn-tree-close">Close</button>
+      <h3>▹ Scene Tree</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <button class="btn" id="btn-tree-prev" title="Previous value (←)">◀</button>
+        <span id="tree-nav-indicator" style="font-size:0.75rem;color:#8b949e;min-width:3rem;text-align:center;">0/0</span>
+        <button class="btn" id="btn-tree-next" title="Next value (→)">▶</button>
+        <button class="btn" id="btn-tree-close">Close</button>
+      </div>
     </div>
     <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
       <!-- Tree structure rendered here -->
@@ -2956,8 +2961,19 @@
       nodeNotes: ''
     };
 
+    // Navigation state for editable values
+    let treeNavState = {
+      editableValues: [],  // Array of {path, value, paramName, nodeNotes, type}
+      currentIndex: -1
+    };
+
     function generateTreeView(json) {
       const lines = [];
+
+      // Reset navigation state
+      treeNavState.editableValues = [];
+      treeNavState.currentIndex = -1;
+
       const colors = {
         // Node types
         sphere: '#22d3ee', box: '#22d3ee', cylinder: '#22d3ee', torus: '#22d3ee',
@@ -2966,7 +2982,8 @@
         smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
         transform: '#a371f7', material: '#f472b6', group: '#ffd700',
         ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922',
-        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1'
+        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1',
+        customExpr: '#ff69b4'
       };
 
       function getNodeIcon(type) {
@@ -2975,18 +2992,49 @@
           union: '∪', subtract: '−', intersect: '∩',
           smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
           transform: '↻', material: '◆', group: '⊞', ref: '→',
-          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮'
+          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮',
+          customExpr: '⟨⟩'
         };
         return icons[type] || '◇';
       }
 
-      // Create clickable number span for tree editing
-      function makeClickableValue(value, path, paramName, nodeNotes) {
+      // Create clickable number span for tree editing and register for navigation
+      function makeClickableValue(value, path, paramName, nodeNotes, valueType = 'number') {
         if (typeof value !== 'number') return formatValue(value);
+
+        // Register for navigation
+        treeNavState.editableValues.push({
+          path, value, paramName, nodeNotes: nodeNotes || '', type: valueType
+        });
+
         const escapedPath = path.replace(/'/g, "\\'");
         const escapedParam = paramName.replace(/'/g, "\\'");
         const escapedNotes = (nodeNotes || '').replace(/'/g, "\\'");
-        return `<span class="tree-editable" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+      }
+
+      // Create clickable base64 value for GLSL display
+      function makeClickableGlsl(encoded, path, nodeNotes) {
+        let decoded = '';
+        let summary = encoded.substring(0, 20) + '...';
+        try {
+          decoded = atob(encoded);
+          // Summarize: show first meaningful part
+          summary = decoded.length > 40 ? decoded.substring(0, 40) + '...' : decoded;
+          // Clean up for display
+          summary = summary.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        } catch (e) {
+          summary = '(invalid base64)';
+        }
+
+        // Register for navigation as 'glsl' type
+        treeNavState.editableValues.push({
+          path, value: encoded, paramName: 'glsl', nodeNotes: nodeNotes || '', type: 'glsl', decoded
+        });
+
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" style="cursor:pointer;text-decoration:underline dotted;color:#ff69b4" onclick="window.showGlslValue(${navIndex})" title="${decoded.replace(/"/g, '&quot;')}">${summary}</span>`;
       }
 
       function walkNode(node, prefix = '', isLast = true, path = 'root') {
@@ -3038,6 +3086,11 @@
         if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
         if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
 
+        // Handle customExpr glsl field (base64 encoded GLSL)
+        if (node.glsl) {
+          label += ` <span style="color:#ff69b4">glsl=${makeClickableGlsl(node.glsl, path + '.glsl', nodeNotes)}</span>`;
+        }
+
         lines.push(`${prefix}${connector} ${label}`);
 
         const childPrefix = prefix + (isLast ? '   ' : '│  ');
@@ -3071,7 +3124,7 @@
       }
 
       // Show root
-      lines.push(`<span style="color:#22d3ee;font-weight:bold">🌳 Scene Root:</span>`);
+      lines.push(`<span style="color:#22d3ee;font-weight:bold">▹ Scene Root:</span>`);
       walkNode(json.root, '', true, 'root');
 
       // Notes if present
@@ -3080,8 +3133,83 @@
         lines.push(`<span style="color:#8b949e;font-style:italic">📝 ${json.notes}</span>`);
       }
 
+      // Update navigation indicator
+      updateTreeNavIndicator();
+
       return lines.join('\n');
     }
+
+    // Update navigation indicator display
+    function updateTreeNavIndicator() {
+      const indicator = $('tree-nav-indicator');
+      if (indicator) {
+        const total = treeNavState.editableValues.length;
+        const current = treeNavState.currentIndex >= 0 ? treeNavState.currentIndex + 1 : 0;
+        indicator.textContent = `${current}/${total}`;
+      }
+    }
+
+    // Navigate to previous editable value
+    function navigateTreePrev() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex--;
+      if (treeNavState.currentIndex < 0) {
+        treeNavState.currentIndex = treeNavState.editableValues.length - 1;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Navigate to next editable value
+    function navigateTreeNext() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex++;
+      if (treeNavState.currentIndex >= treeNavState.editableValues.length) {
+        treeNavState.currentIndex = 0;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Select and activate a tree value by navigation index
+    function selectTreeValue(index) {
+      const item = treeNavState.editableValues[index];
+      if (!item) return;
+
+      updateTreeNavIndicator();
+
+      // Highlight the selected element in the tree
+      const treeContent = $('tree-content');
+      const allEditables = treeContent.querySelectorAll('.tree-editable');
+      allEditables.forEach(el => el.style.background = 'transparent');
+      const targetEl = treeContent.querySelector(`[data-nav-index="${index}"]`);
+      if (targetEl) {
+        targetEl.style.background = 'rgba(251, 191, 36, 0.3)';
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // Handle based on type
+      if (item.type === 'glsl') {
+        window.showGlslValue(index);
+      } else {
+        window.editTreeValue(item.path, item.value, item.paramName, item.nodeNotes);
+      }
+    }
+
+    // Global function to show decoded GLSL
+    window.showGlslValue = function(navIndex) {
+      const item = treeNavState.editableValues[navIndex];
+      if (!item || item.type !== 'glsl') return;
+
+      treeNavState.currentIndex = navIndex;
+      updateTreeNavIndicator();
+
+      // Show decoded GLSL in status or alert
+      const decoded = item.decoded || '(unable to decode)';
+      showStatus(`GLSL: ${decoded.substring(0, 80)}${decoded.length > 80 ? '...' : ''}`, 'info');
+
+      // Also log full decoded GLSL to console for copying
+      console.log('Decoded GLSL:', decoded);
+      console.log('Base64:', item.value);
+    };
 
     // Global function for tree value editing
     window.editTreeValue = function(path, value, paramName, nodeNotes) {
@@ -3529,6 +3657,17 @@
       document.addEventListener('keydown', (e) => {
         if (e.target === jsonEditor) return;
 
+        // When tree panel is open, arrow keys navigate editable values
+        if (treeOpen && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+          e.preventDefault();
+          if (e.key === 'ArrowRight') {
+            navigateTreeNext();
+          } else {
+            navigateTreePrev();
+          }
+          return;
+        }
+
         if (e.key === 'ArrowRight' || e.key === ' ') {
           e.preventDefault();
           switchDemo((currentDemo + 1) % demos.length);
@@ -3650,6 +3789,10 @@
         treePanel.classList.remove('open');
         $('btn-tree').classList.remove('active');
       });
+
+      // Tree navigation buttons
+      $('btn-tree-prev').addEventListener('click', navigateTreePrev);
+      $('btn-tree-next').addEventListener('click', navigateTreeNext);
 
       // Main menu toggle
       $('btn-menu').addEventListener('click', () => {
