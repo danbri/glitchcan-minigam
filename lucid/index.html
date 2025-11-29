@@ -1173,10 +1173,16 @@
 
       {
         title: "Cylinder Array",
-        subtitle: "Multiple cylinders in formation",
+        subtitle: "Simple table with 4 legs",
+        camera: {
+          distance: 7,      // One table-length (~3) out from the table
+          phi: 1.1,         // Slight angle above (looking down ~30°)
+          theta: 0.5,       // Angled to show 3D depth
+          target: [0, 1, 0] // Center on tabletop height
+        },
         json: {
           "version": "1.0",
-          "notes": "TEMPLATING: Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref. This avoids duplicating shape definitions.",
+          "notes": "A simple table demonstrating defs/ref templating. Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref.",
           "defs": {
             "pillar": {
               "type": "cylinder",
@@ -2555,9 +2561,12 @@
         currentDemo = index;
         const demo = demos[index];
 
-        // Reset camera target when switching demos
+        // Reset camera - use demo-specific settings if available
         if (renderer && renderer.camera) {
-          renderer.camera.target = [0, 0, 0];
+          renderer.camera.target = demo.camera?.target || [0, 0, 0];
+          renderer.camera.distance = demo.camera?.distance || debugSettings.cameraDistance;
+          renderer.camera.phi = demo.camera?.phi || Math.PI / 4;
+          renderer.camera.theta = demo.camera?.theta || 0;
         }
 
         // Update UI
