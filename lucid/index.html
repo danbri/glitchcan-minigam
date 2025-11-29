@@ -3356,11 +3356,26 @@
         return icons[type] || '◇';
       }
 
-      // Create clickable number span for tree editing and register for navigation
+      // Create clickable value span for tree editing and register for navigation
+      // Handles numbers (slider), expressions (popup), arrays
       function makeClickableValue(value, path, paramName, nodeNotes, valueType = 'number') {
+        // Handle expression objects - show as readable GLSL
+        if (typeof value === 'object' && value !== null && (value.expr || value.var)) {
+          return makeClickableExpr(value, path, paramName, nodeNotes);
+        }
+
+        // Handle arrays - each element can be a number or expression
+        if (Array.isArray(value)) {
+          const items = value.map((v, i) =>
+            makeClickableValue(v, path + '.' + i, paramName + '[' + i + ']', nodeNotes)
+          );
+          return `[${items.join(', ')}]`;
+        }
+
+        // Not a number - just format it
         if (typeof value !== 'number') return formatValue(value);
 
-        // Register for navigation
+        // Register number for navigation (slider)
         treeNavState.editableValues.push({
           path, value, paramName, nodeNotes: nodeNotes || '', type: valueType
         });
@@ -3444,6 +3459,24 @@
         if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
         if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
 
+        // Show transform values (translate, rotate, scale) - often contain expressions
+        if (node.transform) {
+          const t = node.transform;
+          const tparts = [];
+          if (t.translate) {
+            tparts.push(`pos=${makeClickableValue(t.translate, path + '.transform.translate', 'translate', nodeNotes)}`);
+          }
+          if (t.rotate) {
+            tparts.push(`rot=${makeClickableValue(t.rotate, path + '.transform.rotate', 'rotate', nodeNotes)}`);
+          }
+          if (t.scale) {
+            tparts.push(`scl=${makeClickableValue(t.scale, path + '.transform.scale', 'scale', nodeNotes)}`);
+          }
+          if (tparts.length > 0) {
+            label += ` <span style="color:#a371f7;font-size:0.85em">${tparts.join(' ')}</span>`;
+          }
+        }
+
         // Handle customExpr glsl field (base64 encoded GLSL)
         if (node.glsl) {
           label += ` <span style="color:#ff69b4">glsl=${makeClickableGlsl(node.glsl, path + '.glsl', nodeNotes)}</span>`;
@@ -3466,9 +3499,67 @@
 
       function formatValue(v) {
         if (typeof v === 'number') return v.toFixed ? (v % 1 === 0 ? v : v.toFixed(2)) : v;
-        if (typeof v === 'object' && v.expr) return `{${v.expr}(...)}`;
-        if (typeof v === 'object' && v.var) return `{${v.var}}`;
+        if (typeof v === 'object' && (v.expr || v.var)) return exprToGlsl(v);
         return String(v);
+      }
+
+      // Convert expression object to readable GLSL string
+      function exprToGlsl(value) {
+        if (value === null || value === undefined) return '0.0';
+        if (typeof value === 'number') {
+          return Number.isInteger(value) ? value + '.0' : String(value);
+        }
+        if (typeof value === 'string') return value;
+        if (Array.isArray(value)) {
+          return `vec${value.length}(${value.map(exprToGlsl).join(', ')})`;
+        }
+        if (typeof value !== 'object') return String(value);
+
+        // Handle {var: "time"} etc
+        if (value.var) {
+          return value.var === 'time' ? 'u_time' : value.var;
+        }
+
+        // Handle {expr: "op", args: [...]}
+        if (value.expr) {
+          const args = (value.args || []).map(exprToGlsl);
+          switch (value.expr) {
+            case 'add': return `(${args.join(' + ')})`;
+            case 'sub': return `(${args[0]} - ${args[1]})`;
+            case 'mul': return `(${args.join(' * ')})`;
+            case 'div': return `(${args[0]} / ${args[1]})`;
+            case 'sin': return `sin(${args[0]})`;
+            case 'cos': return `cos(${args[0]})`;
+            case 'tan': return `tan(${args[0]})`;
+            case 'min': return `min(${args.join(', ')})`;
+            case 'max': return `max(${args.join(', ')})`;
+            case 'neg': return `(-${args[0]})`;
+            case 'abs': return `abs(${args[0]})`;
+            case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
+            case 'mix': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
+            case 'mod': return `mod(${args[0]}, ${args[1]})`;
+            case 'pow': return `pow(${args[0]}, ${args[1]})`;
+            case 'sqrt': return `sqrt(${args[0]})`;
+            case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
+            default: return `${value.expr}(${args.join(', ')})`;
+          }
+        }
+
+        return JSON.stringify(value);
+      }
+
+      // Create clickable expression span for tree display
+      function makeClickableExpr(value, path, paramName, nodeNotes) {
+        const glslStr = exprToGlsl(value);
+        const escaped = glslStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // Register for navigation as 'expr' type
+        treeNavState.editableValues.push({
+          path, value, paramName, nodeNotes: nodeNotes || '', type: 'expr', glslStr
+        });
+
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" style="cursor:pointer;text-decoration:underline dotted;color:#a78bfa" onclick="window.showExprValue(${navIndex})" title="Click to view expression">${escaped}</span>`;
       }
 
       // Show defs first
@@ -3547,8 +3638,10 @@
       // Handle based on type
       if (item.type === 'glsl') {
         window.showGlslValue(index);
+      } else if (item.type === 'expr') {
+        window.showExprValue(index);
       } else {
-        hideGlslDisplay(); // Hide GLSL panel when selecting numeric values
+        hideGlslDisplay(); // Hide GLSL/expr panel when selecting numeric values
         window.editTreeValue(item.path, item.value, item.paramName, item.nodeNotes);
       }
     }
@@ -3575,6 +3668,39 @@
       // Log full decoded GLSL to console for copying
       console.log('Decoded GLSL:', decoded);
       console.log('Base64:', item.value);
+    };
+
+    // Global function to show expression as GLSL (mobile-friendly popup)
+    window.showExprValue = function(navIndex) {
+      const item = treeNavState.editableValues[navIndex];
+      if (!item || item.type !== 'expr') return;
+
+      treeNavState.currentIndex = navIndex;
+      updateTreeNavIndicator();
+
+      // Highlight the selected element
+      const treeContent = $('tree-content');
+      const allEditables = treeContent.querySelectorAll('.tree-editable');
+      allEditables.forEach(el => el.style.background = 'transparent');
+      const targetEl = treeContent.querySelector(`[data-nav-index="${navIndex}"]`);
+      if (targetEl) {
+        targetEl.style.background = 'rgba(167, 139, 250, 0.3)';
+      }
+
+      // Show expression as GLSL in dedicated display area
+      const glslStr = item.glslStr || exprToGlsl(item.value);
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) {
+        glslDisplay.style.display = 'block';
+        glslDisplay.innerHTML = `<span style="color:#a78bfa;font-weight:bold">Expression:</span> ${glslStr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
+      }
+
+      // Status bar hint
+      showStatus(`Expr: ${glslStr}`, 'info');
+
+      // Console for developers
+      console.log('Expression GLSL:', glslStr);
+      console.log('Original JSON:', JSON.stringify(item.value, null, 2));
     };
 
     // Hide GLSL display when selecting non-GLSL value
