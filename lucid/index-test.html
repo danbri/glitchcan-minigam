@@ -1,15 +1,32 @@
 <!DOCTYPE html>
 <!--
-  Lucid SDF-CSG Test Viewer (Lightweight Entry Point)
+  Lucid SDF-CSG Demo Application (Main Entry Point)
 
-  Loads scenes from scenes/toc.json - no embedded demos.
-  Used for testing scene files and development.
+  ⚠️ VERSION BUMP REQUIRED: Update VERSION constant (~line 909) with every commit!
+
+  This is the main demo viewer for the Lucid SDF system (formerly demos_json.html).
+  JSON-based scene definition with interactive editor.
+
+  Key files:
+  - core/json-loader.js  - JSON scene parser
+  - core/json-codegen.js - GLSL code generator
+  - ui/raymarcher.js     - WebGL renderer
+
+  Other files:
+  - initial_test.html    - Full raymarcher app (DSL-based, experimental)
+  - demos.html           - DSL editor interface (legacy)
+
+  See lucid/CLAUDE.md for full development guide.
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Lucid Test Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- iOS Safari specific -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>SDF JSON Demos</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -19,66 +36,75 @@
       --text-dim: #8b949e;
       --accent: #22d3ee;
       --accent-alt: #f472b6;
+      --success: #3fb950;
+      --error: #f85149;
+      --code-bg: #1c2128;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
+      overflow: hidden;
       height: 100vh;
+      height: 100dvh;
+      /* iOS WebKit UI suppression */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* iOS-specific: Suppress select all, resize handles, etc. */
+    *:not(input):not(textarea) {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Allow text selection in editor areas */
+    .json-textarea,
+    input[type="text"],
+    input[type="url"] {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+
+    /* Prevent iOS keyboard zoom on inputs */
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+
+    /* Main Layout */
+    .app {
       display: flex;
       flex-direction: column;
+      height: 100%;
     }
 
-    /* Header with scene selector */
-    header {
-      background: var(--panel-bg);
-      border-bottom: 1px solid var(--border);
-      padding: 0.5rem 1rem;
+    .main-area {
+      flex: 1;
       display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
+      min-height: 0;
     }
-    header h1 {
-      font-size: 0.9rem;
-      color: var(--accent);
-      white-space: nowrap;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    select {
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 0.4rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-    select:focus { outline: 1px solid var(--accent); }
-    button {
-      background: var(--panel-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 0.4rem 0.8rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-    button:hover { background: var(--border); }
-    button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
 
-    /* Main canvas area */
-    main {
+    /* Render Panel */
+    .render-panel {
       flex: 1;
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #000;
     }
+
     canvas {
       width: 100%;
       height: 100%;
@@ -86,103 +112,967 @@
       touch-action: none;
     }
 
-    /* Info panel */
-    .info {
-      position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      background: rgba(22, 27, 34, 0.9);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.75rem;
-      max-width: 300px;
+    /* Editor Panel */
+    .editor-panel {
+      width: 0;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease;
+      overflow: hidden;
     }
-    .info h2 { color: var(--accent); font-size: 0.85rem; margin-bottom: 0.25rem; }
-    .info p { color: var(--text-dim); font-size: 0.7rem; }
-    .info .notes { margin-top: 0.5rem; font-style: italic; border-top: 1px solid var(--border); padding-top: 0.5rem; }
 
-    /* Animation controls */
-    .anim-controls {
-      position: absolute;
-      bottom: 0.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(22, 27, 34, 0.9);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.4rem 0.6rem;
+    .editor-panel.open {
+      width: 400px;
+    }
+
+    @media (max-width: 768px) {
+      .main-area {
+        flex-direction: column;
+      }
+      .render-panel {
+        height: 50%;
+      }
+      .editor-panel {
+        width: 100%;
+        height: 0;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+      .editor-panel.open {
+        width: 100%;
+        height: 50%;
+      }
+    }
+
+    .editor-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .editor-header h3 {
+      font-size: 0.875rem;
+      color: var(--accent);
+    }
+
+    .editor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .json-textarea {
+      flex: 1;
+      width: 100%;
+      background: var(--code-bg);
+      border: none;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 1rem;
+      resize: none;
+      outline: none;
+    }
+
+    /* Scrubber Panel */
+    .scrubber-panel {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(244, 114, 182, 0.1));
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .scrubber-panel.visible {
+      display: flex;
+    }
+
+    .scrubber-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      min-width: 4rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    #scrubber-slider {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    #scrubber-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    #scrubber-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    #scrubber-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+    }
+
+    .scrubber-value {
+      font-size: 0.75rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--accent);
+      min-width: 4rem;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .scrubber-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .scrubber-close:hover {
+      color: var(--error);
+    }
+
+    .editor-actions {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    /* Header Bar */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-left {
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
-    .anim-btn {
-      width: 2rem;
-      height: 2rem;
-      border-radius: 50%;
+
+    .demo-info h1 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .demo-info p {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: #3d4450;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn.success {
+      background: var(--success);
+      color: var(--bg);
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1rem;
-      padding: 0;
-    }
-    .time-display {
-      font-family: monospace;
-      font-size: 0.75rem;
-      min-width: 4rem;
-      text-align: center;
     }
 
-    /* Status toast */
-    .status {
+    /* Navigation */
+    .nav {
       position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.5rem 1rem;
-      font-size: 0.8rem;
-      transform: translateY(100px);
-      opacity: 0;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
       transition: all 0.3s ease;
     }
-    .status.visible { transform: translateY(0); opacity: 1; }
-    .status.error { border-color: #f85149; color: #f85149; }
-    .status.success { border-color: #3fb950; color: #3fb950; }
+
+    .nav-dot.active {
+      background: var(--accent);
+      transform: scale(1.3);
+    }
+
+    .nav-dot:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Main Menu (Hamburger) */
+    .main-menu {
+      position: fixed;
+      top: 60px;
+      left: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      z-index: 90;
+      min-width: 180px;
+      display: none;
+    }
+
+    .main-menu.open {
+      display: block;
+    }
+
+    .menu-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .menu-item:hover {
+      background: var(--border);
+    }
+
+    .menu-item.has-submenu::after {
+      content: '▶';
+      font-size: 0.6rem;
+      opacity: 0.6;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0.5rem 0;
+    }
+
+    /* Submenu */
+    .submenu {
+      position: absolute;
+      left: 100%;
+      top: 0;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      min-width: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .menu-item:hover > .submenu {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .submenu {
+        position: static;
+        margin-top: 0.5rem;
+        margin-left: 1rem;
+        border: none;
+        border-left: 2px solid var(--border);
+        border-radius: 0;
+      }
+      .menu-item.has-submenu::after {
+        content: '▼';
+      }
+      .menu-item.submenu-open > .submenu {
+        display: block;
+      }
+    }
+
+    .submenu-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .submenu-item:hover {
+      background: var(--border);
+    }
+
+    .submenu-item.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    /* Legacy - keep for compatibility */
+    .template-gallery {
+      display: none;
+    }
+
+    /* URL Input Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+      display: none;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .modal h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .input-group {
+      margin-bottom: 1rem;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Status Messages */
+    .status {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .status.visible {
+      opacity: 1;
+    }
+
+    .status.error {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .status.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* Loading */
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1rem;
+      color: var(--accent);
+      z-index: 300;
+    }
+
+    /* Hidden file input */
+    .hidden-input {
+      display: none;
+    }
+
+    /* Debug Panel - slides up from bottom */
+    .debug-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border);
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 150;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+
+    .debug-panel.open {
+      transform: translateY(0);
+    }
+
+    .debug-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--panel-bg);
+    }
+
+    .debug-header h3 {
+      font-size: 0.875rem;
+      color: var(--accent);
+    }
+
+    .debug-content {
+      padding: 1rem;
+    }
+
+    .debug-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .debug-row:last-child {
+      border-bottom: none;
+    }
+
+    .debug-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle.active {
+      background: var(--accent);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    /* Debug toggle button - now in header, keep for mobile fallback */
+    .debug-toggle {
+      display: none;
+    }
+
+    /* Header icon buttons */
+    .header-icons {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .icon-btn.active {
+      color: var(--accent);
+      background: rgba(34, 211, 238, 0.15);
+    }
+
+    /* Animation control states */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .anim-playing {
+      color: #4ade80 !important;  /* Green for playing */
+    }
+
+    .anim-playing #anim-icon {
+      animation: spin 1.5s linear infinite;
+    }
+
+    .anim-paused {
+      color: #facc15 !important;  /* Yellow for paused (time still runs) */
+    }
+
+    .anim-frozen {
+      color: #6b7280 !important;  /* Grey for frozen */
+    }
+
+    .anim-frozen #anim-icon {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
+    /* Edge indicators (visual feedback) */
+    .edge-indicator {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      width: 5%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 50;
+    }
+
+    .edge-indicator.left {
+      left: 0;
+      background: linear-gradient(to right, rgba(34, 211, 238, 0.3), transparent);
+    }
+
+    .edge-indicator.right {
+      right: 0;
+      background: linear-gradient(to left, rgba(34, 211, 238, 0.3), transparent);
+    }
+
+    .edge-indicator.active {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Lucid Test Viewer</h1>
-    <div class="controls">
-      <select id="category-select">
-        <option value="">-- Category --</option>
-      </select>
-      <select id="scene-select">
-        <option value="">-- Scene --</option>
-      </select>
-      <button id="btn-reload">Reload</button>
-      <button id="btn-editor">Editor</button>
-    </div>
-  </header>
+  <div class="loading" id="loading">Loading...</div>
 
-  <main>
-    <canvas id="canvas"></canvas>
-    <div class="info" id="info" style="display: none;">
-      <h2 id="info-title">Scene Title</h2>
-      <p id="info-subtitle">Subtitle</p>
-      <p class="notes" id="info-notes" style="display: none;"></p>
-    </div>
-    <div class="anim-controls">
-      <button class="anim-btn" id="btn-prev" title="Step back">&#x23EA;</button>
-      <button class="anim-btn" id="btn-play" title="Play/Pause">&#x23F5;</button>
-      <button class="anim-btn" id="btn-next" title="Step forward">&#x23E9;</button>
-      <span class="time-display" id="time-display">0.00s</span>
-    </div>
-  </main>
+  <div class="app" id="app" style="display: none;">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-icons">
+          <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
+          <button class="icon-btn" id="btn-paste-apply" title="Paste & Apply (V)">📋</button>
+          <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
+          <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
+          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+          <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
+            <span id="anim-icon" style="display:inline-block;">▶</span>
+          </button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
+        </div>
+        <div class="demo-info">
+          <h1 id="title">Loading...</h1>
+          <p id="subtitle">JSON SDF Demo</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <!-- Actions moved to left icons -->
+      </div>
+    </header>
 
+    <!-- Main Area -->
+    <div class="main-area">
+      <div class="render-panel">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="editor-panel" id="editor-panel">
+        <div class="editor-header">
+          <button class="btn primary" id="btn-apply" title="Apply Changes (Ctrl+Enter)">Save</button>
+          <div style="display: flex; gap: 0.25rem;">
+            <button class="btn" id="btn-select-all" title="Select All (Ctrl+A)">All</button>
+            <button class="btn" id="btn-cut" title="Cut (Ctrl+X)">Cut</button>
+            <button class="btn" id="btn-copy-sel" title="Copy (Ctrl+C)">Copy</button>
+            <button class="btn" id="btn-paste" title="Paste (Ctrl+V)">Paste</button>
+            <button class="btn" id="btn-format">Format</button>
+          </div>
+        </div>
+        <!-- Scalar Scrubber Panel -->
+        <div class="scrubber-panel" id="scrubber-panel">
+          <span class="scrubber-label" id="scrubber-label">value</span>
+          <input type="range" id="scrubber-slider" min="0" max="1" step="0.01" value="0.5">
+          <span class="scrubber-value" id="scrubber-value">0.5</span>
+          <button class="scrubber-close" id="scrubber-close" title="Close scrubber">×</button>
+        </div>
+        <div class="editor-content">
+          <textarea class="json-textarea" id="json-editor" spellcheck="false"></textarea>
+        </div>
+        <div class="editor-actions">
+          <button class="btn" id="btn-copy">Copy</button>
+          <button class="btn" id="btn-download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Dots -->
+    <div class="nav" id="nav"></div>
+  </div>
+
+  <!-- Main Menu -->
+  <div class="main-menu" id="main-menu">
+    <div class="menu-item has-submenu" id="menu-demos">
+      <span>📦 Demos</span>
+      <div class="submenu" id="demos-submenu">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-new-demo">
+      <span>✨ New Demo</span>
+    </div>
+    <div class="menu-item" id="menu-load-url">
+      <span>🔗 Load from URL</span>
+    </div>
+    <div class="menu-item" id="menu-load-file">
+      <span>📁 Load File</span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-lighting">
+      <span>💡 Lighting</span>
+    </div>
+    <div class="menu-item" id="menu-settings">
+      <span>⚙️ Settings</span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-about">
+      <span>ℹ️ About</span>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div class="modal" id="about-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <h2 style="margin-bottom: 0.5rem;">Lucid SDF-CSG</h2>
+      <p style="color: var(--text-dim); font-size: 0.75rem; margin-bottom: 1rem;" id="about-version">v0.9.0</p>
+
+      <div style="font-size: 0.8rem; margin-bottom: 1rem;">
+        <p style="margin-bottom: 0.5rem;">Node-based CSG/SDF scene language with WebGL raymarching.</p>
+      </div>
+
+      <div style="font-size: 0.75rem; margin-bottom: 1rem;">
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent);">GitHub Links:</p>
+        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html" target="_blank" style="color: var(--text); text-decoration: none;">📄 demos_json.html</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-loader.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-codegen.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/ui/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 raymarcher.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/CLAUDE.md" target="_blank" style="color: var(--text); text-decoration: none;">📖 CLAUDE.md</a>
+        </div>
+      </div>
+
+      <div style="font-size: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--code-bg); border-radius: 6px;">
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-alt);">Current Branch:</p>
+        <a href="https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT" target="_blank" style="color: var(--accent); text-decoration: none; word-break: break-all; font-family: monospace; font-size: 0.7rem;">🔀 View PR / Compare Changes</a>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn primary" id="btn-about-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tree Viewer Panel - slides up from bottom -->
+  <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
+    <div class="debug-header" style="flex-wrap:wrap;">
+      <h3>▹ Scene Tree</h3>
+      <div style="display:flex;gap:0.25rem;align-items:center;">
+        <button class="btn" id="btn-tree-prev" title="Previous value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">◀</button>
+        <span id="tree-nav-indicator" style="font-size:0.85rem;color:#8b949e;min-width:3.5rem;text-align:center;padding:0 0.25rem;">0/0</span>
+        <button class="btn" id="btn-tree-next" title="Next value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">▶</button>
+        <button class="btn" id="btn-tree-close" style="margin-left:0.5rem;">Close</button>
+      </div>
+    </div>
+    <!-- GLSL/Expression display area (readonly popup for code) -->
+    <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.75rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;">
+    </div>
+    <!-- Tree slider widget for numeric values -->
+    <div id="tree-slider-panel" style="display:none;padding:0.5rem 0.75rem;background:#1a1f26;border-bottom:1px solid #333;">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <span id="tree-slider-label" style="font-size:0.75rem;color:#fbbf24;min-width:4rem;"></span>
+        <input type="range" id="tree-slider" style="flex:1;min-width:100px;accent-color:#fbbf24;">
+        <span id="tree-slider-value" style="font-size:0.8rem;color:#fbbf24;min-width:3.5rem;text-align:right;font-family:monospace;"></span>
+      </div>
+    </div>
+    <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
+      <!-- Tree structure rendered here -->
+    </div>
+  </div>
+
+  <!-- Legacy gallery for compatibility -->
+  <div class="template-gallery" id="template-gallery" style="display:none;">
+  </div>
+
+  <!-- URL Modal -->
+  <div class="modal" id="url-modal">
+    <div class="modal-content">
+      <h2>Load JSON from URL</h2>
+      <div class="input-group">
+        <label>JSON URL</label>
+        <input type="url" id="url-input" placeholder="https://example.com/scene.sdf.json" />
+      </div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn" id="btn-modal-cancel">Cancel</button>
+        <button class="btn primary" id="btn-modal-load">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input -->
+  <input type="file" class="hidden-input" id="file-input" accept=".json,.sdf.json" />
+
+  <!-- Status Message -->
   <div class="status" id="status"></div>
+
+  <!-- Debug Panel -->
+  <div class="debug-panel" id="debug-panel">
+    <div class="debug-header">
+      <h3>Debug Options</h3>
+      <button class="btn" id="btn-debug-close">Close</button>
+    </div>
+    <div class="debug-content">
+      <div class="debug-row">
+        <span class="debug-label">Volume Render Mode</span>
+        <div class="toggle" id="toggle-volume"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Ground Plane</span>
+        <div class="toggle active" id="toggle-ground"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Edges</span>
+        <div class="toggle active" id="toggle-edges"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show CSG Cutters</span>
+        <div class="toggle" id="toggle-cutters" title="Debug: Show subtract cutters as visible shapes"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Axes (RGB)</span>
+        <div class="toggle" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Camera Distance</span>
+        <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;">
+      </div>
+      <div class="debug-row" id="volume-controls" style="display: none; flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Mode</span>
+          <select id="select-volume-mode" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Jelly</option>
+            <option value="1">X-Ray</option>
+            <option value="2">Heatmap</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Color</span>
+          <select id="select-volume-color" style="width: 100px; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+            <option value="0">Material</option>
+            <option value="1">Rainbow</option>
+            <option value="2">Depth</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Step Size</span>
+          <input type="range" min="0.01" max="0.15" step="0.01" value="0.05" id="slider-step-size" style="width: 100px;">
+          <span id="step-size-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.05</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Density</span>
+          <input type="range" min="1" max="20" step="1" value="8" id="slider-density" style="width: 100px;">
+          <span id="density-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">8</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Edge Focus</span>
+          <input type="range" min="0" max="1" step="0.05" value="0.5" id="slider-edge-focus" style="width: 100px;">
+          <span id="edge-focus-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.50</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Composite</span>
+          <input type="range" min="0" max="1" step="0.05" value="0" id="slider-composite" style="width: 100px;">
+          <span id="composite-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.00</span>
+        </div>
+      </div>
+      <div class="debug-row" style="border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.75rem;">
+        <span class="debug-label">Version</span>
+        <span id="version-display" style="font-size: 0.75rem; color: var(--text-dim); font-family: monospace;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lighting Panel -->
+  <div class="debug-panel" id="lighting-panel">
+    <div class="debug-header">
+      <h3>💡 Lighting</h3>
+      <button class="btn" id="btn-lighting-close">Close</button>
+    </div>
+    <div class="debug-content">
+      <div class="debug-row" style="flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light X</span>
+          <input type="range" min="-2" max="2" step="0.1" value="1" id="slider-light-x" style="width: 100px;">
+          <span id="light-x-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">1.0</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light Y</span>
+          <input type="range" min="-2" max="2" step="0.1" value="1" id="slider-light-y" style="width: 100px;">
+          <span id="light-y-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">1.0</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="debug-label">Light Z</span>
+          <input type="range" min="-2" max="2" step="0.1" value="-1" id="slider-light-z" style="width: 100px;">
+          <span id="light-z-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">-1.0</span>
+        </div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Ambient</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.3" id="slider-ambient" style="width: 100px;">
+        <span id="ambient-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.30</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Diffuse</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.7" id="slider-diffuse" style="width: 100px;">
+        <span id="diffuse-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.70</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Specular</span>
+        <input type="range" min="0" max="1" step="0.05" value="0.3" id="slider-specular" style="width: 100px;">
+        <span id="specular-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">0.30</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Shininess</span>
+        <input type="range" min="1" max="128" step="1" value="32" id="slider-shininess" style="width: 100px;">
+        <span id="shininess-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">32</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edge Indicators -->
+  <div class="edge-indicator left" id="edge-left"></div>
+  <div class="edge-indicator right" id="edge-right"></div>
 
   <script type="module">
     import { SimpleRaymarcher } from './ui/raymarcher.js';
@@ -190,317 +1080,1910 @@
     import { generateGlslFromJson } from './core/json-codegen.js';
 
     // ============================================
-    // STATE
+    // VERSION INFO
     // ============================================
+    // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
+    const VERSION = '0.17.0';
+    const BUILD_DATE = '2025-11-29';
+
+    // ============================================
+    // TOC-BASED DEMO LOADING (index-test.html)
+    // ============================================
+    // This version loads demos from scenes/toc.json instead of embedded templates
     let toc = null;
-    let currentScene = null;
-    let raymarcher = null;
-    let animationId = null;
-    let time = 0;
-    let playing = true;
-    let lastFrameTime = 0;
 
-    // ============================================
-    // DOM ELEMENTS
-    // ============================================
-    const $ = id => document.getElementById(id);
-    const canvas = $('canvas');
-    const categorySelect = $('category-select');
-    const sceneSelect = $('scene-select');
-    const infoPanel = $('info');
-    const infoTitle = $('info-title');
-    const infoSubtitle = $('info-subtitle');
-    const infoNotes = $('info-notes');
-    const timeDisplay = $('time-display');
-    const statusEl = $('status');
-
-    // ============================================
-    // STATUS MESSAGES
-    // ============================================
-    function showStatus(msg, type = 'info') {
-      statusEl.textContent = msg;
-      statusEl.className = 'status visible ' + type;
-      setTimeout(() => statusEl.classList.remove('visible'), 3000);
-    }
-
-    // ============================================
-    // TOC LOADING
-    // ============================================
     async function loadToc() {
-      try {
-        const resp = await fetch('scenes/toc.json');
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        toc = await resp.json();
-        populateCategories();
-        showStatus('TOC loaded: ' + toc.categories.length + ' categories', 'success');
-      } catch (e) {
-        console.error('Failed to load TOC:', e);
-        showStatus('Failed to load scenes/toc.json', 'error');
-      }
+      const resp = await fetch('scenes/toc.json');
+      if (!resp.ok) throw new Error(`Failed to load TOC: HTTP ${resp.status}`);
+      toc = await resp.json();
+      return toc;
     }
 
-    function populateCategories() {
-      categorySelect.innerHTML = '<option value="">-- Category --</option>';
+    async function loadSceneFile(path) {
+      const resp = await fetch('scenes/' + path);
+      if (!resp.ok) throw new Error(`Failed to load scene: HTTP ${resp.status}`);
+      return await resp.json();
+    }
+
+    async function loadAllDemos() {
+      await loadToc();
+      const demos = [];
       for (const cat of toc.categories) {
-        const opt = document.createElement('option');
-        opt.value = cat.id;
-        opt.textContent = `${cat.title} (${cat.scenes.length})`;
-        categorySelect.appendChild(opt);
-      }
-    }
-
-    function populateScenes(categoryId) {
-      sceneSelect.innerHTML = '<option value="">-- Scene --</option>';
-      const cat = toc.categories.find(c => c.id === categoryId);
-      if (!cat) return;
-
-      for (const scene of cat.scenes) {
-        const opt = document.createElement('option');
-        opt.value = scene.path;
-        opt.textContent = scene.title;
-        sceneSelect.appendChild(opt);
-      }
-    }
-
-    // ============================================
-    // SCENE LOADING
-    // ============================================
-    async function loadScene(path) {
-      try {
-        showStatus('Loading ' + path + '...', 'info');
-        const resp = await fetch('scenes/' + path);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        currentScene = await resp.json();
-
-        // Update info panel
-        infoTitle.textContent = currentScene.title || 'Untitled';
-        infoSubtitle.textContent = currentScene.subtitle || '';
-        if (currentScene.notes) {
-          infoNotes.textContent = currentScene.notes;
-          infoNotes.style.display = 'block';
-        } else {
-          infoNotes.style.display = 'none';
-        }
-        infoPanel.style.display = 'block';
-
-        // Compile and render
-        compileAndRender();
-        showStatus('Loaded: ' + currentScene.title, 'success');
-      } catch (e) {
-        console.error('Failed to load scene:', e);
-        showStatus('Failed to load scene: ' + e.message, 'error');
-      }
-    }
-
-    // ============================================
-    // RENDERING
-    // ============================================
-    function compileAndRender() {
-      if (!currentScene || !currentScene.root) {
-        console.error('No scene to render');
-        return;
-      }
-
-      try {
-        // Parse and generate GLSL
-        const sceneData = loadJsonScene(currentScene);
-        const glsl = generateGlslFromJson(sceneData);
-
-        // Apply camera from scene if present
-        if (currentScene.camera) {
-          const cam = currentScene.camera;
-          if (raymarcher) {
-            if (cam.distance !== undefined) raymarcher.cameraDistance = cam.distance;
-            if (cam.phi !== undefined) raymarcher.cameraPhi = cam.phi;
-            if (cam.theta !== undefined) raymarcher.cameraTheta = cam.theta;
+        for (const scene of cat.scenes) {
+          try {
+            const json = await loadSceneFile(scene.path);
+            demos.push({
+              title: json.title || scene.title,
+              subtitle: json.subtitle || scene.subtitle || '',
+              category: cat.title,
+              path: scene.path,
+              json: json
+            });
+          } catch (e) {
+            console.warn(`Failed to load ${scene.path}:`, e);
           }
         }
-
-        // Update shader
-        if (raymarcher) {
-          raymarcher.updateSceneShader(glsl);
-        }
-
-        // Reset time
-        time = 0;
-
-      } catch (e) {
-        console.error('Compilation error:', e);
-        showStatus('Compile error: ' + e.message, 'error');
       }
+      return demos;
     }
 
+    // Placeholder - will be populated by loadAllDemos()
+    const templates = [
+      { title: "Loading...", subtitle: "Please wait", json: { "root": { "type": "sphere", "params": { "r": 0.5, "color": [0.5, 0.5, 0.5] } } } }
+    ];
+    // Note: This file deleted 1600+ lines of embedded demo JSON.
+    // Demos are loaded at runtime from scenes/toc.json via loadAllDemos()
     // ============================================
-    // ANIMATION LOOP
+    // STATE
     // ============================================
-    function animate(timestamp) {
-      animationId = requestAnimationFrame(animate);
+    let currentDemo = 0;
+    let demos = [...templates]; // Copy templates as demos
+    let renderer = null;
+    let editorOpen = false;
+    let menuOpen = false;
+    let debugOpen = false;
+    let lightingOpen = false;
+    let treeOpen = false;
+    let autoRotate = false;
+    let autoRotateSpeed = 0.5; // radians per second
 
-      if (playing) {
-        const delta = lastFrameTime ? (timestamp - lastFrameTime) / 1000 : 0;
-        time += delta;
-      }
-      lastFrameTime = timestamp;
+    // Animation state: 'playing' | 'paused' | 'frozen'
+    // playing = icon spins, time runs
+    // paused = icon static, time still runs (for camera manipulation while scene animates)
+    // frozen = grey/struck, time frozen
+    let animState = 'playing';
+    let frozenTime = 0; // Store time when frozen
 
-      timeDisplay.textContent = time.toFixed(2) + 's';
-
-      if (raymarcher) {
-        raymarcher.render(time);
-      }
-    }
-
-    // ============================================
-    // EVENT HANDLERS
-    // ============================================
-    categorySelect.addEventListener('change', () => {
-      populateScenes(categorySelect.value);
-    });
-
-    sceneSelect.addEventListener('change', () => {
-      if (sceneSelect.value) {
-        loadScene(sceneSelect.value);
-      }
-    });
-
-    $('btn-reload').addEventListener('click', () => {
-      if (sceneSelect.value) {
-        loadScene(sceneSelect.value);
-      }
-    });
-
-    $('btn-editor').addEventListener('click', () => {
-      // Open main editor with current scene
-      const path = sceneSelect.value;
-      if (path) {
-        window.open('index.html?scene=' + encodeURIComponent('scenes/' + path), '_blank');
-      } else {
-        window.open('index.html', '_blank');
-      }
-    });
-
-    $('btn-play').addEventListener('click', () => {
-      playing = !playing;
-      $('btn-play').innerHTML = playing ? '&#x23F8;' : '&#x23F5;';
-    });
-
-    $('btn-prev').addEventListener('click', () => {
-      time = Math.max(0, time - 0.5);
-    });
-
-    $('btn-next').addEventListener('click', () => {
-      time += 0.5;
-    });
-
-    // Camera controls (mouse drag to rotate)
+    // Camera orbit state
     let isDragging = false;
-    let lastX = 0, lastY = 0;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let pinchStartDist = 0;
+    let pinchCenterX = 0;
+    let pinchCenterY = 0;
 
-    canvas.addEventListener('mousedown', e => {
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
+    // Debug settings (persisted)
+    const debugSettings = {
+      volumeRender: false,
+      showGround: true,
+      showCutters: false,
+      showAxes: false,
+      cameraDistance: 4
+    };
 
-    window.addEventListener('mousemove', e => {
-      if (!isDragging || !raymarcher) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      raymarcher.cameraTheta -= dx * 0.01;
-      raymarcher.cameraPhi = Math.max(-1.5, Math.min(1.5, raymarcher.cameraPhi - dy * 0.01));
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
+    // Lighting settings
+    const lightingSettings = {
+      lightDir: [1.0, 1.0, -1.0],
+      ambient: 0.3,
+      diffuse: 0.7,
+      specular: 0.3,
+      shininess: 32
+    };
 
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+    // Scrubber state
+    let scrubberState = {
+      visible: false,
+      selectionStart: 0,
+      selectionEnd: 0,
+      originalValue: 0,
+      min: 0,
+      max: 1,
+      step: 0.01
+    };
 
-    canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      if (raymarcher) {
-        raymarcher.cameraDistance = Math.max(1, Math.min(20, raymarcher.cameraDistance + e.deltaY * 0.01));
-      }
-    }, { passive: false });
-
-    // Touch controls
-    let lastTouchDist = 0;
-    canvas.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        isDragging = true;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[1].clientX - e.touches[0].clientX;
-        const dy = e.touches[1].clientY - e.touches[0].clientY;
-        lastTouchDist = Math.sqrt(dx * dx + dy * dy);
-      }
-    });
-
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (e.touches.length === 1 && isDragging && raymarcher) {
-        const dx = e.touches[0].clientX - lastX;
-        const dy = e.touches[0].clientY - lastY;
-        raymarcher.cameraTheta -= dx * 0.01;
-        raymarcher.cameraPhi = Math.max(-1.5, Math.min(1.5, raymarcher.cameraPhi - dy * 0.01));
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      } else if (e.touches.length === 2 && raymarcher) {
-        const dx = e.touches[1].clientX - e.touches[0].clientX;
-        const dy = e.touches[1].clientY - e.touches[0].clientY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const delta = lastTouchDist - dist;
-        raymarcher.cameraDistance = Math.max(1, Math.min(20, raymarcher.cameraDistance + delta * 0.02));
-        lastTouchDist = dist;
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', () => {
-      isDragging = false;
-    });
+    // ============================================
+    // DOM REFERENCES
+    // ============================================
+    const $ = id => document.getElementById(id);
+    // Safe event listener helper - won't throw if element missing
+    const addClick = (id, handler) => {
+      const el = $(id);
+      if (el) el.addEventListener('click', handler);
+      else console.warn(`Element #${id} not found`);
+    };
+    const addEvent = (id, event, handler) => {
+      const el = $(id);
+      if (el) el.addEventListener(event, handler);
+      else console.warn(`Element #${id} not found for ${event}`);
+    };
+    const loadingEl = $('loading');
+    const appEl = $('app');
+    const titleEl = $('title');
+    const subtitleEl = $('subtitle');
+    const navEl = $('nav');
+    const editorPanel = $('editor-panel');
+    const jsonEditor = $('json-editor');
+    const mainMenu = $('main-menu');
+    const demosSubmenu = $('demos-submenu');
+    const urlModal = $('url-modal');
+    const urlInput = $('url-input');
+    const statusEl = $('status');
+    const fileInput = $('file-input');
+    const debugPanel = $('debug-panel');
+    const lightingPanel = $('lighting-panel');
+    const edgeLeft = $('edge-left');
+    const edgeRight = $('edge-right');
+    const scrubberPanel = $('scrubber-panel');
+    const scrubberSlider = $('scrubber-slider');
+    const scrubberLabel = $('scrubber-label');
+    const scrubberValue = $('scrubber-value');
 
     // ============================================
     // INITIALIZATION
     // ============================================
     async function init() {
-      // Initialize raymarcher
-      raymarcher = new SimpleRaymarcher(canvas);
-      await raymarcher.init();
+      try {
+        // Load demos from TOC (index-test.html specific)
+        console.log('Loading demos from scenes/toc.json...');
+        const loadedDemos = await loadAllDemos();
+        demos.length = 0; // Clear placeholder
+        demos.push(...loadedDemos);
+        console.log(`Loaded ${demos.length} demos from TOC`);
 
-      // Load TOC
-      await loadToc();
+        const canvas = $('canvas');
+        renderer = new SimpleRaymarcher(canvas);
 
-      // Check URL params for initial scene
-      const params = new URLSearchParams(window.location.search);
-      const scenePath = params.get('scene');
-      if (scenePath) {
-        // Find category and scene
-        for (const cat of toc.categories) {
-          const scene = cat.scenes.find(s => s.path === scenePath);
-          if (scene) {
-            categorySelect.value = cat.id;
-            populateScenes(cat.id);
-            sceneSelect.value = scenePath;
-            loadScene(scenePath);
-            break;
+        // Build navigation dots
+        buildNav();
+
+        // Build demos submenu
+        buildDemosSubmenu();
+
+        // Load first demo
+        switchDemo(0);
+
+        // Render loop with auto-rotate
+        let lastFrameTime = performance.now();
+        function renderLoop() {
+          const now = performance.now();
+          const deltaTime = (now - lastFrameTime) / 1000; // seconds
+          lastFrameTime = now;
+
+          // Auto-rotate camera
+          if (autoRotate && !isDragging) {
+            renderer.camera.theta += autoRotateSpeed * deltaTime;
+          }
+
+          // Handle animation state for time control
+          if (animState === 'frozen') {
+            renderer.overrideTime = frozenTime;
+          } else {
+            renderer.overrideTime = null; // Use normal time
+          }
+
+          renderer.render();
+          requestAnimationFrame(renderLoop);
+        }
+        renderLoop();
+
+        // Initialize animation button state
+        updateAnimButton();
+
+        // Hide loading, show app
+        loadingEl.style.display = 'none';
+        appEl.style.display = 'flex';
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Display version
+        $('version-display').textContent = `v${VERSION} (${BUILD_DATE})`;
+
+        console.log(`SDF JSON Demos v${VERSION} initialized`);
+        console.log(`${demos.length} demos available`);
+
+      } catch (error) {
+        console.error('Init failed:', error);
+        loadingEl.textContent = `Error: ${error.message}`;
+        loadingEl.style.color = '#f85149';
+      }
+    }
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    function buildNav() {
+      navEl.innerHTML = '';
+      demos.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentDemo ? ' active' : '');
+        dot.addEventListener('click', () => switchDemo(i));
+        navEl.appendChild(dot);
+      });
+    }
+
+    function switchDemo(index) {
+      try {
+        currentDemo = index;
+        const demo = demos[index];
+
+        // Reset camera - use demo-specific settings if available
+        if (renderer && renderer.camera) {
+          renderer.camera.target = demo.camera?.target || [0, 0, 0];
+          renderer.camera.distance = demo.camera?.distance || debugSettings.cameraDistance;
+          renderer.camera.phi = demo.camera?.phi || Math.PI / 4;
+          renderer.camera.theta = demo.camera?.theta || 0;
+        }
+
+        // Update UI
+        titleEl.textContent = demo.title;
+        subtitleEl.textContent = demo.subtitle;
+
+        // Update nav dots
+        navEl.querySelectorAll('.nav-dot').forEach((dot, i) => {
+          dot.classList.toggle('active', i === index);
+        });
+
+        // Update editor
+        jsonEditor.value = JSON.stringify(demo.json, null, 2);
+
+        // Parse and render
+        renderJson(demo.json);
+
+        // Update demos submenu selection
+        updateDemosSubmenuSelection();
+
+        // Update tree view if open
+        if (treeOpen) updateTreeView();
+
+        console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
+
+      } catch (error) {
+        console.error('Failed to switch demo:', error);
+        showStatus(`Error: ${error.message}`, 'error');
+      }
+    }
+
+    function renderJson(json) {
+      const scene = loadJsonScene(json);
+      const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
+      renderer.updateScene(glsl);
+    }
+
+    // ============================================
+    // DEMOS SUBMENU
+    // ============================================
+    function buildDemosSubmenu() {
+      demosSubmenu.innerHTML = '';
+      demos.forEach((demo, i) => {
+        const item = document.createElement('div');
+        item.className = 'submenu-item' + (i === currentDemo ? ' active' : '');
+        item.textContent = demo.title;
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          switchDemo(i);
+          menuOpen = false;
+          mainMenu.classList.remove('open');
+        });
+        demosSubmenu.appendChild(item);
+      });
+    }
+
+    function updateDemosSubmenuSelection() {
+      demosSubmenu.querySelectorAll('.submenu-item').forEach((item, i) => {
+        item.classList.toggle('active', i === currentDemo);
+      });
+    }
+
+    // ============================================
+    // EDITOR FUNCTIONS
+    // ============================================
+    function applyEditorChanges() {
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        demos[currentDemo].json = json;
+        renderJson(json);
+        showStatus('Changes applied', 'success');
+      } catch (error) {
+        showStatus(`JSON Error: ${error.message}`, 'error');
+      }
+    }
+
+    function formatJson() {
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        jsonEditor.value = JSON.stringify(json, null, 2);
+        showStatus('Formatted', 'success');
+      } catch (error) {
+        showStatus(`JSON Error: ${error.message}`, 'error');
+      }
+    }
+
+    function copyJson() {
+      navigator.clipboard.writeText(jsonEditor.value).then(() => {
+        showStatus('Copied to clipboard', 'success');
+      });
+    }
+
+    function downloadJson() {
+      const blob = new Blob([jsonEditor.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${demos[currentDemo].title.toLowerCase().replace(/\s+/g, '-')}.sdf.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showStatus('Downloaded', 'success');
+    }
+
+    // ============================================
+    // EDITOR BUTTON FUNCTIONS
+    // ============================================
+    function selectAllText() {
+      jsonEditor.focus();
+      jsonEditor.select();
+    }
+
+    function cutSelection() {
+      const start = jsonEditor.selectionStart;
+      const end = jsonEditor.selectionEnd;
+      if (start !== end) {
+        const selectedText = jsonEditor.value.substring(start, end);
+        navigator.clipboard.writeText(selectedText).then(() => {
+          jsonEditor.value = jsonEditor.value.substring(0, start) + jsonEditor.value.substring(end);
+          jsonEditor.selectionStart = jsonEditor.selectionEnd = start;
+          showStatus('Cut to clipboard', 'success');
+        });
+      }
+    }
+
+    function copySelection() {
+      const start = jsonEditor.selectionStart;
+      const end = jsonEditor.selectionEnd;
+      if (start !== end) {
+        const selectedText = jsonEditor.value.substring(start, end);
+        navigator.clipboard.writeText(selectedText).then(() => {
+          showStatus('Copied selection', 'success');
+        });
+      } else {
+        copyJson(); // Copy all if nothing selected
+      }
+    }
+
+    function pasteFromClipboard() {
+      navigator.clipboard.readText().then(text => {
+        const start = jsonEditor.selectionStart;
+        const end = jsonEditor.selectionEnd;
+        const before = jsonEditor.value.substring(0, start);
+        const after = jsonEditor.value.substring(end);
+        jsonEditor.value = before + text + after;
+        jsonEditor.selectionStart = jsonEditor.selectionEnd = start + text.length;
+        jsonEditor.focus();
+        showStatus('Pasted from clipboard', 'success');
+      }).catch(err => {
+        showStatus('Paste failed - check permissions', 'error');
+        console.error('Paste failed:', err);
+      });
+    }
+
+    // ============================================
+    // SCALAR SCRUBBER FUNCTIONS
+    // ============================================
+    function detectScalarSelection() {
+      let start = jsonEditor.selectionStart;
+      let end = jsonEditor.selectionEnd;
+      const text = jsonEditor.value;
+
+      // If no selection, try to find number at cursor position
+      if (start === end) {
+        // Look for number containing cursor position
+        // Expand left and right to find number boundaries
+        const numberChars = /[-0-9.]/;
+        let numStart = start;
+        let numEnd = start;
+
+        // Expand left
+        while (numStart > 0 && numberChars.test(text[numStart - 1])) {
+          numStart--;
+        }
+
+        // Expand right
+        while (numEnd < text.length && numberChars.test(text[numEnd])) {
+          numEnd++;
+        }
+
+        // Check if we found something
+        if (numStart === numEnd) {
+          hideScrubber();
+          return;
+        }
+
+        const potentialNumber = text.substring(numStart, numEnd);
+        // Validate it's actually a number
+        if (!/^-?\d*\.?\d+$/.test(potentialNumber)) {
+          hideScrubber();
+          return;
+        }
+
+        // Update selection to cover the number
+        start = numStart;
+        end = numEnd;
+        jsonEditor.selectionStart = start;
+        jsonEditor.selectionEnd = end;
+      }
+
+      const selectedText = text.substring(start, end).trim();
+
+      // Check if selection is a valid number (integer or decimal)
+      // Match: 0.5, -1.2, 3, -4, .5, -.3
+      const numberRegex = /^-?\d*\.?\d+$/;
+      if (!numberRegex.test(selectedText)) {
+        hideScrubber();
+        return;
+      }
+
+      const value = parseFloat(selectedText);
+      if (isNaN(value)) {
+        hideScrubber();
+        return;
+      }
+
+      // Determine appropriate range based on value
+      // Key: never trap users - always allow going beyond current value
+      let min, max, step;
+      const absValue = Math.abs(value);
+
+      if (absValue === 0) {
+        // Zero value: allow reasonable range both ways
+        min = -2;
+        max = 2;
+        step = 0.05;
+      } else if (absValue < 0.5) {
+        // Small values: allow going larger
+        min = value < 0 ? -2 : -0.5;
+        max = 2;
+        step = 0.02;
+      } else if (absValue <= 2) {
+        // Medium values: wider range
+        min = value < 0 ? -5 : -1;
+        max = 5;
+        step = 0.05;
+      } else if (absValue <= 10) {
+        // Moderate values
+        min = value < 0 ? -20 : -2;
+        max = 20;
+        step = 0.1;
+      } else {
+        // Large values - scale range appropriately
+        min = value < 0 ? value * 3 : -absValue;
+        max = absValue * 3;
+        step = absValue > 100 ? 1 : 0.5;
+      }
+
+      // Store state
+      scrubberState = {
+        visible: true,
+        selectionStart: start,
+        selectionEnd: end,
+        originalValue: value,
+        min,
+        max,
+        step
+      };
+
+      // Update slider
+      scrubberSlider.min = min;
+      scrubberSlider.max = max;
+      scrubberSlider.step = step;
+      scrubberSlider.value = value;
+
+      // Update display
+      scrubberLabel.textContent = `[${min}, ${max}]`;
+      scrubberValue.textContent = formatNumber(value);
+
+      // Show panel
+      scrubberPanel.classList.add('visible');
+    }
+
+    function formatNumber(num) {
+      // Format to reasonable precision
+      if (Number.isInteger(num)) return num.toString();
+      const formatted = num.toFixed(3);
+      // Remove trailing zeros but keep at least one decimal
+      return formatted.replace(/\.?0+$/, '') || '0';
+    }
+
+    function updateScrubberValue(newValue) {
+      const formatted = formatNumber(newValue);
+      scrubberValue.textContent = formatted;
+
+      // Update the text in the editor
+      const text = jsonEditor.value;
+      const before = text.substring(0, scrubberState.selectionStart);
+      const after = text.substring(scrubberState.selectionEnd);
+
+      jsonEditor.value = before + formatted + after;
+
+      // Update selection to match new value length
+      const newEnd = scrubberState.selectionStart + formatted.length;
+      jsonEditor.selectionStart = scrubberState.selectionStart;
+      jsonEditor.selectionEnd = newEnd;
+      scrubberState.selectionEnd = newEnd;
+
+      // Try to apply changes live
+      try {
+        const json = JSON.parse(jsonEditor.value);
+        demos[currentDemo].json = json;
+        renderJson(json);
+      } catch (e) {
+        // Invalid JSON during scrub - ignore
+      }
+    }
+
+    function hideScrubber() {
+      scrubberState.visible = false;
+      scrubberPanel.classList.remove('visible');
+    }
+
+    // ============================================
+    // EXTERNAL LOADING
+    // ============================================
+    async function loadFromUrl(url) {
+      try {
+        showStatus('Loading...', '');
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        addExternalDemo(json, url);
+        showStatus('Loaded from URL', 'success');
+      } catch (error) {
+        showStatus(`Load failed: ${error.message}`, 'error');
+      }
+    }
+
+    function loadFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const json = JSON.parse(e.target.result);
+          addExternalDemo(json, file.name);
+          showStatus(`Loaded: ${file.name}`, 'success');
+        } catch (error) {
+          showStatus(`Parse error: ${error.message}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function addExternalDemo(json, source) {
+      const title = json.title || source.split('/').pop() || 'Loaded Scene';
+      const subtitle = json.description || 'External JSON';
+
+      demos.push({ title, subtitle, json });
+      buildNav();
+      buildDemosSubmenu();
+      switchDemo(demos.length - 1);
+    }
+
+    // ============================================
+    // UI HELPERS
+    // ============================================
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status visible' + (type ? ` ${type}` : '');
+      setTimeout(() => {
+        statusEl.classList.remove('visible');
+      }, 2500);
+    }
+
+    /**
+     * Update animation button appearance based on animState
+     * Three states: playing (green, spinning), paused (yellow, static), frozen (grey, struck)
+     */
+    function updateAnimButton() {
+      const btn = $('btn-anim');
+      const icon = $('anim-icon');
+      if (!btn || !icon) return;
+
+      // Remove all state classes
+      btn.classList.remove('anim-playing', 'anim-paused', 'anim-frozen');
+
+      switch (animState) {
+        case 'playing':
+          btn.classList.add('anim-playing');
+          icon.textContent = '▶';
+          btn.title = 'Animation: Playing - click to pause (A)';
+          break;
+        case 'paused':
+          btn.classList.add('anim-paused');
+          icon.textContent = '⏸';
+          btn.title = 'Animation: Paused (time runs) - click to freeze (A)';
+          break;
+        case 'frozen':
+          btn.classList.add('anim-frozen');
+          icon.textContent = '⏹';
+          btn.title = 'Animation: Frozen (time stopped) - click to play (A)';
+          break;
+      }
+    }
+
+    // ============================================
+    // TREE VIEWER
+    // ============================================
+    // Tree view state for editable values
+    let treeEditState = {
+      path: null,
+      paramName: '',
+      nodeNotes: ''
+    };
+
+    // Navigation state for editable values
+    let treeNavState = {
+      editableValues: [],  // Array of {path, value, paramName, nodeNotes, type}
+      currentIndex: -1
+    };
+
+    function generateTreeView(json) {
+      const lines = [];
+
+      // Reset navigation state
+      treeNavState.editableValues = [];
+      treeNavState.currentIndex = -1;
+
+      const colors = {
+        // Node types
+        sphere: '#22d3ee', box: '#22d3ee', cylinder: '#22d3ee', torus: '#22d3ee',
+        capsule: '#22d3ee', ellipsoid: '#22d3ee', plane: '#22d3ee',
+        union: '#3fb950', subtract: '#f85149', intersect: '#f0883e',
+        smoothUnion: '#3fb950', smoothSubtract: '#f85149', smoothIntersect: '#f0883e',
+        transform: '#a371f7', material: '#f472b6', group: '#ffd700',
+        ref: '#8b949e', round: '#d29922', shell: '#d29922', mirror: '#d29922',
+        displace: '#ff6b6b', radial: '#4ecdc4', repeat: '#45b7d1',
+        customExpr: '#ff69b4'
+      };
+
+      function getNodeIcon(type) {
+        const icons = {
+          sphere: '●', box: '■', cylinder: '▬', torus: '◎', capsule: '⬭', ellipsoid: '⬯', plane: '▭',
+          union: '∪', subtract: '−', intersect: '∩',
+          smoothUnion: '∪̃', smoothSubtract: '−̃', smoothIntersect: '∩̃',
+          transform: '↻', material: '◆', group: '⊞', ref: '→',
+          round: '○', shell: '◯', mirror: '⊥', displace: '〰', radial: '✳', repeat: '⋮⋮',
+          customExpr: '⟨⟩'
+        };
+        return icons[type] || '◇';
+      }
+
+      // Create clickable value span for tree editing and register for navigation
+      // Handles numbers (slider), expressions (popup), arrays
+      function makeClickableValue(value, path, paramName, nodeNotes, valueType = 'number') {
+        // Handle expression objects - show as readable GLSL
+        if (typeof value === 'object' && value !== null && (value.expr || value.var)) {
+          return makeClickableExpr(value, path, paramName, nodeNotes);
+        }
+
+        // Handle arrays - each element can be a number or expression
+        if (Array.isArray(value)) {
+          const items = value.map((v, i) =>
+            makeClickableValue(v, path + '.' + i, paramName + '[' + i + ']', nodeNotes)
+          );
+          return `[${items.join(', ')}]`;
+        }
+
+        // Not a number - just format it
+        if (typeof value !== 'number') return formatValue(value);
+
+        // Register number for navigation (slider)
+        treeNavState.editableValues.push({
+          path, value, paramName, nodeNotes: nodeNotes || '', type: valueType
+        });
+
+        const escapedPath = path.replace(/'/g, "\\'");
+        const escapedParam = paramName.replace(/'/g, "\\'");
+        const escapedNotes = (nodeNotes || '').replace(/'/g, "\\'");
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" data-path="${escapedPath}" data-param="${escapedParam}" data-notes="${escapedNotes}" style="cursor:pointer;text-decoration:underline dotted;color:#fbbf24" onclick="window.editTreeValue('${escapedPath}', ${value}, '${escapedParam}', '${escapedNotes}')">${formatValue(value)}</span>`;
+      }
+
+      // Create clickable base64 value for GLSL display
+      function makeClickableGlsl(encoded, path, nodeNotes) {
+        let decoded = '';
+        let summary = encoded.substring(0, 20) + '...';
+        try {
+          decoded = atob(encoded);
+          // Summarize: show first meaningful part
+          summary = decoded.length > 40 ? decoded.substring(0, 40) + '...' : decoded;
+          // Clean up for display
+          summary = summary.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        } catch (e) {
+          summary = '(invalid base64)';
+        }
+
+        // Register for navigation as 'glsl' type
+        treeNavState.editableValues.push({
+          path, value: encoded, paramName: 'glsl', nodeNotes: nodeNotes || '', type: 'glsl', decoded
+        });
+
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" style="cursor:pointer;text-decoration:underline dotted;color:#ff69b4" onclick="window.showGlslValue(${navIndex})" title="${decoded.replace(/"/g, '&quot;')}">${summary}</span>`;
+      }
+
+      function walkNode(node, prefix = '', isLast = true, path = 'root') {
+        if (!node || !node.type) return;
+
+        const connector = isLast ? '└─' : '├─';
+        const icon = getNodeIcon(node.type);
+        const color = colors[node.type] || '#c9d1d9';
+        const nodeNotes = node.notes || '';
+
+        let label = `<span style="color:${color}">${icon} ${node.type}</span>`;
+
+        // Add key params inline with clickable values
+        if (node.params) {
+          const params = [];
+          if (node.params.r !== undefined) {
+            params.push(`r=${makeClickableValue(node.params.r, path + '.params.r', 'radius', nodeNotes)}`);
+          }
+          if (node.params.size) {
+            const sizeVals = node.params.size.map((v, i) =>
+              makeClickableValue(v, path + '.params.size.' + i, 'size[' + i + ']', nodeNotes)
+            );
+            params.push(`size=[${sizeVals.join(',')}]`);
+          }
+          if (node.params.h !== undefined) {
+            params.push(`h=${makeClickableValue(node.params.h, path + '.params.h', 'height', nodeNotes)}`);
+          }
+          if (node.params.major !== undefined) {
+            params.push(`R=${makeClickableValue(node.params.major, path + '.params.major', 'major radius', nodeNotes)}`);
+          }
+          if (node.params.minor !== undefined) {
+            params.push(`r=${makeClickableValue(node.params.minor, path + '.params.minor', 'minor radius', nodeNotes)}`);
+          }
+          if (node.params.amount !== undefined) {
+            params.push(`amt=${makeClickableValue(node.params.amount, path + '.params.amount', 'amount', nodeNotes)}`);
+          }
+          if (node.params.thickness !== undefined) {
+            params.push(`t=${makeClickableValue(node.params.thickness, path + '.params.thickness', 'thickness', nodeNotes)}`);
+          }
+          if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+          if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
+        }
+        if (node.k !== undefined) {
+          label += ` <span style="color:#8b949e">k=${makeClickableValue(node.k, path + '.k', 'blend factor', nodeNotes)}</span>`;
+        }
+        if (node.r !== undefined) {
+          label += ` <span style="color:#8b949e">r=${makeClickableValue(node.r, path + '.r', 'round radius', nodeNotes)}</span>`;
+        }
+        if (node.id) label += ` <span style="color:#8b949e">→${node.id}</span>`;
+        if (node.axis) label += ` <span style="color:#8b949e">${node.axis}</span>`;
+
+        // Show transform values (translate, rotate, scale) - often contain expressions
+        if (node.transform) {
+          const t = node.transform;
+          const tparts = [];
+          if (t.translate) {
+            tparts.push(`pos=${makeClickableValue(t.translate, path + '.transform.translate', 'translate', nodeNotes)}`);
+          }
+          if (t.rotate) {
+            tparts.push(`rot=${makeClickableValue(t.rotate, path + '.transform.rotate', 'rotate', nodeNotes)}`);
+          }
+          if (t.scale) {
+            tparts.push(`scl=${makeClickableValue(t.scale, path + '.transform.scale', 'scale', nodeNotes)}`);
+          }
+          if (tparts.length > 0) {
+            label += ` <span style="color:#a371f7;font-size:0.85em">${tparts.join(' ')}</span>`;
           }
         }
-      } else {
-        // Load first scene by default
-        if (toc.categories.length > 0 && toc.categories[0].scenes.length > 0) {
-          const firstCat = toc.categories[0];
-          const firstScene = firstCat.scenes[0];
-          categorySelect.value = firstCat.id;
-          populateScenes(firstCat.id);
-          sceneSelect.value = firstScene.path;
-          loadScene(firstScene.path);
+
+        // Handle customExpr glsl field (base64 encoded GLSL)
+        if (node.glsl) {
+          label += ` <span style="color:#ff69b4">glsl=${makeClickableGlsl(node.glsl, path + '.glsl', nodeNotes)}</span>`;
+        }
+
+        lines.push(`${prefix}${connector} ${label}`);
+
+        const childPrefix = prefix + (isLast ? '   ' : '│  ');
+
+        // Handle children
+        if (node.children) {
+          node.children.forEach((child, i) => {
+            walkNode(child, childPrefix, i === node.children.length - 1, path + '.children.' + i);
+          });
+        }
+        if (node.child) {
+          walkNode(node.child, childPrefix, true, path + '.child');
         }
       }
 
-      // Start animation loop
-      animate(0);
+      function formatValue(v) {
+        if (typeof v === 'number') return v.toFixed ? (v % 1 === 0 ? v : v.toFixed(2)) : v;
+        if (typeof v === 'object' && (v.expr || v.var)) return exprToGlsl(v);
+        return String(v);
+      }
+
+      // Convert expression object to readable GLSL string
+      function exprToGlsl(value) {
+        if (value === null || value === undefined) return '0.0';
+        if (typeof value === 'number') {
+          return Number.isInteger(value) ? value + '.0' : String(value);
+        }
+        if (typeof value === 'string') return value;
+        if (Array.isArray(value)) {
+          return `vec${value.length}(${value.map(exprToGlsl).join(', ')})`;
+        }
+        if (typeof value !== 'object') return String(value);
+
+        // Handle {var: "time"} etc
+        if (value.var) {
+          return value.var === 'time' ? 'u_time' : value.var;
+        }
+
+        // Handle {expr: "op", args: [...]}
+        if (value.expr) {
+          const args = (value.args || []).map(exprToGlsl);
+          switch (value.expr) {
+            case 'add': return `(${args.join(' + ')})`;
+            case 'sub': return `(${args[0]} - ${args[1]})`;
+            case 'mul': return `(${args.join(' * ')})`;
+            case 'div': return `(${args[0]} / ${args[1]})`;
+            case 'sin': return `sin(${args[0]})`;
+            case 'cos': return `cos(${args[0]})`;
+            case 'tan': return `tan(${args[0]})`;
+            case 'min': return `min(${args.join(', ')})`;
+            case 'max': return `max(${args.join(', ')})`;
+            case 'neg': return `(-${args[0]})`;
+            case 'abs': return `abs(${args[0]})`;
+            case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
+            case 'mix': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
+            case 'mod': return `mod(${args[0]}, ${args[1]})`;
+            case 'pow': return `pow(${args[0]}, ${args[1]})`;
+            case 'sqrt': return `sqrt(${args[0]})`;
+            case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
+            default: return `${value.expr}(${args.join(', ')})`;
+          }
+        }
+
+        return JSON.stringify(value);
+      }
+
+      // Create clickable expression span for tree display
+      function makeClickableExpr(value, path, paramName, nodeNotes) {
+        const glslStr = exprToGlsl(value);
+        const escaped = glslStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // Register for navigation as 'expr' type
+        treeNavState.editableValues.push({
+          path, value, paramName, nodeNotes: nodeNotes || '', type: 'expr', glslStr
+        });
+
+        const navIndex = treeNavState.editableValues.length - 1;
+        return `<span class="tree-editable" data-nav-index="${navIndex}" style="cursor:pointer;text-decoration:underline dotted;color:#a78bfa" onclick="window.showExprValue(${navIndex})" title="Click to view expression">${escaped}</span>`;
+      }
+
+      // Show defs first
+      if (json.defs && Object.keys(json.defs).length > 0) {
+        lines.push(`<span style="color:#f472b6;font-weight:bold">📦 Definitions:</span>`);
+        for (const [id, def] of Object.entries(json.defs)) {
+          lines.push(`<span style="color:#a371f7">  ⊳ ${id}</span>`);
+          walkNode(def, '    ', true, 'defs.' + id);
+        }
+        lines.push('');
+      }
+
+      // Show root
+      lines.push(`<span style="color:#22d3ee;font-weight:bold">▹ Scene Root:</span>`);
+      walkNode(json.root, '', true, 'root');
+
+      // Notes if present
+      if (json.notes) {
+        lines.push('');
+        lines.push(`<span style="color:#8b949e;font-style:italic">📝 ${json.notes}</span>`);
+      }
+
+      // Update navigation indicator
+      updateTreeNavIndicator();
+
+      return lines.join('\n');
     }
 
+    // Update navigation indicator display
+    function updateTreeNavIndicator() {
+      const indicator = $('tree-nav-indicator');
+      if (indicator) {
+        const total = treeNavState.editableValues.length;
+        const current = treeNavState.currentIndex >= 0 ? treeNavState.currentIndex + 1 : 0;
+        indicator.textContent = `${current}/${total}`;
+      }
+    }
+
+    // Navigate to previous editable value
+    function navigateTreePrev() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex--;
+      if (treeNavState.currentIndex < 0) {
+        treeNavState.currentIndex = treeNavState.editableValues.length - 1;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Navigate to next editable value
+    function navigateTreeNext() {
+      if (treeNavState.editableValues.length === 0) return;
+      treeNavState.currentIndex++;
+      if (treeNavState.currentIndex >= treeNavState.editableValues.length) {
+        treeNavState.currentIndex = 0;
+      }
+      selectTreeValue(treeNavState.currentIndex);
+    }
+
+    // Select and activate a tree value by navigation index
+    function selectTreeValue(index) {
+      const item = treeNavState.editableValues[index];
+      if (!item) return;
+
+      updateTreeNavIndicator();
+
+      // Highlight the selected element in the tree
+      const treeContent = $('tree-content');
+      const allEditables = treeContent.querySelectorAll('.tree-editable');
+      allEditables.forEach(el => el.style.background = 'transparent');
+      const targetEl = treeContent.querySelector(`[data-nav-index="${index}"]`);
+      if (targetEl) {
+        targetEl.style.background = 'rgba(251, 191, 36, 0.3)';
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // Handle based on type
+      if (item.type === 'glsl') {
+        window.showGlslValue(index);
+      } else if (item.type === 'expr') {
+        window.showExprValue(index);
+      } else {
+        hideGlslDisplay(); // Hide GLSL/expr panel when selecting numeric values
+        window.editTreeValue(item.path, item.value, item.paramName, item.nodeNotes);
+      }
+    }
+
+    // Global function to show decoded GLSL (mobile-friendly)
+    window.showGlslValue = function(navIndex) {
+      const item = treeNavState.editableValues[navIndex];
+      if (!item || item.type !== 'glsl') return;
+
+      treeNavState.currentIndex = navIndex;
+      updateTreeNavIndicator();
+
+      // Hide tree slider when showing GLSL
+      hideTreeSlider();
+
+      // Show full decoded GLSL in dedicated display area (mobile-friendly)
+      const decoded = item.decoded || '(unable to decode)';
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) {
+        glslDisplay.style.display = 'block';
+        glslDisplay.textContent = decoded;
+      }
+
+      // Also show abbreviated version in status
+      showStatus(`GLSL: ${decoded.substring(0, 60)}...`, 'info');
+
+      // Log full decoded GLSL to console for copying
+      console.log('Decoded GLSL:', decoded);
+      console.log('Base64:', item.value);
+    };
+
+    // Global function to show expression as GLSL (mobile-friendly popup)
+    window.showExprValue = function(navIndex) {
+      const item = treeNavState.editableValues[navIndex];
+      if (!item || item.type !== 'expr') return;
+
+      treeNavState.currentIndex = navIndex;
+      updateTreeNavIndicator();
+
+      // Hide tree slider when showing expression
+      hideTreeSlider();
+
+      // Highlight the selected element
+      const treeContent = $('tree-content');
+      const allEditables = treeContent.querySelectorAll('.tree-editable');
+      allEditables.forEach(el => el.style.background = 'transparent');
+      const targetEl = treeContent.querySelector(`[data-nav-index="${navIndex}"]`);
+      if (targetEl) {
+        targetEl.style.background = 'rgba(167, 139, 250, 0.3)';
+      }
+
+      // Show expression as GLSL in dedicated display area
+      const glslStr = item.glslStr || exprToGlsl(item.value);
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) {
+        glslDisplay.style.display = 'block';
+        glslDisplay.innerHTML = `<span style="color:#a78bfa;font-weight:bold">Expression:</span> ${glslStr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
+      }
+
+      // Status bar hint
+      showStatus(`Expr: ${glslStr}`, 'info');
+
+      // Console for developers
+      console.log('Expression GLSL:', glslStr);
+      console.log('Original JSON:', JSON.stringify(item.value, null, 2));
+    };
+
+    // Hide GLSL display when selecting non-GLSL value
+    function hideGlslDisplay() {
+      const glslDisplay = $('glsl-display');
+      if (glslDisplay) glslDisplay.style.display = 'none';
+    }
+
+    // Hide all tree popups (GLSL display and slider)
+    function hideTreePopups() {
+      hideGlslDisplay();
+      hideTreeSlider();
+    }
+
+    // Global function for tree value editing
+    window.editTreeValue = function(path, value, paramName, nodeNotes) {
+      treeEditState.path = path;
+      treeEditState.paramName = paramName;
+      treeEditState.nodeNotes = nodeNotes;
+
+      // Calculate appropriate range - never trap between 0-1
+      const absValue = Math.abs(value);
+      let min, max, step;
+
+      if (absValue === 0) {
+        min = -2;
+        max = 2;
+        step = 0.05;
+      } else if (absValue < 0.5) {
+        // Small values: allow going larger
+        min = value < 0 ? -2 : -0.5;
+        max = 2;
+        step = 0.02;
+      } else if (absValue <= 2) {
+        // Medium values: wider range
+        min = value < 0 ? -5 : -1;
+        max = 5;
+        step = 0.05;
+      } else if (absValue <= 10) {
+        min = value < 0 ? -20 : -2;
+        max = 20;
+        step = 0.1;
+      } else {
+        // Large values
+        min = value < 0 ? value * 3 : -absValue;
+        max = absValue * 3;
+        step = absValue > 100 ? 1 : 0.5;
+      }
+
+      // Store state for tree editing
+      treeEditState.min = min;
+      treeEditState.max = max;
+      treeEditState.step = step;
+      treeEditState.value = value;
+
+      // Use tree-specific slider (not editor scrubber)
+      const treeSliderPanel = $('tree-slider-panel');
+      const treeSlider = $('tree-slider');
+      const treeSliderLabel = $('tree-slider-label');
+      const treeSliderValue = $('tree-slider-value');
+
+      if (treeSliderPanel && treeSlider) {
+        treeSlider.min = min;
+        treeSlider.max = max;
+        treeSlider.step = step;
+        treeSlider.value = value;
+
+        // Show param name and notes in label
+        const labelText = nodeNotes ? `${paramName}` : paramName;
+        treeSliderLabel.textContent = labelText.substring(0, 20);
+        treeSliderValue.textContent = formatNumber(value);
+
+        treeSliderPanel.style.display = 'block';
+
+        // Hide GLSL display when showing slider
+        hideGlslDisplay();
+      }
+    };
+
+    function updateTreeSliderValue(newValue) {
+      if (!treeEditState.path) return;
+
+      const formatted = formatNumber(newValue);
+      const treeSliderValue = $('tree-slider-value');
+      if (treeSliderValue) treeSliderValue.textContent = formatted;
+
+      // Update JSON using path
+      const json = demos[currentDemo].json;
+      setValueByPath(json, treeEditState.path, newValue);
+
+      // Update editor text
+      jsonEditor.value = JSON.stringify(json, null, 2);
+
+      // Re-render
+      try {
+        renderJson(json);
+        // Don't update tree view while scrubbing - too slow
+      } catch (e) {
+        console.warn('Tree slider render error:', e);
+      }
+    }
+
+    // Hide tree slider panel
+    function hideTreeSlider() {
+      const treeSliderPanel = $('tree-slider-panel');
+      if (treeSliderPanel) treeSliderPanel.style.display = 'none';
+    }
+
+    function setValueByPath(obj, path, value) {
+      const parts = path.split('.');
+      let current = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        if (current[part] === undefined) return;
+        current = current[part];
+      }
+      const lastPart = parts[parts.length - 1];
+      current[lastPart] = value;
+    }
+
+    function updateTreeView() {
+      const json = demos[currentDemo]?.json;
+      if (json) {
+        $('tree-content').innerHTML = generateTreeView(json);
+      }
+    }
+
+    // ============================================
+    // EDGE DETECTION (5% edges for navigation)
+    // ============================================
+    function isInEdge(x, side) {
+      const width = window.innerWidth;
+      const edgeWidth = width * 0.05;
+      if (side === 'left') return x < edgeWidth;
+      if (side === 'right') return x > width - edgeWidth;
+      return false;
+    }
+
+    // ============================================
+    // ORBIT CAMERA CONTROLS
+    // ============================================
+    function setupOrbitControls() {
+      const canvas = $('canvas');
+
+      // Mouse controls
+      canvas.addEventListener('mousedown', (e) => {
+        if (isInEdge(e.clientX, 'left') || isInEdge(e.clientX, 'right')) return;
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+
+        // Orbit camera
+        renderer.camera.theta += dx * 0.01;
+        renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - dy * 0.01));
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+      });
+
+      // Mouse wheel zoom
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomSpeed = 0.001;
+        renderer.camera.distance = Math.max(1, Math.min(15,
+          renderer.camera.distance + e.deltaY * zoomSpeed * renderer.camera.distance));
+        debugSettings.cameraDistance = renderer.camera.distance;
+        $('slider-distance').value = renderer.camera.distance;
+      }, { passive: false });
+
+      // Set initial cursor
+      canvas.style.cursor = 'grab';
+    }
+
+    // ============================================
+    // TOUCH CONTROLS
+    // ============================================
+    function setupTouchControls() {
+      const canvas = $('canvas');
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      let isEdgeSwipe = false;
+      let activeTouches = 0;
+
+      canvas.addEventListener('touchstart', (e) => {
+        activeTouches = e.touches.length;
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchStartTime = Date.now();
+
+        // Check if starting from edge
+        isEdgeSwipe = isInEdge(touch.clientX, 'left') || isInEdge(touch.clientX, 'right');
+
+        // Show edge indicator
+        if (isInEdge(touch.clientX, 'left')) {
+          edgeLeft.classList.add('active');
+        } else if (isInEdge(touch.clientX, 'right')) {
+          edgeRight.classList.add('active');
+        }
+
+        // Pinch zoom and pan setup
+        if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+          // Track center for panning
+          pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        // Two-finger: pinch zoom + pan
+        if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          // Calculate center movement for panning
+          const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          const panDx = centerX - pinchCenterX;
+          const panDy = centerY - pinchCenterY;
+
+          // Pan camera target (move in camera-relative direction)
+          const panScale = 0.003 * renderer.camera.distance;
+          const cosTheta = Math.cos(renderer.camera.theta);
+          const sinTheta = Math.sin(renderer.camera.theta);
+
+          // Pan in screen X -> camera right, screen Y -> camera up
+          renderer.camera.target[0] -= (panDx * cosTheta) * panScale;
+          renderer.camera.target[2] -= (panDx * sinTheta) * panScale;
+          renderer.camera.target[1] += panDy * panScale;
+
+          // Update center tracking
+          pinchCenterX = centerX;
+          pinchCenterY = centerY;
+
+          // Zoom based on pinch distance change
+          const scale = pinchStartDist / dist;
+          renderer.camera.distance = Math.max(1, Math.min(15,
+            debugSettings.cameraDistance * scale));
+          return;
+        }
+
+        // Single touch - orbit or edge swipe
+        if (e.touches.length === 1 && !isEdgeSwipe) {
+          const touch = e.touches[0];
+          const dx = touch.clientX - touchStartX;
+          const dy = touch.clientY - touchStartY;
+
+          // Orbit camera
+          renderer.camera.theta += dx * 0.005;
+          renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1,
+            renderer.camera.phi - dy * 0.005));
+
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', (e) => {
+        edgeLeft.classList.remove('active');
+        edgeRight.classList.remove('active');
+
+        // Update pinch end distance
+        if (activeTouches === 2) {
+          debugSettings.cameraDistance = renderer.camera.distance;
+          $('slider-distance').value = renderer.camera.distance;
+        }
+
+        // Swipe navigation - works anywhere on canvas
+        if (e.changedTouches.length > 0 && activeTouches === 1) {
+          const touch = e.changedTouches[0];
+          const dx = touch.clientX - touchStartX;
+          const dy = touch.clientY - touchStartY;
+          const elapsed = Date.now() - touchStartTime;
+
+          // Horizontal swipe detection: fast, mostly horizontal
+          if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
+            if (dx < 0) {
+              // Swipe left = next demo
+              switchDemo((currentDemo + 1) % demos.length);
+            } else {
+              // Swipe right = previous demo
+              switchDemo((currentDemo - 1 + demos.length) % demos.length);
+            }
+          }
+        }
+
+        isEdgeSwipe = false;
+        activeTouches = 0;
+      }, { passive: true });
+    }
+
+    // ============================================
+    // DEBUG PANEL
+    // ============================================
+    function setupDebugPanel() {
+      try {
+      // Close button inside debug panel
+      addClick('btn-debug-close', () => {
+        debugOpen = false;
+        debugPanel.classList.remove('open');
+        $('btn-debug').classList.remove('active');
+      });
+
+      // Volume render toggle
+      addClick('toggle-volume', function() {
+        this.classList.toggle('active');
+        debugSettings.volumeRender = this.classList.contains('active');
+        renderer.volumeRender = debugSettings.volumeRender;
+        // Show/hide volume controls
+        const vc = $('volume-controls');
+        if (vc) vc.style.display = debugSettings.volumeRender ? 'flex' : 'none';
+        // Need to recompile shader when switching modes
+        renderer.compileShaders();
+      });
+
+      // Ground plane toggle
+      addClick('toggle-ground', function() {
+        this.classList.toggle('active');
+        debugSettings.showGround = this.classList.contains('active');
+        renderer.showGroundPlane = debugSettings.showGround;
+      });
+
+      // Edge toggle
+      addClick('toggle-edges', function() {
+        this.classList.toggle('active');
+        renderer.showEdges = this.classList.contains('active');
+      });
+
+      // Show CSG cutters toggle (debug mode)
+      addClick('toggle-cutters', function() {
+        this.classList.toggle('active');
+        debugSettings.showCutters = this.classList.contains('active');
+        // Re-render with updated codegen options
+        const json = demos[currentDemo]?.json;
+        if (json) renderJson(json);
+      });
+
+      // Axes toggle
+      addClick('toggle-axes', function() {
+        this.classList.toggle('active');
+        debugSettings.showAxes = this.classList.contains('active');
+        renderer.showAxes = debugSettings.showAxes;
+      });
+
+      // Camera distance slider
+      addEvent('slider-distance', 'input', function() {
+        debugSettings.cameraDistance = parseFloat(this.value);
+        renderer.camera.distance = debugSettings.cameraDistance;
+      });
+
+      // Volume step size slider
+      addEvent('slider-step-size', 'input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeStepSize = val;
+        const el = $('step-size-val');
+        if (el) el.textContent = val.toFixed(2);
+      });
+
+      // Volume density slider
+      addEvent('slider-density', 'input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeDensity = val;
+        const el = $('density-val');
+        if (el) el.textContent = val;
+      });
+
+      // Volume mode select
+      addEvent('select-volume-mode', 'change', function() {
+        renderer.volumeMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Volume color mode select
+      addEvent('select-volume-color', 'change', function() {
+        renderer.volumeColorMode = parseInt(this.value);
+        renderer.compileShaders();
+      });
+
+      // Edge focus slider
+      addEvent('slider-edge-focus', 'input', function() {
+        const val = parseFloat(this.value);
+        renderer.edgeFocus = val;
+        const el = $('edge-focus-val');
+        if (el) el.textContent = val.toFixed(2);
+      });
+
+      // Composite slider
+      addEvent('slider-composite', 'input', function() {
+        const val = parseFloat(this.value);
+        renderer.volumeComposite = val;
+        const el = $('composite-val');
+        if (el) el.textContent = val.toFixed(2);
+      });
+      } catch (e) { console.error('setupDebugPanel error:', e); }
+    }
+
+    // ============================================
+    // LIGHTING PANEL
+    // ============================================
+    function setupLightingPanel() {
+      try {
+      // Close button
+      addClick('btn-lighting-close', () => {
+        lightingOpen = false;
+        if (lightingPanel) lightingPanel.classList.remove('open');
+      });
+
+      // Light direction sliders
+      addEvent('slider-light-x', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[0] = val;
+        const el = $('light-x-val');
+        if (el) el.textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      addEvent('slider-light-y', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[1] = val;
+        const el = $('light-y-val');
+        if (el) el.textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      addEvent('slider-light-z', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.lightDir[2] = val;
+        const el = $('light-z-val');
+        if (el) el.textContent = val.toFixed(1);
+        updateLighting();
+      });
+
+      // Lighting coefficient sliders
+      addEvent('slider-ambient', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.ambient = val;
+        const el = $('ambient-val');
+        if (el) el.textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      addEvent('slider-diffuse', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.diffuse = val;
+        const el = $('diffuse-val');
+        if (el) el.textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      addEvent('slider-specular', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.specular = val;
+        const el = $('specular-val');
+        if (el) el.textContent = val.toFixed(2);
+        updateLighting();
+      });
+
+      addEvent('slider-shininess', 'input', function() {
+        const val = parseFloat(this.value);
+        lightingSettings.shininess = val;
+        const el = $('shininess-val');
+        if (el) el.textContent = val.toFixed(0);
+        updateLighting();
+      });
+      } catch (e) { console.error('setupLightingPanel error:', e); }
+    }
+
+    function updateLighting() {
+      if (renderer) {
+        renderer.setLighting(lightingSettings);
+      }
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    function setupEventListeners() {
+      try {
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.target === jsonEditor) return;
+
+        // When tree panel is open, arrow keys navigate editable values
+        if (treeOpen && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+          e.preventDefault();
+          if (e.key === 'ArrowRight') {
+            navigateTreeNext();
+          } else {
+            navigateTreePrev();
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          switchDemo((currentDemo + 1) % demos.length);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          switchDemo((currentDemo - 1 + demos.length) % demos.length);
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          editorOpen = !editorOpen;
+          editorPanel.classList.toggle('open', editorOpen);
+        } else if (e.key === 'd' || e.key === 'D') {
+          e.preventDefault();
+          debugOpen = !debugOpen;
+          debugPanel.classList.toggle('open', debugOpen);
+          $('btn-debug').classList.toggle('active', debugOpen);
+        } else if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault();
+          lightingOpen = !lightingOpen;
+          lightingPanel.classList.toggle('open', lightingOpen);
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          autoRotate = !autoRotate;
+          $('btn-auto-rotate').classList.toggle('active', autoRotate);
+        } else if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          $('btn-paste-apply').click(); // Trigger paste & apply
+        } else if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          $('menu-new-demo').click(); // Create new demo
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          $('btn-menu').click(); // Toggle menu
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          $('btn-tree').click(); // Toggle tree view
+        } else if (e.key === 'a' || e.key === 'A') {
+          e.preventDefault();
+          $('btn-anim').click(); // Cycle animation state
+        } else if (e.key === 'Escape') {
+          urlModal.classList.remove('open');
+          menuOpen = false;
+          mainMenu.classList.remove('open');
+          debugOpen = false;
+          debugPanel.classList.remove('open');
+          lightingOpen = false;
+          lightingPanel.classList.remove('open');
+          treeOpen = false;
+          treePanel.classList.remove('open');
+          $('btn-tree').classList.remove('active');
+        }
+      });
+
+      // Setup orbit and touch controls
+      setupOrbitControls();
+      setupTouchControls();
+      setupDebugPanel();
+      setupLightingPanel();
+
+      // Editor toggle
+      addClick('btn-editor', () => {
+        editorOpen = !editorOpen;
+        editorPanel.classList.toggle('open', editorOpen);
+        $('btn-editor').classList.toggle('active', editorOpen);
+      });
+
+      // Auto-rotate toggle
+      addClick('btn-auto-rotate', () => {
+        autoRotate = !autoRotate;
+        $('btn-auto-rotate').classList.toggle('active', autoRotate);
+      });
+
+      // Animation state toggle (cycles: playing → paused → frozen → playing)
+      addClick('btn-anim', () => {
+        if (animState === 'playing') {
+          animState = 'paused';
+        } else if (animState === 'paused') {
+          animState = 'frozen';
+          // Capture current time when freezing
+          frozenTime = (performance.now() - renderer.startTime) / 1000.0;
+        } else {
+          animState = 'playing';
+        }
+        updateAnimButton();
+      });
+
+      // Paste & Apply - one click to paste JSON and render
+      addClick('btn-paste-apply', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          const json = JSON.parse(text);
+
+          // Update current demo
+          demos[currentDemo] = {
+            title: json.notes ? json.notes.substring(0, 30) + '...' : 'Pasted Demo',
+            subtitle: 'From clipboard',
+            json: json
+          };
+
+          // Render and update UI
+          renderJson(json);
+          $('title').textContent = demos[currentDemo].title;
+          $('subtitle').textContent = demos[currentDemo].subtitle;
+          jsonEditor.value = JSON.stringify(json, null, 2);
+
+          showStatus('✓ Pasted and applied!', 'success');
+        } catch (err) {
+          if (err.name === 'NotAllowedError') {
+            showStatus('Clipboard access denied - try editor paste', 'error');
+          } else if (err instanceof SyntaxError) {
+            showStatus('Invalid JSON in clipboard', 'error');
+          } else {
+            showStatus('Paste failed: ' + err.message, 'error');
+          }
+          console.error('Paste error:', err);
+        }
+      });
+
+      // Debug panel toggle (from header button)
+      addClick('btn-debug', () => {
+        debugOpen = !debugOpen;
+        debugPanel.classList.toggle('open', debugOpen);
+        $('btn-debug').classList.toggle('active', debugOpen);
+      });
+
+      // Tree panel toggle
+      const treePanel = $('tree-panel');
+      addClick('btn-tree', () => {
+        treeOpen = !treeOpen;
+        if (treeOpen) updateTreeView();
+        if (treePanel) treePanel.classList.toggle('open', treeOpen);
+        $('btn-tree').classList.toggle('active', treeOpen);
+      });
+
+      addClick('btn-tree-close', () => {
+        treeOpen = false;
+        if (treePanel) treePanel.classList.remove('open');
+        $('btn-tree').classList.remove('active');
+      });
+
+      // Tree navigation buttons
+      addClick('btn-tree-prev', navigateTreePrev);
+      addClick('btn-tree-next', navigateTreeNext);
+
+      // Tree slider for numeric value editing
+      const treeSlider = $('tree-slider');
+      if (treeSlider) {
+        treeSlider.addEventListener('input', (e) => {
+          const newValue = parseFloat(e.target.value);
+          updateTreeSliderValue(newValue);
+        });
+        // Update tree view when slider interaction ends
+        treeSlider.addEventListener('change', () => {
+          updateTreeView();
+        });
+      }
+
+      // Main menu toggle
+      addClick('btn-menu', () => {
+        menuOpen = !menuOpen;
+        mainMenu.classList.toggle('open', menuOpen);
+        $('btn-menu').classList.toggle('active', menuOpen);
+        // Close submenu when menu closes
+        if (!menuOpen) {
+          $('menu-demos').classList.remove('submenu-open');
+        }
+      });
+
+      // Menu items
+      // New Demo - create fresh entry in demos list
+      addClick('menu-new-demo', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+
+        const newDemo = {
+          title: `My Demo ${demos.length + 1}`,
+          subtitle: 'New custom demo',
+          json: {
+            "version": "1.0",
+            "notes": "Your custom SDF scene. Edit the JSON to create shapes!",
+            "root": {
+              "type": "sphere",
+              "params": { "r": 1.0, "color": [0.4, 0.8, 1.0] }
+            }
+          }
+        };
+
+        // Add to demos and switch to it
+        demos.push(newDemo);
+        buildDemosSubmenu(); // Rebuild menu to include new entry
+        switchDemo(demos.length - 1);
+
+        // Open editor for immediate editing
+        editorOpen = true;
+        editorPanel.classList.add('open');
+        $('btn-editor').classList.add('active');
+
+        showStatus('✨ New demo created! Edit the JSON.', 'success');
+      });
+
+      addClick('menu-load-url', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        urlModal.classList.add('open');
+        urlInput.focus();
+      });
+
+      addClick('menu-load-file', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        fileInput.click();
+      });
+
+      addClick('menu-lighting', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        lightingOpen = true;
+        lightingPanel.classList.add('open');
+      });
+
+      addClick('menu-settings', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        debugOpen = true;
+        debugPanel.classList.add('open');
+      });
+
+      // About modal
+      const aboutModal = $('about-modal');
+      addClick('menu-about', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('about-version').textContent = `v${VERSION} (${BUILD_DATE})`;
+        if (aboutModal) aboutModal.classList.add('open');
+      });
+
+      addClick('btn-about-close', () => {
+        if (aboutModal) aboutModal.classList.remove('open');
+      });
+
+      // Close about modal on outside click
+      if (aboutModal) aboutModal.addEventListener('click', (e) => {
+        if (e.target === aboutModal) {
+          aboutModal.classList.remove('open');
+        }
+      });
+
+      // Mobile submenu toggle
+      addClick('menu-demos', function(e) {
+        if (window.innerWidth <= 768) {
+          e.stopPropagation();
+          this.classList.toggle('submenu-open');
+        }
+      });
+
+      // Close submenu when clicking elsewhere in menu
+      if (mainMenu) mainMenu.addEventListener('click', function(e) {
+        const menuDemos = $('menu-demos');
+        if (menuDemos && !menuDemos.contains(e.target)) {
+          menuDemos.classList.remove('submenu-open');
+        }
+      });
+
+      // Editor actions
+      addClick('btn-apply', applyEditorChanges);
+      addClick('btn-format', formatJson);
+      addClick('btn-copy', copyJson);
+      addClick('btn-download', downloadJson);
+
+      // Editor header buttons
+      addClick('btn-select-all', selectAllText);
+      addClick('btn-cut', cutSelection);
+      addClick('btn-copy-sel', copySelection);
+      addClick('btn-paste', pasteFromClipboard);
+
+      // Scrubber controls
+      addClick('scrubber-close', () => {
+        hideScrubber();
+        treeEditState.path = null; // Clear tree edit state
+      });
+      if (scrubberSlider) scrubberSlider.addEventListener('input', (e) => {
+        const newValue = parseFloat(e.target.value);
+        // Editor scrubber only - tree uses its own slider now
+        updateScrubberValue(newValue);
+      });
+
+      // Detect scalar selection on cursor position change
+      if (jsonEditor) {
+        jsonEditor.addEventListener('mouseup', detectScalarSelection);
+        jsonEditor.addEventListener('click', () => {
+          // Small delay to let cursor position settle
+          setTimeout(detectScalarSelection, 10);
+        });
+        jsonEditor.addEventListener('keyup', (e) => {
+          // Check on arrow keys, shift+arrow, or other navigation
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            detectScalarSelection();
+          }
+        });
+
+        // Double-click to select number and show scrubber
+        jsonEditor.addEventListener('dblclick', () => {
+          // Small delay to let browser selection complete
+          setTimeout(detectScalarSelection, 10);
+        });
+
+        // Ctrl+Enter to apply
+        jsonEditor.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            applyEditorChanges();
+          }
+        });
+      }
+
+      // URL modal
+      addClick('btn-modal-cancel', () => {
+        if (urlModal) urlModal.classList.remove('open');
+      });
+
+      addClick('btn-modal-load', () => {
+        const url = urlInput?.value?.trim();
+        if (url) {
+          loadFromUrl(url);
+          if (urlModal) urlModal.classList.remove('open');
+          if (urlInput) urlInput.value = '';
+        }
+      });
+
+      if (urlInput) urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          $('btn-modal-load')?.click();
+        } else if (e.key === 'Escape') {
+          if (urlModal) urlModal.classList.remove('open');
+        }
+      });
+
+      // File loading
+      if (fileInput) fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          loadFromFile(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+
+      // Click outside to close panels
+      document.addEventListener('click', (e) => {
+        if (menuOpen && mainMenu && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
+          menuOpen = false;
+          mainMenu.classList.remove('open');
+          $('menu-demos')?.classList.remove('submenu-open');
+        }
+      });
+      } catch (e) { console.error('setupEventListeners error:', e); }
+    }
+
+    // ============================================
+    // START
+    // ============================================
     init();
   </script>
 </body>
