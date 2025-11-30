@@ -1,0 +1,32 @@
+{
+  "title": "Cylinder Array",
+  "subtitle": "Simple table with 4 legs",
+  "camera": {
+    "distance": 7,
+    "phi": 1.1,
+    "theta": 0.5,
+    "target": [0, 1, 0]
+  },
+  "version": "1.0",
+  "notes": "A simple table demonstrating defs/ref templating. Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref.",
+  "defs": {
+    "pillar": {
+      "type": "cylinder",
+      "params": { "h": 2.0, "r": 0.2 }
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+      { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+      { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+      { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
+      {
+        "type": "box",
+        "params": { "size": [2.0, 0.1, 2.0], "color": [0.5, 0.5, 0.6] },
+        "transform": { "translate": [0.0, 2.0, 0.0] }
+      }
+    ]
+  }
+}

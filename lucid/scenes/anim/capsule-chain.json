@@ -1,0 +1,51 @@
+{
+  "title": "Capsule Chain",
+  "subtitle": "Animated rope-like segments",
+  "version": "1.0",
+  "notes": "Three capsules connected end-to-end with smooth blending. Each segment animates independently creating flowing, rope-like motion. smoothUnion eliminates color flickering at joints.",
+  "root": {
+    "type": "smoothUnion",
+    "k": 0.15,
+    "children": [
+      {
+        "type": "capsule",
+        "notes": "Left segment - fixed left end, animated right end",
+        "params": { "h": 0.5, "r": 0.12, "color": [1.0, 0.3, 0.3] },
+        "transform": {
+          "translate": [
+            -0.8,
+            { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] },
+            0
+          ],
+          "rotate": [0, 0, 90]
+        }
+      },
+      {
+        "type": "capsule",
+        "notes": "Middle segment - both ends animated",
+        "params": { "h": 0.5, "r": 0.12, "color": [0.3, 1.0, 0.3] },
+        "transform": {
+          "translate": [
+            0,
+            { "expr": "mul", "args": [0.4, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.5] }] }] },
+            0
+          ],
+          "rotate": [0, 0, 90]
+        }
+      },
+      {
+        "type": "capsule",
+        "notes": "Right segment - animated left end, fixed right end",
+        "params": { "h": 0.5, "r": 0.12, "color": [0.3, 0.3, 1.0] },
+        "transform": {
+          "translate": [
+            0.8,
+            { "expr": "mul", "args": [-0.3, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
+            0
+          ],
+          "rotate": [0, 0, 90]
+        }
+      }
+    ]
+  }
+}

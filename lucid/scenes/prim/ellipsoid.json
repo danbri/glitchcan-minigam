@@ -1,0 +1,13 @@
+{
+  "title": "Ellipsoid Demo",
+  "subtitle": "Stretched spheres with different radii",
+  "version": "1.0",
+  "root": {
+    "type": "union",
+    "children": [
+      { "type": "ellipsoid", "params": { "radii": [0.8, 0.3, 0.3], "color": [1, 0.5, 0.2] }, "transform": { "translate": [-1.5, 0, 0] } },
+      { "type": "ellipsoid", "params": { "radii": [0.4, 0.8, 0.4], "color": [0.2, 0.8, 0.5] }, "transform": { "translate": [0, 0, 0] } },
+      { "type": "ellipsoid", "params": { "radii": [0.3, 0.3, 0.9], "color": [0.5, 0.3, 1] }, "transform": { "translate": [1.5, 0, 0] } }
+    ]
+  }
+}

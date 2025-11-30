@@ -1,0 +1,40 @@
+{
+  "title": "Glowing Orb",
+  "subtitle": "Emission + shell + noise",
+  "version": "1.1",
+  "notes": "Combining effects: shell creates hollow sphere, displace adds organic texture, material with emit creates glow. Shell thickness > displace amount to avoid holes.",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "displace",
+        "amount": 0.03,
+        "scale": 4.0,
+        "octaves": 3,
+        "animate": true,
+        "child": {
+          "type": "shell",
+          "thickness": 0.08,
+          "child": {
+            "type": "material",
+            "params": { "color": [0.2, 0.8, 1.0], "emit": 0.6 },
+            "child": {
+              "type": "sphere",
+              "params": { "r": 0.9 }
+            }
+          }
+        },
+        "transform": { "translate": [0, 0.5, 0] }
+      },
+      {
+        "type": "material",
+        "params": { "color": [1.0, 1.0, 1.0], "emit": 1.0 },
+        "child": {
+          "type": "sphere",
+          "params": { "r": 0.25 },
+          "transform": { "translate": [0, 0.5, 0] }
+        }
+      }
+    ]
+  }
+}

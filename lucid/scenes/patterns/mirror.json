@@ -1,0 +1,24 @@
+{
+  "title": "Mirror Symmetry",
+  "subtitle": "XZ mirror - define quarter, get whole",
+  "version": "1.0",
+  "root": {
+    "type": "mirror",
+    "axis": "xz",
+    "child": {
+      "type": "union",
+      "children": [
+        {
+          "type": "sphere",
+          "params": { "r": 0.5, "color": [0.3, 0.8, 1.0] },
+          "transform": { "translate": [0.8, 0, 0.8] }
+        },
+        {
+          "type": "box",
+          "params": { "size": [0.3, 0.8, 0.3], "color": [1.0, 0.5, 0.3] },
+          "transform": { "translate": [0.5, 0, 0.5] }
+        }
+      ]
+    }
+  }
+}

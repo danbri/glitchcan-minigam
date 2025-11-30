@@ -1,0 +1,52 @@
+{
+  "title": "Radial Invaders",
+  "subtitle": "6 detailed invaders from radial symmetry",
+  "version": "1.0",
+  "defs": {
+    "invader": {
+      "type": "subtract",
+      "children": [
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
+            { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
+            { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
+          ]
+        },
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
+            { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
+            { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
+          ]
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "radial",
+    "count": 6,
+    "axis": "y",
+    "child": {
+      "type": "material",
+      "params": { "color": [0, 1, 0.5] },
+      "child": {
+        "type": "transform",
+        "transform": {
+          "translate": [
+            { "expr": "add", "args": [1.8, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+            0,
+            0
+          ]
+        },
+        "child": { "type": "ref", "id": "invader" }
+      }
+    }
+  }
+}

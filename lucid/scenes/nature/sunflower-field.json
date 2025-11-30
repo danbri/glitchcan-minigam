@@ -1,0 +1,32 @@
+{
+  "title": "Sunflower Field",
+  "subtitle": "Infinite flowers via repeat + radial (static)",
+  "version": "1.1",
+  "notes": "Animation disabled - was causing distortion with repeat+radial combination",
+  "defs": {
+    "sunflower": {
+      "type": "union",
+      "children": [
+        {
+          "type": "sphere",
+          "params": { "r": 0.25, "color": [0.45, 0.3, 0.1] }
+        },
+        {
+          "type": "radial",
+          "count": 12,
+          "axis": "z",
+          "child": {
+            "type": "sphere",
+            "params": { "r": 0.12, "color": [1.0, 0.8, 0.1] },
+            "transform": { "translate": [0.35, 0, 0] }
+          }
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "repeat",
+    "period": [2.5, 0, 2.5],
+    "child": { "type": "ref", "id": "sunflower" }
+  }
+}

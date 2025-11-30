@@ -1,0 +1,36 @@
+{
+  "title": "Transforms Tutorial",
+  "subtitle": "All transform types explained",
+  "version": "1.0",
+  "notes": "TRANSFORMS move/rotate shapes. Types: 'translate':[x,y,z], 'rotate':[rx,ry,rz] (Euler degrees XYZ order), 'rotateQ':[x,y,z,w] (quaternion), 'rotateAxis':{axis:[x,y,z],angle:deg}, 'mat4':[16 values] (column-major 4x4 matrix). Inline on primitives OR wrap with 'transform' node.",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "box",
+        "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 0.3] },
+        "transform": { "translate": [-1.5, 0.5, 0] }
+      },
+      {
+        "type": "box",
+        "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 1, 0.3] },
+        "transform": { "translate": [0, 0.5, 0], "rotate": [0, 45, 0] }
+      },
+      {
+        "type": "box",
+        "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 0.3, 1] },
+        "transform": { "translate": [1.5, 0.5, 0], "rotate": [45, 45, 0] }
+      },
+      {
+        "type": "transform",
+        "transform": { "translate": [-1.5, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 45 } },
+        "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 1, 0.3] } }
+      },
+      {
+        "type": "transform",
+        "transform": { "translate": [0, -0.5, 0], "rotateQ": [0, 0.383, 0, 0.924] },
+        "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 1] } }
+      }
+    ]
+  }
+}

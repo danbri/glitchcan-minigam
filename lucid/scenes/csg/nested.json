@@ -1,0 +1,26 @@
+{
+  "title": "Nested CSG",
+  "subtitle": "Union of intersections",
+  "version": "1.0",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "intersect",
+        "children": [
+          { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [1.0, 0.4, 0.3] } },
+          { "type": "sphere", "params": { "r": 1.2, "color": [1.0, 0.4, 0.3] } }
+        ],
+        "transform": { "translate": [-1.2, 0.0, 0.0] }
+      },
+      {
+        "type": "intersect",
+        "children": [
+          { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [0.3, 0.8, 0.5] } },
+          { "type": "sphere", "params": { "r": 1.2, "color": [0.3, 0.8, 0.5] } }
+        ],
+        "transform": { "translate": [1.2, 0.0, 0.0] }
+      }
+    ]
+  }
+}

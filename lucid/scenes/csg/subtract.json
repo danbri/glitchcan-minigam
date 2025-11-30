@@ -1,0 +1,18 @@
+{
+  "title": "Box & Torus Subtract",
+  "subtitle": "CSG subtraction operation",
+  "version": "1.0",
+  "root": {
+    "type": "subtract",
+    "children": [
+      {
+        "type": "box",
+        "params": { "size": [0.95, 1.0, 0.95], "color": [0.4, 1.0, 0.0] }
+      },
+      {
+        "type": "torus",
+        "params": { "major": 1.0, "minor": 1.0 }
+      }
+    ]
+  }
+}

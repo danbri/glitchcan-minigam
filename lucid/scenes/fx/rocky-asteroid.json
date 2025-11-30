@@ -1,0 +1,24 @@
+{
+  "title": "Rocky Asteroid",
+  "subtitle": "Turbulent noise for rough surfaces",
+  "version": "1.1",
+  "notes": "Turbulence noise creates sharper, more rocky features than FBM. Great for asteroids, terrain, and weathered surfaces. Amount reduced for solid appearance.",
+  "root": {
+    "type": "displace",
+    "amount": 0.08,
+    "scale": 2.5,
+    "octaves": 3,
+    "noiseType": "turbulence",
+    "animate": false,
+    "child": {
+      "type": "smoothUnion",
+      "k": 0.3,
+      "children": [
+        { "type": "sphere", "params": { "r": 0.8, "color": [0.5, 0.4, 0.35] } },
+        { "type": "sphere", "params": { "r": 0.6, "color": [0.6, 0.5, 0.4] }, "transform": { "translate": [0.4, 0.3, 0.2] } },
+        { "type": "sphere", "params": { "r": 0.5, "color": [0.55, 0.45, 0.38] }, "transform": { "translate": [-0.3, -0.2, 0.4] } }
+      ]
+    },
+    "transform": { "translate": [0, 0.5, 0] }
+  }
+}
