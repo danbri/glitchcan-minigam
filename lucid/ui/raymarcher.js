@@ -255,7 +255,11 @@ export class SimpleRaymarcher {
               return vec4(col, 1.0);
             }
 
-            t += abs(d) * 0.9;
+            // Conservative stepping with minimum step size
+            // This prevents missing thin geometry (stems, flattened petals)
+            // Per IQ: step = max(d, minStep) avoids precision issues
+            float minStep = 0.002;
+            t += max(abs(d) * 0.9, minStep);
           } else {
             // Volume mode - accumulate density near surface
             float stepSize = u_volumeStepSize;
