@@ -1,0 +1,130 @@
+{
+  "title": "Draggo",
+  "subtitle": "Sharp-edged terror with cones and boxes",
+  "camera": { "distance": 6, "phi": 0.25, "theta": 0.3, "target": [0, 0, 0] },
+  "version": "1.0",
+  "notes": "Draggo - Sharp dragon using cones for horns/spikes, boxes for angular skull, hard unions for crisp edges",
+  "root": {
+    "type": "transform",
+    "transform": {
+      "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
+    },
+    "child": {
+      "type": "union",
+      "children": [
+        {
+          "notes": "Body core - slightly smoothed for organic feel",
+          "type": "smoothUnion",
+          "k": 0.08,
+          "children": [
+            { "notes": "Main body", "type": "ellipsoid", "params": { "radii": [0.5, 0.45, 0.8], "color": [0.12, 0.08, 0.1] } },
+            { "notes": "Neck", "type": "capsule", "params": { "h": 0.35, "r": 0.2, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0, 0.15, 0.75], "rotate": [35, 0, 0] } }
+          ]
+        },
+        {
+          "notes": "Angular skull - box-based",
+          "type": "union",
+          "children": [
+            { "notes": "Skull top", "type": "box", "params": { "size": [0.22, 0.15, 0.28], "color": [0.1, 0.06, 0.08] }, "transform": { "translate": [0, 0.42, 1.25], "rotate": [15, 0, 0] } },
+            { "notes": "Snout", "type": "box", "params": { "size": [0.12, 0.08, 0.25], "color": [0.12, 0.07, 0.09] }, "transform": { "translate": [0, 0.32, 1.55], "rotate": [5, 0, 0] } },
+            { "notes": "Lower jaw", "type": "box", "params": { "size": [0.1, 0.05, 0.2], "color": [0.08, 0.05, 0.07] }, "transform": { "translate": [0, 0.2, 1.5] } }
+          ]
+        },
+        {
+          "notes": "SHARP horns - cones (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              { "notes": "Main horn", "type": "cone", "params": { "h": 0.4, "r": 0.06, "color": [0.25, 0.15, 0.1] }, "transform": { "translate": [0.18, 0.55, 1.1], "rotate": [130, 25, 0] } },
+              { "notes": "Secondary horn", "type": "cone", "params": { "h": 0.25, "r": 0.04, "color": [0.3, 0.18, 0.12] }, "transform": { "translate": [0.22, 0.48, 1.0], "rotate": [145, 35, 0] } }
+            ]
+          }
+        },
+        {
+          "notes": "Glowing eyes (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "material", "params": { "color": [1.0, 0.15, 0.0], "emit": 2.0 },
+            "child": { "type": "sphere", "params": { "r": 0.06 }, "transform": { "translate": [0.12, 0.45, 1.4] } }
+          }
+        },
+        {
+          "notes": "Sharp fangs - cones (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              { "notes": "Upper fang", "type": "cone", "params": { "h": 0.12, "r": 0.02, "color": [0.9, 0.85, 0.8] }, "transform": { "translate": [0.06, 0.22, 1.7], "rotate": [180, 0, 5] } },
+              { "notes": "Lower fang", "type": "cone", "params": { "h": 0.08, "r": 0.015, "color": [0.9, 0.85, 0.8] }, "transform": { "translate": [0.05, 0.25, 1.65], "rotate": [0, 0, -5] } }
+            ]
+          }
+        },
+        {
+          "notes": "Spine spikes - sharp cones",
+          "type": "union",
+          "children": [
+            { "type": "cone", "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] }, "transform": { "translate": [0, 0.55, 1.0], "rotate": [160, 0, 0] } },
+            { "type": "cone", "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] }, "transform": { "translate": [0, 0.52, 0.6], "rotate": [170, 0, 0] } },
+            { "type": "cone", "params": { "h": 0.25, "r": 0.045, "color": [0.2, 0.1, 0.12] }, "transform": { "translate": [0, 0.48, 0.2], "rotate": [175, 0, 0] } },
+            { "type": "cone", "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] }, "transform": { "translate": [0, 0.42, -0.2], "rotate": [170, 0, 0] } },
+            { "type": "cone", "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] }, "transform": { "translate": [0, 0.35, -0.55], "rotate": [165, 0, 0] } }
+          ]
+        },
+        {
+          "notes": "Tail with blade",
+          "type": "union",
+          "children": [
+            {
+              "notes": "Tail segments",
+              "type": "smoothUnion", "k": 0.06,
+              "children": [
+                { "type": "capsule", "params": { "h": 0.35, "r": 0.18, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0, -0.05, -0.9], "rotate": [-12, 0, 0] } },
+                { "type": "capsule", "params": { "h": 0.3, "r": 0.12, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0, -0.15, -1.5], "rotate": [-18, 0, 0] } },
+                { "type": "capsule", "params": { "h": 0.25, "r": 0.08, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0, -0.2, -2.0], "rotate": [-10, 0, 0] } }
+              ]
+            },
+            { "notes": "Tail blade", "type": "box", "params": { "size": [0.02, 0.15, 0.2], "color": [0.2, 0.08, 0.1] }, "transform": { "translate": [0, -0.15, -2.4], "rotate": [-5, 0, 0] } },
+            { "notes": "Tail spike", "type": "cone", "params": { "h": 0.12, "r": 0.025, "color": [0.25, 0.1, 0.1] }, "transform": { "translate": [0, -0.05, -2.55], "rotate": [-25, 0, 0] } }
+          ]
+        },
+        {
+          "notes": "Front legs with sharp claws (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              { "type": "capsule", "params": { "h": 0.28, "r": 0.1, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0.35, -0.5, 0.4], "rotate": [8, 0, 15] } },
+              { "notes": "Claw 1", "type": "cone", "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] }, "transform": { "translate": [0.4, -0.85, 0.5], "rotate": [170, 0, 10] } },
+              { "notes": "Claw 2", "type": "cone", "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] }, "transform": { "translate": [0.45, -0.85, 0.45], "rotate": [170, 0, 20] } }
+            ]
+          }
+        },
+        {
+          "notes": "Back legs (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              { "type": "capsule", "params": { "h": 0.32, "r": 0.12, "color": [0.1, 0.07, 0.09] }, "transform": { "translate": [0.4, -0.55, -0.45], "rotate": [10, 0, 12] } },
+              { "type": "cone", "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] }, "transform": { "translate": [0.48, -0.92, -0.35], "rotate": [165, 0, 8] } },
+              { "type": "cone", "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] }, "transform": { "translate": [0.52, -0.92, -0.4], "rotate": [165, 0, 18] } }
+            ]
+          }
+        },
+        {
+          "notes": "Angular wings (mirrored)",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              { "notes": "Wing arm bone", "type": "capsule", "params": { "h": 0.5, "r": 0.045, "color": [0.08, 0.05, 0.07] }, "transform": { "translate": [0.7, 0.35, 0.1], "rotate": [90, -50, 20] } },
+              { "notes": "Wing membrane", "type": "box", "params": { "size": [0.6, 0.012, 0.4], "color": [0.15, 0.05, 0.08] }, "transform": { "translate": [1.1, 0.3, -0.05], "rotate": [0, -20, 8] } },
+              { "notes": "Wing claw", "type": "cone", "params": { "h": 0.08, "r": 0.015, "color": [0.2, 0.12, 0.1] }, "transform": { "translate": [1.55, 0.28, 0.25], "rotate": [100, -30, 0] } }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

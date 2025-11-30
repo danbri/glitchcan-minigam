@@ -1,0 +1,104 @@
+{
+  "title": "Lucid SDF Scene Library",
+  "version": "1.0",
+  "description": "Table of contents for all SDF-CSG demo scenes",
+  "categories": [
+    {
+      "id": "prim",
+      "title": "Primitives",
+      "description": "Basic SDF shapes",
+      "scenes": [
+        { "path": "prim/catalogue.json", "title": "Primitives Catalogue", "subtitle": "All 7 SDF primitives + smooth blend" },
+        { "path": "prim/capsule.json", "title": "Capsule", "subtitle": "Rounded cylinder primitive" },
+        { "path": "prim/ellipsoid.json", "title": "Ellipsoid", "subtitle": "Stretched sphere primitive" }
+      ]
+    },
+    {
+      "id": "csg",
+      "title": "CSG Operations",
+      "description": "Constructive Solid Geometry",
+      "scenes": [
+        { "path": "csg/operations.json", "title": "CSG Operations", "subtitle": "Union, subtract, intersect, smooth union" },
+        { "path": "csg/smooth-union.json", "title": "Smooth Union", "subtitle": "Organic blending of shapes" },
+        { "path": "csg/subtract.json", "title": "Subtraction", "subtitle": "Carving shapes from shapes" },
+        { "path": "csg/nested.json", "title": "Nested CSG", "subtitle": "Complex multi-level operations" }
+      ]
+    },
+    {
+      "id": "anim",
+      "title": "Animation",
+      "description": "Time-based expressions",
+      "scenes": [
+        { "path": "anim/pulsing-sphere.json", "title": "Pulsing Sphere", "subtitle": "Animated radius with sin(time)" },
+        { "path": "anim/breathing-torus.json", "title": "Breathing Torus", "subtitle": "Animated minor radius" },
+        { "path": "anim/capsule-chain.json", "title": "Capsule Chain", "subtitle": "Multiple animated elements" },
+        { "path": "anim/expressions.json", "title": "Expression System", "subtitle": "sin, cos, mul, add, mix expressions" }
+      ]
+    },
+    {
+      "id": "tut",
+      "title": "Tutorials",
+      "description": "Learning SDF concepts",
+      "scenes": [
+        { "path": "tut/transforms.json", "title": "Transforms Tutorial", "subtitle": "All transform types explained" },
+        { "path": "tut/rotation-methods.json", "title": "Rotation Methods", "subtitle": "Euler, quaternion, axis-angle" },
+        { "path": "tut/material-emission.json", "title": "Material & Emission", "subtitle": "Colors and glowing surfaces" },
+        { "path": "tut/grouping.json", "title": "Grouping", "subtitle": "Organizing complex scenes" },
+        { "path": "tut/expressions.json", "title": "Expressions", "subtitle": "Math expressions for animation" },
+        { "path": "tut/modifiers.json", "title": "Modifiers", "subtitle": "Shell, displace, and more" }
+      ]
+    },
+    {
+      "id": "patterns",
+      "title": "Patterns",
+      "description": "Repetition and symmetry",
+      "scenes": [
+        { "path": "patterns/mirror.json", "title": "Mirror Symmetry", "subtitle": "X/Y/Z axis reflection" },
+        { "path": "patterns/radial-flower.json", "title": "Radial Flower", "subtitle": "Rotational symmetry pattern" },
+        { "path": "patterns/table.json", "title": "Grid Table", "subtitle": "3D array of objects" },
+        { "path": "patterns/infinite-field.json", "title": "Infinite Field", "subtitle": "Repeat modifier for endless patterns" }
+      ]
+    },
+    {
+      "id": "fx",
+      "title": "Effects",
+      "description": "Visual effects and modifiers",
+      "scenes": [
+        { "path": "fx/glowing-orb.json", "title": "Glowing Orb", "subtitle": "Emission + shell + noise" },
+        { "path": "fx/alien-planet.json", "title": "Alien Planet", "subtitle": "Animated noise displacement" },
+        { "path": "fx/rocky-asteroid.json", "title": "Rocky Asteroid", "subtitle": "Turbulent noise for rough surfaces" },
+        { "path": "fx/custom-glsl.json", "title": "Custom GLSL", "subtitle": "User-defined distance functions" }
+      ]
+    },
+    {
+      "id": "creatures",
+      "title": "Creatures",
+      "description": "Organic and character models",
+      "scenes": [
+        { "path": "creatures/draggo.json", "title": "Draggo", "subtitle": "Sharp-edged terror with cones and boxes" },
+        { "path": "creatures/invaders.json", "title": "Space Invaders", "subtitle": "Classic arcade aliens" },
+        { "path": "creatures/radial-invaders.json", "title": "Radial Invaders", "subtitle": "Circular alien formation" },
+        { "path": "creatures/spirit-creatures.json", "title": "Spirit Creatures", "subtitle": "Ethereal ghost-like beings" }
+      ]
+    },
+    {
+      "id": "ships",
+      "title": "Spaceships",
+      "description": "Vehicle models",
+      "scenes": [
+        { "path": "ships/cobra-mk3.json", "title": "Cobra Mk III", "subtitle": "Elite ship with CSG sculpting" },
+        { "path": "ships/elite-wireframe.json", "title": "Elite Wireframe", "subtitle": "Classic vector graphics style" }
+      ]
+    },
+    {
+      "id": "nature",
+      "title": "Nature",
+      "description": "Plants and natural forms",
+      "scenes": [
+        { "path": "nature/sunflower.json", "title": "Sunflower", "subtitle": "Single botanical model" },
+        { "path": "nature/sunflower-field.json", "title": "Sunflower Field", "subtitle": "Multiple flowers with variations" },
+        { "path": "nature/poppy-field.json", "title": "Poppy Field", "subtitle": "Red poppies swaying" }
+      ]
+    }
+  ]
+}

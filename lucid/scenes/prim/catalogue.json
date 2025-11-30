@@ -1,0 +1,54 @@
+{
+  "title": "Primitives Catalogue",
+  "subtitle": "All 7 SDF primitives + smooth blend",
+  "version": "1.0",
+  "notes": "SDF primitives are the building blocks. Each has specific params: sphere(r), box(size[3]), cylinder(h,r), torus(major,minor), capsule(h,r), ellipsoid(radii[3]), plane(normal,h). All primitives support 'color' param and inline 'transform'.",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "sphere",
+        "params": { "r": 0.35, "color": [1.0, 0.4, 0.4] },
+        "transform": { "translate": [-1.8, 0.8, 0] }
+      },
+      {
+        "type": "box",
+        "params": { "size": [0.28, 0.28, 0.28], "color": [0.4, 1.0, 0.4] },
+        "transform": { "translate": [-0.6, 0.8, 0] }
+      },
+      {
+        "type": "cylinder",
+        "params": { "h": 0.3, "r": 0.2, "color": [0.4, 0.6, 1.0] },
+        "transform": { "translate": [0.6, 0.8, 0] }
+      },
+      {
+        "type": "torus",
+        "params": { "major": 0.25, "minor": 0.08, "color": [1.0, 0.9, 0.3] },
+        "transform": { "translate": [1.8, 0.8, 0] }
+      },
+      {
+        "type": "capsule",
+        "params": { "h": 0.25, "r": 0.12, "color": [1.0, 0.5, 0.2] },
+        "transform": { "translate": [-1.8, -0.2, 0] }
+      },
+      {
+        "type": "ellipsoid",
+        "params": { "radii": [0.4, 0.2, 0.2], "color": [0.8, 0.4, 1.0] },
+        "transform": { "translate": [-0.6, -0.2, 0] }
+      },
+      {
+        "type": "smoothUnion",
+        "k": 0.2,
+        "children": [
+          { "type": "sphere", "params": { "r": 0.22, "color": [0.3, 0.9, 0.8] } },
+          { "type": "box", "params": { "size": [0.18, 0.18, 0.18], "color": [0.9, 0.4, 0.8] }, "transform": { "translate": [0.25, 0, 0] } }
+        ],
+        "transform": { "translate": [0.6, -0.2, 0] }
+      },
+      {
+        "type": "plane",
+        "params": { "normal": [0, 1, 0], "h": 0.8, "color": [0.35, 0.35, 0.4] }
+      }
+    ]
+  }
+}

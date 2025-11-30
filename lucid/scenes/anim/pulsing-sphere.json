@@ -1,0 +1,18 @@
+{
+  "title": "Pulsing Sphere",
+  "subtitle": "Animated radius with time expression",
+  "version": "1.0",
+  "root": {
+    "type": "sphere",
+    "params": {
+      "r": {
+        "expr": "add",
+        "args": [
+          1.0,
+          { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "var": "time" }] }] }
+        ]
+      },
+      "color": [0.4, 0.8, 1.0]
+    }
+  }
+}

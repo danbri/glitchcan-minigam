@@ -1,0 +1,81 @@
+{
+  "title": "Elite Wireframe",
+  "subtitle": "ZX Spectrum style spaceship with mirror symmetry",
+  "version": "1.0",
+  "notes": "Cobra-style ship. Capsules are Y-aligned by default, so [90,theta,0] lays them flat in XZ plane at angle theta",
+  "root": {
+    "type": "transform",
+    "transform": {
+      "rotate": [0, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
+    },
+    "child": {
+      "type": "mirror",
+      "axis": "x",
+      "child": {
+        "type": "union",
+        "children": [
+          {
+            "notes": "Nose to wing tip - diagonal in XZ plane",
+            "type": "capsule",
+            "params": { "h": 0.9, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0.45, 0, 0.3], "rotate": [90, -60, 0] }
+          },
+          {
+            "notes": "Wing tip to rear corner - along Z",
+            "type": "capsule",
+            "params": { "h": 0.5, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0.9, 0, -0.3], "rotate": [90, 0, 0] }
+          },
+          {
+            "notes": "Rear corner to center rear - along X",
+            "type": "capsule",
+            "params": { "h": 0.45, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0.45, 0, -0.8], "rotate": [0, 0, 90] }
+          },
+          {
+            "notes": "Center rear spine - along Z",
+            "type": "capsule",
+            "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0, 0, 0.5], "rotate": [90, 0, 0] }
+          },
+          {
+            "notes": "Cockpit front strut - angled up from nose",
+            "type": "capsule",
+            "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0, 0.12, 0.85], "rotate": [30, 0, 0] }
+          },
+          {
+            "notes": "Cockpit top - along Z",
+            "type": "capsule",
+            "params": { "h": 0.35, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0, 0.2, 0.35], "rotate": [90, 0, 0] }
+          },
+          {
+            "notes": "Cockpit rear strut - angled down",
+            "type": "capsule",
+            "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0, 0.1, -0.1], "rotate": [-30, 0, 0] }
+          },
+          {
+            "notes": "Cockpit side - along X from center",
+            "type": "capsule",
+            "params": { "h": 0.15, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0.08, 0.2, 0.5], "rotate": [0, 0, 90] }
+          },
+          {
+            "notes": "Engine strut - vertical",
+            "type": "capsule",
+            "params": { "h": 0.12, "r": 0.02, "color": [0.2, 1.0, 0.3] },
+            "transform": { "translate": [0.5, 0, -0.7] }
+          },
+          {
+            "notes": "Engine glow ring",
+            "type": "torus",
+            "params": { "major": 0.1, "minor": 0.02, "color": [1.0, 0.5, 0.1] },
+            "transform": { "translate": [0.5, 0, -0.85], "rotate": [90, 0, 0] }
+          }
+        ]
+      }
+    }
+  }
+}

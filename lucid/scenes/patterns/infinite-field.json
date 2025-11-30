@@ -1,0 +1,19 @@
+{
+  "title": "Infinite Field",
+  "subtitle": "Tiled spheres extending to infinity",
+  "version": "1.0",
+  "root": {
+    "type": "repeat",
+    "period": [3, 0, 3],
+    "child": {
+      "type": "sphere",
+      "params": {
+        "r": {
+          "expr": "add",
+          "args": [0.4, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }]
+        },
+        "color": [0.6, 0.9, 0.4]
+      }
+    }
+  }
+}
