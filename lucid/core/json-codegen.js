@@ -614,9 +614,19 @@ function generateMirror(node, ctx) {
   const callArgs = idParam ? `p, ${idParam}` : 'p';
   const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
+  // Propagate mirror's transform to child (fixes transform propagation bug)
+  // This ensures parent transforms (like animated rotations) reach nested children
+  let child = node.child;
+  if (node.transform) {
+    child = {
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    };
+  }
+
   // Wrap the child in its own helper function
   const childFuncName = `mirror_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(node.child, ctx);
+  const childExpr = walkNode(child, ctx);
   ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
@@ -630,11 +640,11 @@ function generateMirror(node, ctx) {
   if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
   if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
 
-  // Apply any transform from the mirror node itself
-  const p = applyTransform('p', node.transform, ctx);
+  // Note: transform is propagated to child above, not applied here
+  // This ensures proper transform composition through the tree
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  vec3 q = ${p};
+  vec3 q = p;
 ${mirrorCode}  return ${childFuncName}(${childCallArgs});
 }`;
 
@@ -655,9 +665,18 @@ function generateRadial(node, ctx) {
   const callArgs = idParam ? `p, ${idParam}` : 'p';
   const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
+  // Propagate radial's transform to child (fixes transform propagation bug)
+  let child = node.child;
+  if (node.transform) {
+    child = {
+      ...child,
+      transform: combineTransforms(child.transform, node.transform)
+    };
+  }
+
   // Wrap the child in its own helper function
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(node.child, ctx);
+  const childExpr = walkNode(child, ctx);
   ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
@@ -665,8 +684,7 @@ function generateRadial(node, ctx) {
   // Now generate the radial wrapper
   const funcName = `radial_${ctx.helperCounter++}`;
 
-  // Apply any transform from the radial node itself
-  const p = applyTransform('p', node.transform, ctx);
+  // Note: transform is propagated to child above, not applied here
 
   // TAU = 2*PI
   const segment = (2 * Math.PI / count).toFixed(6);
@@ -694,7 +712,7 @@ function generateRadial(node, ctx) {
   }
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  vec3 q = ${p};
+  vec3 q = p;
 ${radialCode}
   return ${childFuncName}(${childCallArgs});
 }`;
