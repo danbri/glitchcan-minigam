@@ -11,8 +11,8 @@
       "children": [
         {
           "type": "capsule",
-          "notes": "Stem",
-          "params": { "h": 0.25, "r": 0.008, "color": [0.2, 0.5, 0.15] }
+          "notes": "Stem - thicker for robust raymarching",
+          "params": { "h": 0.25, "r": 0.012, "color": [0.2, 0.5, 0.15] }
         },
         {
           "type": "sphere",
@@ -34,8 +34,8 @@
       "children": [
         {
           "type": "capsule",
-          "notes": "Thick stem",
-          "params": { "h": 0.35, "r": 0.015, "color": [0.25, 0.45, 0.1] }
+          "notes": "Thick stem - robust for raymarching",
+          "params": { "h": 0.35, "r": 0.018, "color": [0.25, 0.45, 0.1] }
         },
         {
           "type": "sphere",
@@ -67,7 +67,7 @@
           "a": {
             "type": "ref",
             "id": "poppy",
-            "notes": "Poppies when hash < 0.6 (60% of field)",
+            "notes": "Poppies when hash < 0.6 (60% of field) - large jitter breaks grid pattern",
             "transform": {
               "translate": [
                 { "expr": "mul", "args": [
@@ -75,7 +75,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 50] }] },
                     0.5
                   ]},
-                  0.15
+                  0.22
                 ]},
                 0,
                 { "expr": "mul", "args": [
@@ -83,7 +83,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 150] }] },
                     0.5
                   ]},
-                  0.15
+                  0.22
                 ]}
               ],
               "rotate": [
@@ -92,7 +92,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 200] }] },
                     0.5
                   ]},
-                  15
+                  25
                 ]},
                 { "expr": "mul", "args": [
                   { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 300] }] },
@@ -103,15 +103,21 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 250] }] },
                     0.5
                   ]},
-                  15
+                  25
                 ]}
+              ],
+              "scale": [
+                { "expr": "add", "args": [0.7, { "expr": "mul", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 600] }] },
+                  0.5
+                ]}]}
               ]
             }
           },
           "b": {
             "type": "ref",
             "id": "sunflower",
-            "notes": "Sunflowers when hash >= 0.6 (40% of field)",
+            "notes": "Sunflowers when hash >= 0.6 (40% of field) - large jitter breaks grid pattern",
             "transform": {
               "translate": [
                 { "expr": "mul", "args": [
@@ -119,7 +125,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 70] }] },
                     0.5
                   ]},
-                  0.12
+                  0.20
                 ]},
                 0,
                 { "expr": "mul", "args": [
@@ -127,7 +133,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 170] }] },
                     0.5
                   ]},
-                  0.12
+                  0.20
                 ]}
               ],
               "rotate": [
@@ -136,7 +142,7 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 400] }] },
                     0.5
                   ]},
-                  10
+                  18
                 ]},
                 { "expr": "mul", "args": [
                   { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 500] }] },
@@ -147,8 +153,14 @@
                     { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 450] }] },
                     0.5
                   ]},
-                  10
+                  18
                 ]}
+              ],
+              "scale": [
+                { "expr": "add", "args": [0.75, { "expr": "mul", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 700] }] },
+                  0.4
+                ]}]}
               ]
             }
           }
