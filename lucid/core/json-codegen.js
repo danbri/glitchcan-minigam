@@ -712,6 +712,10 @@ function generateRepeat(node, ctx) {
   // Build period vector string
   const periodVec = `vec3(${period[0].toFixed(4)}, ${period[1].toFixed(4)}, ${period[2].toFixed(4)})`;
 
+  // Build safe period vector for cell ID calculation (avoid division by zero)
+  // Replace zero components with 1.0 - we only care about cell IDs on repeating axes
+  const safePeriodVec = `vec3(${period[0] > 0 ? period[0].toFixed(4) : '1.0'}, ${period[1] > 0 ? period[1].toFixed(4) : '1.0'}, ${period[2] > 0 ? period[2].toFixed(4) : '1.0'})`;
+
   // Build repeat code - only repeat on non-zero axes
   let repeatCode = '';
   if (period[0] > 0) {
@@ -744,7 +748,8 @@ function generateRepeat(node, ctx) {
     const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec3 q = ${p};
   // Calculate instance ID from grid cell before domain folding
-  vec3 cellId = floor(q / ${periodVec});
+  // Use safePeriodVec to avoid division by zero on non-repeating axes
+  vec3 cellId = floor(q / ${safePeriodVec});
   float ${exposeId} = dot(cellId, vec3(1.0, 157.0, 113.0));
 ${repeatCode}  return ${childExpr.replace(/\bp\b/g, 'q')};
 }`;
