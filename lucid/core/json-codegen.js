@@ -879,6 +879,11 @@ function exprToGlsl(expr, ctx) {
     case 'sub': return `(${args[0]} - ${args[1]})`;
     case 'mul': return `(${args.join(' * ')})`;
     case 'div': return `(${args[0]} / ${args[1]})`;
+    case 'mod': return `mod(${args[0]}, ${args[1]})`;
+    case 'abs': return `abs(${args[0]})`;
+    case 'floor': return `floor(${args[0]})`;
+    case 'ceil': return `ceil(${args[0]})`;
+    case 'fract': return `fract(${args[0]})`;
     case 'sin': return `sin(${args[0]})`;
     case 'cos': return `cos(${args[0]})`;
     case 'tan': return `tan(${args[0]})`;
@@ -1195,9 +1200,8 @@ float sdCone(vec3 p, float h, float r) {
 
 // Truncated cone / frustum / round cone
 // r1 = bottom radius (at y=0), r2 = top radius (at y=h), h = height
-// Base at origin, extends upward to y=h (matches sdCone convention but inverted)
+// r1 end at origin, extends upward to r2 end at y=h
 float sdRoundCone(vec3 p, float r1, float r2, float h) {
-  // Cone with r1 at y=0 and r2 at y=h
   vec2 q = vec2(length(p.xz), p.y);
 
   float b = (r1 - r2) / h;
