@@ -16,7 +16,8 @@ export function generateGlslFromJson(scene, options = {}) {
     helpers: [],
     helperCounter: 0,
     showCutters: options.showCutters || false,
-    localVars: {}  // For instance IDs and other scoped variables
+    localVars: {},  // For instance IDs and other scoped variables
+    instanceIdParam: null  // When set, pass this ID through to helper functions
   };
 
   // Generate main scene expression
@@ -300,6 +301,9 @@ function generateUnion(node, ctx) {
 
   // Generate helper function for this union
   const funcName = `union_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   // Generate child expressions as direct assignments
   const childAssignments = children.map((child, i) => {
@@ -321,13 +325,13 @@ function generateUnion(node, ctx) {
     colorSelect += '\n  return nearest;';
   }
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -354,6 +358,9 @@ function generateSubtract(node, ctx) {
 
   // Generate helper function
   const funcName = `subtract_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   const baseExpr = walkNode(children[0], ctx);
   let body = `  vec4 base = ${baseExpr};\n`;
@@ -370,13 +377,13 @@ function generateSubtract(node, ctx) {
     }
   }
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${body}  return base;
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -403,6 +410,9 @@ function generateIntersect(node, ctx) {
 
   // Generate helper function
   const funcName = `intersect_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   const childAssignments = children.map((child, i) => {
     const childExpr = walkNode(child, ctx);
@@ -423,13 +433,13 @@ function generateIntersect(node, ctx) {
     colorSelect += '\n  return farthest;';
   }
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -457,12 +467,15 @@ function generateSmoothUnion(node, ctx) {
 
   // Generate helper function
   const funcName = `smoothUnion_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   const child0Expr = walkNode(children[0], ctx);
   const child1Expr = walkNode(children[1], ctx);
 
   // Blend colors based on smooth union blend factor
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec4 a = ${child0Expr};
   vec4 b = ${child1Expr};
   float h = clamp(0.5 + 0.5 * (b.x - a.x) / ${k}, 0.0, 1.0);
@@ -473,7 +486,7 @@ function generateSmoothUnion(node, ctx) {
 
   ctx.helpers.push(helperFunc);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -545,6 +558,9 @@ function generateMaterial(node, ctx) {
 
   // Generate helper to apply material
   const funcName = `material_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   const color = params.color
     ? valueToGlsl(params.color, ctx)
@@ -565,7 +581,7 @@ function generateMaterial(node, ctx) {
     : '0.5';
 
   // Apply emission boost to color (simple additive emission)
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec4 c = ${childExpr};
   vec3 baseColor = ${color};
   float emissive = ${emit};
@@ -575,7 +591,7 @@ function generateMaterial(node, ctx) {
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -584,11 +600,15 @@ function generateMaterial(node, ctx) {
  */
 function generateMirror(node, ctx) {
   const axis = node.axis || 'x';
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+  const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
   // Wrap the child in its own helper function
   const childFuncName = `mirror_child_${ctx.helperCounter++}`;
   const childExpr = walkNode(node.child, ctx);
-  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
 
@@ -604,13 +624,13 @@ function generateMirror(node, ctx) {
   // Apply any transform from the mirror node itself
   const p = applyTransform('p', node.transform, ctx);
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec3 q = ${p};
-${mirrorCode}  return ${childFuncName}(q);
+${mirrorCode}  return ${childFuncName}(${childCallArgs});
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -621,11 +641,15 @@ ${mirrorCode}  return ${childFuncName}(q);
 function generateRadial(node, ctx) {
   const count = node.count || 6;
   const axis = node.axis || 'y';
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+  const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
   // Wrap the child in its own helper function
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
   const childExpr = walkNode(node.child, ctx);
-  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
 
@@ -660,14 +684,14 @@ function generateRadial(node, ctx) {
   q = vec3(r * cos(angle), r * sin(angle), q.z);`;
   }
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec3 q = ${p};
 ${radialCode}
-  return ${childFuncName}(q);
+  return ${childFuncName}(${childCallArgs});
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -697,16 +721,18 @@ function generateRepeat(node, ctx) {
     repeatCode += `  q.z = mod(q.z + ${(period[2]/2).toFixed(4)}, ${period[2].toFixed(4)}) - ${(period[2]/2).toFixed(4)};\n`;
   }
 
-  // If exposing instance ID, we need to inline the child (can't use separate function)
+  // If exposing instance ID, pass it through to nested helper functions
   if (exposeId) {
-    // Set local variable so child expressions can reference it
+    // Set context so child helpers accept and pass the ID parameter
     ctx.localVars[exposeId] = exposeId;
+    ctx.instanceIdParam = exposeId;
 
-    // Generate child expression (will use exposeId variable)
+    // Generate child expression (will use exposeId variable and pass to nested helpers)
     const childExpr = walkNode(node.child, ctx);
 
-    // Clear local variable
+    // Clear context
     delete ctx.localVars[exposeId];
+    ctx.instanceIdParam = null;
 
     const funcName = `repeat_${ctx.helperCounter++}`;
 
@@ -751,15 +777,18 @@ function generateRound(node, ctx) {
   const r = node.r !== undefined ? valueToGlsl(node.r, ctx) : '0.05';
 
   const funcName = `round_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
   const p = applyTransform('p', node.transform, ctx);
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
   return vec4(c.x - ${r}, c.yzw);
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -771,15 +800,18 @@ function generateShell(node, ctx) {
   const thickness = node.thickness !== undefined ? valueToGlsl(node.thickness, ctx) : '0.05';
 
   const funcName = `shell_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
   const p = applyTransform('p', node.transform, ctx);
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
   return vec4(abs(c.x) - ${thickness}, c.yzw);
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -798,6 +830,9 @@ function generateDisplace(node, ctx) {
   const noiseType = node.noiseType || 'fbm'; // 'noise', 'fbm', or 'turbulence'
 
   const funcName = `displace_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
   const p = applyTransform('p', node.transform, ctx);
 
   // Choose noise function based on type
@@ -814,7 +849,7 @@ function generateDisplace(node, ctx) {
   const timeOffset = node.animate ? ' + u_time * 0.5' : '';
   ctx.uniforms.add('u_time');
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec3 np = (${p}) * ${scale}${timeOffset};
   float disp = (${noiseCall} - 0.5) * 2.0 * ${amount};
   vec4 c = ${childExpr.replace(/\bp\b/g, `(${p})`)};
@@ -822,7 +857,7 @@ function generateDisplace(node, ctx) {
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
@@ -854,19 +889,22 @@ function generateCustomExpr(node, ctx) {
 
   // Generate helper function with the custom code
   const funcName = `custom_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
 
   // If the expression uses u_time, ensure uniform is declared
   if (glslCode.includes('u_time')) {
     ctx.uniforms.add('u_time');
   }
 
-  const helperFunc = `vec4 ${funcName}(vec3 p) {
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
   vec3 q = ${p};
   return ${glslCode.replace(/\bp\b/g, 'q')};
 }`;
 
   ctx.helpers.push(helperFunc);
-  return `${funcName}(p)`;
+  return `${funcName}(${callArgs})`;
 }
 
 /**
