@@ -255,8 +255,8 @@ export class SimpleRaymarcher {
         vec3 surfaceNormal = vec3(0.0);
         float surfaceT = 0.0;
 
-        // Ground plane: compute ray-plane intersection directly (not via SDF marching)
-        // This avoids psychedelic patterns from mixing ground plane with complex scene SDFs
+        // Ground plane: compute ray-plane intersection ONCE, render AFTER scene marching
+        // This completely separates ground from scene SDF to avoid interference
         float groundT = -1.0;
         vec3 groundHitPos = vec3(0.0);
         if (u_showGroundPlane > 0.5 && abs(rd.y) > 0.001) {
@@ -267,53 +267,42 @@ export class SimpleRaymarcher {
           }
         }
 
+        // Track scene hit separately - don't return early, let ground plane compare
+        float sceneHitT = -1.0;
+        vec3 sceneHitColor = vec3(0.0);
+        vec3 sceneHitNormal = vec3(0.0);
+
         for (int i = 0; i < MAX_STEPS; i++) {
           if (t > 50.0) break;
           if (u_volumeRender > 0.5 && trans < 0.01) break;
 
-          // Stop if we've passed the ground plane intersection
-          if (groundT > 0.0 && t > groundT) {
-            // Render ground plane
-            vec3 normal = vec3(0.0, 1.0, 0.0);
-            vec3 light = normalize(u_lightDir);
-            float diff = max(dot(normal, light), 0.0);
-            vec3 col = getGroundColor(groundHitPos) * (u_ambient + diff * u_diffuse);
-            return vec4(col, 1.0);
-          }
+          // Stop marching if we've gone past both scene potential and ground plane
+          float maxT = groundT > 0.0 ? groundT + 0.1 : 50.0;
+          if (t > maxT && sceneHitT < 0.0) break;
 
           vec3 p = ro + rd * t;
           vec4 scene = g_df_scene(p);
           float d = scene.x;
           vec3 sceneColor = scene.yzw;
-          bool hitAxes = false;
 
-          // Check axes if enabled (axes don't interfere with ground plane)
+          // Check axes if enabled
           if (u_showAxes > 0.5) {
             vec4 axes = sdAxisArrows(p);
             if (axes.x < d) {
               d = axes.x;
               sceneColor = axes.yzw;
-              hitAxes = true;
             }
           }
 
           // Surface mode - traditional raymarching
           if (u_volumeRender < 0.5) {
-            // Hit threshold - using quality preset
-            if (abs(d) < HIT_THRESHOLD) {
-              vec3 normal = calcNormal(p);
-              vec3 light = normalize(u_lightDir);
-              float diff = max(dot(normal, light), 0.0);
-              float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), u_shininess);
-              vec3 col = sceneColor * (u_ambient + diff * u_diffuse) + spec * u_specular;
-
-              // Edge rendering - darken silhouette edges
-              if (u_showEdges > 0.5) {
-                float edge = pow(1.0 - abs(dot(normal, -rd)), 2.0);
-                col = mix(col, vec3(0.0), edge * 0.7);
-              }
-
-              return vec4(col, 1.0);
+            // Hit threshold - record hit but don't return yet
+            if (abs(d) < HIT_THRESHOLD && sceneHitT < 0.0) {
+              sceneHitT = t;
+              sceneHitNormal = calcNormal(p);
+              sceneHitColor = sceneColor;
+              // Found scene hit - can stop marching
+              break;
             }
 
             // Conservative stepping with minimum step size (from quality preset)
@@ -401,6 +390,35 @@ export class SimpleRaymarcher {
 
           return vec4(col, 1.0);
         }
+
+        // Surface mode: compare scene hit vs ground plane, render closer one
+        bool useGround = groundT > 0.0 && (sceneHitT < 0.0 || groundT < sceneHitT);
+
+        if (useGround) {
+          // Render ground plane with checkerboard
+          vec3 normal = vec3(0.0, 1.0, 0.0);
+          vec3 light = normalize(u_lightDir);
+          float diff = max(dot(normal, light), 0.0);
+          vec3 col = getGroundColor(groundHitPos) * (u_ambient + diff * u_diffuse);
+          return vec4(col, 1.0);
+        }
+
+        if (sceneHitT > 0.0) {
+          // Render scene hit
+          vec3 light = normalize(u_lightDir);
+          float diff = max(dot(sceneHitNormal, light), 0.0);
+          float spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u_shininess);
+          vec3 col = sceneHitColor * (u_ambient + diff * u_diffuse) + spec * u_specular;
+
+          // Edge rendering - darken silhouette edges
+          if (u_showEdges > 0.5) {
+            float edge = pow(1.0 - abs(dot(sceneHitNormal, -rd)), 2.0);
+            col = mix(col, vec3(0.0), edge * 0.7);
+          }
+
+          return vec4(col, 1.0);
+        }
+
         return vec4(0.0);
       }
 
