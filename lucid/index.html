@@ -519,6 +519,8 @@
       padding: 0.5rem;
       z-index: 90;
       min-width: 180px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
       display: none;
     }
 
@@ -1080,6 +1082,22 @@
 
   <!-- Main Menu -->
   <div class="main-menu" id="main-menu">
+    <div class="menu-item" id="menu-debug">
+      <span>🔧 Debug Panel</span>
+    </div>
+    <div class="menu-item" id="menu-editor">
+      <span>{ } Editor</span>
+    </div>
+    <div class="menu-item" id="menu-tree">
+      <span>▹ Scene Tree</span>
+    </div>
+    <div class="menu-item" id="menu-auto-rotate">
+      <span>🚁 Auto-rotate</span>
+    </div>
+    <div class="menu-item" id="menu-anim">
+      <span>▶ Animation</span>
+    </div>
+    <div class="menu-divider"></div>
     <div class="menu-item has-submenu" id="menu-demos">
       <span>📦 Demos</span>
       <div class="submenu" id="demos-submenu">
@@ -3462,6 +3480,42 @@
         menuOpen = false;
         mainMenu.classList.remove('open');
         fileInput.click();
+      });
+
+      // Menu shortcuts for header icons
+      addClick('menu-debug', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-debug').click();
+      });
+
+      addClick('menu-editor', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-editor').click();
+      });
+
+      addClick('menu-tree', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-tree').click();
+      });
+
+      addClick('menu-auto-rotate', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-auto-rotate').click();
+      });
+
+      addClick('menu-anim', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-anim').click();
       });
 
       addClick('menu-lighting', () => {
