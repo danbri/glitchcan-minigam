@@ -1,0 +1,159 @@
+{
+  "title": "Snowman",
+  "subtitle": "Winter scene with falling snow",
+  "version": "1.0",
+  "notes": "Classic snowman with carrot nose, coal eyes, stick arms. Snow particles fall using animated repeat patterns.",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "union",
+        "notes": "Snowman body - three stacked spheres",
+        "children": [
+          {
+            "type": "sphere",
+            "notes": "Bottom ball (largest)",
+            "params": { "r": 0.5, "color": [0.95, 0.97, 1.0] },
+            "transform": { "translate": [0, -0.3, 0] }
+          },
+          {
+            "type": "sphere",
+            "notes": "Middle ball",
+            "params": { "r": 0.38, "color": [0.95, 0.97, 1.0] },
+            "transform": { "translate": [0, 0.35, 0] }
+          },
+          {
+            "type": "sphere",
+            "notes": "Head",
+            "params": { "r": 0.28, "color": [0.95, 0.97, 1.0] },
+            "transform": { "translate": [0, 0.88, 0] }
+          }
+        ]
+      },
+      {
+        "type": "cone",
+        "notes": "Carrot nose",
+        "params": { "h": 0.25, "r1": 0.05, "r2": 0.01, "color": [1.0, 0.5, 0.1] },
+        "transform": { "translate": [0.28, 0.9, 0], "rotate": [0, 0, -90] }
+      },
+      {
+        "type": "mirror",
+        "axis": "x",
+        "notes": "Coal eyes",
+        "child": {
+          "type": "sphere",
+          "params": { "r": 0.035, "color": [0.1, 0.1, 0.1] },
+          "transform": { "translate": [0.1, 0.95, 0.22] }
+        }
+      },
+      {
+        "type": "union",
+        "notes": "Coal mouth (smile)",
+        "children": [
+          {
+            "type": "sphere",
+            "params": { "r": 0.02, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [-0.1, 0.78, 0.24] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.02, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [-0.05, 0.76, 0.25] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.02, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0.0, 0.75, 0.26] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.02, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0.05, 0.76, 0.25] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.02, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0.1, 0.78, 0.24] }
+          }
+        ]
+      },
+      {
+        "type": "union",
+        "notes": "Coal buttons on middle ball",
+        "children": [
+          {
+            "type": "sphere",
+            "params": { "r": 0.04, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0, 0.5, 0.36] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.04, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0, 0.3, 0.38] }
+          },
+          {
+            "type": "sphere",
+            "params": { "r": 0.04, "color": [0.1, 0.1, 0.1] },
+            "transform": { "translate": [0, 0.1, 0.36] }
+          }
+        ]
+      },
+      {
+        "type": "mirror",
+        "axis": "x",
+        "notes": "Stick arms",
+        "child": {
+          "type": "union",
+          "children": [
+            {
+              "type": "capsule",
+              "notes": "Main arm",
+              "params": { "h": 0.35, "r": 0.02, "color": [0.4, 0.25, 0.1] },
+              "transform": { "translate": [0.55, 0.35, 0], "rotate": [0, 0, 20] }
+            },
+            {
+              "type": "capsule",
+              "notes": "Twig finger 1",
+              "params": { "h": 0.08, "r": 0.012, "color": [0.4, 0.25, 0.1] },
+              "transform": { "translate": [0.72, 0.48, 0], "rotate": [0, 0, 50] }
+            },
+            {
+              "type": "capsule",
+              "notes": "Twig finger 2",
+              "params": { "h": 0.07, "r": 0.01, "color": [0.4, 0.25, 0.1] },
+              "transform": { "translate": [0.74, 0.44, 0], "rotate": [0, 0, -20] }
+            }
+          ]
+        }
+      },
+      {
+        "type": "repeat",
+        "notes": "Falling snowflakes",
+        "period": [1.2, 2.0, 1.2],
+        "child": {
+          "type": "sphere",
+          "params": { "r": 0.03, "color": [1.0, 1.0, 1.0] },
+          "transform": {
+            "translate": [
+              0,
+              { "expr": "sub", "args": [
+                2.0,
+                { "expr": "mod", "args": [
+                  { "expr": "mul", "args": [{ "var": "time" }, 0.5] },
+                  2.5
+                ]}
+              ]},
+              0
+            ]
+          }
+        },
+        "transform": { "translate": [0, 0, 0] }
+      },
+      {
+        "type": "plane",
+        "notes": "Snowy ground",
+        "params": { "normal": [0, 1, 0], "h": 0.8, "color": [0.9, 0.93, 0.98] }
+      }
+    ]
+  }
+}
