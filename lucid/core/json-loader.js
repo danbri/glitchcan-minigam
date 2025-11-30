@@ -38,7 +38,10 @@ export function loadJsonScene(json) {
   return {
     version: json.version || '1.0',
     root: nodeRegistry.root,
-    defs: nodeRegistry.defs
+    defs: nodeRegistry.defs,
+    // Pass through rendering hints
+    quality: json.quality || 'medium',  // 'low', 'medium', 'high'
+    camera: json.camera || null          // Optional camera settings
   };
 }
 

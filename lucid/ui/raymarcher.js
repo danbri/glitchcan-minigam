@@ -3,6 +3,28 @@
  * Supports orbit camera, ground plane, and volume rendering modes
  */
 export class SimpleRaymarcher {
+  // Quality presets for raymarch parameters
+  static QUALITY_PRESETS = {
+    low: {
+      maxSteps: 100,
+      hitThreshold: 0.005,
+      minStep: 0.006,
+      relaxation: 0.5
+    },
+    medium: {
+      maxSteps: 150,
+      hitThreshold: 0.003,
+      minStep: 0.004,
+      relaxation: 0.7
+    },
+    high: {
+      maxSteps: 200,
+      hitThreshold: 0.002,
+      minStep: 0.003,
+      relaxation: 0.6
+    }
+  };
+
   constructor(canvas) {
     this.canvas = canvas;
     this.gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
@@ -16,6 +38,10 @@ export class SimpleRaymarcher {
       surfDist: 0.001,
       stepSize: 0.05
     };
+
+    // Raymarch quality settings (can be set per-scene)
+    this.quality = 'medium';
+    this.raymarchParams = { ...SimpleRaymarcher.QUALITY_PRESETS.medium };
 
     this.currentGlsl = '';
     this.program = null;
@@ -68,6 +94,34 @@ export class SimpleRaymarcher {
   updateScene(glslCode) {
     this.currentGlsl = glslCode;
     this.compileShaders();
+  }
+
+  /**
+   * Set raymarch quality level (low, medium, high) or custom params
+   * @param {string|object} quality - 'low', 'medium', 'high' or {maxSteps, hitThreshold, minStep, relaxation}
+   */
+  setQuality(quality) {
+    if (typeof quality === 'string') {
+      const preset = SimpleRaymarcher.QUALITY_PRESETS[quality];
+      if (preset) {
+        this.quality = quality;
+        this.raymarchParams = { ...preset };
+      } else {
+        console.warn(`Unknown quality preset: ${quality}, using 'medium'`);
+        this.quality = 'medium';
+        this.raymarchParams = { ...SimpleRaymarcher.QUALITY_PRESETS.medium };
+      }
+    } else if (typeof quality === 'object') {
+      this.quality = 'custom';
+      this.raymarchParams = {
+        ...SimpleRaymarcher.QUALITY_PRESETS.medium,
+        ...quality
+      };
+    }
+    // Recompile shaders if we have a current scene
+    if (this.currentGlsl) {
+      this.compileShaders();
+    }
   }
 
   setLighting(settings) {
@@ -185,20 +239,47 @@ export class SimpleRaymarcher {
         ));
       }
 
+      // Raymarch quality parameters (baked from quality preset)
+      #define MAX_STEPS ${this.raymarchParams.maxSteps}
+      #define HIT_THRESHOLD ${this.raymarchParams.hitThreshold.toFixed(6)}
+      #define MIN_STEP ${this.raymarchParams.minStep.toFixed(6)}
+      #define RELAXATION ${this.raymarchParams.relaxation.toFixed(6)}
+
       vec4 raymarch(vec3 ro, vec3 rd) {
         float t = 0.0;
         vec3 colVol = vec3(0.0);
         float trans = 1.0;
-        bool hitGround = false;
         bool hitSurface = false;
         vec3 hitPos = vec3(0.0);
         vec3 surfaceColor = vec3(0.0);
         vec3 surfaceNormal = vec3(0.0);
         float surfaceT = 0.0;
 
-        for (int i = 0; i < 180; i++) {
+        // Ground plane: compute ray-plane intersection directly (not via SDF marching)
+        // This avoids psychedelic patterns from mixing ground plane with complex scene SDFs
+        float groundT = -1.0;
+        vec3 groundHitPos = vec3(0.0);
+        if (u_showGroundPlane > 0.5 && abs(rd.y) > 0.001) {
+          float groundY = -1.5;
+          groundT = (groundY - ro.y) / rd.y;
+          if (groundT > 0.0) {
+            groundHitPos = ro + rd * groundT;
+          }
+        }
+
+        for (int i = 0; i < MAX_STEPS; i++) {
           if (t > 50.0) break;
           if (u_volumeRender > 0.5 && trans < 0.01) break;
+
+          // Stop if we've passed the ground plane intersection
+          if (groundT > 0.0 && t > groundT) {
+            // Render ground plane
+            vec3 normal = vec3(0.0, 1.0, 0.0);
+            vec3 light = normalize(u_lightDir);
+            float diff = max(dot(normal, light), 0.0);
+            vec3 col = getGroundColor(groundHitPos) * (u_ambient + diff * u_diffuse);
+            return vec4(col, 1.0);
+          }
 
           vec3 p = ro + rd * t;
           vec4 scene = g_df_scene(p);
@@ -206,7 +287,7 @@ export class SimpleRaymarcher {
           vec3 sceneColor = scene.yzw;
           bool hitAxes = false;
 
-          // Check axes if enabled
+          // Check axes if enabled (axes don't interfere with ground plane)
           if (u_showAxes > 0.5) {
             vec4 axes = sdAxisArrows(p);
             if (axes.x < d) {
@@ -216,23 +297,10 @@ export class SimpleRaymarcher {
             }
           }
 
-          // Check ground plane if enabled
-          if (u_showGroundPlane > 0.5) {
-            float dGround = sdGroundPlane(p);
-            if (dGround < d) {
-              d = dGround;
-              hitAxes = false;
-              if (abs(d) < 0.001) {
-                hitGround = true;
-                hitPos = p;
-              }
-            }
-          }
-
           // Surface mode - traditional raymarching
           if (u_volumeRender < 0.5) {
-            // Hit threshold - tuned for thin+flat+repeated geometry
-            if (abs(d) < 0.0035 && !hitGround) {
+            // Hit threshold - using quality preset
+            if (abs(d) < HIT_THRESHOLD) {
               vec3 normal = calcNormal(p);
               vec3 light = normalize(u_lightDir);
               float diff = max(dot(normal, light), 0.0);
@@ -248,20 +316,8 @@ export class SimpleRaymarcher {
               return vec4(col, 1.0);
             }
 
-            if (hitGround) {
-              vec3 normal = vec3(0.0, 1.0, 0.0);
-              vec3 light = normalize(u_lightDir);
-              float diff = max(dot(normal, light), 0.0);
-              vec3 col = getGroundColor(hitPos) * (u_ambient + diff * u_diffuse);
-              return vec4(col, 1.0);
-            }
-
-            // Conservative stepping with minimum step size
-            // This prevents missing thin geometry (stems r=0.008, flattened petals)
-            // Per IQ: step = max(d * relaxation, minStep) avoids precision issues
-            // Tuned for thin+flat+repeated scenes (flower meadow stress test)
-            float minStep = 0.004;
-            t += max(abs(d) * 0.6, minStep);
+            // Conservative stepping with minimum step size (from quality preset)
+            t += max(abs(d) * RELAXATION, MIN_STEP);
           } else {
             // Volume mode - accumulate density near surface
             float stepSize = u_volumeStepSize;
