@@ -898,7 +898,11 @@
   <!-- Tree Viewer Panel - slides up from bottom -->
   <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
     <div class="debug-header" style="flex-wrap:wrap;">
-      <h3>▹ Scene Tree</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <!-- Tab buttons -->
+        <button class="btn" id="btn-tab-tree" style="background:var(--accent);color:#000;" title="Scene Tree">▹ Tree</button>
+        <button class="btn" id="btn-tab-dsl" title="S-expression DSL">(λ) DSL</button>
+      </div>
       <div style="display:flex;gap:0.25rem;align-items:center;">
         <button class="btn" id="btn-tree-prev" title="Previous value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">◀</button>
         <span id="tree-nav-indicator" style="font-size:0.85rem;color:#8b949e;min-width:3.5rem;text-align:center;padding:0 0.25rem;">0/0</span>
@@ -917,8 +921,13 @@
         <span id="tree-slider-value" style="font-size:0.8rem;color:#fbbf24;min-width:3.5rem;text-align:right;font-family:monospace;"></span>
       </div>
     </div>
+    <!-- Tree view content -->
     <div class="debug-content" id="tree-content" style="font-family: 'SF Mono', monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto;">
       <!-- Tree structure rendered here -->
+    </div>
+    <!-- DSL view content (hidden by default) -->
+    <div class="debug-content" id="dsl-content" style="display:none; font-family: 'SF Mono', monospace; font-size: 0.8rem; white-space: pre; overflow-x: auto; color: #a6e3a1; line-height: 1.4;">
+      <!-- S-expression DSL rendered here -->
     </div>
   </div>
 
@@ -3637,6 +3646,154 @@
       return lines.join('\n');
     }
 
+    // ============================================
+    // DSL S-EXPRESSION GENERATOR
+    // ============================================
+    function generateDslView(json) {
+      const indent = (level) => '  '.repeat(level);
+
+      // Convert expression to S-expr
+      function exprToDsl(value) {
+        if (typeof value === 'number') return value.toFixed(3).replace(/\.?0+$/, '');
+        if (typeof value === 'string') return `"${value}"`;
+        if (Array.isArray(value)) return `[${value.map(exprToDsl).join(' ')}]`;
+        if (value === null || value === undefined) return 'nil';
+
+        if (typeof value === 'object') {
+          if (value.var) return `$${value.var}`;
+          if (value.expr) {
+            const args = (value.args || []).map(exprToDsl).join(' ');
+            return `(${value.expr} ${args})`;
+          }
+        }
+        return String(value);
+      }
+
+      // Format params as :key value pairs
+      function formatParams(params) {
+        if (!params) return '';
+        const parts = [];
+        for (const [key, val] of Object.entries(params)) {
+          if (key === 'color') {
+            const rgb = val.map(v => exprToDsl(v)).join(' ');
+            parts.push(`:color [${rgb}]`);
+          } else if (Array.isArray(val)) {
+            parts.push(`:${key} [${val.map(exprToDsl).join(' ')}]`);
+          } else {
+            parts.push(`:${key} ${exprToDsl(val)}`);
+          }
+        }
+        return parts.join(' ');
+      }
+
+      // Format transform
+      function formatTransform(t, level) {
+        if (!t) return '';
+        const parts = [];
+        if (t.translate) parts.push(`(translate ${t.translate.map(exprToDsl).join(' ')})`);
+        if (t.rotate) parts.push(`(rotate ${t.rotate.map(exprToDsl).join(' ')})`);
+        if (t.rotateAxis) parts.push(`(rotate-axis [${t.rotateAxis.axis.join(' ')}] ${t.rotateAxis.angle})`);
+        if (t.rotateQ) parts.push(`(rotate-q ${t.rotateQ.map(exprToDsl).join(' ')})`);
+        if (t.scale) {
+          const s = Array.isArray(t.scale) ? t.scale.map(exprToDsl).join(' ') : exprToDsl(t.scale);
+          parts.push(`(scale ${s})`);
+        }
+        return parts.length ? '\n' + indent(level + 1) + parts.join('\n' + indent(level + 1)) : '';
+      }
+
+      // Main node walker
+      function walkNode(node, level = 0) {
+        if (!node) return 'nil';
+        if (!node.type) return JSON.stringify(node);
+
+        const type = node.type;
+        const lines = [];
+
+        // Primitives
+        const primitives = ['sphere', 'box', 'cylinder', 'torus', 'capsule', 'ellipsoid', 'plane', 'cone'];
+        if (primitives.includes(type)) {
+          const params = formatParams(node.params);
+          const transform = formatTransform(node.transform, level);
+          return `(${type} ${params}${transform})`;
+        }
+
+        // CSG operations
+        const csgOps = { union: '∪', subtract: '−', intersect: '∩', smoothUnion: '∪~', smoothSubtract: '−~', smoothIntersect: '∩~' };
+        if (csgOps[type]) {
+          const op = csgOps[type];
+          const k = node.k ? ` :k ${node.k}` : '';
+          const children = (node.children || []).map(c => walkNode(c, level + 1));
+          const childStr = children.map(c => '\n' + indent(level + 1) + c).join('');
+          return `(${op}${k}${childStr})`;
+        }
+
+        // Modifiers
+        if (type === 'mirror') {
+          const child = walkNode(node.child, level + 1);
+          return `(mirror :axis "${node.axis}"\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'radial') {
+          const child = walkNode(node.child, level + 1);
+          return `(radial :count ${node.count} :axis "${node.axis || 'z'}"\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'repeat') {
+          const child = walkNode(node.child, level + 1);
+          const period = node.period ? `:period [${node.period.join(' ')}]` : '';
+          return `(repeat ${period}\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'transform') {
+          const child = walkNode(node.child, level + 1);
+          const transform = formatTransform(node.transform, level);
+          return `(transform${transform}\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'shell') {
+          const child = walkNode(node.child, level + 1);
+          return `(shell :thickness ${node.thickness || 0.05}\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'round') {
+          const child = walkNode(node.child, level + 1);
+          return `(round :radius ${node.radius || 0.05}\n${indent(level + 1)}${child})`;
+        }
+        if (type === 'displace') {
+          const child = walkNode(node.child, level + 1);
+          const strength = node.strength ? `:strength ${exprToDsl(node.strength)}` : '';
+          const freq = node.frequency ? `:freq ${exprToDsl(node.frequency)}` : '';
+          return `(displace ${strength} ${freq}\n${indent(level + 1)}${child})`;
+        }
+
+        // Ref
+        if (type === 'ref') {
+          return `(ref "${node.id}")`;
+        }
+
+        // Custom GLSL
+        if (type === 'customExpr') {
+          return `(custom-glsl ...)`;
+        }
+
+        // Fallback
+        return `(${type} ...)`;
+      }
+
+      // Build output
+      let output = `;; S-expression DSL view (readonly)\n`;
+      output += `;; Scene: ${json.title || 'Untitled'}\n\n`;
+
+      // Defs
+      if (json.defs && Object.keys(json.defs).length > 0) {
+        output += `;; Definitions\n`;
+        for (const [id, def] of Object.entries(json.defs)) {
+          output += `(def ${id}\n  ${walkNode(def, 1)})\n\n`;
+        }
+      }
+
+      // Root
+      output += `;; Scene root\n`;
+      output += walkNode(json.root, 0);
+
+      return output;
+    }
+
     // Update navigation indicator display
     function updateTreeNavIndicator() {
       const indicator = $('tree-nav-indicator');
@@ -3880,6 +4037,11 @@
       const json = demos[currentDemo]?.json;
       if (json) {
         $('tree-content').innerHTML = generateTreeView(json);
+        // Also update DSL view if it's visible
+        const dslContent = $('dsl-content');
+        if (dslContent && dslContent.style.display !== 'none') {
+          dslContent.textContent = generateDslView(json);
+        }
       }
     }
 
@@ -4407,6 +4569,37 @@
       // Tree navigation buttons
       addClick('btn-tree-prev', navigateTreePrev);
       addClick('btn-tree-next', navigateTreeNext);
+
+      // Tree panel tab switching
+      addClick('btn-tab-tree', () => {
+        $('tree-content').style.display = 'block';
+        $('dsl-content').style.display = 'none';
+        $('btn-tab-tree').style.background = 'var(--accent)';
+        $('btn-tab-tree').style.color = '#000';
+        $('btn-tab-dsl').style.background = '';
+        $('btn-tab-dsl').style.color = '';
+        // Show tree-specific controls
+        $('btn-tree-prev').style.display = '';
+        $('btn-tree-next').style.display = '';
+        $('tree-nav-indicator').style.display = '';
+      });
+      addClick('btn-tab-dsl', () => {
+        $('tree-content').style.display = 'none';
+        $('dsl-content').style.display = 'block';
+        $('btn-tab-dsl').style.background = 'var(--accent)';
+        $('btn-tab-dsl').style.color = '#000';
+        $('btn-tab-tree').style.background = '';
+        $('btn-tab-tree').style.color = '';
+        // Hide tree-specific controls (nav not relevant for DSL)
+        $('btn-tree-prev').style.display = 'none';
+        $('btn-tree-next').style.display = 'none';
+        $('tree-nav-indicator').style.display = 'none';
+        // Update DSL view
+        const demo = demos[currentDemo];
+        if (demo && demo.json) {
+          $('dsl-content').textContent = generateDslView(demo.json);
+        }
+      });
 
       // Tree slider for numeric value editing
       const treeSlider = $('tree-slider');
