@@ -87,6 +87,7 @@
       "title": "Nature",
       "description": "Plants & organic",
       "scenes": [
+        { "path": "nature/single-sunflower.json", "title": "Single Sunflower 🔬", "subtitle": "Scale test - no repeat" },
         { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed poppies & sunflowers" },
         { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
         { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers" },

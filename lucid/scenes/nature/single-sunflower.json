@@ -1,0 +1,39 @@
+{
+  "title": "Single Sunflower",
+  "subtitle": "Isolated test - no repeat, no select - to verify scaled SDF correctness",
+  "version": "1.0",
+  "notes": "Sanity check: if this renders cleanly from all angles, the scaled SDF pipeline is correct and remaining artifacts in flower-meadow are raymarching/repetition issues",
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "union",
+        "notes": "Single sunflower at origin using same geometry as flower-meadow",
+        "children": [
+          {
+            "type": "capsule",
+            "notes": "Thick stem",
+            "params": { "h": 0.35, "r": 0.015, "color": [0.25, 0.45, 0.1] }
+          },
+          {
+            "type": "sphere",
+            "notes": "Yellow petals - flattened via non-uniform scale",
+            "params": { "r": 0.12, "color": [1.0, 0.85, 0.1] },
+            "transform": { "translate": [0, 0.40, 0], "scale": [1, 0.3, 1] }
+          },
+          {
+            "type": "sphere",
+            "notes": "Brown seed center",
+            "params": { "r": 0.06, "color": [0.4, 0.25, 0.1] },
+            "transform": { "translate": [0, 0.42, 0] }
+          }
+        ]
+      },
+      {
+        "type": "plane",
+        "notes": "Ground for reference",
+        "params": { "normal": [0, 1, 0], "h": 0.0, "color": [0.3, 0.55, 0.2] }
+      }
+    ]
+  }
+}
