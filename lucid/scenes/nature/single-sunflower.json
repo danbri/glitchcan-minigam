@@ -2,6 +2,7 @@
   "title": "Single Sunflower",
   "subtitle": "Isolated test - no repeat, no select - to verify scaled SDF correctness",
   "version": "1.0",
+  "quality": "high",
   "notes": "Sanity check: if this renders cleanly from all angles, the scaled SDF pipeline is correct and remaining artifacts in flower-meadow are raymarching/repetition issues",
   "root": {
     "type": "union",

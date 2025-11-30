@@ -2,6 +2,7 @@
   "title": "Flower Meadow",
   "subtitle": "Poppies and sunflowers with per-instance variation",
   "version": "1.1",
+  "quality": "high",
   "notes": "Demonstrates exposeId + select node for proper SDF type selection without raymarching artifacts",
   "defs": {
     "poppy": {

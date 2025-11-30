@@ -1532,6 +1532,14 @@
 
     function renderJson(json) {
       const scene = loadJsonScene(json);
+
+      // Apply scene's quality preset before generating GLSL
+      // (quality affects shader compilation via setQuality -> compileShaders)
+      if (scene.quality && renderer.setQuality) {
+        renderer.setQuality(scene.quality);
+        console.log(`🎚️ Raymarch quality: ${scene.quality}`);
+      }
+
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
       renderer.updateScene(glsl);
