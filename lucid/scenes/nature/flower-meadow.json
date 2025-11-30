@@ -1,0 +1,180 @@
+{
+  "title": "Flower Meadow",
+  "subtitle": "Poppies and sunflowers with per-instance variation",
+  "version": "1.0",
+  "notes": "Demonstrates exposeId for mixing flower types, random rotation, and gentle swaying",
+  "defs": {
+    "poppy": {
+      "type": "union",
+      "notes": "Red poppy - thin stem, cup-shaped petals, dark center",
+      "children": [
+        {
+          "type": "capsule",
+          "notes": "Stem",
+          "params": { "h": 0.25, "r": 0.008, "color": [0.2, 0.5, 0.15] }
+        },
+        {
+          "type": "sphere",
+          "notes": "Flower head - flattened sphere for cup shape",
+          "params": { "r": 0.07, "color": [0.9, 0.1, 0.1] },
+          "transform": { "translate": [0, 0.28, 0], "scale": [1, 0.4, 1] }
+        },
+        {
+          "type": "sphere",
+          "notes": "Dark center",
+          "params": { "r": 0.025, "color": [0.1, 0.1, 0.1] },
+          "transform": { "translate": [0, 0.30, 0] }
+        }
+      ]
+    },
+    "sunflower": {
+      "type": "union",
+      "notes": "Sunflower - thicker stem, large yellow head, brown center",
+      "children": [
+        {
+          "type": "capsule",
+          "notes": "Thick stem",
+          "params": { "h": 0.35, "r": 0.015, "color": [0.25, 0.45, 0.1] }
+        },
+        {
+          "type": "sphere",
+          "notes": "Yellow petals - flattened",
+          "params": { "r": 0.12, "color": [1.0, 0.85, 0.1] },
+          "transform": { "translate": [0, 0.40, 0], "scale": [1, 0.3, 1] }
+        },
+        {
+          "type": "sphere",
+          "notes": "Brown seed center",
+          "params": { "r": 0.06, "color": [0.4, 0.25, 0.1] },
+          "transform": { "translate": [0, 0.42, 0] }
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "repeat",
+        "notes": "Flower field with mixed types and natural variation",
+        "period": [0.5, 0, 0.5],
+        "exposeId": "flowerId",
+        "child": {
+          "type": "union",
+          "notes": "Conditionally render poppy or sunflower based on hash",
+          "children": [
+            {
+              "type": "ref",
+              "id": "poppy",
+              "notes": "Poppies appear when hash < 0.6 - pushed away when hash > 0.6",
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 50] }] },
+                      0.5
+                    ]},
+                    0.15
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "smoothstep", "args": [
+                      0.55, 0.65,
+                      { "expr": "hash", "args": [{ "var": "flowerId" }] }
+                    ]},
+                    -1000
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 150] }] },
+                      0.5
+                    ]},
+                    0.15
+                  ]}
+                ],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 200] }] },
+                      0.5
+                    ]},
+                    15
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 300] }] },
+                    360
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 250] }] },
+                      0.5
+                    ]},
+                    15
+                  ]}
+                ]
+              }
+            },
+            {
+              "type": "ref",
+              "id": "sunflower",
+              "notes": "Sunflowers appear when hash >= 0.6 - pushed away when hash < 0.6",
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 70] }] },
+                      0.5
+                    ]},
+                    0.12
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      1.0,
+                      { "expr": "smoothstep", "args": [
+                        0.55, 0.65,
+                        { "expr": "hash", "args": [{ "var": "flowerId" }] }
+                      ]}
+                    ]},
+                    -1000
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 170] }] },
+                      0.5
+                    ]},
+                    0.12
+                  ]}
+                ],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 400] }] },
+                      0.5
+                    ]},
+                    10
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 500] }] },
+                    360
+                  ]},
+                  { "expr": "mul", "args": [
+                    { "expr": "sub", "args": [
+                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 450] }] },
+                      0.5
+                    ]},
+                    10
+                  ]}
+                ]
+              }
+            }
+          ]
+        },
+        "transform": { "translate": [0, -0.5, 0] }
+      },
+      {
+        "type": "plane",
+        "notes": "Grassy ground",
+        "params": { "normal": [0, 1, 0], "h": 0.5, "color": [0.3, 0.55, 0.2] }
+      }
+    ]
+  }
+}
