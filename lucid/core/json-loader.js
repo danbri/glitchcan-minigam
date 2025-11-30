@@ -126,6 +126,13 @@ function processNode(node, registry) {
       processed.child = processNode(node.child, registry);
       break;
 
+    // Conditional selection - pick one of two SDFs based on condition
+    case 'select':
+      processed.cond = processValue(node.cond);  // Expression evaluating to 0 or 1
+      processed.a = processNode(node.a, registry);  // Selected when cond < 0.5
+      processed.b = processNode(node.b, registry);  // Selected when cond >= 0.5
+      break;
+
     // Round modifier - soften edges
     case 'round':
       processed.r = processValue(node.r !== undefined ? node.r : 0.05);
