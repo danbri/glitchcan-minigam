@@ -122,6 +122,7 @@ function processNode(node, registry) {
     // Infinite repeat/tiling
     case 'repeat':
       processed.period = node.period || [2, 0, 2];
+      if (node.exposeId) processed.exposeId = node.exposeId;  // Expose instance ID for per-instance variation
       processed.child = processNode(node.child, registry);
       break;
 

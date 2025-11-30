@@ -1,5 +1,7 @@
 # Instance ID Proposal for Lucid SDF-CSG
 
+**STATUS: IMPLEMENTED** ✅
+
 ## Problem Statement
 
 When using domain repetition (`repeat` node), all instances are identical. Real-world scenes need per-instance variation: different sizes, colors, rotations, or positions. Currently there's no way to distinguish instance 0 from instance 47.
