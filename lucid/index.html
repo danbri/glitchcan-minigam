@@ -519,6 +519,8 @@
       padding: 0.5rem;
       z-index: 90;
       min-width: 180px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
       display: none;
     }
 
@@ -778,35 +780,42 @@
 
     /* Resizer grip between render and editor panels */
     .panel-resizer {
-      width: 6px;
+      width: 8px;
       background: var(--border);
       cursor: col-resize;
       flex-shrink: 0;
       position: relative;
       transition: background 0.15s ease;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      z-index: 10;
     }
     .panel-resizer:hover,
     .panel-resizer.dragging {
       background: var(--accent);
     }
     .panel-resizer::after {
-      content: '⋮';
+      content: '⋮⋮';
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       color: var(--text-dim);
-      font-size: 0.75rem;
+      font-size: 0.85rem;
+      pointer-events: none;
+      letter-spacing: -2px;
     }
 
     @media (max-width: 768px) {
       .panel-resizer {
         width: 100%;
-        height: 10px;
+        height: 12px;
         cursor: row-resize;
       }
       .panel-resizer::after {
-        content: '⋯';
+        content: '⋯⋯';
+        letter-spacing: -2px;
       }
     }
 
@@ -961,7 +970,6 @@
       <div class="header-left">
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
-          <button class="icon-btn" id="btn-paste-apply" title="Paste & Apply (V)">📋</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🚁</button>
@@ -995,21 +1003,18 @@
         <!-- Tab Bar -->
         <div class="panel-tabs">
           <button class="panel-tab active" id="tab-source" title="JSON Source">
-            <span class="panel-tab-icon">{}</span> Source
-            <button class="tab-copy-btn" id="copy-source" title="Copy JSON">📋</button>
+            <span class="panel-tab-icon">{}</span> JSON
           </button>
           <button class="panel-tab" id="tab-tree" title="Scene Tree">
             <span class="panel-tab-icon">▹</span> Tree
-            <button class="tab-copy-btn" id="copy-tree" title="Copy tree">📋</button>
           </button>
           <button class="panel-tab" id="tab-dsl" title="S-expression DSL">
             <span class="panel-tab-icon">λ</span> DSL
-            <button class="tab-copy-btn" id="copy-dsl" title="Copy DSL">📋</button>
           </button>
           <button class="panel-tab" id="tab-glsl" title="Generated GLSL">
             <span class="panel-tab-icon">⟨⟩</span> GLSL
-            <button class="tab-copy-btn" id="copy-glsl" title="Copy GLSL">📋</button>
           </button>
+          <button class="tab-copy-btn" id="copy-tab" title="Copy current tab content">📋</button>
         </div>
 
         <!-- Source Tab Content -->
@@ -1077,6 +1082,22 @@
 
   <!-- Main Menu -->
   <div class="main-menu" id="main-menu">
+    <div class="menu-item" id="menu-debug">
+      <span>🔧 Debug Panel</span>
+    </div>
+    <div class="menu-item" id="menu-editor">
+      <span>{ } Editor</span>
+    </div>
+    <div class="menu-item" id="menu-tree">
+      <span>▹ Scene Tree</span>
+    </div>
+    <div class="menu-item" id="menu-auto-rotate">
+      <span>🚁 Auto-rotate</span>
+    </div>
+    <div class="menu-item" id="menu-anim">
+      <span>▶ Animation</span>
+    </div>
+    <div class="menu-divider"></div>
     <div class="menu-item has-submenu" id="menu-demos">
       <span>📦 Demos</span>
       <div class="submenu" id="demos-submenu">
@@ -1092,6 +1113,9 @@
     </div>
     <div class="menu-item" id="menu-load-file">
       <span>📁 Load File</span>
+    </div>
+    <div class="menu-item" id="menu-paste-apply">
+      <span>📋 Paste & Apply</span>
     </div>
     <div class="menu-divider"></div>
     <div class="menu-item" id="menu-lighting">
@@ -1976,15 +2000,17 @@
 
       let isResizing = false;
       let startX, startY, startWidth, startHeight;
-      const isMobile = window.innerWidth <= 768;
 
       resizer.addEventListener('mousedown', startResize);
       resizer.addEventListener('touchstart', startResize, { passive: false });
 
       function startResize(e) {
         e.preventDefault();
+        e.stopPropagation();
         isResizing = true;
         resizer.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = window.innerWidth <= 768 ? 'row-resize' : 'col-resize';
 
         const touch = e.touches ? e.touches[0] : e;
         startX = touch.clientX;
@@ -2027,6 +2053,8 @@
       function stopResize() {
         isResizing = false;
         resizer.classList.remove('dragging');
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
         document.removeEventListener('mousemove', doResize);
         document.removeEventListener('touchmove', doResize);
         document.removeEventListener('mouseup', stopResize);
@@ -2045,6 +2073,9 @@
         tab.classList.remove('active');
       });
       $('tab-' + tabName)?.classList.add('active');
+
+      // Update header tree button state (only active when tree tab is shown)
+      $('btn-tree')?.classList.toggle('active', tabName === 'tree');
 
       // Update tab content visibility
       document.querySelectorAll('.tab-content').forEach(content => {
@@ -3198,7 +3229,7 @@
           $('btn-auto-rotate').classList.toggle('active', autoRotate);
         } else if (e.key === 'v' || e.key === 'V') {
           e.preventDefault();
-          $('btn-paste-apply').click(); // Trigger paste & apply
+          $('menu-paste-apply').click(); // Trigger paste & apply
         } else if (e.key === 'n' || e.key === 'N') {
           e.preventDefault();
           $('menu-new-demo').click(); // Create new demo
@@ -3245,15 +3276,22 @@
         $('btn-editor').classList.toggle('active', editorOpen);
       });
 
-      // Tree button - opens editor with tree tab
+      // Tree button - toggles editor with tree tab
       addClick('btn-tree', () => {
-        if (!editorOpen) {
+        if (editorOpen && activeTab === 'tree') {
+          // Already showing tree - close editor
+          editorOpen = false;
+          editorPanel.classList.remove('open');
+          $('btn-editor')?.classList.remove('active');
+          $('btn-tree').classList.remove('active');
+        } else {
+          // Open editor and switch to tree tab
           editorOpen = true;
           editorPanel.classList.add('open');
           $('btn-editor')?.classList.add('active');
+          switchTab('tree');
+          $('btn-tree').classList.add('active');
         }
-        switchTab('tree');
-        $('btn-tree').classList.add('active');
       });
 
       // Auto-rotate toggle
@@ -3274,8 +3312,13 @@
         updateAnimButton();
       });
 
-      // Paste & Apply - one click to paste JSON and render
-      addClick('btn-paste-apply', async () => {
+      // Paste & Apply - from menu
+      addClick('menu-paste-apply', async () => {
+        // Close menu first
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+
         try {
           const text = await navigator.clipboard.readText();
           const json = JSON.parse(text);
@@ -3311,6 +3354,7 @@
         editorOpen = false;
         editorPanel.classList.remove('open');
         $('btn-editor')?.classList.remove('active');
+        $('btn-tree')?.classList.remove('active');
       });
 
       // Debug panel toggle (from header button) - exclusive with other bottom panels
@@ -3338,46 +3382,28 @@
       });
 
       // Editor panel tab switching
-      addClick('tab-source', (e) => {
-        if (e.target.classList.contains('tab-copy-btn')) return;
-        switchTab('source');
-      });
-      addClick('tab-tree', (e) => {
-        if (e.target.classList.contains('tab-copy-btn')) return;
-        switchTab('tree');
-      });
-      addClick('tab-dsl', (e) => {
-        if (e.target.classList.contains('tab-copy-btn')) return;
-        switchTab('dsl');
-      });
-      addClick('tab-glsl', (e) => {
-        if (e.target.classList.contains('tab-copy-btn')) return;
-        switchTab('glsl');
-      });
+      addClick('tab-source', () => switchTab('source'));
+      addClick('tab-tree', () => switchTab('tree'));
+      addClick('tab-dsl', () => switchTab('dsl'));
+      addClick('tab-glsl', () => switchTab('glsl'));
 
-      // Copy buttons for each tab
-      addClick('copy-source', (e) => {
-        e.stopPropagation();
-        const json = jsonEditor?.value || '';
-        copyToClipboard(json, 'JSON');
-      });
-      addClick('copy-tree', (e) => {
-        e.stopPropagation();
+      // Single copy button - copies current active tab content
+      addClick('copy-tab', () => {
         const demo = demos[currentDemo];
-        if (demo?.json) {
-          copyToClipboard(generateTreeText(demo.json), 'Tree');
+        switch (activeTab) {
+          case 'source':
+            copyToClipboard(jsonEditor?.value || '', 'JSON');
+            break;
+          case 'tree':
+            if (demo?.json) copyToClipboard(generateTreeText(demo.json), 'Tree');
+            break;
+          case 'dsl':
+            if (demo?.json) copyToClipboard(generateDslView(demo.json), 'DSL');
+            break;
+          case 'glsl':
+            copyToClipboard(currentGlsl || '', 'GLSL');
+            break;
         }
-      });
-      addClick('copy-dsl', (e) => {
-        e.stopPropagation();
-        const demo = demos[currentDemo];
-        if (demo?.json) {
-          copyToClipboard(generateDslView(demo.json), 'DSL');
-        }
-      });
-      addClick('copy-glsl', (e) => {
-        e.stopPropagation();
-        copyToClipboard(currentGlsl || '', 'GLSL');
       });
 
       // Tree navigation buttons (now in tree tab)
@@ -3454,6 +3480,42 @@
         menuOpen = false;
         mainMenu.classList.remove('open');
         fileInput.click();
+      });
+
+      // Menu shortcuts for header icons
+      addClick('menu-debug', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-debug').click();
+      });
+
+      addClick('menu-editor', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-editor').click();
+      });
+
+      addClick('menu-tree', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-tree').click();
+      });
+
+      addClick('menu-auto-rotate', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-auto-rotate').click();
+      });
+
+      addClick('menu-anim', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        $('btn-anim').click();
       });
 
       addClick('menu-lighting', () => {

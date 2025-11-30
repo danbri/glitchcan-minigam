@@ -1194,11 +1194,11 @@ float sdCone(vec3 p, float h, float r) {
 }
 
 // Truncated cone / frustum / round cone
-// r1 = bottom radius, r2 = top radius, h = height
-// Centered at origin, extends from y=-h/2 to y=h/2
+// r1 = bottom radius (at y=0), r2 = top radius (at y=h), h = height
+// Base at origin, extends upward to y=h (matches sdCone convention but inverted)
 float sdRoundCone(vec3 p, float r1, float r2, float h) {
-  // Shift p so cone is centered vertically
-  vec2 q = vec2(length(p.xz), p.y + h * 0.5);
+  // Cone with r1 at y=0 and r2 at y=h
+  vec2 q = vec2(length(p.xz), p.y);
 
   float b = (r1 - r2) / h;
   float a = sqrt(1.0 - b * b);
