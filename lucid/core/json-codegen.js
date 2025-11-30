@@ -15,7 +15,8 @@ export function generateGlslFromJson(scene, options = {}) {
     functions: [],
     helpers: [],
     helperCounter: 0,
-    showCutters: options.showCutters || false
+    showCutters: options.showCutters || false,
+    localVars: {}  // For instance IDs and other scoped variables
   };
 
   // Generate main scene expression
@@ -672,22 +673,17 @@ ${radialCode}
 /**
  * Generate repeat - infinite tiling
  * period: [x, y, z] - spacing between repetitions (0 = no repeat on that axis)
+ * exposeId: optional variable name to expose instance ID for per-instance variation
  */
 function generateRepeat(node, ctx) {
   const period = node.period || [2, 0, 2];
-
-  // Wrap the child in its own helper function
-  const childFuncName = `repeat_child_${ctx.helperCounter++}`;
-  const childExpr = walkNode(node.child, ctx);
-  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
-  return ${childExpr};
-}`);
-
-  // Now generate the repeat wrapper
-  const funcName = `repeat_${ctx.helperCounter++}`;
+  const exposeId = node.exposeId;  // e.g., "instanceId"
 
   // Apply any transform from the repeat node itself
   const p = applyTransform('p', node.transform, ctx);
+
+  // Build period vector string
+  const periodVec = `vec3(${period[0].toFixed(4)}, ${period[1].toFixed(4)}, ${period[2].toFixed(4)})`;
 
   // Build repeat code - only repeat on non-zero axes
   let repeatCode = '';
@@ -700,6 +696,42 @@ function generateRepeat(node, ctx) {
   if (period[2] > 0) {
     repeatCode += `  q.z = mod(q.z + ${(period[2]/2).toFixed(4)}, ${period[2].toFixed(4)}) - ${(period[2]/2).toFixed(4)};\n`;
   }
+
+  // If exposing instance ID, we need to inline the child (can't use separate function)
+  if (exposeId) {
+    // Set local variable so child expressions can reference it
+    ctx.localVars[exposeId] = exposeId;
+
+    // Generate child expression (will use exposeId variable)
+    const childExpr = walkNode(node.child, ctx);
+
+    // Clear local variable
+    delete ctx.localVars[exposeId];
+
+    const funcName = `repeat_${ctx.helperCounter++}`;
+
+    // Calculate instance ID before domain folding
+    // Using prime multipliers for good hash distribution across 3D grid
+    const helperFunc = `vec4 ${funcName}(vec3 p) {
+  vec3 q = ${p};
+  // Calculate instance ID from grid cell before domain folding
+  vec3 cellId = floor(q / ${periodVec});
+  float ${exposeId} = dot(cellId, vec3(1.0, 157.0, 113.0));
+${repeatCode}  return ${childExpr.replace(/\bp\b/g, 'q')};
+}`;
+
+    ctx.helpers.push(helperFunc);
+    return `${funcName}(p)`;
+  }
+
+  // Standard repeat without instance ID - use separate child function
+  const childFuncName = `repeat_child_${ctx.helperCounter++}`;
+  const childExpr = walkNode(node.child, ctx);
+  ctx.helpers.push(`vec4 ${childFuncName}(vec3 p) {
+  return ${childExpr};
+}`);
+
+  const funcName = `repeat_${ctx.helperCounter++}`;
 
   const helperFunc = `vec4 ${funcName}(vec3 p) {
   vec3 q = ${p};
@@ -853,6 +885,11 @@ function valueToGlsl(value, ctx) {
       return String(num);
 
     case 'var':
+      // Check local scoped variables first (e.g., instance IDs from repeat)
+      if (ctx.localVars && ctx.localVars[value.name]) {
+        return ctx.localVars[value.name];
+      }
+      // Fall back to uniform
       ctx.uniforms.add(`u_${value.name}`);
       return `u_${value.name}`;
 

@@ -128,22 +128,44 @@
       },
       {
         "type": "repeat",
-        "notes": "Falling snowflakes",
+        "notes": "Falling snowflakes with per-instance variation",
         "period": [1.2, 2.0, 1.2],
+        "exposeId": "flakeId",
         "child": {
           "type": "sphere",
-          "params": { "r": 0.03, "color": [1.0, 1.0, 1.0] },
+          "params": {
+            "r": { "expr": "add", "args": [
+              0.02,
+              { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "var": "flakeId" }] }, 0.02] }
+            ]},
+            "color": [1.0, 1.0, 1.0]
+          },
           "transform": {
             "translate": [
-              0,
+              { "expr": "mul", "args": [
+                { "expr": "sub", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flakeId" }, 100] }] },
+                  0.5
+                ]},
+                0.3
+              ]},
               { "expr": "sub", "args": [
                 2.0,
                 { "expr": "mod", "args": [
-                  { "expr": "mul", "args": [{ "var": "time" }, 0.5] },
+                  { "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, 0.5] },
+                    { "expr": "hash", "args": [{ "var": "flakeId" }] }
+                  ]},
                   2.5
                 ]}
               ]},
-              0
+              { "expr": "mul", "args": [
+                { "expr": "sub", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flakeId" }, 200] }] },
+                  0.5
+                ]},
+                0.3
+              ]}
             ]
           }
         },
