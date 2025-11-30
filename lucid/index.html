@@ -121,10 +121,24 @@
       flex-direction: column;
       transition: width 0.3s ease;
       overflow: hidden;
+      position: relative;
     }
 
     .editor-panel.open {
       width: 400px;
+    }
+
+    /* Resizer only visible when editor is open */
+    .panel-resizer {
+      display: none;
+    }
+    .editor-panel.open ~ .panel-resizer,
+    .panel-resizer:has(+ .editor-panel.open) {
+      display: none;
+    }
+    /* Show resizer when sibling editor is open */
+    .main-area:has(.editor-panel.open) .panel-resizer {
+      display: block;
     }
 
     @media (max-width: 768px) {
@@ -624,6 +638,64 @@
       color: var(--accent);
     }
 
+    /* Close button (X) for panels */
+    .panel-close {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 1.75rem;
+      height: 1.75rem;
+      border: none;
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--error);
+      border-radius: 4px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+    .panel-close:hover {
+      background: var(--error);
+      color: #fff;
+    }
+
+    /* Resizer grip between render and editor panels */
+    .panel-resizer {
+      width: 6px;
+      background: var(--border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s ease;
+    }
+    .panel-resizer:hover,
+    .panel-resizer.dragging {
+      background: var(--accent);
+    }
+    .panel-resizer::after {
+      content: '⋮';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .panel-resizer {
+        width: 100%;
+        height: 10px;
+        cursor: row-resize;
+      }
+      .panel-resizer::after {
+        content: '⋯';
+      }
+    }
+
     .debug-content {
       padding: 1rem;
     }
@@ -800,7 +872,11 @@
         <canvas id="canvas"></canvas>
       </div>
 
+      <!-- Resizer grip between 3D view and editor -->
+      <div class="panel-resizer" id="panel-resizer"></div>
+
       <div class="editor-panel" id="editor-panel">
+        <button class="panel-close" id="editor-close" title="Close editor (E)">×</button>
         <div class="editor-header">
           <button class="btn primary" id="btn-apply" title="Apply Changes (Ctrl+Enter)">Save</button>
           <div style="display: flex; gap: 0.25rem;">
@@ -897,6 +973,7 @@
 
   <!-- Tree Viewer Panel - slides up from bottom -->
   <div class="debug-panel" id="tree-panel" style="max-height: 50vh;">
+    <button class="panel-close" id="btn-tree-close" title="Close tree view (T)">×</button>
     <div class="debug-header" style="flex-wrap:wrap;">
       <div style="display:flex;gap:0.5rem;align-items:center;">
         <!-- Tab buttons -->
@@ -907,7 +984,6 @@
         <button class="btn" id="btn-tree-prev" title="Previous value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">◀</button>
         <span id="tree-nav-indicator" style="font-size:0.85rem;color:#8b949e;min-width:3.5rem;text-align:center;padding:0 0.25rem;">0/0</span>
         <button class="btn" id="btn-tree-next" title="Next value" style="padding:0.5rem 0.75rem;font-size:1.1rem;min-width:2.5rem;">▶</button>
-        <button class="btn" id="btn-tree-close" style="margin-left:0.5rem;">Close</button>
       </div>
     </div>
     <!-- GLSL/Expression display area (readonly popup for code) -->
@@ -958,9 +1034,9 @@
 
   <!-- Debug Panel -->
   <div class="debug-panel" id="debug-panel">
+    <button class="panel-close" id="btn-debug-close" title="Close settings">×</button>
     <div class="debug-header">
-      <h3>Debug Options</h3>
-      <button class="btn" id="btn-debug-close">Close</button>
+      <h3>⚙️ Settings</h3>
     </div>
     <div class="debug-content">
       <div class="debug-row">
@@ -1034,9 +1110,9 @@
 
   <!-- Lighting Panel -->
   <div class="debug-panel" id="lighting-panel">
+    <button class="panel-close" id="btn-lighting-close" title="Close lighting">×</button>
     <div class="debug-header">
       <h3>💡 Lighting</h3>
-      <button class="btn" id="btn-lighting-close">Close</button>
     </div>
     <div class="debug-content">
       <div class="debug-row" style="flex-direction: column; gap: 0.5rem;">
@@ -1092,8 +1168,8 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.17.0';
-    const BUILD_DATE = '2025-11-29';
+    const VERSION = '0.18.0';
+    const BUILD_DATE = '2025-11-30';
 
     // ============================================
     // TOC-BASED DEMO LOADING (index-test.html)
@@ -1161,6 +1237,9 @@
     // frozen = grey/struck, time frozen
     let animState = 'playing';
     let frozenTime = 0; // Store time when frozen
+
+    // Visibility state - pause rendering when tab/app not visible
+    let isAppVisible = true;
 
     // Camera orbit state
     let isDragging = false;
@@ -1261,9 +1340,16 @@
         // Load first demo
         switchDemo(0);
 
-        // Render loop with auto-rotate
+        // Render loop with auto-rotate and visibility pause
         let lastFrameTime = performance.now();
+        let renderLoopId = null;
         function renderLoop() {
+          // Skip rendering when app not visible (saves battery on mobile)
+          if (!isAppVisible) {
+            renderLoopId = requestAnimationFrame(renderLoop);
+            return;
+          }
+
           const now = performance.now();
           const deltaTime = (now - lastFrameTime) / 1000; // seconds
           lastFrameTime = now;
@@ -1281,9 +1367,18 @@
           }
 
           renderer.render();
-          requestAnimationFrame(renderLoop);
+          renderLoopId = requestAnimationFrame(renderLoop);
         }
         renderLoop();
+
+        // Visibility API - pause when tab/app not visible
+        document.addEventListener('visibilitychange', () => {
+          isAppVisible = !document.hidden;
+          if (isAppVisible) {
+            lastFrameTime = performance.now(); // Reset to avoid large delta
+          }
+          console.log(`App visibility: ${isAppVisible ? 'visible' : 'hidden'}`);
+        });
 
         // Initialize animation button state
         updateAnimButton();
@@ -1693,6 +1788,119 @@
       setTimeout(() => {
         statusEl.classList.remove('visible');
       }, 2500);
+    }
+
+    /**
+     * Close all bottom panels (debug, lighting, tree) with quick animation
+     * Returns true if any panels were open
+     */
+    function closeAllBottomPanels() {
+      let anyOpen = false;
+
+      if (debugOpen) {
+        debugOpen = false;
+        debugPanel.classList.remove('open');
+        $('btn-debug')?.classList.remove('active');
+        anyOpen = true;
+      }
+      if (lightingOpen) {
+        lightingOpen = false;
+        lightingPanel.classList.remove('open');
+        anyOpen = true;
+      }
+      if (treeOpen) {
+        treeOpen = false;
+        $('tree-panel')?.classList.remove('open');
+        $('btn-tree')?.classList.remove('active');
+        anyOpen = true;
+      }
+
+      return anyOpen;
+    }
+
+    /**
+     * Close other panels before opening a new one
+     * Waits for slide-down animation before calling the open callback
+     */
+    function openPanelExclusive(panelName, openCallback) {
+      const wasOpen = closeAllBottomPanels();
+
+      if (wasOpen) {
+        // Wait for slide-down animation (300ms from CSS transition)
+        setTimeout(openCallback, 150);
+      } else {
+        openCallback();
+      }
+    }
+
+    /**
+     * Setup resizer functionality between 3D view and editor panel
+     */
+    function setupResizer() {
+      const resizer = $('panel-resizer');
+      const mainArea = document.querySelector('.main-area');
+      const renderPanel = document.querySelector('.render-panel');
+
+      if (!resizer || !mainArea || !renderPanel) return;
+
+      let isResizing = false;
+      let startX, startY, startWidth, startHeight;
+      const isMobile = window.innerWidth <= 768;
+
+      resizer.addEventListener('mousedown', startResize);
+      resizer.addEventListener('touchstart', startResize, { passive: false });
+
+      function startResize(e) {
+        e.preventDefault();
+        isResizing = true;
+        resizer.classList.add('dragging');
+
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+
+        // Get current editor width/height
+        const editorPanel = $('editor-panel');
+        if (window.innerWidth <= 768) {
+          startHeight = editorPanel.offsetHeight || mainArea.offsetHeight * 0.5;
+        } else {
+          startWidth = editorPanel.offsetWidth || 400;
+        }
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('touchmove', doResize, { passive: false });
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchend', stopResize);
+      }
+
+      function doResize(e) {
+        if (!isResizing) return;
+        e.preventDefault();
+
+        const touch = e.touches ? e.touches[0] : e;
+        const editorPanel = $('editor-panel');
+
+        if (window.innerWidth <= 768) {
+          // Mobile: vertical resize
+          const deltaY = startY - touch.clientY;
+          const newHeight = Math.max(100, Math.min(startHeight + deltaY, mainArea.offsetHeight - 100));
+          editorPanel.style.height = newHeight + 'px';
+        } else {
+          // Desktop: horizontal resize
+          const deltaX = startX - touch.clientX;
+          const newWidth = Math.max(200, Math.min(startWidth + deltaX, mainArea.offsetWidth - 200));
+          editorPanel.style.width = newWidth + 'px';
+        }
+      }
+
+      function stopResize() {
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('touchmove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchend', stopResize);
+      }
     }
 
     /**
@@ -2788,6 +2996,7 @@
       setupTouchControls();
       setupDebugPanel();
       setupLightingPanel();
+      setupResizer();
 
       // Editor toggle
       addClick('btn-editor', () => {
@@ -2846,20 +3055,54 @@
         }
       });
 
-      // Debug panel toggle (from header button)
-      addClick('btn-debug', () => {
-        debugOpen = !debugOpen;
-        debugPanel.classList.toggle('open', debugOpen);
-        $('btn-debug').classList.toggle('active', debugOpen);
+      // Editor close button (X)
+      addClick('editor-close', () => {
+        editorOpen = false;
+        editorPanel.classList.remove('open');
+        $('btn-editor')?.classList.remove('active');
       });
 
-      // Tree panel toggle
+      // Debug panel toggle (from header button) - exclusive with other bottom panels
+      addClick('btn-debug', () => {
+        if (debugOpen) {
+          // Just close it
+          debugOpen = false;
+          debugPanel.classList.remove('open');
+          $('btn-debug').classList.remove('active');
+        } else {
+          // Close others first, then open
+          openPanelExclusive('debug', () => {
+            debugOpen = true;
+            debugPanel.classList.add('open');
+            $('btn-debug').classList.add('active');
+          });
+        }
+      });
+
+      // Debug close button (X)
+      addClick('btn-debug-close', () => {
+        debugOpen = false;
+        debugPanel.classList.remove('open');
+        $('btn-debug')?.classList.remove('active');
+      });
+
+      // Tree panel toggle - exclusive with other bottom panels
       const treePanel = $('tree-panel');
       addClick('btn-tree', () => {
-        treeOpen = !treeOpen;
-        if (treeOpen) updateTreeView();
-        if (treePanel) treePanel.classList.toggle('open', treeOpen);
-        $('btn-tree').classList.toggle('active', treeOpen);
+        if (treeOpen) {
+          // Just close it
+          treeOpen = false;
+          if (treePanel) treePanel.classList.remove('open');
+          $('btn-tree').classList.remove('active');
+        } else {
+          // Close others first, then open
+          openPanelExclusive('tree', () => {
+            treeOpen = true;
+            updateTreeView();
+            if (treePanel) treePanel.classList.add('open');
+            $('btn-tree').classList.add('active');
+          });
+        }
       });
 
       addClick('btn-tree-close', () => {
@@ -2973,15 +3216,28 @@
       addClick('menu-lighting', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
-        lightingOpen = true;
-        lightingPanel.classList.add('open');
+        // Exclusive opening - close others first
+        openPanelExclusive('lighting', () => {
+          lightingOpen = true;
+          lightingPanel.classList.add('open');
+        });
+      });
+
+      // Lighting close button (X)
+      addClick('btn-lighting-close', () => {
+        lightingOpen = false;
+        lightingPanel.classList.remove('open');
       });
 
       addClick('menu-settings', () => {
         menuOpen = false;
         mainMenu.classList.remove('open');
-        debugOpen = true;
-        debugPanel.classList.add('open');
+        // Exclusive opening - close others first
+        openPanelExclusive('settings', () => {
+          debugOpen = true;
+          debugPanel.classList.add('open');
+          $('btn-debug')?.classList.add('active');
+        });
       });
 
       // About modal
