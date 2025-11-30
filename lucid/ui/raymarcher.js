@@ -231,7 +231,8 @@ export class SimpleRaymarcher {
 
           // Surface mode - traditional raymarching
           if (u_volumeRender < 0.5) {
-            if (abs(d) < 0.001 && !hitGround) {
+            // Hit threshold - slightly larger for dense instanced scenes
+            if (abs(d) < 0.002 && !hitGround) {
               vec3 normal = calcNormal(p);
               vec3 light = normalize(u_lightDir);
               float diff = max(dot(normal, light), 0.0);
@@ -256,10 +257,11 @@ export class SimpleRaymarcher {
             }
 
             // Conservative stepping with minimum step size
-            // This prevents missing thin geometry (stems, flattened petals)
-            // Per IQ: step = max(d, minStep) avoids precision issues
-            float minStep = 0.002;
-            t += max(abs(d) * 0.9, minStep);
+            // This prevents missing thin geometry (stems r=0.008, flattened petals)
+            // Per IQ: step = max(d * relaxation, minStep) avoids precision issues
+            // Reduced from 0.9 to 0.7 for better handling of dense instanced scenes
+            float minStep = 0.003;
+            t += max(abs(d) * 0.7, minStep);
           } else {
             // Volume mode - accumulate density near surface
             float stepSize = u_volumeStepSize;
