@@ -856,11 +856,19 @@ function generateScaledNode(node, ctx) {
   // Parse scale values
   let scaleVec;
   if (scale.type === 'array' && scale.values) {
-    // Expression-based scale
+    // Expression-based scale from IR (e.g., from processValue)
     scaleVec = scale.values.map(v => valueToGlsl(v, ctx));
+    // Handle single-element array as uniform scale
+    if (scaleVec.length === 1) {
+      scaleVec = [scaleVec[0], scaleVec[0], scaleVec[0]];
+    }
   } else if (Array.isArray(scale)) {
-    // Static scale values
+    // Direct array in JSON (static or expression values)
     scaleVec = scale.map(v => (typeof v === 'number' ? v.toFixed(6) : valueToGlsl(v, ctx)));
+    // Handle single-element array as uniform scale
+    if (scaleVec.length === 1) {
+      scaleVec = [scaleVec[0], scaleVec[0], scaleVec[0]];
+    }
   } else if (typeof scale === 'number') {
     // Uniform scale shorthand
     const s = scale.toFixed(6);

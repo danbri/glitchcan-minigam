@@ -3,6 +3,7 @@
   "subtitle": "Sharp-edged terror with cones and boxes",
   "camera": { "distance": 6, "phi": 0.25, "theta": 0.3, "target": [0, 0, 0] },
   "version": "1.0",
+  "quality": "medium",
   "notes": "Draggo - Sharp dragon using cones for horns/spikes, boxes for angular skull, hard unions for crisp edges",
   "root": {
     "type": "transform",
