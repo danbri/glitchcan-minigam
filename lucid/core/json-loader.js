@@ -64,6 +64,7 @@ function processNode(node, registry) {
     case 'cylinder':
     case 'capsule':
     case 'ellipsoid':
+    case 'cone':
     case 'plane':
       processed.params = processParams(node.params || {});
       break;
