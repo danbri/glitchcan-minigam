@@ -219,16 +219,28 @@ function generateEllipsoid(node, ctx) {
 
 /**
  * Generate cone - returns expression
- * A cone with height h and base radius r, tip at origin pointing up
+ * Supports both simple cones (r param) and truncated cones (r1, r2 params)
+ * - h: height of the cone
+ * - r: base radius (simple cone with tip at top)
+ * - r1, r2: bottom and top radii (truncated cone/frustum)
  */
 function generateCone(node, ctx) {
   const params = node.params || {};
   const h = valueToGlsl(params.h || { type: 'const', value: 1.0 }, ctx);
-  const r = valueToGlsl(params.r || { type: 'const', value: 0.5 }, ctx);
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdCone(${p}, ${h}, ${r}), ${color})`;
+  // Check if truncated cone (r1, r2) or simple cone (r)
+  if (params.r1 !== undefined || params.r2 !== undefined) {
+    // Truncated cone / frustum / rounded cone
+    const r1 = valueToGlsl(params.r1 || { type: 'const', value: 0.5 }, ctx);  // bottom radius
+    const r2 = valueToGlsl(params.r2 || { type: 'const', value: 0.0 }, ctx);  // top radius (0 = pointed tip)
+    return `vec4(sdRoundCone(${p}, ${r1}, ${r2}, ${h}), ${color})`;
+  } else {
+    // Simple cone with tip at origin
+    const r = valueToGlsl(params.r || { type: 'const', value: 0.5 }, ctx);
+    return `vec4(sdCone(${p}, ${h}, ${r}), ${color})`;
+  }
 }
 
 /**
@@ -1179,6 +1191,23 @@ float sdCone(vec3 p, float h, float r) {
   vec2 d2 = q - vec2(clamp(q.x, 0.0, r), h);
   float s = max(dot(w, vec2(e.y, -e.x)), q.y - h);
   return sqrt(min(dot(d1, d1), dot(d2, d2))) * sign(s);
+}
+
+// Truncated cone / frustum / round cone
+// r1 = bottom radius, r2 = top radius, h = height
+// Centered at origin, extends from y=-h/2 to y=h/2
+float sdRoundCone(vec3 p, float r1, float r2, float h) {
+  // Shift p so cone is centered vertically
+  vec2 q = vec2(length(p.xz), p.y + h * 0.5);
+
+  float b = (r1 - r2) / h;
+  float a = sqrt(1.0 - b * b);
+  float k = dot(q, vec2(-b, a));
+
+  if (k < 0.0) return length(q) - r1;
+  if (k > a * h) return length(q - vec2(0.0, h)) - r2;
+
+  return dot(q, vec2(a, b)) - r1;
 }
 
 float sdPlane(vec3 p, vec3 n, float h) {
