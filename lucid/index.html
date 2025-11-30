@@ -778,7 +778,7 @@
           <button class="icon-btn" id="btn-paste-apply" title="Paste & Apply (V)">📋</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
-          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🔄</button>
+          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🚁</button>
           <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
             <span id="anim-icon" style="display:inline-block;">▶</span>
           </button>
@@ -1096,1700 +1096,52 @@
     const BUILD_DATE = '2025-11-29';
 
     // ============================================
-    // DEMO TEMPLATES
+    // TOC-BASED DEMO LOADING (index-test.html)
     // ============================================
-    const templates = [
-      {
-        title: "Primitives Catalogue",
-        subtitle: "All 7 SDF primitives + smooth blend",
-        json: {
-          "version": "1.0",
-          "notes": "SDF primitives are the building blocks. Each has specific params: sphere(r), box(size[3]), cylinder(h,r), torus(major,minor), capsule(h,r), ellipsoid(radii[3]), plane(normal,h). All primitives support 'color' param and inline 'transform'.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "sphere",
-                "params": { "r": 0.35, "color": [1.0, 0.4, 0.4] },
-                "transform": { "translate": [-1.8, 0.8, 0] }
-              },
-              {
-                "type": "box",
-                "params": { "size": [0.28, 0.28, 0.28], "color": [0.4, 1.0, 0.4] },
-                "transform": { "translate": [-0.6, 0.8, 0] }
-              },
-              {
-                "type": "cylinder",
-                "params": { "h": 0.3, "r": 0.2, "color": [0.4, 0.6, 1.0] },
-                "transform": { "translate": [0.6, 0.8, 0] }
-              },
-              {
-                "type": "torus",
-                "params": { "major": 0.25, "minor": 0.08, "color": [1.0, 0.9, 0.3] },
-                "transform": { "translate": [1.8, 0.8, 0] }
-              },
-              {
-                "type": "capsule",
-                "params": { "h": 0.25, "r": 0.12, "color": [1.0, 0.5, 0.2] },
-                "transform": { "translate": [-1.8, -0.2, 0] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [0.4, 0.2, 0.2], "color": [0.8, 0.4, 1.0] },
-                "transform": { "translate": [-0.6, -0.2, 0] }
-              },
-              {
-                "type": "smoothUnion",
-                "k": 0.2,
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.22, "color": [0.3, 0.9, 0.8] } },
-                  { "type": "box", "params": { "size": [0.18, 0.18, 0.18], "color": [0.9, 0.4, 0.8] }, "transform": { "translate": [0.25, 0, 0] } }
-                ],
-                "transform": { "translate": [0.6, -0.2, 0] }
-              },
-              {
-                "type": "plane",
-                "params": { "normal": [0, 1, 0], "h": 0.8, "color": [0.35, 0.35, 0.4] }
-              }
-            ]
-          }
-        }
-      },
+    // This version loads demos from scenes/toc.json instead of embedded templates
+    let toc = null;
 
-      {
-        title: "Pulsing Sphere",
-        subtitle: "Animated radius with time expression",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "sphere",
-            "params": {
-              "r": {
-                "expr": "add",
-                "args": [
-                  1.0,
-                  { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "var": "time" }] }] }
-                ]
-              },
-              "color": [0.4, 0.8, 1.0]
-            }
-          }
-        }
-      },
+    async function loadToc() {
+      const resp = await fetch('scenes/toc.json');
+      if (!resp.ok) throw new Error(`Failed to load TOC: HTTP ${resp.status}`);
+      toc = await resp.json();
+      return toc;
+    }
 
-      {
-        title: "Smooth Union",
-        subtitle: "Two spheres with smooth blending",
-        json: {
-          "version": "1.0",
-          "notes": "CSG ops combine shapes: union (add), subtract (cut), intersect (common). Smooth variants (smoothUnion, smoothSubtract, smoothIntersect) use 'k' param to control blend radius. Higher k = more blending.",
-          "root": {
-            "type": "smoothUnion",
-            "k": 0.5,
-            "children": [
-              {
-                "type": "sphere",
-                "params": { "r": 0.8, "color": [1, 0.7, 0.2] },
-                "transform": {
-                  "translate": [
-                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 1.7] },
-                    0.7,
-                    0.5
-                  ]
-                }
-              },
-              {
-                "type": "sphere",
-                "params": { "r": 0.8, "color": [0.5, 0.2, 1] },
-                "transform": {
-                  "translate": [
-                    { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, -0.5] },
-                    -0.3,
-                    0
-                  ]
-                }
-              }
-            ]
-          }
-        }
-      },
+    async function loadSceneFile(path) {
+      const resp = await fetch('scenes/' + path);
+      if (!resp.ok) throw new Error(`Failed to load scene: HTTP ${resp.status}`);
+      return await resp.json();
+    }
 
-      {
-        title: "Box & Torus Subtract",
-        subtitle: "CSG subtraction operation",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "subtract",
-            "children": [
-              {
-                "type": "box",
-                "params": { "size": [0.95, 1.0, 0.95], "color": [0.4, 1.0, 0.0] }
-              },
-              {
-                "type": "torus",
-                "params": { "major": 1.0, "minor": 1.0 }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Nested CSG",
-        subtitle: "Union of intersections",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "intersect",
-                "children": [
-                  { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [1.0, 0.4, 0.3] } },
-                  { "type": "sphere", "params": { "r": 1.2, "color": [1.0, 0.4, 0.3] } }
-                ],
-                "transform": { "translate": [-1.2, 0.0, 0.0] }
-              },
-              {
-                "type": "intersect",
-                "children": [
-                  { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": [0.3, 0.8, 0.5] } },
-                  { "type": "sphere", "params": { "r": 1.2, "color": [0.3, 0.8, 0.5] } }
-                ],
-                "transform": { "translate": [1.2, 0.0, 0.0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Cylinder Array",
-        subtitle: "Simple table with 4 legs",
-        camera: {
-          distance: 7,      // One table-length (~3) out from the table
-          phi: 1.1,         // Slight angle above (looking down ~30°)
-          theta: 0.5,       // Angled to show 3D depth
-          target: [0, 1, 0] // Center on tabletop height
-        },
-        json: {
-          "version": "1.0",
-          "notes": "A simple table demonstrating defs/ref templating. Use 'defs' to define reusable shapes, then 'ref' to instantiate them. Each ref can have its own transform and material wrapper. Pattern: material > transform > ref.",
-          "defs": {
-            "pillar": {
-              "type": "cylinder",
-              "params": { "h": 2.0, "r": 0.2 }
-            }
-          },
-          "root": {
-            "type": "union",
-            "children": [
-              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
-              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, -1.5] }, "child": { "type": "ref", "id": "pillar" } } },
-              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
-              { "type": "material", "params": { "color": [0.8, 0.6, 0.4] }, "child": { "type": "transform", "transform": { "translate": [1.5, 0.0, 1.5] }, "child": { "type": "ref", "id": "pillar" } } },
-              {
-                "type": "box",
-                "params": { "size": [2.0, 0.1, 2.0], "color": [0.5, 0.5, 0.6] },
-                "transform": { "translate": [0.0, 2.0, 0.0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Breathing Torus",
-        subtitle: "Animated minor radius",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "torus",
-            "params": {
-              "major": 1.2,
-              "minor": {
-                "expr": "add",
-                "args": [
-                  0.25,
-                  { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] }
-                ]
-              },
-              "color": [0.9, 0.4, 0.6]
-            }
-          }
-        }
-      },
-
-      {
-        title: "Distance Field Invaders",
-        subtitle: "Detailed invaders with body parts",
-        json: {
-          "version": "1.0",
-          "defs": {
-            "invader": {
-              "type": "subtract",
-              "children": [
-                {
-                  "type": "union",
-                  "children": [
-                    { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
-                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
-                  ]
-                },
-                {
-                  "type": "union",
-                  "children": [
-                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
-                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
-                    { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
-                  ]
-                }
-              ]
-            }
-          },
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "material",
-                "params": { "color": [0, 1, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": {
-                    "translate": [
-                      { "expr": "add", "args": [-1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
-                      0.6,
-                      0
-                    ]
-                  },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0, 1, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": {
-                    "translate": [
-                      0,
-                      { "expr": "add", "args": [0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1] }] }, 0.2] }] },
-                      0
-                    ]
-                  },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0, 1, 0.5] },
-                "child": {
-                  "type": "transform",
-                  "transform": {
-                    "translate": [
-                      { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] }] },
-                      0.6,
-                      0
-                    ]
-                  },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": { "translate": [-1.5, -0.6, 0] },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": {
-                    "translate": [
-                      { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "var": "time" }] }, 0.3] },
-                      -0.6,
-                      0
-                    ]
-                  },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1, 0.3, 0.8] },
-                "child": {
-                  "type": "transform",
-                  "transform": {
-                    "translate": [
-                      1.5,
-                      { "expr": "add", "args": [-0.6, { "expr": "mul", "args": [{ "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 3] }] }, 0.2] }] },
-                      0
-                    ]
-                  },
-                  "child": { "type": "ref", "id": "invader" }
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Radial Flower",
-        subtitle: "12 petals from one sphere (O(1) cost!)",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "sphere",
-                "params": { "r": 0.4, "color": [1.0, 0.8, 0.2] }
-              },
-              {
-                "type": "radial",
-                "count": 12,
-                "axis": "y",
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 0.25, "color": [1.0, 0.4, 0.6] },
-                  "transform": { "translate": [0.7, 0, 0] }
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Mirror Symmetry",
-        subtitle: "XZ mirror - define quarter, get whole",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "mirror",
-            "axis": "xz",
-            "child": {
-              "type": "union",
-              "children": [
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.5, "color": [0.3, 0.8, 1.0] },
-                  "transform": { "translate": [0.8, 0, 0.8] }
-                },
-                {
-                  "type": "box",
-                  "params": { "size": [0.3, 0.8, 0.3], "color": [1.0, 0.5, 0.3] },
-                  "transform": { "translate": [0.5, 0, 0.5] }
-                }
-              ]
-            }
-          }
-        }
-      },
-
-      {
-        title: "Infinite Field",
-        subtitle: "Tiled spheres extending to infinity",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "repeat",
-            "period": [3, 0, 3],
-            "child": {
-              "type": "sphere",
-              "params": {
-                "r": {
-                  "expr": "add",
-                  "args": [0.4, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }]
-                },
-                "color": [0.6, 0.9, 0.4]
-              }
-            }
-          }
-        }
-      },
-
-      {
-        title: "Radial Invaders",
-        subtitle: "6 detailed invaders from radial symmetry",
-        json: {
-          "version": "1.0",
-          "defs": {
-            "invader": {
-              "type": "subtract",
-              "children": [
-                {
-                  "type": "union",
-                  "children": [
-                    { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
-                    { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
-                    { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
-                  ]
-                },
-                {
-                  "type": "union",
-                  "children": [
-                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
-                    { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
-                    { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
-                  ]
-                }
-              ]
-            }
-          },
-          "root": {
-            "type": "radial",
-            "count": 6,
-            "axis": "y",
-            "child": {
-              "type": "material",
-              "params": { "color": [0, 1, 0.5] },
-              "child": {
-                "type": "transform",
-                "transform": {
-                  "translate": [
-                    { "expr": "add", "args": [1.8, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
-                    0,
-                    0
-                  ]
-                },
-                "child": { "type": "ref", "id": "invader" }
-              }
-            }
-          }
-        }
-      },
-
-      {
-        title: "Sunflower",
-        subtitle: "Radial petals with layered center",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "smoothUnion",
-                "k": 0.15,
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.35, "color": [0.4, 0.25, 0.1] } },
-                  { "type": "sphere", "params": { "r": 0.25, "color": [0.6, 0.4, 0.15] }, "transform": { "translate": [0, 0.15, 0] } }
-                ]
-              },
-              {
-                "type": "radial",
-                "count": 16,
-                "axis": "z",
-                "child": {
-                  "type": "smoothUnion",
-                  "k": 0.1,
-                  "children": [
-                    {
-                      "type": "sphere",
-                      "params": { "r": 0.18, "color": [1.0, 0.85, 0.1] },
-                      "transform": { "translate": [0.5, 0, 0] }
-                    },
-                    {
-                      "type": "sphere",
-                      "params": { "r": 0.12, "color": [1.0, 0.75, 0.0] },
-                      "transform": { "translate": [0.7, 0, 0] }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Sunflower Field",
-        subtitle: "Infinite flowers via repeat + radial (static)",
-        json: {
-          "version": "1.1",
-          "notes": "Animation disabled - was causing distortion with repeat+radial combination",
-          "defs": {
-            "sunflower": {
-              "type": "union",
-              "children": [
-                {
-                  "type": "sphere",
-                  "params": { "r": 0.25, "color": [0.45, 0.3, 0.1] }
-                },
-                {
-                  "type": "radial",
-                  "count": 12,
-                  "axis": "z",
-                  "child": {
-                    "type": "sphere",
-                    "params": { "r": 0.12, "color": [1.0, 0.8, 0.1] },
-                    "transform": { "translate": [0.35, 0, 0] }
-                  }
-                }
-              ]
-            }
-          },
-          "root": {
-            "type": "repeat",
-            "period": [2.5, 0, 2.5],
-            "child": { "type": "ref", "id": "sunflower" }
-          }
-        }
-      },
-
-      {
-        title: "Poppy Field",
-        subtitle: "Rotated disk faces with centralized head angle (static)",
-        json: {
-          "version": "1.1",
-          "notes": "Animation disabled - was causing issues with repeat+radial combination",
-          "defs": {
-            "poppy_head": {
-              "type": "union",
-              "comment": "Head angle is defined ONCE here - rotate X by 75° to tilt disk face",
-              "children": [
-                {
-                  "type": "cylinder",
-                  "params": { "h": 0.02, "r": 0.15, "color": [0.35, 0.2, 0.1] },
-                  "transform": { "rotate": [75, 0, 0] }
-                },
-                {
-                  "type": "radial",
-                  "count": 8,
-                  "axis": "z",
-                  "child": {
-                    "type": "sphere",
-                    "params": { "r": 0.12, "color": [0.9, 0.15, 0.1] },
-                    "transform": { "translate": [0.18, 0, 0], "rotate": [75, 0, 0] }
-                  }
-                }
-              ],
-              "transform": { "translate": [0, 0.8, 0] }
-            },
-            "stem": {
-              "type": "cylinder",
-              "params": { "h": 0.8, "r": 0.03, "color": [0.2, 0.5, 0.15] }
-            },
-            "poppy": {
-              "type": "union",
-              "children": [
-                { "type": "ref", "id": "stem" },
-                { "type": "ref", "id": "poppy_head" }
-              ]
-            }
-          },
-          "root": {
-            "type": "repeat",
-            "period": [1.8, 0, 1.8],
-            "child": { "type": "ref", "id": "poppy" }
-          }
-        }
-      },
-
-      {
-        title: "Rotation Methods",
-        subtitle: "Euler, quaternion, and axis-angle rotation",
-        json: {
-          "version": "1.0",
-          "notes": "Demonstrates all three rotation methods: Euler angles, quaternions, and axis-angle",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "notes": "Euler rotation: rotate [45, 0, 0] = 45° around X axis",
-                "type": "box",
-                "params": { "size": [0.6, 0.2, 0.2], "color": [1, 0.3, 0.3] },
-                "transform": { "translate": [-1.8, 0.8, 0], "rotate": [45, 0, 0] }
-              },
-              {
-                "notes": "Euler rotation: rotate [0, 45, 0] = 45° around Y axis",
-                "type": "box",
-                "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 1, 0.3] },
-                "transform": { "translate": [0, 0.8, 0], "rotate": [0, 45, 0] }
-              },
-              {
-                "notes": "Euler rotation: rotate [0, 0, 45] = 45° around Z axis",
-                "type": "box",
-                "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 0.3, 1] },
-                "transform": { "translate": [1.8, 0.8, 0], "rotate": [0, 0, 45] }
-              },
-              {
-                "notes": "Quaternion: 90° around Y axis = [0, 0.707, 0, 0.707]",
-                "type": "cylinder",
-                "params": { "h": 0.4, "r": 0.15, "color": [1, 0.8, 0.2] },
-                "transform": { "translate": [-1.2, -0.5, 0], "rotateQ": [0, 0.7071, 0, 0.7071] }
-              },
-              {
-                "notes": "Axis-angle: 60° around diagonal axis [1,1,0]",
-                "type": "cylinder",
-                "params": { "h": 0.4, "r": 0.15, "color": [0.8, 0.2, 1] },
-                "transform": { "translate": [1.2, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 60 } }
-              },
-              {
-                "notes": "Animated axis-angle rotation",
-                "type": "torus",
-                "params": { "major": 0.3, "minor": 0.08, "color": [0.2, 0.9, 0.9] },
-                "transform": {
-                  "translate": [0, -0.5, 0],
-                  "rotateAxis": {
-                    "axis": [0, 1, 0],
-                    "angle": { "expr": "mul", "args": [45, { "var": "time" }] }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Spirit Creatures",
-        subtitle: "Rotating ghost-like beings with tentacles",
-        json: {
-          "version": "1.0",
-          "defs": {
-            "tentacle_chain": {
-              "type": "smoothUnion",
-              "k": 0.08,
-              "children": [
-                { "type": "sphere", "params": { "r": 0.08, "color": [1, 0.2, 0.1] } },
-                { "type": "sphere", "params": { "r": 0.06, "color": [1, 0.6, 0.1] }, "transform": { "translate": [0.15, 0, 0] } },
-                { "type": "sphere", "params": { "r": 0.03, "color": [1, 1, 0.5] }, "transform": { "translate": [0.3, 0, 0] } }
-              ]
-            },
-            "ghost_body": {
-              "type": "sphere",
-              "params": { "r": 0.22, "color": [0.9, 0.95, 1.0] }
-            },
-            "spirit_creature": {
-              "type": "smoothUnion",
-              "k": 0.1,
-              "children": [
-                { "type": "ref", "id": "ghost_body" },
-                {
-                  "type": "radial",
-                  "count": 6,
-                  "axis": "z",
-                  "child": {
-                    "type": "transform",
-                    "transform": { "translate": [0.15, 0, 0.1], "rotate": [0, 45, 0] },
-                    "child": { "type": "ref", "id": "tentacle_chain" }
-                  }
-                }
-              ]
-            }
-          },
-          "root": {
-            "type": "repeat",
-            "period": [2.0, 2.0, 2.0],
-            "child": {
-              "type": "transform",
-              "transform": {
-                "translate": [0, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }, 0],
-                "rotate": [0, 0, { "expr": "mul", "args": [20, { "var": "time" }] }]
-              },
-              "child": { "type": "ref", "id": "spirit_creature" }
-            }
-          }
-        }
-      },
-
-      {
-        title: "Capsule Demo",
-        subtitle: "Rounded cylinder primitive",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              { "type": "capsule", "params": { "h": 0.8, "r": 0.2, "color": [0.9, 0.3, 0.5] }, "transform": { "translate": [-1.2, 0, 0] } },
-              { "type": "capsule", "params": { "h": 0.5, "r": 0.3, "color": [0.3, 0.8, 0.5] }, "transform": { "translate": [0, 0, 0], "rotate": [0, 0, 45] } },
-              { "type": "capsule", "params": { "h": 1.0, "r": 0.15, "color": [0.3, 0.5, 0.9] }, "transform": { "translate": [1.2, 0, 0], "rotate": [90, 0, 0] } }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Capsule Chain",
-        subtitle: "Animated rope-like segments",
-        json: {
-          "version": "1.0",
-          "notes": "Three capsules connected end-to-end with smooth blending. Each segment animates independently creating flowing, rope-like motion. smoothUnion eliminates color flickering at joints.",
-          "root": {
-            "type": "smoothUnion",
-            "k": 0.15,
-            "children": [
-              {
-                "type": "capsule",
-                "notes": "Left segment - fixed left end, animated right end",
-                "params": { "h": 0.5, "r": 0.12, "color": [1.0, 0.3, 0.3] },
-                "transform": {
-                  "translate": [
-                    -0.8,
-                    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] },
-                    0
-                  ],
-                  "rotate": [0, 0, 90]
-                }
-              },
-              {
-                "type": "capsule",
-                "notes": "Middle segment - both ends animated",
-                "params": { "h": 0.5, "r": 0.12, "color": [0.3, 1.0, 0.3] },
-                "transform": {
-                  "translate": [
-                    0,
-                    { "expr": "mul", "args": [0.4, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.5] }] }] },
-                    0
-                  ],
-                  "rotate": [0, 0, 90]
-                }
-              },
-              {
-                "type": "capsule",
-                "notes": "Right segment - animated left end, fixed right end",
-                "params": { "h": 0.5, "r": 0.12, "color": [0.3, 0.3, 1.0] },
-                "transform": {
-                  "translate": [
-                    0.8,
-                    { "expr": "mul", "args": [-0.3, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
-                    0
-                  ],
-                  "rotate": [0, 0, 90]
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Ellipsoid Demo",
-        subtitle: "Stretched spheres with different radii",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.8, 0.3, 0.3], "color": [1, 0.5, 0.2] }, "transform": { "translate": [-1.5, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.4, 0.8, 0.4], "color": [0.2, 0.8, 0.5] }, "transform": { "translate": [0, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.3, 0.3, 0.9], "color": [0.5, 0.3, 1] }, "transform": { "translate": [1.5, 0, 0] } }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "CSG Operations",
-        subtitle: "Union, subtract, intersect, smooth union",
-        json: {
-          "version": "1.0",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "union",
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.4, "color": [0.9, 0.3, 0.3] } },
-                  { "type": "box", "params": { "size": [0.25, 0.25, 0.25], "color": [0.3, 0.9, 0.3] }, "transform": { "translate": [0.3, 0.3, 0] } }
-                ],
-                "transform": { "translate": [-2.5, 0.8, 0] }
-              },
-              {
-                "type": "subtract",
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.45, "color": [0.3, 0.6, 0.9] } },
-                  { "type": "box", "params": { "size": [0.3, 0.3, 0.6], "color": [0.9, 0.9, 0.3] } }
-                ],
-                "transform": { "translate": [-0.8, 0.8, 0] }
-              },
-              {
-                "type": "intersect",
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.5, "color": [0.9, 0.5, 0.2] } },
-                  { "type": "box", "params": { "size": [0.35, 0.35, 0.35], "color": [0.9, 0.5, 0.2] } }
-                ],
-                "transform": { "translate": [0.9, 0.8, 0] }
-              },
-              {
-                "type": "smoothUnion",
-                "k": 0.25,
-                "children": [
-                  { "type": "sphere", "params": { "r": 0.35, "color": [0.7, 0.3, 0.9] } },
-                  { "type": "sphere", "params": { "r": 0.35, "color": [0.3, 0.9, 0.7] }, "transform": { "translate": [0.4, 0, 0] } }
-                ],
-                "transform": { "translate": [2.5, 0.8, 0] }
-              },
-              {
-                "type": "mirror",
-                "axis": "x",
-                "child": {
-                  "type": "capsule",
-                  "params": { "h": 0.3, "r": 0.15, "color": [0.9, 0.6, 0.2] },
-                  "transform": { "translate": [0.5, 0, 0], "rotate": [0, 0, 30] }
-                },
-                "transform": { "translate": [-2.0, -0.8, 0] }
-              },
-              {
-                "type": "radial",
-                "count": 5,
-                "axis": "z",
-                "child": {
-                  "type": "box",
-                  "params": { "size": [0.15, 0.08, 0.08], "color": [0.2, 0.8, 0.9] },
-                  "transform": { "translate": [0.35, 0, 0] }
-                },
-                "transform": { "translate": [0, -0.8, 0] }
-              },
-              {
-                "type": "repeat",
-                "period": [0.8, 0, 0.8],
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 0.12, "color": [0.9, 0.4, 0.6] }
-                },
-                "transform": { "translate": [2.2, -0.8, 0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "Animated Expressions",
-        subtitle: "Time-based animation with math expressions",
-        json: {
-          "version": "1.0",
-          "defs": {
-            "orbiter": {
-              "type": "sphere",
-              "params": { "r": 0.15, "color": [1.0, 0.8, 0.2] }
-            }
-          },
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "sphere",
-                "params": {
-                  "r": { "expr": "add", "args": [0.5, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
-                  "color": [0.3, 0.5, 0.9]
-                }
-              },
-              {
-                "type": "ref",
-                "id": "orbiter",
-                "transform": {
-                  "translate": [
-                    { "expr": "mul", "args": [1.2, { "expr": "cos", "args": [{ "var": "time" }] }] },
-                    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 3] }] }] },
-                    { "expr": "mul", "args": [1.2, { "expr": "sin", "args": [{ "var": "time" }] }] }
-                  ]
-                }
-              },
-              {
-                "type": "ref",
-                "id": "orbiter",
-                "transform": {
-                  "translate": [
-                    { "expr": "mul", "args": [1.2, { "expr": "cos", "args": [{ "expr": "add", "args": [{ "var": "time" }, 2.1] }] }] },
-                    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "expr": "add", "args": [{ "var": "time" }, 2.1] }, 3] }] }] },
-                    { "expr": "mul", "args": [1.2, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 2.1] }] }] }
-                  ]
-                }
-              },
-              {
-                "type": "ref",
-                "id": "orbiter",
-                "transform": {
-                  "translate": [
-                    { "expr": "mul", "args": [1.2, { "expr": "cos", "args": [{ "expr": "add", "args": [{ "var": "time" }, 4.2] }] }] },
-                    { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "expr": "add", "args": [{ "var": "time" }, 4.2] }, 3] }] }] },
-                    { "expr": "mul", "args": [1.2, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 4.2] }] }] }
-                  ]
-                }
-              },
-              {
-                "type": "torus",
-                "params": { "major": 1.2, "minor": 0.03, "color": [0.4, 0.4, 0.5] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "🚀 Cobra Mk III",
-        subtitle: "Elite ship - REVEALS MIRROR BUG (cutters don't rotate)",
-        json: {
-          "version": "4.4",
-          "notes": "Cobra Mk III - Demonstrates CSG box-cutting AND a platform bug.\n\nKEY CONCEPTS:\n1. SUBTRACT node: First child is BASE, remaining children are CUTTERS\n   subtract([hull, cutter1, cutter2]) = hull - cutter1 - cutter2\n\n2. TRANSFORM PROPAGATION BUG: Watch the animation - the CSG cutters inside\n   mirror nodes don't rotate with the parent! The ship only looks correct\n   at certain angles. Use 'Show CSG Cutters' debug mode to visualize.\n\n3. CSG CUTTER SIZING: Cutters should be large enough to fully cut through the\n   base shape. Position cutters so they intersect the base at desired angles.\n\nSTRUCTURE:\n  transform (ANIMATED Y rotation - reveals bug)\n    └─ union\n         ├─ subtract (main hull)\n         │    ├─ box (base hull)\n         │    ├─ mirror(x) > box (side wing cutters) ← BUG: doesn't rotate\n         │    ├─ box (top nose bevel)\n         │    ├─ box (bottom belly bevel)\n         │    └─ box (rear notch)\n         └─ mirror(x) > union (engine pods)\n              ├─ cylinder (engine body)\n              └─ torus (engine glow ring - animated pulse)",
-          "root": {
-            "type": "transform",
-            "transform": {
-              "rotate": [15, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
-            },
-            "child": {
-              "type": "union",
-              "children": [
-                {
-                  "type": "subtract",
-                  "notes": "Subtract takes [base, cutter1, cutter2, ...]. First child is kept, rest are removed.",
-                  "children": [
-                    {
-                      "type": "box",
-                      "notes": "Base hull - flat elongated box that will be sculpted by cutters",
-                      "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
-                    },
-                    {
-                      "type": "mirror",
-                      "axis": "x",
-                      "notes": "Mirror creates symmetric side cuts",
-                      "child": {
-                        "type": "box",
-                        "notes": "Wing angle cutter - angled 68° to create swept wing profile",
-                        "params": {"size": [0.8, 0.6, 2.0], "color": [1, 0, 0]},
-                        "transform": {"translate": [1.6, 0, 0.2], "rotate": [0, 68, 0]}
-                      }
-                    },
-                    {
-                      "type": "box",
-                      "notes": "Top bevel - angled cut from nose",
-                      "params": {"size": [1.6, 0.5, 2.0], "color": [0, 1, 0]},
-                      "transform": {"translate": [0, 0.7, 0.8], "rotate": [12, 0, 0]}
-                    },
-                    {
-                      "type": "box",
-                      "notes": "Bottom bevel - angled cut for belly",
-                      "params": {"size": [1.6, 0.5, 2.0], "color": [0, 0, 1]},
-                      "transform": {"translate": [0, -0.7, 0.8], "rotate": [-12, 0, 0]}
-                    },
-                    {
-                      "type": "box",
-                      "notes": "Rear notch - engine bay area",
-                      "params": {"size": [1.0, 0.5, 0.5], "color": [1, 1, 0]},
-                      "transform": {"translate": [0, 0, -1.6], "rotate": [-15, 0, 0]}
-                    }
-                  ]
-                },
-                {
-                  "type": "mirror",
-                  "axis": "x",
-                  "notes": "Mirrored engine assembly - creates symmetric engine pods on both sides",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "type": "cylinder",
-                        "notes": "Engine body - rotated 90° around X to point backward (Z axis)",
-                        "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
-                        "transform": {"translate": [0.5, 0, -1.2], "rotate": [90, 0, 0]}
-                      },
-                      {
-                        "type": "torus",
-                        "notes": "Engine glow ring - pulsing exhaust ring at engine exit",
-                        "params": {
-                          "major": 0.14,
-                          "minor": { "expr": "add", "args": [0.03, { "expr": "mul", "args": [0.015, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 5.0] }] }] }] },
-                          "color": [1.0, 0.6, 0.1]
-                        },
-                        "transform": {"translate": [0.5, 0, -1.4], "rotate": [90, 0, 0]}
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        }
-      },
-
-      {
-        title: "Elite Wireframe",
-        subtitle: "ZX Spectrum style spaceship with mirror symmetry",
-        json: {
-          "version": "1.0",
-          "notes": "Cobra-style ship. Capsules are Y-aligned by default, so [90,θ,0] lays them flat in XZ plane at angle θ",
-          "root": {
-            "type": "transform",
-            "transform": {
-              "rotate": [0, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
-            },
-            "child": {
-              "type": "mirror",
-              "axis": "x",
-              "child": {
-                "type": "union",
-                "children": [
-                  {
-                    "notes": "Nose to wing tip - diagonal in XZ plane",
-                    "type": "capsule",
-                    "params": { "h": 0.9, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.45, 0, 0.3], "rotate": [90, -60, 0] }
-                  },
-                  {
-                    "notes": "Wing tip to rear corner - along Z",
-                    "type": "capsule",
-                    "params": { "h": 0.5, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.9, 0, -0.3], "rotate": [90, 0, 0] }
-                  },
-                  {
-                    "notes": "Rear corner to center rear - along X",
-                    "type": "capsule",
-                    "params": { "h": 0.45, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.45, 0, -0.8], "rotate": [0, 0, 90] }
-                  },
-                  {
-                    "notes": "Center rear spine - along Z",
-                    "type": "capsule",
-                    "params": { "h": 0.6, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0, 0, 0.5], "rotate": [90, 0, 0] }
-                  },
-                  {
-                    "notes": "Cockpit front strut - angled up from nose",
-                    "type": "capsule",
-                    "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0, 0.12, 0.85], "rotate": [30, 0, 0] }
-                  },
-                  {
-                    "notes": "Cockpit top - along Z",
-                    "type": "capsule",
-                    "params": { "h": 0.35, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0, 0.2, 0.35], "rotate": [90, 0, 0] }
-                  },
-                  {
-                    "notes": "Cockpit rear strut - angled down",
-                    "type": "capsule",
-                    "params": { "h": 0.25, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0, 0.1, -0.1], "rotate": [-30, 0, 0] }
-                  },
-                  {
-                    "notes": "Cockpit side - along X from center",
-                    "type": "capsule",
-                    "params": { "h": 0.15, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.08, 0.2, 0.5], "rotate": [0, 0, 90] }
-                  },
-                  {
-                    "notes": "Engine strut - vertical",
-                    "type": "capsule",
-                    "params": { "h": 0.12, "r": 0.02, "color": [0.2, 1.0, 0.3] },
-                    "transform": { "translate": [0.5, 0, -0.7] }
-                  },
-                  {
-                    "notes": "Engine glow ring",
-                    "type": "torus",
-                    "params": { "major": 0.1, "minor": 0.02, "color": [1.0, 0.5, 0.1] },
-                    "transform": { "translate": [0.5, 0, -0.85], "rotate": [90, 0, 0] }
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-
-      // ========================================
-      // TUTORIAL DEMOS - Explain key concepts
-      // ========================================
-      {
-        title: "📚 Transforms Tutorial",
-        subtitle: "All transform types explained",
-        json: {
-          "version": "1.0",
-          "notes": "TRANSFORMS move/rotate shapes. Types: 'translate':[x,y,z], 'rotate':[rx,ry,rz] (Euler degrees XYZ order), 'rotateQ':[x,y,z,w] (quaternion), 'rotateAxis':{axis:[x,y,z],angle:deg}, 'mat4':[16 values] (column-major 4x4 matrix). Inline on primitives OR wrap with 'transform' node.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "box",
-                "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 0.3] },
-                "transform": { "translate": [-1.5, 0.5, 0] }
-              },
-              {
-                "type": "box",
-                "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 1, 0.3] },
-                "transform": { "translate": [0, 0.5, 0], "rotate": [0, 45, 0] }
-              },
-              {
-                "type": "box",
-                "params": { "size": [0.3, 0.3, 0.3], "color": [0.3, 0.3, 1] },
-                "transform": { "translate": [1.5, 0.5, 0], "rotate": [45, 45, 0] }
-              },
-              {
-                "type": "transform",
-                "transform": { "translate": [-1.5, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 45 } },
-                "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 1, 0.3] } }
-              },
-              {
-                "type": "transform",
-                "transform": { "translate": [0, -0.5, 0], "rotateQ": [0, 0.383, 0, 0.924] },
-                "child": { "type": "box", "params": { "size": [0.3, 0.3, 0.3], "color": [1, 0.3, 1] } }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "📚 Material & Emission",
-        subtitle: "Color override and glow effects",
-        json: {
-          "version": "1.0",
-          "notes": "MATERIAL node wraps a child and overrides its appearance. Params: 'color':[r,g,b] overrides color, 'emit':0-1 adds glow effect (higher = brighter). Material > transform > shape is the typical pattern for reusable templates.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "material",
-                "params": { "color": [1, 0.2, 0.2] },
-                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [-1.2, 0.5, 0] } }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0.2, 1, 0.2], "emit": 0.3 },
-                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [0, 0.5, 0] } }
-              },
-              {
-                "type": "material",
-                "params": { "color": [0.2, 0.5, 1], "emit": 0.8 },
-                "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [1.2, 0.5, 0] } }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1, 1, 1], "emit": 1.0 },
-                "child": { "type": "sphere", "params": { "r": 0.25 }, "transform": { "translate": [0, -0.3, 0] } }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "📚 Grouping & Hierarchy",
-        subtitle: "Nested transforms with groups",
-        json: {
-          "version": "1.0",
-          "notes": "GROUP node collects children and applies a shared transform. Unlike union (which combines SDFs), group is purely organizational. Transforms cascade: parent transform applies to all children. Use for logical hierarchy and shared positioning.",
-          "defs": {
-            "arm": {
-              "type": "union",
-              "children": [
-                { "type": "sphere", "params": { "r": 0.15 } },
-                { "type": "capsule", "params": { "h": 0.3, "r": 0.08 }, "transform": { "translate": [0, -0.25, 0] } },
-                { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0, -0.5, 0] } }
-              ]
-            }
-          },
-          "root": {
-            "type": "group",
-            "transform": { "translate": [0, 0.5, 0] },
-            "children": [
-              { "type": "sphere", "params": { "r": 0.4, "color": [0.8, 0.6, 0.4] } },
-              { "type": "material", "params": { "color": [0.6, 0.8, 0.4] }, "child": { "type": "transform", "transform": { "translate": [-0.5, 0, 0], "rotate": [0, 0, -30] }, "child": { "type": "ref", "id": "arm" } } },
-              { "type": "material", "params": { "color": [0.6, 0.8, 0.4] }, "child": { "type": "transform", "transform": { "translate": [0.5, 0, 0], "rotate": [0, 0, 30] }, "child": { "type": "ref", "id": "arm" } } },
-              { "type": "sphere", "params": { "r": 0.25, "color": [0.9, 0.8, 0.7] }, "transform": { "translate": [0, 0.55, 0] } }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "📚 Expressions & Animation",
-        subtitle: "Dynamic values with math expressions",
-        json: {
-          "version": "1.0",
-          "notes": "EXPRESSIONS make values dynamic. Use {expr:'op', args:[...]} syntax. Ops: add, sub, mul, div, sin, cos, abs, min, max, mix, clamp, mod, pow, sqrt. Use {var:'time'} for animation, {var:'x/y/z'} for position. Expressions work in any numeric param.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "sphere",
-                "params": {
-                  "r": { "expr": "add", "args": [0.3, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
-                  "color": [1, 0.5, 0.2]
-                },
-                "transform": { "translate": [-1, 0.5, 0] }
-              },
-              {
-                "type": "box",
-                "params": { "size": [0.3, 0.3, 0.3], "color": [0.2, 0.8, 1] },
-                "transform": {
-                  "translate": [0, 0.5, 0],
-                  "rotate": [0, { "expr": "mul", "args": [{ "var": "time" }, 45] }, 0]
-                }
-              },
-              {
-                "type": "torus",
-                "params": {
-                  "major": 0.4,
-                  "minor": { "expr": "add", "args": [0.08, { "expr": "mul", "args": [0.04, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 3] }] }] }] },
-                  "color": [0.8, 0.2, 0.8]
-                },
-                "transform": { "translate": [1, 0.5, 0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "📚 Modifiers: Round & Shell",
-        subtitle: "Post-process SDF shapes",
-        json: {
-          "version": "1.0",
-          "notes": "MODIFIERS alter the SDF after shape calculation. 'round' adds radius to edges (softens corners). 'shell' hollows out shapes with wall thickness. Modifiers wrap any shape or CSG result. Great for organic or manufactured looks.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "box",
-                "params": { "size": [0.35, 0.35, 0.35], "color": [0.8, 0.4, 0.2] },
-                "transform": { "translate": [-1.2, 0.5, 0] }
-              },
-              {
-                "type": "round",
-                "r": 0.08,
-                "child": {
-                  "type": "box",
-                  "params": { "size": [0.35, 0.35, 0.35], "color": [0.4, 0.8, 0.2] }
-                },
-                "transform": { "translate": [0, 0.5, 0] }
-              },
-              {
-                "type": "shell",
-                "thickness": 0.05,
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 0.4, "color": [0.2, 0.5, 0.9] }
-                },
-                "transform": { "translate": [1.2, 0.5, 0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "🌊 Alien Planet",
-        subtitle: "Animated noise displacement",
-        json: {
-          "version": "1.1",
-          "notes": "DISPLACE modifier uses noise to distort surfaces. Params: amount (strength), scale (frequency), octaves (detail), noiseType ('fbm', 'turbulence', 'noise'), animate (true for moving noise). Amount reduced for more solid appearance.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "displace",
-                "amount": 0.06,
-                "scale": 3.0,
-                "octaves": 4,
-                "noiseType": "fbm",
-                "animate": true,
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 1.0, "color": [0.3, 0.6, 0.9] }
-                },
-                "transform": { "translate": [0, 0.5, 0] }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 0.8, 0.3], "emit": 0.8 },
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 0.15 },
-                  "transform": { "translate": [1.5, 1.0, -0.5] }
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "🪨 Rocky Asteroid",
-        subtitle: "Turbulent noise for rough surfaces",
-        json: {
-          "version": "1.1",
-          "notes": "Turbulence noise creates sharper, more rocky features than FBM. Great for asteroids, terrain, and weathered surfaces. Amount reduced for solid appearance.",
-          "root": {
-            "type": "displace",
-            "amount": 0.08,
-            "scale": 2.5,
-            "octaves": 3,
-            "noiseType": "turbulence",
-            "animate": false,
-            "child": {
-              "type": "smoothUnion",
-              "k": 0.3,
-              "children": [
-                { "type": "sphere", "params": { "r": 0.8, "color": [0.5, 0.4, 0.35] } },
-                { "type": "sphere", "params": { "r": 0.6, "color": [0.6, 0.5, 0.4] }, "transform": { "translate": [0.4, 0.3, 0.2] } },
-                { "type": "sphere", "params": { "r": 0.5, "color": [0.55, 0.45, 0.38] }, "transform": { "translate": [-0.3, -0.2, 0.4] } }
-              ]
-            },
-            "transform": { "translate": [0, 0.5, 0] }
-          }
-        }
-      },
-
-      {
-        title: "✨ Glowing Orb",
-        subtitle: "Emission + shell + noise",
-        json: {
-          "version": "1.1",
-          "notes": "Combining effects: shell creates hollow sphere, displace adds organic texture, material with emit creates glow. Shell thickness > displace amount to avoid holes.",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "displace",
-                "amount": 0.03,
-                "scale": 4.0,
-                "octaves": 3,
-                "animate": true,
-                "child": {
-                  "type": "shell",
-                  "thickness": 0.08,
-                  "child": {
-                    "type": "material",
-                    "params": { "color": [0.2, 0.8, 1.0], "emit": 0.6 },
-                    "child": {
-                      "type": "sphere",
-                      "params": { "r": 0.9 }
-                    }
-                  }
-                },
-                "transform": { "translate": [0, 0.5, 0] }
-              },
-              {
-                "type": "material",
-                "params": { "color": [1.0, 1.0, 1.0], "emit": 1.0 },
-                "child": {
-                  "type": "sphere",
-                  "params": { "r": 0.25 },
-                  "transform": { "translate": [0, 0.5, 0] }
-                }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "🧬 Custom GLSL",
-        subtitle: "Raw GLSL expression (base64 encoded)",
-        json: {
-          "version": "1.0",
-          "notes": "customExpr node allows raw GLSL stored as base64. The 'glsl' field decodes to a vec4(dist, r, g, b) expression. Use 'p' for position, 'u_time' for animation. Encode with: echo -n 'vec4(...)' | base64",
-          "root": {
-            "type": "union",
-            "children": [
-              {
-                "type": "customExpr",
-                "notes": "Gyroid surface - a triply periodic minimal surface",
-                "glsl": "dmVjNChhYnMoc2luKHAueCozLjE0KSpjb3MocC55KjMuMTQpICsgc2luKHAueSozLjE0KSpjb3MocC56KjMuMTQpICsgc2luKHAueiozLjE0KSpjb3MocC54KjMuMTQpKSAtIDAuMywgMC45LCAwLjQsIDAuNyk="
-              },
-              {
-                "type": "customExpr",
-                "notes": "Pulsing sphere using u_time",
-                "glsl": "dmVjNChsZW5ndGgocCkgLSAwLjggLSAwLjIgKiBzaW4odV90aW1lICogMi4wKSwgMC4yLCAwLjgsIDEuMCk=",
-                "transform": { "translate": [3, 0, 0] }
-              }
-            ]
-          }
-        }
-      },
-
-      {
-        title: "🐉 Draggo",
-        subtitle: "Sharp-edged terror with cones and boxes",
-        camera: { distance: 6, phi: 0.25, theta: 0.3, target: [0, 0, 0] },
-        json: {
-          "version": "1.0",
-          "notes": "Draggo - Sharp dragon using cones for horns/spikes, boxes for angular skull, hard unions for crisp edges",
-          "root": {
-            "type": "transform",
-            "transform": {
-              "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
-            },
-            "child": {
-              "type": "union",
-              "children": [
-                {
-                  "notes": "Body core - slightly smoothed for organic feel",
-                  "type": "smoothUnion",
-                  "k": 0.08,
-                  "children": [
-                    {
-                      "notes": "Main body",
-                      "type": "ellipsoid",
-                      "params": { "radii": [0.5, 0.45, 0.8], "color": [0.12, 0.08, 0.1] }
-                    },
-                    {
-                      "notes": "Neck",
-                      "type": "capsule",
-                      "params": { "h": 0.35, "r": 0.2, "color": [0.1, 0.07, 0.09] },
-                      "transform": { "translate": [0, 0.15, 0.75], "rotate": [35, 0, 0] }
-                    }
-                  ]
-                },
-                {
-                  "notes": "Angular skull - box-based",
-                  "type": "union",
-                  "children": [
-                    {
-                      "notes": "Skull top",
-                      "type": "box",
-                      "params": { "size": [0.22, 0.15, 0.28], "color": [0.1, 0.06, 0.08] },
-                      "transform": { "translate": [0, 0.42, 1.25], "rotate": [15, 0, 0] }
-                    },
-                    {
-                      "notes": "Snout - angular box",
-                      "type": "box",
-                      "params": { "size": [0.12, 0.08, 0.25], "color": [0.12, 0.07, 0.09] },
-                      "transform": { "translate": [0, 0.32, 1.55], "rotate": [5, 0, 0] }
-                    },
-                    {
-                      "notes": "Lower jaw",
-                      "type": "box",
-                      "params": { "size": [0.1, 0.05, 0.2], "color": [0.08, 0.05, 0.07] },
-                      "transform": { "translate": [0, 0.2, 1.5] }
-                    }
-                  ]
-                },
-                {
-                  "notes": "SHARP horns - cones (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "notes": "Main horn - sharp cone",
-                        "type": "cone",
-                        "params": { "h": 0.4, "r": 0.06, "color": [0.25, 0.15, 0.1] },
-                        "transform": { "translate": [0.18, 0.55, 1.1], "rotate": [130, 25, 0] }
-                      },
-                      {
-                        "notes": "Secondary horn",
-                        "type": "cone",
-                        "params": { "h": 0.25, "r": 0.04, "color": [0.3, 0.18, 0.12] },
-                        "transform": { "translate": [0.22, 0.48, 1.0], "rotate": [145, 35, 0] }
-                      }
-                    ]
-                  }
-                },
-                {
-                  "notes": "Glowing eyes (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "material",
-                    "params": { "color": [1.0, 0.15, 0.0], "emit": 2.0 },
-                    "child": {
-                      "type": "sphere",
-                      "params": { "r": 0.06 },
-                      "transform": { "translate": [0.12, 0.45, 1.4] }
-                    }
-                  }
-                },
-                {
-                  "notes": "Sharp fangs - cones (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "notes": "Upper fang",
-                        "type": "cone",
-                        "params": { "h": 0.12, "r": 0.02, "color": [0.9, 0.85, 0.8] },
-                        "transform": { "translate": [0.06, 0.22, 1.7], "rotate": [180, 0, 5] }
-                      },
-                      {
-                        "notes": "Lower fang",
-                        "type": "cone",
-                        "params": { "h": 0.08, "r": 0.015, "color": [0.9, 0.85, 0.8] },
-                        "transform": { "translate": [0.05, 0.25, 1.65], "rotate": [0, 0, -5] }
-                      }
-                    ]
-                  }
-                },
-                {
-                  "notes": "Spine spikes - sharp cones",
-                  "type": "union",
-                  "children": [
-                    {
-                      "type": "cone",
-                      "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] },
-                      "transform": { "translate": [0, 0.55, 1.0], "rotate": [160, 0, 0] }
-                    },
-                    {
-                      "type": "cone",
-                      "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] },
-                      "transform": { "translate": [0, 0.52, 0.6], "rotate": [170, 0, 0] }
-                    },
-                    {
-                      "type": "cone",
-                      "params": { "h": 0.25, "r": 0.045, "color": [0.2, 0.1, 0.12] },
-                      "transform": { "translate": [0, 0.48, 0.2], "rotate": [175, 0, 0] }
-                    },
-                    {
-                      "type": "cone",
-                      "params": { "h": 0.22, "r": 0.04, "color": [0.2, 0.1, 0.12] },
-                      "transform": { "translate": [0, 0.42, -0.2], "rotate": [170, 0, 0] }
-                    },
-                    {
-                      "type": "cone",
-                      "params": { "h": 0.18, "r": 0.035, "color": [0.2, 0.1, 0.12] },
-                      "transform": { "translate": [0, 0.35, -0.55], "rotate": [165, 0, 0] }
-                    }
-                  ]
-                },
-                {
-                  "notes": "Tail with blade",
-                  "type": "union",
-                  "children": [
-                    {
-                      "notes": "Tail segments",
-                      "type": "smoothUnion",
-                      "k": 0.06,
-                      "children": [
-                        {
-                          "type": "capsule",
-                          "params": { "h": 0.35, "r": 0.18, "color": [0.1, 0.07, 0.09] },
-                          "transform": { "translate": [0, -0.05, -0.9], "rotate": [-12, 0, 0] }
-                        },
-                        {
-                          "type": "capsule",
-                          "params": { "h": 0.3, "r": 0.12, "color": [0.1, 0.07, 0.09] },
-                          "transform": { "translate": [0, -0.15, -1.5], "rotate": [-18, 0, 0] }
-                        },
-                        {
-                          "type": "capsule",
-                          "params": { "h": 0.25, "r": 0.08, "color": [0.1, 0.07, 0.09] },
-                          "transform": { "translate": [0, -0.2, -2.0], "rotate": [-10, 0, 0] }
-                        }
-                      ]
-                    },
-                    {
-                      "notes": "Tail blade - sharp box",
-                      "type": "box",
-                      "params": { "size": [0.02, 0.15, 0.2], "color": [0.2, 0.08, 0.1] },
-                      "transform": { "translate": [0, -0.15, -2.4], "rotate": [-5, 0, 0] }
-                    },
-                    {
-                      "notes": "Tail spikes",
-                      "type": "cone",
-                      "params": { "h": 0.12, "r": 0.025, "color": [0.25, 0.1, 0.1] },
-                      "transform": { "translate": [0, -0.05, -2.55], "rotate": [-25, 0, 0] }
-                    }
-                  ]
-                },
-                {
-                  "notes": "Front legs with sharp claws (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "type": "capsule",
-                        "params": { "h": 0.28, "r": 0.1, "color": [0.1, 0.07, 0.09] },
-                        "transform": { "translate": [0.35, -0.5, 0.4], "rotate": [8, 0, 15] }
-                      },
-                      {
-                        "notes": "Sharp claws",
-                        "type": "cone",
-                        "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] },
-                        "transform": { "translate": [0.4, -0.85, 0.5], "rotate": [170, 0, 10] }
-                      },
-                      {
-                        "type": "cone",
-                        "params": { "h": 0.1, "r": 0.02, "color": [0.15, 0.1, 0.08] },
-                        "transform": { "translate": [0.45, -0.85, 0.45], "rotate": [170, 0, 20] }
-                      }
-                    ]
-                  }
-                },
-                {
-                  "notes": "Back legs (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "type": "capsule",
-                        "params": { "h": 0.32, "r": 0.12, "color": [0.1, 0.07, 0.09] },
-                        "transform": { "translate": [0.4, -0.55, -0.45], "rotate": [10, 0, 12] }
-                      },
-                      {
-                        "notes": "Sharp claws",
-                        "type": "cone",
-                        "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] },
-                        "transform": { "translate": [0.48, -0.92, -0.35], "rotate": [165, 0, 8] }
-                      },
-                      {
-                        "type": "cone",
-                        "params": { "h": 0.12, "r": 0.022, "color": [0.15, 0.1, 0.08] },
-                        "transform": { "translate": [0.52, -0.92, -0.4], "rotate": [165, 0, 18] }
-                      }
-                    ]
-                  }
-                },
-                {
-                  "notes": "Angular wings (mirrored)",
-                  "type": "mirror",
-                  "axis": "x",
-                  "child": {
-                    "type": "union",
-                    "children": [
-                      {
-                        "notes": "Wing arm bone",
-                        "type": "capsule",
-                        "params": { "h": 0.5, "r": 0.045, "color": [0.08, 0.05, 0.07] },
-                        "transform": { "translate": [0.7, 0.35, 0.1], "rotate": [90, -50, 20] }
-                      },
-                      {
-                        "notes": "Wing membrane - flat box",
-                        "type": "box",
-                        "params": { "size": [0.6, 0.012, 0.4], "color": [0.15, 0.05, 0.08] },
-                        "transform": { "translate": [1.1, 0.3, -0.05], "rotate": [0, -20, 8] }
-                      },
-                      {
-                        "notes": "Wing claw",
-                        "type": "cone",
-                        "params": { "h": 0.08, "r": 0.015, "color": [0.2, 0.12, 0.1] },
-                        "transform": { "translate": [1.55, 0.28, 0.25], "rotate": [100, -30, 0] }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
+    async function loadAllDemos() {
+      await loadToc();
+      const demos = [];
+      for (const cat of toc.categories) {
+        for (const scene of cat.scenes) {
+          try {
+            const json = await loadSceneFile(scene.path);
+            demos.push({
+              title: json.title || scene.title,
+              subtitle: json.subtitle || scene.subtitle || '',
+              category: cat.title,
+              path: scene.path,
+              json: json
+            });
+          } catch (e) {
+            console.warn(`Failed to load ${scene.path}:`, e);
           }
         }
       }
-    ];
+      return demos;
+    }
 
+    // Placeholder - will be populated by loadAllDemos()
+    const templates = [
+      { title: "Loading...", subtitle: "Please wait", json: { "root": { "type": "sphere", "params": { "r": 0.5, "color": [0.5, 0.5, 0.5] } } } }
+    ];
+    // Note: This file deleted 1600+ lines of embedded demo JSON.
+    // Demos are loaded at runtime from scenes/toc.json via loadAllDemos()
     // ============================================
     // STATE
     // ============================================
@@ -2804,9 +1156,8 @@
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
 
-    // Animation state: 'playing' | 'paused' | 'frozen'
+    // Animation state: 'playing' | 'frozen' (simplified binary)
     // playing = icon spins, time runs
-    // paused = icon static, time still runs (for camera manipulation while scene animates)
     // frozen = grey/struck, time frozen
     let animState = 'playing';
     let frozenTime = 0; // Store time when frozen
@@ -2888,8 +1239,15 @@
     // ============================================
     // INITIALIZATION
     // ============================================
-    function init() {
+    async function init() {
       try {
+        // Load demos from TOC (index-test.html specific)
+        console.log('Loading demos from scenes/toc.json...');
+        const loadedDemos = await loadAllDemos();
+        demos.length = 0; // Clear placeholder
+        demos.push(...loadedDemos);
+        console.log(`Loaded ${demos.length} demos from TOC`);
+
         const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
 
@@ -3338,7 +1696,7 @@
 
     /**
      * Update animation button appearance based on animState
-     * Three states: playing (green, spinning), paused (yellow, static), frozen (grey, struck)
+     * Binary: playing (green, spinning) or frozen (grey, stopped)
      */
     function updateAnimButton() {
       const btn = $('btn-anim');
@@ -3348,22 +1706,14 @@
       // Remove all state classes
       btn.classList.remove('anim-playing', 'anim-paused', 'anim-frozen');
 
-      switch (animState) {
-        case 'playing':
-          btn.classList.add('anim-playing');
-          icon.textContent = '▶';
-          btn.title = 'Animation: Playing - click to pause (A)';
-          break;
-        case 'paused':
-          btn.classList.add('anim-paused');
-          icon.textContent = '⏸';
-          btn.title = 'Animation: Paused (time runs) - click to freeze (A)';
-          break;
-        case 'frozen':
-          btn.classList.add('anim-frozen');
-          icon.textContent = '⏹';
-          btn.title = 'Animation: Frozen (time stopped) - click to play (A)';
-          break;
+      if (animState === 'playing') {
+        btn.classList.add('anim-playing');
+        icon.textContent = '▶';
+        btn.title = 'Animation: Playing - click to freeze (A)';
+      } else {
+        btn.classList.add('anim-frozen');
+        icon.textContent = '⏸';
+        btn.title = 'Animation: Frozen - click to play (A)';
       }
     }
 
@@ -3652,13 +2002,11 @@
     function generateDslView(json) {
       const indent = (level) => '  '.repeat(level);
 
-      // Convert expression to S-expr
       function exprToDsl(value) {
         if (typeof value === 'number') return value.toFixed(3).replace(/\.?0+$/, '');
         if (typeof value === 'string') return `"${value}"`;
         if (Array.isArray(value)) return `[${value.map(exprToDsl).join(' ')}]`;
         if (value === null || value === undefined) return 'nil';
-
         if (typeof value === 'object') {
           if (value.var) return `$${value.var}`;
           if (value.expr) {
@@ -3669,14 +2017,12 @@
         return String(value);
       }
 
-      // Format params as :key value pairs
       function formatParams(params) {
         if (!params) return '';
         const parts = [];
         for (const [key, val] of Object.entries(params)) {
           if (key === 'color') {
-            const rgb = val.map(v => exprToDsl(v)).join(' ');
-            parts.push(`:color [${rgb}]`);
+            parts.push(`:color [${val.map(v => exprToDsl(v)).join(' ')}]`);
           } else if (Array.isArray(val)) {
             parts.push(`:${key} [${val.map(exprToDsl).join(' ')}]`);
           } else {
@@ -3686,7 +2032,6 @@
         return parts.join(' ');
       }
 
-      // Format transform
       function formatTransform(t, level) {
         if (!t) return '';
         const parts = [];
@@ -3701,15 +2046,11 @@
         return parts.length ? '\n' + indent(level + 1) + parts.join('\n' + indent(level + 1)) : '';
       }
 
-      // Main node walker
       function walkNode(node, level = 0) {
         if (!node) return 'nil';
         if (!node.type) return JSON.stringify(node);
-
         const type = node.type;
-        const lines = [];
 
-        // Primitives
         const primitives = ['sphere', 'box', 'cylinder', 'torus', 'capsule', 'ellipsoid', 'plane', 'cone'];
         if (primitives.includes(type)) {
           const params = formatParams(node.params);
@@ -3717,7 +2058,6 @@
           return `(${type} ${params}${transform})`;
         }
 
-        // CSG operations
         const csgOps = { union: '∪', subtract: '−', intersect: '∩', smoothUnion: '∪~', smoothSubtract: '−~', smoothIntersect: '∩~' };
         if (csgOps[type]) {
           const op = csgOps[type];
@@ -3727,70 +2067,29 @@
           return `(${op}${k}${childStr})`;
         }
 
-        // Modifiers
-        if (type === 'mirror') {
-          const child = walkNode(node.child, level + 1);
-          return `(mirror :axis "${node.axis}"\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'radial') {
-          const child = walkNode(node.child, level + 1);
-          return `(radial :count ${node.count} :axis "${node.axis || 'z'}"\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'repeat') {
-          const child = walkNode(node.child, level + 1);
-          const period = node.period ? `:period [${node.period.join(' ')}]` : '';
-          return `(repeat ${period}\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'transform') {
-          const child = walkNode(node.child, level + 1);
-          const transform = formatTransform(node.transform, level);
-          return `(transform${transform}\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'shell') {
-          const child = walkNode(node.child, level + 1);
-          return `(shell :thickness ${node.thickness || 0.05}\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'round') {
-          const child = walkNode(node.child, level + 1);
-          return `(round :radius ${node.radius || 0.05}\n${indent(level + 1)}${child})`;
-        }
-        if (type === 'displace') {
-          const child = walkNode(node.child, level + 1);
-          const strength = node.strength ? `:strength ${exprToDsl(node.strength)}` : '';
-          const freq = node.frequency ? `:freq ${exprToDsl(node.frequency)}` : '';
-          return `(displace ${strength} ${freq}\n${indent(level + 1)}${child})`;
-        }
+        if (type === 'mirror') return `(mirror :axis "${node.axis}"\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'radial') return `(radial :count ${node.count} :axis "${node.axis || 'z'}"\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'repeat') return `(repeat :period [${(node.period||[]).join(' ')}]\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'transform') return `(transform${formatTransform(node.transform, level)}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'shell') return `(shell :thickness ${node.thickness || 0.05}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'round') return `(round :radius ${node.radius || 0.05}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'displace') return `(displace :strength ${exprToDsl(node.strength)} :freq ${exprToDsl(node.frequency)}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
+        if (type === 'ref') return `(ref "${node.id}")`;
+        if (type === 'customExpr') return `(custom-glsl ...)`;
 
-        // Ref
-        if (type === 'ref') {
-          return `(ref "${node.id}")`;
-        }
-
-        // Custom GLSL
-        if (type === 'customExpr') {
-          return `(custom-glsl ...)`;
-        }
-
-        // Fallback
         return `(${type} ...)`;
       }
 
-      // Build output
       let output = `;; S-expression DSL view (readonly)\n`;
       output += `;; Scene: ${json.title || 'Untitled'}\n\n`;
-
-      // Defs
       if (json.defs && Object.keys(json.defs).length > 0) {
         output += `;; Definitions\n`;
         for (const [id, def] of Object.entries(json.defs)) {
           output += `(def ${id}\n  ${walkNode(def, 1)})\n\n`;
         }
       }
-
-      // Root
       output += `;; Scene root\n`;
       output += walkNode(json.root, 0);
-
       return output;
     }
 
@@ -4037,7 +2336,6 @@
       const json = demos[currentDemo]?.json;
       if (json) {
         $('tree-content').innerHTML = generateTreeView(json);
-        // Also update DSL view if it's visible
         const dslContent = $('dsl-content');
         if (dslContent && dslContent.style.display !== 'none') {
           dslContent.textContent = generateDslView(json);
@@ -4112,12 +2410,16 @@
       let touchStartTime = 0;
       let isEdgeSwipe = false;
       let activeTouches = 0;
+      let swipeStartX = 0; // For swipe detection (not updated during orbit)
+      let swipeStartY = 0;
 
       canvas.addEventListener('touchstart', (e) => {
         activeTouches = e.touches.length;
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
+        swipeStartX = touch.clientX; // Store original for swipe detection
+        swipeStartY = touch.clientY;
         touchStartTime = Date.now();
 
         // Check if starting from edge
@@ -4204,8 +2506,9 @@
         // Swipe navigation - works anywhere on canvas
         if (e.changedTouches.length > 0 && activeTouches === 1) {
           const touch = e.changedTouches[0];
-          const dx = touch.clientX - touchStartX;
-          const dy = touch.clientY - touchStartY;
+          // Use original swipe start position (not orbit-updated touchStart)
+          const dx = touch.clientX - swipeStartX;
+          const dy = touch.clientY - swipeStartY;
           const elapsed = Date.now() - touchStartTime;
 
           // Horizontal swipe detection: fast, mostly horizontal
@@ -4498,11 +2801,9 @@
         $('btn-auto-rotate').classList.toggle('active', autoRotate);
       });
 
-      // Animation state toggle (cycles: playing → paused → frozen → playing)
+      // Animation toggle (binary: playing ↔ frozen)
       addClick('btn-anim', () => {
         if (animState === 'playing') {
-          animState = 'paused';
-        } else if (animState === 'paused') {
           animState = 'frozen';
           // Capture current time when freezing
           frozenTime = (performance.now() - renderer.startTime) / 1000.0;
@@ -4578,7 +2879,6 @@
         $('btn-tab-tree').style.color = '#000';
         $('btn-tab-dsl').style.background = '';
         $('btn-tab-dsl').style.color = '';
-        // Show tree-specific controls
         $('btn-tree-prev').style.display = '';
         $('btn-tree-next').style.display = '';
         $('tree-nav-indicator').style.display = '';
@@ -4590,11 +2890,9 @@
         $('btn-tab-dsl').style.color = '#000';
         $('btn-tab-tree').style.background = '';
         $('btn-tab-tree').style.color = '';
-        // Hide tree-specific controls (nav not relevant for DSL)
         $('btn-tree-prev').style.display = 'none';
         $('btn-tree-next').style.display = 'none';
         $('tree-nav-indicator').style.display = 'none';
-        // Update DSL view
         const demo = demos[currentDemo];
         if (demo && demo.json) {
           $('dsl-content').textContent = generateDslView(demo.json);
@@ -4706,16 +3004,20 @@
         }
       });
 
-      // Mobile submenu toggle
+      // Mobile submenu toggle - prevent closing on touches
+      let menuJustOpened = false;
       addClick('menu-demos', function(e) {
-        if (window.innerWidth <= 768) {
-          e.stopPropagation();
-          this.classList.toggle('submenu-open');
-        }
+        e.stopPropagation();
+        e.preventDefault();
+        this.classList.toggle('submenu-open');
+        menuJustOpened = true;
+        // Reset flag after a short delay
+        setTimeout(() => { menuJustOpened = false; }, 300);
       });
 
-      // Close submenu when clicking elsewhere in menu
+      // Close submenu when clicking elsewhere in menu (but not immediately after opening)
       if (mainMenu) mainMenu.addEventListener('click', function(e) {
+        if (menuJustOpened) return; // Don't close if just opened
         const menuDemos = $('menu-demos');
         if (menuDemos && !menuDemos.contains(e.target)) {
           menuDemos.classList.remove('submenu-open');

@@ -75,6 +75,7 @@
       "title": "Creatures",
       "description": "Organic and character models",
       "scenes": [
+        { "path": "creatures/snowman.json", "title": "Snowman", "subtitle": "Winter scene with falling snow" },
         { "path": "creatures/draggo.json", "title": "Draggo", "subtitle": "Sharp-edged terror with cones and boxes" },
         { "path": "creatures/invaders.json", "title": "Space Invaders", "subtitle": "Classic arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders", "subtitle": "Circular alien formation" },
