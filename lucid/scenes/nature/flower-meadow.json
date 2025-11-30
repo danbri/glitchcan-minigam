@@ -1,8 +1,8 @@
 {
   "title": "Flower Meadow",
   "subtitle": "Poppies and sunflowers with per-instance variation",
-  "version": "1.0",
-  "notes": "Demonstrates exposeId for mixing flower types, random rotation, and gentle swaying",
+  "version": "1.1",
+  "notes": "Demonstrates exposeId + select node for proper SDF type selection without raymarching artifacts",
   "defs": {
     "poppy": {
       "type": "union",
@@ -56,117 +56,101 @@
     "children": [
       {
         "type": "repeat",
-        "notes": "Flower field with mixed types and natural variation",
+        "notes": "Flower field with mixed types using proper select node",
         "period": [0.5, 0, 0.5],
         "exposeId": "flowerId",
         "child": {
-          "type": "union",
-          "notes": "Conditionally render poppy or sunflower based on hash",
-          "children": [
-            {
-              "type": "ref",
-              "id": "poppy",
-              "notes": "Poppies appear when hash < 0.6 - pushed away when hash > 0.6",
-              "transform": {
-                "translate": [
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 50] }] },
-                      0.5
-                    ]},
-                    0.15
+          "type": "select",
+          "notes": "Select poppy (hash<0.6) or sunflower (hash>=0.6) - no translation hacks!",
+          "cond": { "expr": "step", "args": [0.6, { "expr": "hash", "args": [{ "var": "flowerId" }] }] },
+          "a": {
+            "type": "ref",
+            "id": "poppy",
+            "notes": "Poppies when hash < 0.6 (60% of field)",
+            "transform": {
+              "translate": [
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 50] }] },
+                    0.5
                   ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "smoothstep", "args": [
-                      0.55, 0.65,
-                      { "expr": "hash", "args": [{ "var": "flowerId" }] }
-                    ]},
-                    -1000
+                  0.15
+                ]},
+                0,
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 150] }] },
+                    0.5
                   ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 150] }] },
-                      0.5
-                    ]},
-                    0.15
-                  ]}
-                ],
-                "rotate": [
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 200] }] },
-                      0.5
-                    ]},
-                    15
+                  0.15
+                ]}
+              ],
+              "rotate": [
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 200] }] },
+                    0.5
                   ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 300] }] },
-                    360
+                  15
+                ]},
+                { "expr": "mul", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 300] }] },
+                  360
+                ]},
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 250] }] },
+                    0.5
                   ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 250] }] },
-                      0.5
-                    ]},
-                    15
-                  ]}
-                ]
-              }
-            },
-            {
-              "type": "ref",
-              "id": "sunflower",
-              "notes": "Sunflowers appear when hash >= 0.6 - pushed away when hash < 0.6",
-              "transform": {
-                "translate": [
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 70] }] },
-                      0.5
-                    ]},
-                    0.12
-                  ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      1.0,
-                      { "expr": "smoothstep", "args": [
-                        0.55, 0.65,
-                        { "expr": "hash", "args": [{ "var": "flowerId" }] }
-                      ]}
-                    ]},
-                    -1000
-                  ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 170] }] },
-                      0.5
-                    ]},
-                    0.12
-                  ]}
-                ],
-                "rotate": [
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 400] }] },
-                      0.5
-                    ]},
-                    10
-                  ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 500] }] },
-                    360
-                  ]},
-                  { "expr": "mul", "args": [
-                    { "expr": "sub", "args": [
-                      { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 450] }] },
-                      0.5
-                    ]},
-                    10
-                  ]}
-                ]
-              }
+                  15
+                ]}
+              ]
             }
-          ]
+          },
+          "b": {
+            "type": "ref",
+            "id": "sunflower",
+            "notes": "Sunflowers when hash >= 0.6 (40% of field)",
+            "transform": {
+              "translate": [
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 70] }] },
+                    0.5
+                  ]},
+                  0.12
+                ]},
+                0,
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 170] }] },
+                    0.5
+                  ]},
+                  0.12
+                ]}
+              ],
+              "rotate": [
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 400] }] },
+                    0.5
+                  ]},
+                  10
+                ]},
+                { "expr": "mul", "args": [
+                  { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 500] }] },
+                  360
+                ]},
+                { "expr": "mul", "args": [
+                  { "expr": "sub", "args": [
+                    { "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 450] }] },
+                    0.5
+                  ]},
+                  10
+                ]}
+              ]
+            }
+          }
         },
         "transform": { "translate": [0, -0.5, 0] }
       },

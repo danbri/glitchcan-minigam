@@ -124,6 +124,9 @@ function walkNode(node, ctx) {
     case 'repeat':
       return generateRepeat(node, ctx);
 
+    case 'select':
+      return generateSelect(node, ctx);
+
     case 'round':
       return generateRound(node, ctx);
 
@@ -769,6 +772,42 @@ ${repeatCode}  return ${childFuncName}(q);
 }
 
 /**
+ * Generate select - conditional SDF selection
+ * Evaluates ONLY the selected branch based on condition
+ * cond < 0.5 → return a
+ * cond >= 0.5 → return b
+ *
+ * This is the correct way to do per-instance type selection in SDF.
+ * Unlike translation hacks (±1000 units), this properly handles the
+ * distance field without discontinuities or raymarching artifacts.
+ */
+function generateSelect(node, ctx) {
+  const condExpr = valueToGlsl(node.cond, ctx);
+
+  // Generate both child expressions
+  const aExpr = walkNode(node.a, ctx);
+  const bExpr = walkNode(node.b, ctx);
+
+  const funcName = `select_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+
+  // Use mix with step for branchless selection
+  // When cond >= 0.5, step returns 1.0, so we get b
+  // When cond < 0.5, step returns 0.0, so we get a
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
+  float sel = step(0.5, ${condExpr});
+  vec4 va = ${aExpr};
+  vec4 vb = ${bExpr};
+  return mix(va, vb, sel);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(${callArgs})`;
+}
+
+/**
  * Generate round modifier - adds radius to soften edges
  * round(sdf) = sdf - r
  */
@@ -966,6 +1005,7 @@ function exprToGlsl(expr, ctx) {
     case 'max': return `max(${args.join(', ')})`;
     case 'neg': return `(-${args[0]})`;
     case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
+    case 'step': return `step(${args[0]}, ${args[1]})`;
     case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
     // Noise functions - demoscene effects
     case 'noise': return `noise3(vec3(${args.join(', ')}))`;
