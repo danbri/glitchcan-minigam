@@ -127,10 +127,10 @@ export class SimpleRaymarcher {
       // Axis arrow SDFs - Blender-style RGB arrows
       // Returns vec4(distance, r, g, b)
       vec4 sdAxisArrows(vec3 p) {
-        float arrowLen = 1.5;
-        float shaftR = 0.02;
-        float headR = 0.06;
-        float headH = 0.15;
+        float arrowLen = 2.5;
+        float shaftR = 0.035;
+        float headR = 0.10;
+        float headH = 0.22;
 
         // X axis - Red arrow (positive X direction)
         vec3 px = p - vec3(arrowLen * 0.5, 0.0, 0.0);

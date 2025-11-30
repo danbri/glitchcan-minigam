@@ -981,7 +981,7 @@
       </div>
       <div class="debug-row">
         <span class="debug-label">Show Axes (RGB)</span>
-        <div class="toggle" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
+        <div class="toggle active" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
@@ -1175,7 +1175,7 @@
       volumeRender: false,
       showGround: true,
       showCutters: false,
-      showAxes: false,
+      showAxes: true,  // Default visible
       cameraDistance: 4
     };
 
@@ -1250,6 +1250,7 @@
 
         const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
+        renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
 
         // Build navigation dots
         buildNav();
