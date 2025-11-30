@@ -855,38 +855,14 @@ function generateScaledNode(node, ctx) {
   const sx = scaleVec[0];
   const sy = scaleVec[1];
   const sz = scaleVec[2];
+  const scaleVecGlsl = `vec3(${sx}, ${sy}, ${sz})`;
 
   // Check if uniform scale (all components equal)
   const isUniform = sx === sy && sy === sz;
 
-  // Create node copy without scale transform
-  const nodeWithoutScale = {
-    ...node,
-    transform: { ...node.transform }
-  };
-  delete nodeWithoutScale.transform.scale;
-
-  // If transform is now empty, remove it entirely
-  if (Object.keys(nodeWithoutScale.transform).length === 0) {
-    delete nodeWithoutScale.transform;
-  }
-
-  // Generate helper function for scaled SDF
-  const funcName = `scaled_${ctx.helperCounter++}`;
-  const idParam = ctx.instanceIdParam;
-  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
-  const callArgs = idParam ? `p, ${idParam}` : 'p';
-
-  // Generate child expression with scaled point
-  // We need to evaluate the child with p/scale
-  const scaleVecGlsl = `vec3(${sx}, ${sy}, ${sz})`;
-
-  // Generate child SDF code - it will use 'p' which we'll replace with scaled p
-  const childExpr = walkNode(nodeWithoutScale, ctx);
-
   // Scale factor for distance correction
-  // Uniform: multiply by scale
-  // Non-uniform: multiply by min(scale) for conservative bound
+  // Uniform: multiply by scale (exact)
+  // Non-uniform: multiply by min(scale) (conservative bound)
   let scaleFactor;
   if (isUniform) {
     scaleFactor = sx;
@@ -894,10 +870,105 @@ function generateScaledNode(node, ctx) {
     scaleFactor = `min(${sx}, min(${sy}, ${sz}))`;
   }
 
+  // Create node with NO transform - we'll handle all transforms in the wrapper
+  // This ensures correct transform order: translate -> rotate -> scale
+  const bareNode = { ...node };
+  delete bareNode.transform;
+
+  // Generate helper function for scaled SDF
+  const funcName = `scaled_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+
+  // Generate child SDF code with bare node (no transforms)
+  const childExpr = walkNode(bareNode, ctx);
+
+  // Build the correct transform order:
+  // Object-space: scale -> rotate -> translate
+  // Inverse (for point): translate -> rotate -> scale
+  //
+  // Per IQ: for SDF, we apply inverse transform to the point
+  let transformedP = 'p';
+
+  // 1. First: translate (subtract translation)
+  if (node.transform.translate) {
+    const t = valueToGlsl(node.transform.translate, ctx);
+    transformedP = `(${transformedP} - ${t})`;
+  }
+
+  // 2. Then: rotate (apply inverse rotation)
+  // Handle all rotation types from the original transform
+  const origTransform = node.transform;
+  if (origTransform.rotateQ) {
+    const q = origTransform.rotateQ;
+    let qx, qy, qz, qw;
+    if (q.type === 'array' && q.values) {
+      qx = valueToGlsl(q.values[0], ctx);
+      qy = valueToGlsl(q.values[1], ctx);
+      qz = valueToGlsl(q.values[2], ctx);
+      qw = valueToGlsl(q.values[3], ctx);
+    } else if (Array.isArray(q) && q.length >= 4) {
+      qx = (q[0] || 0).toFixed(6);
+      qy = (q[1] || 0).toFixed(6);
+      qz = (q[2] || 0).toFixed(6);
+      qw = (q[3] || 1).toFixed(6);
+    }
+    if (qx !== undefined) {
+      transformedP = `rotQ(${transformedP}, vec4(${qx}, ${qy}, ${qz}, ${qw}))`;
+    }
+  } else if (origTransform.rotateAxis) {
+    const aa = origTransform.rotateAxis;
+    const axis = aa.axis || [0, 1, 0];
+    const angle = aa.angle || 0;
+    let axisGlsl;
+    if (axis.type === 'array' && axis.values) {
+      const ax = valueToGlsl(axis.values[0], ctx);
+      const ay = valueToGlsl(axis.values[1], ctx);
+      const az = valueToGlsl(axis.values[2], ctx);
+      axisGlsl = `vec3(${ax}, ${ay}, ${az})`;
+    } else if (Array.isArray(axis)) {
+      axisGlsl = `vec3(${(axis[0] || 0).toFixed(6)}, ${(axis[1] || 1).toFixed(6)}, ${(axis[2] || 0).toFixed(6)})`;
+    } else {
+      axisGlsl = 'vec3(0.0, 1.0, 0.0)';
+    }
+    let angleGlsl;
+    if (typeof angle === 'object') {
+      angleGlsl = `(${valueToGlsl(angle, ctx)} * 0.017453)`;
+    } else {
+      const DEG2RAD = Math.PI / 180;
+      angleGlsl = ((angle || 0) * DEG2RAD).toFixed(6);
+    }
+    transformedP = `rotAxisAngle(${transformedP}, ${axisGlsl}, ${angleGlsl})`;
+  } else if (origTransform.rotate) {
+    const rot = origTransform.rotate;
+    let rx, ry, rz;
+    if (rot.type === 'array' && rot.values) {
+      rx = `(${valueToGlsl(rot.values[0], ctx)} * 0.017453)`;
+      ry = `(${valueToGlsl(rot.values[1], ctx)} * 0.017453)`;
+      rz = `(${valueToGlsl(rot.values[2], ctx)} * 0.017453)`;
+    } else if (Array.isArray(rot)) {
+      const DEG2RAD = Math.PI / 180;
+      rx = ((rot[0] || 0) * DEG2RAD).toFixed(6);
+      ry = ((rot[1] || 0) * DEG2RAD).toFixed(6);
+      rz = ((rot[2] || 0) * DEG2RAD).toFixed(6);
+    }
+    if (rx !== undefined) {
+      // Apply rotations: for inverse of XYZ order, apply Z then Y then X
+      transformedP = `rotZ(${transformedP}, ${rz})`;
+      transformedP = `rotY(${transformedP}, ${ry})`;
+      transformedP = `rotX(${transformedP}, ${rx})`;
+    }
+  }
+
+  // 3. Finally: scale (divide by scale - innermost transform)
+  transformedP = `(${transformedP} / ${scaleVecGlsl})`;
+
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  // SDF scale: transform point by 1/scale, multiply distance by min(scale)
-  vec3 sp = p / ${scaleVecGlsl};
-  vec4 c = ${childExpr.replace(/\bp\b/g, 'sp')};
+  // SDF scale with correct transform order: translate -> rotate -> scale
+  // Per IQ: primitive(p/s) * s, but p must first have translate/rotate applied
+  vec3 tp = ${transformedP};
+  vec4 c = ${childExpr.replace(/\bp\b/g, 'tp')};
   return vec4(c.x * ${scaleFactor}, c.yzw);
 }`;
 
