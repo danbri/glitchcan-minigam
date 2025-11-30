@@ -66,6 +66,12 @@ export function generateGlslFromJson(scene, options = {}) {
  * Returns a string that evaluates to vec4(distance, r, g, b)
  */
 function walkNode(node, ctx) {
+  // Check if this node has a scale transform - if so, wrap with scale correction
+  // Per IQ's SDF guidance: primitive(p/s) * s for uniform, primitive(p/s) * min(s) for non-uniform
+  if (node.transform && node.transform.scale) {
+    return generateScaledNode(node, ctx);
+  }
+
   switch (node.type) {
     case 'sphere':
       return generateSphere(node, ctx);
@@ -813,6 +819,93 @@ function generateSelect(node, ctx) {
 }
 
 /**
+ * Generate scaled node wrapper - implements SDF-correct scaling per IQ's guidance
+ *
+ * From Inigo Quilez (https://iquilezles.org/articles/distfunctions/):
+ *   float opScale(vec3 p, float s, sdf3d primitive) {
+ *     return primitive(p/s) * s;
+ *   }
+ *
+ * For uniform scale: multiply distance by s (exact)
+ * For non-uniform scale: multiply distance by min(s.x, s.y, s.z) (conservative bound)
+ *
+ * As IQ notes: "Non uniform scaling is not possible (while still getting a correct SDF)"
+ * The min(s) approach gives a conservative bound that prevents raymarcher overshoot.
+ */
+function generateScaledNode(node, ctx) {
+  const scale = node.transform.scale;
+
+  // Parse scale values
+  let scaleVec;
+  if (scale.type === 'array' && scale.values) {
+    // Expression-based scale
+    scaleVec = scale.values.map(v => valueToGlsl(v, ctx));
+  } else if (Array.isArray(scale)) {
+    // Static scale values
+    scaleVec = scale.map(v => (typeof v === 'number' ? v.toFixed(6) : valueToGlsl(v, ctx)));
+  } else if (typeof scale === 'number') {
+    // Uniform scale shorthand
+    const s = scale.toFixed(6);
+    scaleVec = [s, s, s];
+  } else {
+    // Fallback
+    scaleVec = ['1.0', '1.0', '1.0'];
+  }
+
+  const sx = scaleVec[0];
+  const sy = scaleVec[1];
+  const sz = scaleVec[2];
+
+  // Check if uniform scale (all components equal)
+  const isUniform = sx === sy && sy === sz;
+
+  // Create node copy without scale transform
+  const nodeWithoutScale = {
+    ...node,
+    transform: { ...node.transform }
+  };
+  delete nodeWithoutScale.transform.scale;
+
+  // If transform is now empty, remove it entirely
+  if (Object.keys(nodeWithoutScale.transform).length === 0) {
+    delete nodeWithoutScale.transform;
+  }
+
+  // Generate helper function for scaled SDF
+  const funcName = `scaled_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+
+  // Generate child expression with scaled point
+  // We need to evaluate the child with p/scale
+  const scaleVecGlsl = `vec3(${sx}, ${sy}, ${sz})`;
+
+  // Generate child SDF code - it will use 'p' which we'll replace with scaled p
+  const childExpr = walkNode(nodeWithoutScale, ctx);
+
+  // Scale factor for distance correction
+  // Uniform: multiply by scale
+  // Non-uniform: multiply by min(scale) for conservative bound
+  let scaleFactor;
+  if (isUniform) {
+    scaleFactor = sx;
+  } else {
+    scaleFactor = `min(${sx}, min(${sy}, ${sz}))`;
+  }
+
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
+  // SDF scale: transform point by 1/scale, multiply distance by min(scale)
+  vec3 sp = p / ${scaleVecGlsl};
+  vec4 c = ${childExpr.replace(/\bp\b/g, 'sp')};
+  return vec4(c.x * ${scaleFactor}, c.yzw);
+}`;
+
+  ctx.helpers.push(helperFunc);
+  return `${funcName}(${callArgs})`;
+}
+
+/**
  * Generate round modifier - adds radius to soften edges
  * round(sdf) = sdf - r
  */
@@ -1133,7 +1226,9 @@ function applyTransform(pVar, transform, ctx) {
     }
   }
 
-  // Apply scale (TODO: implement)
+  // Note: Scale is NOT applied here in applyTransform
+  // Scale requires modifying the returned DISTANCE, not just the point
+  // Scale handling is done at the node level via generateScaledNode() in walkNode()
 
   return result;
 }
@@ -1200,7 +1295,9 @@ function combineTransforms(child, parent) {
     combined.rotate = child.rotate;
   }
 
-  // Scale: child takes precedence (TODO: proper scale composition)
+  // Scale: child takes precedence
+  // Note: proper scale composition would require multiplying scales component-wise
+  // AND scaling parent translations by child scale - complex, so child wins for now
   if (child.scale) combined.scale = child.scale;
 
   return combined;
