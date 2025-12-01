@@ -1399,6 +1399,34 @@
     // Current scene path for tracking which scene is active
     let currentScenePath = null;
 
+    // ============================================
+    // HASH ROUTING (SPA-style navigation)
+    // ============================================
+    // Convert scene path to URL hash: "nature/celly.json" -> "#nature.celly"
+    function pathToHash(path) {
+      if (!path) return '';
+      // Remove .json suffix and replace / with .
+      return '#' + path.replace(/\.json$/, '').replace(/\//g, '.');
+    }
+
+    // Convert URL hash to scene path: "#nature.celly" -> "nature/celly.json"
+    function hashToPath(hash) {
+      if (!hash || hash === '#') return null;
+      // Remove # prefix, replace . with /, add .json suffix
+      return hash.substring(1).replace(/\./g, '/') + '.json';
+    }
+
+    // Update URL hash without triggering navigation (for initial load)
+    function setHashSilently(hash) {
+      history.replaceState({ path: hashToPath(hash) }, '', hash);
+    }
+
+    // Push new hash to history (for user navigation)
+    function pushHash(path) {
+      const hash = pathToHash(path);
+      history.pushState({ path: path }, '', hash);
+    }
+
     // Placeholder - will be populated with first scene
     const templates = [
       { title: "Loading...", subtitle: "Please wait", json: { "root": { "type": "sphere", "params": { "r": 0.5, "color": [0.5, 0.5, 0.5] } } } }
@@ -1408,6 +1436,9 @@
     // ============================================
     // STATE
     // ============================================
+    // Helper to detect desktop (wider than mobile breakpoint)
+    const isDesktop = () => window.matchMedia('(min-width: 769px)').matches;
+
     let currentDemo = 0;
     let demos = [...templates]; // Copy templates as demos
     let renderer = null;
@@ -1522,8 +1553,19 @@
         // Build hierarchical demos submenu
         buildDemosSubmenu();
 
-        // Display first demo
-        switchDemo(0);
+        // Check for initial hash in URL, otherwise display first demo
+        const initialPath = hashToPath(window.location.hash);
+        if (initialPath && allScenePaths.includes(initialPath)) {
+          // Load scene from URL hash (don't push to history, just replace)
+          await loadAndSwitchToScene(initialPath, { pushToHistory: false });
+          setHashSilently(window.location.hash);
+        } else {
+          // Display first demo and set its hash
+          switchDemo(0);
+          if (currentScenePath) {
+            setHashSilently(pathToHash(currentScenePath));
+          }
+        }
 
         // Render loop with auto-rotate and visibility pause
         let lastFrameTime = performance.now();
@@ -1575,6 +1617,14 @@
         // Setup event listeners
         setupEventListeners();
 
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', async (event) => {
+          const path = event.state?.path || hashToPath(window.location.hash);
+          if (path && allScenePaths.includes(path)) {
+            await loadAndSwitchToScene(path, { pushToHistory: false });
+          }
+        });
+
         // Display version
         $('version-display').textContent = `v${VERSION} (${BUILD_DATE})`;
 
@@ -1624,8 +1674,21 @@
         // Update demos submenu selection
         updateDemosSubmenuSelection();
 
-        // Update tree view if tree tab is active
-        if (editorOpen && activeTab === 'tree') updateTreeView();
+        // Update editor panel content if open (refresh whichever tab is active)
+        if (editorOpen) {
+          switch (activeTab) {
+            case 'tree':
+              updateTreeView();
+              break;
+            case 'dsl':
+              $('dsl-content').textContent = generateDslView(demo.json);
+              break;
+            case 'glsl':
+              $('glsl-content').textContent = currentGlsl || '// No GLSL generated yet';
+              break;
+            // 'source' tab updates automatically via jsonEditor.value above
+          }
+        }
 
         console.log(`Loaded demo ${index + 1}/${demos.length}: ${demo.title}`);
 
@@ -1696,8 +1759,11 @@
           sceneEl.addEventListener('click', async (e) => {
             e.stopPropagation();
             await loadAndSwitchToScene(scene.path);
-            menuOpen = false;
-            mainMenu.classList.remove('open');
+            // Only close menu on mobile - desktop users want to keep browsing
+            if (!isDesktop()) {
+              menuOpen = false;
+              mainMenu.classList.remove('open');
+            }
           });
           scenesEl.appendChild(sceneEl);
         });
@@ -1735,8 +1801,11 @@
           sceneEl.addEventListener('click', (e) => {
             e.stopPropagation();
             switchDemo(demoIndex);
-            menuOpen = false;
-            mainMenu.classList.remove('open');
+            // Only close menu on mobile - desktop users want to keep browsing
+            if (!isDesktop()) {
+              menuOpen = false;
+              mainMenu.classList.remove('open');
+            }
           });
           scenesEl.appendChild(sceneEl);
         });
@@ -1747,7 +1816,7 @@
     }
 
     // Load a scene by path and switch to it (lazy loading)
-    async function loadAndSwitchToScene(path) {
+    async function loadAndSwitchToScene(path, { pushToHistory = true } = {}) {
       // Mark scene as loading in menu
       const sceneEl = demosSubmenu.querySelector(`[data-path="${path}"]`);
       if (sceneEl) sceneEl.classList.add('loading');
@@ -1771,6 +1840,11 @@
         currentScenePath = path;
         switchDemo(demoIndex);
         updateDemosSubmenuSelection();
+
+        // Update URL hash for SPA navigation
+        if (pushToHistory) {
+          pushHash(path);
+        }
       } catch (e) {
         console.error(`Failed to load scene ${path}:`, e);
         showStatus(`Failed to load: ${e.message}`, 'error');
@@ -3425,10 +3499,54 @@
       } else if (key === 'Enter' || key === ' ') {
         const item = items[currentIndex];
         if (item) {
-          item.el.click();
-          // Don't close menu for category expansion, do close for scene/action selection
-          if (item.type === 'scene' || (item.type === 'menu-item' && item.id !== 'menu-demos')) {
-            // Menu will close via click handler for actions
+          if (item.type === 'category') {
+            // Toggle category open/closed
+            const wasOpen = item.category.classList.contains('open');
+            item.el.click();
+
+            // After toggling, maintain focus and scroll appropriately
+            const newItems = getMenuNavigableItems();
+            if (!wasOpen) {
+              // Just opened: move focus to first scene in this category
+              const catIndex = newItems.findIndex(i => i.category === item.category);
+              const firstSceneIndex = newItems.findIndex((i, idx) => idx > catIndex && i.type === 'scene');
+              if (firstSceneIndex !== -1) {
+                currentIndex = firstSceneIndex;
+                // Scroll to show the category header and some scenes below
+                item.el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+              } else {
+                currentIndex = catIndex;
+              }
+            } else {
+              // Just closed: keep focus on the category header
+              currentIndex = newItems.findIndex(i => i.category === item.category);
+            }
+            // Apply focus after category toggle
+            mainMenu.querySelectorAll('.menu-focus').forEach(el => el.classList.remove('menu-focus'));
+            if (currentIndex >= 0 && currentIndex < newItems.length) {
+              newItems[currentIndex].el.classList.add('menu-focus');
+              // Small delay to let DOM update, then ensure visible
+              setTimeout(() => {
+                newItems[currentIndex].el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+              }, 50);
+            }
+            return;
+          } else if (item.type === 'scene') {
+            // Load the scene
+            item.el.click();
+            // On desktop, keep focus on the scene item (menu stays open)
+            if (isDesktop()) {
+              // Re-apply focus since click might have changed things
+              setTimeout(() => {
+                mainMenu.querySelectorAll('.menu-focus').forEach(el => el.classList.remove('menu-focus'));
+                item.el.classList.add('menu-focus');
+              }, 50);
+            }
+            return;
+          } else {
+            // Other menu items (actions)
+            item.el.click();
+            return;
           }
         }
         return;
