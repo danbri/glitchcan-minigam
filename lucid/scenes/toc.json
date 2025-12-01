@@ -91,6 +91,7 @@
       "title": "Nature",
       "description": "Plants & organic",
       "scenes": [
+        { "path": "nature/celly.json", "title": "Celly 🦠", "subtitle": "Dividing microbes" },
         { "path": "nature/single-sunflower.json", "title": "Single Sunflower 🔬", "subtitle": "Scale test - no repeat" },
         { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed poppies & sunflowers" },
         { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
