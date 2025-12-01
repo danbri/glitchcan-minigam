@@ -773,8 +773,8 @@ function generateRepeat(node, ctx) {
   vec3 q = ${p};
   // Calculate instance ID from grid cell before domain folding
   // Use safePeriodVec to avoid division by zero on non-repeating axes
-  vec3 cellId = floor(q / ${safePeriodVec});
-  float ${exposeId} = dot(cellId, vec3(1.0, 157.0, 113.0));
+  vec3 _gridCell = floor(q / ${safePeriodVec});
+  float ${exposeId} = dot(_gridCell, vec3(1.0, 157.0, 113.0));
 ${repeatCode}  return ${childExpr.replace(/\bp\b/g, 'q')};
 }`;
 
