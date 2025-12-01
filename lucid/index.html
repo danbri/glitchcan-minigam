@@ -579,6 +579,74 @@
       color: var(--bg);
     }
 
+    /* Hierarchical submenu categories */
+    .submenu-category {
+      margin-bottom: 0.25rem;
+    }
+
+    .submenu-category-header {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.2s;
+    }
+
+    .submenu-category-header:hover {
+      background: var(--border);
+    }
+
+    .submenu-category-header::before {
+      content: '▸';
+      font-size: 0.6rem;
+      transition: transform 0.2s;
+    }
+
+    .submenu-category.open .submenu-category-header::before {
+      transform: rotate(90deg);
+    }
+
+    .submenu-category-scenes {
+      display: none;
+      margin-left: 0.8rem;
+      border-left: 1px solid var(--border);
+      padding-left: 0.4rem;
+    }
+
+    .submenu-category.open .submenu-category-scenes {
+      display: block;
+    }
+
+    .submenu-scene {
+      padding: 0.35rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .submenu-scene:hover {
+      background: var(--border);
+    }
+
+    .submenu-scene.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .submenu-scene.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
     /* Legacy - keep for compatibility */
     .template-gallery {
       display: none;
@@ -1260,8 +1328,8 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.19.0';
-    const BUILD_DATE = '2025-11-30';
+    const VERSION = '0.20.0';
+    const BUILD_DATE = '2025-12-01';
 
     // ============================================
     // TOC-BASED DEMO LOADING (index-test.html)
@@ -1282,34 +1350,53 @@
       return await resp.json();
     }
 
-    async function loadAllDemos() {
-      await loadToc();
-      const demos = [];
+    // Cache for loaded scene JSON - key is path, value is {title, subtitle, json}
+    const sceneCache = new Map();
+
+    // Load a single scene by path (lazy loading)
+    async function loadSceneByPath(path) {
+      if (sceneCache.has(path)) {
+        return sceneCache.get(path);
+      }
+      const json = await loadSceneFile(path);
+      // Find scene metadata from TOC
+      let title = json.title || path;
+      let subtitle = json.subtitle || '';
+      let category = '';
       for (const cat of toc.categories) {
-        for (const scene of cat.scenes) {
-          try {
-            const json = await loadSceneFile(scene.path);
-            demos.push({
-              title: json.title || scene.title,
-              subtitle: json.subtitle || scene.subtitle || '',
-              category: cat.title,
-              path: scene.path,
-              json: json
-            });
-          } catch (e) {
-            console.warn(`Failed to load ${scene.path}:`, e);
-          }
+        const found = cat.scenes.find(s => s.path === path);
+        if (found) {
+          title = json.title || found.title;
+          subtitle = json.subtitle || found.subtitle || '';
+          category = cat.title;
+          break;
         }
       }
-      return demos;
+      const demo = { title, subtitle, category, path, json };
+      sceneCache.set(path, demo);
+      return demo;
     }
 
-    // Placeholder - will be populated by loadAllDemos()
+    // Load first scene to initialize (lazy loading - only loads one scene)
+    async function loadInitialDemo() {
+      await loadToc();
+      if (toc.categories.length > 0 && toc.categories[0].scenes.length > 0) {
+        const firstScene = toc.categories[0].scenes[0];
+        const demo = await loadSceneByPath(firstScene.path);
+        return [demo];
+      }
+      return [];
+    }
+
+    // Current scene path for tracking which scene is active
+    let currentScenePath = null;
+
+    // Placeholder - will be populated with first scene
     const templates = [
       { title: "Loading...", subtitle: "Please wait", json: { "root": { "type": "sphere", "params": { "r": 0.5, "color": [0.5, 0.5, 0.5] } } } }
     ];
-    // Note: This file deleted 1600+ lines of embedded demo JSON.
-    // Demos are loaded at runtime from scenes/toc.json via loadAllDemos()
+    // Note: Scenes are now lazy-loaded from scenes/toc.json
+    // Only the first scene loads on init, rest load when selected
     // ============================================
     // STATE
     // ============================================
@@ -1410,21 +1497,24 @@
     // ============================================
     async function init() {
       try {
-        // Load demos from TOC (index-test.html specific)
-        console.log('Loading demos from scenes/toc.json...');
-        const loadedDemos = await loadAllDemos();
+        // Load TOC and first demo only (lazy loading)
+        console.log('Loading TOC and first demo...');
+        const loadedDemos = await loadInitialDemo();
         demos.length = 0; // Clear placeholder
         demos.push(...loadedDemos);
-        console.log(`Loaded ${demos.length} demos from TOC`);
+        if (loadedDemos.length > 0) {
+          currentScenePath = loadedDemos[0].path;
+        }
+        console.log(`Loaded TOC with ${toc.categories.length} categories, first demo ready`);
 
         const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
         renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
 
-        // Build demos submenu
+        // Build hierarchical demos submenu
         buildDemosSubmenu();
 
-        // Load first demo
+        // Display first demo
         switchDemo(0);
 
         // Render loop with auto-rotate and visibility pause
@@ -1498,12 +1588,19 @@
         currentDemo = index;
         const demo = demos[index];
 
+        // Track current scene path for hierarchical menu
+        if (demo.path) {
+          currentScenePath = demo.path;
+        }
+
         // Reset camera - use demo-specific settings if available
+        // First check json.camera, then top-level demo.camera
+        const camera = demo.json?.camera || demo.camera;
         if (renderer && renderer.camera) {
-          renderer.camera.target = demo.camera?.target || [0, 0, 0];
-          renderer.camera.distance = demo.camera?.distance || debugSettings.cameraDistance;
-          renderer.camera.phi = demo.camera?.phi || Math.PI / 4;
-          renderer.camera.theta = demo.camera?.theta || 0;
+          renderer.camera.target = camera?.target || [0, 0, 0];
+          renderer.camera.distance = camera?.distance || debugSettings.cameraDistance;
+          renderer.camera.phi = camera?.phi || Math.PI / 4;
+          renderer.camera.theta = camera?.theta || 0;
         }
 
         // Update UI
@@ -1551,27 +1648,131 @@
     }
 
     // ============================================
-    // DEMOS SUBMENU
+    // DEMOS SUBMENU - HIERARCHICAL WITH LAZY LOADING
     // ============================================
     function buildDemosSubmenu() {
       demosSubmenu.innerHTML = '';
-      demos.forEach((demo, i) => {
-        const item = document.createElement('div');
-        item.className = 'submenu-item' + (i === currentDemo ? ' active' : '');
-        item.textContent = demo.title;
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          switchDemo(i);
-          menuOpen = false;
-          mainMenu.classList.remove('open');
-        });
-        demosSubmenu.appendChild(item);
+
+      // Collect all TOC paths for checking external demos
+      const tocPaths = new Set();
+      toc.categories.forEach(cat => {
+        cat.scenes.forEach(scene => tocPaths.add(scene.path));
       });
+
+      // Build hierarchical menu from TOC categories
+      toc.categories.forEach((cat, catIndex) => {
+        const catEl = document.createElement('div');
+        catEl.className = 'submenu-category' + (catIndex === 0 ? ' open' : '');
+        catEl.dataset.categoryId = cat.id;
+
+        // Category header
+        const headerEl = document.createElement('div');
+        headerEl.className = 'submenu-category-header';
+        headerEl.textContent = cat.title;
+        headerEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          catEl.classList.toggle('open');
+        });
+        catEl.appendChild(headerEl);
+
+        // Scenes container
+        const scenesEl = document.createElement('div');
+        scenesEl.className = 'submenu-category-scenes';
+
+        cat.scenes.forEach(scene => {
+          const sceneEl = document.createElement('div');
+          sceneEl.className = 'submenu-scene' + (scene.path === currentScenePath ? ' active' : '');
+          sceneEl.dataset.path = scene.path;
+          sceneEl.textContent = scene.title;
+          sceneEl.title = scene.subtitle || '';
+          sceneEl.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await loadAndSwitchToScene(scene.path);
+            menuOpen = false;
+            mainMenu.classList.remove('open');
+          });
+          scenesEl.appendChild(sceneEl);
+        });
+
+        catEl.appendChild(scenesEl);
+        demosSubmenu.appendChild(catEl);
+      });
+
+      // Add "Imported" category for external/user-added demos
+      const externalDemos = demos.filter(d => !d.path || !tocPaths.has(d.path));
+      if (externalDemos.length > 0) {
+        const catEl = document.createElement('div');
+        catEl.className = 'submenu-category open';
+        catEl.dataset.categoryId = 'imported';
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'submenu-category-header';
+        headerEl.textContent = '📥 Imported';
+        headerEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          catEl.classList.toggle('open');
+        });
+        catEl.appendChild(headerEl);
+
+        const scenesEl = document.createElement('div');
+        scenesEl.className = 'submenu-category-scenes';
+
+        externalDemos.forEach((demo, i) => {
+          const demoIndex = demos.indexOf(demo);
+          const sceneEl = document.createElement('div');
+          sceneEl.className = 'submenu-scene' + (demoIndex === currentDemo ? ' active' : '');
+          sceneEl.dataset.index = demoIndex;
+          sceneEl.textContent = demo.title;
+          sceneEl.title = demo.subtitle || '';
+          sceneEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            switchDemo(demoIndex);
+            menuOpen = false;
+            mainMenu.classList.remove('open');
+          });
+          scenesEl.appendChild(sceneEl);
+        });
+
+        catEl.appendChild(scenesEl);
+        demosSubmenu.appendChild(catEl);
+      }
+    }
+
+    // Load a scene by path and switch to it (lazy loading)
+    async function loadAndSwitchToScene(path) {
+      // Mark scene as loading in menu
+      const sceneEl = demosSubmenu.querySelector(`[data-path="${path}"]`);
+      if (sceneEl) sceneEl.classList.add('loading');
+
+      try {
+        const demo = await loadSceneByPath(path);
+
+        // Add to demos array if not already there
+        let demoIndex = demos.findIndex(d => d.path === path);
+        if (demoIndex === -1) {
+          demos.push(demo);
+          demoIndex = demos.length - 1;
+        }
+
+        currentScenePath = path;
+        switchDemo(demoIndex);
+        updateDemosSubmenuSelection();
+      } catch (e) {
+        console.error(`Failed to load scene ${path}:`, e);
+        showStatus(`Failed to load: ${e.message}`, 'error');
+      } finally {
+        if (sceneEl) sceneEl.classList.remove('loading');
+      }
     }
 
     function updateDemosSubmenuSelection() {
-      demosSubmenu.querySelectorAll('.submenu-item').forEach((item, i) => {
-        item.classList.toggle('active', i === currentDemo);
+      // Update TOC scene items based on currentScenePath
+      demosSubmenu.querySelectorAll('.submenu-scene[data-path]').forEach(item => {
+        item.classList.toggle('active', item.dataset.path === currentScenePath);
+      });
+      // Update imported scene items based on currentDemo index
+      demosSubmenu.querySelectorAll('.submenu-scene[data-index]').forEach(item => {
+        item.classList.toggle('active', parseInt(item.dataset.index) === currentDemo);
       });
     }
 
