@@ -3323,6 +3323,10 @@
     // ============================================
     function setupEventListeners() {
       try {
+      // Touch-friendly timing guard for menu interactions
+      let lastMenuInteraction = 0;
+      const MENU_GUARD_MS = 600; // Delay before allowing menu close on mobile
+
       // Keyboard navigation
       document.addEventListener('keydown', (e) => {
         if (e.target === jsonEditor) return;
@@ -3565,6 +3569,7 @@
         menuOpen = !menuOpen;
         mainMenu.classList.toggle('open', menuOpen);
         $('btn-menu').classList.toggle('active', menuOpen);
+        lastMenuInteraction = Date.now(); // Guard against immediate close on mobile
         // Close submenu when menu closes
         if (!menuOpen) {
           $('menu-demos').classList.remove('submenu-open');
@@ -3701,20 +3706,18 @@
         }
       });
 
-      // Mobile submenu toggle - prevent closing on touches
-      let menuJustOpened = false;
+      // Submenu toggle (uses timing guard declared at top of setupEventListeners)
       addClick('menu-demos', function(e) {
         e.stopPropagation();
         e.preventDefault();
         this.classList.toggle('submenu-open');
-        menuJustOpened = true;
-        // Reset flag after a short delay
-        setTimeout(() => { menuJustOpened = false; }, 300);
+        lastMenuInteraction = Date.now();
       });
 
-      // Close submenu when clicking elsewhere in menu (but not immediately after opening)
+      // Close submenu when clicking elsewhere in menu (with timing guard)
       if (mainMenu) mainMenu.addEventListener('click', function(e) {
-        if (menuJustOpened) return; // Don't close if just opened
+        // Guard against rapid touch events on mobile
+        if (Date.now() - lastMenuInteraction < MENU_GUARD_MS) return;
         const menuDemos = $('menu-demos');
         if (menuDemos && !menuDemos.contains(e.target)) {
           menuDemos.classList.remove('submenu-open');
@@ -3803,8 +3806,10 @@
         }
       });
 
-      // Click outside to close panels
+      // Click outside to close panels (with timing guard for mobile)
       document.addEventListener('click', (e) => {
+        // Guard against rapid touch events closing menu prematurely
+        if (Date.now() - lastMenuInteraction < MENU_GUARD_MS) return;
         if (menuOpen && mainMenu && !mainMenu.contains(e.target) && e.target.id !== 'btn-menu') {
           menuOpen = false;
           mainMenu.classList.remove('open');
