@@ -514,52 +514,36 @@
       background: var(--border);
     }
 
-    .menu-item.has-submenu::after {
-      content: '▶';
-      font-size: 0.6rem;
-      opacity: 0.6;
-    }
-
     .menu-divider {
       height: 1px;
       background: var(--border);
       margin: 0.5rem 0;
     }
 
-    /* Submenu */
+    /* Submenu - always inline to avoid overflow clipping */
     .submenu {
-      position: absolute;
-      left: 100%;
-      top: 0;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.5rem;
-      min-width: 200px;
-      max-height: 400px;
-      overflow-y: auto;
       display: none;
+      margin-top: 0.5rem;
+      margin-left: 1rem;
+      border-left: 2px solid var(--border);
+      padding-left: 0.5rem;
+      max-height: 300px;
+      overflow-y: auto;
     }
 
-    .menu-item:hover > .submenu {
+    .menu-item.has-submenu::after {
+      content: '▼';
+      font-size: 0.6rem;
+      opacity: 0.6;
+      transition: transform 0.2s;
+    }
+
+    .menu-item.submenu-open::after {
+      transform: rotate(180deg);
+    }
+
+    .menu-item.submenu-open > .submenu {
       display: block;
-    }
-
-    @media (max-width: 768px) {
-      .submenu {
-        position: static;
-        margin-top: 0.5rem;
-        margin-left: 1rem;
-        border: none;
-        border-left: 2px solid var(--border);
-        border-radius: 0;
-      }
-      .menu-item.has-submenu::after {
-        content: '▼';
-      }
-      .menu-item.submenu-open > .submenu {
-        display: block;
-      }
     }
 
     .submenu-item {
@@ -1380,13 +1364,26 @@
     // Load first scene to initialize (lazy loading - only loads one scene)
     async function loadInitialDemo() {
       await loadToc();
+      // Build flat list of all scene paths for swipe navigation
+      allScenePaths = [];
+      for (const cat of toc.categories) {
+        for (const scene of cat.scenes) {
+          allScenePaths.push(scene.path);
+        }
+      }
       if (toc.categories.length > 0 && toc.categories[0].scenes.length > 0) {
         const firstScene = toc.categories[0].scenes[0];
         const demo = await loadSceneByPath(firstScene.path);
+        currentSceneIndex = 0; // First scene in flat list
         return [demo];
       }
       return [];
     }
+
+    // Flat list of all scene paths for swipe navigation (populated from TOC)
+    let allScenePaths = [];
+    // Current index in allScenePaths for swipe navigation
+    let currentSceneIndex = 0;
 
     // Current scene path for tracking which scene is active
     let currentScenePath = null;
@@ -1754,6 +1751,12 @@
           demoIndex = demos.length - 1;
         }
 
+        // Update scene index in flat list for swipe navigation
+        const flatIndex = allScenePaths.indexOf(path);
+        if (flatIndex !== -1) {
+          currentSceneIndex = flatIndex;
+        }
+
         currentScenePath = path;
         switchDemo(demoIndex);
         updateDemosSubmenuSelection();
@@ -1763,6 +1766,20 @@
       } finally {
         if (sceneEl) sceneEl.classList.remove('loading');
       }
+    }
+
+    // Navigate to next scene in full TOC list (for swipe/arrow navigation)
+    async function navigateToNextScene() {
+      if (allScenePaths.length === 0) return;
+      currentSceneIndex = (currentSceneIndex + 1) % allScenePaths.length;
+      await loadAndSwitchToScene(allScenePaths[currentSceneIndex]);
+    }
+
+    // Navigate to previous scene in full TOC list (for swipe/arrow navigation)
+    async function navigateToPrevScene() {
+      if (allScenePaths.length === 0) return;
+      currentSceneIndex = (currentSceneIndex - 1 + allScenePaths.length) % allScenePaths.length;
+      await loadAndSwitchToScene(allScenePaths[currentSceneIndex]);
     }
 
     function updateDemosSubmenuSelection() {
@@ -3105,11 +3122,11 @@
           // Horizontal swipe detection: fast, mostly horizontal
           if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
             if (dx < 0) {
-              // Swipe left = next demo
-              switchDemo((currentDemo + 1) % demos.length);
+              // Swipe left = next demo (navigates through ALL demos)
+              navigateToNextScene();
             } else {
-              // Swipe right = previous demo
-              switchDemo((currentDemo - 1 + demos.length) % demos.length);
+              // Swipe right = previous demo (navigates through ALL demos)
+              navigateToPrevScene();
             }
           }
         }
@@ -3323,10 +3340,10 @@
 
         if (e.key === 'ArrowRight' || e.key === ' ') {
           e.preventDefault();
-          switchDemo((currentDemo + 1) % demos.length);
+          navigateToNextScene(); // Navigate through ALL demos
         } else if (e.key === 'ArrowLeft') {
           e.preventDefault();
-          switchDemo((currentDemo - 1 + demos.length) % demos.length);
+          navigateToPrevScene(); // Navigate through ALL demos
         } else if (e.key === 'e' || e.key === 'E') {
           e.preventDefault();
           editorOpen = !editorOpen;
