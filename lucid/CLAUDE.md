@@ -111,6 +111,21 @@ This creates O(n) SDF evaluations per ray step × ~100 steps × HD resolution = 
 - `demos_json.html` - Main demo app with 8 built-in templates (v0.2.0)
 - `README.html` - Documentation and architecture overview
 
+### Scene Library
+- `scenes/toc.json` - Table of contents for all demo scenes
+- `scenes/` subdirectories: `prim/`, `csg/`, `tut/`, `anim/`, `patterns/`, `fx/`, `creatures/`, `nature/`, `ships/`
+
+## ⚠️ Scene Management
+
+**When adding or removing scene files, ALWAYS update `scenes/toc.json`!**
+
+The TOC is the master index used by the UI to display available scenes. If you:
+- Add a new scene → Add entry to appropriate category in `toc.json`
+- Remove a scene → Remove its entry from `toc.json`
+- Rename a scene → Update the path in `toc.json`
+
+Include a cheerful emoji at the end of non-tutorial scene titles (e.g., "Draggo 🐲", "Snowman ⛄").
+
 ## Version Management
 
 **VERSION is a hardcoded constant** in `demos_json.html`:
