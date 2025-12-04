@@ -288,6 +288,10 @@ function chainedMax(values) {
 
 /**
  * Generate union - creates helper function, returns call expression
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform. This ensures proper transform composition
+ * where root rotations affect the entire assembly uniformly.
  */
 function generateUnion(node, ctx) {
   let children = node.children || [];
@@ -296,15 +300,35 @@ function generateUnion(node, ctx) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  // Propagate node's transform to all children
-  if (node.transform) {
-    children = children.map(child => ({
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    }));
-  }
+  // Apply parent transform to p first, then children use only local transforms
+  // This replaces the old approach of combining transforms which didn't work
+  // correctly for rotation composition
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
+    // For single child, if we have parent transform, wrap it
+    if (hasParentTransform) {
+      const funcName = `union_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      // Create child helper with original p parameter
+      const childFuncName = `union_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
     return walkNode(children[0], ctx);
   }
 
@@ -314,19 +338,35 @@ function generateUnion(node, ctx) {
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
   const callArgs = idParam ? `p, ${idParam}` : 'p';
 
-  // Generate child expressions as direct assignments
-  const childAssignments = children.map((child, i) => {
+  // If we have a parent transform, apply it first and pass transformed point to children
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  // Generate child expressions - each child uses childP (transformed or not)
+  // We wrap each child in a helper that takes the transformed point
+  const childHelpers = children.map((child, i) => {
+    const childFuncName = `union_child_${ctx.helperCounter++}`;
     const childExpr = walkNode(child, ctx);
-    return `  vec4 c${i} = ${childExpr};`;
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    return childFuncName;
+  });
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+  const childAssignments = childHelpers.map((funcName, i) => {
+    return `  vec4 c${i} = ${funcName}(${childCallArgs});`;
   }).join('\n');
 
   // Select color from closest child using sequential comparisons (O(n) code size)
-  // Avoids exponential growth from nested ternaries
   let colorSelect;
   if (children.length === 2) {
     colorSelect = '\n  return c0.x < c1.x ? c0 : c1;';
   } else {
-    // Sequential comparisons - each line is O(1), total O(n)
     colorSelect = '\n  vec4 nearest = c0;';
     for (let i = 1; i < children.length; i++) {
       colorSelect += `\n  nearest = nearest.x < c${i}.x ? nearest : c${i};`;
@@ -335,7 +375,7 @@ function generateUnion(node, ctx) {
   }
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-${childAssignments}${colorSelect}
+${bodyPrefix}${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -345,6 +385,12 @@ ${childAssignments}${colorSelect}
 
 /**
  * Generate subtract - creates helper function, returns call expression
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform. This ensures proper transform composition
+ * where root rotations affect the entire assembly uniformly.
+ *
+ * CSG formula: max(base, max(-cutter1, max(-cutter2, ...)))
  */
 function generateSubtract(node, ctx) {
   let children = node.children || [];
@@ -353,15 +399,32 @@ function generateSubtract(node, ctx) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  // Propagate node's transform to all children
-  if (node.transform) {
-    children = children.map(child => ({
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    }));
-  }
+  // Apply parent transform to p first, then children use only local transforms
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
+    // For single child, if we have parent transform, wrap it
+    if (hasParentTransform) {
+      const funcName = `subtract_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      const childFuncName = `subtract_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
     return walkNode(children[0], ctx);
   }
 
@@ -371,12 +434,32 @@ function generateSubtract(node, ctx) {
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
   const callArgs = idParam ? `p, ${idParam}` : 'p';
 
-  const baseExpr = walkNode(children[0], ctx);
-  let body = `  vec4 base = ${baseExpr};\n`;
+  // If we have a parent transform, apply it first
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  // Wrap each child in a helper function
+  const childHelpers = children.map((child, i) => {
+    const childFuncName = `subtract_child_${ctx.helperCounter++}`;
+    const childExpr = walkNode(child, ctx);
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    return childFuncName;
+  });
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+
+  // Build the subtract body
+  let body = bodyPrefix;
+  body += `  vec4 base = ${childHelpers[0]}(${childCallArgs});\n`;
 
   for (let i = 1; i < children.length; i++) {
-    const subExpr = walkNode(children[i], ctx);
-    body += `  vec4 sub${i} = ${subExpr};\n`;
+    body += `  vec4 sub${i} = ${childHelpers[i]}(${childCallArgs});\n`;
     if (ctx.showCutters) {
       // Debug mode: show cutters as union (min) instead of subtract (max of negated)
       body += `  if (sub${i}.x < base.x) base = sub${i};\n`;
@@ -397,6 +480,9 @@ ${body}  return base;
 
 /**
  * Generate intersect - creates helper function, returns call expression
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform.
  */
 function generateIntersect(node, ctx) {
   let children = node.children || [];
@@ -405,15 +491,31 @@ function generateIntersect(node, ctx) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  // Propagate node's transform to all children
-  if (node.transform) {
-    children = children.map(child => ({
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    }));
-  }
+  // Apply parent transform to p first, then children use only local transforms
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
+    if (hasParentTransform) {
+      const funcName = `intersect_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      const childFuncName = `intersect_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
     return walkNode(children[0], ctx);
   }
 
@@ -423,18 +525,34 @@ function generateIntersect(node, ctx) {
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
   const callArgs = idParam ? `p, ${idParam}` : 'p';
 
-  const childAssignments = children.map((child, i) => {
+  // If we have a parent transform, apply it first
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  // Wrap each child in a helper function
+  const childHelpers = children.map((child, i) => {
+    const childFuncName = `intersect_child_${ctx.helperCounter++}`;
     const childExpr = walkNode(child, ctx);
-    return `  vec4 c${i} = ${childExpr};`;
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    return childFuncName;
+  });
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+  const childAssignments = childHelpers.map((funcName, i) => {
+    return `  vec4 c${i} = ${funcName}(${childCallArgs});`;
   }).join('\n');
 
-  // Select color from child with largest distance using sequential comparisons (O(n) code size)
-  // Avoids exponential growth from nested ternaries
+  // Select color from child with largest distance using sequential comparisons
   let colorSelect;
   if (children.length === 2) {
     colorSelect = '\n  return c0.x > c1.x ? c0 : c1;';
   } else {
-    // Sequential comparisons - each line is O(1), total O(n)
     colorSelect = '\n  vec4 farthest = c0;';
     for (let i = 1; i < children.length; i++) {
       colorSelect += `\n  farthest = farthest.x > c${i}.x ? farthest : c${i};`;
@@ -443,7 +561,7 @@ function generateIntersect(node, ctx) {
   }
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-${childAssignments}${colorSelect}
+${bodyPrefix}${childAssignments}${colorSelect}
 }`;
 
   ctx.helpers.push(helperFunc);
@@ -453,6 +571,9 @@ ${childAssignments}${colorSelect}
 
 /**
  * Generate smooth union - creates helper function, returns call expression
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform.
  */
 function generateSmoothUnion(node, ctx) {
   let children = node.children || [];
@@ -462,15 +583,31 @@ function generateSmoothUnion(node, ctx) {
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  // Propagate node's transform to all children
-  if (node.transform) {
-    children = children.map(child => ({
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    }));
-  }
+  // Apply parent transform to p first, then children use only local transforms
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
+    if (hasParentTransform) {
+      const funcName = `smoothUnion_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      const childFuncName = `smoothUnion_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
     return walkNode(children[0], ctx);
   }
 
@@ -480,13 +617,33 @@ function generateSmoothUnion(node, ctx) {
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
   const callArgs = idParam ? `p, ${idParam}` : 'p';
 
+  // If we have a parent transform, apply it first
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  // Wrap each child in a helper function
+  const child0FuncName = `smoothUnion_child_${ctx.helperCounter++}`;
   const child0Expr = walkNode(children[0], ctx);
+  ctx.helpers.push(`vec4 ${child0FuncName}(${paramList}) {
+  return ${child0Expr};
+}`);
+
+  const child1FuncName = `smoothUnion_child_${ctx.helperCounter++}`;
   const child1Expr = walkNode(children[1], ctx);
+  ctx.helpers.push(`vec4 ${child1FuncName}(${paramList}) {
+  return ${child1Expr};
+}`);
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
 
   // Blend colors based on smooth union blend factor
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  vec4 a = ${child0Expr};
-  vec4 b = ${child1Expr};
+${bodyPrefix}  vec4 a = ${child0FuncName}(${childCallArgs});
+  vec4 b = ${child1FuncName}(${childCallArgs});
   float h = clamp(0.5 + 0.5 * (b.x - a.x) / ${k}, 0.0, 1.0);
   float d = mix(b.x, a.x, h) - ${k} * h * (1.0 - h);
   vec3 col = mix(b.yzw, a.yzw, h);
