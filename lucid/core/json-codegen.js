@@ -166,9 +166,9 @@ function generateSphere(node, ctx) {
 /**
  * Generate box - returns expression
  *
- * Note: JSON size is full dimensions [width, height, depth].
- * sdBox expects half-extents, so we multiply by 0.5.
- * This matches intuitive behavior: size [2, 1, 3] = 2x1x3 box.
+ * Note: JSON size values are half-extents [halfWidth, halfHeight, halfDepth],
+ * matching what sdBox expects directly. A box with size [1, 0.5, 2] spans
+ * -1 to +1 on X, -0.5 to +0.5 on Y, -2 to +2 on Z.
  */
 function generateBox(node, ctx) {
   const params = node.params || {};
@@ -176,8 +176,7 @@ function generateBox(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  // sdBox takes half-extents, so multiply size by 0.5
-  return `vec4(sdBox(${p}, ${size} * 0.5), ${color})`;
+  return `vec4(sdBox(${p}, ${size}), ${color})`;
 }
 
 /**
@@ -1374,6 +1373,7 @@ function exprToGlsl(expr, ctx) {
     case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
     case 'step': return `step(${args[0]}, ${args[1]})`;
     case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
+    case 'mix': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
     // Noise functions - demoscene effects
     case 'noise': return `noise3(vec3(${args.join(', ')}))`;
     case 'fbm': return `fbm(vec3(${args[0]}, ${args[1]}, ${args[2]}), ${args[3] || '4'})`;
