@@ -1,0 +1,397 @@
+{
+  "title": "Cobra vs Invaders",
+  "subtitle": "Elite ship attacks space invaders over a flower meadow",
+  "version": "1.0",
+  "quality": "high",
+  "notes": "Combined scene: Cobra Mk III swoops through invader formation firing lasers. Invaders glow red when hit and vanish. Flower meadow provides scenic backdrop.",
+  "camera": {
+    "distance": 8.0,
+    "phi": 0.6,
+    "theta": 0.0
+  },
+  "defs": {
+    "poppy": {
+      "type": "union",
+      "notes": "Red poppy - simplified for performance",
+      "children": [
+        {
+          "type": "capsule",
+          "params": { "h": 0.2, "r": 0.01, "color": [0.2, 0.5, 0.15] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.06, "color": [0.9, 0.1, 0.1] },
+          "transform": { "translate": [0, 0.23, 0], "scale": [1, 0.4, 1] }
+        }
+      ]
+    },
+    "sunflower": {
+      "type": "union",
+      "notes": "Yellow sunflower - simplified",
+      "children": [
+        {
+          "type": "capsule",
+          "params": { "h": 0.3, "r": 0.015, "color": [0.25, 0.45, 0.1] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.1, "color": [1.0, 0.85, 0.1] },
+          "transform": { "translate": [0, 0.35, 0], "scale": [1, 0.3, 1] }
+        }
+      ]
+    },
+    "invader": {
+      "type": "subtract",
+      "notes": "Classic space invader shape",
+      "children": [
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.25, 0.18, 0.08] } },
+            { "type": "box", "params": { "size": [0.07, 0.07, 0.08] }, "transform": { "translate": [0.18, 0.25, 0] } },
+            { "type": "box", "params": { "size": [0.07, 0.07, 0.08] }, "transform": { "translate": [-0.18, 0.25, 0] } },
+            { "type": "box", "params": { "size": [0.04, 0.12, 0.08] }, "transform": { "translate": [0.29, 0.04, 0] } },
+            { "type": "box", "params": { "size": [0.04, 0.12, 0.08] }, "transform": { "translate": [-0.29, 0.04, 0] } },
+            { "type": "box", "params": { "size": [0.07, 0.07, 0.08] }, "transform": { "translate": [0.25, -0.25, 0] } },
+            { "type": "box", "params": { "size": [0.07, 0.07, 0.08] }, "transform": { "translate": [-0.25, -0.25, 0] } }
+          ]
+        },
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.06, 0.06, 0.15] }, "transform": { "translate": [0.11, 0.07, 0.04] } },
+            { "type": "box", "params": { "size": [0.06, 0.06, 0.15] }, "transform": { "translate": [-0.11, 0.07, 0.04] } }
+          ]
+        }
+      ]
+    },
+    "cobraHull": {
+      "type": "union",
+      "notes": "Cobra Mk III hull - CSG sculpted spaceship",
+      "children": [
+        {
+          "type": "subtract",
+          "children": [
+            {
+              "type": "box",
+              "params": {"size": [0.7, 0.2, 0.75], "color": [0.7, 0.75, 0.8]}
+            },
+            {
+              "type": "mirror",
+              "axis": "x",
+              "child": {
+                "type": "box",
+                "params": {"size": [0.4, 0.3, 1.0]},
+                "transform": {"translate": [0.55, 0, 0.1], "rotate": [0, 25.5, 0]}
+              }
+            },
+            {
+              "type": "box",
+              "params": {"size": [0.8, 0.25, 1.0]},
+              "transform": {"translate": [0, -0.275, -0.075], "rotate": [-36, 0, 0]}
+            },
+            {
+              "type": "box",
+              "params": {"size": [0.8, 0.25, 1.0]},
+              "transform": {"translate": [0, -0.175, 0.05], "rotate": [22, 0, 0]}
+            },
+            {
+              "type": "box",
+              "params": {"size": [0.5, 0.25, 0.25]},
+              "transform": {"translate": [0, 0, -0.8], "rotate": [-6, 0, 0]}
+            }
+          ]
+        },
+        {
+          "type": "mirror",
+          "axis": "x",
+          "child": {
+            "type": "union",
+            "children": [
+              {
+                "type": "cylinder",
+                "params": {"h": 0.22, "r": 0.075, "color": [0.4, 0.4, 0.45]},
+                "transform": {"translate": [0.25, 0, -0.6], "rotate": [90, 0, 0]}
+              },
+              {
+                "type": "torus",
+                "params": {
+                  "major": 0.07,
+                  "minor": {"expr": "add", "args": [0.02, {"expr": "mul", "args": [0.01, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 8.0]}]}]}]},
+                  "color": [1.0, 0.5, 0.0]
+                },
+                "transform": {"translate": [0.25, 0, -0.7], "rotate": [90, 0, 0]}
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "laserBeam": {
+      "type": "capsule",
+      "notes": "Pulsing laser beam",
+      "params": {
+        "h": 2.5,
+        "r": {"expr": "add", "args": [0.02, {"expr": "mul", "args": [0.01, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 20.0]}]}]}]},
+        "color": [1.0, 0.2, 0.2]
+      }
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "repeat",
+        "notes": "Flower meadow background - sparse for performance",
+        "period": [0.8, 0, 0.8],
+        "exposeId": "flowerId",
+        "child": {
+          "type": "select",
+          "cond": { "expr": "step", "args": [0.5, { "expr": "hash", "args": [{ "var": "flowerId" }] }] },
+          "a": {
+            "type": "ref",
+            "id": "poppy",
+            "transform": {
+              "translate": [
+                { "expr": "mul", "args": [{ "expr": "sub", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 50] }] }, 0.5] }, 0.3] },
+                0,
+                { "expr": "mul", "args": [{ "expr": "sub", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 150] }] }, 0.5] }, 0.3] }
+              ],
+              "rotate": [0, { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 300] }] }, 360] }, 0],
+              "scale": [{ "expr": "add", "args": [0.6, { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 600] }] }, 0.5] }] }]
+            }
+          },
+          "b": {
+            "type": "ref",
+            "id": "sunflower",
+            "transform": {
+              "translate": [
+                { "expr": "mul", "args": [{ "expr": "sub", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 70] }] }, 0.5] }, 0.25] },
+                0,
+                { "expr": "mul", "args": [{ "expr": "sub", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 170] }] }, 0.5] }, 0.25] }
+              ],
+              "rotate": [0, { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 500] }] }, 360] }, 0],
+              "scale": [{ "expr": "add", "args": [0.7, { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "expr": "add", "args": [{ "var": "flowerId" }, 700] }] }, 0.4] }] }]
+            }
+          }
+        },
+        "transform": { "translate": [0, -2.0, 0] }
+      },
+      {
+        "type": "union",
+        "notes": "Invader formation - 3x3 block with hit animations",
+        "children": [
+          {
+            "type": "material",
+            "notes": "Invader 1 - hit at t=3s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.0, 1.0, { "expr": "smoothstep", "args": [3.0, 3.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [3.0, 4.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.5, 0.0, { "expr": "smoothstep", "args": [3.0, 4.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [-1.2, 1.8, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [3.5, 4.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 2 - hit at t=5s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.0, 1.0, { "expr": "smoothstep", "args": [5.0, 5.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [5.0, 6.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.5, 0.0, { "expr": "smoothstep", "args": [5.0, 6.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [0, { "expr": "add", "args": [1.8, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] }] }, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [5.5, 6.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 3 - hit at t=7s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.0, 1.0, { "expr": "smoothstep", "args": [7.0, 7.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [7.0, 8.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.5, 0.0, { "expr": "smoothstep", "args": [7.0, 8.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [1.2, 1.8, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [7.5, 8.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 4 - hit at t=9s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [1.0, 1.0, { "expr": "smoothstep", "args": [9.0, 9.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.3, 0.0, { "expr": "smoothstep", "args": [9.0, 10.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.8, 0.0, { "expr": "smoothstep", "args": [9.0, 10.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [{ "expr": "add", "args": [-1.2, { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "var": "time" }] }] }] }, 0.9, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [9.5, 10.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 5 - hit at t=11s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [1.0, 1.0, { "expr": "smoothstep", "args": [11.0, 11.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.3, 0.0, { "expr": "smoothstep", "args": [11.0, 12.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.8, 0.0, { "expr": "smoothstep", "args": [11.0, 12.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [0, { "expr": "add", "args": [0.9, { "expr": "mul", "args": [0.12, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, 1.5] }] }] }] }, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [11.5, 12.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 6 - hit at t=13s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [1.0, 1.0, { "expr": "smoothstep", "args": [13.0, 13.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.3, 0.0, { "expr": "smoothstep", "args": [13.0, 14.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.8, 0.0, { "expr": "smoothstep", "args": [13.0, 14.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [1.2, 0.9, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [13.5, 14.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 7 - hit at t=15s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.5, 1.0, { "expr": "smoothstep", "args": [15.0, 15.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [15.0, 16.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.0, 0.0, { "expr": "smoothstep", "args": [15.0, 16.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [-1.2, 0.0, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [15.5, 16.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 8 - hit at t=17s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.5, 1.0, { "expr": "smoothstep", "args": [17.0, 17.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [17.0, 18.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.0, 0.0, { "expr": "smoothstep", "args": [17.0, 18.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [{ "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.5] }] }] }, 0.0, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [17.5, 18.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          },
+          {
+            "type": "material",
+            "notes": "Invader 9 - hit at t=19s",
+            "params": {
+              "color": [
+                { "expr": "mix", "args": [0.5, 1.0, { "expr": "smoothstep", "args": [19.0, 19.5, { "var": "time" }] }] },
+                { "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [19.0, 20.0, { "var": "time" }] }] },
+                { "expr": "mix", "args": [0.0, 0.0, { "expr": "smoothstep", "args": [19.0, 20.0, { "var": "time" }] }] }
+              ]
+            },
+            "child": {
+              "type": "transform",
+              "transform": {
+                "translate": [1.2, 0.0, 0],
+                "scale": [{ "expr": "mix", "args": [1.0, 0.0, { "expr": "smoothstep", "args": [19.5, 20.5, { "var": "time" }] }] }]
+              },
+              "child": { "type": "ref", "id": "invader" }
+            }
+          }
+        ]
+      },
+      {
+        "type": "transform",
+        "notes": "Cobra Mk III on swooping attack path",
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [2.5, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.4] }] }] },
+            { "expr": "add", "args": [0.5, { "expr": "mul", "args": [1.5, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.3] }] }] }] },
+            { "expr": "add", "args": [2.0, { "expr": "mul", "args": [1.0, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.25] }] }] }] }
+          ],
+          "rotate": [
+            { "expr": "mul", "args": [-20, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.3] }] }] },
+            { "expr": "add", "args": [180, { "expr": "mul", "args": [30, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.4] }] }] }] },
+            { "expr": "mul", "args": [25, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.4] }] }] }
+          ]
+        },
+        "child": {
+          "type": "union",
+          "children": [
+            { "type": "ref", "id": "cobraHull" },
+            {
+              "type": "transform",
+              "notes": "Laser beam from cobra nose",
+              "transform": {
+                "translate": [0, -0.05, 1.5],
+                "rotate": [90, 0, 0]
+              },
+              "child": {
+                "type": "material",
+                "params": {
+                  "color": [1.0, 0.1, 0.1],
+                  "emission": 2.0
+                },
+                "child": { "type": "ref", "id": "laserBeam" }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
