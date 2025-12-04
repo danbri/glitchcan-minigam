@@ -606,6 +606,14 @@ function generateMaterial(node, ctx) {
 /**
  * Generate mirror - reflection symmetry
  * axis can be "x", "y", "z", "xy", "xz", "yz", "xyz"
+ *
+ * Transform handling for domain modifiers:
+ * 1. Apply parent transform (e.g., root rotation) to p FIRST
+ * 2. Then apply mirror (abs) to the transformed point
+ * 3. Child keeps only its own local transform
+ *
+ * This ensures the mirror symmetry operates in the rotated space,
+ * so the entire mirrored assembly rotates as a unit.
  */
 function generateMirror(node, ctx) {
   const axis = node.axis || 'x';
@@ -614,15 +622,13 @@ function generateMirror(node, ctx) {
   const callArgs = idParam ? `p, ${idParam}` : 'p';
   const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
-  // Propagate mirror's transform to child (fixes transform propagation bug)
-  // This ensures parent transforms (like animated rotations) reach nested children
-  let child = node.child;
-  if (node.transform) {
-    child = {
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    };
-  }
+  // Apply parent transform to p FIRST, before the mirror operation
+  // This ensures root rotations are applied before mirroring
+  const rp = applyTransform('p', node.transform, ctx);
+
+  // Child keeps only its own local transform (NOT propagated from parent)
+  // The parent transform was already applied above
+  const child = node.child;
 
   // Wrap the child in its own helper function
   const childFuncName = `mirror_child_${ctx.helperCounter++}`;
@@ -634,17 +640,14 @@ function generateMirror(node, ctx) {
   // Now generate the mirror wrapper
   const funcName = `mirror_${ctx.helperCounter++}`;
 
-  // Build the mirror transform
-  let mirrorCode = '';
+  // Build the mirror transform - apply abs AFTER parent transform
+  let mirrorCode = `  vec3 rp = ${rp};\n`;
+  mirrorCode += '  vec3 q = rp;\n';
   if (axis.includes('x')) mirrorCode += '  q.x = abs(q.x);\n';
   if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
   if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
 
-  // Note: transform is propagated to child above, not applied here
-  // This ensures proper transform composition through the tree
-
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  vec3 q = p;
 ${mirrorCode}  return ${childFuncName}(${childCallArgs});
 }`;
 
@@ -656,6 +659,14 @@ ${mirrorCode}  return ${childFuncName}(${childCallArgs});
  * Generate radial - rotational symmetry around an axis
  * count: number of repetitions
  * axis: "x", "y", or "z" (default "y")
+ *
+ * Transform handling for domain modifiers:
+ * 1. Apply parent transform (e.g., root rotation) to p FIRST
+ * 2. Then apply radial folding to the transformed point
+ * 3. Child keeps only its own local transform
+ *
+ * This ensures the radial symmetry operates in the rotated space,
+ * so the entire radial assembly rotates as a unit.
  */
 function generateRadial(node, ctx) {
   const count = node.count || 6;
@@ -665,14 +676,13 @@ function generateRadial(node, ctx) {
   const callArgs = idParam ? `p, ${idParam}` : 'p';
   const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
-  // Propagate radial's transform to child (fixes transform propagation bug)
-  let child = node.child;
-  if (node.transform) {
-    child = {
-      ...child,
-      transform: combineTransforms(child.transform, node.transform)
-    };
-  }
+  // Apply parent transform to p FIRST, before the radial operation
+  // This ensures root rotations are applied before radial folding
+  const rp = applyTransform('p', node.transform, ctx);
+
+  // Child keeps only its own local transform (NOT propagated from parent)
+  // The parent transform was already applied above
+  const child = node.child;
 
   // Wrap the child in its own helper function
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
@@ -684,35 +694,35 @@ function generateRadial(node, ctx) {
   // Now generate the radial wrapper
   const funcName = `radial_${ctx.helperCounter++}`;
 
-  // Note: transform is propagated to child above, not applied here
-
   // TAU = 2*PI
   const segment = (2 * Math.PI / count).toFixed(6);
 
-  // Build radial fold code based on axis
+  // Build radial fold code based on axis - apply AFTER parent transform
   let radialCode;
   if (axis === 'y') {
-    radialCode = `  float angle = atan(q.z, q.x);
+    radialCode = `  vec3 rp = ${rp};
+  float angle = atan(rp.z, rp.x);
   float segment = ${segment};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
-  float r = length(q.xz);
-  q = vec3(r * cos(angle), q.y, r * sin(angle));`;
+  float r = length(rp.xz);
+  vec3 q = vec3(r * cos(angle), rp.y, r * sin(angle));`;
   } else if (axis === 'x') {
-    radialCode = `  float angle = atan(q.z, q.y);
+    radialCode = `  vec3 rp = ${rp};
+  float angle = atan(rp.z, rp.y);
   float segment = ${segment};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
-  float r = length(q.yz);
-  q = vec3(q.x, r * cos(angle), r * sin(angle));`;
+  float r = length(rp.yz);
+  vec3 q = vec3(rp.x, r * cos(angle), r * sin(angle));`;
   } else { // z
-    radialCode = `  float angle = atan(q.y, q.x);
+    radialCode = `  vec3 rp = ${rp};
+  float angle = atan(rp.y, rp.x);
   float segment = ${segment};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
-  float r = length(q.xy);
-  q = vec3(r * cos(angle), r * sin(angle), q.z);`;
+  float r = length(rp.xy);
+  vec3 q = vec3(r * cos(angle), r * sin(angle), rp.z);`;
   }
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-  vec3 q = p;
 ${radialCode}
   return ${childFuncName}(${childCallArgs});
 }`;
