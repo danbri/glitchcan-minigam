@@ -1,7 +1,7 @@
 {
   "title": "Cobra Mk III",
   "subtitle": "Elite-style 80s spaceship with CSG subtraction",
-  "version": "4.5",
+  "version": "4.6",
   "notes": "Cobra Mk III - Demonstrates CSG box-cutting for spaceship hull sculpting. Features animated Y-axis rotation, mirrored wing cutters, beveled hull surfaces, and pulsing orange engine tori.",
   "root": {
     "type": "transform",
