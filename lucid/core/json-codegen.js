@@ -165,6 +165,10 @@ function generateSphere(node, ctx) {
 
 /**
  * Generate box - returns expression
+ *
+ * Note: JSON size is full dimensions [width, height, depth].
+ * sdBox expects half-extents, so we multiply by 0.5.
+ * This matches intuitive behavior: size [2, 1, 3] = 2x1x3 box.
  */
 function generateBox(node, ctx) {
   const params = node.params || {};
@@ -172,7 +176,8 @@ function generateBox(node, ctx) {
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToGlsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
-  return `vec4(sdBox(${p}, ${size}), ${color})`;
+  // sdBox takes half-extents, so multiply size by 0.5
+  return `vec4(sdBox(${p}, ${size} * 0.5), ${color})`;
 }
 
 /**
