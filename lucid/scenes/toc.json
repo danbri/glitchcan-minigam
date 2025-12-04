@@ -107,6 +107,14 @@
         { "path": "ships/cobra-mk3.json", "title": "Cobra Mk III 🚀", "subtitle": "Elite ship" },
         { "path": "ships/elite-wireframe.json", "title": "Elite Wireframe ✨", "subtitle": "Vector style" }
       ]
+    },
+    {
+      "id": "combined",
+      "title": "Combined Scenes",
+      "description": "Multi-element showcases",
+      "scenes": [
+        { "path": "combined/cobra-vs-invaders.json", "title": "Cobra vs Invaders 🎮", "subtitle": "Elite ship attacks space invaders" }
+      ]
     }
   ]
 }
