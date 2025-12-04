@@ -1,75 +1,75 @@
 {
   "title": "Cobra Mk III",
   "subtitle": "Elite-style 80s spaceship with CSG subtraction",
-  "version": "4.7",
-  "notes": "Cobra Mk III - Demonstrates CSG box-cutting for spaceship hull sculpting. Features animated Y-axis rotation, mirrored wing cutters, beveled hull surfaces, and pulsing orange engine tori.",
+  "version": "4.8",
+  "notes": "Classic Elite Cobra Mk III built with CSG subtraction. Hull is sculpted by mirrored wing cutters (creating swept delta profile), angled top/bottom bevels (for cockpit slope and belly), and rear notch (engine bay). Pulsing orange torus rings on twin engines.",
   "root": {
     "type": "transform",
     "transform": {
-      "rotate": [15, { "expr": "mul", "args": [20, { "var": "time" }] }, 0]
+      "rotate": [15, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
     },
     "child": {
       "type": "union",
       "children": [
         {
           "type": "subtract",
-          "notes": "Subtract takes [base, cutter1, cutter2, ...]. First child is kept, rest are removed.",
+          "notes": "CSG subtract: [base, cutter1, cutter2, ...] - first child kept, rest carved away",
           "children": [
             {
               "type": "box",
-              "notes": "Base hull - flat elongated box that will be sculpted by cutters",
+              "notes": "Hull base - elongated flat box, sculpted by cutters below",
               "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
             },
             {
               "type": "mirror",
               "axis": "x",
-              "notes": "Mirror creates symmetric side cuts",
+              "notes": "Symmetric wing cuts via X-axis mirror",
               "child": {
                 "type": "box",
-                "notes": "Wing angle cutter - angled 68 to create swept wing profile",
+                "notes": "Wing cutter - angled 25.5deg for swept delta wing profile",
                 "params": {"size": [0.8, 0.6, 2.0], "color": [1, 0, 0]},
-                "transform": {"translate": [1.6, 0, 0.2], "rotate": [0, 68, 0]}
+                "transform": {"translate": [1.1, 0, 0.2], "rotate": [0, 25.5, 0]}
               }
             },
             {
               "type": "box",
-              "notes": "Top bevel - angled cut from nose",
+              "notes": "Top bevel - slopes cockpit area forward and down",
               "params": {"size": [1.6, 0.5, 2.0], "color": [0, 1, 0]},
-              "transform": {"translate": [0, 0.7, 0.8], "rotate": [12, 0, 0]}
+              "transform": {"translate": [0, -0.55, -0.15], "rotate": [-36, 0, 0]}
             },
             {
               "type": "box",
-              "notes": "Bottom bevel - angled cut for belly",
+              "notes": "Bottom bevel - creates angled belly profile",
               "params": {"size": [1.6, 0.5, 2.0], "color": [0, 0, 1]},
-              "transform": {"translate": [0, -0.7, 0.8], "rotate": [-12, 0, 0]}
+              "transform": {"translate": [0, -0.35, 0.1], "rotate": [22, 0, 0]}
             },
             {
               "type": "box",
-              "notes": "Rear notch - engine bay area",
+              "notes": "Rear notch - carves engine bay recess",
               "params": {"size": [1.0, 0.5, 0.5], "color": [1, 1, 0]},
-              "transform": {"translate": [0, 0, -1.6], "rotate": [-15, 0, 0]}
+              "transform": {"translate": [0, 0, -1.6], "rotate": [-6, 0, 0]}
             }
           ]
         },
         {
           "type": "mirror",
           "axis": "x",
-          "notes": "Mirrored engine assembly",
+          "notes": "Twin engine pods via X-axis mirror",
           "child": {
             "type": "union",
             "children": [
               {
                 "type": "cylinder",
-                "notes": "Engine body",
+                "notes": "Engine nacelle body",
                 "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
                 "transform": {"translate": [0.5, 0, -1.2], "rotate": [90, 0, 0]}
               },
               {
                 "type": "torus",
-                "notes": "Engine glow ring - pulsing exhaust ring at engine exit",
+                "notes": "Engine glow - pulsing exhaust ring (minor radius oscillates)",
                 "params": {
                   "major": 0.14,
-                  "minor": { "expr": "add", "args": [0.03, { "expr": "mul", "args": [0.015, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 5.0] }] }] }] },
+                  "minor": {"expr": "add", "args": [0.03, {"expr": "mul", "args": [0.015, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 5.0]}]}]}]},
                   "color": [1.0, 0.6, 0.1]
                 },
                 "transform": {"translate": [0.5, 0, -1.4], "rotate": [90, 0, 0]}
