@@ -1,8 +1,8 @@
 {
   "title": "Cobra Mk III",
-  "subtitle": "Elite ship - REVEALS MIRROR BUG (cutters don't rotate)",
-  "version": "4.4",
-  "notes": "Cobra Mk III - Demonstrates CSG box-cutting AND a platform bug. TRANSFORM PROPAGATION BUG: Watch the animation - the CSG cutters inside mirror nodes don't rotate with the parent!",
+  "subtitle": "Elite-style 80s spaceship with CSG subtraction",
+  "version": "4.5",
+  "notes": "Cobra Mk III - Demonstrates CSG box-cutting for spaceship hull sculpting. Features animated Y-axis rotation, mirrored wing cutters, beveled hull surfaces, and pulsing orange engine tori.",
   "root": {
     "type": "transform",
     "transform": {
