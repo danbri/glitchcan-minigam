@@ -68,38 +68,38 @@
     },
     "cobraHull": {
       "type": "union",
-      "notes": "Cobra Mk III hull - copied from cobra-mk3.json v4.7",
+      "notes": "Cobra Mk III hull - v4.9 tuned geometry for half-extent convention",
       "children": [
         {
           "type": "subtract",
           "children": [
             {
               "type": "box",
-              "params": {"size": [1.4, 0.4, 1.5], "color": [0.7, 0.75, 0.8]}
+              "params": {"size": [0.7, 0.2, 0.75], "color": [0.7, 0.75, 0.8]}
             },
             {
               "type": "mirror",
               "axis": "x",
               "child": {
                 "type": "box",
-                "params": {"size": [0.8, 0.6, 2.0]},
-                "transform": {"translate": [1.6, 0, 0.2], "rotate": [0, 68, 0]}
+                "params": {"size": [0.4, 0.3, 1.0]},
+                "transform": {"translate": [0.55, 0, 0.1], "rotate": [0, 25.5, 0]}
               }
             },
             {
               "type": "box",
-              "params": {"size": [1.6, 0.5, 2.0]},
-              "transform": {"translate": [0, 0.7, 0.8], "rotate": [12, 0, 0]}
+              "params": {"size": [0.8, 0.25, 1.0]},
+              "transform": {"translate": [0, -0.275, -0.075], "rotate": [-36, 0, 0]}
             },
             {
               "type": "box",
-              "params": {"size": [1.6, 0.5, 2.0]},
-              "transform": {"translate": [0, -0.7, 0.8], "rotate": [-12, 0, 0]}
+              "params": {"size": [0.8, 0.25, 1.0]},
+              "transform": {"translate": [0, -0.175, 0.05], "rotate": [22, 0, 0]}
             },
             {
               "type": "box",
-              "params": {"size": [1.0, 0.5, 0.5]},
-              "transform": {"translate": [0, 0, -1.6], "rotate": [-15, 0, 0]}
+              "params": {"size": [0.5, 0.25, 0.25]},
+              "transform": {"translate": [0, 0, -0.8], "rotate": [-6, 0, 0]}
             }
           ]
         },
@@ -111,17 +111,17 @@
             "children": [
               {
                 "type": "cylinder",
-                "params": {"h": 0.45, "r": 0.15, "color": [0.4, 0.4, 0.45]},
-                "transform": {"translate": [0.7, 0, -1.2], "rotate": [90, 0, 0]}
+                "params": {"h": 0.225, "r": 0.075, "color": [0.4, 0.4, 0.45]},
+                "transform": {"translate": [0.25, 0, -0.6], "rotate": [90, 0, 0]}
               },
               {
                 "type": "torus",
                 "params": {
-                  "major": 0.14,
-                  "minor": {"expr": "add", "args": [0.03, {"expr": "mul", "args": [0.015, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 5.0]}]}]}]},
+                  "major": 0.07,
+                  "minor": {"expr": "add", "args": [0.015, {"expr": "mul", "args": [0.0075, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 5.0]}]}]}]},
                   "color": [1.0, 0.6, 0.1]
                 },
-                "transform": {"translate": [0.7, 0, -1.4], "rotate": [90, 0, 0]}
+                "transform": {"translate": [0.25, 0, -0.7], "rotate": [90, 0, 0]}
               }
             ]
           }
@@ -369,7 +369,7 @@
             { "expr": "add", "args": [180, { "expr": "mul", "args": [30, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.4] }] }] }] },
             { "expr": "mul", "args": [25, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.4] }] }] }
           ],
-          "scale": [0.5]
+          "scale": [1.0]
         },
         "child": {
           "type": "union",
@@ -379,7 +379,7 @@
               "type": "transform",
               "notes": "Laser beam from cobra nose",
               "transform": {
-                "translate": [0, -0.1, 1.5],
+                "translate": [0, -0.05, 0.8],
                 "rotate": [-90, 0, 0]
               },
               "child": {
