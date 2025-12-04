@@ -1373,6 +1373,7 @@ function exprToGlsl(expr, ctx) {
     case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
     case 'step': return `step(${args[0]}, ${args[1]})`;
     case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
+    case 'mix': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
     // Noise functions - demoscene effects
     case 'noise': return `noise3(vec3(${args.join(', ')}))`;
     case 'fbm': return `fbm(vec3(${args[0]}, ${args[1]}, ${args[2]}), ${args[3] || '4'})`;
