@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instanced Gaussian Splats - Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: #16213e;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
+
+    .sidebar h1 {
+      font-size: 1.2em;
+      margin-bottom: 20px;
+      color: #00d9ff;
+    }
+
+    .sidebar h2 {
+      font-size: 0.9em;
+      margin: 15px 0 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      background: #0f3460;
+      border: 1px solid #1a508b;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #1a508b;
+      border-color: #00d9ff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: #00d9ff;
+      color: #000;
+      border-color: #00d9ff;
+    }
+
+    button.primary:hover {
+      background: #00b8d9;
+    }
+
+    .progress {
+      margin: 15px 0;
+      padding: 10px;
+      background: #0a0a15;
+      border-radius: 6px;
+      font-size: 0.85em;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #00d9ff;
+      transition: width 0.3s;
+    }
+
+    .stats {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    .stats div {
+      padding: 4px 0;
+      border-bottom: 1px solid #222;
+    }
+
+    .scene-selector {
+      width: 100%;
+      padding: 10px;
+      background: #0a0a15;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+
+    .controls {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #333;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    .control-row label {
+      flex: 1;
+      font-size: 0.85em;
+      color: #888;
+    }
+
+    .control-row input[type="range"] {
+      width: 100px;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.85em;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .mode-toggle {
+      display: flex;
+      gap: 5px;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 8px;
+    }
+
+    .mode-toggle button.active {
+      background: #00d9ff;
+      color: #000;
+    }
+
+    #log {
+      margin-top: 15px;
+      padding: 10px;
+      background: #0a0a15;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.75em;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    #log div {
+      padding: 2px 0;
+      border-bottom: 1px solid #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h1>🔮 Instanced Splats</h1>
+
+      <h2>Scene</h2>
+      <select id="sceneSelect" class="scene-selector">
+        <option value="">Select a scene...</option>
+        <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders</option>
+        <option value="creatures/invaders.json">Space Invaders</option>
+        <option value="ships/cobra-mk3.json">Cobra Mk III</option>
+        <option value="nature/flower-meadow.json">Flower Meadow</option>
+      </select>
+
+      <h2>Convert</h2>
+      <button id="loadBtn">Load Scene</button>
+      <button id="convertBtn" class="primary" disabled>Convert to Splats</button>
+      <button id="downloadBtn" disabled>Download Bundle</button>
+
+      <div class="progress" id="progressPanel">
+        <div id="progressText">Ready</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <h2>Render Mode</h2>
+      <div class="mode-toggle">
+        <button id="modeSplat" class="active">Splats</button>
+        <button id="modeSDF">SDF (Original)</button>
+      </div>
+
+      <div class="controls">
+        <h2>Camera</h2>
+        <div class="control-row">
+          <label>Distance</label>
+          <input type="range" id="camDist" min="2" max="20" step="0.5" value="8">
+        </div>
+        <div class="control-row">
+          <label>Rotation</label>
+          <input type="range" id="camRot" min="0" max="360" step="1" value="0">
+        </div>
+        <div class="control-row">
+          <label>Height</label>
+          <input type="range" id="camHeight" min="-5" max="5" step="0.1" value="1">
+        </div>
+      </div>
+
+      <h2>Stats</h2>
+      <div class="stats" id="stats">
+        <div>Templates: -</div>
+        <div>Instances: -</div>
+        <div>Total Splats: -</div>
+        <div>FPS: -</div>
+      </div>
+
+      <h2>Log</h2>
+      <div id="log"></div>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="canvas"></canvas>
+      <div class="overlay" id="overlay">
+        <div>Drag to rotate | Scroll to zoom</div>
+        <div id="modeLabel">Mode: Splats</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      LucidToSplats,
+      createSimpleSdfEvaluator,
+      InstancedSplatRenderer,
+      SplatBundle
+    } from './index.js';
+
+    // State
+    let currentScene = null;
+    let currentBundle = null;
+    let renderer = null;
+    let mode = 'splat';
+    let animationId = null;
+
+    // Elements
+    const canvas = document.getElementById('canvas');
+    const sceneSelect = document.getElementById('sceneSelect');
+    const loadBtn = document.getElementById('loadBtn');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const statsDiv = document.getElementById('stats');
+    const logDiv = document.getElementById('log');
+    const modeSplatBtn = document.getElementById('modeSplat');
+    const modeSDFBtn = document.getElementById('modeSDF');
+    const modeLabel = document.getElementById('modeLabel');
+
+    // Camera controls
+    const camDist = document.getElementById('camDist');
+    const camRot = document.getElementById('camRot');
+    const camHeight = document.getElementById('camHeight');
+
+    let cameraTheta = 0;
+    let cameraPhi = 0.5;
+    let cameraDistance = 8;
+
+    function log(msg) {
+      const div = document.createElement('div');
+      div.textContent = `${new Date().toLocaleTimeString()}: ${msg}`;
+      logDiv.insertBefore(div, logDiv.firstChild);
+      console.log(msg);
+    }
+
+    function updateProgress(stage, progress) {
+      progressText.textContent = stage;
+      progressFill.style.width = `${progress}%`;
+    }
+
+    function updateStats(data) {
+      statsDiv.innerHTML = `
+        <div>Templates: ${data.templates || '-'}</div>
+        <div>Instances: ${data.instances || '-'}</div>
+        <div>Total Splats: ${data.splats || '-'}</div>
+        <div>FPS: ${data.fps || '-'}</div>
+      `;
+    }
+
+    // Load scene
+    loadBtn.addEventListener('click', async () => {
+      const path = sceneSelect.value;
+      if (!path) {
+        log('Please select a scene');
+        return;
+      }
+
+      try {
+        log(`Loading ${path}...`);
+        const resp = await fetch(`../scenes/${path}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+        currentScene = await resp.json();
+        log(`Loaded: ${currentScene.title || path}`);
+
+        convertBtn.disabled = false;
+        downloadBtn.disabled = true;
+        currentBundle = null;
+
+      } catch (err) {
+        log(`Error loading scene: ${err.message}`);
+      }
+    });
+
+    // Convert to splats
+    convertBtn.addEventListener('click', async () => {
+      if (!currentScene) {
+        log('No scene loaded');
+        return;
+      }
+
+      try {
+        convertBtn.disabled = true;
+        log('Starting conversion...');
+
+        const converter = new LucidToSplats({
+          samplerResolution: 32,
+          targetSplatsPerTemplate: 500,
+          onProgress: ({ stage, template, progress }) => {
+            updateProgress(
+              template ? `Converting ${template}...` : stage,
+              progress
+            );
+          }
+        });
+
+        const sdfEvaluator = createSimpleSdfEvaluator();
+        currentBundle = await converter.convert(currentScene, sdfEvaluator);
+
+        log(`Conversion complete: ${currentBundle.templateClouds.size} templates`);
+
+        // Set up renderer
+        setupRenderer();
+
+        downloadBtn.disabled = false;
+        updateProgress('Ready', 100);
+
+        // Update stats
+        let totalSplats = 0;
+        for (const [, cloud] of currentBundle.templateClouds) {
+          totalSplats += cloud.count;
+        }
+        updateStats({
+          templates: currentBundle.templateClouds.size,
+          instances: currentBundle.manifest.instances.length,
+          splats: totalSplats
+        });
+
+      } catch (err) {
+        log(`Conversion error: ${err.message}`);
+        console.error(err);
+      } finally {
+        convertBtn.disabled = false;
+      }
+    });
+
+    // Download bundle
+    downloadBtn.addEventListener('click', async () => {
+      if (!currentBundle) return;
+
+      try {
+        await currentBundle.download(`${currentScene.title || 'scene'}.isplat.json`);
+        log('Bundle downloaded');
+      } catch (err) {
+        log(`Download error: ${err.message}`);
+      }
+    });
+
+    // Set up splat renderer
+    function setupRenderer() {
+      if (renderer) {
+        renderer.dispose();
+      }
+
+      renderer = new InstancedSplatRenderer(canvas);
+
+      // Add templates
+      for (const [id, cloud] of currentBundle.templateClouds) {
+        renderer.addTemplate(id, cloud);
+        log(`Added template: ${id} (${cloud.count} splats)`);
+      }
+
+      // Add instances
+      for (const instance of currentBundle.getInstances()) {
+        renderer.addInstance(instance.template, instance);
+      }
+
+      log(`Added ${currentBundle.manifest.instances.length} instances`);
+
+      // Start animation loop
+      startAnimation();
+    }
+
+    let lastTime = 0;
+    let frameCount = 0;
+    let fpsTime = 0;
+
+    function startAnimation() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+
+      function animate(time) {
+        animationId = requestAnimationFrame(animate);
+
+        const dt = time - lastTime;
+        lastTime = time;
+
+        // FPS counter
+        frameCount++;
+        if (time - fpsTime > 1000) {
+          updateStats({
+            templates: currentBundle?.templateClouds.size || 0,
+            instances: currentBundle?.manifest.instances.length || 0,
+            splats: Array.from(currentBundle?.templateClouds.values() || [])
+              .reduce((sum, c) => sum + c.count, 0),
+            fps: frameCount
+          });
+          frameCount = 0;
+          fpsTime = time;
+        }
+
+        if (renderer && mode === 'splat') {
+          // Update time for animations
+          renderer.setTime(time / 1000);
+
+          // Update camera
+          const theta = parseFloat(camRot.value) * Math.PI / 180 + cameraTheta;
+          const dist = parseFloat(camDist.value);
+          const height = parseFloat(camHeight.value);
+
+          renderer.setCamera({
+            position: [
+              Math.sin(theta) * dist,
+              height,
+              Math.cos(theta) * dist
+            ],
+            target: [0, 0, 0],
+            fov: 45
+          });
+
+          renderer.render();
+        }
+      }
+
+      animate(0);
+    }
+
+    // Mode toggle
+    modeSplatBtn.addEventListener('click', () => {
+      mode = 'splat';
+      modeSplatBtn.classList.add('active');
+      modeSDFBtn.classList.remove('active');
+      modeLabel.textContent = 'Mode: Splats';
+    });
+
+    modeSDFBtn.addEventListener('click', () => {
+      mode = 'sdf';
+      modeSDFBtn.classList.add('active');
+      modeSplatBtn.classList.remove('active');
+      modeLabel.textContent = 'Mode: SDF (not implemented in this demo)';
+    });
+
+    // Mouse controls for camera
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+
+      cameraTheta += dx * 0.01;
+      cameraPhi = Math.max(-1, Math.min(1, cameraPhi + dy * 0.01));
+
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mouseleave', () => isDragging = false);
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const newDist = parseFloat(camDist.value) + e.deltaY * 0.01;
+      camDist.value = Math.max(2, Math.min(20, newDist));
+    });
+
+    // Resize handler
+    function resize() {
+      canvas.width = canvas.clientWidth * window.devicePixelRatio;
+      canvas.height = canvas.clientHeight * window.devicePixelRatio;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    log('Ready. Select a scene and click Load.');
+  </script>
+</body>
+</html>
