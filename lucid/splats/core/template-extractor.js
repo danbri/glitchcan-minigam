@@ -68,12 +68,21 @@ export class TemplateExtractor {
       case 'subtract':
       case 'intersect':
       case 'smoothUnion':
-        // Walk children
-        if (node.children) {
-          for (const child of node.children) {
-            this.walkNode(child, currentTransform, animation);
-          }
+        // CSG operations should be treated as atomic units, not walked into.
+        // Create a single template for the entire CSG tree.
+        const csgId = `__csg_${node.type}_${this.templates.size}`;
+        if (!this.templates.has(csgId)) {
+          this.templates.set(csgId, node);
         }
+        this.instances.push({
+          templateId: csgId,
+          id: `${csgId}_inst`,
+          transform: this.staticTransform(currentTransform),
+          animation: animation,
+          color: [0.8, 0.8, 0.8, 1],
+          visible: true
+        });
+        // DO NOT walk into children - they are part of the CSG, not separate instances
         break;
 
       case 'transform':

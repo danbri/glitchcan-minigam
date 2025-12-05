@@ -3,386 +3,597 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instanced Gaussian Splats - Demo</title>
+  <title>Instanced Gaussian Splats</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
+      background: #0a0a12;
       color: #eee;
       overflow: hidden;
     }
 
-    .container {
-      display: flex;
+    /* Fullscreen canvas */
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
       height: 100vh;
-    }
-
-    .sidebar {
-      width: 280px;
-      min-width: 280px;
-      max-width: 280px;
-      background: #16213e;
-      padding: 15px;
-      overflow-y: auto;
-      border-right: 1px solid #333;
-      flex-shrink: 0;
-    }
-
-    .canvas-container {
-      flex: 1;
-      position: relative;
-      min-width: 0;  /* Allow canvas to shrink */
-    }
-
-    .sidebar h1 {
-      font-size: 1.2em;
-      margin-bottom: 20px;
-      color: #00d9ff;
-    }
-
-    .sidebar h2 {
-      font-size: 0.9em;
-      margin: 15px 0 10px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    canvas {
-      width: 100%;
-      height: 100%;
       display: block;
     }
 
-    button {
+    /* Control panel overlay */
+    .panel {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      width: 300px;
+      max-height: calc(100vh - 30px);
+      background: rgba(20, 25, 45, 0.95);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .panel.minimized {
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+    }
+
+    .panel.minimized .panel-content { display: none; }
+    .panel.minimized .panel-header h1 { display: none; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: rgba(0, 217, 255, 0.1);
+      border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+      cursor: pointer;
+    }
+
+    .panel-header h1 {
+      flex: 1;
+      font-size: 1em;
+      color: #00d9ff;
+      margin-left: 8px;
+    }
+
+    .panel-toggle {
+      width: 24px;
+      height: 24px;
+      background: none;
+      border: none;
+      color: #00d9ff;
+      font-size: 1.2em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .panel-content {
+      padding: 15px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+
+    .section { margin-bottom: 18px; }
+
+    .section-title {
+      font-size: 0.75em;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    select, button {
       width: 100%;
-      padding: 12px;
-      margin: 5px 0;
-      background: #0f3460;
-      border: 1px solid #1a508b;
+      padding: 10px 12px;
+      background: rgba(15, 52, 96, 0.8);
+      border: 1px solid rgba(26, 80, 139, 0.8);
       color: #fff;
       border-radius: 6px;
+      font-size: 0.85em;
       cursor: pointer;
-      font-size: 0.9em;
       transition: all 0.2s;
     }
 
-    button:hover {
-      background: #1a508b;
+    select:hover, button:hover {
       border-color: #00d9ff;
+      background: rgba(26, 80, 139, 0.9);
     }
 
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
 
     button.primary {
-      background: #00d9ff;
-      color: #000;
+      background: linear-gradient(135deg, #00d9ff 0%, #0099cc 100%);
       border-color: #00d9ff;
+      color: #000;
+      font-weight: 600;
     }
 
-    button.primary:hover {
-      background: #00b8d9;
+    .btn-row {
+      display: flex;
+      gap: 8px;
     }
 
-    .progress {
-      margin: 15px 0;
-      padding: 10px;
-      background: #0a0a15;
-      border-radius: 6px;
-      font-size: 0.85em;
+    .btn-row button { flex: 1; }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      gap: 10px;
+    }
+
+    .control-row label {
+      flex: 1;
+      font-size: 0.8em;
+      color: #888;
+    }
+
+    .control-row input[type="range"] {
+      width: 70px;
+      accent-color: #00d9ff;
+    }
+
+    .control-row .value {
+      width: 40px;
+      text-align: right;
+      font-size: 0.75em;
+      color: #00d9ff;
+      font-family: monospace;
     }
 
     .progress-bar {
-      height: 6px;
-      background: #333;
-      border-radius: 3px;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
       margin-top: 8px;
       overflow: hidden;
     }
 
     .progress-fill {
       height: 100%;
-      background: #00d9ff;
+      background: linear-gradient(90deg, #00d9ff, #00ffaa);
       transition: width 0.3s;
     }
 
-    .stats {
-      font-size: 0.8em;
+    .status-text {
+      font-size: 0.75em;
       color: #888;
-      margin-top: 10px;
+      margin-top: 4px;
     }
 
-    .stats div {
-      padding: 4px 0;
-      border-bottom: 1px solid #222;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.75em;
     }
 
-    .scene-selector {
-      width: 100%;
-      padding: 10px;
-      background: #0a0a15;
-      border: 1px solid #333;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 0.9em;
-    }
-
-    .controls {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #333;
-    }
-
-    .control-row {
-      display: flex;
-      align-items: center;
-      margin: 8px 0;
-    }
-
-    .control-row label {
-      flex: 1;
-      font-size: 0.85em;
-      color: #888;
-    }
-
-    .control-row input[type="range"] {
-      width: 80px;
-    }
-
-    .control-row span {
-      width: 45px;
-      text-align: right;
-      font-size: 0.8em;
-      color: #00d9ff;
-      font-family: monospace;
-    }
-
-    .overlay {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 15px;
-      border-radius: 8px;
-      font-size: 0.85em;
-    }
-
-    .overlay.hidden {
-      display: none;
-    }
-
-    .mode-toggle {
-      display: flex;
-      gap: 5px;
-    }
-
-    .mode-toggle button {
-      flex: 1;
+    .stat-item {
+      background: rgba(0,0,0,0.3);
       padding: 8px;
+      border-radius: 4px;
     }
 
-    .mode-toggle button.active {
+    .stat-label { color: #666; }
+    .stat-value { color: #00d9ff; font-weight: 600; }
+
+    /* Camera mode buttons */
+    .cam-modes {
+      display: flex;
+      gap: 6px;
+    }
+
+    .cam-modes button {
+      padding: 8px;
+      font-size: 1.1em;
+    }
+
+    .cam-modes button.active {
       background: #00d9ff;
       color: #000;
     }
 
-    #log {
-      margin-top: 15px;
-      padding: 10px;
-      background: #0a0a15;
-      border-radius: 6px;
+    /* Toolbar overlay */
+    .toolbar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      background: rgba(20, 25, 45, 0.9);
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      z-index: 100;
+    }
+
+    .toolbar button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toolbar button.active {
+      background: #00d9ff;
+      color: #000;
+    }
+
+    /* Info overlay */
+    .info-overlay {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(20, 25, 45, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 0.8em;
+      color: #888;
+      z-index: 50;
+    }
+
+    /* Log panel */
+    .log-panel {
+      position: fixed;
+      bottom: 80px;
+      left: 15px;
+      width: 300px;
+      max-height: 150px;
+      background: rgba(10, 10, 20, 0.95);
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
       font-family: monospace;
-      font-size: 0.75em;
-      max-height: 200px;
+      font-size: 0.7em;
+      z-index: 90;
+      transition: opacity 0.3s;
+    }
+
+    .log-panel.hidden { opacity: 0; pointer-events: none; }
+
+    .log-content {
+      padding: 10px;
+      max-height: 130px;
       overflow-y: auto;
     }
 
-    #log div {
+    .log-content div {
       padding: 2px 0;
-      border-bottom: 1px solid #1a1a2e;
+      color: #666;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Fullscreen mode */
+    body.fullscreen .panel,
+    body.fullscreen .toolbar,
+    body.fullscreen .info-overlay,
+    body.fullscreen .log-panel {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.fullscreen:hover .toolbar {
+      opacity: 1;
+      pointer-events: auto;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <h1>🔮 Instanced Splats</h1>
+  <canvas id="canvas"></canvas>
 
-      <h2>Scene</h2>
-      <select id="sceneSelect" class="scene-selector">
-        <option value="">Select a scene...</option>
-        <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders</option>
-        <option value="creatures/invaders.json">Space Invaders</option>
-        <option value="ships/cobra-mk3.json">Cobra Mk III</option>
-        <option value="nature/flower-meadow.json">Flower Meadow</option>
-      </select>
-
-      <h2>Conversion Settings</h2>
-      <div class="control-row">
-        <label>Sample Resolution</label>
-        <input type="range" id="sampleRes" min="16" max="96" step="8" value="64">
-        <span id="sampleResVal">64</span>
+  <!-- Control Panel -->
+  <div class="panel" id="panel">
+    <div class="panel-header" id="panelHeader">
+      <button class="panel-toggle" id="panelToggle">&#9776;</button>
+      <h1>Gaussian Splats</h1>
+    </div>
+    <div class="panel-content">
+      <!-- Scene Selection -->
+      <div class="section">
+        <div class="section-title">Scene</div>
+        <select id="sceneSelect">
+          <option value="">Select scene...</option>
+          <optgroup label="Simple">
+            <option value="creatures/invaders.json">Space Invaders</option>
+            <option value="creatures/snowman.json">Snowman</option>
+            <option value="nature/single-sunflower.json">Sunflower</option>
+          </optgroup>
+          <optgroup label="Ships">
+            <option value="ships/cobra-mk3.json">Cobra Mk III</option>
+          </optgroup>
+          <optgroup label="Complex">
+            <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders</option>
+            <option value="nature/flower-meadow.json">Flower Meadow</option>
+          </optgroup>
+        </select>
       </div>
-      <div class="control-row">
-        <label>Target Splats</label>
-        <input type="range" id="targetSplats" min="500" max="5000" step="250" value="2000">
-        <span id="targetSplatsVal">2000</span>
-      </div>
-      <div class="control-row">
-        <label>Splat Scale</label>
-        <input type="range" id="splatScale" min="0.5" max="3.0" step="0.1" value="1.5">
-        <span id="splatScaleVal">1.5x</span>
-      </div>
 
-      <h2>Convert</h2>
-      <button id="loadBtn">Load Scene</button>
-      <button id="convertBtn" class="primary" disabled>Convert to Splats</button>
-      <button id="downloadBtn" disabled>Download Bundle</button>
-
-      <div class="progress" id="progressPanel">
-        <div id="progressText">Ready</div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      <!-- Conversion -->
+      <div class="section">
+        <div class="section-title">Convert</div>
+        <div class="control-row">
+          <label>Resolution</label>
+          <input type="range" id="sampleRes" min="24" max="96" step="8" value="64">
+          <span class="value" id="sampleResVal">64</span>
         </div>
+        <div class="control-row">
+          <label>Splat Count</label>
+          <input type="range" id="targetSplats" min="500" max="5000" step="250" value="2000">
+          <span class="value" id="targetSplatsVal">2k</span>
+        </div>
+        <div class="control-row">
+          <label>Splat Size</label>
+          <input type="range" id="splatScale" min="0.5" max="3.0" step="0.1" value="1.5">
+          <span class="value" id="splatScaleVal">1.5x</span>
+        </div>
+        <div class="btn-row">
+          <button id="loadBtn">Load</button>
+          <button id="convertBtn" class="primary" disabled>Convert</button>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="status-text" id="statusText">Ready</div>
       </div>
 
-      <h2>Render Mode</h2>
-      <div class="mode-toggle">
-        <button id="modeSplat" class="active">Splats</button>
-        <button id="modeSDF">SDF (Original)</button>
-      </div>
-
-      <div class="controls">
-        <h2>Camera</h2>
+      <!-- Camera -->
+      <div class="section">
+        <div class="section-title">Camera Mode</div>
+        <div class="cam-modes">
+          <button id="camOrbit" class="active" title="Orbit">&#128269;</button>
+          <button id="camHelicopter" title="Helicopter">&#128641;</button>
+          <button id="camTop" title="Top View">&#8595;</button>
+          <button id="camFront" title="Front View">&#8594;</button>
+        </div>
         <div class="control-row">
           <label>Distance</label>
-          <input type="range" id="camDist" min="2" max="20" step="0.5" value="8">
-        </div>
-        <div class="control-row">
-          <label>Rotation</label>
-          <input type="range" id="camRot" min="0" max="360" step="1" value="0">
+          <input type="range" id="camDist" min="2" max="25" step="0.5" value="8">
+          <span class="value" id="camDistVal">8</span>
         </div>
         <div class="control-row">
           <label>Height</label>
-          <input type="range" id="camHeight" min="-5" max="5" step="0.1" value="1">
+          <input type="range" id="camHeight" min="-5" max="8" step="0.2" value="2">
+          <span class="value" id="camHeightVal">2</span>
         </div>
       </div>
 
-      <h2>Stats</h2>
-      <div class="stats" id="stats">
-        <div>Templates: -</div>
-        <div>Instances: -</div>
-        <div>Total Splats: -</div>
-        <div>FPS: -</div>
-      </div>
-
-      <h2>Log</h2>
-      <div id="log"></div>
-    </div>
-
-    <div class="canvas-container">
-      <canvas id="canvas"></canvas>
-      <div class="overlay" id="overlay">
-        <div>Drag to rotate | Scroll to zoom</div>
-        <div id="modeLabel">Mode: Splats</div>
+      <!-- Stats -->
+      <div class="section">
+        <div class="section-title">Stats</div>
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-label">Templates</div><div class="stat-value" id="statTemplates">-</div></div>
+          <div class="stat-item"><div class="stat-label">Instances</div><div class="stat-value" id="statInstances">-</div></div>
+          <div class="stat-item"><div class="stat-label">Splats</div><div class="stat-value" id="statSplats">-</div></div>
+          <div class="stat-item"><div class="stat-label">FPS</div><div class="stat-value" id="statFps">-</div></div>
+        </div>
       </div>
     </div>
+  </div>
+
+  <!-- Bottom Toolbar -->
+  <div class="toolbar">
+    <button id="tbFullscreen" title="Fullscreen">&#9974;</button>
+    <button id="tbReset" title="Reset Camera">&#8634;</button>
+    <button id="tbAutoRotate" title="Auto Rotate">&#10227;</button>
+    <button id="tbLog" title="Toggle Log">&#128220;</button>
+    <button id="tbDownload" title="Download" disabled>&#11015;</button>
+  </div>
+
+  <!-- Info Overlay -->
+  <div class="info-overlay" id="infoOverlay">
+    Drag to rotate &bull; Scroll to zoom
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel hidden" id="logPanel">
+    <div class="log-content" id="logContent"></div>
   </div>
 
   <script type="module">
     import {
       LucidToSplats,
       createSimpleSdfEvaluator,
-      InstancedSplatRenderer,
-      SplatBundle
+      InstancedSplatRenderer
     } from './index.js';
 
     // State
     let currentScene = null;
     let currentBundle = null;
     let renderer = null;
-    let mode = 'splat';
     let animationId = null;
+    let autoRotate = false;
+    let cameraMode = 'orbit'; // orbit, helicopter, top, front
+
+    // Camera state
+    let camTheta = 0;
+    let camPhi = 0.3;
+    let camDist = 8;
+    let camHeight = 2;
+    let targetTheta = 0;
+    let targetPhi = 0.3;
 
     // Elements
     const canvas = document.getElementById('canvas');
-    const sceneSelect = document.getElementById('sceneSelect');
-    const loadBtn = document.getElementById('loadBtn');
-    const convertBtn = document.getElementById('convertBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const progressText = document.getElementById('progressText');
-    const progressFill = document.getElementById('progressFill');
-    const statsDiv = document.getElementById('stats');
-    const logDiv = document.getElementById('log');
-    const modeSplatBtn = document.getElementById('modeSplat');
-    const modeSDFBtn = document.getElementById('modeSDF');
-    const modeLabel = document.getElementById('modeLabel');
+    const panel = document.getElementById('panel');
+    const panelToggle = document.getElementById('panelToggle');
+    const panelHeader = document.getElementById('panelHeader');
 
-    // Camera controls
-    const camDist = document.getElementById('camDist');
-    const camRot = document.getElementById('camRot');
-    const camHeight = document.getElementById('camHeight');
-
-    // Conversion controls
-    const sampleResSlider = document.getElementById('sampleRes');
-    const targetSplatsSlider = document.getElementById('targetSplats');
-    const splatScaleSlider = document.getElementById('splatScale');
-    const sampleResVal = document.getElementById('sampleResVal');
-    const targetSplatsVal = document.getElementById('targetSplatsVal');
-    const splatScaleVal = document.getElementById('splatScaleVal');
-
-    // Update value displays
-    sampleResSlider.addEventListener('input', () => {
-      sampleResVal.textContent = sampleResSlider.value;
-    });
-    targetSplatsSlider.addEventListener('input', () => {
-      targetSplatsVal.textContent = targetSplatsSlider.value;
-    });
-    splatScaleSlider.addEventListener('input', () => {
-      splatScaleVal.textContent = splatScaleSlider.value + 'x';
-    });
-
-    let cameraTheta = 0;
-    let cameraPhi = 0.5;
-    let cameraDistance = 8;
-
-    function log(msg) {
-      const div = document.createElement('div');
-      div.textContent = `${new Date().toLocaleTimeString()}: ${msg}`;
-      logDiv.insertBefore(div, logDiv.firstChild);
-      console.log(msg);
+    // Init
+    function init() {
+      setupEventListeners();
+      resize();
+      startAnimation();
+      log('Ready. Select a scene and convert.');
     }
 
-    function updateProgress(stage, progress) {
-      progressText.textContent = stage;
-      progressFill.style.width = `${progress}%`;
+    function setupEventListeners() {
+      // Panel toggle
+      panelHeader.addEventListener('click', () => {
+        panel.classList.toggle('minimized');
+        panelToggle.textContent = panel.classList.contains('minimized') ? '+' : '\u2630';
+      });
+
+      // Slider value displays
+      const sliders = [
+        ['sampleRes', 'sampleResVal', v => v],
+        ['targetSplats', 'targetSplatsVal', v => v >= 1000 ? (v/1000) + 'k' : v],
+        ['splatScale', 'splatScaleVal', v => v + 'x'],
+        ['camDist', 'camDistVal', v => Math.round(v)],
+        ['camHeight', 'camHeightVal', v => v.toFixed(1)]
+      ];
+
+      sliders.forEach(([id, valId, fmt]) => {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(valId);
+        el.addEventListener('input', () => {
+          valEl.textContent = fmt(parseFloat(el.value));
+          if (id === 'camDist') camDist = parseFloat(el.value);
+          if (id === 'camHeight') camHeight = parseFloat(el.value);
+        });
+      });
+
+      // Load & Convert
+      document.getElementById('loadBtn').addEventListener('click', loadScene);
+      document.getElementById('convertBtn').addEventListener('click', convertScene);
+
+      // Camera modes
+      const camModes = ['camOrbit', 'camHelicopter', 'camTop', 'camFront'];
+      camModes.forEach(id => {
+        document.getElementById(id).addEventListener('click', () => {
+          camModes.forEach(m => document.getElementById(m).classList.remove('active'));
+          document.getElementById(id).classList.add('active');
+          cameraMode = id.replace('cam', '').toLowerCase();
+          applyCameraPreset();
+        });
+      });
+
+      // Toolbar
+      document.getElementById('tbFullscreen').addEventListener('click', toggleFullscreen);
+      document.getElementById('tbReset').addEventListener('click', resetCamera);
+      document.getElementById('tbAutoRotate').addEventListener('click', () => {
+        autoRotate = !autoRotate;
+        document.getElementById('tbAutoRotate').classList.toggle('active', autoRotate);
+      });
+      document.getElementById('tbLog').addEventListener('click', () => {
+        document.getElementById('logPanel').classList.toggle('hidden');
+      });
+      document.getElementById('tbDownload').addEventListener('click', downloadBundle);
+
+      // Mouse controls
+      let isDragging = false;
+      let lastX = 0, lastY = 0;
+
+      canvas.addEventListener('mousedown', e => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+
+        if (cameraMode === 'orbit' || cameraMode === 'helicopter') {
+          targetTheta += dx * 0.005;
+          targetPhi = Math.max(-1.4, Math.min(1.4, targetPhi - dy * 0.005));
+        }
+
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      canvas.addEventListener('mouseup', () => isDragging = false);
+      canvas.addEventListener('mouseleave', () => isDragging = false);
+
+      canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        camDist = Math.max(2, Math.min(25, camDist + e.deltaY * 0.02));
+        document.getElementById('camDist').value = camDist;
+        document.getElementById('camDistVal').textContent = Math.round(camDist);
+      }, { passive: false });
+
+      // Touch support
+      let lastTouch = null;
+      canvas.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+          lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      canvas.addEventListener('touchmove', e => {
+        if (e.touches.length === 1 && lastTouch) {
+          const dx = e.touches[0].clientX - lastTouch.x;
+          const dy = e.touches[0].clientY - lastTouch.y;
+          targetTheta += dx * 0.005;
+          targetPhi = Math.max(-1.4, Math.min(1.4, targetPhi - dy * 0.005));
+          lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      canvas.addEventListener('touchend', () => lastTouch = null);
+
+      window.addEventListener('resize', resize);
     }
 
-    function updateStats(data) {
-      statsDiv.innerHTML = `
-        <div>Templates: ${data.templates || '-'}</div>
-        <div>Instances: ${data.instances || '-'}</div>
-        <div>Total Splats: ${data.splats || '-'}</div>
-        <div>FPS: ${data.fps || '-'}</div>
-      `;
-    }
-
-    // Load scene
-    loadBtn.addEventListener('click', async () => {
-      const path = sceneSelect.value;
-      if (!path) {
-        log('Please select a scene');
-        return;
+    function applyCameraPreset() {
+      switch (cameraMode) {
+        case 'orbit':
+          targetPhi = 0.3;
+          break;
+        case 'helicopter':
+          targetPhi = 1.2;
+          break;
+        case 'top':
+          targetPhi = 1.57;
+          targetTheta = 0;
+          break;
+        case 'front':
+          targetPhi = 0;
+          targetTheta = 0;
+          break;
       }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.body.requestFullscreen();
+        document.body.classList.add('fullscreen');
+      } else {
+        document.exitFullscreen();
+        document.body.classList.remove('fullscreen');
+      }
+    }
+
+    function resetCamera() {
+      targetTheta = 0;
+      targetPhi = 0.3;
+      camDist = 8;
+      camHeight = 2;
+      document.getElementById('camDist').value = 8;
+      document.getElementById('camHeight').value = 2;
+      document.getElementById('camDistVal').textContent = '8';
+      document.getElementById('camHeightVal').textContent = '2.0';
+    }
+
+    async function loadScene() {
+      const path = document.getElementById('sceneSelect').value;
+      if (!path) { log('Select a scene first'); return; }
 
       try {
         log(`Loading ${path}...`);
@@ -391,108 +602,76 @@
 
         currentScene = await resp.json();
         log(`Loaded: ${currentScene.title || path}`);
-
-        convertBtn.disabled = false;
-        downloadBtn.disabled = true;
-        currentBundle = null;
-
+        document.getElementById('convertBtn').disabled = false;
       } catch (err) {
-        log(`Error loading scene: ${err.message}`);
+        log(`Error: ${err.message}`);
       }
-    });
+    }
 
-    // Convert to splats
-    convertBtn.addEventListener('click', async () => {
-      if (!currentScene) {
-        log('No scene loaded');
-        return;
-      }
+    async function convertScene() {
+      if (!currentScene) return;
+
+      const convertBtn = document.getElementById('convertBtn');
+      convertBtn.disabled = true;
 
       try {
-        convertBtn.disabled = true;
-        log('Starting conversion...');
-
-        const samplerRes = parseInt(sampleResSlider.value);
-        const targetSplats = parseInt(targetSplatsSlider.value);
-        const splatScale = parseFloat(splatScaleSlider.value);
+        log('Converting...');
+        updateStatus('Converting...', 0);
 
         const converter = new LucidToSplats({
-          samplerResolution: samplerRes,
-          targetSplatsPerTemplate: targetSplats,
-          splatScaleMultiplier: splatScale,
-          onProgress: ({ stage, template, progress }) => {
-            updateProgress(
-              template ? `Converting ${template}...` : stage,
-              progress
-            );
-          }
+          samplerResolution: parseInt(document.getElementById('sampleRes').value),
+          targetSplatsPerTemplate: parseInt(document.getElementById('targetSplats').value),
+          splatScaleMultiplier: parseFloat(document.getElementById('splatScale').value),
+          onProgress: ({ stage, progress }) => updateStatus(stage, progress)
         });
 
         const sdfEvaluator = createSimpleSdfEvaluator();
         currentBundle = await converter.convert(currentScene, sdfEvaluator);
 
-        log(`Conversion complete: ${currentBundle.templateClouds.size} templates`);
-
-        // Set up renderer
+        log(`Done: ${currentBundle.templateClouds.size} templates`);
         setupRenderer();
-
-        downloadBtn.disabled = false;
-        updateProgress('Ready', 100);
-
-        // Update stats
-        let totalSplats = 0;
-        for (const [, cloud] of currentBundle.templateClouds) {
-          totalSplats += cloud.count;
-        }
-        updateStats({
-          templates: currentBundle.templateClouds.size,
-          instances: currentBundle.manifest.instances.length,
-          splats: totalSplats
-        });
+        document.getElementById('tbDownload').disabled = false;
+        updateStatus('Ready', 100);
 
       } catch (err) {
-        log(`Conversion error: ${err.message}`);
+        log(`Error: ${err.message}`);
         console.error(err);
       } finally {
         convertBtn.disabled = false;
       }
-    });
+    }
 
-    // Download bundle
-    downloadBtn.addEventListener('click', async () => {
-      if (!currentBundle) return;
-
-      try {
-        await currentBundle.download(`${currentScene.title || 'scene'}.isplat.json`);
-        log('Bundle downloaded');
-      } catch (err) {
-        log(`Download error: ${err.message}`);
-      }
-    });
-
-    // Set up splat renderer
     function setupRenderer() {
-      if (renderer) {
-        renderer.dispose();
-      }
+      if (renderer) renderer.dispose();
 
       renderer = new InstancedSplatRenderer(canvas);
 
-      // Add templates
       for (const [id, cloud] of currentBundle.templateClouds) {
         renderer.addTemplate(id, cloud);
-        log(`Added template: ${id} (${cloud.count} splats)`);
       }
 
-      // Add instances
       for (const instance of currentBundle.getInstances()) {
         renderer.addInstance(instance.template, instance);
       }
 
-      log(`Added ${currentBundle.manifest.instances.length} instances`);
+      let totalSplats = 0;
+      for (const [, cloud] of currentBundle.templateClouds) {
+        totalSplats += cloud.count;
+      }
 
-      // Start animation loop
-      startAnimation();
+      document.getElementById('statTemplates').textContent = currentBundle.templateClouds.size;
+      document.getElementById('statInstances').textContent = currentBundle.manifest.instances.length;
+      document.getElementById('statSplats').textContent = totalSplats.toLocaleString();
+    }
+
+    async function downloadBundle() {
+      if (!currentBundle) return;
+      try {
+        await currentBundle.download(`${currentScene.title || 'scene'}.isplat.json`);
+        log('Downloaded bundle');
+      } catch (err) {
+        log(`Download error: ${err.message}`);
+      }
     }
 
     let lastTime = 0;
@@ -500,114 +679,79 @@
     let fpsTime = 0;
 
     function startAnimation() {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-
       function animate(time) {
         animationId = requestAnimationFrame(animate);
 
-        const dt = time - lastTime;
-        lastTime = time;
-
-        // FPS counter
+        // FPS
         frameCount++;
         if (time - fpsTime > 1000) {
-          updateStats({
-            templates: currentBundle?.templateClouds.size || 0,
-            instances: currentBundle?.manifest.instances.length || 0,
-            splats: Array.from(currentBundle?.templateClouds.values() || [])
-              .reduce((sum, c) => sum + c.count, 0),
-            fps: frameCount
-          });
+          document.getElementById('statFps').textContent = frameCount;
           frameCount = 0;
           fpsTime = time;
         }
 
-        if (renderer && mode === 'splat') {
-          // Update time for animations
+        // Auto rotate
+        if (autoRotate) {
+          targetTheta += 0.005;
+        }
+
+        // Smooth camera
+        camTheta += (targetTheta - camTheta) * 0.1;
+        camPhi += (targetPhi - camPhi) * 0.1;
+
+        if (renderer) {
           renderer.setTime(time / 1000);
 
-          // Update camera
-          const theta = parseFloat(camRot.value) * Math.PI / 180 + cameraTheta;
-          const dist = parseFloat(camDist.value);
-          const height = parseFloat(camHeight.value);
+          // Calculate camera position based on mode
+          let pos;
+          if (cameraMode === 'helicopter') {
+            pos = [
+              Math.sin(camTheta) * camDist * 0.5,
+              camDist * 0.8 + camHeight,
+              Math.cos(camTheta) * camDist * 0.5
+            ];
+          } else {
+            pos = [
+              Math.sin(camTheta) * Math.cos(camPhi) * camDist,
+              Math.sin(camPhi) * camDist + camHeight,
+              Math.cos(camTheta) * Math.cos(camPhi) * camDist
+            ];
+          }
 
           renderer.setCamera({
-            position: [
-              Math.sin(theta) * dist,
-              height,
-              Math.cos(theta) * dist
-            ],
-            target: [0, 0, 0],
+            position: pos,
+            target: [0, camHeight * 0.3, 0],
             fov: 45
           });
 
           renderer.render();
         }
+
+        lastTime = time;
       }
 
       animate(0);
     }
 
-    // Mode toggle
-    modeSplatBtn.addEventListener('click', () => {
-      mode = 'splat';
-      modeSplatBtn.classList.add('active');
-      modeSDFBtn.classList.remove('active');
-      modeLabel.textContent = 'Mode: Splats';
-    });
-
-    modeSDFBtn.addEventListener('click', () => {
-      mode = 'sdf';
-      modeSDFBtn.classList.add('active');
-      modeSplatBtn.classList.remove('active');
-      modeLabel.textContent = 'Mode: SDF (not implemented in this demo)';
-    });
-
-    // Mouse controls for camera
-    let isDragging = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
-
-    canvas.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-
-      const dx = e.clientX - lastMouseX;
-      const dy = e.clientY - lastMouseY;
-
-      cameraTheta += dx * 0.01;
-      cameraPhi = Math.max(-1, Math.min(1, cameraPhi + dy * 0.01));
-
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-    });
-
-    canvas.addEventListener('mouseup', () => isDragging = false);
-    canvas.addEventListener('mouseleave', () => isDragging = false);
-
-    canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const newDist = parseFloat(camDist.value) + e.deltaY * 0.01;
-      camDist.value = Math.max(2, Math.min(20, newDist));
-    });
-
-    // Resize handler
     function resize() {
-      canvas.width = canvas.clientWidth * window.devicePixelRatio;
-      canvas.height = canvas.clientHeight * window.devicePixelRatio;
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
     }
 
-    window.addEventListener('resize', resize);
-    resize();
+    function updateStatus(text, progress) {
+      document.getElementById('statusText').textContent = text;
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
 
-    log('Ready. Select a scene and click Load.');
+    function log(msg) {
+      const div = document.createElement('div');
+      div.textContent = `${new Date().toLocaleTimeString().slice(0,5)} ${msg}`;
+      const logContent = document.getElementById('logContent');
+      logContent.insertBefore(div, logContent.firstChild);
+      console.log(msg);
+    }
+
+    init();
   </script>
 </body>
 </html>
