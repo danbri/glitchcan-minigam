@@ -144,9 +144,9 @@ export class LucidToSplats {
 
 /**
  * Create a simple SDF evaluator for basic primitives
- * This is a standalone evaluator that doesn't depend on the full Lucid codegen
+ * @param {Object} defs - Scene definitions for resolving refs
  */
-export function createSimpleSdfEvaluator() {
+export function createSimpleSdfEvaluator(defs = {}) {
   function evalNode(node, x, y, z) {
     if (!node) return { distance: 1000, color: [0.8, 0.8, 0.8] };
 
@@ -252,7 +252,12 @@ export function createSimpleSdfEvaluator() {
       }
 
       case 'ref': {
-        // Should be resolved by template extractor
+        // Resolve ref by looking up in defs
+        const refDef = defs[node.id];
+        if (refDef) {
+          return evalNode(refDef, pos[0], pos[1], pos[2]);
+        }
+        console.warn(`Unresolved ref: ${node.id}`);
         return { distance: 1000, color };
       }
 
