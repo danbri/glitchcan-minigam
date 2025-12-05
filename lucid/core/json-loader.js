@@ -45,10 +45,17 @@ export function loadJsonScene(json) {
   };
 }
 
+const MAX_RECURSION_DEPTH = 100;
+
 /**
- * Process a node recursively
+ * Process a node recursively with depth limiting
  */
-function processNode(node, registry) {
+function processNode(node, registry, depth = 0) {
+  if (depth > MAX_RECURSION_DEPTH) {
+    console.warn(`Max recursion depth (${MAX_RECURSION_DEPTH}) exceeded, truncating tree`);
+    return { type: 'sphere', params: { r: { type: 'const', value: 0.1 } } };
+  }
+
   if (!node || !node.type) {
     throw new Error('Invalid node: missing "type" field');
   }
@@ -80,7 +87,7 @@ function processNode(node, registry) {
     case 'smoothSubtract':
     case 'smoothIntersect':
       processed.children = (node.children || []).map(child =>
-        processNode(child, registry)
+        processNode(child, registry, depth + 1)
       );
       if (node.k !== undefined) {
         processed.k = processValue(node.k);
@@ -90,13 +97,13 @@ function processNode(node, registry) {
     // Transform wrapper
     case 'transform':
       processed.transform = processTransform(node.transform || {});
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Group
     case 'group':
       processed.children = (node.children || []).map(child =>
-        processNode(child, registry)
+        processNode(child, registry, depth + 1)
       );
       if (node.transform) {
         processed.transform = processTransform(node.transform);
@@ -106,46 +113,46 @@ function processNode(node, registry) {
     // Material wrapper
     case 'material':
       processed.params = processParams(node.params || {});
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Mirror symmetry
     case 'mirror':
       processed.axis = node.axis || 'x';
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Radial symmetry
     case 'radial':
       processed.count = node.count || 6;
       processed.axis = node.axis || 'y';
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Infinite repeat/tiling
     case 'repeat':
       processed.period = node.period || [2, 0, 2];
       if (node.exposeId) processed.exposeId = node.exposeId;  // Expose instance ID for per-instance variation
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Conditional selection - pick one of two SDFs based on condition
     case 'select':
       processed.cond = processValue(node.cond);  // Expression evaluating to 0 or 1
-      processed.a = processNode(node.a, registry);  // Selected when cond < 0.5
-      processed.b = processNode(node.b, registry);  // Selected when cond >= 0.5
+      processed.a = processNode(node.a, registry, depth + 1);  // Selected when cond < 0.5
+      processed.b = processNode(node.b, registry, depth + 1);  // Selected when cond >= 0.5
       break;
 
     // Round modifier - soften edges
     case 'round':
       processed.r = processValue(node.r !== undefined ? node.r : 0.05);
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Shell modifier - hollow out shape
     case 'shell':
       processed.thickness = processValue(node.thickness !== undefined ? node.thickness : 0.05);
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Displace modifier - noise-based surface displacement
@@ -155,7 +162,7 @@ function processNode(node, registry) {
       processed.octaves = node.octaves || 4;
       processed.noiseType = node.noiseType || 'fbm';
       processed.animate = node.animate || false;
-      processed.child = processNode(node.child, registry);
+      processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Reference to definition
@@ -280,7 +287,7 @@ function processTransform(transform) {
 /**
  * Expand a ref node by cloning the definition
  */
-export function expandRef(refNode, registry) {
+export function expandRef(refNode, registry, depth = 0) {
   if (refNode.type !== 'ref') {
     return refNode;
   }
@@ -299,5 +306,5 @@ export function expandRef(refNode, registry) {
     // For now, just wrap in a material/transform node if needed
   }
 
-  return processNode(expanded, registry);
+  return processNode(expanded, registry, depth);
 }
