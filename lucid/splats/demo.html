@@ -239,6 +239,26 @@
       color: #000;
     }
 
+    .toolbar button.vr-btn {
+      background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+      border-color: #a855f7;
+    }
+
+    .toolbar button.vr-btn:hover {
+      background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+    }
+
+    .toolbar button.vr-btn.active {
+      background: #22c55e;
+      border-color: #22c55e;
+      animation: vr-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes vr-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    }
+
     /* Info overlay */
     .info-overlay {
       position: fixed;
@@ -476,11 +496,12 @@
     <button id="tbAutoRotate" title="Auto Rotate">&#10227;</button>
     <button id="tbLog" title="Toggle Log">&#128220;</button>
     <button id="tbDownload" title="Download" disabled>&#11015;</button>
+    <button id="tbVR" title="Enter VR" class="vr-btn" style="display:none;">🥽</button>
   </div>
 
   <!-- Info Overlay -->
   <div class="info-overlay" id="infoOverlay">
-    Drag to rotate &bull; Scroll to zoom
+    Drag to rotate &bull; Scroll to zoom &bull; 🥽 for VR
   </div>
 
   <!-- Log Panel -->
@@ -542,6 +563,9 @@
       resize();
       startAnimation();
       log('Gaussian Splat Viewer');
+
+      // Check VR support
+      checkVRSupport();
 
       // Auto-load default scene after short delay
       setTimeout(() => {
@@ -618,6 +642,7 @@
         document.getElementById('logPanel').classList.toggle('hidden');
       });
       document.getElementById('tbDownload').addEventListener('click', downloadBundle);
+      document.getElementById('tbVR').addEventListener('click', toggleVR);
 
       // Mouse controls
       let isDragging = false;
@@ -714,6 +739,116 @@
       document.getElementById('camHeight').value = 2;
       document.getElementById('camDistVal').textContent = '8';
       document.getElementById('camHeightVal').textContent = '2.0';
+    }
+
+    // =========================================================================
+    // WebXR / VR Support
+    // =========================================================================
+
+    let xrSession = null;
+
+    async function checkVRSupport() {
+      if (!navigator.xr) {
+        log('WebXR not available in this browser');
+        return false;
+      }
+
+      try {
+        const supported = await navigator.xr.isSessionSupported('immersive-vr');
+        if (supported) {
+          document.getElementById('tbVR').style.display = 'flex';
+          log('WebXR VR supported - click 🥽 to enter VR');
+        }
+        return supported;
+      } catch (e) {
+        log('WebXR check failed: ' + e.message);
+        return false;
+      }
+    }
+
+    async function toggleVR() {
+      const vrBtn = document.getElementById('tbVR');
+
+      if (xrSession) {
+        // Exit VR
+        await renderer.endXR();
+        xrSession = null;
+        vrBtn.classList.remove('active');
+        vrBtn.title = 'Enter VR';
+        log('Exited VR mode');
+        // Resume normal animation loop
+        startAnimation();
+      } else {
+        // Enter VR
+        if (!renderer) {
+          log('Load a scene first before entering VR');
+          return;
+        }
+
+        try {
+          vrBtn.disabled = true;
+          log('Starting VR session...');
+
+          xrSession = await renderer.startXR();
+
+          vrBtn.classList.add('active');
+          vrBtn.title = 'Exit VR';
+          vrBtn.disabled = false;
+
+          // Set up XR callbacks
+          renderer.onXRSessionEnd = () => {
+            xrSession = null;
+            vrBtn.classList.remove('active');
+            vrBtn.title = 'Enter VR';
+            log('VR session ended');
+            startAnimation();
+          };
+
+          // Cancel normal animation and start XR loop
+          if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+          }
+
+          // Start XR animation loop
+          xrSession.requestAnimationFrame(xrAnimate);
+          log('Entered VR mode - look around!');
+
+        } catch (e) {
+          vrBtn.disabled = false;
+          log('VR error: ' + e.message);
+          console.error('VR error:', e);
+        }
+      }
+    }
+
+    function xrAnimate(time, frame) {
+      if (!xrSession) return;
+
+      // Request next frame first
+      xrSession.requestAnimationFrame(xrAnimate);
+
+      // Update time for effects
+      renderer.setTime(time / 1000);
+
+      // Update effects from checkboxes
+      renderer.setEffects({
+        swirl: document.getElementById('fxSwirl')?.checked || false,
+        lighting: document.getElementById('fxLighting')?.checked || false,
+        noise: document.getElementById('fxNoise')?.checked || false,
+        pulse: document.getElementById('fxPulse')?.checked || false
+      });
+
+      // Render the XR frame
+      renderer.renderXR(frame);
+
+      // Update FPS counter
+      frameCount++;
+      if (time - fpsTime > 1000) {
+        document.getElementById('statFps').textContent = frameCount;
+        frameCount = 0;
+        fpsTime = time;
+      }
     }
 
     async function loadAndConvert() {

@@ -14,7 +14,8 @@ export class InstancedSplatRenderer {
     this.gl = canvas.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: false,
-      antialias: true
+      antialias: true,
+      xrCompatible: true  // Enable WebXR compatibility
     });
 
     if (!this.gl) {
@@ -49,7 +50,13 @@ export class InstancedSplatRenderer {
       far: 100
     };
 
+    // WebXR state
+    this.xrSession = null;
+    this.xrRefSpace = null;
+    this.xrSupported = false;
+
     this.init();
+    this.checkXRSupport();
   }
 
   init() {
@@ -481,6 +488,206 @@ export class InstancedSplatRenderer {
       gl.deleteVertexArray(template.vao);
     }
     gl.deleteProgram(this.program);
+    if (this.xrSession) {
+      this.xrSession.end();
+    }
+  }
+
+  // =========================================================================
+  // WebXR / VR Support
+  // =========================================================================
+
+  async checkXRSupport() {
+    if (!navigator.xr) {
+      console.log('WebXR not available');
+      this.xrSupported = false;
+      return false;
+    }
+
+    try {
+      this.xrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+      console.log('WebXR immersive-vr supported:', this.xrSupported);
+      return this.xrSupported;
+    } catch (e) {
+      console.warn('WebXR check failed:', e);
+      this.xrSupported = false;
+      return false;
+    }
+  }
+
+  async startXR() {
+    if (!navigator.xr) {
+      throw new Error('WebXR not supported on this browser');
+    }
+
+    if (this.xrSession) {
+      console.log('XR session already active');
+      return this.xrSession;
+    }
+
+    try {
+      // Request immersive VR session with local-floor reference space
+      this.xrSession = await navigator.xr.requestSession('immersive-vr', {
+        requiredFeatures: ['local-floor'],
+        optionalFeatures: ['bounded-floor', 'hand-tracking']
+      });
+
+      // Set up the WebGL layer
+      const gl = this.gl;
+      const glLayer = new XRWebGLLayer(this.xrSession, gl, {
+        alpha: true,
+        antialias: true,
+        depth: true,
+        stencil: false
+      });
+
+      await this.xrSession.updateRenderState({
+        baseLayer: glLayer,
+        depthNear: 0.1,
+        depthFar: 100.0
+      });
+
+      // Get reference space (local-floor puts origin at floor level)
+      this.xrRefSpace = await this.xrSession.requestReferenceSpace('local-floor');
+
+      // Handle session end
+      this.xrSession.addEventListener('end', () => {
+        console.log('XR session ended');
+        this.xrSession = null;
+        this.xrRefSpace = null;
+        if (this.onXRSessionEnd) this.onXRSessionEnd();
+      });
+
+      console.log('WebXR session started');
+      if (this.onXRSessionStart) this.onXRSessionStart();
+
+      return this.xrSession;
+    } catch (e) {
+      console.error('Failed to start XR session:', e);
+      this.xrSession = null;
+      throw e;
+    }
+  }
+
+  async endXR() {
+    if (this.xrSession) {
+      await this.xrSession.end();
+      this.xrSession = null;
+      this.xrRefSpace = null;
+    }
+  }
+
+  isInXR() {
+    return this.xrSession !== null;
+  }
+
+  /**
+   * Render a single XR frame - call this from XRSession.requestAnimationFrame callback
+   * @param {XRFrame} frame - The XR frame to render
+   */
+  renderXR(frame) {
+    const session = frame.session;
+    const gl = this.gl;
+    const glLayer = session.renderState.baseLayer;
+    const pose = frame.getViewerPose(this.xrRefSpace);
+
+    if (!pose) {
+      return; // No tracking yet
+    }
+
+    // Bind XR framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
+
+    // Clear with transparent background for passthrough AR/VR
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.useProgram(this.program);
+    gl.uniform1f(this.locations.u_time, this.time);
+
+    // Effects uniforms
+    gl.uniform1f(this.locations.u_fxSwirl, this.effects.swirl ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxLighting, this.effects.lighting ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxNoise, this.effects.noise ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxPulse, this.effects.pulse ? 1.0 : 0.0);
+
+    // Render each view (typically 2 for stereo VR)
+    for (const view of pose.views) {
+      const viewport = glLayer.getViewport(view);
+      gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+      // Use XR-provided view and projection matrices
+      const viewMatrix = view.transform.inverse.matrix;
+      const projMatrix = view.projectionMatrix;
+
+      // Compute focal length from projection matrix
+      const focalX = projMatrix[0] * viewport.width / 2;
+      const focalY = projMatrix[5] * viewport.height / 2;
+
+      gl.uniformMatrix4fv(this.locations.u_viewMatrix, false, viewMatrix);
+      gl.uniformMatrix4fv(this.locations.u_projMatrix, false, projMatrix);
+      gl.uniform2f(this.locations.u_viewport, viewport.width, viewport.height);
+      gl.uniform2f(this.locations.u_focal, focalX, focalY);
+
+      // Render all templates
+      for (const [templateId, template] of this.templates) {
+        this.renderTemplateXR(templateId, template, viewMatrix);
+      }
+    }
+
+    // Unbind framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  /**
+   * Render a template in XR mode (similar to renderTemplate but with XR view matrix)
+   */
+  renderTemplateXR(templateId, template, viewMatrix) {
+    const gl = this.gl;
+
+    const instances = this.instances.filter(
+      i => i.templateId === templateId && i.visible
+    );
+
+    if (instances.length === 0) return;
+
+    // Sort instances back to front using XR view matrix
+    if (this.options.sortMode === 'perInstance') {
+      instances.sort((a, b) => {
+        const posA = this.getInstancePosition(a);
+        const posB = this.getInstancePosition(b);
+        // Use XR view matrix (column-major) for depth sorting
+        const depthA = viewMatrix[2] * posA[0] + viewMatrix[6] * posA[1] + viewMatrix[10] * posA[2] + viewMatrix[14];
+        const depthB = viewMatrix[2] * posB[0] + viewMatrix[6] * posB[1] + viewMatrix[10] * posB[2] + viewMatrix[14];
+        return depthA - depthB;
+      });
+    }
+
+    // Build instance data
+    const instanceData = new Float32Array(instances.length * 20);
+    for (let i = 0; i < instances.length; i++) {
+      const inst = instances[i];
+      const offset = i * 20;
+      const transform = this.evaluateTransform(inst);
+      const matrix = this.buildTransformMatrix(transform);
+      instanceData.set(matrix, offset);
+      instanceData.set(this.evaluateColor(inst), offset + 16);
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, template.instanceBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, instanceData);
+
+    gl.bindVertexArray(template.vao);
+
+    gl.drawElementsInstanced(
+      gl.TRIANGLES,
+      6,
+      gl.UNSIGNED_SHORT,
+      0,
+      template.splatCount * instances.length
+    );
+
+    gl.bindVertexArray(null);
   }
 }
 
