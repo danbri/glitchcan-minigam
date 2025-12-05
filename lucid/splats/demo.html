@@ -496,7 +496,10 @@
       GPUSampler,
       QuickTrainer,
       GaussianCloud,
-      import3DGS
+      import3DGS,
+      exportToPLY,
+      exportToSplat,
+      downloadFile
     } from './index.js';
 
     // Use Lucid's existing raymarcher for GLSL generation (fallback)
@@ -1161,11 +1164,60 @@
 
     async function downloadBundle() {
       if (!currentBundle) return;
+
       try {
-        await currentBundle.download(`${currentScene.title || 'scene'}.isplat.json`);
-        log('Downloaded bundle');
+        // Collect all Gaussians from the bundle
+        let totalCount = 0;
+        for (const [, cloud] of currentBundle.templateClouds) {
+          totalCount += cloud.count;
+        }
+
+        // Prepare data for export
+        const positions = new Float32Array(totalCount * 3);
+        const scales = new Float32Array(totalCount * 3);
+        const rotations = new Float32Array(totalCount * 4);
+        const colors = new Float32Array(totalCount * 3);
+        const opacities = new Float32Array(totalCount);
+
+        let offset = 0;
+        for (const [, cloud] of currentBundle.templateClouds) {
+          for (let i = 0; i < cloud.count; i++) {
+            const g = cloud.gaussians[i];
+            const idx = offset + i;
+
+            positions[idx * 3] = g.position[0];
+            positions[idx * 3 + 1] = g.position[1];
+            positions[idx * 3 + 2] = g.position[2];
+
+            scales[idx * 3] = g.scale[0];
+            scales[idx * 3 + 1] = g.scale[1];
+            scales[idx * 3 + 2] = g.scale[2];
+
+            rotations[idx * 4] = g.rotation[0];
+            rotations[idx * 4 + 1] = g.rotation[1];
+            rotations[idx * 4 + 2] = g.rotation[2];
+            rotations[idx * 4 + 3] = g.rotation[3];
+
+            colors[idx * 3] = g.color[0];
+            colors[idx * 3 + 1] = g.color[1];
+            colors[idx * 3 + 2] = g.color[2];
+
+            opacities[idx] = g.opacity;
+          }
+          offset += cloud.count;
+        }
+
+        const data = { positions, scales, rotations, colors, opacities, count: totalCount };
+
+        // Export to PLY format (compatible with INRIA, Luma, Polycam, SuperSplat)
+        const plyData = exportToPLY(data, { shDegree: 0, includeNormals: true });
+        const filename = `${(currentScene.title || 'scene').replace(/[^a-z0-9]/gi, '_')}.ply`;
+        downloadFile(plyData, filename, 'application/octet-stream');
+
+        log(`Downloaded ${totalCount.toLocaleString()} Gaussians as ${filename}`);
       } catch (err) {
         log(`Download error: ${err.message}`);
+        console.error(err);
       }
     }
 
