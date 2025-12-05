@@ -341,6 +341,7 @@ export class GaussianTrainer {
 export class QuickTrainer {
   constructor(options = {}) {
     this.targetCount = options.targetCount || 2000;
+    this.scaleMultiplier = options.scaleMultiplier || 1.5;
   }
 
   /**
@@ -357,13 +358,21 @@ export class QuickTrainer {
 
     const cloud = new GaussianCloud();
 
-    // Estimate spacing
+    // Estimate spacing based on point density
     const bounds = this.computeBounds(positions, count);
     const volume = (bounds.max[0] - bounds.min[0]) *
                    (bounds.max[1] - bounds.min[1]) *
                    (bounds.max[2] - bounds.min[2]);
-    const avgSpacing = Math.pow(volume / count, 1/3);
-    const scale = avgSpacing * 0.4;
+
+    // Use actual sample count for spacing estimate
+    const sampleCount = indices.length;
+    const avgSpacing = Math.pow(volume / sampleCount, 1/3);
+
+    // Scale splats to overlap and form coherent surface
+    // Base scale ensures coverage, multiplier allows tuning
+    const scale = avgSpacing * 0.8 * this.scaleMultiplier;
+
+    console.log(`QuickTrainer: ${sampleCount} splats, scale=${scale.toFixed(4)}, bounds volume=${volume.toFixed(2)}`);
 
     for (const i of indices) {
       const idx = i * 3;
@@ -373,7 +382,7 @@ export class QuickTrainer {
         scale: [scale, scale, scale],
         rotation: [1, 0, 0, 0],
         color: colors ? [colors[idx], colors[idx + 1], colors[idx + 2]] : [0.8, 0.8, 0.8],
-        opacity: 0.8
+        opacity: 0.7
       }));
     }
 

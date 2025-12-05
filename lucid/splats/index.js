@@ -20,9 +20,10 @@ export { SDFSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, Qu
 export class LucidToSplats {
   constructor(options = {}) {
     this.options = {
-      samplerResolution: options.samplerResolution || 48,
+      samplerResolution: options.samplerResolution || 64,
       trainerIterations: options.trainerIterations || 100,
-      targetSplatsPerTemplate: options.targetSplatsPerTemplate || 1000,
+      targetSplatsPerTemplate: options.targetSplatsPerTemplate || 2000,
+      splatScaleMultiplier: options.splatScaleMultiplier || 1.5,
       ...options
     };
 
@@ -90,7 +91,8 @@ export class LucidToSplats {
 
         // Train Gaussians
         const trainer = new QuickTrainer({
-          targetCount: this.options.targetSplatsPerTemplate
+          targetCount: this.options.targetSplatsPerTemplate,
+          scaleMultiplier: this.options.splatScaleMultiplier
         });
 
         const cloud = await trainer.train(pointCloud);
