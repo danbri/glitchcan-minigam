@@ -61,18 +61,29 @@ export function generateGlslFromJson(scene, options = {}) {
   return glsl;
 }
 
+const MAX_CODEGEN_DEPTH = 200;
+
 /**
  * Walk node and generate GLSL expression (not a statement)
  * Returns a string that evaluates to vec4(distance, r, g, b)
  */
 function walkNode(node, ctx) {
-  // Check if this node has a scale transform - if so, wrap with scale correction
-  // Per IQ's SDF guidance: primitive(p/s) * s for uniform, primitive(p/s) * min(s) for non-uniform
-  if (node.transform && node.transform.scale) {
-    return generateScaledNode(node, ctx);
+  // Track recursion depth
+  ctx.depth = (ctx.depth || 0) + 1;
+  if (ctx.depth > MAX_CODEGEN_DEPTH) {
+    console.warn(`Max codegen depth (${MAX_CODEGEN_DEPTH}) exceeded, returning placeholder`);
+    ctx.depth--;
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  switch (node.type) {
+  try {
+    // Check if this node has a scale transform - if so, wrap with scale correction
+    // Per IQ's SDF guidance: primitive(p/s) * s for uniform, primitive(p/s) * min(s) for non-uniform
+    if (node.transform && node.transform.scale) {
+      return generateScaledNode(node, ctx);
+    }
+
+    switch (node.type) {
     case 'sphere':
       return generateSphere(node, ctx);
 
@@ -148,6 +159,9 @@ function walkNode(node, ctx) {
     default:
       console.warn(`Unhandled node type: ${node.type}`);
       return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+    }
+  } finally {
+    ctx.depth--;
   }
 }
 
