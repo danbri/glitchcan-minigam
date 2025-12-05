@@ -384,9 +384,16 @@
       <div class="section">
         <div class="section-title">Convert</div>
         <div class="control-row">
+          <label>Sampling Mode</label>
+          <select id="samplingMode" style="width: 90px; padding: 4px;">
+            <option value="cpu">CPU</option>
+            <option value="gpu" selected>GPU (WebGL2)</option>
+          </select>
+        </div>
+        <div class="control-row">
           <label>Resolution</label>
-          <input type="range" id="sampleRes" min="24" max="256" step="8" value="64">
-          <span class="value" id="sampleResVal">64</span>
+          <input type="range" id="sampleRes" min="24" max="512" step="8" value="128">
+          <span class="value" id="sampleResVal">128²</span>
         </div>
         <div class="control-row">
           <label>Splat Count</label>
@@ -460,8 +467,15 @@
     import {
       LucidToSplats,
       createSimpleSdfEvaluator,
-      InstancedSplatRenderer
+      InstancedSplatRenderer,
+      GPUSampler,
+      QuickTrainer,
+      GaussianCloud
     } from './index.js';
+
+    // Import GLSL codegen from main Lucid tool
+    import { generateGlslFromJson } from '../core/json-codegen.js';
+    import { loadJsonScene } from '../core/json-loader.js';
 
     // State
     let currentScene = null;
@@ -511,12 +525,19 @@
 
       // Slider value displays
       const sliders = [
-        ['sampleRes', 'sampleResVal', v => v],
+        ['sampleRes', 'sampleResVal', v => v + (document.getElementById('samplingMode').value === 'gpu' ? '²' : '')],
         ['targetSplats', 'targetSplatsVal', v => v >= 1000 ? (v/1000) + 'k' : v],
         ['splatScale', 'splatScaleVal', v => v + 'x'],
         ['camDist', 'camDistVal', v => Math.round(v)],
         ['camHeight', 'camHeightVal', v => v.toFixed(1)]
       ];
+
+      // Update resolution label when sampling mode changes
+      document.getElementById('samplingMode').addEventListener('change', () => {
+        const res = document.getElementById('sampleRes').value;
+        const mode = document.getElementById('samplingMode').value;
+        document.getElementById('sampleResVal').textContent = res + (mode === 'gpu' ? '²' : '');
+      });
 
       sliders.forEach(([id, valId, fmt]) => {
         const el = document.getElementById(id);
@@ -668,6 +689,11 @@
       goBtn.disabled = true;
       goBtn.textContent = 'Loading...';
 
+      const samplingMode = document.getElementById('samplingMode').value;
+      const resolution = parseInt(document.getElementById('sampleRes').value);
+      const targetSplats = parseInt(document.getElementById('targetSplats').value);
+      const splatScale = parseFloat(document.getElementById('splatScale').value);
+
       try {
         // Step 1: Load scene
         log(`Loading ${path}...`);
@@ -679,20 +705,13 @@
         currentScene = await resp.json();
         log(`Loaded: ${currentScene.title || path}`);
 
-        // Step 2: Convert to splats
-        updateStatus('Converting to splats...', 30);
-
-        const converter = new LucidToSplats({
-          samplerResolution: parseInt(document.getElementById('sampleRes').value),
-          targetSplatsPerTemplate: parseInt(document.getElementById('targetSplats').value),
-          splatScaleMultiplier: parseFloat(document.getElementById('splatScale').value),
-          onProgress: ({ stage, progress }) => updateStatus(stage, 30 + progress * 0.6)
-        });
-
-        const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
-        currentBundle = await converter.convert(currentScene, sdfEvaluator);
-
-        log(`Converted: ${currentBundle.templateClouds.size} templates`);
+        if (samplingMode === 'gpu') {
+          // GPU-accelerated path using WebGL2 raymarching
+          await loadAndConvertGPU(resolution, targetSplats, splatScale);
+        } else {
+          // CPU path (original)
+          await loadAndConvertCPU(resolution, targetSplats, splatScale);
+        }
 
         // Step 3: Setup renderer
         updateStatus('Setting up renderer...', 95);
@@ -710,6 +729,139 @@
         goBtn.disabled = false;
         goBtn.textContent = 'Load & Convert';
       }
+    }
+
+    async function loadAndConvertCPU(resolution, targetSplats, splatScale) {
+      log('Using CPU sampling (JavaScript)...');
+      updateStatus('Converting to splats (CPU)...', 30);
+
+      const converter = new LucidToSplats({
+        samplerResolution: resolution,
+        targetSplatsPerTemplate: targetSplats,
+        splatScaleMultiplier: splatScale,
+        onProgress: ({ stage, progress }) => updateStatus(`CPU: ${stage}`, 30 + progress * 0.6)
+      });
+
+      const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
+      currentBundle = await converter.convert(currentScene, sdfEvaluator);
+
+      log(`CPU converted: ${currentBundle.templateClouds.size} templates`);
+    }
+
+    async function loadAndConvertGPU(resolution, targetSplats, splatScale) {
+      log(`Using GPU sampling (WebGL2, ${resolution}x${resolution})...`);
+      updateStatus('Processing scene for GPU...', 25);
+
+      // Process scene JSON to IR
+      const processedScene = loadJsonScene(currentScene);
+
+      // Generate GLSL code
+      updateStatus('Generating GLSL...', 35);
+      const glslCode = generateGlslFromJson(processedScene);
+      log(`Generated ${glslCode.length} chars of GLSL`);
+
+      // Compute scene bounds
+      const bounds = computeSceneBounds(currentScene);
+      log(`Scene bounds: [${bounds.min.map(v => v.toFixed(1)).join(',')}] to [${bounds.max.map(v => v.toFixed(1)).join(',')}]`);
+
+      // Create GPU sampler
+      updateStatus('GPU raymarching...', 45);
+      const gpuSampler = new GPUSampler({
+        resolution: resolution,
+        maxDistance: 30.0,
+        hitThreshold: 0.001,
+        maxSteps: 200
+      });
+
+      // Sample on GPU
+      const startTime = performance.now();
+      const sampleResult = gpuSampler.sample(glslCode, bounds, {
+        deduplicationRadius: 0.015
+      });
+      const sampleTime = performance.now() - startTime;
+
+      log(`GPU sampled ${sampleResult.count} points in ${sampleTime.toFixed(0)}ms`);
+      updateStatus('Training Gaussians...', 70);
+
+      // Compute base scale from bounds
+      const boundsSize = Math.max(
+        bounds.max[0] - bounds.min[0],
+        bounds.max[1] - bounds.min[1],
+        bounds.max[2] - bounds.min[2]
+      );
+      const baseScale = (boundsSize / resolution) * 1.5 * splatScale;
+
+      // Convert to point cloud
+      const pointCloud = gpuSampler.toPointCloud(sampleResult, { baseScale });
+
+      // Train Gaussians
+      const trainer = new QuickTrainer({
+        targetCount: targetSplats,
+        scaleMultiplier: splatScale
+      });
+
+      const cloud = await trainer.train(pointCloud);
+      log(`Trained ${cloud.count} Gaussians`);
+
+      // Clean up
+      gpuSampler.dispose();
+
+      // Create a simple bundle-like structure for the renderer
+      currentBundle = {
+        templateClouds: new Map([['gpu_scene', cloud]]),
+        manifest: {
+          instances: [{
+            id: 'gpu_instance',
+            template: 'gpu_scene',
+            transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+          }]
+        },
+        getInstances() {
+          return this.manifest.instances;
+        }
+      };
+    }
+
+    function computeSceneBounds(scene) {
+      // Try to extract bounds from scene, or use defaults
+      const min = [-3, -3, -3];
+      const max = [3, 3, 3];
+
+      // Walk scene to find extents if possible
+      function walkNode(node, offset = [0, 0, 0]) {
+        if (!node) return;
+
+        const t = node.transform?.translate || [0, 0, 0];
+        const pos = [offset[0] + t[0], offset[1] + t[1], offset[2] + t[2]];
+
+        // Expand bounds based on node position and estimated size
+        let size = 1;
+        if (node.params?.r) size = node.params.r * 2;
+        if (node.params?.size) size = Math.max(...node.params.size) * 2;
+        if (node.params?.major) size = node.params.major * 2 + (node.params.minor || 0.3) * 2;
+
+        for (let i = 0; i < 3; i++) {
+          min[i] = Math.min(min[i], pos[i] - size);
+          max[i] = Math.max(max[i], pos[i] + size);
+        }
+
+        // Walk children
+        if (node.children) {
+          for (const child of node.children) {
+            walkNode(child, pos);
+          }
+        }
+        if (node.child) walkNode(node.child, pos);
+      }
+
+      walkNode(scene.root);
+
+      // Add margin
+      const margin = 0.5;
+      return {
+        min: min.map(v => v - margin),
+        max: max.map(v => v + margin)
+      };
     }
 
     function setupRenderer() {
