@@ -403,13 +403,13 @@
         </div>
         <div class="control-row">
           <label>Splat Count</label>
-          <input type="range" id="targetSplats" min="500" max="50000" step="500" value="50000">
-          <span class="value" id="targetSplatsVal">50k</span>
+          <input type="range" id="targetSplats" min="500" max="50000" step="500" value="10000">
+          <span class="value" id="targetSplatsVal">10k</span>
         </div>
         <div class="control-row">
           <label>Splat Size</label>
-          <input type="range" id="splatScale" min="0.3" max="5.0" step="0.1" value="0.3">
-          <span class="value" id="splatScaleVal">0.3x</span>
+          <input type="range" id="splatScale" min="0.3" max="5.0" step="0.1" value="1.0">
+          <span class="value" id="splatScaleVal">1.0x</span>
         </div>
         <button id="goBtn" class="primary">Load &amp; Convert</button>
         <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -420,10 +420,10 @@
       <div class="section">
         <div class="section-title">Camera Mode</div>
         <div class="cam-modes">
-          <button id="camOrbit" class="active" title="Orbit">&#128269;</button>
-          <button id="camHelicopter" title="Helicopter">&#128641;</button>
-          <button id="camTop" title="Top View">&#8595;</button>
-          <button id="camFront" title="Front View">&#8594;</button>
+          <button id="camOrbit" class="active" title="Orbit">🔍</button>
+          <button id="camHelicopter" title="Aerial View">🦅</button>
+          <button id="camTop" title="Top View">⬇</button>
+          <button id="camFront" title="Front View">➡</button>
         </div>
         <div class="control-row">
           <label>Distance</label>
@@ -1172,10 +1172,23 @@
     let lastTime = 0;
     let frameCount = 0;
     let fpsTime = 0;
+    let isPaused = false;  // Visibility-based pause
+
+    // Pause rendering when tab is hidden to save resources
+    document.addEventListener('visibilitychange', () => {
+      isPaused = document.hidden;
+      if (!isPaused && animationId) {
+        // Resume - request new frame
+        log(isPaused ? 'Paused (tab hidden)' : 'Resumed');
+      }
+    });
 
     function startAnimation() {
       function animate(time) {
         animationId = requestAnimationFrame(animate);
+
+        // Skip rendering when tab is hidden
+        if (isPaused) return;
 
         // FPS
         frameCount++;
