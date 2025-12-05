@@ -1130,6 +1130,9 @@
       <span>⚙️ Settings</span>
     </div>
     <div class="menu-divider"></div>
+    <div class="menu-item" id="menu-splats">
+      <span>🔮 Gaussian Splats</span>
+    </div>
     <div class="menu-item" id="menu-about">
       <span>ℹ️ About</span>
     </div>
@@ -3944,6 +3947,14 @@
           debugPanel.classList.add('open');
           $('btn-debug')?.classList.add('active');
         });
+      });
+
+      // Gaussian Splats demo
+      addClick('menu-splats', () => {
+        menuOpen = false;
+        mainMenu.classList.remove('open');
+        $('btn-menu').classList.remove('active');
+        window.open('splats/demo.html', '_blank');
       });
 
       // About modal
