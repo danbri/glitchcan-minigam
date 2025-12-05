@@ -6,6 +6,7 @@
  */
 
 import { SDFSampler } from './core/sdf-sampler.js';
+import { FixedSDFSampler } from './core/fixed-sdf-sampler.js';
 import { Gaussian, GaussianCloud } from './core/gaussian.js';
 import { TemplateExtractor } from './core/template-extractor.js';
 import { SplatBundle } from './core/bundle.js';
@@ -13,7 +14,7 @@ import { QuickTrainer } from './training/trainer.js';
 import { InstancedSplatRenderer } from './render/renderer.js';
 import { GPUSampler } from './core/gpu-sampler.js';
 
-export { SDFSampler, GPUSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, QuickTrainer, InstancedSplatRenderer };
+export { SDFSampler, FixedSDFSampler, GPUSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, QuickTrainer, InstancedSplatRenderer };
 
 /**
  * Main conversion pipeline: Lucid scene -> Instanced splat bundle
@@ -433,6 +434,7 @@ export default {
   quickConvertAndRender,
   gpuConvertAndRender,
   SDFSampler,
+  FixedSDFSampler,
   GPUSampler,
   Gaussian,
   GaussianCloud,
