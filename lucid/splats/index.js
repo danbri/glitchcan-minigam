@@ -6,6 +6,7 @@
  */
 
 import { SDFSampler } from './core/sdf-sampler.js';
+import { FixedSDFSampler } from './core/fixed-sdf-sampler.js';
 import { Gaussian, GaussianCloud } from './core/gaussian.js';
 import { TemplateExtractor } from './core/template-extractor.js';
 import { SplatBundle } from './core/bundle.js';
@@ -13,7 +14,27 @@ import { QuickTrainer } from './training/trainer.js';
 import { InstancedSplatRenderer } from './render/renderer.js';
 import { GPUSampler } from './core/gpu-sampler.js';
 
-export { SDFSampler, GPUSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, QuickTrainer, InstancedSplatRenderer };
+// True 3DGS generation (requires THREE.js)
+import { SDFGaussianSampler, SplatExporter, createSplatMaterial, createSplatMesh } from './core/sdf-to-splats.js';
+
+export {
+  // Original samplers (surfels)
+  SDFSampler,
+  FixedSDFSampler,
+  GPUSampler,
+  // Core classes
+  Gaussian,
+  GaussianCloud,
+  TemplateExtractor,
+  SplatBundle,
+  QuickTrainer,
+  InstancedSplatRenderer,
+  // True 3DGS (requires THREE.js)
+  SDFGaussianSampler,
+  SplatExporter,
+  createSplatMaterial,
+  createSplatMesh
+};
 
 /**
  * Main conversion pipeline: Lucid scene -> Instanced splat bundle
@@ -432,12 +453,20 @@ export default {
   createSimpleSdfEvaluator,
   quickConvertAndRender,
   gpuConvertAndRender,
+  // Samplers
   SDFSampler,
+  FixedSDFSampler,
   GPUSampler,
+  // Core
   Gaussian,
   GaussianCloud,
   TemplateExtractor,
   SplatBundle,
   QuickTrainer,
-  InstancedSplatRenderer
+  InstancedSplatRenderer,
+  // True 3DGS (requires THREE.js)
+  SDFGaussianSampler,
+  SplatExporter,
+  createSplatMaterial,
+  createSplatMesh
 };
