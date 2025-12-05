@@ -478,7 +478,8 @@
       GaussianCloud
     } from './index.js';
 
-    // Import GLSL codegen from main Lucid tool
+    // Use Lucid's existing raymarcher for GLSL generation
+    import { SimpleRaymarcher } from '../ui/raymarcher.js';
     import { generateGlslFromJson } from '../core/json-codegen.js';
     import { loadJsonScene } from '../core/json-loader.js';
 
@@ -486,6 +487,9 @@
     let currentScene = null;
     let currentBundle = null;
     let renderer = null;
+
+    // Hidden raymarcher for GLSL generation (reuses Lucid's existing code)
+    let glslGenerator = null;
     let animationId = null;
     let autoRotate = false;
     let cameraMode = 'orbit'; // orbit, helicopter, top, front
@@ -758,15 +762,26 @@
     async function loadAndConvertGPU(resolution, targetSplats, splatScale) {
       const numDirections = parseInt(document.getElementById('sampleDirs').value);
       log(`Using GPU sampling (WebGL2, ${resolution}² × ${numDirections} dirs)...`);
-      updateStatus('Processing scene for GPU...', 25);
+      updateStatus('Generating GLSL via Lucid raymarcher...', 25);
 
-      // Process scene JSON to IR
+      // Use Lucid's existing raymarcher for GLSL generation
+      // This avoids duplicating tree traversal and uses battle-tested code
+      if (!glslGenerator) {
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = 1;
+        hiddenCanvas.height = 1;
+        glslGenerator = new SimpleRaymarcher(hiddenCanvas);
+      }
+
+      // Generate GLSL using Lucid's existing pipeline
       const processedScene = loadJsonScene(currentScene);
-
-      // Generate GLSL code
-      updateStatus('Generating GLSL...', 35);
       const glslCode = generateGlslFromJson(processedScene);
-      log(`Generated ${glslCode.length} chars of GLSL`);
+
+      // Update the raymarcher (validates GLSL compiles)
+      glslGenerator.updateScene(glslCode);
+      glslGenerator.overrideTime = 0; // Freeze animations for sampling
+
+      log(`Generated ${glslCode.length} chars of GLSL (via Lucid)`);
 
       // Compute scene bounds
       const bounds = computeSceneBounds(currentScene);
