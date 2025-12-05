@@ -313,22 +313,69 @@
         <div class="section-title">Scene</div>
         <select id="sceneSelect">
           <option value="">Select scene...</option>
-          <optgroup label="Simple (start here)">
-            <option value="objects/table.json" selected>Table (recommended)</option>
+
+          <optgroup label="1. Primitives">
+            <option value="prim/catalogue.json">Shape Catalogue 📦</option>
+            <option value="prim/capsule.json">Capsule 💊</option>
+            <option value="prim/ellipsoid.json">Ellipsoid 🥚</option>
+          </optgroup>
+
+          <optgroup label="2. CSG Operations">
+            <option value="csg/operations.json">All Operations ⚙️</option>
+            <option value="csg/smooth-union.json">Smooth Union 🫧</option>
+            <option value="csg/subtract.json">Subtraction ✂️</option>
+            <option value="csg/nested.json">Nested CSG 🪆</option>
+          </optgroup>
+
+          <optgroup label="3. Tutorials">
+            <option value="tut/transforms.json">Transforms</option>
+            <option value="tut/rotation-methods.json">Rotation Methods</option>
+            <option value="tut/material-emission.json">Materials</option>
+            <option value="tut/grouping.json">Grouping</option>
+            <option value="tut/modifiers.json">Modifiers</option>
+          </optgroup>
+
+          <optgroup label="4. Patterns">
+            <option value="patterns/mirror.json">Mirror 🪞</option>
+            <option value="patterns/radial-flower.json">Radial Flower 🌸</option>
+            <option value="patterns/table.json" selected>Grid Array 🔲 (recommended)</option>
+          </optgroup>
+
+          <optgroup label="5. Effects">
+            <option value="fx/glowing-orb.json">Glowing Orb 🔮</option>
+            <option value="fx/alien-planet.json">Alien Planet 🪐</option>
+            <option value="fx/rocky-asteroid.json">Asteroid ☄️</option>
+          </optgroup>
+
+          <optgroup label="Creatures">
+            <option value="creatures/snowman.json">Snowman ⛄</option>
+            <option value="creatures/invaders.json">Space Invaders 👾</option>
+            <option value="creatures/radial-invaders.json">Radial Invaders 🛸</option>
+            <option value="creatures/spirit-creatures.json">Spirits 👻</option>
+            <option value="creatures/draggo.json">Draggo 🐲</option>
+            <option value="creatures/draggo2.json">Dragon B2-H2 🐉</option>
+          </optgroup>
+
+          <optgroup label="Nature">
+            <option value="nature/single-sunflower.json">Single Sunflower 🔬</option>
+            <option value="nature/sunflower.json">Sunflower 🌻</option>
+            <option value="nature/celly.json">Celly 🦠</option>
+          </optgroup>
+
+          <optgroup label="Spaceships">
+            <option value="ships/cobra-mk3.json">Cobra Mk III 🚀</option>
+            <option value="ships/elite-wireframe.json">Elite Wireframe ✨</option>
+          </optgroup>
+
+          <optgroup label="Combined Scenes">
+            <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders 🎮</option>
+          </optgroup>
+
+          <optgroup label="Test Objects">
+            <option value="objects/table.json">Simple Table</option>
             <option value="objects/cylinder-array.json">Cylinder Array</option>
             <option value="objects/box-torus-subtract.json">Box - Torus (CSG)</option>
             <option value="objects/rotated-boxes.json">Rotated Boxes</option>
-          </optgroup>
-          <optgroup label="Creatures">
-            <option value="creatures/invaders.json">Space Invaders</option>
-            <option value="creatures/snowman.json">Snowman</option>
-          </optgroup>
-          <optgroup label="Ships">
-            <option value="ships/cobra-mk3.json">Cobra Mk III</option>
-          </optgroup>
-          <optgroup label="Complex">
-            <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders</option>
-            <option value="nature/flower-meadow.json">Flower Meadow</option>
           </optgroup>
         </select>
       </div>
