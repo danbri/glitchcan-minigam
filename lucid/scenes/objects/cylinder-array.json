@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "title": "Cylinder Array",
+  "description": "Grid of colored cylinders",
+  "defs": {
+    "cyl": {
+      "type": "cylinder",
+      "params": {
+        "r": 0.15,
+        "h": 0.8
+      }
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, -0.6] },
+        "params": { "color": [1.0, 0.3, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, -0.6] },
+        "params": { "color": [0.3, 1.0, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, -0.6] },
+        "params": { "color": [0.3, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, 0] },
+        "params": { "color": [1.0, 1.0, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, 0] },
+        "params": { "color": [1.0, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, 0] },
+        "params": { "color": [0.3, 1.0, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, 0.6] },
+        "params": { "color": [1.0, 0.6, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, 0.6] },
+        "params": { "color": [0.6, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, 0.6] },
+        "params": { "color": [0.3, 0.8, 0.5] }
+      }
+    ]
+  }
+}

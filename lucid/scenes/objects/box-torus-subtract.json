@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "title": "Box minus Torus",
+  "description": "CSG subtraction - torus carved from box",
+  "root": {
+    "type": "subtract",
+    "children": [
+      {
+        "type": "box",
+        "params": {
+          "size": [0.8, 0.8, 0.8],
+          "color": [0.7, 0.5, 0.3]
+        }
+      },
+      {
+        "type": "torus",
+        "params": {
+          "major": 0.6,
+          "minor": 0.25,
+          "color": [0.3, 0.6, 0.9]
+        }
+      }
+    ]
+  }
+}
