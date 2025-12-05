@@ -9,7 +9,38 @@
  * Based on Gemini's implementation.
  */
 
-import * as THREE from 'three';
+// THREE.js loader with CDN + offline fallback
+const THREE_VERSION = '0.169.0';
+const CDN_URL = `https://unpkg.com/three@${THREE_VERSION}/build/three.module.min.js`;
+// Relative path from lucid/splats/core/ to lucid/vendor/cdn-cache/
+const LOCAL_FALLBACK = '../../vendor/cdn-cache/three.module.min.js';
+
+let THREE;
+
+async function loadThree() {
+  if (THREE) return THREE;
+
+  // Try CDN first
+  try {
+    THREE = await import(CDN_URL);
+    console.log(`[3DGS] THREE.js loaded from CDN (v${THREE_VERSION})`);
+    return THREE;
+  } catch (cdnError) {
+    console.warn('[3DGS] CDN failed, trying local fallback...', cdnError.message);
+  }
+
+  // Fallback to local cache
+  try {
+    THREE = await import(LOCAL_FALLBACK);
+    console.log('[3DGS] THREE.js loaded from local cache');
+    return THREE;
+  } catch (localError) {
+    throw new Error(`Failed to load THREE.js: ${localError.message}`);
+  }
+}
+
+// Top-level await to load THREE.js at module initialization
+await loadThree();
 
 /**
  * ------------------------------------------------------------------
