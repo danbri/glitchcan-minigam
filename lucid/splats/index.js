@@ -155,15 +155,46 @@ export function createSimpleSdfEvaluator(defs = {}) {
     // Apply inverse transform
     if (node.transform) {
       const t = node.transform.translate || [0, 0, 0];
+      const r = node.transform.rotate || [0, 0, 0];
       const s = node.transform.scale;
       const scale = s ? (Array.isArray(s) ? s : [s, s, s]) : [1, 1, 1];
 
-      // Translate
-      pos[0] = (pos[0] - (typeof t[0] === 'number' ? t[0] : 0)) / scale[0];
-      pos[1] = (pos[1] - (typeof t[1] === 'number' ? t[1] : 0)) / scale[1];
-      pos[2] = (pos[2] - (typeof t[2] === 'number' ? t[2] : 0)) / scale[2];
+      // Translate first
+      pos[0] = pos[0] - (typeof t[0] === 'number' ? t[0] : 0);
+      pos[1] = pos[1] - (typeof t[1] === 'number' ? t[1] : 0);
+      pos[2] = pos[2] - (typeof t[2] === 'number' ? t[2] : 0);
 
-      // TODO: rotation
+      // Apply inverse rotation (rotate in reverse order: Z, Y, X with negated angles)
+      const rx = -(typeof r[0] === 'number' ? r[0] : 0) * Math.PI / 180;
+      const ry = -(typeof r[1] === 'number' ? r[1] : 0) * Math.PI / 180;
+      const rz = -(typeof r[2] === 'number' ? r[2] : 0) * Math.PI / 180;
+
+      // Rotate around Z (reverse)
+      if (rz !== 0) {
+        const cz = Math.cos(rz), sz = Math.sin(rz);
+        const x = pos[0], y = pos[1];
+        pos[0] = x * cz - y * sz;
+        pos[1] = x * sz + y * cz;
+      }
+      // Rotate around Y (reverse)
+      if (ry !== 0) {
+        const cy = Math.cos(ry), sy = Math.sin(ry);
+        const x = pos[0], z = pos[2];
+        pos[0] = x * cy + z * sy;
+        pos[2] = -x * sy + z * cy;
+      }
+      // Rotate around X (reverse)
+      if (rx !== 0) {
+        const cx = Math.cos(rx), sx = Math.sin(rx);
+        const y = pos[1], z = pos[2];
+        pos[1] = y * cx - z * sx;
+        pos[2] = y * sx + z * cx;
+      }
+
+      // Scale
+      pos[0] /= scale[0];
+      pos[1] /= scale[1];
+      pos[2] /= scale[2];
     }
 
     const color = node.params?.color || [0.8, 0.8, 0.8];

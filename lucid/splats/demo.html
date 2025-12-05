@@ -205,12 +205,11 @@
       color: #000;
     }
 
-    /* Toolbar overlay */
+    /* Toolbar overlay - positioned to right of panel */
     .toolbar {
       position: fixed;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 330px;
       display: flex;
       gap: 8px;
       background: rgba(20, 25, 45, 0.9);
@@ -218,6 +217,10 @@
       border-radius: 25px;
       border: 1px solid rgba(0, 217, 255, 0.3);
       z-index: 100;
+    }
+
+    .panel.minimized ~ .toolbar {
+      left: 80px;
     }
 
     .toolbar button {
@@ -312,6 +315,11 @@
           <option value="">Select scene...</option>
           <optgroup label="Simple (start here)">
             <option value="objects/table.json" selected>Table (recommended)</option>
+            <option value="objects/cylinder-array.json">Cylinder Array</option>
+            <option value="objects/box-torus-subtract.json">Box - Torus (CSG)</option>
+            <option value="objects/rotated-boxes.json">Rotated Boxes</option>
+          </optgroup>
+          <optgroup label="Creatures">
             <option value="creatures/invaders.json">Space Invaders</option>
             <option value="creatures/snowman.json">Snowman</option>
           </optgroup>
@@ -330,25 +338,22 @@
         <div class="section-title">Convert</div>
         <div class="control-row">
           <label>Resolution</label>
-          <input type="range" id="sampleRes" min="24" max="96" step="8" value="64">
+          <input type="range" id="sampleRes" min="24" max="256" step="8" value="64">
           <span class="value" id="sampleResVal">64</span>
         </div>
         <div class="control-row">
           <label>Splat Count</label>
-          <input type="range" id="targetSplats" min="500" max="5000" step="250" value="2000">
+          <input type="range" id="targetSplats" min="500" max="50000" step="500" value="2000">
           <span class="value" id="targetSplatsVal">2k</span>
         </div>
         <div class="control-row">
           <label>Splat Size</label>
-          <input type="range" id="splatScale" min="0.5" max="4.0" step="0.1" value="2.5">
+          <input type="range" id="splatScale" min="0.3" max="5.0" step="0.1" value="2.5">
           <span class="value" id="splatScaleVal">2.5x</span>
         </div>
-        <div class="btn-row">
-          <button id="loadBtn">Load</button>
-          <button id="convertBtn" class="primary" disabled>Convert</button>
-        </div>
+        <button id="goBtn" class="primary">Load &amp; Convert</button>
         <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-        <div class="status-text" id="statusText">Ready</div>
+        <div class="status-text" id="statusText">Select scene above, then click Load &amp; Convert</div>
       </div>
 
       <!-- Camera -->
@@ -438,7 +443,16 @@
       setupEventListeners();
       resize();
       startAnimation();
-      log('Ready. Select a scene and convert.');
+      log('Gaussian Splat Viewer');
+
+      // Auto-load default scene after short delay
+      setTimeout(() => {
+        const select = document.getElementById('sceneSelect');
+        if (select.value) {
+          log('Auto-loading default scene...');
+          loadAndConvert();
+        }
+      }, 500);
     }
 
     function setupEventListeners() {
@@ -467,9 +481,13 @@
         });
       });
 
-      // Load & Convert
-      document.getElementById('loadBtn').addEventListener('click', loadScene);
-      document.getElementById('convertBtn').addEventListener('click', convertScene);
+      // Load & Convert - single button workflow
+      document.getElementById('goBtn').addEventListener('click', loadAndConvert);
+
+      // Also trigger on scene change
+      document.getElementById('sceneSelect').addEventListener('change', () => {
+        updateStatus('Click "Load & Convert" to render', 0);
+      });
 
       // Camera modes
       const camModes = ['camOrbit', 'camHelicopter', 'camTop', 'camFront'];
@@ -510,8 +528,8 @@
         const dy = e.clientY - lastY;
 
         if (cameraMode === 'orbit' || cameraMode === 'helicopter') {
-          targetTheta += dx * 0.005;
-          targetPhi = Math.max(-1.4, Math.min(1.4, targetPhi - dy * 0.005));
+          targetTheta += dx * 0.008;  // Horizontal rotation
+          targetPhi = Math.max(-0.1, Math.min(1.5, targetPhi + dy * 0.008));  // Vertical: drag down = look from above
         }
 
         lastX = e.clientX;
@@ -540,8 +558,8 @@
         if (e.touches.length === 1 && lastTouch) {
           const dx = e.touches[0].clientX - lastTouch.x;
           const dy = e.touches[0].clientY - lastTouch.y;
-          targetTheta += dx * 0.005;
-          targetPhi = Math.max(-1.4, Math.min(1.4, targetPhi - dy * 0.005));
+          targetTheta += dx * 0.008;
+          targetPhi = Math.max(-0.1, Math.min(1.5, targetPhi + dy * 0.008));
           lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
       });
@@ -591,53 +609,59 @@
       document.getElementById('camHeightVal').textContent = '2.0';
     }
 
-    async function loadScene() {
+    async function loadAndConvert() {
       const path = document.getElementById('sceneSelect').value;
-      if (!path) { log('Select a scene first'); return; }
+      if (!path) {
+        log('Please select a scene first');
+        updateStatus('Select a scene from the dropdown', 0);
+        return;
+      }
+
+      const goBtn = document.getElementById('goBtn');
+      goBtn.disabled = true;
+      goBtn.textContent = 'Loading...';
 
       try {
+        // Step 1: Load scene
         log(`Loading ${path}...`);
+        updateStatus('Loading scene...', 10);
+
         const resp = await fetch(`../scenes/${path}`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         currentScene = await resp.json();
         log(`Loaded: ${currentScene.title || path}`);
-        document.getElementById('convertBtn').disabled = false;
-      } catch (err) {
-        log(`Error: ${err.message}`);
-      }
-    }
 
-    async function convertScene() {
-      if (!currentScene) return;
-
-      const convertBtn = document.getElementById('convertBtn');
-      convertBtn.disabled = true;
-
-      try {
-        log('Converting...');
-        updateStatus('Converting...', 0);
+        // Step 2: Convert to splats
+        updateStatus('Converting to splats...', 30);
 
         const converter = new LucidToSplats({
           samplerResolution: parseInt(document.getElementById('sampleRes').value),
           targetSplatsPerTemplate: parseInt(document.getElementById('targetSplats').value),
           splatScaleMultiplier: parseFloat(document.getElementById('splatScale').value),
-          onProgress: ({ stage, progress }) => updateStatus(stage, progress)
+          onProgress: ({ stage, progress }) => updateStatus(stage, 30 + progress * 0.6)
         });
 
         const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
         currentBundle = await converter.convert(currentScene, sdfEvaluator);
 
-        log(`Done: ${currentBundle.templateClouds.size} templates`);
+        log(`Converted: ${currentBundle.templateClouds.size} templates`);
+
+        // Step 3: Setup renderer
+        updateStatus('Setting up renderer...', 95);
         setupRenderer();
+
         document.getElementById('tbDownload').disabled = false;
-        updateStatus('Ready', 100);
+        updateStatus('Done! Drag to rotate, scroll to zoom', 100);
+        log('Ready - drag to rotate, scroll to zoom');
 
       } catch (err) {
         log(`Error: ${err.message}`);
+        updateStatus(`Error: ${err.message}`, 0);
         console.error(err);
       } finally {
-        convertBtn.disabled = false;
+        goBtn.disabled = false;
+        goBtn.textContent = 'Load & Convert';
       }
     }
 
