@@ -24,11 +24,20 @@
     }
 
     .sidebar {
-      width: 300px;
+      width: 280px;
+      min-width: 280px;
+      max-width: 280px;
       background: #16213e;
-      padding: 20px;
+      padding: 15px;
       overflow-y: auto;
       border-right: 1px solid #333;
+      flex-shrink: 0;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      min-width: 0;  /* Allow canvas to shrink */
     }
 
     .sidebar h1 {
@@ -43,11 +52,6 @@
       color: #888;
       text-transform: uppercase;
       letter-spacing: 1px;
-    }
-
-    .canvas-container {
-      flex: 1;
-      position: relative;
     }
 
     canvas {
@@ -151,7 +155,15 @@
     }
 
     .control-row input[type="range"] {
-      width: 100px;
+      width: 80px;
+    }
+
+    .control-row span {
+      width: 45px;
+      text-align: right;
+      font-size: 0.8em;
+      color: #00d9ff;
+      font-family: monospace;
     }
 
     .overlay {
@@ -213,6 +225,23 @@
         <option value="ships/cobra-mk3.json">Cobra Mk III</option>
         <option value="nature/flower-meadow.json">Flower Meadow</option>
       </select>
+
+      <h2>Conversion Settings</h2>
+      <div class="control-row">
+        <label>Sample Resolution</label>
+        <input type="range" id="sampleRes" min="16" max="96" step="8" value="64">
+        <span id="sampleResVal">64</span>
+      </div>
+      <div class="control-row">
+        <label>Target Splats</label>
+        <input type="range" id="targetSplats" min="500" max="5000" step="250" value="2000">
+        <span id="targetSplatsVal">2000</span>
+      </div>
+      <div class="control-row">
+        <label>Splat Scale</label>
+        <input type="range" id="splatScale" min="0.5" max="3.0" step="0.1" value="1.5">
+        <span id="splatScaleVal">1.5x</span>
+      </div>
 
       <h2>Convert</h2>
       <button id="loadBtn">Load Scene</button>
@@ -303,6 +332,25 @@
     const camRot = document.getElementById('camRot');
     const camHeight = document.getElementById('camHeight');
 
+    // Conversion controls
+    const sampleResSlider = document.getElementById('sampleRes');
+    const targetSplatsSlider = document.getElementById('targetSplats');
+    const splatScaleSlider = document.getElementById('splatScale');
+    const sampleResVal = document.getElementById('sampleResVal');
+    const targetSplatsVal = document.getElementById('targetSplatsVal');
+    const splatScaleVal = document.getElementById('splatScaleVal');
+
+    // Update value displays
+    sampleResSlider.addEventListener('input', () => {
+      sampleResVal.textContent = sampleResSlider.value;
+    });
+    targetSplatsSlider.addEventListener('input', () => {
+      targetSplatsVal.textContent = targetSplatsSlider.value;
+    });
+    splatScaleSlider.addEventListener('input', () => {
+      splatScaleVal.textContent = splatScaleSlider.value + 'x';
+    });
+
     let cameraTheta = 0;
     let cameraPhi = 0.5;
     let cameraDistance = 8;
@@ -364,9 +412,14 @@
         convertBtn.disabled = true;
         log('Starting conversion...');
 
+        const samplerRes = parseInt(sampleResSlider.value);
+        const targetSplats = parseInt(targetSplatsSlider.value);
+        const splatScale = parseFloat(splatScaleSlider.value);
+
         const converter = new LucidToSplats({
-          samplerResolution: 32,
-          targetSplatsPerTemplate: 500,
+          samplerResolution: samplerRes,
+          targetSplatsPerTemplate: targetSplats,
+          splatScaleMultiplier: splatScale,
           onProgress: ({ stage, template, progress }) => {
             updateProgress(
               template ? `Converting ${template}...` : stage,
