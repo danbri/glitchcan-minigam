@@ -293,7 +293,7 @@ export class InstancedSplatRenderer {
     }
 
     // Clear
-    gl.clearColor(0.1, 0.1, 0.15, 1.0);
+    gl.clearColor(0.12, 0.13, 0.18, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Use program
@@ -629,7 +629,12 @@ void main() {
     // Discard nearly transparent pixels
     if (alpha < 0.01) discard;
 
-    fragColor = vec4(v_color, alpha);
+    // Simple lighting boost - ambient + slight color enhancement
+    vec3 ambient = vec3(0.15);
+    vec3 color = v_color * 1.2 + ambient;
+    color = clamp(color, 0.0, 1.0);
+
+    fragColor = vec4(color, alpha);
 }
 `;
 
