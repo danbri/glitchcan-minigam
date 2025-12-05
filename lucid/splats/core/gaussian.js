@@ -171,13 +171,43 @@ export class Gaussian {
  * Collection of Gaussians forming a splat "template"
  */
 export class GaussianCloud {
-  constructor() {
+  /**
+   * @param {number} [count] - Optional count to pre-allocate Gaussians
+   */
+  constructor(count) {
     this.gaussians = [];
     this.bounds = null;
+
+    // Pre-allocate if count provided
+    if (count && count > 0) {
+      for (let i = 0; i < count; i++) {
+        this.gaussians.push(new Gaussian());
+      }
+    }
   }
 
   add(gaussian) {
     this.gaussians.push(gaussian);
+    this.bounds = null;  // Invalidate bounds cache
+  }
+
+  /**
+   * Set Gaussian at specific index (for pre-allocated clouds)
+   * @param {number} index - Index to set
+   * @param {Object} data - Gaussian data {position, scale, rotation, color, opacity}
+   */
+  setGaussian(index, data) {
+    if (index < 0 || index >= this.gaussians.length) {
+      throw new Error(`Index ${index} out of bounds (0-${this.gaussians.length - 1})`);
+    }
+
+    const g = this.gaussians[index];
+    if (data.position) g.position = data.position;
+    if (data.scale) g.scale = data.scale;
+    if (data.rotation) g.rotation = data.rotation;
+    if (data.color) g.color = data.color;
+    if (data.opacity !== undefined) g.opacity = data.opacity;
+
     this.bounds = null;  // Invalidate bounds cache
   }
 

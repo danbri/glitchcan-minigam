@@ -105,10 +105,11 @@ export class GPUSampler {
 
     // Create textures for MRT output
     // 0: Position (xyz) + hit flag (w)
-    // 1: Normal (xyz) + curvature (w)
+    // 1: Normal (xyz) + mean curvature (w) for fallback
     // 2: Color (rgb) + distance (a)
+    // 3: Principal curvatures: k1, k2, principal direction angle, tangent1.x
 
-    const targets = ['position', 'normal', 'color'];
+    const targets = ['position', 'normal', 'color', 'curvature'];
     const attachments = [];
 
     for (let i = 0; i < targets.length; i++) {
@@ -175,9 +176,10 @@ export class GPUSampler {
       uniform float u_time;
 
       // Output targets (MRT)
-      layout(location = 0) out vec4 out_position;  // xyz = position, w = hit flag
-      layout(location = 1) out vec4 out_normal;    // xyz = normal, w = curvature estimate
-      layout(location = 2) out vec4 out_color;     // rgb = color, a = distance
+      layout(location = 0) out vec4 out_position;   // xyz = position, w = hit flag
+      layout(location = 1) out vec4 out_normal;     // xyz = normal, w = mean curvature (fallback)
+      layout(location = 2) out vec4 out_color;      // rgb = color, a = distance
+      layout(location = 3) out vec4 out_curvature;  // k1, k2, principal dir angle, tangent1.x
 
       // Scene SDF from codegen
       ${sceneGlsl}
@@ -193,12 +195,78 @@ export class GPUSampler {
         ));
       }
 
-      // Estimate mean curvature via Laplacian of SDF
-      float estimateCurvature(vec3 p, vec3 n) {
+      // Build orthonormal tangent frame from normal
+      void buildTangentFrame(vec3 n, out vec3 t1, out vec3 t2) {
+        // Choose axis not parallel to normal
+        vec3 up = abs(n.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        t1 = normalize(cross(up, n));
+        t2 = cross(n, t1);
+      }
+
+      // Compute principal curvatures via Hessian analysis
+      // Returns vec4(k1, k2, principalAngle, t1.x)
+      // k1 = max curvature, k2 = min curvature
+      vec4 computePrincipalCurvatures(vec3 p, vec3 n) {
         const float h = 0.01;
         float d0 = g_df_scene(p).x;
 
-        // Laplacian approximation
+        // Compute full 3x3 Hessian (second partial derivatives of SDF)
+        // Diagonal terms: d²f/dx², d²f/dy², d²f/dz²
+        float dxx = (g_df_scene(p + vec3(h,0,0)).x - 2.0*d0 + g_df_scene(p - vec3(h,0,0)).x) / (h*h);
+        float dyy = (g_df_scene(p + vec3(0,h,0)).x - 2.0*d0 + g_df_scene(p - vec3(0,h,0)).x) / (h*h);
+        float dzz = (g_df_scene(p + vec3(0,0,h)).x - 2.0*d0 + g_df_scene(p - vec3(0,0,h)).x) / (h*h);
+
+        // Off-diagonal terms: d²f/dxdy, d²f/dxdz, d²f/dydz
+        float dxy = (g_df_scene(p + vec3(h,h,0)).x - g_df_scene(p + vec3(h,-h,0)).x
+                   - g_df_scene(p + vec3(-h,h,0)).x + g_df_scene(p + vec3(-h,-h,0)).x) / (4.0*h*h);
+        float dxz = (g_df_scene(p + vec3(h,0,h)).x - g_df_scene(p + vec3(h,0,-h)).x
+                   - g_df_scene(p + vec3(-h,0,h)).x + g_df_scene(p + vec3(-h,0,-h)).x) / (4.0*h*h);
+        float dyz = (g_df_scene(p + vec3(0,h,h)).x - g_df_scene(p + vec3(0,h,-h)).x
+                   - g_df_scene(p + vec3(0,-h,h)).x + g_df_scene(p + vec3(0,-h,-h)).x) / (4.0*h*h);
+
+        // Hessian matrix H
+        mat3 H = mat3(
+          dxx, dxy, dxz,
+          dxy, dyy, dyz,
+          dxz, dyz, dzz
+        );
+
+        // Build tangent frame
+        vec3 t1, t2;
+        buildTangentFrame(n, t1, t2);
+
+        // Project Hessian onto tangent plane to get shape operator (2x2)
+        // S_ij = t_i · H · t_j
+        float s11 = dot(t1, H * t1);
+        float s12 = dot(t1, H * t2);
+        float s22 = dot(t2, H * t2);
+
+        // Find eigenvalues of 2x2 symmetric matrix (principal curvatures)
+        // For [a, b; b, c]: λ = (a+c)/2 ± sqrt((a-c)²/4 + b²)
+        float trace = s11 + s22;
+        float det = s11 * s22 - s12 * s12;
+        float disc = max(0.0, trace * trace * 0.25 - det);
+        float sqrtDisc = sqrt(disc);
+
+        float k1 = trace * 0.5 + sqrtDisc;  // Max curvature
+        float k2 = trace * 0.5 - sqrtDisc;  // Min curvature
+
+        // Compute principal direction angle in tangent plane
+        // Eigenvector for k1 is proportional to (s12, k1 - s11) or (k1 - s22, s12)
+        float angle = 0.0;
+        if (abs(s12) > 1e-6) {
+          angle = 0.5 * atan(2.0 * s12, s11 - s22);
+        } else if (s11 < s22) {
+          angle = 1.5707963;  // π/2 if s12 ≈ 0 and s11 < s22
+        }
+
+        return vec4(k1, k2, angle, t1.x);
+      }
+
+      // Estimate mean curvature via Laplacian (simpler fallback)
+      float estimateMeanCurvature(vec3 p) {
+        const float h = 0.01;
+        float d0 = g_df_scene(p).x;
         float laplacian = 0.0;
         laplacian += g_df_scene(p + vec3(h, 0, 0)).x;
         laplacian += g_df_scene(p - vec3(h, 0, 0)).x;
@@ -207,8 +275,6 @@ export class GPUSampler {
         laplacian += g_df_scene(p + vec3(0, 0, h)).x;
         laplacian += g_df_scene(p - vec3(0, 0, h)).x;
         laplacian = (laplacian - 6.0 * d0) / (h * h);
-
-        // Mean curvature is half the Laplacian for SDF
         return laplacian * 0.5;
       }
 
@@ -237,7 +303,8 @@ export class GPUSampler {
         vec3 hitNormal = vec3(0.0);
         vec3 hitColor = vec3(0.0);
         float hitDist = MAX_DIST;
-        float hitCurvature = 0.0;
+        float meanCurvature = 0.0;
+        vec4 principalCurvatures = vec4(0.0);
 
         for (int i = 0; i < MAX_STEPS; i++) {
           vec3 p = rayOrigin + rayDir * t;
@@ -250,7 +317,8 @@ export class GPUSampler {
             hitNormal = calcNormal(p);
             hitColor = scene.yzw;
             hitDist = t;
-            hitCurvature = estimateCurvature(p, hitNormal);
+            meanCurvature = estimateMeanCurvature(p);
+            principalCurvatures = computePrincipalCurvatures(p, hitNormal);
             break;
           }
 
@@ -262,12 +330,14 @@ export class GPUSampler {
         // Output to render targets
         if (hit) {
           out_position = vec4(hitPos, 1.0);
-          out_normal = vec4(hitNormal, hitCurvature);
+          out_normal = vec4(hitNormal, meanCurvature);
           out_color = vec4(hitColor, hitDist);
+          out_curvature = principalCurvatures;
         } else {
           out_position = vec4(0.0, 0.0, 0.0, 0.0);
           out_normal = vec4(0.0, 0.0, 0.0, 0.0);
           out_color = vec4(0.0, 0.0, 0.0, -1.0);
+          out_curvature = vec4(0.0, 0.0, 0.0, 0.0);
         }
       }
     `;
@@ -352,7 +422,7 @@ export class GPUSampler {
    * Sample the scene from one direction
    * @param {number} dirIndex - Direction index into DIRECTIONS array
    * @param {Object} bounds - { min: [x,y,z], max: [x,y,z] }
-   * @returns {Object} - { positions, normals, colors, curvatures, count }
+   * @returns {Object} - { positions, normals, colors, curvatures, k1, k2, principalAngles, count }
    */
   sampleDirection(dirIndex, bounds) {
     const gl = this.gl;
@@ -385,12 +455,13 @@ export class GPUSampler {
     // Read back textures
     const pixelCount = res * res;
 
-    let positionData, normalData, colorData;
+    let positionData, normalData, colorData, curvatureData;
 
     if (this.useFloatTextures) {
       positionData = new Float32Array(pixelCount * 4);
       normalData = new Float32Array(pixelCount * 4);
       colorData = new Float32Array(pixelCount * 4);
+      curvatureData = new Float32Array(pixelCount * 4);
 
       gl.readBuffer(gl.COLOR_ATTACHMENT0);
       gl.readPixels(0, 0, res, res, gl.RGBA, gl.FLOAT, positionData);
@@ -400,11 +471,15 @@ export class GPUSampler {
 
       gl.readBuffer(gl.COLOR_ATTACHMENT2);
       gl.readPixels(0, 0, res, res, gl.RGBA, gl.FLOAT, colorData);
+
+      gl.readBuffer(gl.COLOR_ATTACHMENT3);
+      gl.readPixels(0, 0, res, res, gl.RGBA, gl.FLOAT, curvatureData);
     } else {
       // RGBA8 fallback - need to encode/decode
       const positionBytes = new Uint8Array(pixelCount * 4);
       const normalBytes = new Uint8Array(pixelCount * 4);
       const colorBytes = new Uint8Array(pixelCount * 4);
+      const curvatureBytes = new Uint8Array(pixelCount * 4);
 
       gl.readBuffer(gl.COLOR_ATTACHMENT0);
       gl.readPixels(0, 0, res, res, gl.RGBA, gl.UNSIGNED_BYTE, positionBytes);
@@ -415,15 +490,20 @@ export class GPUSampler {
       gl.readBuffer(gl.COLOR_ATTACHMENT2);
       gl.readPixels(0, 0, res, res, gl.RGBA, gl.UNSIGNED_BYTE, colorBytes);
 
+      gl.readBuffer(gl.COLOR_ATTACHMENT3);
+      gl.readPixels(0, 0, res, res, gl.RGBA, gl.UNSIGNED_BYTE, curvatureBytes);
+
       // Convert to float (simple 0-1 range)
       positionData = new Float32Array(pixelCount * 4);
       normalData = new Float32Array(pixelCount * 4);
       colorData = new Float32Array(pixelCount * 4);
+      curvatureData = new Float32Array(pixelCount * 4);
 
       for (let i = 0; i < pixelCount * 4; i++) {
         positionData[i] = positionBytes[i] / 255.0;
         normalData[i] = normalBytes[i] / 255.0;
         colorData[i] = colorBytes[i] / 255.0;
+        curvatureData[i] = curvatureBytes[i] / 255.0;
       }
     }
 
@@ -433,7 +513,10 @@ export class GPUSampler {
     const positions = [];
     const normals = [];
     const colors = [];
-    const curvatures = [];
+    const curvatures = [];  // Mean curvature (fallback)
+    const k1Values = [];    // Principal curvature 1 (max)
+    const k2Values = [];    // Principal curvature 2 (min)
+    const principalAngles = [];
 
     for (let i = 0; i < pixelCount; i++) {
       const hitFlag = positionData[i * 4 + 3];
@@ -453,7 +536,12 @@ export class GPUSampler {
           colorData[i * 4 + 1],
           colorData[i * 4 + 2]
         );
-        curvatures.push(normalData[i * 4 + 3]);
+        curvatures.push(normalData[i * 4 + 3]);  // Mean curvature
+
+        // Principal curvatures from 4th texture
+        k1Values.push(curvatureData[i * 4]);      // k1
+        k2Values.push(curvatureData[i * 4 + 1]);  // k2
+        principalAngles.push(curvatureData[i * 4 + 2]);  // angle in tangent plane
       }
     }
 
@@ -462,6 +550,9 @@ export class GPUSampler {
       normals: new Float32Array(normals),
       colors: new Float32Array(colors),
       curvatures: new Float32Array(curvatures),
+      k1: new Float32Array(k1Values),
+      k2: new Float32Array(k2Values),
+      principalAngles: new Float32Array(principalAngles),
       count: positions.length / 3
     };
   }
@@ -473,7 +564,7 @@ export class GPUSampler {
    * @param {Object} options - Additional options
    *   - numDirections: 6, 14, or 26 (faces, +corners, +edges)
    *   - deduplicationRadius: merge nearby points
-   * @returns {Object} - Combined point cloud
+   * @returns {Object} - Combined point cloud with principal curvatures
    */
   sample(sceneGlsl, bounds, options = {}) {
     const startTime = performance.now();
@@ -486,7 +577,10 @@ export class GPUSampler {
     const allPositions = [];
     const allNormals = [];
     const allColors = [];
-    const allCurvatures = [];
+    const allCurvatures = [];  // Mean curvature (fallback)
+    const allK1 = [];          // Principal curvature k1 (max)
+    const allK2 = [];          // Principal curvature k2 (min)
+    const allPrincipalAngles = [];
 
     // Build directions array based on numDirections
     const numDirs = options.numDirections || 6;
@@ -505,6 +599,9 @@ export class GPUSampler {
         allNormals.push(...result.normals);
         allColors.push(...result.colors);
         allCurvatures.push(...result.curvatures);
+        allK1.push(...result.k1);
+        allK2.push(...result.k2);
+        allPrincipalAngles.push(...result.principalAngles);
       }
 
       if (directions.length <= 10) {
@@ -520,6 +617,9 @@ export class GPUSampler {
       new Float32Array(allNormals),
       new Float32Array(allColors),
       new Float32Array(allCurvatures),
+      new Float32Array(allK1),
+      new Float32Array(allK2),
+      new Float32Array(allPrincipalAngles),
       options.deduplicationRadius || 0.01
     );
 
@@ -532,7 +632,7 @@ export class GPUSampler {
   /**
    * Remove duplicate points within a radius
    */
-  deduplicatePoints(positions, normals, colors, curvatures, radius) {
+  deduplicatePoints(positions, normals, colors, curvatures, k1, k2, principalAngles, radius) {
     const count = positions.length / 3;
     const radiusSq = radius * radius;
 
@@ -565,6 +665,9 @@ export class GPUSampler {
     const outNormals = [];
     const outColors = [];
     const outCurvatures = [];
+    const outK1 = [];
+    const outK2 = [];
+    const outPrincipalAngles = [];
 
     for (let i = 0; i < count; i++) {
       if (keep[i]) {
@@ -572,6 +675,9 @@ export class GPUSampler {
         outNormals.push(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
         outColors.push(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]);
         outCurvatures.push(curvatures[i]);
+        outK1.push(k1[i]);
+        outK2.push(k2[i]);
+        outPrincipalAngles.push(principalAngles[i]);
       }
     }
 
@@ -580,19 +686,23 @@ export class GPUSampler {
       normals: new Float32Array(outNormals),
       colors: new Float32Array(outColors),
       curvatures: new Float32Array(outCurvatures),
+      k1: new Float32Array(outK1),
+      k2: new Float32Array(outK2),
+      principalAngles: new Float32Array(outPrincipalAngles),
       count: outPositions.length / 3
     };
   }
 
   /**
    * Convert GPU sample results to format expected by trainer
-   * Includes anisotropic scale estimation from curvature
+   * Uses principal curvatures (k1, k2) for truly anisotropic scaling
    */
   toPointCloud(sampleResult, options = {}) {
-    const { positions, normals, colors, curvatures, count } = sampleResult;
+    const { positions, normals, colors, curvatures, k1, k2, principalAngles, count } = sampleResult;
     const baseScale = options.baseScale || 0.05;
+    const curvatureFactor = options.curvatureFactor || 5.0;
 
-    // Generate scales and rotations from normals and curvatures
+    // Generate scales and rotations from normals and principal curvatures
     const scales = new Float32Array(count * 3);
     const rotations = new Float32Array(count * 4);
 
@@ -602,54 +712,78 @@ export class GPUSampler {
       const ny = normals[i * 3 + 1];
       const nz = normals[i * 3 + 2];
 
-      // Curvature affects scale - high curvature = smaller, flatter splats
-      const k = Math.abs(curvatures[i]);
-      // Clamp curvature to avoid extreme values
-      const clampedK = Math.min(k, 50.0);
-      const curvatureScale = 1.0 / (1.0 + clampedK * 5.0);
+      // Get principal curvatures
+      const kappa1 = k1 ? k1[i] : curvatures[i];  // Max curvature (fallback to mean)
+      const kappa2 = k2 ? k2[i] : curvatures[i];  // Min curvature (fallback to mean)
+      const angle = principalAngles ? principalAngles[i] : 0;
 
-      // Scale: VERY flat along normal (true splat, not particle)
-      // Tangent scale: full size disk in surface plane
-      // Normal scale: thin along surface normal (like a disc)
-      const tangentScale = baseScale * curvatureScale;
-      const normalScale = baseScale * 0.1 * curvatureScale;  // 10x flatter than tangent
+      // Anisotropic scale: inverse of curvature
+      // High curvature → small scale (tight splats)
+      // Low curvature → large scale (wide splats)
+      const clampedK1 = Math.min(Math.abs(kappa1), 50.0);
+      const clampedK2 = Math.min(Math.abs(kappa2), 50.0);
 
-      scales[i * 3] = tangentScale;
-      scales[i * 3 + 1] = tangentScale;
-      scales[i * 3 + 2] = normalScale;
+      // Scale in principal directions
+      const scale1 = baseScale / (1.0 + clampedK1 * curvatureFactor);  // Along max curvature direction
+      const scale2 = baseScale / (1.0 + clampedK2 * curvatureFactor);  // Along min curvature direction
+      const scaleN = baseScale * 0.1;  // Very thin along normal (disk-like)
 
-      // Compute quaternion to rotate Z-axis to normal direction
-      // Using the half-angle formula: q = [sin(θ/2)*axis, cos(θ/2)]
-      const up = [0, 0, 1];
-      const dot = nx * up[0] + ny * up[1] + nz * up[2];
+      // Store scales: x = principal dir 1, y = principal dir 2, z = normal
+      scales[i * 3] = scale1;
+      scales[i * 3 + 1] = scale2;
+      scales[i * 3 + 2] = scaleN;
+
+      // Step 1: Compute quaternion to align Z-axis with surface normal
+      let qNormal = [0, 0, 0, 1];  // [x, y, z, w]
+      const dot = nz;  // dot([0,0,1], normal) = nz
 
       if (dot > 0.9999) {
         // Normal ≈ +Z, identity quaternion
-        rotations[i * 4] = 0;
-        rotations[i * 4 + 1] = 0;
-        rotations[i * 4 + 2] = 0;
-        rotations[i * 4 + 3] = 1;
+        qNormal = [0, 0, 0, 1];
       } else if (dot < -0.9999) {
         // Normal ≈ -Z, 180° rotation around X
-        rotations[i * 4] = 1;
-        rotations[i * 4 + 1] = 0;
-        rotations[i * 4 + 2] = 0;
-        rotations[i * 4 + 3] = 0;
+        qNormal = [1, 0, 0, 0];
       } else {
-        // General case: axis = normalize(up × normal), angle = acos(dot)
-        const ax = up[1] * nz - up[2] * ny;
-        const ay = up[2] * nx - up[0] * nz;
-        const az = up[0] * ny - up[1] * nx;
-        const axisLen = Math.sqrt(ax * ax + ay * ay + az * az);
-
+        // General case: axis = normalize([0,0,1] × normal) = normalize([-ny, nx, 0])
+        const ax = -ny;
+        const ay = nx;
+        const axisLen = Math.sqrt(ax * ax + ay * ay);
         const halfAngle = Math.acos(dot) * 0.5;
         const sinHalf = Math.sin(halfAngle);
         const cosHalf = Math.cos(halfAngle);
+        qNormal = [
+          (ax / axisLen) * sinHalf,
+          (ay / axisLen) * sinHalf,
+          0,
+          cosHalf
+        ];
+      }
 
-        rotations[i * 4] = (ax / axisLen) * sinHalf;
-        rotations[i * 4 + 1] = (ay / axisLen) * sinHalf;
-        rotations[i * 4 + 2] = (az / axisLen) * sinHalf;
-        rotations[i * 4 + 3] = cosHalf;
+      // Step 2: Compute rotation in tangent plane by principal direction angle
+      // This rotates around the normal (Z-axis in local space) by the principal angle
+      if (angle !== 0 && k1 && k2) {
+        const halfPrincipal = angle * 0.5;
+        const qPrincipal = [
+          0,
+          0,
+          Math.sin(halfPrincipal),
+          Math.cos(halfPrincipal)
+        ];
+
+        // Combine rotations: qTotal = qNormal * qPrincipal
+        // Quaternion multiplication: q1 * q2
+        const q1 = qNormal;
+        const q2 = qPrincipal;
+        rotations[i * 4] = q1[3]*q2[0] + q1[0]*q2[3] + q1[1]*q2[2] - q1[2]*q2[1];  // x
+        rotations[i * 4 + 1] = q1[3]*q2[1] - q1[0]*q2[2] + q1[1]*q2[3] + q1[2]*q2[0];  // y
+        rotations[i * 4 + 2] = q1[3]*q2[2] + q1[0]*q2[1] - q1[1]*q2[0] + q1[2]*q2[3];  // z
+        rotations[i * 4 + 3] = q1[3]*q2[3] - q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2];  // w
+      } else {
+        // No principal angle, just use normal alignment
+        rotations[i * 4] = qNormal[0];
+        rotations[i * 4 + 1] = qNormal[1];
+        rotations[i * 4 + 2] = qNormal[2];
+        rotations[i * 4 + 3] = qNormal[3];
       }
     }
 
@@ -659,6 +793,9 @@ export class GPUSampler {
       colors,
       scales,
       rotations,
+      k1,
+      k2,
+      principalAngles,
       count,
       anisotropic: true
     };
