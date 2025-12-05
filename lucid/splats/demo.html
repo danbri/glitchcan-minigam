@@ -385,9 +385,10 @@
         <div class="section-title">Convert</div>
         <div class="control-row">
           <label>Sampling Mode</label>
-          <select id="samplingMode" style="width: 90px; padding: 4px;">
-            <option value="cpu">CPU</option>
-            <option value="gpu" selected>GPU (WebGL2)</option>
+          <select id="samplingMode" style="width: 110px; padding: 4px;">
+            <option value="3dgs" selected>3DGS (Gemini)</option>
+            <option value="gpu">GPU (WebGL2)</option>
+            <option value="cpu">CPU (Legacy)</option>
           </select>
         </div>
         <div class="control-row">
@@ -494,13 +495,18 @@
       InstancedSplatRenderer,
       GPUSampler,
       QuickTrainer,
-      GaussianCloud
+      GaussianCloud,
+      import3DGS
     } from './index.js';
 
-    // Use Lucid's existing raymarcher for GLSL generation
+    // Use Lucid's existing raymarcher for GLSL generation (fallback)
     import { SimpleRaymarcher } from '../ui/raymarcher.js';
     import { generateGlslFromJson } from '../core/json-codegen.js';
     import { loadJsonScene } from '../core/json-loader.js';
+
+    // Lazy-load Gemini's true 3DGS generator
+    let SDFGaussianSampler = null;
+    let SplatExporter = null;
 
     // State
     let currentScene = null;
@@ -735,7 +741,10 @@
         currentScene = await resp.json();
         log(`Loaded: ${currentScene.title || path}`);
 
-        if (samplingMode === 'gpu') {
+        if (samplingMode === '3dgs') {
+          // Gemini's true 3DGS generator with curvature-based covariance
+          await loadAndConvert3DGS(resolution, targetSplats, splatScale);
+        } else if (samplingMode === 'gpu') {
           // GPU-accelerated path using WebGL2 raymarching
           await loadAndConvertGPU(resolution, targetSplats, splatScale);
         } else {
@@ -776,6 +785,82 @@
       currentBundle = await converter.convert(currentScene, sdfEvaluator);
 
       log(`CPU converted: ${currentBundle.templateClouds.size} templates`);
+    }
+
+    async function loadAndConvert3DGS(resolution, targetSplats, splatScale) {
+      log(`Using Gemini's true 3DGS generator (resolution ${resolution})...`);
+      updateStatus('Loading THREE.js...', 20);
+
+      // Lazy load the 3DGS module (has top-level await for THREE.js)
+      if (!SDFGaussianSampler) {
+        try {
+          const module = await import3DGS();
+          SDFGaussianSampler = module.SDFGaussianSampler;
+          SplatExporter = module.SplatExporter;
+          log('THREE.js and 3DGS module loaded');
+        } catch (err) {
+          log(`Failed to load 3DGS module: ${err.message}`);
+          throw err;
+        }
+      }
+
+      updateStatus('Computing scene bounds...', 30);
+      const bounds = computeSceneBounds(currentScene);
+      log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
+
+      // Create SDF evaluator from the scene
+      const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
+
+      // Wrap evaluator for SDFGaussianSampler format (returns {distance, color})
+      const sdfFunc = (x, y, z) => {
+        const result = sdfEvaluator(currentScene.root, x, y, z);
+        return {
+          distance: result.distance,
+          color: result.color || [0.8, 0.8, 0.8]
+        };
+      };
+
+      updateStatus('Sampling with curvature analysis...', 40);
+      const sampler = new SDFGaussianSampler({
+        resolution: resolution,
+        bounds: { min: bounds.min, max: bounds.max },
+        threshold: 0.001
+      });
+
+      const startTime = performance.now();
+      const data = sampler.generate(sdfFunc);
+      const elapsed = performance.now() - startTime;
+      log(`3DGS generated ${data.count} splats in ${elapsed.toFixed(0)}ms`);
+
+      updateStatus('Building Gaussian cloud...', 80);
+
+      // Convert to GaussianCloud format for our renderer
+      const cloud = new GaussianCloud(data.count);
+      for (let i = 0; i < data.count; i++) {
+        cloud.setGaussian(i, {
+          position: [data.positions[i*3], data.positions[i*3+1], data.positions[i*3+2]],
+          scale: [data.scales[i*3], data.scales[i*3+1], data.scales[i*3+2]],
+          rotation: [data.rotations[i*4], data.rotations[i*4+1], data.rotations[i*4+2], data.rotations[i*4+3]],
+          color: [data.colors[i*3], data.colors[i*3+1], data.colors[i*3+2]],
+          opacity: 0.95
+        });
+      }
+
+      currentBundle = {
+        templateClouds: new Map([['3dgs_scene', cloud]]),
+        manifest: {
+          instances: [{
+            id: '3dgs_instance',
+            template: '3dgs_scene',
+            transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+          }]
+        },
+        getInstances() { return this.manifest.instances; },
+        // Store raw data for PLY export
+        _rawData: data
+      };
+
+      log(`3DGS complete: ${data.count} Gaussians with curvature-based covariance`);
     }
 
     async function loadAndConvertGPU(resolution, targetSplats, splatScale) {

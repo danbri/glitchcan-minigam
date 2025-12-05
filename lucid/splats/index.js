@@ -14,8 +14,15 @@ import { QuickTrainer } from './training/trainer.js';
 import { InstancedSplatRenderer } from './render/renderer.js';
 import { GPUSampler } from './core/gpu-sampler.js';
 
-// True 3DGS generation (requires THREE.js)
-import { SDFGaussianSampler, SplatExporter, createSplatMaterial, createSplatMesh } from './core/sdf-to-splats.js';
+// True 3DGS generation is LAZY loaded (has top-level await for THREE.js)
+// Use: const { SDFGaussianSampler, SplatExporter } = await import3DGS();
+let _3dgsModule = null;
+export async function import3DGS() {
+  if (!_3dgsModule) {
+    _3dgsModule = await import('./core/sdf-to-splats.js');
+  }
+  return _3dgsModule;
+}
 
 export {
   // Original samplers (surfels)
@@ -28,12 +35,7 @@ export {
   TemplateExtractor,
   SplatBundle,
   QuickTrainer,
-  InstancedSplatRenderer,
-  // True 3DGS (requires THREE.js)
-  SDFGaussianSampler,
-  SplatExporter,
-  createSplatMaterial,
-  createSplatMesh
+  InstancedSplatRenderer
 };
 
 /**
@@ -464,9 +466,6 @@ export default {
   SplatBundle,
   QuickTrainer,
   InstancedSplatRenderer,
-  // True 3DGS (requires THREE.js)
-  SDFGaussianSampler,
-  SplatExporter,
-  createSplatMaterial,
-  createSplatMesh
+  // True 3DGS (lazy loaded - use import3DGS())
+  import3DGS
 };
