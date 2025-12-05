@@ -205,12 +205,11 @@
       color: #000;
     }
 
-    /* Toolbar overlay */
+    /* Toolbar overlay - positioned to right of panel */
     .toolbar {
       position: fixed;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 330px;
       display: flex;
       gap: 8px;
       background: rgba(20, 25, 45, 0.9);
@@ -218,6 +217,10 @@
       border-radius: 25px;
       border: 1px solid rgba(0, 217, 255, 0.3);
       z-index: 100;
+    }
+
+    .panel.minimized ~ .toolbar {
+      left: 80px;
     }
 
     .toolbar button {
@@ -343,12 +346,9 @@
           <input type="range" id="splatScale" min="0.5" max="4.0" step="0.1" value="2.5">
           <span class="value" id="splatScaleVal">2.5x</span>
         </div>
-        <div class="btn-row">
-          <button id="loadBtn">Load</button>
-          <button id="convertBtn" class="primary" disabled>Convert</button>
-        </div>
+        <button id="goBtn" class="primary">Load &amp; Convert</button>
         <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-        <div class="status-text" id="statusText">Ready</div>
+        <div class="status-text" id="statusText">Select scene above, then click Load &amp; Convert</div>
       </div>
 
       <!-- Camera -->
@@ -438,7 +438,16 @@
       setupEventListeners();
       resize();
       startAnimation();
-      log('Ready. Select a scene and convert.');
+      log('Gaussian Splat Viewer');
+
+      // Auto-load default scene after short delay
+      setTimeout(() => {
+        const select = document.getElementById('sceneSelect');
+        if (select.value) {
+          log('Auto-loading default scene...');
+          loadAndConvert();
+        }
+      }, 500);
     }
 
     function setupEventListeners() {
@@ -467,9 +476,13 @@
         });
       });
 
-      // Load & Convert
-      document.getElementById('loadBtn').addEventListener('click', loadScene);
-      document.getElementById('convertBtn').addEventListener('click', convertScene);
+      // Load & Convert - single button workflow
+      document.getElementById('goBtn').addEventListener('click', loadAndConvert);
+
+      // Also trigger on scene change
+      document.getElementById('sceneSelect').addEventListener('change', () => {
+        updateStatus('Click "Load & Convert" to render', 0);
+      });
 
       // Camera modes
       const camModes = ['camOrbit', 'camHelicopter', 'camTop', 'camFront'];
@@ -591,53 +604,59 @@
       document.getElementById('camHeightVal').textContent = '2.0';
     }
 
-    async function loadScene() {
+    async function loadAndConvert() {
       const path = document.getElementById('sceneSelect').value;
-      if (!path) { log('Select a scene first'); return; }
+      if (!path) {
+        log('Please select a scene first');
+        updateStatus('Select a scene from the dropdown', 0);
+        return;
+      }
+
+      const goBtn = document.getElementById('goBtn');
+      goBtn.disabled = true;
+      goBtn.textContent = 'Loading...';
 
       try {
+        // Step 1: Load scene
         log(`Loading ${path}...`);
+        updateStatus('Loading scene...', 10);
+
         const resp = await fetch(`../scenes/${path}`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         currentScene = await resp.json();
         log(`Loaded: ${currentScene.title || path}`);
-        document.getElementById('convertBtn').disabled = false;
-      } catch (err) {
-        log(`Error: ${err.message}`);
-      }
-    }
 
-    async function convertScene() {
-      if (!currentScene) return;
-
-      const convertBtn = document.getElementById('convertBtn');
-      convertBtn.disabled = true;
-
-      try {
-        log('Converting...');
-        updateStatus('Converting...', 0);
+        // Step 2: Convert to splats
+        updateStatus('Converting to splats...', 30);
 
         const converter = new LucidToSplats({
           samplerResolution: parseInt(document.getElementById('sampleRes').value),
           targetSplatsPerTemplate: parseInt(document.getElementById('targetSplats').value),
           splatScaleMultiplier: parseFloat(document.getElementById('splatScale').value),
-          onProgress: ({ stage, progress }) => updateStatus(stage, progress)
+          onProgress: ({ stage, progress }) => updateStatus(stage, 30 + progress * 0.6)
         });
 
         const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
         currentBundle = await converter.convert(currentScene, sdfEvaluator);
 
-        log(`Done: ${currentBundle.templateClouds.size} templates`);
+        log(`Converted: ${currentBundle.templateClouds.size} templates`);
+
+        // Step 3: Setup renderer
+        updateStatus('Setting up renderer...', 95);
         setupRenderer();
+
         document.getElementById('tbDownload').disabled = false;
-        updateStatus('Ready', 100);
+        updateStatus('Done! Drag to rotate, scroll to zoom', 100);
+        log('Ready - drag to rotate, scroll to zoom');
 
       } catch (err) {
         log(`Error: ${err.message}`);
+        updateStatus(`Error: ${err.message}`, 0);
         console.error(err);
       } finally {
-        convertBtn.disabled = false;
+        goBtn.disabled = false;
+        goBtn.textContent = 'Load & Convert';
       }
     }
 
