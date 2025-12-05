@@ -788,79 +788,153 @@
     }
 
     async function loadAndConvert3DGS(resolution, targetSplats, splatScale) {
-      log(`Using Gemini's true 3DGS generator (resolution ${resolution})...`);
-      updateStatus('Loading THREE.js...', 20);
+      const numDirections = parseInt(document.getElementById('sampleDirs').value);
+      log(`Using GPU + 3DGS covariance (${resolution}² × ${numDirections} dirs)...`);
 
-      // Lazy load the 3DGS module (has top-level await for THREE.js)
-      if (!SDFGaussianSampler) {
-        try {
-          const module = await import3DGS();
-          SDFGaussianSampler = module.SDFGaussianSampler;
-          SplatExporter = module.SplatExporter;
-          log('THREE.js and 3DGS module loaded');
-        } catch (err) {
-          log(`Failed to load 3DGS module: ${err.message}`);
-          throw err;
+      let step = 'init';
+      try {
+        // Step 1: Generate GLSL using Lucid's existing codegen
+        step = 'create raymarcher';
+        if (!glslGenerator) {
+          const hiddenCanvas = document.createElement('canvas');
+          hiddenCanvas.width = 1;
+          hiddenCanvas.height = 1;
+          glslGenerator = new SimpleRaymarcher(hiddenCanvas);
+        }
+
+        step = 'loadJsonScene';
+        updateStatus('Loading scene...', 20);
+        const processedScene = loadJsonScene(currentScene);
+
+        step = 'generateGlsl';
+        updateStatus('Generating GLSL...', 25);
+        const glslCode = generateGlslFromJson(processedScene);
+        log(`Generated ${glslCode.length} chars of GLSL`);
+
+        step = 'compile GLSL';
+        updateStatus('Compiling GLSL...', 30);
+        glslGenerator.updateScene(glslCode);
+        glslGenerator.overrideTime = 0;
+
+        step = 'computeBounds';
+        updateStatus('Computing bounds...', 35);
+        const bounds = computeSceneBounds(currentScene);
+        log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
+
+        // Step 2: GPU sample using existing GPUSampler
+        step = 'GPU sample';
+        updateStatus(`GPU sampling (${numDirections} dirs)...`, 40);
+        const gpuSampler = new GPUSampler({
+          resolution: resolution,
+          maxDistance: 30.0,
+          hitThreshold: 0.001,
+          maxSteps: 200
+        });
+
+        const startTime = performance.now();
+        const sampleResult = gpuSampler.sample(glslCode, bounds, {
+          numDirections: numDirections,
+          deduplicationRadius: 0.015
+        });
+        log(`GPU sampled ${sampleResult.count} pts in ${(performance.now() - startTime).toFixed(0)}ms`);
+
+        // Step 3: Convert to 3DGS format with curvature-based covariance
+        step = 'compute covariance';
+        updateStatus('Computing 3DGS covariance...', 70);
+
+        const baseScale = splatScale * 0.03;
+        const data = compute3DGSCovariance(sampleResult, baseScale);
+        log(`3DGS: ${data.count} Gaussians with anisotropic covariance`);
+
+        gpuSampler.dispose();
+
+        // Step 4: Build cloud
+        step = 'build cloud';
+        updateStatus('Building Gaussian cloud...', 85);
+        const cloud = new GaussianCloud(data.count);
+        for (let i = 0; i < data.count; i++) {
+          cloud.setGaussian(i, {
+            position: [data.positions[i*3], data.positions[i*3+1], data.positions[i*3+2]],
+            scale: [data.scales[i*3], data.scales[i*3+1], data.scales[i*3+2]],
+            rotation: [data.rotations[i*4], data.rotations[i*4+1], data.rotations[i*4+2], data.rotations[i*4+3]],
+            color: [data.colors[i*3], data.colors[i*3+1], data.colors[i*3+2]],
+            opacity: 0.95
+          });
+        }
+
+        currentBundle = {
+          templateClouds: new Map([['3dgs_scene', cloud]]),
+          manifest: {
+            instances: [{
+              id: '3dgs_instance',
+              template: '3dgs_scene',
+              transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+            }]
+          },
+          getInstances() { return this.manifest.instances; },
+          _rawData: data
+        };
+
+        log(`3DGS complete: ${data.count} Gaussians`);
+
+      } catch (err) {
+        log(`❌ Error at step "${step}": ${err.message}`);
+        console.error(`Error at step: ${step}`, err);
+        throw err;
+      }
+    }
+
+    // Compute 3DGS covariance from GPU sample results (curvature → scale)
+    function compute3DGSCovariance(sampleResult, baseScale) {
+      const { positions, normals, colors, curvatures, count } = sampleResult;
+      const scales = new Float32Array(count * 3);
+      const rotations = new Float32Array(count * 4);
+
+      for (let i = 0; i < count; i++) {
+        const nx = normals[i * 3];
+        const ny = normals[i * 3 + 1];
+        const nz = normals[i * 3 + 2];
+        const k = Math.abs(curvatures[i]);
+
+        // Scale is inverse of curvature: flat = big splat, curved = small splat
+        const clampedK = Math.min(k, 50.0);
+        const curvatureScale = 1.0 / (1.0 + clampedK * 5.0);
+
+        // Anisotropic: wide on surface plane, thin along normal
+        const tangentScale = baseScale * curvatureScale;
+        const normalScale = baseScale * 0.1 * curvatureScale;
+
+        scales[i * 3] = tangentScale;
+        scales[i * 3 + 1] = tangentScale;
+        scales[i * 3 + 2] = normalScale;
+
+        // Quaternion to align Z-axis to surface normal
+        const dot = nz; // dot([0,0,1], [nx,ny,nz])
+        if (dot > 0.9999) {
+          rotations[i * 4] = 0;
+          rotations[i * 4 + 1] = 0;
+          rotations[i * 4 + 2] = 0;
+          rotations[i * 4 + 3] = 1;
+        } else if (dot < -0.9999) {
+          rotations[i * 4] = 1;
+          rotations[i * 4 + 1] = 0;
+          rotations[i * 4 + 2] = 0;
+          rotations[i * 4 + 3] = 0;
+        } else {
+          // axis = cross([0,0,1], normal) = [-ny, nx, 0]
+          const ax = -ny, ay = nx, az = 0;
+          const axisLen = Math.sqrt(ax * ax + ay * ay);
+          const halfAngle = Math.acos(dot) * 0.5;
+          const sinHalf = Math.sin(halfAngle);
+          const cosHalf = Math.cos(halfAngle);
+          rotations[i * 4] = (ax / axisLen) * sinHalf;
+          rotations[i * 4 + 1] = (ay / axisLen) * sinHalf;
+          rotations[i * 4 + 2] = 0;
+          rotations[i * 4 + 3] = cosHalf;
         }
       }
 
-      updateStatus('Computing scene bounds...', 30);
-      const bounds = computeSceneBounds(currentScene);
-      log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
-
-      // Create SDF evaluator from the scene
-      const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
-
-      // Wrap evaluator for SDFGaussianSampler format (returns {distance, color})
-      const sdfFunc = (x, y, z) => {
-        const result = sdfEvaluator(currentScene.root, x, y, z);
-        return {
-          distance: result.distance,
-          color: result.color || [0.8, 0.8, 0.8]
-        };
-      };
-
-      updateStatus('Sampling with curvature analysis...', 40);
-      const sampler = new SDFGaussianSampler({
-        resolution: resolution,
-        bounds: { min: bounds.min, max: bounds.max },
-        threshold: 0.001
-      });
-
-      const startTime = performance.now();
-      const data = sampler.generate(sdfFunc);
-      const elapsed = performance.now() - startTime;
-      log(`3DGS generated ${data.count} splats in ${elapsed.toFixed(0)}ms`);
-
-      updateStatus('Building Gaussian cloud...', 80);
-
-      // Convert to GaussianCloud format for our renderer
-      const cloud = new GaussianCloud(data.count);
-      for (let i = 0; i < data.count; i++) {
-        cloud.setGaussian(i, {
-          position: [data.positions[i*3], data.positions[i*3+1], data.positions[i*3+2]],
-          scale: [data.scales[i*3], data.scales[i*3+1], data.scales[i*3+2]],
-          rotation: [data.rotations[i*4], data.rotations[i*4+1], data.rotations[i*4+2], data.rotations[i*4+3]],
-          color: [data.colors[i*3], data.colors[i*3+1], data.colors[i*3+2]],
-          opacity: 0.95
-        });
-      }
-
-      currentBundle = {
-        templateClouds: new Map([['3dgs_scene', cloud]]),
-        manifest: {
-          instances: [{
-            id: '3dgs_instance',
-            template: '3dgs_scene',
-            transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
-          }]
-        },
-        getInstances() { return this.manifest.instances; },
-        // Store raw data for PLY export
-        _rawData: data
-      };
-
-      log(`3DGS complete: ${data.count} Gaussians with curvature-based covariance`);
+      return { positions, normals, colors, scales, rotations, count };
     }
 
     async function loadAndConvertGPU(resolution, targetSplats, splatScale) {
