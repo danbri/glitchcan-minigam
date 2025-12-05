@@ -70,16 +70,27 @@ export class LucidToSplats {
         // Get bounds for this template
         const bounds = extractor.getTemplateBounds(templateId);
 
-        // Sample SDF to point cloud
+        // Estimate appropriate base scale from bounds
+        const boundsSize = Math.max(
+          bounds.max[0] - bounds.min[0],
+          bounds.max[1] - bounds.min[1],
+          bounds.max[2] - bounds.min[2]
+        );
+        const baseScale = boundsSize / (this.options.samplerResolution * 0.5);
+
+        // Sample SDF to point cloud with curvature for anisotropic splats
         const sampler = new SDFSampler({
           resolution: this.options.samplerResolution,
-          bounds: bounds
+          bounds: bounds,
+          curvatureDelta: baseScale * 0.5  // Scale curvature sampling appropriately
         });
 
         // Create SDF function for this template
         const sdfFunc = (x, y, z) => sdfEvaluator(templateDef, x, y, z);
         const pointCloud = sampler.sampleRayMarch(sdfFunc, {
-          numRays: this.options.samplerResolution * this.options.samplerResolution * 10
+          numRays: this.options.samplerResolution * this.options.samplerResolution * 10,
+          computeCurvature: true,  // Enable anisotropic splats
+          baseScale: baseScale
         });
 
         if (pointCloud.count === 0) {

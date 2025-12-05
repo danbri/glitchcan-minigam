@@ -337,6 +337,7 @@ export class GaussianTrainer {
 
 /**
  * Quick training for MVP - minimal optimization
+ * Now supports anisotropic splats from curvature data
  */
 export class QuickTrainer {
   constructor(options = {}) {
@@ -345,10 +346,10 @@ export class QuickTrainer {
   }
 
   /**
-   * Quick fit: just initialize from points with local scale estimation
+   * Quick fit: initialize from points, using curvature-based anisotropy if available
    */
   async train(pointCloud) {
-    const { positions, colors, count } = pointCloud;
+    const { positions, colors, rotations, scales, count, anisotropic } = pointCloud;
 
     // Subsample if too many points
     let indices = Array.from({ length: count }, (_, i) => i);
@@ -358,31 +359,49 @@ export class QuickTrainer {
 
     const cloud = new GaussianCloud();
 
-    // Estimate spacing based on point density
+    // Estimate spacing based on point density (for fallback isotropic scale)
     const bounds = this.computeBounds(positions, count);
     const volume = (bounds.max[0] - bounds.min[0]) *
                    (bounds.max[1] - bounds.min[1]) *
                    (bounds.max[2] - bounds.min[2]);
 
-    // Use actual sample count for spacing estimate
     const sampleCount = indices.length;
     const avgSpacing = Math.pow(volume / sampleCount, 1/3);
+    const fallbackScale = avgSpacing * 0.8 * this.scaleMultiplier;
 
-    // Scale splats to overlap and form coherent surface
-    // Base scale ensures coverage, multiplier allows tuning
-    const scale = avgSpacing * 0.8 * this.scaleMultiplier;
-
-    console.log(`QuickTrainer: ${sampleCount} splats, scale=${scale.toFixed(4)}, bounds volume=${volume.toFixed(2)}`);
+    console.log(`QuickTrainer: ${sampleCount} splats, anisotropic=${!!anisotropic}, fallbackScale=${fallbackScale.toFixed(4)}`);
 
     for (const i of indices) {
-      const idx = i * 3;
+      const posIdx = i * 3;
+      const quatIdx = i * 4;
+
+      let splatScale, splatRotation;
+
+      if (anisotropic && scales && rotations) {
+        // Use curvature-derived anisotropic scales and rotations
+        splatScale = [
+          scales[posIdx] * this.scaleMultiplier,
+          scales[posIdx + 1] * this.scaleMultiplier,
+          scales[posIdx + 2] * this.scaleMultiplier
+        ];
+        splatRotation = [
+          rotations[quatIdx],
+          rotations[quatIdx + 1],
+          rotations[quatIdx + 2],
+          rotations[quatIdx + 3]
+        ];
+      } else {
+        // Isotropic fallback
+        splatScale = [fallbackScale, fallbackScale, fallbackScale];
+        splatRotation = [1, 0, 0, 0];
+      }
 
       cloud.add(new Gaussian({
-        position: [positions[idx], positions[idx + 1], positions[idx + 2]],
-        scale: [scale, scale, scale],
-        rotation: [1, 0, 0, 0],
-        color: colors ? [colors[idx], colors[idx + 1], colors[idx + 2]] : [0.8, 0.8, 0.8],
-        opacity: 0.7
+        position: [positions[posIdx], positions[posIdx + 1], positions[posIdx + 2]],
+        scale: splatScale,
+        rotation: splatRotation,
+        color: colors ? [colors[posIdx], colors[posIdx + 1], colors[posIdx + 2]] : [0.8, 0.8, 0.8],
+        opacity: 0.8
       }));
     }
 
