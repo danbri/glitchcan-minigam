@@ -11,8 +11,9 @@ import { TemplateExtractor } from './core/template-extractor.js';
 import { SplatBundle } from './core/bundle.js';
 import { QuickTrainer } from './training/trainer.js';
 import { InstancedSplatRenderer } from './render/renderer.js';
+import { GPUSampler } from './core/gpu-sampler.js';
 
-export { SDFSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, QuickTrainer, InstancedSplatRenderer };
+export { SDFSampler, GPUSampler, Gaussian, GaussianCloud, TemplateExtractor, SplatBundle, QuickTrainer, InstancedSplatRenderer };
 
 /**
  * Main conversion pipeline: Lucid scene -> Instanced splat bundle
@@ -359,11 +360,80 @@ export async function quickConvertAndRender(sceneJson, canvas, options = {}) {
   return { bundle, renderer };
 }
 
+/**
+ * GPU-accelerated conversion: Uses WebGL2 raymarching on GPU
+ * Requires the main Lucid codegen for GLSL generation
+ *
+ * @param {string} sceneGlsl - GLSL code from generateGlslFromJson()
+ * @param {Object} bounds - Scene bounds { min: [x,y,z], max: [x,y,z] }
+ * @param {HTMLCanvasElement} canvas - Canvas for rendering
+ * @param {Object} options - Conversion options
+ */
+export async function gpuConvertAndRender(sceneGlsl, bounds, canvas, options = {}) {
+  const resolution = options.gpuResolution || 256;
+  const targetSplats = options.targetSplatsPerTemplate || 4000;
+  const scaleMultiplier = options.splatScaleMultiplier || 1.5;
+
+  console.log(`GPU sampling at ${resolution}x${resolution} from 6 directions...`);
+
+  // Create GPU sampler
+  const gpuSampler = new GPUSampler({
+    resolution: resolution,
+    maxDistance: options.maxDistance || 20.0,
+    hitThreshold: options.hitThreshold || 0.001,
+    maxSteps: options.maxSteps || 128
+  });
+
+  // Sample the scene on GPU
+  const sampleResult = gpuSampler.sample(sceneGlsl, bounds, {
+    deduplicationRadius: options.deduplicationRadius || 0.02
+  });
+
+  console.log(`GPU sampled ${sampleResult.count} surface points`);
+
+  // Estimate base scale from bounds
+  const boundsSize = Math.max(
+    bounds.max[0] - bounds.min[0],
+    bounds.max[1] - bounds.min[1],
+    bounds.max[2] - bounds.min[2]
+  );
+  const baseScale = boundsSize / (resolution * 0.3);
+
+  // Convert to point cloud format with anisotropic data
+  const pointCloud = gpuSampler.toPointCloud(sampleResult, {
+    baseScale: baseScale * scaleMultiplier
+  });
+
+  // Train Gaussians
+  const trainer = new QuickTrainer({
+    targetCount: targetSplats,
+    scaleMultiplier: scaleMultiplier
+  });
+
+  const cloud = await trainer.train(pointCloud);
+  console.log(`Trained ${cloud.count} Gaussians from GPU samples`);
+
+  // Clean up GPU resources
+  gpuSampler.dispose();
+
+  // Create renderer
+  const renderer = new InstancedSplatRenderer(canvas, options);
+  renderer.addTemplate('gpu_scene', cloud);
+  renderer.addInstance('gpu_scene', {
+    templateId: 'gpu_scene',
+    transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+  });
+
+  return { cloud, renderer };
+}
+
 export default {
   LucidToSplats,
   createSimpleSdfEvaluator,
   quickConvertAndRender,
+  gpuConvertAndRender,
   SDFSampler,
+  GPUSampler,
   Gaussian,
   GaussianCloud,
   TemplateExtractor,
