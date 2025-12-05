@@ -13,6 +13,13 @@ import { SplatBundle } from './core/bundle.js';
 import { QuickTrainer } from './training/trainer.js';
 import { InstancedSplatRenderer } from './render/renderer.js';
 import { GPUSampler } from './core/gpu-sampler.js';
+import {
+  exportToPLY,
+  exportToSplat,
+  exportGaussians,
+  downloadFile,
+  createDownloadURL
+} from './core/exporter.js';
 
 // True 3DGS generation is LAZY loaded (has top-level await for THREE.js)
 // Use: const { SDFGaussianSampler, SplatExporter } = await import3DGS();
@@ -35,7 +42,13 @@ export {
   TemplateExtractor,
   SplatBundle,
   QuickTrainer,
-  InstancedSplatRenderer
+  InstancedSplatRenderer,
+  // Exporters (3DGS file formats)
+  exportToPLY,
+  exportToSplat,
+  exportGaussians,
+  downloadFile,
+  createDownloadURL
 };
 
 /**
@@ -467,5 +480,11 @@ export default {
   QuickTrainer,
   InstancedSplatRenderer,
   // True 3DGS (lazy loaded - use import3DGS())
-  import3DGS
+  import3DGS,
+  // Exporters (3DGS file formats)
+  exportToPLY,
+  exportToSplat,
+  exportGaussians,
+  downloadFile,
+  createDownloadURL
 };
