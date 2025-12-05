@@ -613,7 +613,7 @@ void main() {
     // Pass to fragment shader
     v_color = a_color * a_instanceColor.rgb;
     v_opacity = a_opacity * a_instanceColor.a;
-    v_coord = a_quadVertex;
+    v_coord = localOffset;  // Pass pixel-space offset, NOT quad coordinates!
 
     // Pass inverse covariance for elliptical Gaussian
     // inv(cov2D) for 2x2 symmetric: [d, -b; -b, a] / det
@@ -630,7 +630,7 @@ in vec3 v_color;
 in float v_opacity;
 in vec2 v_conic;    // Inverse covariance: (a, b)
 in vec2 v_center;   // Inverse covariance: (c, unused) where c = invCov[1][1]
-in vec2 v_coord;    // Quad coordinate (-2 to 2)
+in vec2 v_coord;    // Pixel-space offset from splat center
 
 out vec4 fragColor;
 
@@ -642,7 +642,7 @@ void main() {
     float c = v_center.x;
 
     // Evaluate elliptical Gaussian: exp(-0.5 * x^T * invCov * x)
-    // For coordinate in quad space, we need to scale back
+    // v_coord is in pixel space, matching the inverse covariance
     vec2 d = v_coord;
 
     float exponent = -0.5 * (a * d.x * d.x + 2.0 * b * d.x * d.y + c * d.y * d.y);
