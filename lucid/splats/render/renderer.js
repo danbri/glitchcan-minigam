@@ -32,6 +32,14 @@ export class InstancedSplatRenderer {
     this.instances = [];
     this.time = 0;
 
+    // Particle effects settings
+    this.effects = {
+      swirl: false,
+      lighting: true,
+      noise: false,
+      pulse: false
+    };
+
     this.camera = {
       position: [0, 0, 5],
       target: [0, 0, 0],
@@ -64,7 +72,12 @@ export class InstancedSplatRenderer {
       u_projMatrix: gl.getUniformLocation(this.program, 'u_projMatrix'),
       u_viewport: gl.getUniformLocation(this.program, 'u_viewport'),
       u_time: gl.getUniformLocation(this.program, 'u_time'),
-      u_focal: gl.getUniformLocation(this.program, 'u_focal')
+      u_focal: gl.getUniformLocation(this.program, 'u_focal'),
+      // Effects uniforms
+      u_fxSwirl: gl.getUniformLocation(this.program, 'u_fxSwirl'),
+      u_fxLighting: gl.getUniformLocation(this.program, 'u_fxLighting'),
+      u_fxNoise: gl.getUniformLocation(this.program, 'u_fxNoise'),
+      u_fxPulse: gl.getUniformLocation(this.program, 'u_fxPulse')
     };
 
     // Create quad vertices for billboards
@@ -254,6 +267,7 @@ export class InstancedSplatRenderer {
 
   setTime(time) { this.time = time; }
   setCamera(camera) { Object.assign(this.camera, camera); }
+  setEffects(effects) { Object.assign(this.effects, effects); }
 
   render() {
     const gl = this.gl;
@@ -283,6 +297,12 @@ export class InstancedSplatRenderer {
     gl.uniform2f(this.locations.u_viewport, width, height);
     gl.uniform2f(this.locations.u_focal, focalX, focalY);
     gl.uniform1f(this.locations.u_time, this.time);
+
+    // Effects uniforms
+    gl.uniform1f(this.locations.u_fxSwirl, this.effects.swirl ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxLighting, this.effects.lighting ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxNoise, this.effects.noise ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxPulse, this.effects.pulse ? 1.0 : 0.0);
 
     for (const [templateId, template] of this.templates) {
       this.renderTemplate(templateId, template, viewMatrix);
@@ -505,6 +525,12 @@ uniform vec2 u_viewport;
 uniform vec2 u_focal;
 uniform float u_time;
 
+// Effects uniforms
+uniform float u_fxSwirl;
+uniform float u_fxLighting;
+uniform float u_fxNoise;
+uniform float u_fxPulse;
+
 // Outputs to fragment shader
 out vec3 v_color;
 out float v_opacity;
@@ -522,18 +548,58 @@ mat3 quatToMat(vec4 q) {
     );
 }
 
+// Simple 3D noise function for effects
+float hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+vec3 noise3(vec3 p) {
+    return vec3(
+        hash31(p),
+        hash31(p + vec3(17.1, 31.7, 57.2)),
+        hash31(p + vec3(47.3, 23.9, 89.1))
+    ) * 2.0 - 1.0;
+}
+
 void main() {
     // Build 3D covariance matrix from scale and rotation
     mat3 R = quatToMat(a_rotation);
+
+    // Pulse effect - scale breathing
+    vec3 scale = a_scale;
+    if (u_fxPulse > 0.5) {
+        float pulse = 1.0 + sin(u_time * 2.0 + a_position.x * 3.0) * 0.15;
+        scale *= pulse;
+    }
+
     mat3 S = mat3(
-        a_scale.x * a_scale.x, 0.0, 0.0,
-        0.0, a_scale.y * a_scale.y, 0.0,
-        0.0, 0.0, a_scale.z * a_scale.z
+        scale.x * scale.x, 0.0, 0.0,
+        0.0, scale.y * scale.y, 0.0,
+        0.0, 0.0, scale.z * scale.z
     );
     mat3 cov3D = R * S * transpose(R);
 
     // Apply instance transform to position
-    vec4 worldPos = a_instanceTransform * vec4(a_position, 1.0);
+    vec3 pos = a_position;
+
+    // Swirl effect - spiral motion around Y axis
+    if (u_fxSwirl > 0.5) {
+        float dist = length(pos.xz);
+        float angle = u_time * 0.5 + dist * 2.0;
+        float s = sin(angle), c = cos(angle);
+        pos.xz = mat2(c, -s, s, c) * pos.xz;
+        pos.y += sin(u_time + dist * 3.0) * 0.1;
+    }
+
+    // Noise field effect - jittery displacement
+    if (u_fxNoise > 0.5) {
+        vec3 n = noise3(pos * 5.0 + u_time * 0.5);
+        pos += n * 0.05;
+    }
+
+    vec4 worldPos = a_instanceTransform * vec4(pos, 1.0);
 
     // Transform to view space
     vec4 viewPos = u_viewMatrix * worldPos;
@@ -632,6 +698,9 @@ in vec2 v_conic;    // Inverse covariance: (a, b)
 in vec2 v_center;   // Inverse covariance: (c, unused) where c = invCov[1][1]
 in vec2 v_coord;    // Pixel-space offset from splat center
 
+uniform float u_fxLighting;
+uniform float u_time;
+
 out vec4 fragColor;
 
 void main() {
@@ -657,6 +726,19 @@ void main() {
 
     // Color with subtle ambient boost
     vec3 color = v_color * 1.1 + vec3(0.05);
+
+    // Dynamic lighting effect - rim glow and color shifting
+    if (u_fxLighting > 0.5) {
+        // Use the gaussian falloff for rim lighting
+        float rim = 1.0 - exp(exponent * 0.3);
+        vec3 rimColor = vec3(0.3, 0.5, 1.0) * rim * 0.4;
+        color += rimColor;
+
+        // Subtle color shift based on time
+        float shift = sin(u_time * 0.5) * 0.5 + 0.5;
+        color = mix(color, color.gbr, shift * 0.1);
+    }
+
     color = clamp(color, 0.0, 1.0);
 
     fragColor = vec4(color, alpha);

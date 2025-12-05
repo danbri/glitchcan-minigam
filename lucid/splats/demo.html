@@ -436,6 +436,25 @@
         </div>
       </div>
 
+      <!-- Particle Effects -->
+      <div class="section">
+        <div class="section-title">Effects</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxSwirl"> Swirl Motion
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxLighting" checked> Dynamic Lighting
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxNoise"> Noise Field
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxPulse"> Pulse/Breathe
+          </label>
+        </div>
+      </div>
+
       <!-- Stats -->
       <div class="section">
         <div class="section-title">Stats</div>
@@ -762,88 +781,92 @@
     async function loadAndConvertGPU(resolution, targetSplats, splatScale) {
       const numDirections = parseInt(document.getElementById('sampleDirs').value);
       log(`Using GPU sampling (WebGL2, ${resolution}² × ${numDirections} dirs)...`);
-      updateStatus('Generating GLSL via Lucid raymarcher...', 25);
 
-      // Use Lucid's existing raymarcher for GLSL generation
-      // This avoids duplicating tree traversal and uses battle-tested code
-      if (!glslGenerator) {
-        const hiddenCanvas = document.createElement('canvas');
-        hiddenCanvas.width = 1;
-        hiddenCanvas.height = 1;
-        glslGenerator = new SimpleRaymarcher(hiddenCanvas);
-      }
-
-      // Generate GLSL using Lucid's existing pipeline
-      const processedScene = loadJsonScene(currentScene);
-      const glslCode = generateGlslFromJson(processedScene);
-
-      // Update the raymarcher (validates GLSL compiles)
-      glslGenerator.updateScene(glslCode);
-      glslGenerator.overrideTime = 0; // Freeze animations for sampling
-
-      log(`Generated ${glslCode.length} chars of GLSL (via Lucid)`);
-
-      // Compute scene bounds
-      const bounds = computeSceneBounds(currentScene);
-      log(`Scene bounds: [${bounds.min.map(v => v.toFixed(1)).join(',')}] to [${bounds.max.map(v => v.toFixed(1)).join(',')}]`);
-
-      // Create GPU sampler
-      updateStatus(`GPU raymarching (${numDirections} directions)...`, 45);
-      const gpuSampler = new GPUSampler({
-        resolution: resolution,
-        maxDistance: 30.0,
-        hitThreshold: 0.001,
-        maxSteps: 200
-      });
-
-      // Sample on GPU from multiple directions
-      const startTime = performance.now();
-      const sampleResult = gpuSampler.sample(glslCode, bounds, {
-        numDirections: numDirections,
-        deduplicationRadius: 0.015
-      });
-      const sampleTime = performance.now() - startTime;
-
-      log(`GPU sampled ${sampleResult.count} points in ${sampleTime.toFixed(0)}ms`);
-      updateStatus('Training Gaussians...', 70);
-
-      // Compute base scale from bounds
-      const boundsSize = Math.max(
-        bounds.max[0] - bounds.min[0],
-        bounds.max[1] - bounds.min[1],
-        bounds.max[2] - bounds.min[2]
-      );
-      const baseScale = (boundsSize / resolution) * 1.5 * splatScale;
-
-      // Convert to point cloud
-      const pointCloud = gpuSampler.toPointCloud(sampleResult, { baseScale });
-
-      // Train Gaussians
-      const trainer = new QuickTrainer({
-        targetCount: targetSplats,
-        scaleMultiplier: splatScale
-      });
-
-      const cloud = await trainer.train(pointCloud);
-      log(`Trained ${cloud.count} Gaussians`);
-
-      // Clean up
-      gpuSampler.dispose();
-
-      // Create a simple bundle-like structure for the renderer
-      currentBundle = {
-        templateClouds: new Map([['gpu_scene', cloud]]),
-        manifest: {
-          instances: [{
-            id: 'gpu_instance',
-            template: 'gpu_scene',
-            transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
-          }]
-        },
-        getInstances() {
-          return this.manifest.instances;
+      // Step-by-step with error tracking
+      let step = 'init';
+      try {
+        step = 'create raymarcher';
+        if (!glslGenerator) {
+          const hiddenCanvas = document.createElement('canvas');
+          hiddenCanvas.width = 1;
+          hiddenCanvas.height = 1;
+          glslGenerator = new SimpleRaymarcher(hiddenCanvas);
         }
-      };
+
+        step = 'loadJsonScene';
+        updateStatus('Loading scene...', 25);
+        const processedScene = loadJsonScene(currentScene);
+        log(`Scene processed`);
+
+        step = 'generateGlslFromJson';
+        updateStatus('Generating GLSL...', 30);
+        const glslCode = generateGlslFromJson(processedScene);
+        log(`Generated ${glslCode.length} chars of GLSL`);
+
+        step = 'compile GLSL';
+        updateStatus('Compiling GLSL...', 35);
+        glslGenerator.updateScene(glslCode);
+        glslGenerator.overrideTime = 0;
+
+        step = 'computeSceneBounds';
+        updateStatus('Computing bounds...', 40);
+        const bounds = computeSceneBounds(currentScene);
+        log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
+
+        step = 'create GPUSampler';
+        updateStatus(`GPU sampling (${numDirections} dirs)...`, 45);
+        const gpuSampler = new GPUSampler({
+          resolution: resolution,
+          maxDistance: 30.0,
+          hitThreshold: 0.001,
+          maxSteps: 200
+        });
+
+        step = 'GPU sample';
+        const startTime = performance.now();
+        const sampleResult = gpuSampler.sample(glslCode, bounds, {
+          numDirections: numDirections,
+          deduplicationRadius: 0.015
+        });
+        log(`GPU sampled ${sampleResult.count} pts in ${(performance.now() - startTime).toFixed(0)}ms`);
+
+        step = 'toPointCloud';
+        updateStatus('Converting to splats...', 65);
+        const boundsSize = Math.max(
+          bounds.max[0] - bounds.min[0],
+          bounds.max[1] - bounds.min[1],
+          bounds.max[2] - bounds.min[2]
+        );
+        const baseScale = (boundsSize / resolution) * 1.5 * splatScale;
+        const pointCloud = gpuSampler.toPointCloud(sampleResult, { baseScale });
+
+        step = 'train';
+        updateStatus('Training Gaussians...', 75);
+        const trainer = new QuickTrainer({
+          targetCount: targetSplats,
+          scaleMultiplier: splatScale
+        });
+        const cloud = await trainer.train(pointCloud);
+        log(`Trained ${cloud.count} Gaussians`);
+
+        gpuSampler.dispose();
+
+        currentBundle = {
+          templateClouds: new Map([['gpu_scene', cloud]]),
+          manifest: {
+            instances: [{
+              id: 'gpu_instance',
+              template: 'gpu_scene',
+              transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+            }]
+          },
+          getInstances() { return this.manifest.instances; }
+        };
+      } catch (err) {
+        log(`❌ Error at step "${step}": ${err.message}`);
+        console.error(`Stack overflow at step: ${step}`, err);
+        throw err;
+      }
     }
 
     function computeSceneBounds(scene) {
@@ -1012,6 +1035,14 @@
             position: pos,
             target: [0, camHeight * 0.3, 0],
             fov: 45
+          });
+
+          // Update effects from checkboxes
+          renderer.setEffects({
+            swirl: document.getElementById('fxSwirl')?.checked || false,
+            lighting: document.getElementById('fxLighting')?.checked || false,
+            noise: document.getElementById('fxNoise')?.checked || false,
+            pulse: document.getElementById('fxPulse')?.checked || false
           });
 
           renderer.render();
