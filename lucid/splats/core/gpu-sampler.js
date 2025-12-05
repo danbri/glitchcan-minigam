@@ -9,6 +9,23 @@
  */
 
 export class GPUSampler {
+  // All 26 sampling directions: 6 face centers, 8 corners, 12 edge midpoints
+  static DIRECTIONS = [
+    // 6 face centers (orthogonal - indices 0-5)
+    [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+    // 8 cube corners (diagonal - indices 6-13)
+    [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
+    [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
+    // 12 edge midpoints (indices 14-25)
+    [1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0],
+    [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1],
+    [0, 1, 1], [0, 1, -1], [0, -1, 1], [0, -1, -1]
+  ].map(d => {
+    // Normalize each direction
+    const len = Math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+    return [d[0]/len, d[1]/len, d[2]/len];
+  });
+
   constructor(options = {}) {
     this.resolution = options.resolution || 256;  // Texture resolution (resolution² rays)
     this.maxDistance = options.maxDistance || 20.0;
@@ -152,8 +169,9 @@ export class GPUSampler {
       uniform vec2 u_resolution;
       uniform vec3 u_boundsMin;
       uniform vec3 u_boundsMax;
-      uniform vec3 u_cameraOrigin;
-      uniform int u_viewDirection;  // 0-5 for ±X, ±Y, ±Z
+      uniform vec3 u_rayDir;        // Normalized ray direction for this pass
+      uniform vec3 u_rayTangentU;   // Tangent U for screen mapping
+      uniform vec3 u_rayTangentV;   // Tangent V for screen mapping
       uniform float u_time;
 
       // Output targets (MRT)
@@ -197,44 +215,16 @@ export class GPUSampler {
       void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
 
-        // Map UV to position within bounds based on view direction
+        // Map UV to position within bounds
         vec3 boundsSize = u_boundsMax - u_boundsMin;
         vec3 boundsCenter = (u_boundsMin + u_boundsMax) * 0.5;
+        float boundsRadius = length(boundsSize) * 0.5 + 2.0;
 
-        vec3 rayOrigin, rayDir;
-
-        // Generate rays from 6 orthogonal directions
-        if (u_viewDirection == 0) {        // +X looking at -X
-          rayOrigin = vec3(u_boundsMax.x + 1.0,
-                          mix(u_boundsMin.y, u_boundsMax.y, uv.y),
-                          mix(u_boundsMin.z, u_boundsMax.z, uv.x));
-          rayDir = vec3(-1.0, 0.0, 0.0);
-        } else if (u_viewDirection == 1) { // -X looking at +X
-          rayOrigin = vec3(u_boundsMin.x - 1.0,
-                          mix(u_boundsMin.y, u_boundsMax.y, uv.y),
-                          mix(u_boundsMin.z, u_boundsMax.z, uv.x));
-          rayDir = vec3(1.0, 0.0, 0.0);
-        } else if (u_viewDirection == 2) { // +Y looking at -Y
-          rayOrigin = vec3(mix(u_boundsMin.x, u_boundsMax.x, uv.x),
-                          u_boundsMax.y + 1.0,
-                          mix(u_boundsMin.z, u_boundsMax.z, uv.y));
-          rayDir = vec3(0.0, -1.0, 0.0);
-        } else if (u_viewDirection == 3) { // -Y looking at +Y
-          rayOrigin = vec3(mix(u_boundsMin.x, u_boundsMax.x, uv.x),
-                          u_boundsMin.y - 1.0,
-                          mix(u_boundsMin.z, u_boundsMax.z, uv.y));
-          rayDir = vec3(0.0, 1.0, 0.0);
-        } else if (u_viewDirection == 4) { // +Z looking at -Z
-          rayOrigin = vec3(mix(u_boundsMin.x, u_boundsMax.x, uv.x),
-                          mix(u_boundsMin.y, u_boundsMax.y, uv.y),
-                          u_boundsMax.z + 1.0);
-          rayDir = vec3(0.0, 0.0, -1.0);
-        } else {                           // -Z looking at +Z
-          rayOrigin = vec3(mix(u_boundsMin.x, u_boundsMax.x, uv.x),
-                          mix(u_boundsMin.y, u_boundsMax.y, uv.y),
-                          u_boundsMin.z - 1.0);
-          rayDir = vec3(0.0, 0.0, 1.0);
-        }
+        // Generate ray from direction + screen UV mapped via tangents
+        vec3 screenOffset = u_rayTangentU * (uv.x - 0.5) * boundsSize.x +
+                            u_rayTangentV * (uv.y - 0.5) * boundsSize.y;
+        vec3 rayOrigin = boundsCenter - u_rayDir * boundsRadius + screenOffset;
+        vec3 rayDir = u_rayDir;
 
         // Raymarch
         float t = 0.0;
@@ -319,8 +309,9 @@ export class GPUSampler {
       resolution: gl.getUniformLocation(this.program, 'u_resolution'),
       boundsMin: gl.getUniformLocation(this.program, 'u_boundsMin'),
       boundsMax: gl.getUniformLocation(this.program, 'u_boundsMax'),
-      cameraOrigin: gl.getUniformLocation(this.program, 'u_cameraOrigin'),
-      viewDirection: gl.getUniformLocation(this.program, 'u_viewDirection'),
+      rayDir: gl.getUniformLocation(this.program, 'u_rayDir'),
+      rayTangentU: gl.getUniformLocation(this.program, 'u_rayTangentU'),
+      rayTangentV: gl.getUniformLocation(this.program, 'u_rayTangentV'),
       time: gl.getUniformLocation(this.program, 'u_time')
     };
 
@@ -332,14 +323,44 @@ export class GPUSampler {
   }
 
   /**
+   * Compute orthonormal tangent basis for a direction
+   */
+  computeTangentBasis(dir) {
+    // Pick an arbitrary vector not parallel to dir
+    const up = Math.abs(dir[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+
+    // tangentU = cross(up, dir)
+    const u = [
+      up[1] * dir[2] - up[2] * dir[1],
+      up[2] * dir[0] - up[0] * dir[2],
+      up[0] * dir[1] - up[1] * dir[0]
+    ];
+    const uLen = Math.sqrt(u[0]*u[0] + u[1]*u[1] + u[2]*u[2]);
+    u[0] /= uLen; u[1] /= uLen; u[2] /= uLen;
+
+    // tangentV = cross(dir, tangentU)
+    const v = [
+      dir[1] * u[2] - dir[2] * u[1],
+      dir[2] * u[0] - dir[0] * u[2],
+      dir[0] * u[1] - dir[1] * u[0]
+    ];
+
+    return { u, v };
+  }
+
+  /**
    * Sample the scene from one direction
-   * @param {number} direction - View direction 0-5
+   * @param {number} dirIndex - Direction index into DIRECTIONS array
    * @param {Object} bounds - { min: [x,y,z], max: [x,y,z] }
    * @returns {Object} - { positions, normals, colors, curvatures, count }
    */
-  sampleDirection(direction, bounds) {
+  sampleDirection(dirIndex, bounds) {
     const gl = this.gl;
     const res = this.resolution;
+
+    // Get direction and compute tangent basis
+    const dir = GPUSampler.DIRECTIONS[dirIndex];
+    const { u, v } = this.computeTangentBasis(dir);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.viewport(0, 0, res, res);
@@ -351,7 +372,9 @@ export class GPUSampler {
     gl.uniform2f(this.uniforms.resolution, res, res);
     gl.uniform3f(this.uniforms.boundsMin, bounds.min[0], bounds.min[1], bounds.min[2]);
     gl.uniform3f(this.uniforms.boundsMax, bounds.max[0], bounds.max[1], bounds.max[2]);
-    gl.uniform1i(this.uniforms.viewDirection, direction);
+    gl.uniform3f(this.uniforms.rayDir, dir[0], dir[1], dir[2]);
+    gl.uniform3f(this.uniforms.rayTangentU, u[0], u[1], u[2]);
+    gl.uniform3f(this.uniforms.rayTangentV, v[0], v[1], v[2]);
     gl.uniform1f(this.uniforms.time, 0.0);
 
     // Clear and render
@@ -444,10 +467,12 @@ export class GPUSampler {
   }
 
   /**
-   * Sample scene from all 6 orthogonal directions
+   * Sample scene from multiple directions
    * @param {string} sceneGlsl - GLSL code from json-codegen
    * @param {Object} bounds - { min: [x,y,z], max: [x,y,z] }
    * @param {Object} options - Additional options
+   *   - numDirections: 6, 14, or 26 (faces, +corners, +edges)
+   *   - deduplicationRadius: merge nearby points
    * @returns {Object} - Combined point cloud
    */
   sample(sceneGlsl, bounds, options = {}) {
@@ -457,13 +482,20 @@ export class GPUSampler {
     this.compileShader(sceneGlsl);
     this.setupFramebuffer();
 
-    // Sample from all 6 directions
+    // Sample from requested number of directions
     const allPositions = [];
     const allNormals = [];
     const allColors = [];
     const allCurvatures = [];
 
-    const directions = options.directions || [0, 1, 2, 3, 4, 5];
+    // Build directions array based on numDirections
+    const numDirs = options.numDirections || 6;
+    const directions = [];
+    for (let i = 0; i < Math.min(numDirs, GPUSampler.DIRECTIONS.length); i++) {
+      directions.push(i);
+    }
+
+    console.log(`GPU sampling from ${directions.length} directions...`);
 
     for (const dir of directions) {
       const result = this.sampleDirection(dir, bounds);
@@ -475,7 +507,9 @@ export class GPUSampler {
         allCurvatures.push(...result.curvatures);
       }
 
-      console.log(`Direction ${dir}: ${result.count} samples`);
+      if (directions.length <= 10) {
+        console.log(`  Direction ${dir}: ${result.count} samples`);
+      }
     }
 
     const totalCount = allPositions.length / 3;
@@ -570,11 +604,15 @@ export class GPUSampler {
 
       // Curvature affects scale - high curvature = smaller, flatter splats
       const k = Math.abs(curvatures[i]);
-      const curvatureScale = 1.0 / (1.0 + k * 10.0);
+      // Clamp curvature to avoid extreme values
+      const clampedK = Math.min(k, 50.0);
+      const curvatureScale = 1.0 / (1.0 + clampedK * 5.0);
 
-      // Scale: flat along normal, expanded in tangent plane
-      const normalScale = baseScale * 0.5 * curvatureScale;
+      // Scale: VERY flat along normal (true splat, not particle)
+      // Tangent scale: full size disk in surface plane
+      // Normal scale: thin along surface normal (like a disc)
       const tangentScale = baseScale * curvatureScale;
+      const normalScale = baseScale * 0.1 * curvatureScale;  // 10x flatter than tangent
 
       scales[i * 3] = tangentScale;
       scales[i * 3 + 1] = tangentScale;
