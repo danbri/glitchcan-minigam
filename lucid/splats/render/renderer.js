@@ -593,10 +593,10 @@ void main() {
         pos.y += sin(u_time + dist * 3.0) * 0.1;
     }
 
-    // Noise field effect - jittery displacement
+    // Noise field effect - slow gentle displacement
     if (u_fxNoise > 0.5) {
-        vec3 n = noise3(pos * 5.0 + u_time * 0.5);
-        pos += n * 0.05;
+        vec3 n = noise3(pos * 3.0 + u_time * 0.08);  // Much slower, gentler
+        pos += n * 0.03;
     }
 
     vec4 worldPos = a_instanceTransform * vec4(pos, 1.0);
@@ -724,19 +724,40 @@ void main() {
     // Early discard for nearly transparent
     if (alpha < 0.004) discard;
 
-    // Color with subtle ambient boost
-    vec3 color = v_color * 1.1 + vec3(0.05);
+    // Base color with enhanced saturation
+    vec3 color = v_color;
 
-    // Dynamic lighting effect - rim glow and color shifting
+    // Boost color saturation and vibrancy
+    float luminance = dot(color, vec3(0.299, 0.587, 0.114));
+    color = mix(vec3(luminance), color, 1.4);  // 40% more saturated
+    color = color * 1.15 + vec3(0.03);  // Slight boost + ambient
+
+    // Dynamic lighting effect - enhanced with multiple light contributions
     if (u_fxLighting > 0.5) {
-        // Use the gaussian falloff for rim lighting
-        float rim = 1.0 - exp(exponent * 0.3);
-        vec3 rimColor = vec3(0.3, 0.5, 1.0) * rim * 0.4;
-        color += rimColor;
+        // Rim glow using gaussian falloff
+        float rim = 1.0 - exp(exponent * 0.25);
 
-        // Subtle color shift based on time
-        float shift = sin(u_time * 0.5) * 0.5 + 0.5;
-        color = mix(color, color.gbr, shift * 0.1);
+        // Orbiting key light (warm)
+        float keyAngle = u_time * 0.3;
+        vec3 keyDir = normalize(vec3(cos(keyAngle), 0.5, sin(keyAngle)));
+        float keyLight = max(0.0, dot(normalize(v_coord.xyy), keyDir)) * 0.5;
+        vec3 keyColor = vec3(1.0, 0.9, 0.7) * keyLight;
+
+        // Static fill light (cool)
+        vec3 fillColor = vec3(0.4, 0.6, 1.0) * rim * 0.35;
+
+        // Color-dependent rim (use splat's own color for glow)
+        vec3 selfGlow = v_color * rim * 0.25;
+
+        color += keyColor + fillColor + selfGlow;
+
+        // Subtle hue rotation over time
+        float shift = sin(u_time * 0.4) * 0.5 + 0.5;
+        color = mix(color, color.gbr, shift * 0.08);
+
+        // Add subtle specular highlights
+        float spec = pow(rim, 3.0) * 0.3;
+        color += vec3(spec);
     }
 
     color = clamp(color, 0.0, 1.0);
