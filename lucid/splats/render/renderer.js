@@ -828,53 +828,57 @@ void main() {
         pos += n * 0.03;
     }
 
-    // Orbital motion - objects circle around origin
-    if (u_fxOrbit > 0.5) {
-        float dist = length(pos.xz);
-        float baseAngle = atan(pos.z, pos.x);
-        // Orbit speed varies inversely with distance (inner = faster, like planets)
-        float orbitSpeed = 0.3 / max(dist, 0.5);
-        float newAngle = baseAngle + u_time * orbitSpeed;
-        pos.x = cos(newAngle) * dist;
-        pos.z = sin(newAngle) * dist;
-        // Gentle vertical bobbing
-        pos.y += sin(u_time * 0.5 + dist * 2.0) * 0.15;
-    }
-
     // Jelly physics - GPU soft body simulation
-    // Creates wobbly, springy motion without any CPU physics
+    // Creates wobbly, springy motion - COHESIVE so whole model moves together
     if (u_fxJelly > 0.5) {
-        // Use position as seed for consistent per-splat behavior
-        float id = dot(a_position, vec3(17.1, 31.7, 57.3));
-
-        // Multiple frequency waves for organic jelly motion
         float t = u_time;
 
-        // Primary wobble - whole body oscillation
-        float wobble1 = sin(t * 2.3 + id) * 0.08;
-        float wobble2 = sin(t * 3.1 + id * 1.3) * 0.05;
-        float wobble3 = cos(t * 1.7 + id * 0.7) * 0.06;
+        // Global wobble - whole model oscillates together
+        float globalWobbleX = sin(t * 1.8) * 0.06;
+        float globalWobbleY = sin(t * 2.2 + 1.0) * 0.05;
+        float globalWobbleZ = sin(t * 1.5 + 2.0) * 0.06;
 
-        // Propagating wave from center (like poking jelly)
-        float distFromCenter = length(pos);
-        float wave = sin(t * 4.0 - distFromCenter * 3.0) * 0.04;
-        wave *= exp(-distFromCenter * 0.5);  // Dampen with distance
+        // Surface deformation based on position within model
+        // Uses smooth gradients so nearby splats move together
+        float surfaceWave = sin(a_position.y * 2.0 + t * 3.0) * 0.03;
+        float rippleX = sin(a_position.x * 3.0 + t * 2.5) * 0.02;
+        float rippleZ = cos(a_position.z * 3.0 + t * 2.3) * 0.02;
 
-        // Surface ripple effect
-        float ripple = sin(pos.x * 5.0 + t * 3.0) * cos(pos.z * 5.0 + t * 2.7) * 0.02;
+        // Squash and stretch - whole model breathes
+        float squash = sin(t * 2.0) * 0.08;
+        float stretchY = 1.0 - squash * 0.4;
+        float stretchXZ = 1.0 + squash * 0.2;
 
-        // Combine all jelly motions
-        pos.x += wobble1 + wave * 0.5;
-        pos.y += wobble2 + wave + ripple;
-        pos.z += wobble3 + wave * 0.5;
+        // Apply deformations
+        pos.x = pos.x * stretchXZ + globalWobbleX + rippleX;
+        pos.y = pos.y * stretchY + globalWobbleY + surfaceWave;
+        pos.z = pos.z * stretchXZ + globalWobbleZ + rippleZ;
 
-        // Squash and stretch - compress Y, expand XZ when moving down
-        float squash = sin(t * 2.0 + id) * 0.1;
-        pos.y *= 1.0 - squash * 0.3;
-        pos.xz *= 1.0 + squash * 0.15;
+        // Bouncy settling wave from bottom up
+        float heightFactor = (a_position.y + 1.0) * 0.5; // 0 at bottom, 1 at top
+        float bounce = sin(t * 4.0 - heightFactor * 2.0) * 0.015 * heightFactor;
+        pos.y += bounce;
     }
 
     vec4 worldPos = a_instanceTransform * vec4(pos, 1.0);
+
+    // Orbital motion - rotate world position around origin
+    // Applied AFTER instance transform so whole model orbits as a unit
+    if (u_fxOrbit > 0.5) {
+        float dist = length(worldPos.xz);
+        // Orbit speed varies with distance (outer = slower, like planets)
+        float orbitSpeed = 0.3 / max(dist * 0.2, 0.5);
+        float angle = u_time * orbitSpeed;
+        float cosA = cos(angle);
+        float sinA = sin(angle);
+        // Rotate around Y axis
+        float newX = worldPos.x * cosA - worldPos.z * sinA;
+        float newZ = worldPos.x * sinA + worldPos.z * cosA;
+        worldPos.x = newX;
+        worldPos.z = newZ;
+        // Gentle bobbing
+        worldPos.y += sin(u_time * 0.5 + dist * 0.5) * 0.1;
+    }
 
     // Transform to view space
     vec4 viewPos = u_viewMatrix * worldPos;
