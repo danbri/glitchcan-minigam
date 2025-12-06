@@ -183,7 +183,7 @@ window.FinkUtils = {
             this.initializeMinigame(containerId, minigameType, parsedConfig);
         }).catch(error => {
             FinkUtils.debugLog(`Minigame initialization failed: ${error.message}`);
-            document.getElementById(containerId).innerHTML = `<div class="minigame-error">Minigame failed to load: ${minigameType}</div>`;
+            document.getElementById(containerId).innerHTML = `<div class="minigame-error">Minigame failed to load: ${minigameType} (script: ${scriptPath})</div>`;
         });
         
         return placeholder;
@@ -211,7 +211,7 @@ window.FinkUtils = {
                             // Set variables in INK story if available
                             if (window.currentStory) {
                                 try {
-                                    window.currentStory.variablesState.$('chess_skill', chess_skill);
+                                    window.currentStory.variablesState['chess_skill'] = chess_skill;
                                     FinkUtils.debugLog(`Set chess_skill variable to: ${chess_skill}`);
                                 } catch (e) {
                                     FinkUtils.debugLog(`Failed to set chess_skill variable: ${e.message}`);

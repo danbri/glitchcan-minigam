@@ -81,7 +81,7 @@
             
             // Test 2: Initialize chess game
             try {
-                const chess = new MamikonMiniChess('chess-container', {
+                new MamikonMiniChess('chess-container', {
                     onGameEnd: function(performance, queenSacrifice, moveHistory) {
                         // Simulate FINK variable updates
                         let chess_skill = 0;

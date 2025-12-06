@@ -41,12 +41,12 @@ jobs:
     - name: Validate Shane Manor story
       run: |
         cd inklet/validation
-        CHROME_PATH=./browsers/chrome/linux-*/chrome-linux*/chrome node checkfink.mjs ../shane-manor.fink.js
+        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f | head -1) node checkfink.mjs ../shane-manor.fink.js
         
     - name: Validate all FINK stories
       run: |
         cd inklet/validation
-        CHROME_PATH=./browsers/chrome/linux-*/chrome-linux*/chrome node checkfink.mjs --scan
+        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f | head -1) node checkfink.mjs --scan
         
     - name: Test minichess integration
       run: |
@@ -54,7 +54,11 @@ jobs:
         # Start local server for testing
         python3 -m http.server 8080 &
         SERVER_PID=$!
-        sleep 3
+        
+        # Ensure netcat is available and wait for server to be ready
+        sudo apt-get update
+        sudo apt-get install -y netcat
+        while ! nc -z localhost 8080; do sleep 1; done
         
         # Test that minichess loads correctly
         curl -f http://localhost:8080/test-minichess.html > /dev/null

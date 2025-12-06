@@ -266,7 +266,7 @@ The locked room mystery, the family tensions, the gambling debts, and the chess 
 * [Suggest an outside intruder]
     -> outside_theory
     
-{chess_insights == "brilliant_analysis": * [Present the chess evidence as key proof] -> chess_evidence_theory}
+* {chess_insights == "brilliant_analysis": [Present the chess evidence as key proof] -> chess_evidence_theory}
     
 * [Gather more evidence first]
     {time_pressure > 0: -> investigation_choice | -> time_up}

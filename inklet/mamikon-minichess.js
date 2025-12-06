@@ -39,8 +39,8 @@ class MamikonMiniChess {
     
     getShaneManorPosition() {
         // The critical position from Shane Manor story
-        // White has just played an aggressive queen sacrifice
-        // Black must respond correctly to avoid mate in 3
+        // Position after White's queen sacrifice - White queen is missing from d1
+        // Black must find the best response to the complex position
         return {
             'a8': 'bR', 'b8': 'bN', 'c8': 'bB', 'd8': 'bQ', 'e8': 'bK', 'f8': 'bB', 'g8': 'bN', 'h8': 'bR',
             'a7': 'bP', 'b7': 'bP', 'c7': 'bP', 'd7': null, 'e7': 'bP', 'f7': 'bP', 'g7': 'bP', 'h7': 'bP',
@@ -191,8 +191,11 @@ class MamikonMiniChess {
         const piece = this.board[fromRank][fromFile];
         const capturedPiece = this.board[toRank][toFile];
         
-        // Check for queen sacrifice detection
-        if (piece === 'wQ' && capturedPiece) {
+        // Check for recognition of the existing sacrifice pattern
+        // Since queen is already sacrificed (missing from d1), detect if player
+        // makes moves that show understanding of the sacrificial attack
+        if (this.currentPlayer === 'black' && capturedPiece) {
+            // Player captures material, showing tactical awareness
             this.queenSacrificeDetected = true;
         }
         
@@ -215,7 +218,6 @@ class MamikonMiniChess {
     
     algebraicNotation(fromRank, fromFile, toRank, toFile, piece, capturedPiece) {
         const files = 'abcdefgh';
-        const fromSquare = files[fromFile] + (8 - fromRank);
         const toSquare = files[toFile] + (8 - toRank);
         const pieceSymbol = piece[1] === 'P' ? '' : piece[1];
         const capture = capturedPiece ? 'x' : '';

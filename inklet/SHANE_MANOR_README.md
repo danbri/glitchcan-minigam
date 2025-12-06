@@ -19,7 +19,7 @@ Shane Manor is an enhanced FINK (Fiction INK) interactive story that showcases a
 - **Variable Outcomes**: Different endings based on chess skill and investigation style
 
 ### 🧩 Technical Showcase
-- **Real INK Compilation**: Uses ink-full.js engine, not regex parsing
+- **Real Ink Compilation**: Uses ink-full.js engine, not regex parsing
 - **FINK Extensions**: IMAGE, BASEHREF, and MINIGAME tags
 - **Variable Tracking**: player_reputation, chess_skill, investigation_style, time_pressure
 - **External Integration**: JavaScript minigame communicates back to story

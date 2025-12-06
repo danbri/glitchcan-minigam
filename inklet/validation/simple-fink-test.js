@@ -6,7 +6,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 function validateFinkFile(filePath) {
     console.log(`🔍 Validating FINK file: ${filePath}`);
@@ -17,7 +16,7 @@ function validateFinkFile(filePath) {
         console.log('✅ File read successfully');
         
         // Extract INK content from FINK file
-        const match = finkContent.match(/oooOO`([^]+?)`/);
+        const match = finkContent.match(/oooOO`([^]*)`/);
         if (!match) {
             throw new Error('No oooOO template literal found');
         }

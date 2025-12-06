@@ -350,8 +350,17 @@ window.FinkUI = {
         
         // Load and initialize minigame
         FinkUtils.loadMinigameScript(minigameConfig.script).then(() => {
-            FinkUtils.initializeMinigame(containerId, minigameConfig.type, 
-                minigameConfig.config ? JSON.parse(minigameConfig.config) : {});
+            let configObj = {};
+            if (minigameConfig.config) {
+                try {
+                    configObj = JSON.parse(minigameConfig.config);
+                } catch (parseError) {
+                    FinkUtils.debugLog(`Minigame config JSON parse error: ${parseError.message}`);
+                    minigameDiv.innerHTML = `<div class="minigame-error">Malformed config for ${minigameConfig.type} minigame</div>`;
+                    return;
+                }
+            }
+            FinkUtils.initializeMinigame(containerId, minigameConfig.type, configObj);
         }).catch(error => {
             FinkUtils.debugLog(`Minigame initialization failed: ${error.message}`);
             minigameDiv.innerHTML = `<div class="minigame-error">Failed to load ${minigameConfig.type} minigame</div>`;
