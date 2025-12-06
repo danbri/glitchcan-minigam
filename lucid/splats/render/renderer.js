@@ -38,8 +38,14 @@ export class InstancedSplatRenderer {
       swirl: false,
       lighting: true,
       noise: false,
-      pulse: false
+      pulse: false,
+      jelly: false,      // Soft body jelly physics
+      orbit: false,      // Orbital motion around origin
+      colorShift: false  // Color variation by group
     };
+
+    // VR-specific settings
+    this.vrOpacity = 0.7;  // Reduce opacity in VR for better passthrough
 
     this.camera = {
       position: [0, 0, 5],
@@ -84,7 +90,11 @@ export class InstancedSplatRenderer {
       u_fxSwirl: gl.getUniformLocation(this.program, 'u_fxSwirl'),
       u_fxLighting: gl.getUniformLocation(this.program, 'u_fxLighting'),
       u_fxNoise: gl.getUniformLocation(this.program, 'u_fxNoise'),
-      u_fxPulse: gl.getUniformLocation(this.program, 'u_fxPulse')
+      u_fxPulse: gl.getUniformLocation(this.program, 'u_fxPulse'),
+      u_fxJelly: gl.getUniformLocation(this.program, 'u_fxJelly'),
+      u_fxOrbit: gl.getUniformLocation(this.program, 'u_fxOrbit'),
+      u_fxColorShift: gl.getUniformLocation(this.program, 'u_fxColorShift'),
+      u_vrMode: gl.getUniformLocation(this.program, 'u_vrMode')
     };
 
     // Create quad vertices for billboards
@@ -310,6 +320,10 @@ export class InstancedSplatRenderer {
     gl.uniform1f(this.locations.u_fxLighting, this.effects.lighting ? 1.0 : 0.0);
     gl.uniform1f(this.locations.u_fxNoise, this.effects.noise ? 1.0 : 0.0);
     gl.uniform1f(this.locations.u_fxPulse, this.effects.pulse ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxJelly, this.effects.jelly ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxOrbit, this.effects.orbit ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxColorShift, this.effects.colorShift ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_vrMode, 0.0);  // Not in VR
 
     for (const [templateId, template] of this.templates) {
       this.renderTemplate(templateId, template, viewMatrix);
@@ -610,6 +624,10 @@ export class InstancedSplatRenderer {
     gl.uniform1f(this.locations.u_fxLighting, this.effects.lighting ? 1.0 : 0.0);
     gl.uniform1f(this.locations.u_fxNoise, this.effects.noise ? 1.0 : 0.0);
     gl.uniform1f(this.locations.u_fxPulse, this.effects.pulse ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxJelly, this.effects.jelly ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxOrbit, this.effects.orbit ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_fxColorShift, this.effects.colorShift ? 1.0 : 0.0);
+    gl.uniform1f(this.locations.u_vrMode, this.vrOpacity);  // VR mode with opacity
 
     // Render each view (typically 2 for stereo VR)
     for (const view of pose.views) {
@@ -737,6 +755,10 @@ uniform float u_fxSwirl;
 uniform float u_fxLighting;
 uniform float u_fxNoise;
 uniform float u_fxPulse;
+uniform float u_fxJelly;
+uniform float u_fxOrbit;
+uniform float u_fxColorShift;
+uniform float u_vrMode;  // 0.0 = normal, >0 = VR opacity multiplier
 
 // Outputs to fragment shader
 out vec3 v_color;
@@ -804,6 +826,52 @@ void main() {
     if (u_fxNoise > 0.5) {
         vec3 n = noise3(pos * 3.0 + u_time * 0.08);  // Much slower, gentler
         pos += n * 0.03;
+    }
+
+    // Orbital motion - objects circle around origin
+    if (u_fxOrbit > 0.5) {
+        float dist = length(pos.xz);
+        float baseAngle = atan(pos.z, pos.x);
+        // Orbit speed varies inversely with distance (inner = faster, like planets)
+        float orbitSpeed = 0.3 / max(dist, 0.5);
+        float newAngle = baseAngle + u_time * orbitSpeed;
+        pos.x = cos(newAngle) * dist;
+        pos.z = sin(newAngle) * dist;
+        // Gentle vertical bobbing
+        pos.y += sin(u_time * 0.5 + dist * 2.0) * 0.15;
+    }
+
+    // Jelly physics - GPU soft body simulation
+    // Creates wobbly, springy motion without any CPU physics
+    if (u_fxJelly > 0.5) {
+        // Use position as seed for consistent per-splat behavior
+        float id = dot(a_position, vec3(17.1, 31.7, 57.3));
+
+        // Multiple frequency waves for organic jelly motion
+        float t = u_time;
+
+        // Primary wobble - whole body oscillation
+        float wobble1 = sin(t * 2.3 + id) * 0.08;
+        float wobble2 = sin(t * 3.1 + id * 1.3) * 0.05;
+        float wobble3 = cos(t * 1.7 + id * 0.7) * 0.06;
+
+        // Propagating wave from center (like poking jelly)
+        float distFromCenter = length(pos);
+        float wave = sin(t * 4.0 - distFromCenter * 3.0) * 0.04;
+        wave *= exp(-distFromCenter * 0.5);  // Dampen with distance
+
+        // Surface ripple effect
+        float ripple = sin(pos.x * 5.0 + t * 3.0) * cos(pos.z * 5.0 + t * 2.7) * 0.02;
+
+        // Combine all jelly motions
+        pos.x += wobble1 + wave * 0.5;
+        pos.y += wobble2 + wave + ripple;
+        pos.z += wobble3 + wave * 0.5;
+
+        // Squash and stretch - compress Y, expand XZ when moving down
+        float squash = sin(t * 2.0 + id) * 0.1;
+        pos.y *= 1.0 - squash * 0.3;
+        pos.xz *= 1.0 + squash * 0.15;
     }
 
     vec4 worldPos = a_instanceTransform * vec4(pos, 1.0);
@@ -884,8 +952,42 @@ void main() {
     gl_Position = vec4(screenCenter + ndcOffset, clipPos.z / clipPos.w, 1.0);
 
     // Pass to fragment shader
-    v_color = a_color * a_instanceColor.rgb;
-    v_opacity = a_opacity * a_instanceColor.a;
+    vec3 finalColor = a_color * a_instanceColor.rgb;
+
+    // Color shift effect - create group variation based on base color
+    if (u_fxColorShift > 0.5) {
+        // Use original color hue to define "group"
+        float hueGroup = dot(a_color, vec3(0.3, 0.5, 0.2));
+        // Shift hue over time, but grouped by original color
+        float hueShift = sin(u_time * 0.5 + hueGroup * 6.28) * 0.15;
+        // Apply hue rotation in RGB space (approximate)
+        float cosH = cos(hueShift * 3.14159);
+        float sinH = sin(hueShift * 3.14159);
+        mat3 hueRotate = mat3(
+            0.299 + 0.701*cosH + 0.168*sinH,
+            0.587 - 0.587*cosH + 0.330*sinH,
+            0.114 - 0.114*cosH - 0.497*sinH,
+            0.299 - 0.299*cosH - 0.328*sinH,
+            0.587 + 0.413*cosH + 0.035*sinH,
+            0.114 - 0.114*cosH + 0.292*sinH,
+            0.299 - 0.300*cosH + 1.250*sinH,
+            0.587 - 0.588*cosH - 1.050*sinH,
+            0.114 + 0.886*cosH - 0.203*sinH
+        );
+        finalColor = hueRotate * finalColor;
+        // Boost saturation for grouped colors
+        float lum = dot(finalColor, vec3(0.299, 0.587, 0.114));
+        finalColor = mix(vec3(lum), finalColor, 1.3);
+    }
+
+    v_color = finalColor;
+
+    // Apply VR opacity reduction for better passthrough
+    float opacity = a_opacity * a_instanceColor.a;
+    if (u_vrMode > 0.0) {
+        opacity *= u_vrMode;  // vrMode contains the opacity multiplier
+    }
+    v_opacity = opacity;
     v_coord = localOffset;  // Pass pixel-space offset, NOT quad coordinates!
 
     // Pass inverse covariance for elliptical Gaussian
