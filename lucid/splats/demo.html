@@ -465,7 +465,16 @@
             <input type="checkbox" id="fxSwirl"> Swirl Motion
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxOrbit"> 🪐 Orbit Origin
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxJelly"> 🍮 Jelly Physics
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
             <input type="checkbox" id="fxLighting" checked> Dynamic Lighting
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxColorShift"> 🌈 Color Groups
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
             <input type="checkbox" id="fxNoise"> Noise Field
@@ -836,7 +845,10 @@
         swirl: document.getElementById('fxSwirl')?.checked || false,
         lighting: document.getElementById('fxLighting')?.checked || false,
         noise: document.getElementById('fxNoise')?.checked || false,
-        pulse: document.getElementById('fxPulse')?.checked || false
+        pulse: document.getElementById('fxPulse')?.checked || false,
+        jelly: document.getElementById('fxJelly')?.checked || false,
+        orbit: document.getElementById('fxOrbit')?.checked || false,
+        colorShift: document.getElementById('fxColorShift')?.checked || false
       });
 
       // Render the XR frame
@@ -1424,7 +1436,10 @@
             swirl: document.getElementById('fxSwirl')?.checked || false,
             lighting: document.getElementById('fxLighting')?.checked || false,
             noise: document.getElementById('fxNoise')?.checked || false,
-            pulse: document.getElementById('fxPulse')?.checked || false
+            pulse: document.getElementById('fxPulse')?.checked || false,
+            jelly: document.getElementById('fxJelly')?.checked || false,
+            orbit: document.getElementById('fxOrbit')?.checked || false,
+            colorShift: document.getElementById('fxColorShift')?.checked || false
           });
 
           renderer.render();
