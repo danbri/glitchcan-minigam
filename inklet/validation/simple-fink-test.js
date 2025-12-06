@@ -16,7 +16,7 @@ function validateFinkFile(filePath) {
         console.log('✅ File read successfully');
         
         // Extract INK content from FINK file
-        const match = finkContent.match(/oooOO`([^]*)`/);
+        const match = finkContent.match(/oooOO`([^]*?)`\s*;?\s*$/);
         if (!match) {
             throw new Error('No oooOO template literal found');
         }

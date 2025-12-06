@@ -41,12 +41,24 @@ jobs:
     - name: Validate Shane Manor story
       run: |
         cd inklet/validation
-        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f | head -1) node checkfink.mjs ../shane-manor.fink.js
+        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f -executable | head -1)
+        if [[ -x "$CHROME_PATH" ]]; then
+          node checkfink.mjs ../shane-manor.fink.js
+        else
+          echo "Chrome binary not found or not executable"
+          exit 1
+        fi
         
     - name: Validate all FINK stories
       run: |
         cd inklet/validation
-        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f | head -1) node checkfink.mjs --scan
+        CHROME_PATH=$(find ./browsers/chrome -name chrome -type f -executable | head -1)
+        if [[ -x "$CHROME_PATH" ]]; then
+          node checkfink.mjs --scan
+        else
+          echo "Chrome binary not found or not executable"
+          exit 1
+        fi
         
     - name: Test minichess integration
       run: |
