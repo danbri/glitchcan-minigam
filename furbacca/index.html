@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furbacca - Furby Audio Control Generator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --accent: #e94560;
+            --accent-secondary: #0f3460;
+            --text: #eee;
+            --text-muted: #aaa;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(135deg, var(--accent), #ff8c00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            margin: 0 0 16px 0;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .command-btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent-secondary);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .command-btn:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .command-btn:active {
+            transform: translateY(0);
+        }
+
+        .command-btn.playing {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .custom-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"], select {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 16px;
+            border: 2px solid var(--accent-secondary);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent);
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: #ff3355;
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-btn.secondary {
+            background: var(--accent-secondary);
+        }
+
+        .action-btn.secondary:hover {
+            background: #1a4f8e;
+        }
+
+        .debug-panel {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .debug-panel .label {
+            color: var(--accent);
+        }
+
+        .debug-panel .value {
+            color: #7ee787;
+        }
+
+        .debug-panel .info {
+            color: var(--text-muted);
+        }
+
+        .waveform-container {
+            margin-top: 16px;
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100px;
+            display: block;
+        }
+
+        .freq-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .freq-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .freq-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .warning {
+            padding: 12px;
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #ffc107;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .status.success {
+            background: rgba(46, 160, 67, 0.2);
+            color: #7ee787;
+        }
+
+        .status.error {
+            background: rgba(248, 81, 73, 0.2);
+            color: #f85149;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Furbacca</h1>
+            <p class="subtitle">Furby Audio Control Code Generator</p>
+        </header>
+
+        <div class="warning">
+            ⚠️ <strong>Note:</strong> This generates ultrasonic frequencies (16-22 kHz). Most humans can't hear these, but your Furby can! Make sure your speakers can reproduce high frequencies.
+        </div>
+
+        <div class="card">
+            <h2>🎮 Quick Commands</h2>
+            <div class="command-grid" id="command-grid">
+                <!-- Commands will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔧 Custom Command</h2>
+            <div class="custom-section">
+                <div class="input-group">
+                    <input type="text" id="custom-command" placeholder="Enter hex (0x00-0xFF) or decimal (0-255)">
+                    <button class="action-btn" onclick="playCustomCommand()">▶ Play</button>
+                    <button class="action-btn secondary" onclick="downloadCustomCommand()">💾 Download WAV</button>
+                </div>
+                <div id="custom-status"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📊 Debug Info</h2>
+            <div class="debug-panel" id="debug-panel">
+<span class="info">Click a command to see packet details...</span>
+            </div>
+            <div class="waveform-container">
+                <canvas id="waveform"></canvas>
+            </div>
+            <div class="freq-legend">
+                <div class="freq-item">
+                    <div class="freq-dot" style="background: #ff6b6b;"></div>
+                    <span>'0' = 16,386 Hz</span>
+                </div>
+                <div class="freq-item">
+                    <div class="freq-dot" style="background: #feca57;"></div>
+                    <span>'1' = 16,943 Hz</span>
+                </div>
+                <div class="freq-item">
+                    <div class="freq-dot" style="background: #48dbfb;"></div>
+                    <span>'X' = 17,500 Hz (carrier)</span>
+                </div>
+                <div class="freq-item">
+                    <div class="freq-dot" style="background: #1dd1a1;"></div>
+                    <span>'3' = 18,057 Hz</span>
+                </div>
+                <div class="freq-item">
+                    <div class="freq-dot" style="background: #f368e0;"></div>
+                    <span>'2' = 18,614 Hz</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                Port of Furby::Audio Perl module to JavaScript/Web Audio API<br>
+                <a href="https://github.com/danbri/glitchcan-minigam">View Source</a>
+            </p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { FurbyAudio } from './furby-audio.js';
+        import { FurbyPacket } from './furby-packet.js';
+
+        let audioContext = null;
+
+        // Initialize audio context on first user interaction
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Populate command grid
+        function initCommandGrid() {
+            const grid = document.getElementById('command-grid');
+            const commands = FurbyPacket.getCommandNames();
+
+            commands.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'command-btn';
+                btn.textContent = name.replace(/_/g, ' ');
+                btn.dataset.command = name;
+                btn.onclick = () => playCommand(name, btn);
+                grid.appendChild(btn);
+            });
+        }
+
+        // Play a command
+        async function playCommand(command, button = null) {
+            try {
+                const ctx = getAudioContext();
+
+                // Resume context if suspended
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                }
+
+                // Update debug panel
+                updateDebugPanel(command);
+
+                // Visual feedback
+                if (button) {
+                    button.classList.add('playing');
+                }
+
+                // Play the audio
+                const source = await FurbyAudio.play(command, ctx);
+
+                // Draw waveform
+                drawWaveform(command, ctx);
+
+                // Remove playing class when done
+                source.onended = () => {
+                    if (button) {
+                        button.classList.remove('playing');
+                    }
+                };
+
+            } catch (error) {
+                console.error('Error playing command:', error);
+                showStatus('custom-status', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update debug panel with packet info
+        function updateDebugPanel(command) {
+            const panel = document.getElementById('debug-panel');
+            const packet = FurbyPacket.make(command);
+            const [pkt1, pkt2] = packet.split(' ');
+            const parsed = FurbyPacket.parsePacket(pkt1);
+
+            // Build interleaved representation
+            const interleaved = 'X' + pkt1.split('').join('X') + 'X';
+
+            panel.innerHTML = `<span class="label">Command:</span> <span class="value">${typeof command === 'string' ? command : '0x' + command.toString(16).toUpperCase()}</span>
+<span class="label">Command Byte:</span> <span class="value">${parsed.commandHex} (${parsed.command})</span>
+<span class="label">Checksum:</span> <span class="value">0x${parsed.checksum.toString(16).toUpperCase()} (${parsed.checksumValid ? '✓ valid' : '✗ invalid'})</span>
+<span class="label">Packet (quaternary):</span> <span class="value">${pkt1}</span>
+<span class="label">Interleaved:</span> <span class="value">${interleaved}</span>
+
+<span class="info">// Packet structure: [cmd_byte:4 digits][checksum:4 digits]
+// Each digit is base-4 (quaternary): 0, 1, 2, 3
+// Interleaved with carrier 'X' between each digit
+// Sent twice with ~500ms gap for reliability</span>`;
+        }
+
+        // Draw waveform visualization
+        function drawWaveform(command, ctx) {
+            const canvas = document.getElementById('waveform');
+            const canvasCtx = canvas.getContext('2d');
+
+            // Set canvas size
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+
+            // Generate a short preview buffer
+            const buffer = FurbyAudio.generateAudio(command, ctx);
+            const data = buffer.getChannelData(0);
+
+            // Clear canvas
+            canvasCtx.fillStyle = '#0d1117';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw waveform
+            canvasCtx.strokeStyle = '#e94560';
+            canvasCtx.lineWidth = 1;
+            canvasCtx.beginPath();
+
+            const step = Math.ceil(data.length / canvas.width);
+            const amp = canvas.height / 2;
+
+            for (let i = 0; i < canvas.width; i++) {
+                const idx = i * step;
+                let min = 1;
+                let max = -1;
+
+                for (let j = 0; j < step && idx + j < data.length; j++) {
+                    const val = data[idx + j];
+                    if (val < min) min = val;
+                    if (val > max) max = val;
+                }
+
+                const y1 = (1 + min) * amp;
+                const y2 = (1 + max) * amp;
+
+                canvasCtx.moveTo(i, y1);
+                canvasCtx.lineTo(i, y2);
+            }
+
+            canvasCtx.stroke();
+        }
+
+        // Play custom command
+        window.playCustomCommand = async function() {
+            const input = document.getElementById('custom-command').value.trim();
+
+            if (!input) {
+                showStatus('custom-status', 'Please enter a command value', 'error');
+                return;
+            }
+
+            try {
+                let command;
+                if (input.toLowerCase().startsWith('0x')) {
+                    command = parseInt(input, 16);
+                } else {
+                    command = parseInt(input, 10);
+                }
+
+                if (isNaN(command) || command < 0 || command > 255) {
+                    throw new Error('Command must be 0-255 (or 0x00-0xFF)');
+                }
+
+                await playCommand(command);
+                showStatus('custom-status', `Playing command 0x${command.toString(16).toUpperCase()}`, 'success');
+
+            } catch (error) {
+                showStatus('custom-status', `Error: ${error.message}`, 'error');
+            }
+        };
+
+        // Download custom command as WAV
+        window.downloadCustomCommand = function() {
+            const input = document.getElementById('custom-command').value.trim();
+
+            if (!input) {
+                showStatus('custom-status', 'Please enter a command value', 'error');
+                return;
+            }
+
+            try {
+                let command;
+                if (input.toLowerCase().startsWith('0x')) {
+                    command = parseInt(input, 16);
+                } else {
+                    command = parseInt(input, 10);
+                }
+
+                if (isNaN(command) || command < 0 || command > 255) {
+                    throw new Error('Command must be 0-255 (or 0x00-0xFF)');
+                }
+
+                const filename = `furby-cmd-0x${command.toString(16).toUpperCase().padStart(2, '0')}.wav`;
+                FurbyAudio.downloadWav(command, filename);
+                showStatus('custom-status', `Downloaded ${filename}`, 'success');
+
+                // Also update debug panel
+                updateDebugPanel(command);
+
+            } catch (error) {
+                showStatus('custom-status', `Error: ${error.message}`, 'error');
+            }
+        };
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<span class="status ${type}">${message}</span>`;
+        }
+
+        // Allow enter key to play custom command
+        document.getElementById('custom-command').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                window.playCustomCommand();
+            }
+        });
+
+        // Initialize on load
+        initCommandGrid();
+    </script>
+</body>
+</html>
