@@ -17,6 +17,9 @@ export class FurbyReceiver {
         '2': { center: 18614, min: 18335, max: 18900 },
     };
 
+    // Lead-in detection: packets start with 22050 Hz → 17500 Hz sweep
+    static LEADIN_FREQ = { min: 19000, max: 22500 };
+
     static SAMPLE_RATE = 44100;
     static FFT_SIZE = 1024;  // Smaller for faster response (23ms vs 46ms)
 
@@ -44,6 +47,16 @@ export class FurbyReceiver {
         this.noiseFloor = 0;
         this.lastPacketTime = 0;
         this.processedPackets = new Set(); // Avoid duplicate packet reports
+
+        // Lead-in detection state
+        this.sawLeadIn = false;         // True if we just saw high frequency lead-in
+        this.leadInTime = 0;            // Timestamp of lead-in detection
+        this.packetPhase = 0;           // 0 = synced (first symbol is X), 1 = unsynced
+
+        // Two-packet command tracking
+        // Hacksby protocol: each command is TWO packets (high bits + low bits)
+        this.pendingPacket1 = null;     // First packet waiting for second
+        this.pendingPacket1Time = 0;    // Timestamp of first packet
     }
 
     /**
@@ -135,11 +148,20 @@ export class FurbyReceiver {
             this.onFrequencyUpdate(analysis);
         }
 
+        // Handle lead-in detection (packet sync marker)
+        if (analysis.leadInDetected) {
+            this.sawLeadIn = true;
+            this.leadInTime = performance.now();
+            // Clear buffer to start fresh with synced packet
+            this.symbolBuffer = [];
+            this.packetPhase = 0; // Next symbol will be X at phase 0
+        }
+
         // Detect symbols
         if (analysis.detectedSymbol && analysis.signalStrength > this.noiseFloor + 25) {
             this.processSymbol(analysis.detectedSymbol, analysis.signalStrength);
-        } else {
-            // No signal - record gap and try to find packets
+        } else if (!analysis.leadInDetected) {
+            // No signal and not lead-in - record gap and try to find packets
             this.processGap();
         }
 
@@ -164,7 +186,9 @@ export class FurbyReceiver {
             frequencies: {},
             detectedSymbol: null,
             signalStrength: 0,
-            noiseLevel: 0
+            noiseLevel: 0,
+            leadInDetected: false,
+            leadInStrength: 0
         };
 
         // Calculate noise floor (average of lower frequencies)
@@ -209,8 +233,24 @@ export class FurbyReceiver {
 
         results.signalStrength = maxStrength;
 
-        // Only detect if signal is significantly above noise
-        if (maxStrength > this.noiseFloor + 30) {
+        // Check for lead-in frequency (19000-22500 Hz range)
+        // This indicates a packet is about to start
+        const leadInMinBin = Math.round(FurbyReceiver.LEADIN_FREQ.min / binWidth);
+        const leadInMaxBin = Math.round(FurbyReceiver.LEADIN_FREQ.max / binWidth);
+        let leadInPeak = 0;
+        for (let i = leadInMinBin; i <= leadInMaxBin && i < frequencyData.length; i++) {
+            if (frequencyData[i] > leadInPeak) {
+                leadInPeak = frequencyData[i];
+            }
+        }
+        results.leadInStrength = leadInPeak;
+
+        // Lead-in detected if it's the dominant frequency and above noise
+        if (leadInPeak > maxStrength && leadInPeak > this.noiseFloor + 30) {
+            results.leadInDetected = true;
+            results.detectedSymbol = null; // Don't report as a symbol
+        } else if (maxStrength > this.noiseFloor + 30) {
+            // Only detect symbol if signal is significantly above noise
             results.detectedSymbol = maxSymbol;
         }
 
@@ -292,25 +332,33 @@ export class FurbyReceiver {
 
     /**
      * Try to find valid packets in the symbol buffer
-     * Uses pattern matching to find properly-aligned packets
-     * Tries both phase alignments: X-d-X-d (phase 0) and d-X-d-X (phase 1)
+     *
+     * Hacksby packet format:
+     * - Each packet is 12 data symbols: DATA(4) + CHECKSUM(4) + IDENTIFIER(4)
+     * - Interleaved with X carriers: 25 total symbols (13 X + 12 data)
+     * - Two packets per command: packet1 (high bits) + packet2 (low bits)
      */
     tryFindPackets() {
-        if (this.symbolBuffer.length < 21) return; // Need at least 21 symbols for full packet
+        // Need at least 25 symbols for one packet (12 data + 13 X carriers)
+        if (this.symbolBuffer.length < 25) return;
 
         const validPackets = [];
 
-        // Try both phase alignments since receiver may catch signal mid-packet
-        // Phase 0: X-d-X-d-X... (standard - X at even positions)
-        // Phase 1: d-X-d-X-d... (shifted - X at odd positions)
-        for (let phase = 0; phase <= 1; phase++) {
-            for (let start = 0; start <= this.symbolBuffer.length - 21; start++) {
-                const slice = this.symbolBuffer.slice(start, start + 21);
+        // Check if we have a synced packet (detected lead-in recently)
+        const now = performance.now();
+        const recentLeadIn = this.sawLeadIn && (now - this.leadInTime < 500);
+
+        // If we saw lead-in, only try phase 0 (we know it's synced)
+        // Otherwise try both phases
+        const phasesToTry = recentLeadIn ? [0] : [0, 1];
+
+        for (const phase of phasesToTry) {
+            for (let start = 0; start <= this.symbolBuffer.length - 25; start++) {
+                const slice = this.symbolBuffer.slice(start, start + 25);
 
                 let patternScore = 0;
                 const dataSymbols = [];
                 let xCount = 0;
-                let dataCount = 0;
 
                 for (let i = 0; i < slice.length; i++) {
                     const sym = slice[i].symbol;
@@ -329,15 +377,14 @@ export class FurbyReceiver {
                         if (sym !== 'X') {
                             dataSymbols.push(sym);
                             patternScore += 2;
-                            dataCount++;
                         } else {
                             patternScore -= 1;
                         }
                     }
                 }
 
-                // Valid packet needs exactly 10 data symbols
-                if (dataSymbols.length !== 10) continue;
+                // Valid packet needs exactly 12 data symbols
+                if (dataSymbols.length !== 12) continue;
 
                 const candidate = dataSymbols.join('');
 
@@ -350,18 +397,20 @@ export class FurbyReceiver {
                     if (parsed.checksumValid) {
                         // Phase 0 (standard alignment) gets bonus
                         const phaseBonus = (phase === 0) ? 50 : 0;
-                        // Perfect X count (11 for phase 0, 10 for phase 1) gets bonus
-                        const expectedX = (phase === 0) ? 11 : 10;
+                        // Perfect X count (13 for phase 0, 12 for phase 1) gets bonus
+                        const expectedX = (phase === 0) ? 13 : 12;
                         const xBonus = (xCount === expectedX) ? 30 : 0;
+                        // Synced packet at start position gets huge bonus
+                        const syncBonus = (recentLeadIn && start === 0 && phase === 0) ? 200 : 0;
 
                         validPackets.push({
                             packet: candidate,
                             parsed: parsed,
-                            score: patternScore + phaseBonus + xBonus,
+                            score: patternScore + phaseBonus + xBonus + syncBonus,
                             start: start,
                             phase: phase,
                             xCount: xCount,
-                            dataCount: dataCount
+                            synced: recentLeadIn && start === 0
                         });
                     }
                 } catch (e) {
@@ -383,23 +432,64 @@ export class FurbyReceiver {
                 this.processedPackets.delete(first);
             }
 
-            if (this.onPacketReceived) {
-                this.onPacketReceived({
-                    packet: best.packet,
-                    parsed: best.parsed,
-                    timestamp: Date.now(),
-                    bufferSize: this.symbolBuffer.length,
-                    alignmentScore: best.score,
-                    phase: best.phase,
-                    xCount: best.xCount,
-                    candidateCount: validPackets.length
-                });
+            const now = performance.now();
+            const parsed = best.parsed;
+
+            // Two-packet command tracking
+            // Packet 1 has isPacket2=false (high bits), Packet 2 has isPacket2=true (low bits)
+            if (!parsed.isPacket2) {
+                // This is packet 1 (high bits) - store for pairing
+                this.pendingPacket1 = parsed;
+                this.pendingPacket1Time = now;
+
+                // Report individual packet
+                if (this.onPacketReceived) {
+                    this.onPacketReceived({
+                        packet: best.packet,
+                        parsed: parsed,
+                        timestamp: Date.now(),
+                        packetType: 'packet1',
+                        highBits: parsed.bits,
+                        alignmentScore: best.score,
+                        synced: best.synced || false
+                    });
+                }
+            } else {
+                // This is packet 2 (low bits)
+                // Try to pair with pending packet 1
+                let decodedCommand = null;
+
+                if (this.pendingPacket1 && (now - this.pendingPacket1Time < 2000)) {
+                    // Have a recent packet 1, try to decode full command
+                    decodedCommand = FurbyPacket.decodeCommand(this.pendingPacket1, parsed);
+                    this.pendingPacket1 = null;
+                }
+
+                if (this.onPacketReceived) {
+                    this.onPacketReceived({
+                        packet: best.packet,
+                        parsed: parsed,
+                        timestamp: Date.now(),
+                        packetType: 'packet2',
+                        lowBits: parsed.bits,
+                        alignmentScore: best.score,
+                        synced: best.synced || false,
+                        // Include decoded command if we paired successfully
+                        command: decodedCommand ? decodedCommand.command : null,
+                        commandName: decodedCommand ? decodedCommand.commandName : null,
+                        commandDescription: decodedCommand ? decodedCommand.description : null,
+                        commandValid: decodedCommand && !decodedCommand.error
+                    });
+                }
             }
 
-            this.lastPacketTime = performance.now();
+            this.lastPacketTime = now;
+
+            // Reset lead-in state after successful decode
+            this.sawLeadIn = false;
 
             // Clear buffer after successful decode to avoid duplicates
-            this.symbolBuffer = this.symbolBuffer.slice(-10);
+            this.symbolBuffer = this.symbolBuffer.slice(-12);
             return;
         }
 

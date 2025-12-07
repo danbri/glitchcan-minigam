@@ -2,11 +2,96 @@
  * Furby Packet Generator
  *
  * Generates control packets for Furby toys.
- * Commands are 10-bit values (0-1023) encoded as quaternary (base-4) digits.
  * Based on Hacksby reverse engineering: https://github.com/iafan/Hacksby
+ *
+ * Protocol:
+ * - Commands are 10-bit values (0-1023)
+ * - Each command is encoded as TWO packets:
+ *   - Packet 1: high 5 bits (0-31)
+ *   - Packet 2: low 5 bits + 32 (32-63)
+ * - Each packet is 12 quaternary digits: DATA(4) + CHECKSUM(4) + IDENTIFIER(4)
+ * - Checksums are looked up from a table, not calculated via XOR
  */
 
 export class FurbyPacket {
+    /**
+     * Checksum lookup table from Hacksby Furby::Packet
+     * First 32 entries for first packet (high bits)
+     * Second 32 entries for second packet (low bits + 32)
+     */
+    static CHECKSUMS = [
+        // First packet (higher 5 bits of command number)
+        '0000', //  0
+        '0110', //  1
+        '0210', //  2
+        '0300', //  3
+        '1023', //  4
+        '1133', //  5
+        '1233', //  6
+        '1323', //  7
+        '0120', //  8
+        '0201', //  9
+        '0330', // 10
+        '1021', // 11
+        '1103', // 12
+        '1222', // 13
+        '1313', // 14
+        '2021', // 15
+        '0220', // 16
+        '0330', // 17
+        '1000', // 18
+        '1110', // 19
+        '1203', // 20
+        '1313', // 21
+        '2000', // 22
+        '2110', // 23
+        '0300', // 24
+        '1011', // 25
+        '1120', // 26
+        '1201', // 27
+        '1323', // 28
+        '2011', // 29
+        '2120', // 30
+        '2201', // 31
+
+        // Second packet (lower 5 bits of command number + 32)
+        '1033', //  0 + 32
+        '1123', //  1 + 32
+        '1223', //  2 + 32
+        '1333', //  3 + 32
+        '2033', //  4 + 32
+        '2123', //  5 + 32
+        '2223', //  6 + 32
+        '2333', //  7 + 32
+        '1113', //  8 + 32
+        '1232', //  9 + 32
+        '1303', // 10 + 32
+        '2031', // 11 + 32
+        '2113', // 12 + 32
+        '2232', // 13 + 32
+        '2303', // 14 + 32
+        '3012', // 15 + 32
+        '1213', // 16 + 32
+        '1303', // 17 + 32
+        '2010', // 18 + 32
+        '2100', // 19 + 32
+        '2213', // 20 + 32
+        '2303', // 21 + 32
+        '3033', // 22 + 32
+        '3123', // 23 + 32
+        '1333', // 24 + 32
+        '2001', // 25 + 32
+        '2130', // 26 + 32
+        '2211', // 27 + 32
+        '2333', // 28 + 32
+        '3022', // 29 + 32
+        '3113', // 30 + 32
+        '3232', // 31 + 32
+    ];
+
+    // Fixed identifier at end of each packet
+    static IDENTIFIER = '1032';
+
     /**
      * Known Furby commands (decimal values 0-1023)
      * From Hacksby Furby::Command - commands marked with ! work with iOS app
@@ -141,45 +226,45 @@ export class FurbyPacket {
     };
 
     /**
-     * Convert a 10-bit value to quaternary string (base-4 digits 0-3)
-     * @param {number} value - Value 0-1023
-     * @returns {string} - 5 quaternary digits representing the value
+     * Convert 6-bit binary string to 4 quaternary digits
+     * Example: '11011011' -> '3123'
+     * @param {string} binary - 8-bit binary string
+     * @returns {string} - 4 quaternary digits
      */
-    static valueToQuaternary(value) {
-        value = value & 0x3FF; // Ensure 10-bit (0-1023)
+    static binToQuad(binary) {
         let result = '';
-        for (let i = 4; i >= 0; i--) {
-            result += ((value >> (i * 2)) & 0x03).toString();
+        for (let i = 0; i < binary.length; i += 2) {
+            const pair = binary.substring(i, i + 2);
+            result += parseInt(pair, 2).toString();
         }
         return result;
     }
 
     /**
-     * Convert quaternary string back to number
-     * @param {string} quat - Quaternary digit string
-     * @returns {number} - Decoded value
+     * Convert number to 6-bit binary string
+     * @param {number} value - Value 0-63
+     * @returns {string} - 6-bit binary string
      */
-    static quaternaryToValue(quat) {
-        let value = 0;
-        for (let i = 0; i < quat.length; i++) {
-            value = (value << 2) | parseInt(quat[i]);
+    static decToBin6(value) {
+        return value.toString(2).padStart(6, '0');
+    }
+
+    /**
+     * Convert quaternary string to decimal
+     * @param {string} quad - Quaternary string
+     * @returns {number} - Decimal value
+     */
+    static quadToDec(quad) {
+        let result = 0;
+        for (const digit of quad) {
+            result = (result << 2) | parseInt(digit);
         }
-        return value;
+        return result;
     }
 
     /**
-     * Calculate checksum for a command
-     * For 10-bit commands, checksum is the complement (XOR with 0x3FF)
-     * @param {number} cmd - Command value (0-1023)
-     * @returns {number} - Checksum value (0-1023)
-     */
-    static checksum(cmd) {
-        return (cmd ^ 0x3FF) & 0x3FF;
-    }
-
-    /**
-     * Create a Furby packet from a command
-     * Returns two space-separated quaternary strings (packet sent twice)
+     * Create Furby packets from a command
+     * Returns two space-separated packet strings (packet1 for high bits, packet2 for low bits)
      *
      * @param {number|string} command - Command value (0-1023) or command name
      * @returns {string} - Two space-separated packet strings
@@ -209,12 +294,23 @@ export class FurbyPacket {
             throw new Error(`Command must be 0-1023, got: ${cmdValue}`);
         }
 
-        // Build packet: command (5 digits) + checksum (5 digits)
-        const chk = this.checksum(cmdValue);
-        const packet = this.valueToQuaternary(cmdValue) + this.valueToQuaternary(chk);
+        // Split into two packets
+        const packet1Byte = cmdValue >> 5;           // High 5 bits (0-31)
+        const packet2Byte = (cmdValue & 31) + 32;    // Low 5 bits + 32 (32-63)
 
-        // Return packet twice (for reliability)
-        return `${packet} ${packet}`;
+        // Build packet 1: '11' + 6-bit binary -> 4 quaternary + checksum + identifier
+        const bin1 = '11' + this.decToBin6(packet1Byte);
+        const data1 = this.binToQuad(bin1);
+        const checksum1 = this.CHECKSUMS[packet1Byte];
+        const s1 = data1 + '-' + checksum1 + '-' + this.IDENTIFIER;
+
+        // Build packet 2: '11' + 6-bit binary -> 4 quaternary + checksum + identifier
+        const bin2 = '11' + this.decToBin6(packet2Byte);
+        const data2 = this.binToQuad(bin2);
+        const checksum2 = this.CHECKSUMS[packet2Byte];
+        const s2 = data2 + '-' + checksum2 + '-' + this.IDENTIFIER;
+
+        return `${s1} ${s2}`;
     }
 
     /**
@@ -257,7 +353,8 @@ export class FurbyPacket {
     }
 
     /**
-     * Parse a raw packet string (for debugging)
+     * Parse a single raw packet string (12 quaternary digits)
+     * Format: DATA(4) + CHECKSUM(4) + IDENTIFIER(4)
      * @param {string} packet - Quaternary packet string
      * @returns {object} - Decoded packet info
      */
@@ -265,34 +362,90 @@ export class FurbyPacket {
         // Remove non-digit characters
         const digits = packet.replace(/[^0-3]/g, '');
 
-        if (digits.length < 10) {
-            return { error: 'Packet too short (need 10 quaternary digits)' };
+        if (digits.length < 8) {
+            return { error: 'Packet too short (need at least 8 quaternary digits)' };
         }
 
-        // Convert quaternary back to values (5 digits each)
-        const cmdValue = this.quaternaryToValue(digits.substring(0, 5));
-        const chkValue = this.quaternaryToValue(digits.substring(5, 10));
+        // Extract parts
+        const data = digits.substring(0, 4);
+        const checksum = digits.substring(4, 8);
+        const identifier = digits.length >= 12 ? digits.substring(8, 12) : null;
 
-        const expectedChk = this.checksum(cmdValue);
-        const valid = chkValue === expectedChk;
+        // Decode the byte value from data
+        const byteValue = this.quadToDec(data);
+
+        // Check high bits (should be 11xxxxxx = 192-255)
+        if ((byteValue & 192) !== 192) {
+            return {
+                error: 'Invalid packet: high bits not set',
+                data: data,
+                byteValue: byteValue
+            };
+        }
+
+        // Get the 6-bit payload
+        const payload = byteValue & 63;
+
+        // Look up expected checksum
+        const expectedChecksum = this.CHECKSUMS[payload];
+        const checksumValid = checksum === expectedChecksum;
+
+        // Determine if this is packet 1 (high bits) or packet 2 (low bits)
+        const isPacket2 = payload >= 32;
+        const bits = isPacket2 ? (payload - 32) : payload;
+
+        return {
+            data: data,
+            checksum: checksum,
+            identifier: identifier,
+            byteValue: byteValue,
+            payload: payload,
+            bits: bits,
+            isPacket2: isPacket2,
+            expectedChecksum: expectedChecksum,
+            checksumValid: checksumValid,
+            identifierValid: identifier === this.IDENTIFIER || identifier === null
+        };
+    }
+
+    /**
+     * Decode a full command from two packets
+     * @param {object} packet1 - Parsed packet 1 (high bits)
+     * @param {object} packet2 - Parsed packet 2 (low bits)
+     * @returns {object} - Decoded command info
+     */
+    static decodeCommand(packet1, packet2) {
+        if (packet1.error || packet2.error) {
+            return { error: packet1.error || packet2.error };
+        }
+
+        if (packet1.isPacket2 || !packet2.isPacket2) {
+            return { error: 'Packet order incorrect' };
+        }
+
+        if (!packet1.checksumValid || !packet2.checksumValid) {
+            return { error: 'Checksum mismatch' };
+        }
+
+        // Reconstruct command: high 5 bits from packet1, low 5 bits from packet2
+        const command = (packet1.bits << 5) | packet2.bits;
 
         // Find command name if known
         let cmdName = null;
         for (const [name, value] of Object.entries(this.COMMANDS)) {
-            if (value === cmdValue) {
+            if (value === command) {
                 cmdName = name;
                 break;
             }
         }
 
         return {
-            command: cmdValue,
-            commandHex: '0x' + cmdValue.toString(16).toUpperCase().padStart(3, '0'),
+            command: command,
+            commandHex: '0x' + command.toString(16).toUpperCase().padStart(3, '0'),
             commandName: cmdName,
-            description: this.DESCRIPTIONS[cmdValue] || '',
-            checksum: chkValue,
-            checksumValid: valid,
-            raw: digits.substring(0, 10)
+            description: this.DESCRIPTIONS[command] || '',
+            packet1Valid: packet1.checksumValid,
+            packet2Valid: packet2.checksumValid
         };
     }
 }

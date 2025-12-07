@@ -2,7 +2,7 @@
 /**
  * Furby Packet Test Utility
  *
- * Verifies packet encoding/decoding without audio.
+ * Verifies packet encoding/decoding matches Hacksby Perl Packet.pm
  * Run with: node test-packets.js
  */
 
@@ -10,124 +10,165 @@
 import { FurbyPacket } from './furby-packet.js';
 
 console.log('=== Furby Packet Test Utility ===\n');
+console.log('Testing Hacksby two-packet protocol:\n');
+console.log('  Each command (0-1023) is encoded as TWO packets:');
+console.log('  - Packet 1: high 5 bits (0-31)');
+console.log('  - Packet 2: low 5 bits + 32 (32-63)');
+console.log('  - Each packet: DATA(4) + CHECKSUM(4) + "1032" identifier\n');
 
 // Test 1: Verify encoding for known commands
 console.log('TEST 1: Packet Encoding');
-console.log('-'.repeat(50));
+console.log('-'.repeat(60));
 
-const testCommands = [868, 869, 863, 820, 350]; // SING, TALK, LAUGH, HYPNOTIZE, FOOD_TASTY
+const testCommands = [
+    { cmd: 867, name: 'CMD_SNEEZE' },
+    { cmd: 864, name: 'CMD_BURP' },
+    { cmd: 865, name: 'CMD_FART' },
+    { cmd: 868, name: 'CMD_SING' },
+    { cmd: 869, name: 'CMD_TALK' },
+    { cmd: 820, name: 'HYPNOTIZE' },
+    { cmd: 350, name: 'FOOD_TASTY' },
+    { cmd: 0, name: 'Zero' },
+    { cmd: 1023, name: 'Max' },
+];
 
-testCommands.forEach(cmd => {
+testCommands.forEach(({ cmd, name }) => {
     const packet = FurbyPacket.make(cmd);
     const [pkt1, pkt2] = packet.split(' ');
-    const parsed = FurbyPacket.parsePacket(pkt1);
 
-    console.log(`Command: ${cmd} (${parsed.commandName || 'unnamed'})`);
-    console.log(`  Quaternary: ${pkt1}`);
-    console.log(`  Checksum:   ${parsed.checksum} (${parsed.checksumValid ? 'VALID' : 'INVALID'})`);
-    console.log(`  Interleaved: X${pkt1.split('').join('X')}X`);
+    const highBits = cmd >> 5;
+    const lowBits = cmd & 31;
+
+    console.log(`Command ${cmd} (${name}):`);
+    console.log(`  High bits: ${highBits}, Low bits: ${lowBits}`);
+    console.log(`  Packet 1: ${pkt1}`);
+    console.log(`  Packet 2: ${pkt2}`);
     console.log();
 });
 
-// Test 2: Verify checksum algorithm
-console.log('\nTEST 2: Checksum Verification');
-console.log('-'.repeat(50));
+// Test 2: Verify checksum lookup table
+console.log('\nTEST 2: Checksum Table Verification');
+console.log('-'.repeat(60));
 
-for (let cmd = 0; cmd <= 1023; cmd += 100) {
-    const chk = FurbyPacket.checksum(cmd);
-    const reconstructed = cmd ^ chk;
-    const valid = reconstructed === 0x3FF;
-    console.log(`cmd=${cmd.toString().padStart(4)}: chk=${chk.toString().padStart(4)} | cmd^chk=${reconstructed} (should be 1023) ${valid ? '✓' : '✗'}`);
+let checksumPass = true;
+for (let i = 0; i < 64; i++) {
+    const checksum = FurbyPacket.CHECKSUMS[i];
+    if (!checksum || checksum.length !== 4) {
+        console.log(`FAIL: Checksum[${i}] = ${checksum} (invalid)`);
+        checksumPass = false;
+    }
 }
+console.log(`Checksum table: ${checksumPass ? '✓ All 64 entries valid' : '✗ Some entries invalid'}`);
 
 // Test 3: Round-trip encoding/decoding
 console.log('\nTEST 3: Round-trip Encoding/Decoding');
-console.log('-'.repeat(50));
+console.log('-'.repeat(60));
 
 let passed = 0;
 let failed = 0;
+const failures = [];
 
 for (let cmd = 0; cmd <= 1023; cmd++) {
     const packet = FurbyPacket.make(cmd);
-    const [pkt1] = packet.split(' ');
-    const parsed = FurbyPacket.parsePacket(pkt1);
+    const [pkt1, pkt2] = packet.split(' ');
 
-    if (parsed.command === cmd && parsed.checksumValid) {
+    // Remove dashes for parsing
+    const parsed1 = FurbyPacket.parsePacket(pkt1.replace(/-/g, ''));
+    const parsed2 = FurbyPacket.parsePacket(pkt2.replace(/-/g, ''));
+
+    // Decode full command
+    const decoded = FurbyPacket.decodeCommand(parsed1, parsed2);
+
+    if (decoded.command === cmd && parsed1.checksumValid && parsed2.checksumValid && !decoded.error) {
         passed++;
     } else {
         failed++;
-        console.log(`FAIL: cmd=${cmd}, decoded=${parsed.command}, valid=${parsed.checksumValid}`);
+        if (failures.length < 5) {
+            failures.push({
+                cmd,
+                decoded: decoded.command,
+                error: decoded.error,
+                p1Valid: parsed1.checksumValid,
+                p2Valid: parsed2.checksumValid
+            });
+        }
     }
 }
 
-console.log(`\nRound-trip: ${passed} passed, ${failed} failed`);
-
-// Test 4: Simulate received symbol stream
-console.log('\nTEST 4: Symbol Stream Simulation');
-console.log('-'.repeat(50));
-
-// Simulate what the receiver sees
-function simulateReceive(cmd) {
-    const packet = FurbyPacket.make(cmd);
-    const [pkt1] = packet.split(' ');
-
-    // Build interleaved stream (what gets transmitted)
-    const interleaved = 'X' + pkt1.split('').join('X') + 'X';
-
-    console.log(`Command ${cmd}:`);
-    console.log(`  Raw packet: ${pkt1}`);
-    console.log(`  Transmitted: ${interleaved}`);
-    console.log(`  Symbols: ${interleaved.length} total (${pkt1.length} data + ${interleaved.length - pkt1.length} carriers)`);
-
-    // Simulate receiver stripping X's
-    const dataSymbols = interleaved.split('').filter(s => s !== 'X');
-    console.log(`  After stripping X: ${dataSymbols.join('')}`);
-    console.log(`  Data symbols count: ${dataSymbols.length} (need 10 for valid packet)`);
-
-    // Try to decode
-    const decoded = FurbyPacket.parsePacket(dataSymbols.join(''));
-    console.log(`  Decoded: cmd=${decoded.command}, valid=${decoded.checksumValid}`);
-    console.log();
-
-    return dataSymbols.length === 10 && decoded.command === cmd && decoded.checksumValid;
+console.log(`Round-trip: ${passed} passed, ${failed} failed`);
+if (failures.length > 0) {
+    console.log('First failures:');
+    failures.forEach(f => {
+        console.log(`  cmd=${f.cmd}: decoded=${f.decoded}, p1=${f.p1Valid}, p2=${f.p2Valid}, error=${f.error}`);
+    });
 }
 
-const simTests = [868, 862, 350, 820, 0, 1023];
-let simPassed = simTests.every(simulateReceive);
-console.log(`Simulation: ${simPassed ? 'ALL PASSED' : 'SOME FAILED'}`);
+// Test 4: Verify packet structure
+console.log('\nTEST 4: Packet Structure Verification');
+console.log('-'.repeat(60));
 
-// Test 5: Analyze user's received sequence
-console.log('\nTEST 5: Analyze Received Sequence');
-console.log('-'.repeat(50));
+const structTests = [0, 100, 500, 867, 1023];
+structTests.forEach(cmd => {
+    const packet = FurbyPacket.make(cmd);
+    const [pkt1, pkt2] = packet.split(' ');
+    const [data1, checksum1, id1] = pkt1.split('-');
+    const [data2, checksum2, id2] = pkt2.split('-');
 
-// From user's log: X, 1, 0, X, 1, X, 0, X (partial sequence)
-const userSequence = ['X', '1', '0', 'X', '1', 'X', '0', 'X'];
-console.log('User received sequence:', userSequence.join(', '));
+    console.log(`Command ${cmd}:`);
+    console.log(`  Packet 1: data=${data1} checksum=${checksum1} id=${id1}`);
+    console.log(`  Packet 2: data=${data2} checksum=${checksum2} id=${id2}`);
 
-// Strip X's
-const userData = userSequence.filter(s => s !== 'X');
-console.log('After stripping X:', userData.join(''));
-console.log(`Data symbols: ${userData.length} (need 10 for complete packet)`);
+    // Verify identifier
+    const idOk = id1 === '1032' && id2 === '1032';
+    console.log(`  Identifiers: ${idOk ? '✓' : '✗'}`);
+    console.log();
+});
 
-// Check expected pattern
-console.log('\nExpected pattern for a packet:');
-console.log('  Transmitted: X d X d X d X d X d X d X d X d X d X d X');
-console.log('  Where d = data digit (0, 1, 2, or 3)');
-console.log('  Total: 21 symbols (11 X carriers + 10 data digits)');
-console.log('  Duration: ~21 * 16ms = 336ms per packet transmission');
+// Test 5: Symbol stream simulation
+console.log('\nTEST 5: Symbol Stream Simulation');
+console.log('-'.repeat(60));
+
+function simulateTransmission(cmd) {
+    const packet = FurbyPacket.make(cmd);
+    const [pkt1, pkt2] = packet.split(' ');
+
+    // Remove dashes to get 12 digits
+    const digits1 = pkt1.replace(/-/g, '');
+    const digits2 = pkt2.replace(/-/g, '');
+
+    // Build interleaved stream (what gets transmitted)
+    const interleaved1 = 'X' + digits1.split('').join('X') + 'X';
+    const interleaved2 = 'X' + digits2.split('').join('X') + 'X';
+
+    console.log(`Command ${cmd}:`);
+    console.log(`  Packet 1 digits: ${digits1} (${digits1.length} digits)`);
+    console.log(`  Packet 1 transmitted: ${interleaved1}`);
+    console.log(`  Packet 1 symbols: ${interleaved1.length} total`);
+    console.log(`  Packet 2 digits: ${digits2} (${digits2.length} digits)`);
+    console.log(`  Packet 2 transmitted: ${interleaved2}`);
+    console.log(`  Packet 2 symbols: ${interleaved2.length} total`);
+    console.log();
+
+    return digits1.length === 12 && digits2.length === 12 &&
+           interleaved1.length === 25 && interleaved2.length === 25;
+}
+
+const simTests = [867, 864, 0, 1023];
+const simResults = simTests.map(cmd => simulateTransmission(cmd));
+console.log(`Simulation: ${simResults.every(r => r) ? 'ALL PASSED' : 'SOME FAILED'}`);
 
 // Test 6: Timing analysis
 console.log('\nTEST 6: Timing Analysis');
-console.log('-'.repeat(50));
+console.log('-'.repeat(60));
 
 const timingParams = {
     baseFreqLength: 16,      // ms per symbol
     xfadeLength: 4,          // ms crossfade
     leadLength: 5,           // ms lead in/out
-    silenceGap: 490,         // ms between packet repeats
+    silenceGap: 490,         // ms between packets
 };
 
-const symbolsPerPacket = 21; // 11 X + 10 data
+const symbolsPerPacket = 25; // 13 X + 12 data
 const symbolTime = timingParams.baseFreqLength + timingParams.xfadeLength;
 const packetTime = (symbolsPerPacket * symbolTime) + (2 * timingParams.leadLength);
 const totalTime = (2 * packetTime) + timingParams.silenceGap;
@@ -137,4 +178,9 @@ console.log(`  Symbol duration: ${timingParams.baseFreqLength}ms + ${timingParam
 console.log(`  Packet duration: ${symbolsPerPacket} symbols × ${symbolTime}ms + ${2 * timingParams.leadLength}ms leads = ${packetTime}ms`);
 console.log(`  Total transmission: 2 packets × ${packetTime}ms + ${timingParams.silenceGap}ms gap = ${totalTime}ms`);
 
-console.log('\n=== Tests Complete ===');
+console.log('\n=== Tests Complete ===\n');
+
+// Final summary
+const allPassed = checksumPass && failed === 0 && simResults.every(r => r);
+console.log(allPassed ? '✓ ALL TESTS PASSED' : '✗ SOME TESTS FAILED');
+process.exit(allPassed ? 0 : 1);
