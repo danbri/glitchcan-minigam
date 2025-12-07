@@ -28,7 +28,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -65,24 +65,37 @@
             color: var(--accent);
         }
 
+        h3 {
+            margin: 16px 0 10px 0;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h3:first-of-type {
+            margin-top: 0;
+        }
+
         .command-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
         }
 
         .command-btn {
-            padding: 12px 16px;
+            padding: 10px 12px;
             border: none;
             border-radius: 8px;
             background: var(--accent-secondary);
             color: var(--text);
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 500;
             transition: all 0.2s ease;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            text-align: center;
         }
 
         .command-btn:hover {
@@ -96,6 +109,13 @@
 
         .command-btn.playing {
             animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        .command-btn .cmd-value {
+            display: block;
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 4px;
         }
 
         @keyframes pulse {
@@ -266,40 +286,48 @@
         footer a:hover {
             text-decoration: underline;
         }
+
+        .command-group {
+            margin-bottom: 16px;
+        }
+
+        .command-group:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🤖 Furbacca</h1>
-            <p class="subtitle">Furby Audio Control Code Generator</p>
+            <h1>Furbacca</h1>
+            <p class="subtitle">Furby Audio Control Code Generator (Hacksby Port)</p>
         </header>
 
         <div class="warning">
-            ⚠️ <strong>Note:</strong> This generates ultrasonic frequencies (16-22 kHz). Most humans can't hear these, but your Furby can! Make sure your speakers can reproduce high frequencies.
+            <strong>Note:</strong> This generates ultrasonic frequencies (16-22 kHz). Most humans can't hear these, but your Furby can! Make sure your speakers can reproduce high frequencies.
         </div>
 
         <div class="card">
-            <h2>🎮 Quick Commands</h2>
-            <div class="command-grid" id="command-grid">
-                <!-- Commands will be populated by JavaScript -->
+            <h2>Commands</h2>
+            <div id="command-groups">
+                <!-- Command groups will be populated by JavaScript -->
             </div>
         </div>
 
         <div class="card">
-            <h2>🔧 Custom Command</h2>
+            <h2>Custom Command</h2>
             <div class="custom-section">
                 <div class="input-group">
-                    <input type="text" id="custom-command" placeholder="Enter hex (0x00-0xFF) or decimal (0-255)">
-                    <button class="action-btn" onclick="playCustomCommand()">▶ Play</button>
-                    <button class="action-btn secondary" onclick="downloadCustomCommand()">💾 Download WAV</button>
+                    <input type="text" id="custom-command" placeholder="Enter decimal (0-1023) or hex (0x000-0x3FF)">
+                    <button class="action-btn" onclick="playCustomCommand()">Play</button>
+                    <button class="action-btn secondary" onclick="downloadCustomCommand()">Download WAV</button>
                 </div>
                 <div id="custom-status"></div>
             </div>
         </div>
 
         <div class="card">
-            <h2>📊 Debug Info</h2>
+            <h2>Debug Info</h2>
             <div class="debug-panel" id="debug-panel">
 <span class="info">Click a command to see packet details...</span>
             </div>
@@ -333,7 +361,7 @@
         <footer>
             <p>
                 Port of Furby::Audio Perl module to JavaScript/Web Audio API<br>
-                <a href="https://github.com/danbri/glitchcan-minigam">View Source</a>
+                Based on <a href="https://github.com/iafan/Hacksby">Hacksby</a> reverse engineering
             </p>
         </footer>
     </div>
@@ -352,19 +380,36 @@
             return audioContext;
         }
 
-        // Populate command grid
-        function initCommandGrid() {
-            const grid = document.getElementById('command-grid');
-            const commands = FurbyPacket.getCommandNames();
+        // Populate command groups
+        function initCommandGroups() {
+            const container = document.getElementById('command-groups');
+            const groups = FurbyPacket.getCommandGroups();
 
-            commands.forEach(name => {
-                const btn = document.createElement('button');
-                btn.className = 'command-btn';
-                btn.textContent = name.replace(/_/g, ' ');
-                btn.dataset.command = name;
-                btn.onclick = () => playCommand(name, btn);
-                grid.appendChild(btn);
-            });
+            for (const [groupName, commands] of Object.entries(groups)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'command-group';
+
+                const heading = document.createElement('h3');
+                heading.textContent = groupName;
+                groupDiv.appendChild(heading);
+
+                const grid = document.createElement('div');
+                grid.className = 'command-grid';
+
+                commands.forEach(name => {
+                    const cmdValue = FurbyPacket.COMMANDS[name];
+                    const btn = document.createElement('button');
+                    btn.className = 'command-btn';
+                    btn.innerHTML = `${name.replace(/^(CMD_|EVENT_|FOOD_|SONG_|PERSONALITY_|HANDSHAKE_)/i, '').replace(/_/g, ' ')}<span class="cmd-value">${cmdValue}</span>`;
+                    btn.dataset.command = name;
+                    btn.title = FurbyPacket.getDescription(name) || name;
+                    btn.onclick = () => playCommand(name, btn);
+                    grid.appendChild(btn);
+                });
+
+                groupDiv.appendChild(grid);
+                container.appendChild(groupDiv);
+            }
         }
 
         // Play a command
@@ -414,13 +459,17 @@
             // Build interleaved representation
             const interleaved = 'X' + pkt1.split('').join('X') + 'X';
 
-            panel.innerHTML = `<span class="label">Command:</span> <span class="value">${typeof command === 'string' ? command : '0x' + command.toString(16).toUpperCase()}</span>
-<span class="label">Command Byte:</span> <span class="value">${parsed.commandHex} (${parsed.command})</span>
-<span class="label">Checksum:</span> <span class="value">0x${parsed.checksum.toString(16).toUpperCase()} (${parsed.checksumValid ? '✓ valid' : '✗ invalid'})</span>
+            const cmdDisplay = typeof command === 'string' ? command : command;
+            const description = parsed.description ? `\n<span class="label">Description:</span> <span class="value">${parsed.description}</span>` : '';
+
+            panel.innerHTML = `<span class="label">Command:</span> <span class="value">${cmdDisplay}</span>${description}
+<span class="label">Command Value:</span> <span class="value">${parsed.commandHex} (${parsed.command} decimal)</span>
+<span class="label">Checksum:</span> <span class="value">0x${parsed.checksum.toString(16).toUpperCase().padStart(3, '0')} (${parsed.checksumValid ? 'valid' : 'INVALID'})</span>
 <span class="label">Packet (quaternary):</span> <span class="value">${pkt1}</span>
 <span class="label">Interleaved:</span> <span class="value">${interleaved}</span>
 
-<span class="info">// Packet structure: [cmd_byte:4 digits][checksum:4 digits]
+<span class="info">// Packet structure: [command:5 digits][checksum:5 digits]
+// Commands are 10-bit (0-1023), encoded as 5 quaternary digits
 // Each digit is base-4 (quaternary): 0, 1, 2, 3
 // Interleaved with carrier 'X' between each digit
 // Sent twice with ~500ms gap for reliability</span>`;
@@ -489,12 +538,12 @@
                     command = parseInt(input, 10);
                 }
 
-                if (isNaN(command) || command < 0 || command > 255) {
-                    throw new Error('Command must be 0-255 (or 0x00-0xFF)');
+                if (isNaN(command) || command < 0 || command > 1023) {
+                    throw new Error('Command must be 0-1023 (or 0x000-0x3FF)');
                 }
 
                 await playCommand(command);
-                showStatus('custom-status', `Playing command 0x${command.toString(16).toUpperCase()}`, 'success');
+                showStatus('custom-status', `Playing command ${command} (0x${command.toString(16).toUpperCase().padStart(3, '0')})`, 'success');
 
             } catch (error) {
                 showStatus('custom-status', `Error: ${error.message}`, 'error');
@@ -518,11 +567,11 @@
                     command = parseInt(input, 10);
                 }
 
-                if (isNaN(command) || command < 0 || command > 255) {
-                    throw new Error('Command must be 0-255 (or 0x00-0xFF)');
+                if (isNaN(command) || command < 0 || command > 1023) {
+                    throw new Error('Command must be 0-1023 (or 0x000-0x3FF)');
                 }
 
-                const filename = `furby-cmd-0x${command.toString(16).toUpperCase().padStart(2, '0')}.wav`;
+                const filename = `furby-cmd-${command}.wav`;
                 FurbyAudio.downloadWav(command, filename);
                 showStatus('custom-status', `Downloaded ${filename}`, 'success');
 
@@ -548,7 +597,7 @@
         });
 
         // Initialize on load
-        initCommandGrid();
+        initCommandGroups();
     </script>
 </body>
 </html>
