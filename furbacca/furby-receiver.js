@@ -292,63 +292,129 @@ export class FurbyReceiver {
 
     /**
      * Try to find valid packets in the symbol buffer
+     * Uses pattern matching to find properly-aligned packets
      */
     tryFindPackets() {
-        if (this.symbolBuffer.length < 10) return;
+        if (this.symbolBuffer.length < 21) return; // Need at least 21 symbols for full packet
 
-        // Extract just the data symbols (non-X)
-        const dataSymbols = this.symbolBuffer
-            .filter(s => s.symbol !== 'X')
-            .map(s => s.symbol);
+        // Look for properly interleaved pattern: X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X
+        // Find sequences where X and data alternate correctly
+        const validPackets = [];
 
-        // Need at least 10 data symbols for a packet
-        if (dataSymbols.length < 10) return;
+        for (let start = 0; start <= this.symbolBuffer.length - 21; start++) {
+            // Check if this looks like a packet start (should begin with X or data after gap)
+            const slice = this.symbolBuffer.slice(start, start + 21);
 
-        // Try to find valid packets using sliding window
-        for (let i = 0; i <= dataSymbols.length - 10; i++) {
-            const candidate = dataSymbols.slice(i, i + 10).join('');
+            // Extract data symbols from this slice, checking for proper interleaving
+            const dataSymbols = [];
+            let properlyInterleaved = true;
+            let xCount = 0;
+            let dataCount = 0;
 
-            // Skip if we've already processed this exact sequence recently
-            if (this.processedPackets.has(candidate)) continue;
+            for (let i = 0; i < slice.length; i++) {
+                const sym = slice[i].symbol;
+                if (sym === 'X') {
+                    xCount++;
+                } else {
+                    dataSymbols.push(sym);
+                    dataCount++;
+                }
+            }
 
-            try {
-                const parsed = FurbyPacket.parsePacket(candidate);
+            // A proper packet has ~11 X carriers and 10 data symbols
+            if (dataCount >= 10 && xCount >= 8) {
+                const candidate = dataSymbols.slice(0, 10).join('');
 
-                if (parsed.checksumValid) {
-                    this.processedPackets.add(candidate);
+                // Skip if already processed
+                if (this.processedPackets.has(candidate)) continue;
 
-                    // Clear old processed packets (keep last 50)
-                    if (this.processedPackets.size > 50) {
-                        const first = this.processedPackets.values().next().value;
-                        this.processedPackets.delete(first);
-                    }
+                try {
+                    const parsed = FurbyPacket.parsePacket(candidate);
 
-                    if (this.onPacketReceived) {
-                        this.onPacketReceived({
+                    if (parsed.checksumValid) {
+                        validPackets.push({
                             packet: candidate,
                             parsed: parsed,
-                            timestamp: Date.now(),
-                            bufferSize: this.symbolBuffer.length,
-                            dataSymbolCount: dataSymbols.length
+                            score: xCount, // Higher X count = better alignment
+                            start: start
                         });
                     }
-
-                    this.lastPacketTime = performance.now();
-
-                    // Don't clear buffer immediately - might have more packets
-                    return;
+                } catch (e) {
+                    // Invalid packet, continue
                 }
-            } catch (e) {
-                // Invalid packet, continue
             }
         }
 
-        // Also report raw symbol stream for debugging
-        if (this.onRawSymbols && dataSymbols.length >= 5) {
+        // Also try simple sliding window on data-only symbols as fallback
+        const allDataSymbols = this.symbolBuffer
+            .filter(s => s.symbol !== 'X')
+            .map(s => s.symbol);
+
+        if (allDataSymbols.length >= 10) {
+            for (let i = 0; i <= allDataSymbols.length - 10; i++) {
+                const candidate = allDataSymbols.slice(i, i + 10).join('');
+
+                if (this.processedPackets.has(candidate)) continue;
+
+                try {
+                    const parsed = FurbyPacket.parsePacket(candidate);
+
+                    if (parsed.checksumValid) {
+                        // Check if this packet is already found with better score
+                        const existing = validPackets.find(p => p.packet === candidate);
+                        if (!existing) {
+                            validPackets.push({
+                                packet: candidate,
+                                parsed: parsed,
+                                score: 0, // Lower score for non-interleaved detection
+                                start: i
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // Invalid packet
+                }
+            }
+        }
+
+        // Report the best packet (highest score = best interleaving)
+        if (validPackets.length > 0) {
+            validPackets.sort((a, b) => b.score - a.score);
+            const best = validPackets[0];
+
+            this.processedPackets.add(best.packet);
+
+            // Clear old processed packets (keep last 50)
+            if (this.processedPackets.size > 50) {
+                const first = this.processedPackets.values().next().value;
+                this.processedPackets.delete(first);
+            }
+
+            if (this.onPacketReceived) {
+                this.onPacketReceived({
+                    packet: best.packet,
+                    parsed: best.parsed,
+                    timestamp: Date.now(),
+                    bufferSize: this.symbolBuffer.length,
+                    dataSymbolCount: allDataSymbols.length,
+                    alignmentScore: best.score,
+                    candidateCount: validPackets.length
+                });
+            }
+
+            this.lastPacketTime = performance.now();
+
+            // Clear buffer after successful decode to avoid duplicates
+            this.symbolBuffer = this.symbolBuffer.slice(-10);
+            return;
+        }
+
+        // Report raw symbol stream for debugging
+        if (this.onRawSymbols && allDataSymbols.length >= 5) {
             this.onRawSymbols({
                 raw: this.symbolBuffer.map(s => s.symbol).join(''),
-                data: dataSymbols.join(''),
-                count: dataSymbols.length
+                data: allDataSymbols.join(''),
+                count: allDataSymbols.length
             });
         }
     }
