@@ -18,7 +18,7 @@ export class FurbyReceiver {
     };
 
     static SAMPLE_RATE = 44100;
-    static FFT_SIZE = 2048;
+    static FFT_SIZE = 1024;  // Smaller for faster response (23ms vs 46ms)
 
     // Timing constants (ms)
     static SYMBOL_DURATION = 16;      // Expected symbol duration
@@ -72,7 +72,7 @@ export class FurbyReceiver {
             // Create analyser node
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = FurbyReceiver.FFT_SIZE;
-            this.analyser.smoothingTimeConstant = 0.2; // Faster response
+            this.analyser.smoothingTimeConstant = 0; // No smoothing for fastest response
 
             // Connect microphone to analyser
             this.microphone = this.audioContext.createMediaStreamSource(stream);
