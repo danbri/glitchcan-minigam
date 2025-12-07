@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Maple Hollow: Aslan Rising</title>
     <style>
         * {
@@ -12,103 +11,146 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(145deg, #0f0f1a 0%, #1a1025 50%, #0d1117 100%);
-            color: #f0f2f5;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
+            background: #000;
+            color: #fff;
         }
 
         #game-container {
-            max-width: 480px;
-            width: 100%;
-            background: linear-gradient(180deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 25, 0.99) 100%);
-            border-radius: 20px;
-            box-shadow:
-                0 25px 80px rgba(0, 0, 0, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.06),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            overflow: hidden;
-        }
-    
-        #header {
-            background: linear-gradient(180deg, rgba(30, 25, 45, 0.9) 0%, transparent 100%);
-            padding: 20px 20px 0;
-            text-align: center;
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            background: #000;
         }
 
-        #title {
-            font-size: 22px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.5px;
+        /* === CHOICES AT TOP === */
+        #choices-bar {
+            position: relative;
+            z-index: 20;
+            padding: 12px 12px 8px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 80%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #scene-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 4px;
         }
 
-        #subtitle {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.4);
-            font-weight: 400;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 16px;
-        }
-
-        #tabs {
-            display: flex;
-            justify-content: center;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 4px;
-            border-radius: 12px;
-            margin: 0 auto;
-            width: fit-content;
-        }
-
-        .tab {
-            padding: 8px 24px;
-            background: transparent;
-            border: none;
-            color: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-
-        .tab:hover {
-            color: rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .tab.active {
+        #scene-title {
+            font-size: 15px;
+            font-weight: 600;
             color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-    
-        .tab-content {
-            display: none;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
         }
 
-        .tab-content.active {
-            display: block;
+        #settings-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        #settings-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        #settings-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .choice-button {
+            position: relative;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            animation: shimmer 3s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 0.3s);
+        }
+
+        .choice-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            animation: shimmer-sweep 4s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 0.5s);
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                border-color: rgba(167, 139, 250, 0.3);
+                box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
+            }
+            50% {
+                border-color: rgba(167, 139, 250, 0.6);
+                box-shadow: 0 0 20px 0 rgba(167, 139, 250, 0.2);
+            }
+        }
+
+        @keyframes shimmer-sweep {
+            0% { transform: translateX(-100%); }
+            50%, 100% { transform: translateX(100%); }
+        }
+
+        .choice-button:hover {
+            transform: scale(1.02);
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.25) 0%, rgba(96, 165, 250, 0.25) 100%);
+            border-color: rgba(167, 139, 250, 0.8);
+            box-shadow: 0 0 30px rgba(167, 139, 250, 0.4);
+        }
+
+        .choice-button:active {
+            transform: scale(0.98);
+        }
+
+        /* === VIDEO AREA === */
+        #video-area {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
         }
 
         #video-container {
             position: relative;
             width: 100%;
-            padding-bottom: 177.78%;
-            background: linear-gradient(180deg, #0a0a12 0%, #000 100%);
-            border-radius: 0;
+            height: 100%;
         }
 
         #video-player {
@@ -118,146 +160,225 @@
             width: 100%;
             height: 100%;
             border: none;
-        }
-    
-    #video-link-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 10;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
-        padding: 12px 16px 10px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        transition: opacity 0.6s ease, transform 0.4s ease;
-        opacity: 1;
-    }
-
-    #video-link-overlay.faded {
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(100%);
-    }
-
-    #video-link-overlay.hover-reveal:hover {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .overlay-hint {
-        color: rgba(255, 255, 255, 0.6);
-        font-size: 11px;
-        letter-spacing: 0.3px;
-    }
-
-    .watch-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        text-decoration: none;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        font-size: 12px;
-        font-weight: 500;
-        transition: all 0.25s ease;
-        backdrop-filter: blur(10px);
-    }
-
-    .watch-button:hover {
-        background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
-        transform: scale(1.03);
-    }
-
-    .watch-button svg {
-        width: 14px;
-        height: 14px;
-        fill: currentColor;
-    }
-
-    .watch-instruction {
-        display: none;
-    }
-    
-        #scene-info {
-            padding: 16px 20px;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+            object-fit: contain;
         }
 
-        #scene-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 4px;
-            line-height: 1.3;
-        }
-
-        #scene-id {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.35);
-            font-family: 'SF Mono', 'Consolas', monospace;
-            letter-spacing: 0.5px;
-        }
-
-        #choices {
-            padding: 8px 16px 20px;
-        }
-
-        .choice-button {
+        /* === YOUTUBE OVERLAY (discreet footer) === */
+        #video-link-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+            padding: 20px 16px 12px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            transition: opacity 0.5s ease;
+        }
+
+        #video-link-overlay.faded {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay-hint {
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+        }
+
+        .watch-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .watch-button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .watch-button svg {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
+        }
+
+        /* === PROGRESS BAR === */
+        #progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            z-index: 15;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+            width: 10%;
+            transition: width 0.5s ease;
+        }
+
+        /* === TRANSITION OVERLAY === */
+        #transition-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #transition-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #transition-text {
+            font-size: 18px;
+            font-weight: 500;
+            color: #fff;
+            text-align: center;
+            padding: 0 24px;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease 0.2s;
+        }
+
+        #transition-overlay.active #transition-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* === CONFETTI CANVAS === */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 90;
+        }
+
+        /* === SETTINGS MODAL === */
+        #settings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        #settings-modal.open {
+            display: flex;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section h3 {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .settings-btn {
             width: 100%;
             padding: 14px 16px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px;
-            color: rgba(255, 255, 255, 0.9);
+            color: #fff;
             font-size: 14px;
-            font-weight: 450;
-            cursor: pointer;
-            transition: all 0.15s ease;
             text-align: left;
-            font-family: inherit;
-            position: relative;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.12);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
 
-        .choice-button::before {
-            content: '›';
-            font-size: 18px;
-            font-weight: 300;
-            color: rgba(255, 255, 255, 0.3);
-            transition: all 0.15s ease;
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
         }
 
-        .choice-button:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-1px);
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .choice-button:hover::before {
-            color: #a78bfa;
-            transform: translateX(3px);
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
         }
 
-        .choice-button:active {
-            transform: translateY(0) scale(0.99);
-            background: rgba(255, 255, 255, 0.06);
-        }
-    
+        /* === MAP (in settings) === */
         #map-container {
-            width: 100%;
-            height: 500px;
-            background: linear-gradient(180deg, #0a0a14 0%, #0d0d18 100%);
+            flex: 1;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
             position: relative;
             overflow: hidden;
+            min-height: 300px;
         }
 
         #story-map {
@@ -265,53 +386,36 @@
             height: 100%;
         }
 
-        .map-node {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
         .map-node circle {
             stroke-width: 2px;
             transition: all 0.2s;
         }
 
-        .map-node:hover circle {
-            stroke-width: 3px;
-            filter: brightness(1.2);
-        }
-
-        .map-node.visited circle {
-            opacity: 1;
-        }
-
-        .map-node.unvisited circle {
-            opacity: 0.35;
-        }
-
         .map-node.current circle {
-            stroke-width: 3px;
-            filter: drop-shadow(0 0 10px currentColor);
+            filter: drop-shadow(0 0 8px currentColor);
             animation: pulse-node 2s infinite;
         }
 
+        .map-node.visited circle { opacity: 1; }
+        .map-node.unvisited circle { opacity: 0.3; }
+
         @keyframes pulse-node {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+            50% { transform: scale(1.1); }
         }
 
         .map-node text {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 600;
             text-anchor: middle;
-            fill: rgba(255, 255, 255, 0.9);
+            fill: #fff;
             pointer-events: none;
         }
 
         .map-link {
             fill: none;
-            stroke: rgba(255, 255, 255, 0.1);
+            stroke: rgba(255,255,255,0.1);
             stroke-width: 1px;
-            transition: all 0.2s;
         }
 
         .map-link.traveled {
@@ -320,367 +424,235 @@
             opacity: 0.7;
         }
 
-        .map-controls {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            display: flex;
-            gap: 4px;
-            z-index: 10;
-        }
-
-        .map-control-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.7);
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.15s;
-        }
-
-        .map-control-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-
-        .map-legend {
-            position: absolute;
-            bottom: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 10px;
-            z-index: 10;
-            backdrop-filter: blur(8px);
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin: 3px 0;
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 1.5px solid rgba(255, 255, 255, 0.8);
-        }
-    
-        #footer {
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-        }
-
-        #progress {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.4);
-            font-family: 'SF Mono', 'Consolas', monospace;
-        }
-
-        .footer-button {
-            padding: 6px 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.7);
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.15s ease;
-        }
-
-        .footer-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-    
+        /* === END SCREEN === */
         .end-screen {
-            padding: 40px 24px;
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
             text-align: center;
+            z-index: 50;
         }
 
         .end-title {
-            font-size: 28px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             margin-bottom: 16px;
         }
 
         .end-message {
-            font-size: 15px;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.6;
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.5;
             margin-bottom: 24px;
-        }
-
-        .end-stats {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 16px 24px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            margin-bottom: 24px;
-            display: inline-block;
-        }
-
-        .stat-line {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.5);
-            margin: 6px 0;
-            font-family: 'SF Mono', 'Consolas', monospace;
+            max-width: 280px;
         }
 
         .restart-button {
-            padding: 12px 32px;
-            background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
             border: none;
-            border-radius: 10px;
+            border-radius: 24px;
             color: #fff;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .restart-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(167, 139, 250, 0.4);
-        }
-    
-        @media (max-width: 600px) {
-            body {
-                padding: 0;
-            }
-
-            #game-container {
-                max-width: 100%;
-                border-radius: 0;
-            }
-
-            #title {
-                font-size: 20px;
-            }
-
-            #scene-title {
-                font-size: 16px;
-            }
-
-            .choice-button {
-                font-size: 13px;
-                padding: 12px 14px;
-            }
-
-            #video-link-overlay {
-                padding: 10px 12px 8px;
-            }
-
-            .overlay-hint {
-                font-size: 10px;
-            }
-
-            .watch-button {
-                padding: 5px 12px;
-                font-size: 11px;
-            }
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(167, 139, 250, 0.5);
         }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="header">
-            <div id="title">Maple Hollow: Aslan Rising</div>
-            <div id="subtitle">An Interactive Story</div>
-            <div id="tabs">
-                <button type="button" class="tab active" onclick="switchTab('story')">Story</button>
-                <button type="button" class="tab" onclick="switchTab('map')">Map</button>
+        <!-- Choices at top -->
+        <div id="choices-bar">
+            <div id="scene-header">
+                <div id="scene-title">The Train Arrives</div>
+                <button type="button" id="settings-btn" onclick="openSettings()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="choices"></div>
+        </div>
+
+        <!-- Video area -->
+        <div id="video-area">
+            <div id="video-container">
+                <iframe id="video-player"
+                        title="Story video"
+                        src="about:blank"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                <div id="video-link-overlay">
+                    <span class="overlay-hint">Video blocked?</span>
+                    <a id="external-link" href="#" target="_blank" rel="noopener noreferrer" class="watch-button">
+                        <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                        YouTube
+                    </a>
+                </div>
+            </div>
+            <div id="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transition overlay -->
+    <div id="transition-overlay">
+        <div id="transition-text"></div>
+    </div>
+
+    <!-- Confetti canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Settings modal -->
+    <div id="settings-modal">
+        <div class="settings-header">
+            <div class="settings-title">Settings</div>
+            <button type="button" class="close-btn" onclick="closeSettings()">&times;</button>
+        </div>
+
+        <div class="settings-section">
+            <h3>Progress</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-scenes">1</div>
+                    <div class="stat-label">Scenes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-choices">0</div>
+                    <div class="stat-label">Choices</div>
+                </div>
             </div>
         </div>
 
-        <div id="story-content" class="tab-content active">
-        <div id="video-container">
-            <iframe id="video-player"
-                    title="Story video player"
-                    src="about:blank"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-            </iframe>
-            <div id="video-link-overlay">
-                <span class="overlay-hint">Video blocked? Open externally</span>
-                <a id="external-link" href="#" target="_blank" rel="noopener noreferrer" class="watch-button">
-                    <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
-                    YouTube
-                </a>
-            </div>
+        <div class="settings-section">
+            <h3>Actions</h3>
+            <button type="button" class="settings-btn" onclick="restartStory()">Restart Story</button>
+            <button type="button" class="settings-btn" onclick="toggleHistory()">View History</button>
         </div>
-        
-        <div id="scene-info">
-            <div id="scene-title"></div>
-            <div id="scene-id"></div>
-        </div>
-        
-        <div id="choices"></div>
-    </div>
-    
-    <div id="map-content" class="tab-content">
-        <div id="map-container">
-            <svg id="story-map"></svg>
-            <div class="map-controls">
-                <button type="button" class="map-control-btn" onclick="resetMapView()">Reset View</button>
-                <button type="button" class="map-control-btn" onclick="centerOnCurrent()">Center Current</button>
-            </div>
-            <div class="map-legend">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #10b981;"></div>
-                    <span>Entry</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #8ab4f8;"></div>
-                    <span>Current</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #fbbf24;"></div>
-                    <span>Visited</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #4a5568; opacity: 0.4;"></div>
-                    <span>Unvisited</span>
-                </div>
+
+        <div class="settings-section">
+            <h3>Story Map</h3>
+            <div id="map-container">
+                <svg id="story-map"></svg>
             </div>
         </div>
     </div>
-    
-    <div id="footer">
-        <div id="progress"></div>
-        <div>
-            <button type="button" class="footer-button" onclick="toggleHistory()">History</button>
-            <button type="button" class="footer-button" onclick="restartStory()">Restart</button>
-        </div>
-    </div>
-</div>
 
 <script>
     const storyData = {
         'scene-mh01': {
             title: 'The Train Arrives',
-            clip: 'clip-mh01',
-            url: 'https://youtube.com/embed/R4ZGGJsho7I',
+            url: 'https://youtube.com/embed/R4ZGGJsho7I?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=R4ZGGJsho7I',
             choices: [
                 { text: 'Spot Jake by the truck', target: 'scene-rj02' },
                 { text: 'Go to the bakery', target: 'scene-hc04' },
-                { text: 'Watch a snowflake fall on her hand', target: 'scene-sk07' }
+                { text: 'Watch the snowflake', target: 'scene-sk07' }
             ]
         },
         'scene-rj02': {
             title: 'The Unexpected Reunion',
-            clip: 'clip-rj02',
-            url: 'https://youtube.com/embed/BlAGHcJsJio',
+            url: 'https://youtube.com/embed/BlAGHcJsJio?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=BlAGHcJsJio',
             choices: [
                 { text: 'Walk together toward town', target: 'scene-tp03' },
-                { text: 'She looks away—keep moving', target: 'scene-hc04' },
-                { text: "Lily's snowball ambush", target: 'scene-lp05' }
+                { text: 'Keep moving alone', target: 'scene-hc04' },
+                { text: 'Snowball ambush!', target: 'scene-lp05' }
             ]
         },
         'scene-tp03': {
             title: 'Old Friends, New Light',
-            clip: 'clip-tp03',
-            url: 'https://youtube.com/embed/q6mGKXTJdCw',
+            url: 'https://youtube.com/embed/q6mGKXTJdCw?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=q6mGKXTJdCw',
             choices: [
-                { text: 'Ride to festival prep', target: 'scene-fp06' },
-                { text: 'She hops out to walk', target: 'scene-hc04' },
-                { text: 'Radio crackle—their song returns', target: 'scene-sr08' }
+                { text: 'Ride to festival', target: 'scene-fp06' },
+                { text: 'Hop out to walk', target: 'scene-hc04' },
+                { text: 'Their song plays...', target: 'scene-sr08' }
             ]
         },
         'scene-hc04': {
             title: 'The Hearth & Crumb',
-            clip: 'clip-hc04',
-            url: 'https://youtube.com/embed/7Fs_xFCEegM',
+            url: 'https://youtube.com/embed/7Fs_xFCEegM?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=7Fs_xFCEegM',
             choices: [
                 { text: 'Talk about staying', target: 'scene-fp06' },
                 { text: 'Mention Jake', target: 'scene-tp03' },
-                { text: 'Tray slip—flour poof!', target: 'scene-bo09' }
+                { text: 'Flour poof!', target: 'scene-bo09' }
             ]
         },
         'scene-lp05': {
             title: "Lily's Plan",
-            clip: 'clip-lp05',
-            url: 'https://youtube.com/embed/bFo5lWvD8Ms',
+            url: 'https://youtube.com/embed/bFo5lWvD8Ms?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=bFo5lWvD8Ms',
             choices: [
                 { text: 'Ben waves Emma over', target: 'scene-fp06' },
-                { text: 'He shrugs it off—hot cocoa', target: 'scene-hc04' },
+                { text: 'Hot cocoa break', target: 'scene-hc04' },
                 { text: 'Grandma June overhears', target: 'scene-al10' }
             ]
         },
         'scene-fp06': {
             title: 'Festival Preparations',
-            clip: 'clip-fp06',
-            url: 'https://youtube.com/embed/TBPoH_FyWLw',
+            url: 'https://youtube.com/embed/TBPoH_FyWLw?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=TBPoH_FyWLw',
             choices: [
-                { text: 'Keep hanging—hands brush again', target: 'scene-sr08' },
+                { text: 'Hands brush again', target: 'scene-sr08' },
                 { text: 'Ben calls Emma aside', target: 'scene-lp05' },
-                { text: 'Power flickers—golden flare', target: 'scene-al10' }
+                { text: 'Golden flare!', target: 'scene-al10' }
             ]
         },
         'scene-sk07': {
             title: "A Stranger's Kindness",
-            clip: 'clip-sk07',
-            url: 'https://youtube.com/embed/5BT8jT16n88',
+            url: 'https://youtube.com/embed/5BT8jT16n88?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=5BT8jT16n88',
             choices: [
                 { text: 'Cocoa detour', target: 'scene-hc04' },
-                { text: 'Back to the station', target: 'scene-mh01' },
-                { text: 'Camera catches strange light', target: 'scene-al10' }
+                { text: 'Back to station', target: 'scene-mh01' },
+                { text: 'Strange light...', target: 'scene-al10' }
             ]
         },
         'scene-sr08': {
             title: 'The Song Returns',
-            clip: 'clip-sr08',
-            url: 'https://youtube.com/embed/LpjWnlA5Eus',
+            url: 'https://youtube.com/embed/LpjWnlA5Eus?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=LpjWnlA5Eus',
             choices: [
-                { text: 'Smile—head to festival', target: 'scene-fp06' },
-                { text: 'Change the subject—bakery', target: 'scene-hc04' },
-                { text: 'Soft duet—snow intensifies', target: 'scene-al10' }
+                { text: 'Head to festival', target: 'scene-fp06' },
+                { text: 'Bakery instead', target: 'scene-hc04' },
+                { text: 'Soft duet...', target: 'scene-al10' }
             ]
         },
         'scene-bo09': {
             title: 'Bake-Off Mishap',
-            clip: 'clip-bo09',
-            url: 'https://youtube.com/embed/gY0AynfJ3m8',
+            url: 'https://youtube.com/embed/gY0AynfJ3m8?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=gY0AynfJ3m8',
             choices: [
-                { text: 'Team up for the contest', target: 'scene-fp06' },
-                { text: 'Flour war spills outside', target: 'scene-lp05' },
-                { text: 'Grandma June taste-test', target: 'scene-al10' }
+                { text: 'Team up for contest', target: 'scene-fp06' },
+                { text: 'Flour war outside', target: 'scene-lp05' },
+                { text: 'Grandma taste-test', target: 'scene-al10' }
             ]
         },
         'scene-al10': {
             title: 'The Lights of Rising',
-            clip: 'clip-al10',
-            url: 'https://youtube.com/embed/mj1Dqod1MTA',
+            url: 'https://youtube.com/embed/mj1Dqod1MTA?autoplay=1',
             externalUrl: 'https://youtube.com/watch?v=mj1Dqod1MTA',
             choices: [
-                { text: 'Emma & Jake hold hands—soft end', target: 'END' },
-                { text: "Lily's smile—loop back", target: 'scene-mh01' },
-                { text: 'Lantern flares—new hook', target: 'scene-sk07' }
+                { text: 'Hold hands... The End', target: 'END' },
+                { text: "Lily smiles... again?", target: 'scene-mh01' },
+                { text: 'Lantern flares...', target: 'scene-sk07' }
             ]
         }
     };
@@ -689,227 +661,111 @@
     let storyHistory = [];
     let choiceCount = 0;
     let mapInitialized = false;
-    let svgGroup, currentTransform;
+    let overlayFadeTimer = null;
 
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        
-        const tabs = document.querySelectorAll('.tab');
-        tabs.forEach(tab => {
-            if ((tabName === 'story' && tab.textContent === 'Story') ||
-                (tabName === 'map' && tab.textContent === 'Map')) {
-                tab.classList.add('active');
-            }
-        });
-        
-        if (tabName === 'story') {
-            document.getElementById('story-content').classList.add('active');
-        } else if (tabName === 'map') {
-            document.getElementById('map-content').classList.add('active');
-            if (!mapInitialized) {
-                initializeMap();
-                mapInitialized = true;
-            }
-            updateMap();
-        }
+    // === CONFETTI SYSTEM ===
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+
+    function resizeConfetti() {
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
     }
+    resizeConfetti();
+    window.addEventListener('resize', resizeConfetti);
 
-    function initializeMap() {
-        const mapContainer = document.getElementById('story-map');
-        const width = mapContainer.clientWidth || 900;
-        const height = 600;
-        
-        mapContainer.setAttribute('width', width);
-        mapContainer.setAttribute('height', height);
-        
-        svgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        mapContainer.appendChild(svgGroup);
-        
-        let isPanning = false;
-        let startPoint = { x: 0, y: 0 };
-        currentTransform = { x: 0, y: 0, scale: 1 };
-        
-        const updateTransform = () => {
-            svgGroup.setAttribute('transform', 
-                `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.scale})`);
-        };
-        
-        mapContainer.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.map-node')) return;
-            isPanning = true;
-            startPoint = { x: e.clientX - currentTransform.x, y: e.clientY - currentTransform.y };
-        });
-        
-        mapContainer.addEventListener('mousemove', (e) => {
-            if (!isPanning) return;
-            currentTransform.x = e.clientX - startPoint.x;
-            currentTransform.y = e.clientY - startPoint.y;
-            updateTransform();
-        });
-        
-        mapContainer.addEventListener('mouseup', () => {
-            isPanning = false;
-        });
-        
-        mapContainer.addEventListener('mouseleave', () => {
-            isPanning = false;
-        });
-        
-        mapContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            currentTransform.scale *= delta;
-            currentTransform.scale = Math.max(0.5, Math.min(3, currentTransform.scale));
-            updateTransform();
-        });
-        
-        const nodes = [
-            { id: 'scene-mh01', x: width/2, y: 50, label: 'mh01', color: '#10b981' },
-            { id: 'scene-rj02', x: width/3, y: 150, label: 'rj02', color: '#6366f1' },
-            { id: 'scene-hc04', x: width/2, y: 200, label: 'hc04', color: '#8ab4f8' },
-            { id: 'scene-sk07', x: width*2/3, y: 150, label: 'sk07', color: '#6366f1' },
-            { id: 'scene-tp03', x: width/4, y: 280, label: 'tp03', color: '#6366f1' },
-            { id: 'scene-lp05', x: width/6, y: 380, label: 'lp05', color: '#6366f1' },
-            { id: 'scene-fp06', x: width/2, y: 350, label: 'fp06', color: '#8ab4f8' },
-            { id: 'scene-sr08', x: width*3/4, y: 280, label: 'sr08', color: '#6366f1' },
-            { id: 'scene-bo09', x: width*3/5, y: 450, label: 'bo09', color: '#6366f1' },
-            { id: 'scene-al10', x: width/2, y: 500, label: 'al10', color: '#f59e0b' },
-            { id: 'END', x: width/2, y: 580, label: 'END', color: '#ef4444' }
-        ];
-        
-        const links = [];
-        Object.keys(storyData).forEach(sceneId => {
-            const scene = storyData[sceneId];
-            scene.choices.forEach(choice => {
-                const source = nodes.find(n => n.id === sceneId);
-                const target = nodes.find(n => n.id === choice.target);
-                if (source && target) {
-                    links.push({ source, target, sourceId: sceneId, targetId: choice.target });
-                }
+    function createHeartConfetti(x, y) {
+        const colors = ['#ff6b9d', '#c44569', '#f8a5c2', '#ff4757', '#ff6348', '#ffa502'];
+        for (let i = 0; i < 25; i++) {
+            confettiParticles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 12,
+                vy: (Math.random() - 0.8) * 10,
+                rotation: Math.random() * 360,
+                rotationSpeed: (Math.random() - 0.5) * 15,
+                scale: 0.5 + Math.random() * 0.8,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 1
             });
-        });
-        
-        links.forEach(link => {
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const dx = link.target.x - link.source.x;
-            const dy = link.target.y - link.source.y;
-            const pathData = `M${link.source.x},${link.source.y} Q${(link.source.x + link.target.x)/2},${(link.source.y + link.target.y)/2 - 30} ${link.target.x},${link.target.y}`;
-            path.setAttribute('d', pathData);
-            path.setAttribute('class', 'map-link');
-            path.dataset.source = link.sourceId;
-            path.dataset.target = link.targetId;
-            svgGroup.appendChild(path);
-        });
-        
-        nodes.forEach(node => {
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'map-node unvisited');
-            g.setAttribute('transform', `translate(${node.x},${node.y})`);
-            g.dataset.sceneId = node.id;
-            
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('r', 18);
-            circle.setAttribute('fill', node.color);
-            circle.setAttribute('stroke', '#e8eaed');
-            
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('dy', '0.35em');
-            text.textContent = node.label;
-            
-            g.appendChild(circle);
-            g.appendChild(text);
-            
-            const sceneData = storyData[node.id];
-            if (sceneData) {
-                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                title.textContent = sceneData.title;
-                g.appendChild(title);
-            }
-            
-            svgGroup.appendChild(g);
-            
-            g.onclick = () => {
-                if (node.id !== 'END') {
-                    switchTab('story');
-                    loadScene(node.id);
-                }
-            };
-        });
+        }
+        if (confettiParticles.length === 25) animateConfetti();
     }
-    
-    function updateMap() {
-        if (!mapInitialized) return;
-        
-        const visitedSet = new Set(storyHistory);
-        
-        document.querySelectorAll('.map-node').forEach(node => {
-            const sceneId = node.dataset.sceneId;
-            node.classList.remove('visited', 'unvisited', 'current');
-            
-            if (sceneId === currentScene) {
-                node.classList.add('current');
-            } else if (visitedSet.has(sceneId)) {
-                node.classList.add('visited');
-            } else {
-                node.classList.add('unvisited');
-            }
-        });
-        
-        document.querySelectorAll('.map-link').forEach(link => {
-            link.classList.remove('traveled');
-            const source = link.dataset.source;
-            const target = link.dataset.target;
-            
-            for (let i = 0; i < storyHistory.length - 1; i++) {
-                if (storyHistory[i] === source && storyHistory[i + 1] === target) {
-                    link.classList.add('traveled');
-                    break;
-                }
-            }
-        });
+
+    function drawHeart(ctx, x, y, size, rotation, color) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.scale(size, size);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.bezierCurveTo(-5, -12, -15, -8, -15, 0);
+        ctx.bezierCurveTo(-15, 8, 0, 15, 0, 20);
+        ctx.bezierCurveTo(0, 15, 15, 8, 15, 0);
+        ctx.bezierCurveTo(15, -8, 5, -12, 0, -5);
+        ctx.fill();
+        ctx.restore();
     }
-    
-    function resetMapView() {
-        if (!mapInitialized || !currentTransform) return;
-        currentTransform.x = 0;
-        currentTransform.y = 0;
-        currentTransform.scale = 1;
-        svgGroup.setAttribute('transform', 'translate(0,0) scale(1)');
-    }
-    
-    function centerOnCurrent() {
-        if (!mapInitialized || !currentTransform) return;
-        const currentNode = document.querySelector(`.map-node[data-scene-id="${currentScene}"]`);
-        if (currentNode) {
-            const transform = currentNode.getAttribute('transform');
-            const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
-            if (match) {
-                const x = parseFloat(match[1]);
-                const y = parseFloat(match[2]);
-                const mapContainer = document.getElementById('story-map');
-                const width = mapContainer.clientWidth;
-                const height = 600;
-                currentTransform.scale = 1.5;
-                currentTransform.x = width/2 - x * currentTransform.scale;
-                currentTransform.y = height/2 - y * currentTransform.scale;
-                svgGroup.setAttribute('transform', 
-                    `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.scale})`);
+
+    function animateConfetti() {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+        confettiParticles = confettiParticles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.3; // gravity
+            p.rotation += p.rotationSpeed;
+            p.life -= 0.015;
+
+            if (p.life > 0) {
+                confettiCtx.globalAlpha = p.life;
+                drawHeart(confettiCtx, p.x, p.y, p.scale, p.rotation, p.color);
+                return true;
             }
+            return false;
+        });
+
+        confettiCtx.globalAlpha = 1;
+
+        if (confettiParticles.length > 0) {
+            requestAnimationFrame(animateConfetti);
         }
     }
 
-    function loadScene(sceneId) {
+    // === TRANSITION SYSTEM ===
+    function transitionToScene(choiceText, targetScene) {
+        const overlay = document.getElementById('transition-overlay');
+        const text = document.getElementById('transition-text');
+
+        // Launch confetti from center
+        createHeartConfetti(window.innerWidth / 2, window.innerHeight / 3);
+
+        // Show overlay with choice text
+        text.textContent = choiceText;
+        overlay.classList.add('active');
+
+        // After fade in, load new scene
+        setTimeout(() => {
+            loadSceneImmediate(targetScene);
+
+            // Fade out
+            setTimeout(() => {
+                overlay.classList.remove('active');
+            }, 600);
+        }, 800);
+    }
+
+    // === SCENE LOADING ===
+    function loadSceneImmediate(sceneId) {
         if (sceneId === 'END') {
             showEndScreen();
             return;
         }
 
         const scene = storyData[sceneId];
-        if (!scene) {
-            console.error('Scene not found:', sceneId);
-            return;
-        }
+        if (!scene) return;
 
         currentScene = sceneId;
         storyHistory.push(sceneId);
@@ -918,106 +774,213 @@
         document.getElementById('video-player').src = scene.url;
         document.getElementById('external-link').href = scene.externalUrl;
         document.getElementById('scene-title').textContent = scene.title;
-        document.getElementById('scene-id').textContent = scene.clip;
 
-        // Reset and schedule overlay fade
         resetOverlay();
         scheduleOverlayFade();
 
         const choicesContainer = document.getElementById('choices');
         choicesContainer.innerHTML = '';
 
-        scene.choices.forEach(choice => {
+        scene.choices.forEach((choice, index) => {
             const button = document.createElement('button');
+            button.type = 'button';
             button.className = 'choice-button';
             button.textContent = choice.text;
-            button.onclick = () => loadScene(choice.target);
+            button.style.setProperty('--i', index);
+            button.onclick = (e) => {
+                const rect = e.target.getBoundingClientRect();
+                createHeartConfetti(rect.left + rect.width / 2, rect.top);
+                transitionToScene(choice.text, choice.target);
+            };
             choicesContainer.appendChild(button);
         });
 
         updateProgress();
-        updateMap();
     }
 
-    function showEndScreen() {
-        const container = document.getElementById('game-container');
-        container.innerHTML = `
-            <div id="header">
-                <div id="title">Maple Hollow: Aslan Rising</div>
-                <div id="subtitle">An Interactive Story</div>
-            </div>
-            <div class="end-screen">
-                <div class="end-title">The End</div>
-                <div class="end-message">
-                    Emma and Jake's story has reached its conclusion.<br>
-                    But in Maple Hollow, every ending is just a new beginning.
-                </div>
-                <div class="end-stats">
-                    <div class="stat-line">Scenes visited: ${new Set(storyHistory).size}</div>
-                    <div class="stat-line">Choices made: ${choiceCount}</div>
-                    <div class="stat-line">Your path: ${storyHistory.slice(-3).join(' → ')}</div>
-                </div>
-                <button class="restart-button" onclick="restartStory()">Play Again</button>
-            </div>
-        `;
+    function loadScene(sceneId) {
+        loadSceneImmediate(sceneId);
     }
 
+    // === OVERLAY FADE ===
+    function resetOverlay() {
+        const overlay = document.getElementById('video-link-overlay');
+        if (overlay) overlay.classList.remove('faded');
+        if (overlayFadeTimer) clearTimeout(overlayFadeTimer);
+    }
+
+    function scheduleOverlayFade() {
+        overlayFadeTimer = setTimeout(() => {
+            const overlay = document.getElementById('video-link-overlay');
+            if (overlay) overlay.classList.add('faded');
+        }, 4000);
+    }
+
+    // === PROGRESS ===
     function updateProgress() {
         const uniqueScenes = new Set(storyHistory).size;
         const totalScenes = Object.keys(storyData).length;
-        document.getElementById('progress').textContent = 
-            `Scenes: ${uniqueScenes}/${totalScenes} | Choices: ${choiceCount}`;
+        const percent = (uniqueScenes / totalScenes) * 100;
+
+        document.getElementById('progress-fill').style.width = percent + '%';
+        document.getElementById('stat-scenes').textContent = uniqueScenes;
+        document.getElementById('stat-choices').textContent = choiceCount;
+    }
+
+    // === SETTINGS ===
+    function openSettings() {
+        document.getElementById('settings-modal').classList.add('open');
+        if (!mapInitialized) {
+            initializeMap();
+            mapInitialized = true;
+        }
+        updateMap();
+    }
+
+    function closeSettings() {
+        document.getElementById('settings-modal').classList.remove('open');
     }
 
     function toggleHistory() {
-        const recent = storyHistory.slice(-5).join(' → ');
-        alert(`Recent path:\n${recent}`);
+        const recent = storyHistory.slice(-5).map(s => storyData[s]?.title || s).join(' → ');
+        alert('Recent path:\n' + recent);
     }
 
     function restartStory() {
         location.reload();
     }
 
-    // Overlay fade management - assumes video plays OK after brief delay
-    let overlayFadeTimer = null;
+    // === MAP ===
+    function initializeMap() {
+        const mapContainer = document.getElementById('story-map');
+        const width = mapContainer.clientWidth || 300;
+        const height = 280;
 
-    function resetOverlay() {
-        const overlay = document.getElementById('video-link-overlay');
-        if (overlay) {
-            overlay.classList.remove('faded', 'hover-reveal');
-        }
-        if (overlayFadeTimer) {
-            clearTimeout(overlayFadeTimer);
-            overlayFadeTimer = null;
-        }
+        mapContainer.setAttribute('width', width);
+        mapContainer.setAttribute('height', height);
+
+        const svgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        mapContainer.appendChild(svgGroup);
+
+        const nodes = [
+            { id: 'scene-mh01', x: width/2, y: 30, label: 'Start', color: '#10b981' },
+            { id: 'scene-rj02', x: width*0.25, y: 70, label: 'rj02', color: '#6366f1' },
+            { id: 'scene-hc04', x: width/2, y: 90, label: 'hc04', color: '#8ab4f8' },
+            { id: 'scene-sk07', x: width*0.75, y: 70, label: 'sk07', color: '#6366f1' },
+            { id: 'scene-tp03', x: width*0.2, y: 130, label: 'tp03', color: '#6366f1' },
+            { id: 'scene-lp05', x: width*0.15, y: 180, label: 'lp05', color: '#6366f1' },
+            { id: 'scene-fp06', x: width/2, y: 160, label: 'fp06', color: '#8ab4f8' },
+            { id: 'scene-sr08', x: width*0.8, y: 130, label: 'sr08', color: '#6366f1' },
+            { id: 'scene-bo09', x: width*0.65, y: 200, label: 'bo09', color: '#6366f1' },
+            { id: 'scene-al10', x: width/2, y: 230, label: 'Finale', color: '#f59e0b' },
+            { id: 'END', x: width/2, y: 270, label: 'END', color: '#ef4444' }
+        ];
+
+        // Draw links
+        Object.keys(storyData).forEach(sceneId => {
+            const scene = storyData[sceneId];
+            const source = nodes.find(n => n.id === sceneId);
+            scene.choices.forEach(choice => {
+                const target = nodes.find(n => n.id === choice.target);
+                if (source && target) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M${source.x},${source.y} L${target.x},${target.y}`);
+                    path.setAttribute('class', 'map-link');
+                    path.dataset.source = sceneId;
+                    path.dataset.target = choice.target;
+                    svgGroup.appendChild(path);
+                }
+            });
+        });
+
+        // Draw nodes
+        nodes.forEach(node => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'map-node unvisited');
+            g.setAttribute('transform', `translate(${node.x},${node.y})`);
+            g.dataset.sceneId = node.id;
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', 12);
+            circle.setAttribute('fill', node.color);
+            circle.setAttribute('stroke', '#fff');
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('dy', '0.35em');
+            text.textContent = node.label;
+
+            g.appendChild(circle);
+            g.appendChild(text);
+            svgGroup.appendChild(g);
+
+            g.onclick = () => {
+                if (node.id !== 'END') {
+                    closeSettings();
+                    transitionToScene(storyData[node.id]?.title || 'Jump to scene', node.id);
+                }
+            };
+        });
     }
 
-    function scheduleOverlayFade() {
-        overlayFadeTimer = setTimeout(() => {
-            const overlay = document.getElementById('video-link-overlay');
-            if (overlay) {
-                overlay.classList.add('faded', 'hover-reveal');
+    function updateMap() {
+        if (!mapInitialized) return;
+        const visitedSet = new Set(storyHistory);
+
+        document.querySelectorAll('.map-node').forEach(node => {
+            const sceneId = node.dataset.sceneId;
+            node.classList.remove('visited', 'unvisited', 'current');
+
+            if (sceneId === currentScene) node.classList.add('current');
+            else if (visitedSet.has(sceneId)) node.classList.add('visited');
+            else node.classList.add('unvisited');
+        });
+
+        document.querySelectorAll('.map-link').forEach(link => {
+            link.classList.remove('traveled');
+            for (let i = 0; i < storyHistory.length - 1; i++) {
+                if (storyHistory[i] === link.dataset.source && storyHistory[i + 1] === link.dataset.target) {
+                    link.classList.add('traveled');
+                    break;
+                }
             }
-        }, 3500); // Fade after 3.5s assuming video loaded OK
+        });
     }
 
-    // Allow manual reveal on video container hover
-    document.getElementById('video-container')?.addEventListener('mouseenter', () => {
-        const overlay = document.getElementById('video-link-overlay');
-        if (overlay?.classList.contains('faded')) {
-            overlay.style.opacity = '1';
-            overlay.style.transform = 'translateY(0)';
-        }
-    });
+    // === END SCREEN ===
+    function showEndScreen() {
+        document.getElementById('game-container').innerHTML = `
+            <div class="end-screen">
+                <div class="end-title">The End</div>
+                <div class="end-message">
+                    Emma and Jake's story has reached its conclusion.
+                    But in Maple Hollow, every ending is just a new beginning.
+                </div>
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-value">${new Set(storyHistory).size}</div>
+                        <div class="stat-label">Scenes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${choiceCount}</div>
+                        <div class="stat-label">Choices</div>
+                    </div>
+                </div>
+                <button type="button" class="restart-button" onclick="restartStory()">Play Again</button>
+            </div>
+        `;
 
-    document.getElementById('video-container')?.addEventListener('mouseleave', () => {
-        const overlay = document.getElementById('video-link-overlay');
-        if (overlay?.classList.contains('faded')) {
-            overlay.style.opacity = '';
-            overlay.style.transform = '';
+        // Celebration confetti
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                createHeartConfetti(
+                    Math.random() * window.innerWidth,
+                    Math.random() * window.innerHeight * 0.5
+                );
+            }, i * 200);
         }
-    });
+    }
 
+    // Start the game
     loadScene('scene-mh01');
 </script>
 </body>
