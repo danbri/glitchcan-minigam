@@ -293,47 +293,52 @@ export class FurbyReceiver {
     /**
      * Try to find valid packets in the symbol buffer
      * Uses pattern matching to find properly-aligned packets
+     * Tries both phase alignments: X-d-X-d (phase 0) and d-X-d-X (phase 1)
      */
     tryFindPackets() {
         if (this.symbolBuffer.length < 21) return; // Need at least 21 symbols for full packet
 
-        // Look for properly interleaved pattern: X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X-d-X
-        // A proper packet MUST start with X and alternate X-d-X-d...
         const validPackets = [];
 
-        for (let start = 0; start <= this.symbolBuffer.length - 21; start++) {
-            const slice = this.symbolBuffer.slice(start, start + 21);
+        // Try both phase alignments since receiver may catch signal mid-packet
+        // Phase 0: X-d-X-d-X... (standard - X at even positions)
+        // Phase 1: d-X-d-X-d... (shifted - X at odd positions)
+        for (let phase = 0; phase <= 1; phase++) {
+            for (let start = 0; start <= this.symbolBuffer.length - 21; start++) {
+                const slice = this.symbolBuffer.slice(start, start + 21);
 
-            // Check if this slice follows proper X-d-X-d pattern
-            // Odd positions (0,2,4...) should be X, even positions (1,3,5...) should be data
-            let patternScore = 0;
-            const dataSymbols = [];
-            let isValidPattern = true;
+                let patternScore = 0;
+                const dataSymbols = [];
+                let xCount = 0;
+                let dataCount = 0;
 
-            for (let i = 0; i < slice.length; i++) {
-                const sym = slice[i].symbol;
-                const expectX = (i % 2 === 0); // Positions 0,2,4,6... should be X
+                for (let i = 0; i < slice.length; i++) {
+                    const sym = slice[i].symbol;
+                    // Phase 0: X at even positions (0,2,4...)
+                    // Phase 1: X at odd positions (1,3,5...)
+                    const expectX = (phase === 0) ? (i % 2 === 0) : (i % 2 === 1);
 
-                if (expectX) {
-                    if (sym === 'X') {
-                        patternScore += 2; // Correct X position
+                    if (expectX) {
+                        if (sym === 'X') {
+                            patternScore += 2;
+                            xCount++;
+                        } else {
+                            patternScore -= 1;
+                        }
                     } else {
-                        patternScore -= 1; // Wrong - data where X expected
-                        isValidPattern = false;
-                    }
-                } else {
-                    if (sym !== 'X') {
-                        dataSymbols.push(sym);
-                        patternScore += 2; // Correct data position
-                    } else {
-                        patternScore -= 1; // Wrong - X where data expected
-                        isValidPattern = false;
+                        if (sym !== 'X') {
+                            dataSymbols.push(sym);
+                            patternScore += 2;
+                            dataCount++;
+                        } else {
+                            patternScore -= 1;
+                        }
                     }
                 }
-            }
 
-            // Only consider if we got exactly 10 data symbols and reasonable pattern
-            if (dataSymbols.length === 10 && patternScore >= 30) {
+                // Valid packet needs exactly 10 data symbols
+                if (dataSymbols.length !== 10) continue;
+
                 const candidate = dataSymbols.join('');
 
                 // Skip if already processed
@@ -343,12 +348,20 @@ export class FurbyReceiver {
                     const parsed = FurbyPacket.parsePacket(candidate);
 
                     if (parsed.checksumValid) {
+                        // Phase 0 (standard alignment) gets bonus
+                        const phaseBonus = (phase === 0) ? 50 : 0;
+                        // Perfect X count (11 for phase 0, 10 for phase 1) gets bonus
+                        const expectedX = (phase === 0) ? 11 : 10;
+                        const xBonus = (xCount === expectedX) ? 30 : 0;
+
                         validPackets.push({
                             packet: candidate,
                             parsed: parsed,
-                            score: patternScore + (isValidPattern ? 100 : 0), // Big bonus for perfect pattern
+                            score: patternScore + phaseBonus + xBonus,
                             start: start,
-                            perfectPattern: isValidPattern
+                            phase: phase,
+                            xCount: xCount,
+                            dataCount: dataCount
                         });
                     }
                 } catch (e) {
@@ -377,7 +390,8 @@ export class FurbyReceiver {
                     timestamp: Date.now(),
                     bufferSize: this.symbolBuffer.length,
                     alignmentScore: best.score,
-                    perfectPattern: best.perfectPattern,
+                    phase: best.phase,
+                    xCount: best.xCount,
                     candidateCount: validPackets.length
                 });
             }
