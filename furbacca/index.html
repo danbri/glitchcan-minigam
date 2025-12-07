@@ -585,6 +585,16 @@
             </div>
 
             <div class="card">
+                <h2>Symbol Buffer (Debug)</h2>
+                <div class="debug-panel" id="buffer-status">
+<span class="info">Buffer: empty | Data symbols: 0/10 needed</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+                    Raw stream (with X carriers) and data-only stream shown above. Need 10 data symbols for a valid packet.
+                </div>
+            </div>
+
+            <div class="card">
                 <h2>Received Packets</h2>
                 <div class="detected-packets" id="detected-packets">
                     <div class="packet-item">
@@ -908,6 +918,10 @@
                 receiver.onPacketReceived = (packet) => {
                     addDetectedPacket(packet);
                 };
+
+                receiver.onRawSymbols = (data) => {
+                    updateBufferStatus(data);
+                };
             }
 
             if (receiver.isListening) {
@@ -958,6 +972,27 @@
             // Keep last 20 lines
             const lines = (newEntry + existing).split('\n').slice(0, 20);
             log.innerHTML = lines.join('\n');
+        }
+
+        function updateBufferStatus(data) {
+            const status = document.getElementById('buffer-status');
+            const dataCount = data.count;
+            const needed = 10;
+            const progress = Math.min(dataCount, needed);
+
+            // Try to decode what we have so far
+            let decodeAttempt = '';
+            if (dataCount >= 5) {
+                try {
+                    const partial = data.data.substring(0, 5);
+                    const cmdValue = parseInt(partial, 4); // Parse as base-4
+                    decodeAttempt = ` | Partial decode: ${cmdValue}`;
+                } catch (e) {}
+            }
+
+            status.innerHTML = `<span class="label">Raw:</span> <span class="value">${data.raw.slice(-50) || '(empty)'}</span>
+<span class="label">Data:</span> <span class="value">${data.data.slice(-30) || '(none)'}</span>
+<span class="label">Progress:</span> <span class="value">${progress}/${needed} data symbols</span>${decodeAttempt}`;
         }
 
         function addDetectedPacket(packet) {

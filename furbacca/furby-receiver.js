@@ -20,6 +20,13 @@ export class FurbyReceiver {
     static SAMPLE_RATE = 44100;
     static FFT_SIZE = 2048;
 
+    // Timing constants (ms)
+    static SYMBOL_DURATION = 16;      // Expected symbol duration
+    static MIN_SYMBOL_DURATION = 8;   // Minimum to accept
+    static MAX_SYMBOL_DURATION = 60;  // Maximum to accept (allow some merging)
+    static PACKET_TIMEOUT = 500;      // Time to wait for packet completion
+    static BUFFER_MAX_AGE = 2000;     // Max age of symbols in buffer
+
     constructor() {
         this.audioContext = null;
         this.analyser = null;
@@ -28,13 +35,15 @@ export class FurbyReceiver {
         this.onSignalDetected = null;
         this.onPacketReceived = null;
         this.onFrequencyUpdate = null;
+        this.onRawSymbols = null;      // New: callback for raw symbol stream
 
         // Signal detection state
-        this.currentSymbols = [];
+        this.symbolBuffer = [];         // All symbols with timestamps
         this.lastSymbol = null;
         this.symbolStartTime = 0;
-        this.signalHistory = [];
         this.noiseFloor = 0;
+        this.lastPacketTime = 0;
+        this.processedPackets = new Set(); // Avoid duplicate packet reports
     }
 
     /**
@@ -63,7 +72,7 @@ export class FurbyReceiver {
             // Create analyser node
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = FurbyReceiver.FFT_SIZE;
-            this.analyser.smoothingTimeConstant = 0.3;
+            this.analyser.smoothingTimeConstant = 0.2; // Faster response
 
             // Connect microphone to analyser
             this.microphone = this.audioContext.createMediaStreamSource(stream);
@@ -104,8 +113,9 @@ export class FurbyReceiver {
         }
 
         this.analyser = null;
-        this.currentSymbols = [];
+        this.symbolBuffer = [];
         this.lastSymbol = null;
+        this.processedPackets.clear();
     }
 
     /**
@@ -126,12 +136,18 @@ export class FurbyReceiver {
         }
 
         // Detect symbols
-        if (analysis.detectedSymbol && analysis.signalStrength > this.noiseFloor + 20) {
+        if (analysis.detectedSymbol && analysis.signalStrength > this.noiseFloor + 25) {
             this.processSymbol(analysis.detectedSymbol, analysis.signalStrength);
         } else {
-            // No signal - might be end of packet
-            this.checkPacketComplete();
+            // No signal - record gap and try to find packets
+            this.processGap();
         }
+
+        // Periodically try to find packets in buffer
+        this.tryFindPackets();
+
+        // Clean old symbols from buffer
+        this.cleanBuffer();
 
         // Continue loop
         requestAnimationFrame(() => this.analyzeLoop());
@@ -158,7 +174,7 @@ export class FurbyReceiver {
             noiseSum += frequencyData[i];
         }
         results.noiseLevel = noiseSum / noiseBins;
-        this.noiseFloor = this.noiseFloor * 0.95 + results.noiseLevel * 0.05;
+        this.noiseFloor = this.noiseFloor * 0.9 + results.noiseLevel * 0.1;
 
         // Check each Furby frequency
         let maxStrength = 0;
@@ -210,16 +226,21 @@ export class FurbyReceiver {
         const now = performance.now();
 
         if (symbol !== this.lastSymbol) {
-            // New symbol detected
+            // New symbol detected - record the previous one
             if (this.lastSymbol !== null) {
                 const duration = now - this.symbolStartTime;
 
-                // Only record if duration is reasonable (5-50ms)
-                if (duration > 5 && duration < 50) {
-                    // Skip carrier 'X' symbols when recording packet
-                    if (this.lastSymbol !== 'X') {
-                        this.currentSymbols.push(this.lastSymbol);
-                    }
+                // Accept symbols with reasonable duration
+                if (duration >= FurbyReceiver.MIN_SYMBOL_DURATION &&
+                    duration <= FurbyReceiver.MAX_SYMBOL_DURATION) {
+
+                    // Add to buffer with timestamp
+                    this.symbolBuffer.push({
+                        symbol: this.lastSymbol,
+                        time: this.symbolStartTime,
+                        duration: duration,
+                        strength: strength
+                    });
 
                     if (this.onSignalDetected) {
                         this.onSignalDetected({
@@ -237,40 +258,130 @@ export class FurbyReceiver {
     }
 
     /**
-     * Check if a complete packet has been received
+     * Process a gap in the signal
      */
-    checkPacketComplete() {
-        if (this.currentSymbols.length >= 10) {
-            // We have enough symbols for a packet
-            const packetStr = this.currentSymbols.slice(0, 10).join('');
+    processGap() {
+        const now = performance.now();
 
-            try {
-                const parsed = FurbyPacket.parsePacket(packetStr);
+        // If we had a symbol, record it before the gap
+        if (this.lastSymbol !== null) {
+            const duration = now - this.symbolStartTime;
 
-                if (parsed.checksumValid && this.onPacketReceived) {
-                    this.onPacketReceived({
-                        packet: packetStr,
-                        parsed: parsed,
-                        timestamp: Date.now()
+            if (duration >= FurbyReceiver.MIN_SYMBOL_DURATION &&
+                duration <= FurbyReceiver.MAX_SYMBOL_DURATION) {
+
+                this.symbolBuffer.push({
+                    symbol: this.lastSymbol,
+                    time: this.symbolStartTime,
+                    duration: duration,
+                    strength: 0
+                });
+
+                if (this.onSignalDetected) {
+                    this.onSignalDetected({
+                        symbol: this.lastSymbol,
+                        duration: duration,
+                        strength: 0
                     });
                 }
+            }
+
+            this.lastSymbol = null;
+        }
+    }
+
+    /**
+     * Try to find valid packets in the symbol buffer
+     */
+    tryFindPackets() {
+        if (this.symbolBuffer.length < 10) return;
+
+        // Extract just the data symbols (non-X)
+        const dataSymbols = this.symbolBuffer
+            .filter(s => s.symbol !== 'X')
+            .map(s => s.symbol);
+
+        // Need at least 10 data symbols for a packet
+        if (dataSymbols.length < 10) return;
+
+        // Try to find valid packets using sliding window
+        for (let i = 0; i <= dataSymbols.length - 10; i++) {
+            const candidate = dataSymbols.slice(i, i + 10).join('');
+
+            // Skip if we've already processed this exact sequence recently
+            if (this.processedPackets.has(candidate)) continue;
+
+            try {
+                const parsed = FurbyPacket.parsePacket(candidate);
+
+                if (parsed.checksumValid) {
+                    this.processedPackets.add(candidate);
+
+                    // Clear old processed packets (keep last 50)
+                    if (this.processedPackets.size > 50) {
+                        const first = this.processedPackets.values().next().value;
+                        this.processedPackets.delete(first);
+                    }
+
+                    if (this.onPacketReceived) {
+                        this.onPacketReceived({
+                            packet: candidate,
+                            parsed: parsed,
+                            timestamp: Date.now(),
+                            bufferSize: this.symbolBuffer.length,
+                            dataSymbolCount: dataSymbols.length
+                        });
+                    }
+
+                    this.lastPacketTime = performance.now();
+
+                    // Don't clear buffer immediately - might have more packets
+                    return;
+                }
             } catch (e) {
-                // Invalid packet, ignore
-            }
-
-            // Clear symbols for next packet
-            this.currentSymbols = [];
-        }
-
-        // Clear if no activity
-        if (this.lastSymbol !== null) {
-            const silenceDuration = performance.now() - this.symbolStartTime;
-            if (silenceDuration > 100) {
-                // Reset after 100ms of silence
-                this.lastSymbol = null;
-                this.currentSymbols = [];
+                // Invalid packet, continue
             }
         }
+
+        // Also report raw symbol stream for debugging
+        if (this.onRawSymbols && dataSymbols.length >= 5) {
+            this.onRawSymbols({
+                raw: this.symbolBuffer.map(s => s.symbol).join(''),
+                data: dataSymbols.join(''),
+                count: dataSymbols.length
+            });
+        }
+    }
+
+    /**
+     * Clean old symbols from buffer
+     */
+    cleanBuffer() {
+        const now = performance.now();
+        const cutoff = now - FurbyReceiver.BUFFER_MAX_AGE;
+
+        // Remove symbols older than max age
+        this.symbolBuffer = this.symbolBuffer.filter(s => s.time > cutoff);
+
+        // Also clear if too many symbols (prevent memory growth)
+        if (this.symbolBuffer.length > 200) {
+            this.symbolBuffer = this.symbolBuffer.slice(-100);
+        }
+    }
+
+    /**
+     * Get current buffer state for debugging
+     * @returns {object} - Buffer statistics
+     */
+    getBufferState() {
+        const dataSymbols = this.symbolBuffer.filter(s => s.symbol !== 'X');
+        return {
+            totalSymbols: this.symbolBuffer.length,
+            dataSymbols: dataSymbols.length,
+            raw: this.symbolBuffer.map(s => s.symbol).join(''),
+            data: dataSymbols.map(s => s.symbol).join(''),
+            noiseFloor: this.noiseFloor
+        };
     }
 
     /**
