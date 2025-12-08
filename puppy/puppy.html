@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Finger Puppies</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            touch-action: none;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #webcam {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 160px;
+            height: 120px;
+            border-radius: 12px;
+            border: 3px solid rgba(255,255,255,0.3);
+            object-fit: cover;
+            transform: scaleX(-1);
+            opacity: 0.8;
+            z-index: 10;
+        }
+
+        #status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            opacity: 0.9;
+        }
+
+        #finger-count {
+            position: fixed;
+            top: 20px;
+            right: 200px;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        #start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        #start-overlay h1 {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+
+        #start-overlay p {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        #start-overlay button {
+            padding: 20px 60px;
+            font-size: 24px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #start-overlay button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-overlay">
+        <h1>🐶</h1>
+        <p>Show your fingers to the camera to spawn adorable bouncing puppies!<br>
+        Each finger = one puppy (up to 20 with two hands)</p>
+        <button id="start-btn">Start Camera</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <video id="webcam" autoplay playsinline></video>
+    <div id="status">Loading hand tracking...</div>
+    <div id="finger-count"></div>
+
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
+
+    <script>
+        // ============ Configuration ============
+        const CONFIG = {
+            maxPuppies: 20,
+            fingerStableTimeUp: 500,    // ms to wait before adding puppy
+            fingerStableTimeDown: 1000, // ms to wait before removing puppy
+            smoothingFactor: 0.15,      // for finger count smoothing
+            physicsTickRate: 60,        // Hz
+            puppyBaseSize: 80,          // base emoji size in pixels
+            puppySizeVariation: 0.3,    // +/- variation
+            bounceEnergyBoost: 1.02,    // energy multiplier on wall bounce
+            maxSpeed: 8,
+            minSpeed: 1,
+            rotationSpeed: 0.02,
+            friction: 0.998,
+            footprintInterval: 80,      // pixels between footprints
+            footprintFadeTime: 2000,    // ms for footprints to fade
+        };
+
+        // ============ State ============
+        let canvas, ctx;
+        let puppies = [];
+        let footprintTrails = [];
+        let smoothedFingerCount = 0;
+        let lastStableFingerCount = 0;
+        let fingerStableTime = 0;
+        let lastFingerChangeTime = 0;
+        let isFingerCountIncreasing = false;
+        let handsReady = false;
+        let lastFrameTime = 0;
+        let rawFingerCounts = [];  // rolling buffer for smoothing
+
+        // ============ Puppy Class ============
+        class Puppy {
+            constructor(x, y, appearing = true) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.size = CONFIG.puppyBaseSize * (1 + (Math.random() - 0.5) * CONFIG.puppySizeVariation);
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationVelocity = (Math.random() - 0.5) * CONFIG.rotationSpeed * 2;
+                this.opacity = appearing ? 0 : 1;
+                this.scale = appearing ? 0.1 : 1;
+                this.appearing = appearing;
+                this.disappearing = false;
+                this.targetCorner = null;
+                this.lastFootprintPos = { x, y };
+            }
+
+            update(dt) {
+                // Appearance animation
+                if (this.appearing) {
+                    this.opacity = Math.min(1, this.opacity + dt * 0.003);
+                    this.scale = Math.min(1, this.scale + dt * 0.003);
+                    if (this.opacity >= 1 && this.scale >= 1) {
+                        this.appearing = false;
+                    }
+                }
+
+                // Disappearing animation - head to corner
+                if (this.disappearing && this.targetCorner) {
+                    const dx = this.targetCorner.x - this.x;
+                    const dy = this.targetCorner.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 50) {
+                        this.opacity -= dt * 0.004;
+                        this.scale -= dt * 0.003;
+                    } else {
+                        // Move toward corner
+                        const speed = 5;
+                        this.vx = (dx / dist) * speed;
+                        this.vy = (dy / dist) * speed;
+                    }
+
+                    // Leave footprints
+                    const footDist = Math.sqrt(
+                        Math.pow(this.x - this.lastFootprintPos.x, 2) +
+                        Math.pow(this.y - this.lastFootprintPos.y, 2)
+                    );
+                    if (footDist > CONFIG.footprintInterval) {
+                        this.addFootprint();
+                        this.lastFootprintPos = { x: this.x, y: this.y };
+                    }
+
+                    return this.opacity > 0 && this.scale > 0;
+                }
+
+                // Physics update
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotationVelocity;
+
+                // Wall bounces with energy boost
+                const radius = this.size * this.scale / 2;
+
+                if (this.x - radius < 0) {
+                    this.x = radius;
+                    this.vx = Math.abs(this.vx) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                } else if (this.x + radius > canvas.width) {
+                    this.x = canvas.width - radius;
+                    this.vx = -Math.abs(this.vx) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                }
+
+                if (this.y - radius < 0) {
+                    this.y = radius;
+                    this.vy = Math.abs(this.vy) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                } else if (this.y + radius > canvas.height) {
+                    this.y = canvas.height - radius;
+                    this.vy = -Math.abs(this.vy) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                }
+
+                // Speed limits
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > CONFIG.maxSpeed) {
+                    this.vx = (this.vx / speed) * CONFIG.maxSpeed;
+                    this.vy = (this.vy / speed) * CONFIG.maxSpeed;
+                } else if (speed < CONFIG.minSpeed && !this.disappearing) {
+                    // Gentle random nudge if too slow
+                    this.vx += (Math.random() - 0.5) * 0.5;
+                    this.vy += (Math.random() - 0.5) * 0.5;
+                }
+
+                // Light friction
+                this.vx *= CONFIG.friction;
+                this.vy *= CONFIG.friction;
+
+                return true;
+            }
+
+            addFootprint() {
+                const angle = Math.atan2(this.vy, this.vx);
+                footprintTrails.push({
+                    x: this.x,
+                    y: this.y,
+                    angle: angle,
+                    opacity: 0.8,
+                    createdAt: performance.now(),
+                    isLeft: footprintTrails.length % 2 === 0
+                });
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.scale(this.scale, this.scale);
+                ctx.globalAlpha = this.opacity;
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🐶', 0, 0);
+                ctx.restore();
+            }
+
+            startDisappearing() {
+                this.disappearing = true;
+                this.targetCorner = getFurthestCorner(this.x, this.y);
+                this.lastFootprintPos = { x: this.x, y: this.y };
+            }
+        }
+
+        // ============ Collision Detection ============
+        function checkCollisions() {
+            for (let i = 0; i < puppies.length; i++) {
+                for (let j = i + 1; j < puppies.length; j++) {
+                    const a = puppies[i];
+                    const b = puppies[j];
+
+                    if (a.disappearing || b.disappearing) continue;
+
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = (a.size * a.scale + b.size * b.scale) / 2 * 0.8;
+
+                    if (dist < minDist && dist > 0) {
+                        // Collision response
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // Relative velocity
+                        const dvx = a.vx - b.vx;
+                        const dvy = a.vy - b.vy;
+                        const dvn = dvx * nx + dvy * ny;
+
+                        // Only resolve if approaching
+                        if (dvn > 0) {
+                            // Elastic collision with slight energy boost
+                            const restitution = 1.05;
+                            a.vx -= dvn * nx * restitution;
+                            a.vy -= dvn * ny * restitution;
+                            b.vx += dvn * nx * restitution;
+                            b.vy += dvn * ny * restitution;
+
+                            // Spin effect
+                            a.rotationVelocity += (Math.random() - 0.5) * 0.02;
+                            b.rotationVelocity += (Math.random() - 0.5) * 0.02;
+
+                            // Separate overlapping puppies
+                            const overlap = minDist - dist;
+                            a.x -= nx * overlap / 2;
+                            a.y -= ny * overlap / 2;
+                            b.x += nx * overlap / 2;
+                            b.y += ny * overlap / 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ============ Corner Utilities ============
+        function getCorners() {
+            return [
+                { x: 50, y: 50 },
+                { x: canvas.width - 50, y: 50 },
+                { x: 50, y: canvas.height - 50 },
+                { x: canvas.width - 50, y: canvas.height - 50 }
+            ];
+        }
+
+        function getEmptiestCorner() {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestScore = -Infinity;
+
+            for (const corner of corners) {
+                let minDist = Infinity;
+                for (const puppy of puppies) {
+                    const dist = Math.sqrt(
+                        Math.pow(puppy.x - corner.x, 2) +
+                        Math.pow(puppy.y - corner.y, 2)
+                    );
+                    minDist = Math.min(minDist, dist);
+                }
+                if (minDist > bestScore) {
+                    bestScore = minDist;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        function getFurthestCorner(x, y) {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestDist = 0;
+
+            for (const corner of corners) {
+                const dist = Math.sqrt(
+                    Math.pow(x - corner.x, 2) +
+                    Math.pow(y - corner.y, 2)
+                );
+                if (dist > bestDist) {
+                    bestDist = dist;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        // ============ Finger Counting ============
+        function countFingers(landmarks) {
+            if (!landmarks || landmarks.length === 0) return 0;
+
+            let totalFingers = 0;
+
+            for (const hand of landmarks) {
+                // Thumb - special case, check if extended sideways
+                const thumbTip = hand[4];
+                const thumbMcp = hand[2];
+                const wrist = hand[0];
+
+                // Determine if left or right hand based on thumb position
+                const isRightHand = thumbMcp.x < wrist.x;
+
+                // Thumb is extended if tip is further from palm center than MCP
+                const thumbExtended = isRightHand
+                    ? thumbTip.x < thumbMcp.x - 0.02
+                    : thumbTip.x > thumbMcp.x + 0.02;
+
+                if (thumbExtended) totalFingers++;
+
+                // Other fingers - check if fingertip is above PIP joint
+                const fingerTips = [8, 12, 16, 20];  // index, middle, ring, pinky
+                const fingerPips = [6, 10, 14, 18];
+
+                for (let i = 0; i < 4; i++) {
+                    const tip = hand[fingerTips[i]];
+                    const pip = hand[fingerPips[i]];
+
+                    // Finger is extended if tip is above (lower y) PIP
+                    if (tip.y < pip.y - 0.02) {
+                        totalFingers++;
+                    }
+                }
+            }
+
+            return Math.min(totalFingers, CONFIG.maxPuppies);
+        }
+
+        function updateSmoothedFingerCount(rawCount) {
+            // Add to rolling buffer
+            rawFingerCounts.push(rawCount);
+            if (rawFingerCounts.length > 10) {
+                rawFingerCounts.shift();
+            }
+
+            // Calculate smoothed average
+            const avg = rawFingerCounts.reduce((a, b) => a + b, 0) / rawFingerCounts.length;
+            smoothedFingerCount = Math.round(avg);
+
+            // Update finger display
+            document.getElementById('finger-count').textContent =
+                smoothedFingerCount > 0 ? `${smoothedFingerCount}` : '';
+
+            // Detect stable changes
+            const now = performance.now();
+
+            if (smoothedFingerCount !== lastStableFingerCount) {
+                const increasing = smoothedFingerCount > lastStableFingerCount;
+                const stableTime = increasing ? CONFIG.fingerStableTimeUp : CONFIG.fingerStableTimeDown;
+
+                if (isFingerCountIncreasing !== increasing) {
+                    isFingerCountIncreasing = increasing;
+                    lastFingerChangeTime = now;
+                }
+
+                if (now - lastFingerChangeTime >= stableTime) {
+                    handleFingerCountChange(smoothedFingerCount, lastStableFingerCount);
+                    lastStableFingerCount = smoothedFingerCount;
+                    lastFingerChangeTime = now;
+                }
+            } else {
+                lastFingerChangeTime = now;
+            }
+        }
+
+        function handleFingerCountChange(newCount, oldCount) {
+            const diff = newCount - oldCount;
+
+            if (diff > 0) {
+                // Add puppies
+                for (let i = 0; i < diff; i++) {
+                    if (puppies.filter(p => !p.disappearing).length < CONFIG.maxPuppies) {
+                        const corner = getEmptiestCorner();
+                        const puppy = new Puppy(corner.x, corner.y, true);
+                        puppies.push(puppy);
+                    }
+                }
+            } else if (diff < 0) {
+                // Remove puppies (oldest first, excluding already disappearing)
+                let toRemove = Math.abs(diff);
+                for (const puppy of puppies) {
+                    if (!puppy.disappearing && toRemove > 0) {
+                        puppy.startDisappearing();
+                        toRemove--;
+                    }
+                }
+            }
+        }
+
+        // ============ Drawing ============
+        function drawFootprints(ctx) {
+            const now = performance.now();
+
+            for (let i = footprintTrails.length - 1; i >= 0; i--) {
+                const fp = footprintTrails[i];
+                const age = now - fp.createdAt;
+
+                if (age > CONFIG.footprintFadeTime) {
+                    footprintTrails.splice(i, 1);
+                    continue;
+                }
+
+                const fadeProgress = age / CONFIG.footprintFadeTime;
+                const opacity = fp.opacity * (1 - fadeProgress);
+
+                ctx.save();
+                ctx.translate(fp.x, fp.y);
+                ctx.rotate(fp.angle + Math.PI / 2);
+                ctx.globalAlpha = opacity;
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+
+                // Offset for walking pattern
+                const offset = fp.isLeft ? -8 : 8;
+                ctx.fillText('🐾', offset, 0);
+
+                ctx.restore();
+            }
+        }
+
+        function drawBackground(ctx) {
+            // Subtle animated gradient
+            const time = performance.now() / 5000;
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2 + Math.sin(time) * 100,
+                canvas.height / 2 + Math.cos(time) * 100,
+                0,
+                canvas.width / 2,
+                canvas.height / 2,
+                Math.max(canvas.width, canvas.height)
+            );
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(0.5, '#16213e');
+            gradient.addColorStop(1, '#0f3460');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 50; i++) {
+                const x = (Math.sin(i * 123.456) * 0.5 + 0.5) * canvas.width;
+                const y = (Math.cos(i * 789.012) * 0.5 + 0.5) * canvas.height;
+                const twinkle = Math.sin(time * 3 + i) * 0.5 + 0.5;
+                ctx.globalAlpha = 0.2 + twinkle * 0.3;
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + twinkle, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // ============ Main Loop ============
+        function gameLoop(timestamp) {
+            const dt = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+
+            // Clear and draw background
+            drawBackground(ctx);
+
+            // Draw footprints (behind puppies)
+            drawFootprints(ctx);
+
+            // Update and draw puppies
+            for (let i = puppies.length - 1; i >= 0; i--) {
+                const alive = puppies[i].update(dt);
+                if (!alive) {
+                    puppies.splice(i, 1);
+                } else {
+                    puppies[i].draw(ctx);
+                }
+            }
+
+            // Check collisions
+            checkCollisions();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ============ MediaPipe Setup ============
+        async function initMediaPipe() {
+            const video = document.getElementById('webcam');
+            const status = document.getElementById('status');
+
+            try {
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                video.srcObject = stream;
+                await video.play();
+
+                status.textContent = 'Initializing hand tracking...';
+                status.classList.add('loading');
+
+                // Initialize MediaPipe Hands
+                const hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
+                    }
+                });
+
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.5
+                });
+
+                hands.onResults((results) => {
+                    if (!handsReady) {
+                        handsReady = true;
+                        status.textContent = 'Show your fingers!';
+                        status.classList.remove('loading');
+                    }
+
+                    const fingerCount = countFingers(results.multiHandLandmarks);
+                    updateSmoothedFingerCount(fingerCount);
+                });
+
+                // Start camera processing at ~24hz
+                const camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                await camera.start();
+
+            } catch (err) {
+                console.error('Camera/MediaPipe error:', err);
+                status.textContent = `Error: ${err.message}`;
+                status.classList.remove('loading');
+            }
+        }
+
+        // ============ Initialization ============
+        function init() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+
+            // Handle resize
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Start game loop
+            lastFrameTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start button handler
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            document.getElementById('start-overlay').classList.add('hidden');
+
+            // Request fullscreen
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (e) {
+                console.log('Fullscreen not available:', e);
+            }
+
+            init();
+            await initMediaPipe();
+        });
+
+        // Exit fullscreen handler
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                // Still allow the app to work without fullscreen
+            }
+        });
+    </script>
+</body>
+</html>
