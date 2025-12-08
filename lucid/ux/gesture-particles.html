@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: #0a0a12;
             min-height: 100vh;
             overflow: hidden;
             color: #fff;
@@ -36,13 +36,13 @@
 
         #video-container {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 200px;
-            height: 150px;
-            border-radius: 12px;
+            bottom: 15px;
+            right: 15px;
+            width: 160px;
+            height: 120px;
+            border-radius: 8px;
             overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
             z-index: 100;
             background: #000;
         }
@@ -67,240 +67,150 @@
             pointer-events: none;
         }
 
-        /* Control Panel */
+        /* Minimal Control Panel */
         #controls {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             z-index: 100;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
+            max-width: 200px;
         }
 
         .control-section {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 16px;
-            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(20, 25, 45, 0.9);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .control-section h3 {
-            font-size: 12px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: rgba(255,255,255,0.7);
+            margin-bottom: 8px;
+            color: rgba(255,255,255,0.5);
         }
 
-        /* Shape Selector */
+        /* Shape Selector - compact */
         .shape-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
         }
 
         .shape-btn {
-            width: 50px;
-            height: 50px;
+            width: 36px;
+            height: 36px;
             border: none;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.08);
             cursor: pointer;
-            font-size: 24px;
-            transition: all 0.2s ease;
+            font-size: 18px;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .shape-btn:hover {
-            background: rgba(255,255,255,0.2);
-            transform: scale(1.05);
+            background: rgba(255,255,255,0.15);
         }
 
         .shape-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            background: #00d9ff;
+            color: #000;
         }
 
-        /* Color Picker */
-        .color-picker-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        /* Color Picker - compact */
         .color-presets {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
         }
 
         .color-preset {
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             border: 2px solid transparent;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .color-preset:hover {
-            transform: scale(1.1);
+            transition: all 0.15s ease;
         }
 
         .color-preset.active {
             border-color: #fff;
-            box-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
 
-        .custom-color {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #color-input {
-            width: 50px;
-            height: 32px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background: transparent;
-        }
-
-        #color-input::-webkit-color-swatch-wrapper {
-            padding: 0;
-        }
-
-        #color-input::-webkit-color-swatch {
-            border: none;
-            border-radius: 8px;
-        }
-
-        /* Sliders */
+        /* Sliders - compact */
         .slider-control {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
         }
 
         .slider-control label {
-            font-size: 11px;
-            color: rgba(255,255,255,0.6);
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            min-width: 50px;
         }
 
         .slider-control input[type="range"] {
-            width: 100%;
-            height: 6px;
+            flex: 1;
+            height: 4px;
             -webkit-appearance: none;
             background: rgba(255,255,255,0.2);
-            border-radius: 3px;
+            border-radius: 2px;
             outline: none;
         }
 
         .slider-control input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #00d9ff;
             cursor: pointer;
         }
 
-        /* Toggle */
-        .toggle-btn {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .toggle-btn:hover {
-            background: rgba(255,255,255,0.15);
-        }
-
-        .toggle-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .toggle-btn span {
-            font-size: 13px;
-        }
-
-        /* Gesture Status */
+        /* Hand Status - minimal */
         #gesture-status {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             z-index: 100;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 16px;
-            border: 1px solid rgba(255,255,255,0.15);
-            min-width: 180px;
-        }
-
-        #gesture-status h3 {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: rgba(255,255,255,0.7);
+            background: rgba(20, 25, 45, 0.9);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-width: 120px;
         }
 
         .gesture-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 8px;
+            margin-bottom: 4px;
         }
 
         .hand-icon {
-            font-size: 20px;
+            font-size: 16px;
         }
 
         .tension-bar {
             flex: 1;
-            height: 8px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
             overflow: hidden;
         }
 
         .tension-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4ade80, #22d3ee);
+            background: #00d9ff;
             transition: width 0.1s ease;
-            border-radius: 4px;
-        }
-
-        /* Instructions */
-        #instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 12px 24px;
-            border: 1px solid rgba(255,255,255,0.15);
-            text-align: center;
-            font-size: 13px;
-            color: rgba(255,255,255,0.8);
-        }
-
-        #instructions.hidden {
-            display: none;
         }
 
         /* Loading overlay */
@@ -310,7 +220,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(26, 26, 46, 0.95);
+            background: #0a0a12;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -323,10 +233,10 @@
         }
 
         .loader {
-            width: 60px;
-            height: 60px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: #667eea;
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #00d9ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -336,37 +246,24 @@
         }
 
         #loading p {
-            margin-top: 20px;
-            font-size: 14px;
-            color: rgba(255,255,255,0.7);
+            margin-top: 15px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
             #controls {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-
-            .control-section {
-                padding: 12px;
+                max-width: 180px;
             }
 
             #video-container {
-                width: 120px;
-                height: 90px;
-                bottom: 80px;
+                width: 100px;
+                height: 75px;
             }
 
             #gesture-status {
-                top: auto;
-                bottom: 80px;
-                right: auto;
-                left: 10px;
-                min-width: 140px;
+                min-width: 100px;
             }
         }
     </style>
@@ -395,46 +292,21 @@
 
             <div class="control-section">
                 <h3>Color</h3>
-                <div class="color-picker-container">
-                    <div class="color-presets">
-                        <div class="color-preset active" style="background: #ff6b6b" data-color="#ff6b6b"></div>
-                        <div class="color-preset" style="background: #feca57" data-color="#feca57"></div>
-                        <div class="color-preset" style="background: #48dbfb" data-color="#48dbfb"></div>
-                        <div class="color-preset" style="background: #ff9ff3" data-color="#ff9ff3"></div>
-                        <div class="color-preset" style="background: #1dd1a1" data-color="#1dd1a1"></div>
-                        <div class="color-preset" style="background: #f368e0" data-color="#f368e0"></div>
-                    </div>
-                    <div class="custom-color">
-                        <input type="color" id="color-input" value="#ff6b6b">
-                        <span style="font-size: 12px; color: rgba(255,255,255,0.6)">Custom</span>
-                    </div>
+                <div class="color-presets">
+                    <div class="color-preset active" style="background: #ff6b6b" data-color="#ff6b6b"></div>
+                    <div class="color-preset" style="background: #feca57" data-color="#feca57"></div>
+                    <div class="color-preset" style="background: #48dbfb" data-color="#48dbfb"></div>
+                    <div class="color-preset" style="background: #ff9ff3" data-color="#ff9ff3"></div>
+                    <div class="color-preset" style="background: #1dd1a1" data-color="#1dd1a1"></div>
                 </div>
-            </div>
-
-            <div class="control-section">
-                <h3>Effects</h3>
                 <div class="slider-control">
-                    <label>Particle Size</label>
-                    <input type="range" id="size-slider" min="1" max="20" value="8">
-                </div>
-                <div class="slider-control" style="margin-top: 10px">
-                    <label>Turbulence</label>
-                    <input type="range" id="turbulence-slider" min="0" max="100" value="30">
-                </div>
-            </div>
-
-            <div class="control-section">
-                <div class="toggle-btn active" id="toggle-camera">
-                    <span>📷 Camera</span>
-                </div>
-                <div class="toggle-btn" id="toggle-autorotate" style="margin-top: 8px">
-                    <span>🔄 Auto-Rotate</span>
+                    <label>Size</label>
+                    <input type="range" id="size-slider" min="2" max="15" value="5">
                 </div>
             </div>
         </div>
 
         <div id="gesture-status">
-            <h3>Hand Tracking</h3>
             <div class="gesture-indicator">
                 <span class="hand-icon">🤚</span>
                 <div class="tension-bar">
@@ -447,19 +319,11 @@
                     <div class="tension-fill" id="right-tension" style="width: 0%"></div>
                 </div>
             </div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 8px;">
-                Close hands to compress<br>Open hands to expand
-            </div>
-        </div>
-
-        <div id="instructions">
-            Hold up your hands to the camera. Close fists to compress particles, open hands to expand.
-            <br>Swipe to rotate the view.
         </div>
 
         <div id="loading">
             <div class="loader"></div>
-            <p>Loading hand tracking...</p>
+            <p>Loading...</p>
         </div>
     </div>
 
@@ -480,15 +344,14 @@
             // State
             this.currentShape = 'heart';
             this.particleColor = new THREE.Color('#ff6b6b');
-            this.particleSize = 8;
-            this.turbulence = 0.3;
-            this.autoRotate = false;
+            this.particleSize = 5;
+            this.autoRotate = true;  // Start with auto-rotate on
             this.cameraEnabled = true;
 
-            // Hand tracking state
+            // Hand tracking state - single hand works too
             this.leftHandTension = 0;  // 0 = open, 1 = closed fist
             this.rightHandTension = 0;
-            this.combinedTension = 0;
+            this.handsDetected = 0;
             this.targetScale = 1;
             this.currentScale = 1;
 
@@ -524,14 +387,14 @@
             // Scene
             this.scene = new THREE.Scene();
 
-            // Camera
+            // Camera - start further back for better view
             this.camera = new THREE.PerspectiveCamera(
-                60,
+                50,
                 window.innerWidth / window.innerHeight,
                 0.1,
                 1000
             );
-            this.camera.position.z = 5;
+            this.camera.position.z = 6;
 
             // Renderer
             this.renderer = new THREE.WebGLRenderer({
@@ -540,6 +403,7 @@
             });
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.setClearColor(0x0a0a12, 1);
             container.appendChild(this.renderer.domElement);
 
             // Handle resize
@@ -551,24 +415,22 @@
         }
 
         // Shape generators - return arrays of Vector3 positions
+        // All shapes scaled up by ~1.8x for better visibility
         generateHeartShape(count) {
             const positions = [];
+            const scale = 0.09;  // Larger scale
             for (let i = 0; i < count; i++) {
                 const t = (i / count) * Math.PI * 2;
-                const u = Math.random() * Math.PI * 2;
-                const v = Math.random();
 
                 // Parametric heart
                 const x = 16 * Math.pow(Math.sin(t), 3);
                 const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                const z = (Math.random() - 0.5) * 4;
+                const z = (Math.random() - 0.5) * 6;
 
-                // Add some noise for volume
-                const scale = 0.05 + Math.random() * 0.02;
                 positions.push(new THREE.Vector3(
-                    x * scale + (Math.random() - 0.5) * 0.3,
-                    y * scale + (Math.random() - 0.5) * 0.3,
-                    z * 0.3
+                    x * scale + (Math.random() - 0.5) * 0.4,
+                    y * scale + (Math.random() - 0.5) * 0.4,
+                    z * 0.25
                 ));
             }
             return positions;
@@ -577,30 +439,31 @@
         generateFlowerShape(count) {
             const positions = [];
             const petals = 6;
+            const scale = 1.8;
 
             for (let i = 0; i < count; i++) {
                 const t = (i / count) * Math.PI * 2;
 
                 // Rose curve variation
                 const k = petals / 2;
-                const r = Math.cos(k * t) * 1.2 + 0.5;
+                const r = (Math.cos(k * t) * 1.2 + 0.5) * scale;
                 const x = r * Math.cos(t);
                 const y = r * Math.sin(t);
-                const z = (Math.random() - 0.5) * 0.8;
+                const z = (Math.random() - 0.5) * 1.2;
 
                 // Add center
                 if (Math.random() < 0.2) {
-                    const cr = Math.random() * 0.4;
+                    const cr = Math.random() * 0.6;
                     const ca = Math.random() * Math.PI * 2;
                     positions.push(new THREE.Vector3(
                         cr * Math.cos(ca),
                         cr * Math.sin(ca),
-                        (Math.random() - 0.5) * 0.3
+                        (Math.random() - 0.5) * 0.5
                     ));
                 } else {
                     positions.push(new THREE.Vector3(
-                        x + (Math.random() - 0.5) * 0.2,
-                        y + (Math.random() - 0.5) * 0.2,
+                        x + (Math.random() - 0.5) * 0.3,
+                        y + (Math.random() - 0.5) * 0.3,
                         z
                     ));
                 }
@@ -610,13 +473,14 @@
 
         generateSaturnShape(count) {
             const positions = [];
+            const scale = 1.6;
 
             for (let i = 0; i < count; i++) {
                 if (Math.random() < 0.4) {
                     // Planet sphere
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
-                    const r = 0.6 + Math.random() * 0.1;
+                    const r = (0.6 + Math.random() * 0.1) * scale;
 
                     positions.push(new THREE.Vector3(
                         r * Math.sin(phi) * Math.cos(theta),
@@ -626,8 +490,8 @@
                 } else {
                     // Ring
                     const angle = Math.random() * Math.PI * 2;
-                    const ringR = 1.0 + Math.random() * 0.5;
-                    const thickness = (Math.random() - 0.5) * 0.1;
+                    const ringR = (1.0 + Math.random() * 0.5) * scale;
+                    const thickness = (Math.random() - 0.5) * 0.15;
 
                     positions.push(new THREE.Vector3(
                         ringR * Math.cos(angle),
@@ -641,19 +505,19 @@
 
         generateBuddhaShape(count) {
             const positions = [];
+            const scale = 1.5;
 
             for (let i = 0; i < count; i++) {
-                // Simplified meditation figure
                 const section = Math.random();
 
                 if (section < 0.3) {
                     // Head (sphere)
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
-                    const r = 0.3;
+                    const r = 0.4 * scale;
                     positions.push(new THREE.Vector3(
                         r * Math.sin(phi) * Math.cos(theta),
-                        r * Math.sin(phi) * Math.sin(theta) + 1.0,
+                        r * Math.sin(phi) * Math.sin(theta) + 1.2 * scale,
                         r * Math.cos(phi)
                     ));
                 } else if (section < 0.6) {
@@ -661,19 +525,19 @@
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
                     positions.push(new THREE.Vector3(
-                        0.5 * Math.sin(phi) * Math.cos(theta),
-                        0.6 * Math.sin(phi) * Math.sin(theta) + 0.3,
-                        0.4 * Math.cos(phi)
+                        0.6 * scale * Math.sin(phi) * Math.cos(theta),
+                        0.7 * scale * Math.sin(phi) * Math.sin(theta) + 0.4 * scale,
+                        0.5 * scale * Math.cos(phi)
                     ));
                 } else {
                     // Lotus base (torus)
                     const angle = Math.random() * Math.PI * 2;
                     const tubeAngle = Math.random() * Math.PI * 2;
-                    const R = 0.6;
-                    const r = 0.15;
+                    const R = 0.7 * scale;
+                    const r = 0.2 * scale;
                     positions.push(new THREE.Vector3(
                         (R + r * Math.cos(tubeAngle)) * Math.cos(angle),
-                        r * Math.sin(tubeAngle) - 0.4,
+                        r * Math.sin(tubeAngle) - 0.5 * scale,
                         (R + r * Math.cos(tubeAngle)) * Math.sin(angle)
                     ));
                 }
@@ -684,20 +548,21 @@
         generateFireworksShape(count) {
             const positions = [];
             const bursts = 5;
+            const scale = 1.5;
 
             for (let i = 0; i < count; i++) {
                 const burst = Math.floor(Math.random() * bursts);
-                const centerX = (burst - 2) * 0.8;
-                const centerY = Math.sin(burst * 0.8) * 0.5;
+                const centerX = (burst - 2) * 1.0 * scale;
+                const centerY = Math.sin(burst * 0.8) * 0.6 * scale;
 
                 // Spherical burst
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.acos(2 * Math.random() - 1);
-                const r = 0.3 + Math.random() * 0.4;
+                const r = (0.4 + Math.random() * 0.5) * scale;
 
                 // Add trails
                 const trail = Math.random();
-                const trailOffset = trail < 0.3 ? trail * 2 : 0;
+                const trailOffset = trail < 0.3 ? trail * 2.5 : 0;
 
                 positions.push(new THREE.Vector3(
                     centerX + r * Math.sin(phi) * Math.cos(theta),
@@ -711,22 +576,22 @@
         generateStarShape(count) {
             const positions = [];
             const points = 5;
+            const scale = 1.8;
 
             for (let i = 0; i < count; i++) {
                 const t = (i / count) * Math.PI * 2;
 
                 // 5-pointed star
-                const r = (Math.floor(t / (Math.PI / points)) % 2 === 0) ? 1.2 : 0.5;
                 const blend = Math.abs(Math.sin(t * points / 2));
-                const radius = 0.5 + blend * 0.7;
+                const radius = (0.5 + blend * 0.7) * scale;
 
                 const x = radius * Math.cos(t);
                 const y = radius * Math.sin(t);
-                const z = (Math.random() - 0.5) * 0.5;
+                const z = (Math.random() - 0.5) * 0.8;
 
                 positions.push(new THREE.Vector3(
-                    x + (Math.random() - 0.5) * 0.2,
-                    y + (Math.random() - 0.5) * 0.2,
+                    x + (Math.random() - 0.5) * 0.3,
+                    y + (Math.random() - 0.5) * 0.3,
                     z
                 ));
             }
@@ -734,7 +599,7 @@
         }
 
         createParticles() {
-            const particleCount = 2000;
+            const particleCount = 800;  // Reduced for cleaner look
 
             // Get shape positions
             this.basePositions = this.getShapePositions(this.currentShape, particleCount);
@@ -765,13 +630,12 @@
             geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
             geometry.setAttribute('random', new THREE.BufferAttribute(randoms, 1));
 
-            // Shader material
+            // Shader material - NO additive blending to prevent white-out
             const material = new THREE.ShaderMaterial({
                 uniforms: {
                     time: { value: 0 },
                     pointSize: { value: this.particleSize },
-                    scale: { value: 1.0 },
-                    turbulence: { value: this.turbulence }
+                    scale: { value: 1.0 }
                 },
                 vertexShader: `
                     attribute float size;
@@ -781,7 +645,6 @@
                     uniform float time;
                     uniform float pointSize;
                     uniform float scale;
-                    uniform float turbulence;
 
                     void main() {
                         vColor = color;
@@ -789,14 +652,14 @@
 
                         vec3 pos = position * scale;
 
-                        // Add turbulence
-                        float t = time * 0.5 + random * 6.28;
-                        pos.x += sin(t + pos.y * 2.0) * turbulence * 0.1;
-                        pos.y += cos(t + pos.x * 2.0) * turbulence * 0.1;
-                        pos.z += sin(t * 0.7 + pos.z * 2.0) * turbulence * 0.1;
+                        // Subtle movement
+                        float t = time * 0.3 + random * 6.28;
+                        pos.x += sin(t + pos.y * 1.5) * 0.03;
+                        pos.y += cos(t + pos.x * 1.5) * 0.03;
+                        pos.z += sin(t * 0.7) * 0.02;
 
                         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-                        gl_PointSize = size * pointSize * (300.0 / -mvPosition.z);
+                        gl_PointSize = size * pointSize * (250.0 / -mvPosition.z);
                         gl_Position = projectionMatrix * mvPosition;
                     }
                 `,
@@ -809,20 +672,17 @@
                         float dist = length(gl_PointCoord - vec2(0.5));
                         if (dist > 0.5) discard;
 
-                        // Soft glow
-                        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-                        alpha *= 0.8 + 0.2 * sin(time * 2.0 + vRandom * 6.28);
+                        // Solid colored particle with soft edge
+                        float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+                        alpha *= 0.9;
 
-                        // Color variation
-                        vec3 col = vColor;
-                        col += 0.1 * sin(time + vRandom * 6.28);
-
-                        gl_FragColor = vec4(col, alpha);
+                        // Use the actual color, no white addition
+                        gl_FragColor = vec4(vColor, alpha);
                     }
                 `,
                 transparent: true,
                 vertexColors: true,
-                blending: THREE.AdditiveBlending,
+                blending: THREE.NormalBlending,  // Changed from Additive
                 depthWrite: false
             });
 
@@ -987,12 +847,20 @@
             // Update state with smoothing
             this.leftHandTension = this.leftHandTension * 0.7 + leftTension * 0.3;
             this.rightHandTension = this.rightHandTension * 0.7 + rightTension * 0.3;
+            this.handsDetected = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
 
-            // Combined tension affects scale
-            // Both hands closed = compress (scale down to 0.3)
-            // Both hands open = expand (scale up to 2.0)
-            const avgTension = (this.leftHandTension + this.rightHandTension) / 2;
-            this.targetScale = 2.0 - avgTension * 1.7;  // Range: 0.3 to 2.0
+            // SINGLE HAND WORKS: Use max of either hand for control
+            // Closed = compress (scale down to 0.4), Open = expand (scale up to 1.8)
+            let tension = 0;
+            if (this.handsDetected === 2) {
+                // Two hands: average
+                tension = (this.leftHandTension + this.rightHandTension) / 2;
+            } else if (this.handsDetected === 1) {
+                // Single hand: use whichever is active
+                tension = Math.max(this.leftHandTension, this.rightHandTension);
+            }
+
+            this.targetScale = 1.8 - tension * 1.4;  // Range: 0.4 to 1.8
 
             // Update UI indicators
             document.getElementById('left-tension').style.width = `${this.leftHandTension * 100}%`;
@@ -1033,27 +901,6 @@
                 if (this.particles) {
                     this.particles.material.uniforms.pointSize.value = this.particleSize;
                 }
-            });
-
-            document.getElementById('turbulence-slider').addEventListener('input', (e) => {
-                this.turbulence = parseFloat(e.target.value) / 100;
-                if (this.particles) {
-                    this.particles.material.uniforms.turbulence.value = this.turbulence;
-                }
-            });
-
-            // Toggles
-            document.getElementById('toggle-camera').addEventListener('click', (e) => {
-                const btn = e.currentTarget;
-                btn.classList.toggle('active');
-                this.cameraEnabled = btn.classList.contains('active');
-                document.getElementById('video-container').classList.toggle('hidden', !this.cameraEnabled);
-            });
-
-            document.getElementById('toggle-autorotate').addEventListener('click', (e) => {
-                const btn = e.currentTarget;
-                btn.classList.toggle('active');
-                this.autoRotate = btn.classList.contains('active');
             });
 
             // Mouse/touch controls for rotation
@@ -1106,18 +953,13 @@
                 this.isDragging = false;
             });
 
-            // Scroll to zoom
+            // Scroll to zoom - extended range
             canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
-                this.camera.position.z = Math.max(2, Math.min(15,
-                    this.camera.position.z + e.deltaY * 0.01
+                this.camera.position.z = Math.max(2, Math.min(25,
+                    this.camera.position.z + e.deltaY * 0.015
                 ));
             }, { passive: false });
-
-            // Hide instructions after interaction
-            canvas.addEventListener('click', () => {
-                document.getElementById('instructions').classList.add('hidden');
-            }, { once: true });
         }
 
         animate() {
