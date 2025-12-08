@@ -19,3 +19,4 @@ Thumbs.db
 playwright-report/
 test-results/
 test-results.json
+tmp/

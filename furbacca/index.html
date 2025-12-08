@@ -486,6 +486,28 @@
             </div>
 
             <div class="card">
+                <h2>Audio Diagnostics</h2>
+                <div class="info-box" id="audio-info">
+                    <strong>Sample Rate:</strong> <span id="sample-rate">Not initialized</span><br>
+                    <strong>State:</strong> <span id="audio-state">Not initialized</span>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h3>Test Pure Tones</h3>
+                    <div class="input-group">
+                        <button class="action-btn secondary" onclick="playTestTone(1000)">1 kHz (audible)</button>
+                        <button class="action-btn secondary" onclick="playTestTone(10000)">10 kHz</button>
+                        <button class="action-btn secondary" onclick="playTestTone(15000)">15 kHz</button>
+                        <button class="action-btn secondary" onclick="playTestTone(17500)">17.5 kHz (X)</button>
+                        <button class="action-btn secondary" onclick="playTestTone(20000)">20 kHz</button>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">
+                        Test your speakers. 1 kHz should be clearly audible. 15-20 kHz should be barely audible or silent for most adults.
+                        If you can clearly hear all frequencies, your playback system may have issues reproducing ultrasonic tones.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
                 <h2>Debug Info</h2>
                 <div class="debug-panel" id="debug-panel">
 <span class="info">Click a command to see packet details...</span>
@@ -649,9 +671,54 @@
         function getAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                updateAudioInfo();
             }
             return audioContext;
         }
+
+        // Update audio diagnostics display
+        function updateAudioInfo() {
+            if (audioContext) {
+                document.getElementById('sample-rate').textContent = `${audioContext.sampleRate} Hz`;
+                document.getElementById('audio-state').textContent = audioContext.state;
+            }
+        }
+
+        // Play a pure test tone
+        window.playTestTone = async function(frequency) {
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+            updateAudioInfo();
+
+            console.log(`Playing test tone at ${frequency} Hz (sample rate: ${ctx.sampleRate} Hz)`);
+
+            // Use OscillatorNode for pure tone
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+            // Fade in/out to avoid clicks
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.45);
+            gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.5);
+
+            document.getElementById('debug-panel').innerHTML =
+                `<span class="label">Test Tone:</span> <span class="value">${frequency} Hz</span>\n` +
+                `<span class="label">Duration:</span> <span class="value">500ms</span>\n` +
+                `<span class="label">Sample Rate:</span> <span class="value">${ctx.sampleRate} Hz</span>\n` +
+                `<span class="info">If ${frequency} Hz is clearly audible and you're over 40, your speakers may be producing lower harmonics or aliasing artifacts.</span>`;
+        };
 
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -729,6 +796,9 @@
         async function playCommand(command, button = null) {
             try {
                 const ctx = getAudioContext();
+
+                // Debug: log sample rate
+                console.log('AudioContext sample rate:', ctx.sampleRate, 'Hz');
 
                 // Resume context if suspended
                 if (ctx.state === 'suspended') {
