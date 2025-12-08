@@ -368,17 +368,29 @@
             this.particles = null;
             this.basePositions = [];
 
-            this.init();
+            this.init().catch(err => {
+                console.error('Init failed:', err);
+                document.getElementById('loading')?.classList.add('hidden');
+            });
         }
 
         async init() {
-            this.setupThreeJS();
-            this.createParticles();
-            this.setupEventListeners();
-            await this.setupHandTracking();
-            this.animate();
-
-            document.getElementById('loading').classList.add('hidden');
+            try {
+                this.setupThreeJS();
+                this.createParticles();
+                this.setupEventListeners();
+                await this.setupHandTracking();
+                this.animate();
+            } catch (err) {
+                console.error('Init error:', err);
+                // Start animation anyway even if hand tracking fails
+                if (!this.animating) {
+                    this.animate();
+                }
+            } finally {
+                // Always hide loading screen
+                document.getElementById('loading').classList.add('hidden');
+            }
         }
 
         setupThreeJS() {
@@ -733,25 +745,32 @@
             const canvas = document.getElementById('hand-overlay');
             const ctx = canvas.getContext('2d');
 
-            // Initialize MediaPipe Hands
-            const hands = new Hands({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
-                }
-            });
+            // Check if MediaPipe loaded
+            if (typeof Hands === 'undefined') {
+                console.warn('MediaPipe Hands not loaded');
+                document.getElementById('video-container').classList.add('hidden');
+                return;
+            }
 
-            hands.setOptions({
-                maxNumHands: 2,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
+            try {
+                // Initialize MediaPipe Hands
+                const hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
+                    }
+                });
 
-            hands.onResults((results) => this.onHandResults(results, canvas, ctx));
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
 
-            // Setup camera
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                try {
+                hands.onResults((results) => this.onHandResults(results, canvas, ctx));
+
+                // Setup camera
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
                             width: 640,
@@ -771,12 +790,12 @@
                         height: 480
                     });
                     camera.start();
-                } catch (err) {
-                    console.warn('Camera not available:', err);
-                    document.getElementById('video-container').classList.add('hidden');
-                    document.getElementById('instructions').innerHTML =
-                        'Camera not available. Use mouse/touch to rotate, scroll to zoom.';
+                } else {
+                    throw new Error('getUserMedia not supported');
                 }
+            } catch (err) {
+                console.warn('Camera/hand tracking not available:', err);
+                document.getElementById('video-container').classList.add('hidden');
             }
         }
 
@@ -868,6 +887,7 @@
         }
 
         setupEventListeners() {
+            if (!this.renderer) return;
             const canvas = this.renderer.domElement;
 
             // Shape buttons
@@ -963,42 +983,82 @@
         }
 
         animate() {
-            requestAnimationFrame(() => this.animate());
+            if (this.animating) return;  // Prevent double animation
+            this.animating = true;
 
-            const time = performance.now() * 0.001;
+            const animateFrame = () => {
+                requestAnimationFrame(animateFrame);
 
-            if (this.particles) {
-                // Update uniforms
-                this.particles.material.uniforms.time.value = time;
+                // Safety check - renderer must exist
+                if (!this.renderer || !this.scene || !this.camera) return;
 
-                // Smooth scale transition based on hand tension
-                this.currentScale += (this.targetScale - this.currentScale) * 0.1;
-                this.particles.material.uniforms.scale.value = this.currentScale;
+                const time = performance.now() * 0.001;
 
-                // Apply rotation
-                if (this.autoRotate) {
-                    this.particles.rotation.y += 0.005;
+                if (this.particles) {
+                    // Update uniforms
+                    this.particles.material.uniforms.time.value = time;
+
+                    // Smooth scale transition based on hand tension
+                    this.currentScale += (this.targetScale - this.currentScale) * 0.1;
+                    this.particles.material.uniforms.scale.value = this.currentScale;
+
+                    // Apply rotation
+                    if (this.autoRotate) {
+                        this.particles.rotation.y += 0.005;
+                    }
+
+                    // Apply manual rotation with momentum
+                    this.particles.rotation.x += this.rotationVelocity.x;
+                    this.particles.rotation.y += this.rotationVelocity.y;
+
+                    // Decay velocity
+                    if (!this.isDragging) {
+                        this.rotationVelocity.x *= 0.95;
+                        this.rotationVelocity.y *= 0.95;
+                    }
                 }
 
-                // Apply manual rotation with momentum
-                this.particles.rotation.x += this.rotationVelocity.x;
-                this.particles.rotation.y += this.rotationVelocity.y;
+                this.renderer.render(this.scene, this.camera);
+            };
 
-                // Decay velocity
-                if (!this.isDragging) {
-                    this.rotationVelocity.x *= 0.95;
-                    this.rotationVelocity.y *= 0.95;
-                }
-            }
-
-            this.renderer.render(this.scene, this.camera);
+            animateFrame();
         }
     }
 
+    // Failsafe: hide loader after 5 seconds no matter what
+    setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('hidden')) {
+            console.warn('Failsafe: hiding loader after timeout');
+            loading.classList.add('hidden');
+        }
+    }, 5000);
+
     // Initialize on load
-    window.addEventListener('DOMContentLoaded', () => {
-        new GestureParticleSystem();
-    });
+    function startApp() {
+        const loading = document.getElementById('loading');
+
+        // Check if Three.js loaded
+        if (typeof THREE === 'undefined') {
+            console.error('Three.js failed to load');
+            if (loading) loading.innerHTML = '<p style="color:#ff6b6b">Failed to load Three.js. Try refreshing.</p>';
+            return;
+        }
+
+        try {
+            new GestureParticleSystem();
+        } catch (err) {
+            console.error('Failed to start:', err);
+            if (loading) loading.classList.add('hidden');
+        }
+    }
+
+    // Try multiple ways to start
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startApp);
+    } else {
+        startApp();
+    }
     </script>
 </body>
 </html>
