@@ -884,6 +884,7 @@
         }
 
         setupEventListeners() {
+            if (!this.renderer) return;
             const canvas = this.renderer.domElement;
 
             // Shape buttons
@@ -985,6 +986,9 @@
             const animateFrame = () => {
                 requestAnimationFrame(animateFrame);
 
+                // Safety check - renderer must exist
+                if (!this.renderer || !this.scene || !this.camera) return;
+
                 const time = performance.now() * 0.001;
 
                 if (this.particles) {
@@ -1019,9 +1023,30 @@
     }
 
     // Initialize on load
-    window.addEventListener('DOMContentLoaded', () => {
-        new GestureParticleSystem();
-    });
+    function startApp() {
+        // Check if Three.js loaded
+        if (typeof THREE === 'undefined') {
+            console.error('Three.js failed to load');
+            document.getElementById('loading').innerHTML =
+                '<p style="color:#ff6b6b">Failed to load Three.js</p>';
+            return;
+        }
+
+        try {
+            new GestureParticleSystem();
+        } catch (err) {
+            console.error('Failed to start:', err);
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+
+    // Try multiple ways to start
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startApp);
+    } else {
+        // DOM already loaded
+        startApp();
+    }
     </script>
 </body>
 </html>
