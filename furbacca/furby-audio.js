@@ -24,12 +24,16 @@ export class FurbyAudio {
         '2': 18614,
     };
 
-    // Audio parameters
+    // Audio parameters - matching Perl exactly
     static BITS_SAMPLE = 16;
     static SAMPLE_RATE = 44100;
     static TOP_FREQ = 44100 / 2; // Nyquist frequency (22050 Hz)
 
-    // Timing parameters (in seconds)
+    // PI as defined in Perl: (22 / 7) * 2
+    // This is slightly different from Math.PI * 2
+    static PI = (22 / 7) * 2;
+
+    // Timing parameters (in seconds) - matching Perl exactly
     static BASE_FREQ_LENGTH = 0.016;          // 16ms - duration of each frequency tone
     static XFADE_LENGTH = 0.004;              // 4ms - crossfade between frequencies
     static LEAD_SILENCE_GAP_LENGTH = 0.005;   // 5ms - silence at start/end
@@ -38,7 +42,7 @@ export class FurbyAudio {
 
     // Volume fade parameters (in samples)
     static XFADE_VOLUME_SAMPLES = 220;
-    static LEAD_XFADE_VOLUME_SAMPLES = Math.floor(44100 * 0.005); // ~220 samples
+    static LEAD_XFADE_VOLUME_SAMPLES = Math.floor(44100 * 0.005); // entire length
 
     /**
      * Get base frequency for a symbol
@@ -124,11 +128,12 @@ export class FurbyAudio {
      * @returns {number} - New offset after adding packet
      */
     static addPacket(channelData, offset, str, sampleRate) {
-        // Remove non-digit characters
+        // Remove non-digit characters (matching Perl: $str =~ s/[^0123]//g;)
         const cleaned = str.replace(/[^0123]/g, '');
 
         // Interleave all digits with base frequency:
         // 0123 => X0X1X2X3X
+        // Matching Perl: my @a = ('', split(//, $str), ''); join('X', @a)
         const chars = ['', ...cleaned.split(''), ''];
         const rawPacket = chars.join('X');
 
@@ -137,6 +142,7 @@ export class FurbyAudio {
 
     /**
      * Add a raw packet (already interleaved) to the audio buffer
+     * Matches Perl add_raw_packet exactly
      * @param {Float32Array} channelData - Audio buffer channel
      * @param {number} offset - Starting sample offset
      * @param {string} str - Raw packet string (e.g., "X0X1X2X3X")
@@ -147,62 +153,54 @@ export class FurbyAudio {
         const chars = str.split('');
         const maxIdx = chars.length - 1;
 
-        // Track phase continuously across all segments to avoid discontinuities
-        let phase = 0;
-
         // Lead-in: sweep from top_freq to first symbol frequency
-        const result1 = this.addSine(
+        offset = this.addSine(
             channelData, offset,
             this.TOP_FREQ, this.baseFreq(chars[0]),
             this.LEAD_LENGTH,
             this.LEAD_XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-            sampleRate, 1, phase
+            sampleRate
         );
-        offset = result1.offset;
-        phase = result1.phase;
 
         // Main packet: tones with crossfades
         for (let i = 0; i <= maxIdx; i++) {
-            // Add main tone
-            const resultTone = this.addSine(
+            // Add main tone (hz1 == hz2, so no sweep)
+            offset = this.addSine(
                 channelData, offset,
                 this.baseFreq(chars[i]), this.baseFreq(chars[i]),
                 this.BASE_FREQ_LENGTH,
                 this.XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-                sampleRate, 1, phase
+                sampleRate
             );
-            offset = resultTone.offset;
-            phase = resultTone.phase;
 
             // Add crossfade to next tone (if not last)
             if (i < maxIdx) {
-                const resultXfade = this.addSine(
+                offset = this.addSine(
                     channelData, offset,
                     this.baseFreq(chars[i]), this.baseFreq(chars[i + 1]),
                     this.XFADE_LENGTH,
                     this.XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-                    sampleRate, 1, phase
+                    sampleRate
                 );
-                offset = resultXfade.offset;
-                phase = resultXfade.phase;
             }
         }
 
         // Lead-out: sweep from last symbol frequency to top_freq
-        const resultOut = this.addSine(
+        // NOTE: Perl uses same fade order for lead-in and lead-out
+        offset = this.addSine(
             channelData, offset,
             this.baseFreq(chars[maxIdx]), this.TOP_FREQ,
             this.LEAD_LENGTH,
-            this.XFADE_VOLUME_SAMPLES, this.LEAD_XFADE_VOLUME_SAMPLES,
-            sampleRate, 1, phase
+            this.LEAD_XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
+            sampleRate
         );
-        offset = resultOut.offset;
 
         return offset;
     }
 
     /**
      * Add a sine wave with frequency sweep and volume fades
+     * Matches Perl add_sine exactly, including "FFT magic"
      * @param {Float32Array} channelData - Audio buffer channel
      * @param {number} offset - Starting sample offset
      * @param {number} hz1 - Starting frequency (Hz)
@@ -212,23 +210,25 @@ export class FurbyAudio {
      * @param {number} fadeoutSamples - Fade-out duration (samples)
      * @param {number} sampleRate - Sample rate
      * @param {number} volume - Base volume (0-1)
-     * @param {number} initialPhase - Initial phase (for continuity between segments)
-     * @returns {object} - {offset: new offset, phase: final phase}
+     * @returns {number} - New offset after adding sine
      */
-    static addSine(channelData, offset, hz1, hz2, length, fadeinSamples, fadeoutSamples, sampleRate, volume = 1, initialPhase = 0) {
-        const lengthSamples = Math.floor(length * sampleRate);
-        const twoPi = Math.PI * 2;
+    static addSine(channelData, offset, hz1, hz2, length, fadeinSamples, fadeoutSamples, sampleRate, volume = 1) {
+        // "FFT magic" from Perl: average the frequencies
+        // $hz2 = ($hz1 + $hz2) / 2;
+        hz2 = (hz1 + hz2) / 2;
 
-        // Start with the provided initial phase for continuity between segments
-        let phase = initialPhase;
+        const lengthSamples = Math.floor(length * sampleRate);
 
         for (let pos = 0; pos < lengthSamples; pos++) {
-            // Linear frequency sweep from hz1 to hz2
-            const t = pos / (lengthSamples - 1 || 1);
-            const hz = hz1 + (hz2 - hz1) * t;
+            const time = pos / sampleRate;
 
-            // Integrate phase: phase += 2π * hz * dt where dt = 1/sampleRate
-            phase += twoPi * hz / sampleRate;
+            // Linear frequency sweep from hz1 to (averaged) hz2
+            const hz = (pos / (lengthSamples - 1 || 1)) * (hz2 - hz1) + hz1;
+
+            // Phase calculation matching Perl exactly:
+            // $phase = $PI * $time * $hz;
+            // where $PI = (22 / 7) * 2
+            const phase = this.PI * time * hz;
 
             // Calculate current volume with fades
             let curVol = volume;
@@ -247,8 +247,7 @@ export class FurbyAudio {
             channelData[offset + pos] = Math.sin(phase) * curVol;
         }
 
-        // Return both offset and phase for continuity
-        return { offset: offset + lengthSamples, phase: phase };
+        return offset + lengthSamples;
     }
 
     /**
