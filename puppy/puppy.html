@@ -321,104 +321,45 @@ app<!DOCTYPE html>
         let puppies = [];
         let footprintTrails = [];      // animated walking trails
         let staticFootprints = [];     // individual fading footprints
-        let smoothedFingerCount = 0;
-        let lastStableFingerCount = 0;
-        let fingerStableTime = 0;
-        let lastFingerChangeTime = 0;
-        let isFingerCountIncreasing = false;
         let handsReady = false;
         let lastFrameTime = 0;
-        let rawFingerCounts = [];  // rolling buffer for smoothing
         let lastHandLandmarks = null;
         let edgeWarnings = { top: 0, bottom: 0, left: 0, right: 0 };
         let audioCtx = null;
 
-        // ============ Web Audio - Cheerful Sounds ============
+        // Per-hand tracking state
+        let handStates = {
+            left: { fingerCount: 0, lastFingerCount: 0, fistTime: 0, wasFist: false, hadTwoPlus: false },
+            right: { fingerCount: 0, lastFingerCount: 0, fistTime: 0, wasFist: false, hadTwoPlus: false }
+        };
+        let lastHandedness = [];  // track which hands are present
+
+        // ============ Web Audio - Placeholder for MP3s ============
         function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
+        // TODO: Replace these with cute puppy bark MP3s and kid-friendly number readings
         function playSpawnSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            // Cheerful ascending arpeggio
-            osc.type = 'sine';
-            const now = audioCtx.currentTime;
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.setValueAtTime(500, now + 0.05);
-            osc.frequency.setValueAtTime(600, now + 0.1);
-            osc.frequency.setValueAtTime(800, now + 0.15);
-
-            gain.gain.setValueAtTime(0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-
-            osc.start(now);
-            osc.stop(now + 0.25);
+            // Commented out - will be replaced with MP3
+            // if (!audioCtx) return;
+            // ...
         }
 
         function playDespawnSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            // Soft descending whimper
-            osc.type = 'triangle';
-            const now = audioCtx.currentTime;
-            osc.frequency.setValueAtTime(500, now);
-            osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-
-            osc.start(now);
-            osc.stop(now + 0.3);
+            // Commented out - will be replaced with MP3
         }
 
         function playBounceSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            // Quick boop
-            osc.type = 'sine';
-            const now = audioCtx.currentTime;
-            const freq = 200 + Math.random() * 200;
-            osc.frequency.setValueAtTime(freq, now);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.08);
-
-            gain.gain.setValueAtTime(0.08, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-
-            osc.start(now);
-            osc.stop(now + 0.1);
+            // Commented out - will be replaced with MP3
         }
 
         function playCollisionSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            // Commented out - will be replaced with MP3
+        }
 
-            // Playful bonk
-            osc.type = 'square';
-            const now = audioCtx.currentTime;
-            osc.frequency.setValueAtTime(300 + Math.random() * 100, now);
-            osc.frequency.exponentialRampToValueAtTime(150, now + 0.05);
-
-            gain.gain.setValueAtTime(0.05, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-
-            osc.start(now);
-            osc.stop(now + 0.06);
+        function playThrowSound() {
+            // TODO: Add whoosh sound for throw gesture
         }
 
         // ============ Skeleton Drawing ============
@@ -596,7 +537,7 @@ app<!DOCTYPE html>
 
         // ============ Puppy Class ============
         class Puppy {
-            constructor(x, y, appearing = true) {
+            constructor(x, y, hand = 'left', appearing = true) {
                 this.x = x;
                 this.y = y;
                 this.vx = (Math.random() - 0.5) * 4;
@@ -609,6 +550,9 @@ app<!DOCTYPE html>
                 this.appearing = appearing;
                 this.disappearing = false;
                 this.disappearStartTime = 0;
+                this.hand = hand;  // 'left' or 'right' - which hand owns this puppy
+                this.markedForRemoval = false;  // for fist grace period
+                this.removalTime = 0;
             }
 
             update(dt) {
@@ -642,19 +586,15 @@ app<!DOCTYPE html>
                 this.y += this.vy;
                 this.rotation += this.rotationVelocity;
 
-                // Wall bounces with energy boost
+                // Wraparound edges (Asteroids style) - left/right
                 const radius = this.size * this.scale / 2;
-
-                if (this.x - radius < 0) {
-                    this.x = radius;
-                    this.vx = Math.abs(this.vx) * CONFIG.bounceEnergyBoost;
-                    this.rotationVelocity *= -0.8;
-                } else if (this.x + radius > canvas.width) {
-                    this.x = canvas.width - radius;
-                    this.vx = -Math.abs(this.vx) * CONFIG.bounceEnergyBoost;
-                    this.rotationVelocity *= -0.8;
+                if (this.x + radius < 0) {
+                    this.x = canvas.width + radius;
+                } else if (this.x - radius > canvas.width) {
+                    this.x = -radius;
                 }
 
+                // Top/bottom still bounce (keeps puppies visible)
                 if (this.y - radius < 0) {
                     this.y = radius;
                     this.vy = Math.abs(this.vy) * CONFIG.bounceEnergyBoost;
@@ -683,6 +623,23 @@ app<!DOCTYPE html>
                 return true;
             }
 
+            // Rotate to face a direction and get kicked that way
+            throwToward(targetX, targetY, kickStrength = 5) {
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    // Adjust rotation to face target
+                    const targetAngle = Math.atan2(dy, dx);
+                    this.rotationVelocity = (targetAngle - this.rotation) * 0.1;
+                    this.rotation = targetAngle;
+
+                    // Kick velocity toward target
+                    this.vx += (dx / dist) * kickStrength;
+                    this.vy += (dy / dist) * kickStrength;
+                }
+            }
+
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
@@ -703,6 +660,12 @@ app<!DOCTYPE html>
                 // Spawn animated footprint trail heading to furthest corner
                 const targetCorner = getFurthestEmptyishCorner(this.x, this.y);
                 footprintTrails.push(new FootprintTrail(this.x, this.y, targetCorner));
+            }
+
+            // Cancel removal if hand reopens within grace period
+            cancelRemoval() {
+                this.markedForRemoval = false;
+                this.removalTime = 0;
             }
         }
 
@@ -913,103 +876,176 @@ app<!DOCTYPE html>
             return bestCorner;
         }
 
-        // ============ Finger Counting ============
-        function countFingers(landmarks) {
-            if (!landmarks || landmarks.length === 0) return 0;
+        // ============ Finger Counting (Per-Hand) ============
+        function countFingersForHand(hand) {
+            // Thumb - special case, check if extended sideways
+            const thumbTip = hand[4];
+            const thumbMcp = hand[2];
+            const wrist = hand[0];
 
-            let totalFingers = 0;
+            // Determine if left or right hand based on thumb position
+            const isRightHand = thumbMcp.x < wrist.x;
 
-            for (const hand of landmarks) {
-                // Thumb - special case, check if extended sideways
-                const thumbTip = hand[4];
-                const thumbMcp = hand[2];
-                const wrist = hand[0];
+            let fingerCount = 0;
 
-                // Determine if left or right hand based on thumb position
-                const isRightHand = thumbMcp.x < wrist.x;
+            // Thumb is extended if tip is further from palm center than MCP
+            const thumbExtended = isRightHand
+                ? thumbTip.x < thumbMcp.x - 0.02
+                : thumbTip.x > thumbMcp.x + 0.02;
 
-                // Thumb is extended if tip is further from palm center than MCP
-                const thumbExtended = isRightHand
-                    ? thumbTip.x < thumbMcp.x - 0.02
-                    : thumbTip.x > thumbMcp.x + 0.02;
+            if (thumbExtended) fingerCount++;
 
-                if (thumbExtended) totalFingers++;
+            // Other fingers - check if fingertip is above PIP joint
+            const fingerTips = [8, 12, 16, 20];  // index, middle, ring, pinky
+            const fingerPips = [6, 10, 14, 18];
 
-                // Other fingers - check if fingertip is above PIP joint
-                const fingerTips = [8, 12, 16, 20];  // index, middle, ring, pinky
-                const fingerPips = [6, 10, 14, 18];
+            for (let i = 0; i < 4; i++) {
+                const tip = hand[fingerTips[i]];
+                const pip = hand[fingerPips[i]];
 
-                for (let i = 0; i < 4; i++) {
-                    const tip = hand[fingerTips[i]];
-                    const pip = hand[fingerPips[i]];
+                // Finger is extended if tip is above (lower y) PIP
+                if (tip.y < pip.y - 0.02) {
+                    fingerCount++;
+                }
+            }
 
-                    // Finger is extended if tip is above (lower y) PIP
-                    if (tip.y < pip.y - 0.02) {
-                        totalFingers++;
+            return { fingerCount, isRightHand };
+        }
+
+        function getHandCenter(hand) {
+            // Return palm center position in screen coordinates
+            const wrist = hand[0];
+            const middleMcp = hand[9];
+            return {
+                x: (1 - (wrist.x + middleMcp.x) / 2) * canvas.width,  // mirrored
+                y: ((wrist.y + middleMcp.y) / 2) * canvas.height
+            };
+        }
+
+        function processHands(landmarks, handedness) {
+            const now = performance.now();
+            const presentHands = { left: false, right: false };
+            const handCenters = {};
+
+            // Process each detected hand
+            if (landmarks && landmarks.length > 0) {
+                for (let i = 0; i < landmarks.length; i++) {
+                    const hand = landmarks[i];
+                    const { fingerCount, isRightHand } = countFingersForHand(hand);
+
+                    // MediaPipe handedness is from camera's perspective, we mirror it
+                    const handLabel = isRightHand ? 'right' : 'left';
+                    presentHands[handLabel] = true;
+                    handCenters[handLabel] = getHandCenter(hand);
+
+                    const state = handStates[handLabel];
+                    const prevCount = state.fingerCount;
+                    state.fingerCount = fingerCount;
+
+                    // Track if hand had 2+ fingers (for fist throw mechanic)
+                    if (fingerCount >= 2) {
+                        state.hadTwoPlus = true;
+                    }
+
+                    // Detect fist (0 fingers)
+                    const isFist = fingerCount === 0;
+
+                    if (isFist && !state.wasFist && state.hadTwoPlus) {
+                        // Just made a fist with a hand that had 2+ fingers
+                        state.fistTime = now;
+                        state.wasFist = true;
+
+                        // Throw puppies toward the OTHER hand
+                        const otherHand = handLabel === 'left' ? 'right' : 'left';
+                        const otherCenter = handCenters[otherHand];
+
+                        if (otherCenter && presentHands[otherHand]) {
+                            // Throw this hand's puppies toward other hand
+                            for (const puppy of puppies) {
+                                if (puppy.hand === handLabel && !puppy.disappearing) {
+                                    puppy.throwToward(otherCenter.x, otherCenter.y, 6);
+                                }
+                            }
+                            playThrowSound();
+                        }
+
+                        // Mark puppies for potential removal (with grace period)
+                        for (const puppy of puppies) {
+                            if (puppy.hand === handLabel && !puppy.disappearing) {
+                                puppy.markedForRemoval = true;
+                                puppy.removalTime = now;
+                            }
+                        }
+                    } else if (!isFist && state.wasFist) {
+                        // Hand reopened - check grace period (1 second)
+                        const fistDuration = now - state.fistTime;
+
+                        if (fistDuration < 1000) {
+                            // Reopened within grace period - cancel removal
+                            for (const puppy of puppies) {
+                                if (puppy.hand === handLabel && puppy.markedForRemoval) {
+                                    puppy.cancelRemoval();
+                                }
+                            }
+                        }
+
+                        state.wasFist = false;
+                        state.hadTwoPlus = fingerCount >= 2;
+                    }
+
+                    // Handle finger count changes (spawn/despawn puppies)
+                    if (fingerCount !== state.lastFingerCount) {
+                        handleHandFingerChange(handLabel, fingerCount, state.lastFingerCount, handCenters[handLabel]);
+                        state.lastFingerCount = fingerCount;
                     }
                 }
             }
 
-            return Math.min(totalFingers, CONFIG.maxPuppies);
-        }
-
-        function updateSmoothedFingerCount(rawCount) {
-            // Add to rolling buffer
-            rawFingerCounts.push(rawCount);
-            if (rawFingerCounts.length > 10) {
-                rawFingerCounts.shift();
+            // Process marked puppies that exceeded grace period
+            for (const puppy of puppies) {
+                if (puppy.markedForRemoval && !puppy.disappearing) {
+                    if (now - puppy.removalTime > 1000) {
+                        puppy.startDisappearing();
+                        playDespawnSound();
+                        puppy.markedForRemoval = false;
+                    }
+                }
             }
 
-            // Calculate smoothed average
-            const avg = rawFingerCounts.reduce((a, b) => a + b, 0) / rawFingerCounts.length;
-            smoothedFingerCount = Math.round(avg);
-
-            // Update finger display
+            // Update display
+            const totalFingers = handStates.left.fingerCount + handStates.right.fingerCount;
             document.getElementById('finger-count').textContent =
-                smoothedFingerCount > 0 ? `${smoothedFingerCount}` : '';
+                totalFingers > 0 ? `${totalFingers}` : '';
 
-            // Detect stable changes
-            const now = performance.now();
-
-            if (smoothedFingerCount !== lastStableFingerCount) {
-                const increasing = smoothedFingerCount > lastStableFingerCount;
-                const stableTime = increasing ? CONFIG.fingerStableTimeUp : CONFIG.fingerStableTimeDown;
-
-                if (isFingerCountIncreasing !== increasing) {
-                    isFingerCountIncreasing = increasing;
-                    lastFingerChangeTime = now;
-                }
-
-                if (now - lastFingerChangeTime >= stableTime) {
-                    handleFingerCountChange(smoothedFingerCount, lastStableFingerCount);
-                    lastStableFingerCount = smoothedFingerCount;
-                    lastFingerChangeTime = now;
-                }
-            } else {
-                lastFingerChangeTime = now;
-            }
+            lastHandedness = presentHands;
         }
 
-        function handleFingerCountChange(newCount, oldCount) {
+        function handleHandFingerChange(handLabel, newCount, oldCount, handCenter) {
+            const state = handStates[handLabel];
+
+            // Skip if this is a fist gesture (handled separately)
+            if (state.wasFist || state.markedForRemoval) return;
+
             const diff = newCount - oldCount;
 
             if (diff > 0) {
-                // Add puppies
+                // Add puppies for this hand
                 for (let i = 0; i < diff; i++) {
-                    if (puppies.filter(p => !p.disappearing).length < CONFIG.maxPuppies) {
+                    const totalPuppies = puppies.filter(p => !p.disappearing).length;
+                    if (totalPuppies < CONFIG.maxPuppies) {
                         const corner = getEmptiestCorner();
-                        const puppy = new Puppy(corner.x, corner.y, true);
+                        const puppy = new Puppy(corner.x, corner.y, handLabel, true);
                         puppies.push(puppy);
                         playSpawnSound();
                     }
                 }
-            } else if (diff < 0) {
-                // Remove puppies (oldest first, excluding already disappearing)
+            } else if (diff < 0 && !state.wasFist) {
+                // Remove puppies for this hand (if not doing fist throw)
                 let toRemove = Math.abs(diff);
                 for (const puppy of puppies) {
-                    if (!puppy.disappearing && toRemove > 0) {
-                        puppy.startDisappearing();
-                        playDespawnSound();
+                    if (puppy.hand === handLabel && !puppy.disappearing && !puppy.markedForRemoval && toRemove > 0) {
+                        puppy.markedForRemoval = true;
+                        puppy.removalTime = performance.now();
                         toRemove--;
                     }
                 }
@@ -1175,8 +1211,8 @@ app<!DOCTYPE html>
                         skelCanvas.classList.remove('minimized');
                     }
 
-                    const fingerCount = countFingers(results.multiHandLandmarks);
-                    updateSmoothedFingerCount(fingerCount);
+                    // Process per-hand finger counting, fist gestures, throws
+                    processHands(results.multiHandLandmarks, results.multiHandedness);
                 });
 
                 // Start camera processing at ~24hz
