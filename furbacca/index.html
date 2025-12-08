@@ -835,27 +835,40 @@
         // Update debug panel with packet info
         function updateDebugPanel(command) {
             const panel = document.getElementById('debug-panel');
-            const packet = FurbyPacket.make(command);
-            const [pkt1, pkt2] = packet.split(' ');
-            const parsed = FurbyPacket.parsePacket(pkt1);
+            const packets = FurbyPacket.make(command);
+            const [pkt1, pkt2] = packets.split(' ');
+            const parsed1 = FurbyPacket.parsePacket(pkt1.replace(/-/g, ''));
+            const parsed2 = FurbyPacket.parsePacket(pkt2.replace(/-/g, ''));
 
-            // Build interleaved representation
-            const interleaved = 'X' + pkt1.split('').join('X') + 'X';
+            // Get command value
+            let cmdValue;
+            if (typeof command === 'string' && command in FurbyPacket.COMMANDS) {
+                cmdValue = FurbyPacket.COMMANDS[command];
+            } else {
+                cmdValue = parseInt(command, 10);
+            }
 
-            const cmdDisplay = typeof command === 'string' ? command : command;
-            const description = parsed.description ? `\n<span class="label">Description:</span> <span class="value">${parsed.description}</span>` : '';
+            const cmdHex = '0x' + cmdValue.toString(16).toUpperCase().padStart(3, '0');
+            const description = FurbyPacket.getDescription(cmdValue);
+            const descLine = description ? `\n<span class="label">Description:</span> <span class="value">${description}</span>` : '';
 
-            panel.innerHTML = `<span class="label">Command:</span> <span class="value">${cmdDisplay}</span>${description}
-<span class="label">Command Value:</span> <span class="value">${parsed.commandHex} (${parsed.command} decimal)</span>
-<span class="label">Checksum:</span> <span class="value">0x${parsed.checksum.toString(16).toUpperCase().padStart(3, '0')} (${parsed.checksumValid ? 'valid' : 'INVALID'})</span>
-<span class="label">Packet (quaternary):</span> <span class="value">${pkt1}</span>
-<span class="label">Interleaved:</span> <span class="value">${interleaved}</span>
+            // Build interleaved representations
+            const interleaved1 = 'X' + pkt1.replace(/-/g, '').split('').join('X') + 'X';
+            const interleaved2 = 'X' + pkt2.replace(/-/g, '').split('').join('X') + 'X';
 
-<span class="info">// Packet structure: [command:5 digits][checksum:5 digits]
-// Commands are 10-bit (0-1023), encoded as 5 quaternary digits
-// Each digit is base-4 (quaternary): 0, 1, 2, 3
-// Interleaved with carrier 'X' between each digit
-// Sent twice with ~500ms gap for reliability</span>`;
+            panel.innerHTML = `<span class="label">Command:</span> <span class="value">${command}</span> = <span class="value">${cmdHex}</span> (${cmdValue} decimal)${descLine}
+
+<span class="label">Two-Packet Protocol:</span>
+<span class="info">  Packet 1 (high 5 bits = ${cmdValue >> 5}):</span> <span class="value">${pkt1}</span> ${parsed1.checksumValid ? '✓' : '✗'}
+<span class="info">  Packet 2 (low 5 bits = ${cmdValue & 31}):</span> <span class="value">${pkt2}</span> ${parsed2.checksumValid ? '✓' : '✗'}
+
+<span class="label">Transmitted sequence:</span>
+<span class="value">${interleaved1}</span> <span class="info">(25 symbols)</span>
+<span class="info">~490ms gap</span>
+<span class="value">${interleaved2}</span> <span class="info">(25 symbols)</span>
+
+<span class="info">// Format: DATA(4) + CHECKSUM(4) + ID(1032)
+// Interleaved with 'X' carrier between each symbol</span>`;
         }
 
         // Draw waveform visualization
