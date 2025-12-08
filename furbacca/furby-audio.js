@@ -147,46 +147,56 @@ export class FurbyAudio {
         const chars = str.split('');
         const maxIdx = chars.length - 1;
 
+        // Track phase continuously across all segments to avoid discontinuities
+        let phase = 0;
+
         // Lead-in: sweep from top_freq to first symbol frequency
-        offset = this.addSine(
+        const result1 = this.addSine(
             channelData, offset,
             this.TOP_FREQ, this.baseFreq(chars[0]),
             this.LEAD_LENGTH,
             this.LEAD_XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-            sampleRate
+            sampleRate, 1, phase
         );
+        offset = result1.offset;
+        phase = result1.phase;
 
         // Main packet: tones with crossfades
         for (let i = 0; i <= maxIdx; i++) {
             // Add main tone
-            offset = this.addSine(
+            const resultTone = this.addSine(
                 channelData, offset,
                 this.baseFreq(chars[i]), this.baseFreq(chars[i]),
                 this.BASE_FREQ_LENGTH,
                 this.XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-                sampleRate
+                sampleRate, 1, phase
             );
+            offset = resultTone.offset;
+            phase = resultTone.phase;
 
             // Add crossfade to next tone (if not last)
             if (i < maxIdx) {
-                offset = this.addSine(
+                const resultXfade = this.addSine(
                     channelData, offset,
                     this.baseFreq(chars[i]), this.baseFreq(chars[i + 1]),
                     this.XFADE_LENGTH,
                     this.XFADE_VOLUME_SAMPLES, this.XFADE_VOLUME_SAMPLES,
-                    sampleRate
+                    sampleRate, 1, phase
                 );
+                offset = resultXfade.offset;
+                phase = resultXfade.phase;
             }
         }
 
         // Lead-out: sweep from last symbol frequency to top_freq
-        offset = this.addSine(
+        const resultOut = this.addSine(
             channelData, offset,
             this.baseFreq(chars[maxIdx]), this.TOP_FREQ,
             this.LEAD_LENGTH,
             this.XFADE_VOLUME_SAMPLES, this.LEAD_XFADE_VOLUME_SAMPLES,
-            sampleRate
+            sampleRate, 1, phase
         );
+        offset = resultOut.offset;
 
         return offset;
     }
@@ -202,22 +212,23 @@ export class FurbyAudio {
      * @param {number} fadeoutSamples - Fade-out duration (samples)
      * @param {number} sampleRate - Sample rate
      * @param {number} volume - Base volume (0-1)
-     * @returns {number} - New offset after adding sine
+     * @param {number} initialPhase - Initial phase (for continuity between segments)
+     * @returns {object} - {offset: new offset, phase: final phase}
      */
-    static addSine(channelData, offset, hz1, hz2, length, fadeinSamples, fadeoutSamples, sampleRate, volume = 1) {
-        // FFT magic from original Perl: average the frequencies
-        const avgHz = (hz1 + hz2) / 2;
+    static addSine(channelData, offset, hz1, hz2, length, fadeinSamples, fadeoutSamples, sampleRate, volume = 1, initialPhase = 0) {
         const lengthSamples = Math.floor(length * sampleRate);
         const twoPi = Math.PI * 2;
 
+        // Start with the provided initial phase for continuity between segments
+        let phase = initialPhase;
+
         for (let pos = 0; pos < lengthSamples; pos++) {
-            const time = pos / sampleRate;
+            // Linear frequency sweep from hz1 to hz2
+            const t = pos / (lengthSamples - 1 || 1);
+            const hz = hz1 + (hz2 - hz1) * t;
 
-            // Linear frequency sweep
-            const hz = (pos / (lengthSamples - 1)) * (avgHz - hz1) + hz1;
-
-            // Calculate phase (instantaneous)
-            const phase = twoPi * time * hz;
+            // Integrate phase: phase += 2π * hz * dt where dt = 1/sampleRate
+            phase += twoPi * hz / sampleRate;
 
             // Calculate current volume with fades
             let curVol = volume;
@@ -236,7 +247,8 @@ export class FurbyAudio {
             channelData[offset + pos] = Math.sin(phase) * curVol;
         }
 
-        return offset + lengthSamples;
+        // Return both offset and phase for continuity
+        return { offset: offset + lengthSamples, phase: phase };
     }
 
     /**
