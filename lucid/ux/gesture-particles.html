@@ -372,13 +372,22 @@
         }
 
         async init() {
-            this.setupThreeJS();
-            this.createParticles();
-            this.setupEventListeners();
-            await this.setupHandTracking();
-            this.animate();
-
-            document.getElementById('loading').classList.add('hidden');
+            try {
+                this.setupThreeJS();
+                this.createParticles();
+                this.setupEventListeners();
+                await this.setupHandTracking();
+                this.animate();
+            } catch (err) {
+                console.error('Init error:', err);
+                // Start animation anyway even if hand tracking fails
+                if (!this.animating) {
+                    this.animate();
+                }
+            } finally {
+                // Always hide loading screen
+                document.getElementById('loading').classList.add('hidden');
+            }
         }
 
         setupThreeJS() {
@@ -733,25 +742,32 @@
             const canvas = document.getElementById('hand-overlay');
             const ctx = canvas.getContext('2d');
 
-            // Initialize MediaPipe Hands
-            const hands = new Hands({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
-                }
-            });
+            // Check if MediaPipe loaded
+            if (typeof Hands === 'undefined') {
+                console.warn('MediaPipe Hands not loaded');
+                document.getElementById('video-container').classList.add('hidden');
+                return;
+            }
 
-            hands.setOptions({
-                maxNumHands: 2,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
+            try {
+                // Initialize MediaPipe Hands
+                const hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
+                    }
+                });
 
-            hands.onResults((results) => this.onHandResults(results, canvas, ctx));
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
 
-            // Setup camera
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                try {
+                hands.onResults((results) => this.onHandResults(results, canvas, ctx));
+
+                // Setup camera
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
                             width: 640,
@@ -771,12 +787,12 @@
                         height: 480
                     });
                     camera.start();
-                } catch (err) {
-                    console.warn('Camera not available:', err);
-                    document.getElementById('video-container').classList.add('hidden');
-                    document.getElementById('instructions').innerHTML =
-                        'Camera not available. Use mouse/touch to rotate, scroll to zoom.';
+                } else {
+                    throw new Error('getUserMedia not supported');
                 }
+            } catch (err) {
+                console.warn('Camera/hand tracking not available:', err);
+                document.getElementById('video-container').classList.add('hidden');
             }
         }
 
@@ -963,35 +979,42 @@
         }
 
         animate() {
-            requestAnimationFrame(() => this.animate());
+            if (this.animating) return;  // Prevent double animation
+            this.animating = true;
 
-            const time = performance.now() * 0.001;
+            const animateFrame = () => {
+                requestAnimationFrame(animateFrame);
 
-            if (this.particles) {
-                // Update uniforms
-                this.particles.material.uniforms.time.value = time;
+                const time = performance.now() * 0.001;
 
-                // Smooth scale transition based on hand tension
-                this.currentScale += (this.targetScale - this.currentScale) * 0.1;
-                this.particles.material.uniforms.scale.value = this.currentScale;
+                if (this.particles) {
+                    // Update uniforms
+                    this.particles.material.uniforms.time.value = time;
 
-                // Apply rotation
-                if (this.autoRotate) {
-                    this.particles.rotation.y += 0.005;
+                    // Smooth scale transition based on hand tension
+                    this.currentScale += (this.targetScale - this.currentScale) * 0.1;
+                    this.particles.material.uniforms.scale.value = this.currentScale;
+
+                    // Apply rotation
+                    if (this.autoRotate) {
+                        this.particles.rotation.y += 0.005;
+                    }
+
+                    // Apply manual rotation with momentum
+                    this.particles.rotation.x += this.rotationVelocity.x;
+                    this.particles.rotation.y += this.rotationVelocity.y;
+
+                    // Decay velocity
+                    if (!this.isDragging) {
+                        this.rotationVelocity.x *= 0.95;
+                        this.rotationVelocity.y *= 0.95;
+                    }
                 }
 
-                // Apply manual rotation with momentum
-                this.particles.rotation.x += this.rotationVelocity.x;
-                this.particles.rotation.y += this.rotationVelocity.y;
+                this.renderer.render(this.scene, this.camera);
+            };
 
-                // Decay velocity
-                if (!this.isDragging) {
-                    this.rotationVelocity.x *= 0.95;
-                    this.rotationVelocity.y *= 0.95;
-                }
-            }
-
-            this.renderer.render(this.scene, this.camera);
+            animateFrame();
         }
     }
 
