@@ -1157,17 +1157,64 @@ app<!DOCTYPE html>
             const video = document.getElementById('webcam');
             const status = document.getElementById('status');
 
-            try {
-                // Request camera access
-                const stream = await navigator.mediaDevices.getUserMedia({
+            // Try multiple camera configurations for cross-platform support
+            const cameraConfigs = [
+                // Preferred: front camera with ideal resolution
+                {
                     video: {
                         facingMode: 'user',
+                        width: { ideal: 640, max: 1280 },
+                        height: { ideal: 480, max: 720 }
+                    }
+                },
+                // Fallback 1: front camera, any resolution
+                {
+                    video: { facingMode: 'user' }
+                },
+                // Fallback 2: any camera with resolution hints
+                {
+                    video: {
                         width: { ideal: 640 },
                         height: { ideal: 480 }
                     }
-                });
+                },
+                // Fallback 3: just give me any camera
+                {
+                    video: true
+                }
+            ];
+
+            let stream = null;
+            let configUsed = -1;
+
+            // Try each config until one works
+            for (let i = 0; i < cameraConfigs.length; i++) {
+                try {
+                    status.textContent = `Requesting camera (attempt ${i + 1})...`;
+                    stream = await navigator.mediaDevices.getUserMedia(cameraConfigs[i]);
+                    configUsed = i;
+                    console.log(`Camera config ${i} succeeded:`, cameraConfigs[i]);
+                    break;
+                } catch (err) {
+                    console.warn(`Camera config ${i} failed:`, err.message);
+                    if (i === cameraConfigs.length - 1) {
+                        throw err; // All configs failed
+                    }
+                }
+            }
+
+            try {
                 video.srcObject = stream;
+                video.setAttribute('playsinline', 'true'); // Critical for iOS
+                video.setAttribute('autoplay', 'true');
+                video.muted = true; // Required for autoplay on some browsers
+
                 await video.play();
+
+                // Get actual video dimensions
+                const videoWidth = video.videoWidth || 640;
+                const videoHeight = video.videoHeight || 480;
+                console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
 
                 status.textContent = 'Initializing hand tracking...';
                 status.classList.add('loading');
@@ -1179,10 +1226,12 @@ app<!DOCTYPE html>
                     }
                 });
 
+                // Use lower complexity on mobile for performance
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
                 hands.setOptions({
                     maxNumHands: 2,
-                    modelComplexity: 1,
-                    minDetectionConfidence: 0.7,
+                    modelComplexity: isMobile ? 0 : 1,  // Simpler model on mobile
+                    minDetectionConfidence: 0.6,
                     minTrackingConfidence: 0.5
                 });
 
@@ -1209,24 +1258,34 @@ app<!DOCTYPE html>
                         skelCanvas.classList.remove('minimized');
                     }
 
-                    // Process per-hand finger counting, fist gestures, throws
+                    // Process per-hand finger counting and jiggle energy
                     processHands(results.multiHandLandmarks, results.multiHandedness);
                 });
 
-                // Start camera processing at ~24hz
+                // Start camera processing
                 const camera = new Camera(video, {
                     onFrame: async () => {
                         await hands.send({ image: video });
                     },
-                    width: 640,
-                    height: 480
+                    width: videoWidth,
+                    height: videoHeight
                 });
 
                 await camera.start();
 
             } catch (err) {
                 console.error('Camera/MediaPipe error:', err);
-                status.textContent = `Error: ${err.message}`;
+                let errorMsg = err.message;
+                if (err.name === 'NotAllowedError') {
+                    errorMsg = 'Camera permission denied. Please allow camera access.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = 'No camera found on this device.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = 'Camera is in use by another app.';
+                } else if (err.name === 'OverconstrainedError') {
+                    errorMsg = 'Camera does not support required features.';
+                }
+                status.textContent = `Error: ${errorMsg}`;
                 status.classList.remove('loading');
             }
         }
