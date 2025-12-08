@@ -329,8 +329,20 @@ app<!DOCTYPE html>
 
         // Per-hand tracking state
         let handStates = {
-            left: { fingerCount: 0, lastFingerCount: 0, fistTime: 0, wasFist: false, hadTwoPlus: false },
-            right: { fingerCount: 0, lastFingerCount: 0, fistTime: 0, wasFist: false, hadTwoPlus: false }
+            left: {
+                fingerCount: 0,
+                lastFingerCount: 0,
+                lastCenter: null,      // for tracking movement
+                velocity: { x: 0, y: 0 },  // smoothed hand velocity
+                jiggleEnergy: 0        // accumulated movement energy
+            },
+            right: {
+                fingerCount: 0,
+                lastFingerCount: 0,
+                lastCenter: null,
+                velocity: { x: 0, y: 0 },
+                jiggleEnergy: 0
+            }
         };
         let lastHandedness = [];  // track which hands are present
 
@@ -551,8 +563,6 @@ app<!DOCTYPE html>
                 this.disappearing = false;
                 this.disappearStartTime = 0;
                 this.hand = hand;  // 'left' or 'right' - which hand owns this puppy
-                this.markedForRemoval = false;  // for fist grace period
-                this.removalTime = 0;
             }
 
             update(dt) {
@@ -623,18 +633,21 @@ app<!DOCTYPE html>
                 return true;
             }
 
-            // Rotate to face a direction and get kicked that way
-            throwToward(targetX, targetY, kickStrength = 5) {
+            // Boost toward a target with energy, adjusting rotation to face direction
+            boostToward(targetX, targetY, energy) {
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > 0) {
-                    // Adjust rotation to face target
+                if (dist > 0 && energy > 0) {
+                    // Adjust rotation to face target direction
                     const targetAngle = Math.atan2(dy, dx);
-                    this.rotationVelocity = (targetAngle - this.rotation) * 0.1;
-                    this.rotation = targetAngle;
+                    const angleDiff = targetAngle - this.rotation;
+                    // Normalize angle difference
+                    const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+                    this.rotationVelocity += normalizedDiff * energy * 0.02;
 
                     // Kick velocity toward target
+                    const kickStrength = energy * 0.5;
                     this.vx += (dx / dist) * kickStrength;
                     this.vy += (dy / dist) * kickStrength;
                 }
@@ -660,12 +673,6 @@ app<!DOCTYPE html>
                 // Spawn animated footprint trail heading to furthest corner
                 const targetCorner = getFurthestEmptyishCorner(this.x, this.y);
                 footprintTrails.push(new FootprintTrail(this.x, this.y, targetCorner));
-            }
-
-            // Cancel removal if hand reopens within grace period
-            cancelRemoval() {
-                this.markedForRemoval = false;
-                this.removalTime = 0;
             }
         }
 
@@ -922,6 +929,23 @@ app<!DOCTYPE html>
             };
         }
 
+        // Get center of gravity of puppies (optionally excluding a specific hand's puppies)
+        function getPuppiesCenterOfGravity(excludeHand = null) {
+            let totalX = 0, totalY = 0, count = 0;
+            for (const puppy of puppies) {
+                if (!puppy.disappearing && puppy.hand !== excludeHand) {
+                    totalX += puppy.x;
+                    totalY += puppy.y;
+                    count++;
+                }
+            }
+            if (count === 0) {
+                // Default to screen center if no other puppies
+                return { x: canvas.width / 2, y: canvas.height / 2 };
+            }
+            return { x: totalX / count, y: totalY / count };
+        }
+
         function processHands(landmarks, handedness) {
             const now = performance.now();
             const presentHands = { left: false, right: false };
@@ -936,79 +960,58 @@ app<!DOCTYPE html>
                     // MediaPipe handedness is from camera's perspective, we mirror it
                     const handLabel = isRightHand ? 'right' : 'left';
                     presentHands[handLabel] = true;
-                    handCenters[handLabel] = getHandCenter(hand);
+                    const center = getHandCenter(hand);
+                    handCenters[handLabel] = center;
 
                     const state = handStates[handLabel];
-                    const prevCount = state.fingerCount;
                     state.fingerCount = fingerCount;
 
-                    // Track if hand had 2+ fingers (for fist throw mechanic)
-                    if (fingerCount >= 2) {
-                        state.hadTwoPlus = true;
-                    }
+                    // Track hand movement/jiggling
+                    if (state.lastCenter) {
+                        // Calculate hand velocity
+                        const dx = center.x - state.lastCenter.x;
+                        const dy = center.y - state.lastCenter.y;
 
-                    // Detect fist (0 fingers)
-                    const isFist = fingerCount === 0;
+                        // Smooth velocity tracking
+                        state.velocity.x = state.velocity.x * 0.7 + dx * 0.3;
+                        state.velocity.y = state.velocity.y * 0.7 + dy * 0.3;
 
-                    if (isFist && !state.wasFist && state.hadTwoPlus) {
-                        // Just made a fist with a hand that had 2+ fingers
-                        state.fistTime = now;
-                        state.wasFist = true;
+                        // Calculate jiggle energy from movement magnitude
+                        const moveMagnitude = Math.sqrt(dx * dx + dy * dy);
+                        state.jiggleEnergy = state.jiggleEnergy * 0.9 + moveMagnitude * 0.1;
 
-                        // Throw puppies toward the OTHER hand
-                        const otherHand = handLabel === 'left' ? 'right' : 'left';
-                        const otherCenter = handCenters[otherHand];
+                        // If hand is moving significantly, boost its puppies toward other puppies
+                        if (state.jiggleEnergy > 2) {
+                            const otherPuppiesCenter = getPuppiesCenterOfGravity(handLabel);
 
-                        if (otherCenter && presentHands[otherHand]) {
-                            // Throw this hand's puppies toward other hand
                             for (const puppy of puppies) {
                                 if (puppy.hand === handLabel && !puppy.disappearing) {
-                                    puppy.throwToward(otherCenter.x, otherCenter.y, 6);
-                                }
-                            }
-                            playThrowSound();
-                        }
-
-                        // Mark puppies for potential removal (with grace period)
-                        for (const puppy of puppies) {
-                            if (puppy.hand === handLabel && !puppy.disappearing) {
-                                puppy.markedForRemoval = true;
-                                puppy.removalTime = now;
-                            }
-                        }
-                    } else if (!isFist && state.wasFist) {
-                        // Hand reopened - check grace period (1 second)
-                        const fistDuration = now - state.fistTime;
-
-                        if (fistDuration < 1000) {
-                            // Reopened within grace period - cancel removal
-                            for (const puppy of puppies) {
-                                if (puppy.hand === handLabel && puppy.markedForRemoval) {
-                                    puppy.cancelRemoval();
+                                    // Boost puppy toward center of other puppies
+                                    puppy.boostToward(
+                                        otherPuppiesCenter.x,
+                                        otherPuppiesCenter.y,
+                                        state.jiggleEnergy * 0.3
+                                    );
                                 }
                             }
                         }
-
-                        state.wasFist = false;
-                        state.hadTwoPlus = fingerCount >= 2;
                     }
+
+                    state.lastCenter = { x: center.x, y: center.y };
 
                     // Handle finger count changes (spawn/despawn puppies)
                     if (fingerCount !== state.lastFingerCount) {
-                        handleHandFingerChange(handLabel, fingerCount, state.lastFingerCount, handCenters[handLabel]);
+                        handleHandFingerChange(handLabel, fingerCount, state.lastFingerCount);
                         state.lastFingerCount = fingerCount;
                     }
                 }
             }
 
-            // Process marked puppies that exceeded grace period
-            for (const puppy of puppies) {
-                if (puppy.markedForRemoval && !puppy.disappearing) {
-                    if (now - puppy.removalTime > 1000) {
-                        puppy.startDisappearing();
-                        playDespawnSound();
-                        puppy.markedForRemoval = false;
-                    }
+            // Decay jiggle energy for hands not detected
+            for (const handLabel of ['left', 'right']) {
+                if (!presentHands[handLabel]) {
+                    handStates[handLabel].jiggleEnergy *= 0.95;
+                    handStates[handLabel].lastCenter = null;
                 }
             }
 
@@ -1020,12 +1023,7 @@ app<!DOCTYPE html>
             lastHandedness = presentHands;
         }
 
-        function handleHandFingerChange(handLabel, newCount, oldCount, handCenter) {
-            const state = handStates[handLabel];
-
-            // Skip if this is a fist gesture (handled separately)
-            if (state.wasFist || state.markedForRemoval) return;
-
+        function handleHandFingerChange(handLabel, newCount, oldCount) {
             const diff = newCount - oldCount;
 
             if (diff > 0) {
@@ -1039,13 +1037,13 @@ app<!DOCTYPE html>
                         playSpawnSound();
                     }
                 }
-            } else if (diff < 0 && !state.wasFist) {
-                // Remove puppies for this hand (if not doing fist throw)
+            } else if (diff < 0) {
+                // Remove puppies for this hand
                 let toRemove = Math.abs(diff);
                 for (const puppy of puppies) {
-                    if (puppy.hand === handLabel && !puppy.disappearing && !puppy.markedForRemoval && toRemove > 0) {
-                        puppy.markedForRemoval = true;
-                        puppy.removalTime = performance.now();
+                    if (puppy.hand === handLabel && !puppy.disappearing && toRemove > 0) {
+                        puppy.startDisappearing();
+                        playDespawnSound();
                         toRemove--;
                     }
                 }
