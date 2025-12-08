@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Maple Hollow: Aslan Rising</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
     <style>
         * {
             margin: 0;
@@ -31,29 +32,22 @@
             background: #000;
         }
 
-        /* === CHOICES AT TOP === */
-        #choices-bar {
+        /* === TOP BAR === */
+        #top-bar {
             position: relative;
             z-index: 20;
-            padding: 12px 12px 8px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 80%, transparent 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        #scene-header {
+            padding: 8px 12px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 4px;
         }
 
         #scene-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             color: #fff;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            opacity: 0.9;
         }
 
         #settings-btn {
@@ -67,17 +61,44 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
-        }
-
-        #settings-btn:hover {
-            background: rgba(255,255,255,0.2);
-            color: #fff;
         }
 
         #settings-btn svg {
             width: 18px;
             height: 18px;
+        }
+
+        /* === STORY TEXT === */
+        #story-text {
+            position: relative;
+            z-index: 15;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, transparent 100%);
+            max-height: 35vh;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.9);
+        }
+
+        #story-text p {
+            margin-bottom: 12px;
+        }
+
+        #story-text em {
+            color: #fbbf24;
+            font-style: italic;
+        }
+
+        /* === CHOICES === */
+        #choices {
+            position: relative;
+            z-index: 20;
+            padding: 8px 12px 12px;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.9) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .choice-button {
@@ -110,14 +131,8 @@
         }
 
         @keyframes shimmer {
-            0%, 100% {
-                border-color: rgba(167, 139, 250, 0.3);
-                box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
-            }
-            50% {
-                border-color: rgba(167, 139, 250, 0.6);
-                box-shadow: 0 0 20px 0 rgba(167, 139, 250, 0.2);
-            }
+            0%, 100% { border-color: rgba(167, 139, 250, 0.3); box-shadow: 0 0 0 rgba(167, 139, 250, 0); }
+            50% { border-color: rgba(167, 139, 250, 0.6); box-shadow: 0 0 20px rgba(167, 139, 250, 0.2); }
         }
 
         @keyframes shimmer-sweep {
@@ -132,38 +147,27 @@
             box-shadow: 0 0 30px rgba(167, 139, 250, 0.4);
         }
 
-        .choice-button:active {
-            transform: scale(0.98);
-        }
+        .choice-button:active { transform: scale(0.98); }
 
         /* === VIDEO AREA === */
         #video-area {
             flex: 1;
             position: relative;
             min-height: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             background: #000;
         }
 
         #video-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            inset: 0;
         }
 
         #video-player {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             border: none;
-            object-fit: contain;
         }
 
-        /* === YOUTUBE OVERLAY (discreet footer) === */
         #video-link-overlay {
             position: absolute;
             bottom: 0;
@@ -171,22 +175,16 @@
             right: 0;
             z-index: 10;
             background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
-            padding: 20px 16px 12px;
+            padding: 20px 16px 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.5s;
         }
 
-        #video-link-overlay.faded {
-            opacity: 0;
-            pointer-events: none;
-        }
+        #video-link-overlay.faded { opacity: 0; pointer-events: none; }
 
-        .overlay-hint {
-            color: rgba(255,255,255,0.5);
-            font-size: 11px;
-        }
+        .overlay-hint { color: rgba(255,255,255,0.5); font-size: 11px; }
 
         .watch-button {
             display: inline-flex;
@@ -199,19 +197,9 @@
             border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.2);
             font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
         }
 
-        .watch-button:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .watch-button svg {
-            width: 12px;
-            height: 12px;
-            fill: currentColor;
-        }
+        .watch-button svg { width: 12px; height: 12px; fill: currentColor; }
 
         /* === PROGRESS BAR === */
         #progress-bar {
@@ -221,14 +209,14 @@
             right: 0;
             height: 3px;
             background: rgba(255,255,255,0.1);
-            z-index: 15;
+            z-index: 25;
         }
 
         #progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
             width: 10%;
-            transition: width 0.5s ease;
+            transition: width 0.5s;
         }
 
         /* === TRANSITION OVERLAY === */
@@ -243,13 +231,10 @@
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.4s ease;
+            transition: opacity 0.4s;
         }
 
-        #transition-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        #transition-overlay.active { opacity: 1; pointer-events: auto; }
 
         #transition-text {
             font-size: 18px;
@@ -257,18 +242,15 @@
             color: #fff;
             text-align: center;
             padding: 0 24px;
-            max-width: 300px;
+            max-width: 320px;
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.4s ease 0.2s;
         }
 
-        #transition-overlay.active #transition-text {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        #transition-overlay.active #transition-text { opacity: 1; transform: translateY(0); }
 
-        /* === CONFETTI CANVAS === */
+        /* === CONFETTI === */
         #confetti-canvas {
             position: fixed;
             inset: 0;
@@ -280,16 +262,15 @@
         #settings-modal {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             z-index: 200;
             display: none;
             flex-direction: column;
             padding: 20px;
+            overflow-y: auto;
         }
 
-        #settings-modal.open {
-            display: flex;
-        }
+        #settings-modal.open { display: flex; }
 
         .settings-header {
             display: flex;
@@ -298,10 +279,7 @@
             margin-bottom: 20px;
         }
 
-        .settings-title {
-            font-size: 20px;
-            font-weight: 600;
-        }
+        .settings-title { font-size: 20px; font-weight: 600; }
 
         .close-btn {
             width: 36px;
@@ -314,12 +292,10 @@
             cursor: pointer;
         }
 
-        .settings-section {
-            margin-bottom: 20px;
-        }
+        .settings-section { margin-bottom: 20px; }
 
         .settings-section h3 {
-            font-size: 14px;
+            font-size: 12px;
             color: rgba(255,255,255,0.5);
             margin-bottom: 12px;
             text-transform: uppercase;
@@ -337,18 +313,9 @@
             text-align: left;
             cursor: pointer;
             margin-bottom: 8px;
-            transition: all 0.2s;
         }
 
-        .settings-btn:hover {
-            background: rgba(255,255,255,0.12);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         .stat-card {
             background: rgba(255,255,255,0.05);
@@ -365,64 +332,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .stat-label {
-            font-size: 11px;
-            color: rgba(255,255,255,0.5);
-            margin-top: 4px;
-        }
-
-        /* === MAP (in settings) === */
-        #map-container {
-            flex: 1;
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-            min-height: 300px;
-        }
-
-        #story-map {
-            width: 100%;
-            height: 100%;
-        }
-
-        .map-node circle {
-            stroke-width: 2px;
-            transition: all 0.2s;
-        }
-
-        .map-node.current circle {
-            filter: drop-shadow(0 0 8px currentColor);
-            animation: pulse-node 2s infinite;
-        }
-
-        .map-node.visited circle { opacity: 1; }
-        .map-node.unvisited circle { opacity: 0.3; }
-
-        @keyframes pulse-node {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .map-node text {
-            font-size: 8px;
-            font-weight: 600;
-            text-anchor: middle;
-            fill: #fff;
-            pointer-events: none;
-        }
-
-        .map-link {
-            fill: none;
-            stroke: rgba(255,255,255,0.1);
-            stroke-width: 1px;
-        }
-
-        .map-link.traveled {
-            stroke: #a78bfa;
-            stroke-width: 2px;
-            opacity: 0.7;
-        }
+        .stat-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
 
         /* === END SCREEN === */
         .end-screen {
@@ -439,7 +349,7 @@
         }
 
         .end-title {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 700;
             background: linear-gradient(135deg, #fbbf24, #f59e0b);
             -webkit-background-clip: text;
@@ -448,11 +358,10 @@
         }
 
         .end-message {
-            font-size: 16px;
+            font-size: 15px;
             color: rgba(255,255,255,0.7);
-            line-height: 1.5;
+            line-height: 1.6;
             margin-bottom: 24px;
-            max-width: 280px;
         }
 
         .restart-button {
@@ -464,524 +373,386 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
         }
 
-        .restart-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 30px rgba(167, 139, 250, 0.5);
+        /* === LOADING === */
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
         }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #loading.hidden { display: none; }
     </style>
 </head>
 <body>
+    <div id="loading"><div class="loading-spinner"></div></div>
+
     <div id="game-container">
-        <!-- Choices at top -->
-        <div id="choices-bar">
-            <div id="scene-header">
-                <div id="scene-title">The Train Arrives</div>
-                <button type="button" id="settings-btn" onclick="openSettings()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                    </svg>
-                </button>
-            </div>
-            <div id="choices"></div>
+        <div id="top-bar">
+            <div id="scene-title">Maple Hollow</div>
+            <button type="button" id="settings-btn" onclick="openSettings()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+            </button>
         </div>
 
-        <!-- Video area -->
+        <div id="story-text"></div>
+
         <div id="video-area">
             <div id="video-container">
-                <iframe id="video-player"
-                        title="Story video"
-                        src="about:blank"
+                <iframe id="video-player" title="Story video" src="about:blank"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen></iframe>
                 <div id="video-link-overlay">
                     <span class="overlay-hint">Video blocked?</span>
-                    <a id="external-link" href="#" target="_blank" rel="noopener noreferrer" class="watch-button">
+                    <a id="external-link" href="#" target="_blank" class="watch-button">
                         <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
                         YouTube
                     </a>
                 </div>
             </div>
-            <div id="progress-bar">
-                <div id="progress-fill"></div>
-            </div>
+            <div id="progress-bar"><div id="progress-fill"></div></div>
         </div>
+
+        <div id="choices"></div>
     </div>
 
-    <!-- Transition overlay -->
-    <div id="transition-overlay">
-        <div id="transition-text"></div>
-    </div>
-
-    <!-- Confetti canvas -->
+    <div id="transition-overlay"><div id="transition-text"></div></div>
     <canvas id="confetti-canvas"></canvas>
 
-    <!-- Settings modal -->
     <div id="settings-modal">
         <div class="settings-header">
             <div class="settings-title">Settings</div>
             <button type="button" class="close-btn" onclick="closeSettings()">&times;</button>
         </div>
-
         <div class="settings-section">
             <h3>Progress</h3>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-scenes">1</div>
-                    <div class="stat-label">Scenes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-choices">0</div>
-                    <div class="stat-label">Choices</div>
-                </div>
+                <div class="stat-card"><div class="stat-value" id="stat-warmth">0</div><div class="stat-label">Warmth</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-choices">0</div><div class="stat-label">Choices</div></div>
             </div>
         </div>
-
         <div class="settings-section">
             <h3>Actions</h3>
             <button type="button" class="settings-btn" onclick="restartStory()">Restart Story</button>
-            <button type="button" class="settings-btn" onclick="toggleHistory()">View History</button>
-        </div>
-
-        <div class="settings-section">
-            <h3>Story Map</h3>
-            <div id="map-container">
-                <svg id="story-map"></svg>
-            </div>
         </div>
     </div>
 
 <script>
-    const storyData = {
-        'scene-mh01': {
-            title: 'The Train Arrives',
-            url: 'https://youtube.com/embed/R4ZGGJsho7I?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=R4ZGGJsho7I',
-            choices: [
-                { text: 'Spot Jake by the truck', target: 'scene-rj02' },
-                { text: 'Go to the bakery', target: 'scene-hc04' },
-                { text: 'Watch the snowflake', target: 'scene-sk07' }
-            ]
-        },
-        'scene-rj02': {
-            title: 'The Unexpected Reunion',
-            url: 'https://youtube.com/embed/BlAGHcJsJio?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=BlAGHcJsJio',
-            choices: [
-                { text: 'Walk together toward town', target: 'scene-tp03' },
-                { text: 'Keep moving alone', target: 'scene-hc04' },
-                { text: 'Snowball ambush!', target: 'scene-lp05' }
-            ]
-        },
-        'scene-tp03': {
-            title: 'Old Friends, New Light',
-            url: 'https://youtube.com/embed/q6mGKXTJdCw?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=q6mGKXTJdCw',
-            choices: [
-                { text: 'Ride to festival', target: 'scene-fp06' },
-                { text: 'Hop out to walk', target: 'scene-hc04' },
-                { text: 'Their song plays...', target: 'scene-sr08' }
-            ]
-        },
-        'scene-hc04': {
-            title: 'The Hearth & Crumb',
-            url: 'https://youtube.com/embed/7Fs_xFCEegM?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=7Fs_xFCEegM',
-            choices: [
-                { text: 'Talk about staying', target: 'scene-fp06' },
-                { text: 'Mention Jake', target: 'scene-tp03' },
-                { text: 'Flour poof!', target: 'scene-bo09' }
-            ]
-        },
-        'scene-lp05': {
-            title: "Lily's Plan",
-            url: 'https://youtube.com/embed/bFo5lWvD8Ms?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=bFo5lWvD8Ms',
-            choices: [
-                { text: 'Ben waves Emma over', target: 'scene-fp06' },
-                { text: 'Hot cocoa break', target: 'scene-hc04' },
-                { text: 'Grandma June overhears', target: 'scene-al10' }
-            ]
-        },
-        'scene-fp06': {
-            title: 'Festival Preparations',
-            url: 'https://youtube.com/embed/TBPoH_FyWLw?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=TBPoH_FyWLw',
-            choices: [
-                { text: 'Hands brush again', target: 'scene-sr08' },
-                { text: 'Ben calls Emma aside', target: 'scene-lp05' },
-                { text: 'Golden flare!', target: 'scene-al10' }
-            ]
-        },
-        'scene-sk07': {
-            title: "A Stranger's Kindness",
-            url: 'https://youtube.com/embed/5BT8jT16n88?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=5BT8jT16n88',
-            choices: [
-                { text: 'Cocoa detour', target: 'scene-hc04' },
-                { text: 'Back to station', target: 'scene-mh01' },
-                { text: 'Strange light...', target: 'scene-al10' }
-            ]
-        },
-        'scene-sr08': {
-            title: 'The Song Returns',
-            url: 'https://youtube.com/embed/LpjWnlA5Eus?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=LpjWnlA5Eus',
-            choices: [
-                { text: 'Head to festival', target: 'scene-fp06' },
-                { text: 'Bakery instead', target: 'scene-hc04' },
-                { text: 'Soft duet...', target: 'scene-al10' }
-            ]
-        },
-        'scene-bo09': {
-            title: 'Bake-Off Mishap',
-            url: 'https://youtube.com/embed/gY0AynfJ3m8?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=gY0AynfJ3m8',
-            choices: [
-                { text: 'Team up for contest', target: 'scene-fp06' },
-                { text: 'Flour war outside', target: 'scene-lp05' },
-                { text: 'Grandma taste-test', target: 'scene-al10' }
-            ]
-        },
-        'scene-al10': {
-            title: 'The Lights of Rising',
-            url: 'https://youtube.com/embed/mj1Dqod1MTA?autoplay=1',
-            externalUrl: 'https://youtube.com/watch?v=mj1Dqod1MTA',
-            choices: [
-                { text: 'Hold hands... The End', target: 'END' },
-                { text: "Lily smiles... again?", target: 'scene-mh01' },
-                { text: 'Lantern flares...', target: 'scene-sk07' }
-            ]
-        }
-    };
+// === FINK SANDBOX LOADER ===
+const FinkSandbox = {
+    loadViaSandbox(url) {
+        return new Promise((resolve, reject) => {
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('sandbox', 'allow-scripts');
+            iframe.style.display = 'none';
 
-    let currentScene = 'scene-mh01';
-    let storyHistory = [];
-    let choiceCount = 0;
-    let mapInitialized = false;
-    let overlayFadeTimer = null;
+            const handler = (e) => {
+                if (e.source !== iframe.contentWindow) return;
+                if (e.data?.type === 'sandbox-ready') {
+                    iframe.contentWindow.postMessage({ type: 'load-script', url }, '*');
+                } else if (e.data?.type === 'fink-loaded') {
+                    window.removeEventListener('message', handler);
+                    iframe.remove();
+                    const content = [...new Set(e.data.data)].join('\n');
+                    resolve(content);
+                } else if (e.data?.type === 'fink-error') {
+                    window.removeEventListener('message', handler);
+                    iframe.remove();
+                    reject(new Error(e.data.error));
+                }
+            };
 
-    // === CONFETTI SYSTEM ===
-    const confettiCanvas = document.getElementById('confetti-canvas');
-    const confettiCtx = confettiCanvas.getContext('2d');
-    let confettiParticles = [];
+            window.addEventListener('message', handler);
 
-    function resizeConfetti() {
-        confettiCanvas.width = window.innerWidth;
-        confettiCanvas.height = window.innerHeight;
-    }
-    resizeConfetti();
-    window.addEventListener('resize', resizeConfetti);
+            iframe.srcdoc = `<!DOCTYPE html><html><body><script>
+                window.finkData = [];
+                function oooOO(s) { window.finkData.push(s.raw ? s.raw.join('') : String(s)); }
+                setTimeout(() => parent.postMessage({type:'sandbox-ready'}, '*'), 50);
+                window.addEventListener('message', e => {
+                    if (e.data?.type === 'load-script') {
+                        const s = document.createElement('script');
+                        s.onload = () => parent.postMessage({type:'fink-loaded', data:window.finkData}, '*');
+                        s.onerror = () => parent.postMessage({type:'fink-error', error:'Load failed'}, '*');
+                        s.src = e.data.url;
+                        document.body.appendChild(s);
+                    }
+                });
+            <\/script></body></html>`;
 
-    function createHeartConfetti(x, y) {
-        const colors = ['#ff6b9d', '#c44569', '#f8a5c2', '#ff4757', '#ff6348', '#ffa502'];
-        for (let i = 0; i < 25; i++) {
-            confettiParticles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 12,
-                vy: (Math.random() - 0.8) * 10,
-                rotation: Math.random() * 360,
-                rotationSpeed: (Math.random() - 0.5) * 15,
-                scale: 0.5 + Math.random() * 0.8,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                life: 1
-            });
-        }
-        if (confettiParticles.length === 25) animateConfetti();
-    }
+            document.body.appendChild(iframe);
 
-    function drawHeart(ctx, x, y, size, rotation, color) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation * Math.PI / 180);
-        ctx.scale(size, size);
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.moveTo(0, -5);
-        ctx.bezierCurveTo(-5, -12, -15, -8, -15, 0);
-        ctx.bezierCurveTo(-15, 8, 0, 15, 0, 20);
-        ctx.bezierCurveTo(0, 15, 15, 8, 15, 0);
-        ctx.bezierCurveTo(15, -8, 5, -12, 0, -5);
-        ctx.fill();
-        ctx.restore();
-    }
-
-    function animateConfetti() {
-        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-
-        confettiParticles = confettiParticles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.3; // gravity
-            p.rotation += p.rotationSpeed;
-            p.life -= 0.015;
-
-            if (p.life > 0) {
-                confettiCtx.globalAlpha = p.life;
-                drawHeart(confettiCtx, p.x, p.y, p.scale, p.rotation, p.color);
-                return true;
-            }
-            return false;
-        });
-
-        confettiCtx.globalAlpha = 1;
-
-        if (confettiParticles.length > 0) {
-            requestAnimationFrame(animateConfetti);
-        }
-    }
-
-    // === TRANSITION SYSTEM ===
-    function transitionToScene(choiceText, targetScene) {
-        const overlay = document.getElementById('transition-overlay');
-        const text = document.getElementById('transition-text');
-
-        // Launch confetti from center
-        createHeartConfetti(window.innerWidth / 2, window.innerHeight / 3);
-
-        // Show overlay with choice text
-        text.textContent = choiceText;
-        overlay.classList.add('active');
-
-        // After fade in, load new scene
-        setTimeout(() => {
-            loadSceneImmediate(targetScene);
-
-            // Fade out
             setTimeout(() => {
-                overlay.classList.remove('active');
-            }, 600);
-        }, 800);
+                window.removeEventListener('message', handler);
+                iframe.remove();
+                reject(new Error('Timeout'));
+            }, 10000);
+        });
     }
+};
 
-    // === SCENE LOADING ===
-    function loadSceneImmediate(sceneId) {
-        if (sceneId === 'END') {
-            showEndScreen();
-            return;
+// === STATE ===
+let story = null;
+let choiceCount = 0;
+let currentVideoId = null;
+let overlayTimer = null;
+
+// === CONFETTI ===
+const canvas = document.getElementById('confetti-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function createHearts(x, y) {
+    const colors = ['#ff6b9d', '#c44569', '#f8a5c2', '#ff4757', '#ff6348'];
+    for (let i = 0; i < 20; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.7) * 8,
+            r: Math.random() * 360,
+            rs: (Math.random() - 0.5) * 12,
+            s: 0.4 + Math.random() * 0.6,
+            c: colors[Math.floor(Math.random() * colors.length)],
+            life: 1
+        });
+    }
+    if (particles.length <= 20) animateHearts();
+}
+
+function drawHeart(x, y, s, r, c) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(r * Math.PI / 180);
+    ctx.scale(s, s);
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.bezierCurveTo(-5, -12, -15, -8, -15, 0);
+    ctx.bezierCurveTo(-15, 8, 0, 15, 0, 20);
+    ctx.bezierCurveTo(0, 15, 15, 8, 15, 0);
+    ctx.bezierCurveTo(15, -8, 5, -12, 0, -5);
+    ctx.fill();
+    ctx.restore();
+}
+
+function animateHearts() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.25;
+        p.r += p.rs;
+        p.life -= 0.018;
+        if (p.life > 0) {
+            ctx.globalAlpha = p.life;
+            drawHeart(p.x, p.y, p.s, p.r, p.c);
+            return true;
         }
+        return false;
+    });
+    ctx.globalAlpha = 1;
+    if (particles.length > 0) requestAnimationFrame(animateHearts);
+}
 
-        const scene = storyData[sceneId];
-        if (!scene) return;
+// === VIDEO ===
+function setVideo(videoId) {
+    if (!videoId || videoId === currentVideoId) return;
+    currentVideoId = videoId;
+    const url = `https://youtube.com/embed/${videoId}?autoplay=1&mute=0`;
+    document.getElementById('video-player').src = url;
+    document.getElementById('external-link').href = `https://youtube.com/watch?v=${videoId}`;
 
-        currentScene = sceneId;
-        storyHistory.push(sceneId);
+    const overlay = document.getElementById('video-link-overlay');
+    overlay.classList.remove('faded');
+    clearTimeout(overlayTimer);
+    overlayTimer = setTimeout(() => overlay.classList.add('faded'), 4000);
+}
+
+// === INK STORY ===
+async function loadStory() {
+    try {
+        const finkUrl = new URL('maple-hollow.fink.js', window.location.href).href;
+        const content = await FinkSandbox.loadViaSandbox(finkUrl);
+
+        const compiler = new inkjs.Compiler(content);
+        story = compiler.Compile();
+
+        if (!story) throw new Error('Compilation failed');
+
+        document.getElementById('loading').classList.add('hidden');
+        continueStory();
+    } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('loading').innerHTML = `<div style="color:#fff;text-align:center;padding:20px;">
+            <p>Error loading story</p><p style="opacity:0.5;font-size:12px">${err.message}</p>
+            <button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#a78bfa;border:none;border-radius:8px;color:#fff;cursor:pointer">Retry</button>
+        </div>`;
+    }
+}
+
+function continueStory(choiceIdx = null) {
+    if (!story) return;
+
+    if (choiceIdx !== null) {
+        story.ChooseChoiceIndex(choiceIdx);
         choiceCount++;
-
-        document.getElementById('video-player').src = scene.url;
-        document.getElementById('external-link').href = scene.externalUrl;
-        document.getElementById('scene-title').textContent = scene.title;
-
-        resetOverlay();
-        scheduleOverlayFade();
-
-        const choicesContainer = document.getElementById('choices');
-        choicesContainer.innerHTML = '';
-
-        scene.choices.forEach((choice, index) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'choice-button';
-            button.textContent = choice.text;
-            button.style.setProperty('--i', index);
-            button.onclick = (e) => {
-                const rect = e.target.getBoundingClientRect();
-                createHeartConfetti(rect.left + rect.width / 2, rect.top);
-                transitionToScene(choice.text, choice.target);
-            };
-            choicesContainer.appendChild(button);
-        });
-
-        updateProgress();
     }
 
-    function loadScene(sceneId) {
-        loadSceneImmediate(sceneId);
-    }
+    const storyEl = document.getElementById('story-text');
+    const choicesEl = document.getElementById('choices');
+    storyEl.innerHTML = '';
+    choicesEl.innerHTML = '';
 
-    // === OVERLAY FADE ===
-    function resetOverlay() {
-        const overlay = document.getElementById('video-link-overlay');
-        if (overlay) overlay.classList.remove('faded');
-        if (overlayFadeTimer) clearTimeout(overlayFadeTimer);
-    }
+    let currentVideo = null;
 
-    function scheduleOverlayFade() {
-        overlayFadeTimer = setTimeout(() => {
-            const overlay = document.getElementById('video-link-overlay');
-            if (overlay) overlay.classList.add('faded');
-        }, 4000);
-    }
+    while (story.canContinue) {
+        let text = story.Continue().trim();
+        const tags = story.currentTags || [];
 
-    // === PROGRESS ===
-    function updateProgress() {
-        const uniqueScenes = new Set(storyHistory).size;
-        const totalScenes = Object.keys(storyData).length;
-        const percent = (uniqueScenes / totalScenes) * 100;
-
-        document.getElementById('progress-fill').style.width = percent + '%';
-        document.getElementById('stat-scenes').textContent = uniqueScenes;
-        document.getElementById('stat-choices').textContent = choiceCount;
-    }
-
-    // === SETTINGS ===
-    function openSettings() {
-        document.getElementById('settings-modal').classList.add('open');
-        if (!mapInitialized) {
-            initializeMap();
-            mapInitialized = true;
-        }
-        updateMap();
-    }
-
-    function closeSettings() {
-        document.getElementById('settings-modal').classList.remove('open');
-    }
-
-    function toggleHistory() {
-        const recent = storyHistory.slice(-5).map(s => storyData[s]?.title || s).join(' → ');
-        alert('Recent path:\n' + recent);
-    }
-
-    function restartStory() {
-        location.reload();
-    }
-
-    // === MAP ===
-    function initializeMap() {
-        const mapContainer = document.getElementById('story-map');
-        const width = mapContainer.clientWidth || 300;
-        const height = 280;
-
-        mapContainer.setAttribute('width', width);
-        mapContainer.setAttribute('height', height);
-
-        const svgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        mapContainer.appendChild(svgGroup);
-
-        const nodes = [
-            { id: 'scene-mh01', x: width/2, y: 30, label: 'Start', color: '#10b981' },
-            { id: 'scene-rj02', x: width*0.25, y: 70, label: 'rj02', color: '#6366f1' },
-            { id: 'scene-hc04', x: width/2, y: 90, label: 'hc04', color: '#8ab4f8' },
-            { id: 'scene-sk07', x: width*0.75, y: 70, label: 'sk07', color: '#6366f1' },
-            { id: 'scene-tp03', x: width*0.2, y: 130, label: 'tp03', color: '#6366f1' },
-            { id: 'scene-lp05', x: width*0.15, y: 180, label: 'lp05', color: '#6366f1' },
-            { id: 'scene-fp06', x: width/2, y: 160, label: 'fp06', color: '#8ab4f8' },
-            { id: 'scene-sr08', x: width*0.8, y: 130, label: 'sr08', color: '#6366f1' },
-            { id: 'scene-bo09', x: width*0.65, y: 200, label: 'bo09', color: '#6366f1' },
-            { id: 'scene-al10', x: width/2, y: 230, label: 'Finale', color: '#f59e0b' },
-            { id: 'END', x: width/2, y: 270, label: 'END', color: '#ef4444' }
-        ];
-
-        // Draw links
-        Object.keys(storyData).forEach(sceneId => {
-            const scene = storyData[sceneId];
-            const source = nodes.find(n => n.id === sceneId);
-            scene.choices.forEach(choice => {
-                const target = nodes.find(n => n.id === choice.target);
-                if (source && target) {
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('d', `M${source.x},${source.y} L${target.x},${target.y}`);
-                    path.setAttribute('class', 'map-link');
-                    path.dataset.source = sceneId;
-                    path.dataset.target = choice.target;
-                    svgGroup.appendChild(path);
-                }
-            });
-        });
-
-        // Draw nodes
-        nodes.forEach(node => {
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'map-node unvisited');
-            g.setAttribute('transform', `translate(${node.x},${node.y})`);
-            g.dataset.sceneId = node.id;
-
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('r', 12);
-            circle.setAttribute('fill', node.color);
-            circle.setAttribute('stroke', '#fff');
-
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('dy', '0.35em');
-            text.textContent = node.label;
-
-            g.appendChild(circle);
-            g.appendChild(text);
-            svgGroup.appendChild(g);
-
-            g.onclick = () => {
-                if (node.id !== 'END') {
-                    closeSettings();
-                    transitionToScene(storyData[node.id]?.title || 'Jump to scene', node.id);
-                }
-            };
-        });
-    }
-
-    function updateMap() {
-        if (!mapInitialized) return;
-        const visitedSet = new Set(storyHistory);
-
-        document.querySelectorAll('.map-node').forEach(node => {
-            const sceneId = node.dataset.sceneId;
-            node.classList.remove('visited', 'unvisited', 'current');
-
-            if (sceneId === currentScene) node.classList.add('current');
-            else if (visitedSet.has(sceneId)) node.classList.add('visited');
-            else node.classList.add('unvisited');
-        });
-
-        document.querySelectorAll('.map-link').forEach(link => {
-            link.classList.remove('traveled');
-            for (let i = 0; i < storyHistory.length - 1; i++) {
-                if (storyHistory[i] === link.dataset.source && storyHistory[i + 1] === link.dataset.target) {
-                    link.classList.add('traveled');
-                    break;
-                }
+        // Process tags
+        tags.forEach(tag => {
+            if (tag.startsWith('VIDEO:')) {
+                currentVideo = tag.substring(6).trim();
             }
         });
-    }
 
-    // === END SCREEN ===
-    function showEndScreen() {
-        document.getElementById('game-container').innerHTML = `
-            <div class="end-screen">
-                <div class="end-title">The End</div>
-                <div class="end-message">
-                    Emma and Jake's story has reached its conclusion.
-                    But in Maple Hollow, every ending is just a new beginning.
-                </div>
-                <div class="stats-grid" style="margin-bottom: 24px;">
-                    <div class="stat-card">
-                        <div class="stat-value">${new Set(storyHistory).size}</div>
-                        <div class="stat-label">Scenes</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${choiceCount}</div>
-                        <div class="stat-label">Choices</div>
-                    </div>
-                </div>
-                <button type="button" class="restart-button" onclick="restartStory()">Play Again</button>
-            </div>
-        `;
+        if (text) {
+            // Format text
+            text = text
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
-        // Celebration confetti
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-                createHeartConfetti(
-                    Math.random() * window.innerWidth,
-                    Math.random() * window.innerHeight * 0.5
-                );
-            }, i * 200);
+            const p = document.createElement('p');
+            p.innerHTML = text;
+            storyEl.appendChild(p);
         }
     }
 
-    // Start the game
-    loadScene('scene-mh01');
+    // Update video if we found a VIDEO tag
+    if (currentVideo) {
+        setVideo(currentVideo);
+    }
+
+    // Update title from first paragraph or keep generic
+    const firstP = storyEl.querySelector('p');
+    if (firstP) {
+        const titleText = firstP.textContent.substring(0, 50);
+        document.getElementById('scene-title').textContent = titleText.length < firstP.textContent.length ? titleText + '...' : titleText;
+    }
+
+    // Display choices
+    if (story.currentChoices.length > 0) {
+        story.currentChoices.forEach((choice, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'choice-button';
+            btn.textContent = choice.text;
+            btn.style.setProperty('--i', i);
+            btn.onclick = (e) => {
+                const rect = e.target.getBoundingClientRect();
+                createHearts(rect.left + rect.width / 2, rect.top);
+                transitionTo(choice.text, i);
+            };
+            choicesEl.appendChild(btn);
+        });
+    } else {
+        // End of story
+        showEnding();
+    }
+
+    updateStats();
+}
+
+function transitionTo(choiceText, choiceIdx) {
+    const overlay = document.getElementById('transition-overlay');
+    const text = document.getElementById('transition-text');
+
+    createHearts(window.innerWidth / 2, window.innerHeight / 3);
+    text.textContent = choiceText;
+    overlay.classList.add('active');
+
+    setTimeout(() => {
+        continueStory(choiceIdx);
+        setTimeout(() => overlay.classList.remove('active'), 500);
+    }, 700);
+}
+
+function showEnding() {
+    const warmth = story.variablesState['warmth'] || 0;
+
+    document.getElementById('game-container').innerHTML = `
+        <div class="end-screen">
+            <div class="end-title">The End</div>
+            <div class="end-message">
+                ${warmth >= 5 ? "Emma found her way home—and found love waiting." :
+                  warmth >= 3 ? "A new chapter begins in Maple Hollow..." :
+                  "Sometimes the journey home takes time."}
+            </div>
+            <div class="stats-grid" style="margin-bottom:24px;width:200px">
+                <div class="stat-card"><div class="stat-value">${warmth}</div><div class="stat-label">Warmth</div></div>
+                <div class="stat-card"><div class="stat-value">${choiceCount}</div><div class="stat-label">Choices</div></div>
+            </div>
+            <button type="button" class="restart-button" onclick="restartStory()">Play Again</button>
+        </div>
+    `;
+
+    // Celebration confetti
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => createHearts(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.5), i * 150);
+    }
+}
+
+function updateStats() {
+    if (!story) return;
+    const warmth = story.variablesState['warmth'] || 0;
+    document.getElementById('stat-warmth').textContent = warmth;
+    document.getElementById('stat-choices').textContent = choiceCount;
+
+    // Progress bar based on warmth (max ~8)
+    const percent = Math.min(100, (warmth / 8) * 100);
+    document.getElementById('progress-fill').style.width = percent + '%';
+}
+
+// === SETTINGS ===
+function openSettings() {
+    updateStats();
+    document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal').classList.remove('open');
+}
+
+function restartStory() {
+    location.reload();
+}
+
+// === INIT ===
+loadStory();
 </script>
 </body>
 </html>
