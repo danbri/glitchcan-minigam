@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Maple Hollow: Aslan Rising</title>
+    <title>Maple Hollow: Aslan Rising (FINK)</title>
     <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
     <style>
         * {
@@ -420,6 +420,8 @@
                 <iframe id="video-player" title="Story video" src="about:blank"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen></iframe>
+                <video id="video-player-mp4" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;"
+                       autoplay loop muted playsinline></video>
                 <div id="video-link-overlay">
                     <span class="overlay-hint">Video blocked?</span>
                     <a id="external-link" href="#" target="_blank" class="watch-button">
@@ -579,14 +581,70 @@ function animateHearts() {
 }
 
 // === VIDEO ===
-function setVideo(videoId) {
-    if (!videoId || videoId === currentVideoId) return;
-    currentVideoId = videoId;
-    const url = `https://youtube.com/embed/${videoId}?autoplay=1&mute=0`;
-    document.getElementById('video-player').src = url;
-    document.getElementById('external-link').href = `https://youtube.com/watch?v=${videoId}`;
+// Extract YouTube video ID from various URL formats
+function extractYouTubeId(src) {
+    if (!src) return null;
+    src = src.trim();
 
+    // Already an 11-char ID
+    if (/^[a-zA-Z0-9_-]{11}$/.test(src)) return src;
+
+    // youtu.be/VIDEO_ID or youtu.be/VIDEO_ID?params
+    let match = src.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/watch?v=VIDEO_ID (handles www. and additional params)
+    match = src.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/embed/VIDEO_ID
+    match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/v/VIDEO_ID (old format)
+    match = src.match(/youtube\.com\/v\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/shorts/VIDEO_ID
+    match = src.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    return null;
+}
+
+// Supports YouTube URLs/IDs or local MP4 paths
+function setVideo(videoSrc) {
+    if (!videoSrc || videoSrc === currentVideoId) return;
+    currentVideoId = videoSrc;
+
+    const iframe = document.getElementById('video-player');
+    const video = document.getElementById('video-player-mp4');
     const overlay = document.getElementById('video-link-overlay');
+    const extLink = document.getElementById('external-link');
+
+    // Try to extract YouTube ID from various URL formats
+    const youtubeId = extractYouTubeId(videoSrc);
+
+    if (youtubeId) {
+        // YouTube embed
+        iframe.src = `https://youtube.com/embed/${youtubeId}?autoplay=1&mute=0`;
+        iframe.style.display = 'block';
+        video.style.display = 'none';
+        video.pause();
+        extLink.href = `https://youtube.com/watch?v=${youtubeId}`;
+        extLink.style.display = '';
+        overlay.querySelector('.overlay-hint').textContent = 'Video blocked?';
+    } else {
+        // Local MP4 file
+        video.src = videoSrc;
+        video.style.display = 'block';
+        video.play().catch(() => {}); // Autoplay may be blocked
+        iframe.src = 'about:blank';
+        iframe.style.display = 'none';
+        extLink.style.display = 'none';
+        overlay.querySelector('.overlay-hint').textContent = '';
+    }
+
     overlay.classList.remove('faded');
     clearTimeout(overlayTimer);
     overlayTimer = setTimeout(() => overlay.classList.add('faded'), 4000);
