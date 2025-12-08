@@ -230,22 +230,26 @@ window.FinkUI = {
     // Image and media handling
     updateImageFromINKTags(story) {
         if (!story) return;
-        
+
         const currentTags = story.currentTags || [];
         FinkUtils.debugLog('Current INK tags: [' + currentTags.join(', ') + ']');
-        
+
         let imageToShow = null;
+        let videoToShow = null;
         let newBasePath = null;
-        
+
         currentTags.forEach(tag => {
             FinkUtils.debugLog('Processing tag: "' + tag + '"');
             if (tag.includes('IMAGE:')) {
                 imageToShow = tag.replace(/^IMAGE:\s*/, '').trim();
                 FinkUtils.debugLog('Found IMAGE tag: ' + imageToShow);
+            } else if (tag.includes('VIDEO:')) {
+                videoToShow = tag.replace(/^VIDEO:\s*/, '').trim();
+                FinkUtils.debugLog('Found VIDEO tag: ' + videoToShow);
             } else if (tag.includes('BASEHREF:')) {
                 newBasePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
                 // Remove quotes if present
-                if ((newBasePath.startsWith('"') && newBasePath.endsWith('"')) || 
+                if ((newBasePath.startsWith('"') && newBasePath.endsWith('"')) ||
                     (newBasePath.startsWith("'") && newBasePath.endsWith("'"))) {
                     newBasePath = newBasePath.slice(1, -1);
                 }
@@ -254,6 +258,11 @@ window.FinkUI = {
                 FinkUtils.debugLog('BASEHREF final: "' + newBasePath + '"');
             }
         });
+
+        // Handle VIDEO tag - show YouTube embed
+        if (videoToShow) {
+            this.updateVideo(videoToShow);
+        }
         
         // Store both processed (for backwards compatibility) and raw BASEHREF
         if (newBasePath) {
@@ -300,7 +309,64 @@ window.FinkUI = {
         
         img.src = actualImagePath;
     },
-    
+
+    // Video handling for YouTube embeds
+    // Note: Embeds may not work for non-logged-in users - always show fallback link
+    updateVideo(videoId) {
+        if (!videoId) return;
+
+        FinkUtils.debugLog('updateVideo called with: "' + videoId + '"');
+
+        // Create or get video container
+        let videoContainer = document.getElementById('video-container');
+        if (!videoContainer) {
+            videoContainer = document.createElement('div');
+            videoContainer.id = 'video-container';
+            videoContainer.style.cssText = 'position:relative;width:100%;padding-bottom:56.25%;background:#000;margin-bottom:1rem;border-radius:8px;overflow:hidden;';
+            // Insert before image container or at start of content
+            const imageContainer = this.elements.imageContainer;
+            if (imageContainer && imageContainer.parentNode) {
+                imageContainer.parentNode.insertBefore(videoContainer, imageContainer);
+            }
+        }
+
+        // Create or update iframe
+        let iframe = videoContainer.querySelector('iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            iframe.allowFullscreen = true;
+            iframe.title = 'Story video';
+            videoContainer.appendChild(iframe);
+        }
+
+        const embedUrl = `https://youtube.com/embed/${videoId}?autoplay=1`;
+        if (iframe.src !== embedUrl) {
+            iframe.src = embedUrl;
+            FinkUtils.debugLog('Video iframe src set to: ' + embedUrl);
+        }
+
+        // Create or update fallback link (embed may not work for non-logged-in users)
+        let fallbackLink = videoContainer.querySelector('.video-fallback');
+        if (!fallbackLink) {
+            fallbackLink = document.createElement('a');
+            fallbackLink.className = 'video-fallback';
+            fallbackLink.target = '_blank';
+            fallbackLink.rel = 'noopener noreferrer';
+            fallbackLink.style.cssText = 'position:absolute;bottom:8px;right:8px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;text-decoration:none;border-radius:4px;font-size:12px;z-index:10;';
+            fallbackLink.innerHTML = '▶ Open on YouTube';
+            videoContainer.appendChild(fallbackLink);
+        }
+        fallbackLink.href = `https://youtube.com/watch?v=${videoId}`;
+
+        // Hide image when showing video
+        if (this.elements.storyImage) {
+            this.elements.storyImage.classList.add('hidden');
+        }
+        videoContainer.style.display = 'block';
+    },
+
     // Status and messaging
     showStatus(message, showLoader = false) {
         this.elements.statusText.textContent = message;

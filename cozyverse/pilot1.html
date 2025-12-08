@@ -617,74 +617,100 @@ async function loadStory() {
 function continueStory(choiceIdx = null) {
     if (!story) return;
 
-    if (choiceIdx !== null) {
-        story.ChooseChoiceIndex(choiceIdx);
-        choiceCount++;
-    }
+    try {
+        if (choiceIdx !== null) {
+            story.ChooseChoiceIndex(choiceIdx);
+            choiceCount++;
+        }
 
-    const storyEl = document.getElementById('story-text');
-    const choicesEl = document.getElementById('choices');
-    storyEl.innerHTML = '';
-    choicesEl.innerHTML = '';
+        const storyEl = document.getElementById('story-text');
+        const choicesEl = document.getElementById('choices');
+        storyEl.innerHTML = '';
+        choicesEl.innerHTML = '';
 
-    let currentVideo = null;
+        let currentVideo = null;
+        let allText = [];
 
-    while (story.canContinue) {
-        let text = story.Continue().trim();
-        const tags = story.currentTags || [];
+        while (story.canContinue) {
+            let text = story.Continue().trim();
+            const tags = story.currentTags || [];
 
-        // Process tags
-        tags.forEach(tag => {
-            if (tag.startsWith('VIDEO:')) {
-                currentVideo = tag.substring(6).trim();
+            // Process tags
+            tags.forEach(tag => {
+                if (tag.startsWith('VIDEO:')) {
+                    currentVideo = tag.substring(6).trim();
+                }
+            });
+
+            if (text) {
+                allText.push(text);
             }
-        });
+        }
 
-        if (text) {
-            // Format text
-            text = text
-                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // Format and display all collected text
+        allText.forEach(text => {
+            // Handle bold first (** before *)
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            // Handle italics - be careful with Aslan quotes
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
             const p = document.createElement('p');
             p.innerHTML = text;
             storyEl.appendChild(p);
-        }
-    }
-
-    // Update video if we found a VIDEO tag
-    if (currentVideo) {
-        setVideo(currentVideo);
-    }
-
-    // Update title from first paragraph or keep generic
-    const firstP = storyEl.querySelector('p');
-    if (firstP) {
-        const titleText = firstP.textContent.substring(0, 50);
-        document.getElementById('scene-title').textContent = titleText.length < firstP.textContent.length ? titleText + '...' : titleText;
-    }
-
-    // Display choices
-    if (story.currentChoices.length > 0) {
-        story.currentChoices.forEach((choice, i) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'choice-button';
-            btn.textContent = choice.text;
-            btn.style.setProperty('--i', i);
-            btn.onclick = (e) => {
-                const rect = e.target.getBoundingClientRect();
-                createHearts(rect.left + rect.width / 2, rect.top);
-                transitionTo(choice.text, i);
-            };
-            choicesEl.appendChild(btn);
         });
-    } else {
-        // End of story
-        showEnding();
-    }
 
-    updateStats();
+        // Update video if we found a VIDEO tag
+        if (currentVideo) {
+            setVideo(currentVideo);
+        }
+
+        // Update title from first paragraph
+        const firstP = storyEl.querySelector('p');
+        if (firstP) {
+            const titleText = firstP.textContent.substring(0, 50);
+            document.getElementById('scene-title').textContent =
+                titleText.length < firstP.textContent.length ? titleText + '...' : titleText;
+        }
+
+        // Display choices
+        if (story.currentChoices.length > 0) {
+            story.currentChoices.forEach((choice, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'choice-button';
+                btn.textContent = choice.text;
+                btn.style.setProperty('--i', i);
+                btn.onclick = (e) => {
+                    const rect = e.target.getBoundingClientRect();
+                    createHearts(rect.left + rect.width / 2, rect.top);
+                    transitionTo(choice.text, i);
+                };
+                choicesEl.appendChild(btn);
+            });
+        } else {
+            // Check if we're at a real ending or stuck
+            const hasEnded = allText.some(t => t.includes('THE END') || t.includes('-> END'));
+            if (hasEnded) {
+                showEnding();
+            } else {
+                // Stuck - provide restart option
+                console.warn('Story reached dead end without proper ending');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'choice-button';
+                btn.textContent = 'Continue the journey...';
+                btn.style.setProperty('--i', 0);
+                btn.onclick = () => restartStory();
+                choicesEl.appendChild(btn);
+            }
+        }
+
+        updateStats();
+    } catch (err) {
+        console.error('Story error:', err);
+        document.getElementById('story-text').innerHTML =
+            `<p style="color:#ff6b6b">Story error: ${err.message}</p>`;
+    }
 }
 
 function transitionTo(choiceText, choiceIdx) {
