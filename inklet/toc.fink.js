@@ -30,6 +30,7 @@ Choose your adventure! Each episode is half-finished in a different way.
 
 + [Bagend] -> hobbit_selected
 + [Hampstead] -> hampstead_selected
++ [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
 + [Riverbend] -> riverbend_selected
 
@@ -120,6 +121,17 @@ Riverbend - Village Mystery
 Discover the secrets of a chocolate-box-perfect village where greed and jealousy bind neighbours together in a conspiracy of silence.
 
 + [Enter Riverbend] -> external_story
+
+=== maple_hollow_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+# FINK: ../cozyverse/maple-hollow.fink.js
+
+Maple Hollow: Aslan Rising
+
+A cozy interactive romance with YouTube mood clips. Return to a snow-covered hometown, reconnect with old flames, and find your way home. Warmth points track your journey.
+
++ [Enter Maple Hollow] -> external_story
 
 === ukrainian_selected ===
 

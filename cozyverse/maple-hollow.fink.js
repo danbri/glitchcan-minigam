@@ -14,7 +14,7 @@ VAR heard_song = false
 
 The train slows with a familiar screech. Through frost-laced windows, Emma watches Maple Hollow emerge from the snow—unchanged, impossibly unchanged, after three years away.
 
-*As Aslan might say: "You cannot go back to the beginning, but you can start where you are."*
+— As Aslan might say: "You cannot go back to the beginning, but you can start where you are."
 
 She hasn't been home since the night she left. Since Jake.
 
@@ -41,7 +41,7 @@ Jake leans against his old red truck, hands stuffed in pockets, breath clouding 
 
 Three years collapse into nothing.
 
-*"Courage, dear heart," Aslan whispers through the falling snow.*
+— "Courage, dear heart," Aslan whispers through the falling snow.
 
 + [Walk toward him—let the past be past]
     ~ warmth += 2
@@ -65,7 +65,7 @@ They fall into step together, the old rhythm returning despite everything. Snow 
 "Different? Older? Like I've been living in the city?"
 "Good." He clears his throat. "You look good, Emma."
 
-*In Narnia, the ice always melts eventually.*
+— In Narnia, the ice always melts eventually.
 
 The truck waits at the curb, its engine still warm.
 
@@ -91,7 +91,7 @@ The Hearth & Crumb smells exactly as Emma remembers—cinnamon, rising bread, an
 
 "EMMA!" Her mother's flour-dusted arms wrap around her before the door even closes.
 
-*"There is nothing like a cup of tea—or fresh bread—to set the world right."*
+— "There is nothing like a cup of tea—or fresh bread—to set the world right."
 
 The warmth of the kitchen seeps into her bones. This, at least, hasn't changed.
 
@@ -118,7 +118,7 @@ An elderly woman with kind eyes offers Emma a handkerchief. "You'll catch cold, 
 
 "Three years, and you still dawdle just the same." But she's smiling. "The town's been waiting for you, you know. *Someone* especially."
 
-*"Aslan is on the move."*
+— "Aslan is on the move."
 
 + [Follow Grandma June to the bakery for cocoa]
     "Come. Your mother's been stress-baking for a week."
@@ -140,7 +140,7 @@ Lily has grown into a hurricane of energy and mischief. At fifteen, she's all ga
 
 Jake shakes snow from his collar, trying to look annoyed and failing completely.
 
-*"Even the smallest person can change the course of the future."*
+— "Even the smallest person can change the course of the future."
 
 + [Help Lily plot more snowball chaos]
     ~ warmth += 1
@@ -166,7 +166,7 @@ Emma finds herself next to Jake, untangling lights.
 "We were here until midnight."
 "Best midnight of my life."
 
-*"Once a King or Queen of Narnia, always a King or Queen."*
+— "Once a King or Queen of Narnia, always a King or Queen."
 
 + [Let their hands brush reaching for the same light]
     ~ warmth += 2
@@ -192,7 +192,7 @@ The melody drifts from somewhere—a radio, a phone, someone humming—and stops
 
 "Neither could I."
 
-*"You have listened to fears, child. Now hear the truth."*
+— "You have listened to fears, child. Now hear the truth."
 
 The snow falls harder, wrapping them in white silence.
 
@@ -217,7 +217,7 @@ Her mother starts laughing—deep, healing laughter—and Emma joins in until te
 
 "Some things never change, Emma Rose."
 
-*"Laugh and fear not, dear heart."*
+— "Laugh and fear not, dear heart."
 
 + [Challenge Mom to a flour fight]
     ~ warmth += 1
@@ -239,7 +239,7 @@ Her mother sets down the rolling pin. "He asks about you, Emma. Every time he co
 
 "Because you needed to come home when *you* were ready. Not when we pushed you."
 
-*"You would not have called to me unless I had been calling to you."*
+— "You would not have called to me unless I had been calling to you."
 
 + [Go find him]
     ~ warmth += 2
@@ -260,7 +260,7 @@ Above Maple Hollow, the aurora blooms—ribbons of green and gold dancing across
 
 Emma finds Jake beside her. Of course he's beside her.
 
-*"I am the great Bridge Builder. I call you across."*
+— "I am the great Bridge Builder. I call you across."
 
 {warmth >= 6:
     Their eyes meet in the impossible light.
@@ -278,7 +278,7 @@ Emma finds Jake beside her. Of course he's beside her.
     And that's okay.
 }
 
-*"Welcome home, dear heart. Welcome home."*
+— "Welcome home, dear heart. Welcome home."
 
 + {warmth >= 5} [Take his hand—write the next chapter together]
     -> ending_love
@@ -296,7 +296,7 @@ Their fingers intertwine as the aurora dances overhead.
 
 "I'm home," Emma answers. "I'm finally home."
 
-*"All shall be well. All shall be well. And all manner of thing shall be well."*
+— "All shall be well. All shall be well. And all manner of thing shall be well."
 
 Behind them, Lily cheers. Grandma June dabs her eyes. And in the bakery window, Emma's mother watches her daughter finally stop running.
 
@@ -318,7 +318,7 @@ Emma watches the aurora paint the sky, surrounded by the town that raised her.
 
 There will be time. For conversations not yet had. For wounds not yet healed. For love not yet spoken.
 
-*"There are no accidents. All is meant."*
+— "There are no accidents. All is meant."
 
 But tonight, she is home. And that is enough.
 
