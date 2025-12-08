@@ -125,7 +125,7 @@ Discover the secrets of a chocolate-box-perfect village where greed and jealousy
 === maple_hollow_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: ../cozyverse/maple-hollow.fink.js
+# FINK: ../../cozyverse/maple-hollow.fink.js
 
 Maple Hollow: Aslan Rising
 
