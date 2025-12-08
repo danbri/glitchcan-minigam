@@ -581,7 +581,38 @@ function animateHearts() {
 }
 
 // === VIDEO ===
-// Supports YouTube IDs (11 chars) or local MP4 paths
+// Extract YouTube video ID from various URL formats
+function extractYouTubeId(src) {
+    if (!src) return null;
+    src = src.trim();
+
+    // Already an 11-char ID
+    if (/^[a-zA-Z0-9_-]{11}$/.test(src)) return src;
+
+    // youtu.be/VIDEO_ID or youtu.be/VIDEO_ID?params
+    let match = src.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/watch?v=VIDEO_ID (handles www. and additional params)
+    match = src.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/embed/VIDEO_ID
+    match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/v/VIDEO_ID (old format)
+    match = src.match(/youtube\.com\/v\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    // youtube.com/shorts/VIDEO_ID
+    match = src.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+
+    return null;
+}
+
+// Supports YouTube URLs/IDs or local MP4 paths
 function setVideo(videoSrc) {
     if (!videoSrc || videoSrc === currentVideoId) return;
     currentVideoId = videoSrc;
@@ -591,16 +622,16 @@ function setVideo(videoSrc) {
     const overlay = document.getElementById('video-link-overlay');
     const extLink = document.getElementById('external-link');
 
-    // Detect if YouTube ID (11 alphanumeric chars) or local file
-    const isYouTube = /^[a-zA-Z0-9_-]{11}$/.test(videoSrc);
+    // Try to extract YouTube ID from various URL formats
+    const youtubeId = extractYouTubeId(videoSrc);
 
-    if (isYouTube) {
+    if (youtubeId) {
         // YouTube embed
-        iframe.src = `https://youtube.com/embed/${videoSrc}?autoplay=1&mute=0`;
+        iframe.src = `https://youtube.com/embed/${youtubeId}?autoplay=1&mute=0`;
         iframe.style.display = 'block';
         video.style.display = 'none';
         video.pause();
-        extLink.href = `https://youtube.com/watch?v=${videoSrc}`;
+        extLink.href = `https://youtube.com/watch?v=${youtubeId}`;
         extLink.style.display = '';
         overlay.querySelector('.overlay-hint').textContent = 'Video blocked?';
     } else {
