@@ -368,7 +368,10 @@
             this.particles = null;
             this.basePositions = [];
 
-            this.init();
+            this.init().catch(err => {
+                console.error('Init failed:', err);
+                document.getElementById('loading')?.classList.add('hidden');
+            });
         }
 
         async init() {
@@ -1022,13 +1025,23 @@
         }
     }
 
+    // Failsafe: hide loader after 5 seconds no matter what
+    setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('hidden')) {
+            console.warn('Failsafe: hiding loader after timeout');
+            loading.classList.add('hidden');
+        }
+    }, 5000);
+
     // Initialize on load
     function startApp() {
+        const loading = document.getElementById('loading');
+
         // Check if Three.js loaded
         if (typeof THREE === 'undefined') {
             console.error('Three.js failed to load');
-            document.getElementById('loading').innerHTML =
-                '<p style="color:#ff6b6b">Failed to load Three.js</p>';
+            if (loading) loading.innerHTML = '<p style="color:#ff6b6b">Failed to load Three.js. Try refreshing.</p>';
             return;
         }
 
@@ -1036,7 +1049,7 @@
             new GestureParticleSystem();
         } catch (err) {
             console.error('Failed to start:', err);
-            document.getElementById('loading').classList.add('hidden');
+            if (loading) loading.classList.add('hidden');
         }
     }
 
@@ -1044,7 +1057,6 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', startApp);
     } else {
-        // DOM already loaded
         startApp();
     }
     </script>
