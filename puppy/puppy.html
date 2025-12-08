@@ -149,21 +149,26 @@
             fingerStableTimeDown: 1000, // ms to wait before removing puppy
             smoothingFactor: 0.15,      // for finger count smoothing
             physicsTickRate: 60,        // Hz
-            puppyBaseSize: 80,          // base emoji size in pixels
-            puppySizeVariation: 0.3,    // +/- variation
+            puppyMinSize: 0.12,         // min size as fraction of screen height
+            puppyMaxSize: 0.20,         // max size as fraction of screen height (20%)
             bounceEnergyBoost: 1.02,    // energy multiplier on wall bounce
             maxSpeed: 8,
             minSpeed: 1,
             rotationSpeed: 0.02,
             friction: 0.998,
-            footprintInterval: 80,      // pixels between footprints
-            footprintFadeTime: 2000,    // ms for footprints to fade
+            puppyFadeOutTime: 400,      // ms for puppy to fade out
+            footprintWalkSpeed: 6,      // pixels per frame for footprint trail
+            footprintSpacing: 60,       // pixels between footprints
+            footprintFadeTime: 2500,    // ms for footprints to fade
+            footprintMinSize: 0.06,     // min footprint size as fraction of screen height
+            footprintMaxSize: 0.10,     // max footprint size as fraction of screen height
         };
 
         // ============ State ============
         let canvas, ctx;
         let puppies = [];
-        let footprintTrails = [];
+        let footprintTrails = [];      // animated walking trails
+        let staticFootprints = [];     // individual fading footprints
         let smoothedFingerCount = 0;
         let lastStableFingerCount = 0;
         let fingerStableTime = 0;
@@ -173,6 +178,19 @@
         let lastFrameTime = 0;
         let rawFingerCounts = [];  // rolling buffer for smoothing
 
+        // Helper to get puppy size based on screen
+        function getPuppySize() {
+            const minPx = canvas.height * CONFIG.puppyMinSize;
+            const maxPx = canvas.height * CONFIG.puppyMaxSize;
+            return minPx + Math.random() * (maxPx - minPx);
+        }
+
+        function getFootprintSize() {
+            const minPx = canvas.height * CONFIG.footprintMinSize;
+            const maxPx = canvas.height * CONFIG.footprintMaxSize;
+            return minPx + Math.random() * (maxPx - minPx);
+        }
+
         // ============ Puppy Class ============
         class Puppy {
             constructor(x, y, appearing = true) {
@@ -180,15 +198,14 @@
                 this.y = y;
                 this.vx = (Math.random() - 0.5) * 4;
                 this.vy = (Math.random() - 0.5) * 4;
-                this.size = CONFIG.puppyBaseSize * (1 + (Math.random() - 0.5) * CONFIG.puppySizeVariation);
+                this.size = getPuppySize();
                 this.rotation = Math.random() * Math.PI * 2;
                 this.rotationVelocity = (Math.random() - 0.5) * CONFIG.rotationSpeed * 2;
                 this.opacity = appearing ? 0 : 1;
                 this.scale = appearing ? 0.1 : 1;
                 this.appearing = appearing;
                 this.disappearing = false;
-                this.targetCorner = null;
-                this.lastFootprintPos = { x, y };
+                this.disappearStartTime = 0;
             }
 
             update(dt) {
@@ -201,33 +218,20 @@
                     }
                 }
 
-                // Disappearing animation - head to corner
-                if (this.disappearing && this.targetCorner) {
-                    const dx = this.targetCorner.x - this.x;
-                    const dy = this.targetCorner.y - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                // Disappearing animation - quick fade in place
+                if (this.disappearing) {
+                    const elapsed = performance.now() - this.disappearStartTime;
+                    const progress = Math.min(1, elapsed / CONFIG.puppyFadeOutTime);
 
-                    if (dist < 50) {
-                        this.opacity -= dt * 0.004;
-                        this.scale -= dt * 0.003;
-                    } else {
-                        // Move toward corner
-                        const speed = 5;
-                        this.vx = (dx / dist) * speed;
-                        this.vy = (dy / dist) * speed;
-                    }
+                    // Quick fade and shrink
+                    this.opacity = 1 - progress;
+                    this.scale = 1 - progress * 0.5;
 
-                    // Leave footprints
-                    const footDist = Math.sqrt(
-                        Math.pow(this.x - this.lastFootprintPos.x, 2) +
-                        Math.pow(this.y - this.lastFootprintPos.y, 2)
-                    );
-                    if (footDist > CONFIG.footprintInterval) {
-                        this.addFootprint();
-                        this.lastFootprintPos = { x: this.x, y: this.y };
-                    }
+                    // Stop moving
+                    this.vx *= 0.9;
+                    this.vy *= 0.9;
 
-                    return this.opacity > 0 && this.scale > 0;
+                    return progress < 1;
                 }
 
                 // Physics update
@@ -276,18 +280,6 @@
                 return true;
             }
 
-            addFootprint() {
-                const angle = Math.atan2(this.vy, this.vx);
-                footprintTrails.push({
-                    x: this.x,
-                    y: this.y,
-                    angle: angle,
-                    opacity: 0.8,
-                    createdAt: performance.now(),
-                    isLeft: footprintTrails.length % 2 === 0
-                });
-            }
-
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
@@ -303,8 +295,78 @@
 
             startDisappearing() {
                 this.disappearing = true;
-                this.targetCorner = getFurthestCorner(this.x, this.y);
-                this.lastFootprintPos = { x: this.x, y: this.y };
+                this.disappearStartTime = performance.now();
+
+                // Spawn animated footprint trail heading to furthest corner
+                const targetCorner = getFurthestEmptyishCorner(this.x, this.y);
+                footprintTrails.push(new FootprintTrail(this.x, this.y, targetCorner));
+            }
+        }
+
+        // ============ Footprint Trail Class ============
+        class FootprintTrail {
+            constructor(startX, startY, targetCorner) {
+                this.x = startX;
+                this.y = startY;
+                this.targetX = targetCorner.x;
+                this.targetY = targetCorner.y;
+                this.size = getFootprintSize();
+                this.stepCount = 0;
+                this.lastStepDist = 0;
+                this.done = false;
+
+                // Calculate direction
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                this.angle = Math.atan2(dy, dx);
+                this.vx = (dx / dist) * CONFIG.footprintWalkSpeed;
+                this.vy = (dy / dist) * CONFIG.footprintWalkSpeed;
+                this.totalDist = dist;
+                this.traveled = 0;
+            }
+
+            update() {
+                if (this.done) return false;
+
+                // Move toward target
+                this.x += this.vx;
+                this.y += this.vy;
+                this.traveled += CONFIG.footprintWalkSpeed;
+
+                // Leave footprints at intervals
+                if (this.traveled - this.lastStepDist >= CONFIG.footprintSpacing) {
+                    this.lastStepDist = this.traveled;
+                    const isLeft = this.stepCount % 2 === 0;
+
+                    // Offset perpendicular to walking direction for left/right paw
+                    const perpAngle = this.angle + Math.PI / 2;
+                    const offset = isLeft ? -this.size * 0.3 : this.size * 0.3;
+
+                    staticFootprints.push({
+                        x: this.x + Math.cos(perpAngle) * offset,
+                        y: this.y + Math.sin(perpAngle) * offset,
+                        angle: this.angle,
+                        size: this.size * (0.8 + Math.random() * 0.4),
+                        opacity: 1,
+                        createdAt: performance.now(),
+                        isLeft: isLeft
+                    });
+
+                    this.stepCount++;
+                }
+
+                // Check if reached target (or close enough)
+                const distToTarget = Math.sqrt(
+                    Math.pow(this.targetX - this.x, 2) +
+                    Math.pow(this.targetY - this.y, 2)
+                );
+
+                if (distToTarget < 30 || this.traveled > this.totalDist + 50) {
+                    this.done = true;
+                }
+
+                return !this.done;
             }
         }
 
@@ -402,6 +464,42 @@
                 );
                 if (dist > bestDist) {
                     bestDist = dist;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        function getFurthestEmptyishCorner(x, y) {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestScore = -Infinity;
+
+            for (const corner of corners) {
+                // Distance from puppy position (want far)
+                const distFromPuppy = Math.sqrt(
+                    Math.pow(x - corner.x, 2) +
+                    Math.pow(y - corner.y, 2)
+                );
+
+                // Distance from other puppies (want far from them too)
+                let minPuppyDist = Infinity;
+                for (const puppy of puppies) {
+                    if (!puppy.disappearing) {
+                        const dist = Math.sqrt(
+                            Math.pow(puppy.x - corner.x, 2) +
+                            Math.pow(puppy.y - corner.y, 2)
+                        );
+                        minPuppyDist = Math.min(minPuppyDist, dist);
+                    }
+                }
+
+                // Score combines distance from origin and emptiness
+                const score = distFromPuppy * 0.7 + (minPuppyDist === Infinity ? 500 : minPuppyDist) * 0.3;
+
+                if (score > bestScore) {
+                    bestScore = score;
                     bestCorner = corner;
                 }
             }
@@ -511,32 +609,41 @@
         }
 
         // ============ Drawing ============
+        function updateFootprintTrails() {
+            // Update animated trails (they spawn static footprints)
+            for (let i = footprintTrails.length - 1; i >= 0; i--) {
+                const alive = footprintTrails[i].update();
+                if (!alive) {
+                    footprintTrails.splice(i, 1);
+                }
+            }
+        }
+
         function drawFootprints(ctx) {
             const now = performance.now();
 
-            for (let i = footprintTrails.length - 1; i >= 0; i--) {
-                const fp = footprintTrails[i];
+            // Draw static footprints (left behind by trails)
+            for (let i = staticFootprints.length - 1; i >= 0; i--) {
+                const fp = staticFootprints[i];
                 const age = now - fp.createdAt;
 
                 if (age > CONFIG.footprintFadeTime) {
-                    footprintTrails.splice(i, 1);
+                    staticFootprints.splice(i, 1);
                     continue;
                 }
 
+                // Smooth fade out
                 const fadeProgress = age / CONFIG.footprintFadeTime;
-                const opacity = fp.opacity * (1 - fadeProgress);
+                const opacity = fp.opacity * (1 - fadeProgress * fadeProgress); // ease-out
 
                 ctx.save();
                 ctx.translate(fp.x, fp.y);
                 ctx.rotate(fp.angle + Math.PI / 2);
                 ctx.globalAlpha = opacity;
-                ctx.font = '24px Arial';
+                ctx.font = `${fp.size}px Arial`;
                 ctx.textAlign = 'center';
-
-                // Offset for walking pattern
-                const offset = fp.isLeft ? -8 : 8;
-                ctx.fillText('🐾', offset, 0);
-
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🐾', 0, 0);
                 ctx.restore();
             }
         }
@@ -580,6 +687,9 @@
 
             // Clear and draw background
             drawBackground(ctx);
+
+            // Update footprint trails (animated walking)
+            updateFootprintTrails();
 
             // Draw footprints (behind puppies)
             drawFootprints(ctx);
