@@ -744,16 +744,22 @@
             const video = document.getElementById('webcam');
             const canvas = document.getElementById('hand-overlay');
             const ctx = canvas.getContext('2d');
+            const videoContainer = document.getElementById('video-container');
+
+            console.log('Setting up hand tracking...');
+            console.log('Hands defined:', typeof Hands !== 'undefined');
+            console.log('Camera defined:', typeof Camera !== 'undefined');
 
             // Check if MediaPipe loaded
-            if (typeof Hands === 'undefined') {
-                console.warn('MediaPipe Hands not loaded');
-                document.getElementById('video-container').classList.add('hidden');
+            if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+                console.warn('MediaPipe not fully loaded - Hands:', typeof Hands, 'Camera:', typeof Camera);
+                videoContainer.classList.add('hidden');
                 return;
             }
 
             try {
                 // Initialize MediaPipe Hands
+                console.log('Initializing MediaPipe Hands...');
                 const hands = new Hands({
                     locateFile: (file) => {
                         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
@@ -770,6 +776,7 @@
                 hands.onResults((results) => this.onHandResults(results, canvas, ctx));
 
                 // Setup camera
+                console.log('Requesting camera access...');
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
@@ -778,6 +785,7 @@
                             facingMode: 'user'
                         }
                     });
+                    console.log('Camera access granted');
                     video.srcObject = stream;
 
                     const camera = new Camera(video, {
@@ -790,12 +798,13 @@
                         height: 480
                     });
                     camera.start();
+                    console.log('Hand tracking started');
                 } else {
                     throw new Error('getUserMedia not supported');
                 }
             } catch (err) {
-                console.warn('Camera/hand tracking not available:', err);
-                document.getElementById('video-container').classList.add('hidden');
+                console.warn('Camera/hand tracking error:', err.name, err.message);
+                videoContainer.classList.add('hidden');
             }
         }
 
@@ -905,14 +914,7 @@
                     document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('active'));
                     preset.classList.add('active');
                     this.updateColor(preset.dataset.color);
-                    document.getElementById('color-input').value = preset.dataset.color;
                 });
-            });
-
-            // Custom color
-            document.getElementById('color-input').addEventListener('input', (e) => {
-                document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('active'));
-                this.updateColor(e.target.value);
             });
 
             // Sliders
