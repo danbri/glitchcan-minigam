@@ -97,35 +97,40 @@ app<!DOCTYPE html>
 
         .edge-warning.top {
             top: 0; left: 0; right: 0;
-            height: 60px;
-            background: linear-gradient(to bottom, rgba(255,60,60,0.8), transparent);
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(255,50,50,0.9), transparent);
+            transform-origin: top center;
         }
 
         .edge-warning.bottom {
             bottom: 0; left: 0; right: 0;
-            height: 60px;
-            background: linear-gradient(to top, rgba(255,60,60,0.8), transparent);
+            height: 80px;
+            background: linear-gradient(to top, rgba(255,50,50,0.9), transparent);
+            transform-origin: bottom center;
         }
 
         .edge-warning.left {
             top: 0; bottom: 0; left: 0;
-            width: 60px;
-            background: linear-gradient(to right, rgba(255,60,60,0.8), transparent);
+            width: 80px;
+            background: linear-gradient(to right, rgba(255,50,50,0.9), transparent);
+            transform-origin: left center;
         }
 
         .edge-warning.right {
             top: 0; bottom: 0; right: 0;
-            width: 60px;
-            background: linear-gradient(to left, rgba(255,60,60,0.8), transparent);
+            width: 80px;
+            background: linear-gradient(to left, rgba(255,50,50,0.9), transparent);
+            transform-origin: right center;
         }
 
         .edge-warning.flash {
-            animation: edgeFlash 0.4s ease-out;
+            animation: edgeFlash 0.5s ease-out forwards;
         }
 
         @keyframes edgeFlash {
-            0% { opacity: 1; }
-            100% { opacity: 0; }
+            0% { opacity: 1; transform: scaleY(1.2); }
+            20% { opacity: 0.9; }
+            100% { opacity: 0; transform: scaleY(1); }
         }
 
         #start-overlay {
@@ -458,18 +463,26 @@ app<!DOCTYPE html>
         }
 
         function drawSkeleton(landmarks) {
-            if (!skeletonCtx || !landmarks || landmarks.length === 0) return;
+            if (!skeletonCtx) return;
 
             const w = skeletonCanvas.width;
             const h = skeletonCanvas.height;
 
-            // Clear with dark background
-            skeletonCtx.fillStyle = 'rgba(20, 20, 30, 0.9)';
+            // Always clear with dark background
+            skeletonCtx.fillStyle = 'rgba(20, 20, 30, 1)';
             skeletonCtx.fillRect(0, 0, w, h);
+
+            if (!landmarks || landmarks.length === 0) {
+                // Draw "no hands" indicator
+                skeletonCtx.fillStyle = 'rgba(100, 100, 120, 0.5)';
+                skeletonCtx.font = '12px Arial';
+                skeletonCtx.textAlign = 'center';
+                skeletonCtx.fillText('Show hands', w/2, h/2);
+                return;
+            }
 
             for (const hand of landmarks) {
                 // Draw connections first (behind joints)
-                skeletonCtx.lineWidth = 3;
                 for (const [start, end] of FINGER_CONNECTIONS) {
                     const p1 = hand[start];
                     const p2 = hand[end];
@@ -526,7 +539,7 @@ app<!DOCTYPE html>
         function checkEdgeWarnings(landmarks) {
             if (!landmarks || landmarks.length === 0) return;
 
-            const margin = 0.05; // 5% from edge triggers warning
+            const margin = 0.08; // 8% from edge triggers warning
             let nearTop = false, nearBottom = false, nearLeft = false, nearRight = false;
 
             for (const hand of landmarks) {
