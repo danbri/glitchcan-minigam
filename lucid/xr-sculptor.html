@@ -496,8 +496,20 @@
         this.onChange = null;
       }
 
+      // Maximum operations to prevent shader compilation failure
+      static MAX_OPERATIONS = 50;
+
       // Add a new operation
       add(op) {
+        // Warn if approaching limit
+        if (this.operations.length >= SDFOperationsList.MAX_OPERATIONS) {
+          console.warn(`Operation limit (${SDFOperationsList.MAX_OPERATIONS}) reached - cannot add more`);
+          return null;
+        }
+        if (this.operations.length >= SDFOperationsList.MAX_OPERATIONS - 5) {
+          console.warn(`Approaching operation limit: ${this.operations.length}/${SDFOperationsList.MAX_OPERATIONS}`);
+        }
+
         // Clear redo stack when adding new operation
         this.undoStack = [];
         this.operations.push({
@@ -710,6 +722,7 @@
 
         // Camera interaction
         this.isDragging = false;
+        this.dragDistance = 0;  // Track drag distance to distinguish click from drag
         this.lastMouse = { x: 0, y: 0 };
 
         // XR state
@@ -791,11 +804,26 @@
         // XR button
         document.getElementById('xr-button').addEventListener('click', () => this.toggleXR());
 
-        // Property inputs
+        // Property inputs with validation
         ['x', 'y', 'z', 'scale', 'noise'].forEach(prop => {
           const input = document.getElementById('prop-' + prop);
           if (input) {
-            input.addEventListener('change', () => this.updateSelectedProperty(prop, parseFloat(input.value)));
+            input.addEventListener('change', () => {
+              const value = parseFloat(input.value);
+              if (!isNaN(value) && isFinite(value)) {
+                this.updateSelectedProperty(prop, value);
+              } else {
+                // Reset to current value on invalid input
+                const sel = this.operations.getSelected();
+                if (sel) {
+                  if (prop === 'x') input.value = sel.position[0].toFixed(2);
+                  else if (prop === 'y') input.value = sel.position[1].toFixed(2);
+                  else if (prop === 'z') input.value = sel.position[2].toFixed(2);
+                  else if (prop === 'scale') input.value = sel.scale.toFixed(2);
+                  else if (prop === 'noise') input.value = sel.noise.toFixed(2);
+                }
+              }
+            });
           }
         });
 
@@ -811,6 +839,7 @@
       setupMouse() {
         this.canvas.addEventListener('mousedown', (e) => {
           this.isDragging = true;
+          this.dragDistance = 0;  // Reset drag distance
           this.lastMouse = { x: e.clientX, y: e.clientY };
         });
 
@@ -818,6 +847,7 @@
           if (this.isDragging) {
             const dx = e.clientX - this.lastMouse.x;
             const dy = e.clientY - this.lastMouse.y;
+            this.dragDistance += Math.abs(dx) + Math.abs(dy);  // Accumulate drag distance
             this.raymarcher.camera.theta += dx * 0.01;
             this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1,
               this.raymarcher.camera.phi + dy * 0.01));
@@ -834,9 +864,10 @@
           this.raymarcher.camera.distance = Math.max(1, Math.min(20, this.raymarcher.camera.distance));
         }, { passive: false });
 
-        // Click to place
+        // Click to place - only if no significant drag occurred
         this.canvas.addEventListener('click', (e) => {
-          if (this.isDragging) return;
+          // Skip if user dragged more than 5 pixels (was orbiting)
+          if (this.dragDistance > 5) return;
           // Calculate placement position based on click
           // For now, place at camera target with slight offset
           const cam = this.raymarcher.camera;
@@ -888,6 +919,10 @@
 
       setupKeyboard() {
         document.addEventListener('keydown', (e) => {
+          // Don't capture keys when typing in input fields
+          const isInputFocused = document.activeElement?.tagName === 'INPUT' ||
+                                 document.activeElement?.tagName === 'TEXTAREA';
+
           if (e.ctrlKey || e.metaKey) {
             if (e.key === 'z') {
               e.preventDefault();
@@ -897,6 +932,9 @@
               this.operations.redo();
             }
           }
+
+          // Skip other shortcuts if in input field
+          if (isInputFocused) return;
 
           // Number keys for primitives
           const primMap = { '1': 'sphere', '2': 'box', '3': 'cylinder', '4': 'torus', '5': 'capsule' };
@@ -908,8 +946,9 @@
           if (e.key === '=' || e.key === '+') this.setMode('union');
           if (e.key === '-') this.setMode('subtract');
 
-          // Delete selected
+          // Delete selected (only when not in input)
           if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();  // Prevent browser back navigation
             const sel = this.operations.selectedIndex;
             if (sel >= 0) {
               this.operations.remove(sel);
@@ -940,12 +979,18 @@
       }
 
       placeShape(position) {
+        // Check operation limit
+        if (this.operations.operations.length >= SDFOperationsList.MAX_OPERATIONS) {
+          log(`Operation limit (${SDFOperationsList.MAX_OPERATIONS}) reached! Use undo to remove shapes.`, 'error');
+          return;
+        }
+
         // Get default color based on mode
         const color = this.tool.mode === 'subtract'
           ? [0.9, 0.3, 0.3]
           : [0.3 + Math.random() * 0.5, 0.3 + Math.random() * 0.5, 0.5 + Math.random() * 0.4];
 
-        this.operations.add({
+        const result = this.operations.add({
           type: this.tool.mode,
           primitive: this.tool.primitive,
           position: position,
@@ -956,7 +1001,9 @@
           smoothK: this.tool.mode === 'union' ? 0.1 : 0
         });
 
-        log(`Placed ${this.tool.primitive} at [${position.map(p => p.toFixed(2)).join(', ')}]`);
+        if (result) {
+          log(`Placed ${this.tool.primitive} at [${position.map(p => p.toFixed(2)).join(', ')}]`);
+        }
       }
 
       getDefaultParams(primitive) {
@@ -1215,6 +1262,10 @@
         // Bind XR framebuffer
         gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
 
+        // Clear the framebuffer once before rendering both eyes
+        gl.clearColor(0.02, 0.02, 0.05, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
         // Process each view (one per eye in VR)
         for (const view of pose.views) {
           const viewport = glLayer.getViewport(view);
@@ -1224,7 +1275,7 @@
           const p = view.transform.position;
           const cameraPos = [p.x, p.y, p.z];
 
-          // Get view direction from the transform
+          // Get view direction from the transform matrix
           const m = view.transform.matrix;
           const forward = [-m[8], -m[9], -m[10]];
           const target = [
@@ -1237,15 +1288,23 @@
           this.raymarcher.camera.target = target;
           this.raymarcher.camera.distance = 0.001; // Very close for direct view
 
+          // Temporarily override canvas dimensions for correct resolution uniform
+          const origWidth = this.raymarcher.canvas.width;
+          const origHeight = this.raymarcher.canvas.height;
+          this.raymarcher.canvas.width = viewport.width;
+          this.raymarcher.canvas.height = viewport.height;
+
           // Temporarily set camera position directly
           const origGetCameraPosition = this.raymarcher.getCameraPosition.bind(this.raymarcher);
           this.raymarcher.getCameraPosition = () => cameraPos;
 
-          // Render
+          // Render this eye's view
           this.raymarcher.render();
 
-          // Restore
+          // Restore original values
           this.raymarcher.getCameraPosition = origGetCameraPosition;
+          this.raymarcher.canvas.width = origWidth;
+          this.raymarcher.canvas.height = origHeight;
         }
 
         // Process controller input for sculpting
