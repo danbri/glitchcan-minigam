@@ -44,17 +44,26 @@
 </head>
 <body>
     <h1>DanjaBeep Browser Tests</h1>
+    <p>WebBeep JavaScript Port - Browser Test Suite</p>
     <button id="run-btn">Run Tests</button>
     <div id="results"></div>
     <div id="summary"></div>
 
     <script type="module">
-        import { StringAudioEncoder } from './string-audio-encoder.js';
-        import { StringAudioDecoder } from './string-audio-decoder.js';
+        import { Constants } from './constants.js';
+        import { Maps } from './maps.js';
+        import { WaveMaker } from './wavemaker.js';
+        import { Goertzel } from './goertzel.js';
+        import { Encoder } from './encoder.js';
+        import { Decoder } from './decoder.js';
 
-        // Make available globally for Playwright
-        window.StringAudioEncoder = StringAudioEncoder;
-        window.StringAudioDecoder = StringAudioDecoder;
+        // Export for Playwright
+        window.Constants = Constants;
+        window.Maps = Maps;
+        window.WaveMaker = WaveMaker;
+        window.Goertzel = Goertzel;
+        window.Encoder = Encoder;
+        window.Decoder = Decoder;
 
         let passed = 0;
         let failed = 0;
@@ -64,12 +73,9 @@
             const div = document.createElement('div');
             div.className = `test-result ${success ? 'pass' : 'fail'}`;
             div.textContent = `${success ? '✓' : '✗'} ${name}`;
-            if (error) {
-                div.textContent += ` - ${error}`;
-            }
+            if (error) div.textContent += ` - ${error}`;
             resultsDiv.appendChild(div);
-            if (success) passed++;
-            else failed++;
+            if (success) passed++; else failed++;
         }
 
         function test(name, fn) {
@@ -94,92 +100,153 @@
             failed = 0;
             resultsDiv.innerHTML = '';
 
+            // Constants tests
+            test('Constants defined', () => {
+                assert(typeof Constants.SAMPLE_RATE === 'number');
+                assertEquals(Constants.SAMPLE_RATE, 22050);
+            });
+
+            // Maps tests
+            test('Maps has correct frequency arrays', () => {
+                assertEquals(Maps.LOW_FREQ.length, 8);
+                assertEquals(Maps.HIGH_FREQ.length, 16);
+            });
+
+            test('Maps frequencies are pentatonic', () => {
+                assert(Maps.LOW_FREQ[0] === 261.63, 'Should start with C4');
+                assert(Maps.HIGH_FREQ[0] === 523.25, 'High should start with C5');
+            });
+
+            // WaveMaker tests
+            test('WaveMaker makes silence', () => {
+                const silence = WaveMaker.makeSilence(0.1);
+                assert(silence.length > 0);
+                assertEquals(silence[0], 0);
+            });
+
+            test('WaveMaker makes dual tone', () => {
+                const tone = WaveMaker.makeDualTone(0, 0);
+                assert(tone instanceof Float32Array);
+                assert(tone.length > 0);
+            });
+
+            test('WaveMaker applies envelope', () => {
+                const flat = new Float32Array(100).fill(1);
+                const shaped = WaveMaker.applyEnvelope(flat);
+                assert(shaped[0] < 0.5, 'Start should be faded');
+            });
+
+            // Goertzel tests
+            test('Goertzel detects frequency', () => {
+                const samples = new Float32Array(2048);
+                for (let i = 0; i < samples.length; i++) {
+                    samples[i] = Math.sin(2 * Math.PI * 440 * i / Constants.SAMPLE_RATE);
+                }
+                const mag = Goertzel.getMagnitude(samples, 440, Constants.SAMPLE_RATE);
+                assert(mag > 0.1, 'Should detect 440 Hz');
+            });
+
+            test('Goertzel findPeak works', () => {
+                const samples = new Float32Array(2048);
+                for (let i = 0; i < samples.length; i++) {
+                    samples[i] = Math.sin(2 * Math.PI * 880 * i / Constants.SAMPLE_RATE);
+                }
+                const result = Goertzel.findPeak(samples, [440, 880, 1320], Constants.SAMPLE_RATE);
+                assertEquals(result.frequency, 880);
+            });
+
             // Encoder tests
-            test('StringAudioEncoder is defined', () => {
-                assert(typeof StringAudioEncoder !== 'undefined');
+            test('Encoder calculates checksum', () => {
+                const bytes = new Uint8Array([65, 66, 67]);
+                const cs = Encoder.calculateChecksum(bytes);
+                assert(cs >= 0 && cs <= 255);
             });
 
-            test('encode produces Float32Array', () => {
-                const samples = StringAudioEncoder.encode('test');
-                assert(samples instanceof Float32Array, 'Should be Float32Array');
+            test('Encoder verifies checksum', () => {
+                const data = new Uint8Array([72, 101, 108, 108, 111]);
+                const cs = Encoder.calculateChecksum(data);
+                const withCs = new Uint8Array([...data, cs]);
+                assert(Encoder.verifyChecksum(withCs));
             });
 
-            test('encode produces samples in valid range', () => {
-                const samples = StringAudioEncoder.encode('hello');
-                let maxAbs = 0;
-                for (const s of samples) maxAbs = Math.max(maxAbs, Math.abs(s));
-                assert(maxAbs <= 1.0, 'Should be in [-1, 1]');
-            });
-
-            test('CRC16 is consistent', () => {
-                const data = new Uint8Array([1, 2, 3]);
-                const crc1 = StringAudioEncoder.crc16(data);
-                const crc2 = StringAudioEncoder.crc16(data);
-                assertEquals(crc1, crc2);
-            });
-
-            test('bytesToQuaternary roundtrip', () => {
-                const original = new Uint8Array([0xAB, 0xCD]);
-                const quad = StringAudioEncoder.bytesToQuaternary(original);
-                const restored = StringAudioEncoder.quaternaryToBytes(quad);
-                assertEquals(restored[0], original[0]);
-                assertEquals(restored[1], original[1]);
-            });
-
-            test('getStats returns duration', () => {
-                const stats = StringAudioEncoder.getStats('test');
-                assert(stats.durationMs > 0, 'Should have positive duration');
-            });
-
-            test('generateWav produces Blob', () => {
-                const wav = StringAudioEncoder.generateWav('test');
-                assert(wav instanceof Blob, 'Should be Blob');
-                assert(wav.size > 44, 'Should have content beyond header');
-            });
-
-            test('encode handles URL', () => {
-                const samples = StringAudioEncoder.encode('https://example.com');
+            test('Encoder encodes string', () => {
+                const samples = Encoder.encode('test');
+                assert(samples instanceof Float32Array);
                 assert(samples.length > 0);
             });
 
-            test('encode handles UTF-8', () => {
-                const samples = StringAudioEncoder.encode('日本語');
+            test('Encoder samples are normalized', () => {
+                const samples = Encoder.encode('Hello');
+                let max = 0;
+                for (const s of samples) max = Math.max(max, Math.abs(s));
+                assert(max <= 1.0, 'Should be normalized');
+            });
+
+            test('Encoder handles URL', () => {
+                const samples = Encoder.encode('https://example.com');
                 assert(samples.length > 0);
             });
 
-            // Decoder tests
-            test('StringAudioDecoder is defined', () => {
-                assert(typeof StringAudioDecoder !== 'undefined');
+            test('Encoder getStats works', () => {
+                const stats = Encoder.getStats('test');
+                assertEquals(stats.inputLength, 4);
+                assert(stats.estimatedDurationMs > 0);
             });
 
-            test('frequencyToSymbol maps correctly', () => {
-                assertEquals(StringAudioDecoder.frequencyToSymbol(16400), '0');
-                assertEquals(StringAudioDecoder.frequencyToSymbol(17000), '1');
-                assertEquals(StringAudioDecoder.frequencyToSymbol(17500), 'X');
+            // WAV generation
+            test('Encoder generates WAV blob', () => {
+                const blob = Encoder.generateWav('Hi');
+                assert(blob instanceof Blob);
+                assert(blob.type === 'audio/wav');
+                assert(blob.size > 44);
             });
 
-            // Web Audio API tests (if available)
+            // Web Audio API tests
             if (typeof AudioContext !== 'undefined') {
-                test('generateAudioBuffer works with AudioContext', async () => {
+                test('Encoder works with AudioContext', async () => {
                     const ctx = new AudioContext();
-                    const buffer = StringAudioEncoder.generateAudioBuffer('test', ctx);
-                    assert(buffer instanceof AudioBuffer, 'Should be AudioBuffer');
-                    assert(buffer.length > 0, 'Should have samples');
+                    const buffer = Encoder.generateAudioBuffer('test', ctx);
+                    assert(buffer instanceof AudioBuffer);
+                    assert(buffer.length > 0);
                     await ctx.close();
                 });
             }
+
+            // Decoder tests
+            test('Decoder normalizes samples', () => {
+                const samples = new Float32Array([0.5, -0.5]);
+                const norm = Decoder.normalize(samples);
+                assertEquals(norm[0], 1.0);
+            });
+
+            test('Decoder decodes chunk', () => {
+                const lowFreq = Maps.LOW_FREQ[0];
+                const highFreq = Maps.HIGH_FREQ[0];
+                const chunk = new Float32Array(1024);
+                for (let i = 0; i < chunk.length; i++) {
+                    const t = i / Constants.SAMPLE_RATE;
+                    chunk[i] = (Math.sin(2 * Math.PI * lowFreq * t) +
+                                Math.sin(2 * Math.PI * highFreq * t)) * 0.5;
+                }
+                const result = Decoder.decodeChunk(chunk, Constants.SAMPLE_RATE);
+                assert(result.byte !== null, 'Should decode byte');
+            });
+
+            // Roundtrip test
+            test('Single byte roundtrip', () => {
+                const tone = Encoder.byteToDualTone(65);
+                const result = Decoder.decodeChunk(tone, Constants.SAMPLE_RATE);
+                assertEquals(result.byte, 65);
+            });
 
             // Update summary
             document.getElementById('summary').textContent =
                 `${passed} passed, ${failed} failed`;
 
-            // Signal completion for Playwright
             window.testResults = { passed, failed, total: passed + failed };
         }
 
         document.getElementById('run-btn').addEventListener('click', runTests);
-
-        // Auto-run for Playwright
         window.runTests = runTests;
     </script>
 </body>

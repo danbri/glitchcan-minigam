@@ -3,122 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanjaBeep - Audio String Encoder/Decoder</title>
+    <title>DanjaBeep - WebBeep Audio Encoder</title>
     <style>
         :root {
-            --bg-color: #1a1a2e;
-            --card-bg: #16213e;
+            --bg: #1a1a2e;
+            --card: #16213e;
             --accent: #e94560;
-            --accent-secondary: #0f3460;
+            --accent2: #0f3460;
             --text: #eee;
-            --text-muted: #aaa;
+            --muted: #aaa;
             --success: #7ee787;
             --warning: #ffc107;
-            --error: #f85149;
         }
-
         * { box-sizing: border-box; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-color);
+            background: var(--bg);
             color: var(--text);
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
         }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; }
         h1 {
             font-size: 2.5rem;
             margin: 0;
             background: linear-gradient(135deg, var(--accent), #ff8c00);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
-
-        .subtitle { color: var(--text-muted); margin-top: 8px; }
-
-        .tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 20px;
-        }
-
+        .subtitle { color: var(--muted); margin-top: 8px; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
         .tab-btn {
             flex: 1;
             padding: 14px 20px;
             border: none;
             border-radius: 8px 8px 0 0;
-            background: var(--accent-secondary);
+            background: var(--accent2);
             color: var(--text);
             cursor: pointer;
             font-size: 1rem;
             font-weight: 600;
-            transition: all 0.2s ease;
         }
-
         .tab-btn:hover { background: #1a4f8e; }
-        .tab-btn.active { background: var(--card-bg); color: var(--accent); }
-
+        .tab-btn.active { background: var(--card); color: var(--accent); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
         .card {
-            background: var(--card-bg);
+            background: var(--card);
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
-
-        h2 {
-            margin: 0 0 16px 0;
-            font-size: 1.2rem;
-            color: var(--accent);
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-
+        h2 { margin: 0 0 16px 0; font-size: 1.2rem; color: var(--accent); }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
         input[type="text"], textarea {
             flex: 1;
             min-width: 200px;
             padding: 12px 16px;
-            border: 2px solid var(--accent-secondary);
+            border: 2px solid var(--accent2);
             border-radius: 8px;
-            background: var(--bg-color);
+            background: var(--bg);
             color: var(--text);
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
         }
-
-        input[type="text"]:focus, textarea:focus {
-            border-color: var(--accent);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-family: monospace;
-        }
-
-        .action-btn {
+        input:focus, textarea:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 60px; font-family: monospace; }
+        .btn {
             padding: 12px 24px;
             border: none;
             border-radius: 8px;
@@ -127,245 +79,88 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 600;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
-
-        .action-btn:hover {
-            background: #ff3355;
-            transform: translateY(-2px);
-        }
-
-        .action-btn:disabled {
-            background: var(--text-muted);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .action-btn.secondary { background: var(--accent-secondary); }
-        .action-btn.secondary:hover { background: #1a4f8e; }
-        .action-btn.success { background: #238636; }
-        .action-btn.success:hover { background: #2ea043; }
-        .action-btn.listening {
-            background: #238636;
-            animation: pulse 1s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
+        .btn:hover { background: #ff3355; transform: translateY(-2px); }
+        .btn:disabled { background: var(--muted); cursor: not-allowed; }
+        .btn.secondary { background: var(--accent2); }
+        .btn.secondary:hover { background: #1a4f8e; }
+        .btn.success { background: #238636; }
+        .btn.listening { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
         .debug-panel {
             background: #0d1117;
             border-radius: 8px;
             padding: 16px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: monospace;
             font-size: 0.85rem;
             overflow-x: auto;
             white-space: pre-wrap;
-            word-break: break-all;
             max-height: 300px;
             overflow-y: auto;
         }
-
         .debug-panel .label { color: var(--accent); }
         .debug-panel .value { color: var(--success); }
-        .debug-panel .info { color: var(--text-muted); }
-
-        .waveform-container {
-            margin-top: 16px;
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 8px;
-        }
-
-        canvas {
-            width: 100%;
-            height: 120px;
-            display: block;
-        }
-
-        #spectrum-canvas { height: 150px; }
-
-        .freq-legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-top: 12px;
-            padding: 12px;
-            background: var(--bg-color);
-            border-radius: 8px;
-        }
-
-        .freq-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
-        }
-
-        .freq-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
+        .debug-panel .info { color: var(--muted); }
+        .waveform-box { background: #0d1117; border-radius: 8px; padding: 8px; margin-top: 16px; }
+        canvas { width: 100%; height: 120px; display: block; }
+        #spectrum-canvas { height: 180px; }
         .info-box {
             padding: 12px;
-            background: rgba(46, 160, 67, 0.2);
+            background: rgba(46,160,67,0.2);
             border-left: 4px solid var(--success);
             border-radius: 0 8px 8px 0;
             margin-bottom: 16px;
             font-size: 0.9rem;
         }
-
         .warning-box {
             padding: 12px;
-            background: rgba(255, 193, 7, 0.2);
+            background: rgba(255,193,7,0.2);
             border-left: 4px solid var(--warning);
             border-radius: 0 8px 8px 0;
             margin-bottom: 16px;
-            font-size: 0.9rem;
         }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .status-badge.idle { background: var(--accent-secondary); }
-        .status-badge.listening { background: rgba(46, 160, 67, 0.3); color: var(--success); }
-        .status-badge.success { background: rgba(46, 160, 67, 0.3); color: var(--success); }
-        .status-badge.error { background: rgba(248, 81, 73, 0.3); color: var(--error); }
-
-        .receiver-controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-
-        .signal-indicator {
-            display: flex;
-            gap: 3px;
-            align-items: flex-end;
-            height: 24px;
-        }
-
-        .signal-bar {
-            width: 4px;
-            background: var(--accent-secondary);
-            border-radius: 2px;
-            transition: height 0.1s, background 0.1s;
-        }
-
-        .signal-bar.active { background: var(--success); }
-
-        .decoded-messages {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .message-item {
-            padding: 12px;
-            background: var(--bg-color);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border-left: 4px solid var(--success);
-        }
-
-        .message-item .time {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        .message-item .text {
-            font-family: monospace;
-            font-size: 1.1rem;
-            color: var(--success);
-            word-break: break-all;
-        }
-
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 12px;
             margin-top: 16px;
         }
-
-        .stat-item {
-            background: var(--bg-color);
-            padding: 12px;
-            border-radius: 8px;
-        }
-
-        .stat-item .label {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-bottom: 4px;
-        }
-
-        .stat-item .value {
-            color: var(--accent);
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .quick-strings {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
+        .stat-item { background: var(--bg); padding: 12px; border-radius: 8px; }
+        .stat-item .label { color: var(--muted); font-size: 0.8rem; }
+        .stat-item .value { color: var(--accent); font-size: 1.2rem; font-weight: 600; }
+        .quick-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
         .quick-btn {
             padding: 6px 12px;
-            border: 1px solid var(--accent-secondary);
+            border: 1px solid var(--accent2);
             border-radius: 6px;
             background: transparent;
             color: var(--text);
             cursor: pointer;
             font-size: 0.85rem;
-            transition: all 0.2s;
         }
-
-        .quick-btn:hover {
-            background: var(--accent-secondary);
-            border-color: var(--accent);
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            color: var(--text-muted);
+        .quick-btn:hover { background: var(--accent2); }
+        .freq-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 0.85rem; }
+        .freq-item { display: flex; align-items: center; gap: 6px; }
+        .freq-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .receiver-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
             font-size: 0.85rem;
+            font-weight: 500;
         }
-
-        footer a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        footer a:hover { text-decoration: underline; }
-
-        .frequency-labels {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 8px;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
+        .status-badge.idle { background: var(--accent2); }
+        .status-badge.listening { background: rgba(46,160,67,0.3); color: var(--success); }
+        footer { text-align: center; margin-top: 40px; color: var(--muted); font-size: 0.85rem; }
+        footer a { color: var(--accent); text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>DanjaBeep</h1>
-            <p class="subtitle">Audio String Encoder/Decoder using FSK</p>
+            <p class="subtitle">WebBeep Audio Encoder - Pentatonic FSK for Strings & URIs</p>
         </header>
 
         <div class="tabs">
@@ -377,23 +172,23 @@
         <!-- SEND TAB -->
         <div id="send-tab" class="tab-content active">
             <div class="info-box">
-                <strong>Audio Encoding:</strong> Encodes text strings into ultrasonic audio (16-19 kHz FSK).
-                Works for identifiers, URIs, and short messages up to 255 bytes.
+                <strong>Pentatonic Encoding:</strong> Uses dual-tone frequencies (~260-1760 Hz) to encode text.
+                Unlike ultrasonic encoders, these tones are <em>audible</em> - you'll hear musical notes!
             </div>
 
             <div class="card">
                 <h2>Encode String</h2>
-                <div class="quick-strings">
-                    <button class="quick-btn" data-text="Hello World">Hello World</button>
-                    <button class="quick-btn" data-text="https://example.com">URL Example</button>
-                    <button class="quick-btn" data-text="user@example.com">Email</button>
+                <div class="quick-btns">
+                    <button class="quick-btn" data-text="Hello">Hello</button>
+                    <button class="quick-btn" data-text="https://example.com">URL</button>
+                    <button class="quick-btn" data-text="user@mail.com">Email</button>
                     <button class="quick-btn" data-text="ID:12345">Identifier</button>
-                    <button class="quick-btn" data-text="urn:uuid:550e8400-e29b-41d4-a716-446655440000">UUID URN</button>
+                    <button class="quick-btn" data-text="urn:isbn:0451450523">URN</button>
                 </div>
                 <div class="input-group">
-                    <input type="text" id="encode-input" placeholder="Enter text to encode (max 255 bytes)">
-                    <button class="action-btn" id="play-btn">Play Audio</button>
-                    <button class="action-btn secondary" id="download-btn">Download WAV</button>
+                    <input type="text" id="encode-input" placeholder="Enter text to encode">
+                    <button class="btn" id="play-btn">Play</button>
+                    <button class="btn secondary" id="download-btn">Download WAV</button>
                 </div>
                 <div id="encode-status"></div>
             </div>
@@ -401,55 +196,22 @@
             <div class="card">
                 <h2>Encoding Statistics</h2>
                 <div class="stats-grid" id="stats-grid">
-                    <div class="stat-item">
-                        <div class="label">Input Length</div>
-                        <div class="value" id="stat-input">-</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="label">Byte Length</div>
-                        <div class="value" id="stat-bytes">-</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="label">Symbol Count</div>
-                        <div class="value" id="stat-symbols">-</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="label">Duration</div>
-                        <div class="value" id="stat-duration">-</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="label">CRC-16</div>
-                        <div class="value" id="stat-crc">-</div>
-                    </div>
+                    <div class="stat-item"><div class="label">Input Length</div><div class="value" id="stat-input">-</div></div>
+                    <div class="stat-item"><div class="label">Byte Length</div><div class="value" id="stat-bytes">-</div></div>
+                    <div class="stat-item"><div class="label">Total Bytes</div><div class="value" id="stat-total">-</div></div>
+                    <div class="stat-item"><div class="label">Duration</div><div class="value" id="stat-duration">-</div></div>
+                    <div class="stat-item"><div class="label">Checksum</div><div class="value" id="stat-checksum">-</div></div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Waveform Preview</h2>
-                <div class="waveform-container">
+                <h2>Waveform</h2>
+                <div class="waveform-box">
                     <canvas id="send-waveform"></canvas>
                 </div>
                 <div class="freq-legend">
-                    <div class="freq-item">
-                        <div class="freq-dot" style="background: #ff6b6b;"></div>
-                        <span>'0' = 16,386 Hz</span>
-                    </div>
-                    <div class="freq-item">
-                        <div class="freq-dot" style="background: #feca57;"></div>
-                        <span>'1' = 16,943 Hz</span>
-                    </div>
-                    <div class="freq-item">
-                        <div class="freq-dot" style="background: #48dbfb;"></div>
-                        <span>'X' = 17,500 Hz (carrier)</span>
-                    </div>
-                    <div class="freq-item">
-                        <div class="freq-dot" style="background: #1dd1a1;"></div>
-                        <span>'3' = 18,057 Hz</span>
-                    </div>
-                    <div class="freq-item">
-                        <div class="freq-dot" style="background: #f368e0;"></div>
-                        <span>'2' = 18,614 Hz</span>
-                    </div>
+                    <div class="freq-item"><div class="freq-dot" style="background:#ff6b6b"></div><span>Low: C4-A4 (262-440 Hz)</span></div>
+                    <div class="freq-item"><div class="freq-dot" style="background:#48dbfb"></div><span>High: C5-A6 (523-1760 Hz)</span></div>
                 </div>
             </div>
         </div>
@@ -457,54 +219,35 @@
         <!-- RECEIVE TAB -->
         <div id="receive-tab" class="tab-content">
             <div class="warning-box">
-                <strong>Microphone Required:</strong> This mode listens to your microphone for encoded audio signals.
-                Grant microphone permission when prompted.
+                <strong>Microphone Required:</strong> Listens for encoded audio. These are audible frequencies, so background noise may interfere.
             </div>
 
             <div class="card">
-                <h2>Listener Controls</h2>
+                <h2>Listener</h2>
                 <div class="receiver-controls">
-                    <button class="action-btn success" id="listen-btn">Start Listening</button>
+                    <button class="btn success" id="listen-btn">Start Listening</button>
                     <span class="status-badge idle" id="receiver-status">Idle</span>
-                    <div class="signal-indicator" id="signal-indicator">
-                        <div class="signal-bar" style="height: 6px;"></div>
-                        <div class="signal-bar" style="height: 10px;"></div>
-                        <div class="signal-bar" style="height: 14px;"></div>
-                        <div class="signal-bar" style="height: 18px;"></div>
-                        <div class="signal-bar" style="height: 22px;"></div>
-                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Frequency Spectrum (15-20 kHz)</h2>
-                <div class="waveform-container">
+                <h2>Frequency Spectrum</h2>
+                <div class="waveform-box">
                     <canvas id="spectrum-canvas"></canvas>
-                    <div class="frequency-labels">
-                        <span>15 kHz</span>
-                        <span>16.4</span>
-                        <span>17</span>
-                        <span>17.5</span>
-                        <span>18</span>
-                        <span>18.6</span>
-                        <span>20 kHz</span>
-                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Symbol Buffer</h2>
-                <div class="debug-panel" id="buffer-display">
-                    <span class="info">Start listening to see symbol buffer...</span>
+                <h2>Goertzel Analysis</h2>
+                <div class="debug-panel" id="goertzel-display">
+                    <span class="info">Start listening to see frequency analysis...</span>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Decoded Messages</h2>
-                <div class="decoded-messages" id="decoded-messages">
-                    <div class="message-item">
-                        <span class="info">No messages decoded yet...</span>
-                    </div>
+                <h2>Decoded Output</h2>
+                <div class="debug-panel" id="decoded-output">
+                    <span class="info">No decoded messages yet...</span>
                 </div>
             </div>
         </div>
@@ -513,66 +256,71 @@
         <div id="debug-tab" class="tab-content">
             <div class="card">
                 <h2>Test Tones</h2>
-                <div class="info-box">
-                    Test your audio system's frequency response. 16-19 kHz tones should be barely audible or silent for most adults.
-                </div>
+                <div class="info-box">Test individual frequencies from the pentatonic scale.</div>
                 <div class="input-group">
-                    <button class="action-btn secondary" data-freq="1000">1 kHz (audible)</button>
-                    <button class="action-btn secondary" data-freq="10000">10 kHz</button>
-                    <button class="action-btn secondary" data-freq="15000">15 kHz</button>
-                    <button class="action-btn secondary" data-freq="16386">16.4 kHz (0)</button>
-                    <button class="action-btn secondary" data-freq="17500">17.5 kHz (X)</button>
-                    <button class="action-btn secondary" data-freq="18614">18.6 kHz (2)</button>
-                    <button class="action-btn secondary" data-freq="20000">20 kHz</button>
+                    <button class="btn secondary" data-freq="261.63">C4 (262 Hz)</button>
+                    <button class="btn secondary" data-freq="440">A4 (440 Hz)</button>
+                    <button class="btn secondary" data-freq="523.25">C5 (523 Hz)</button>
+                    <button class="btn secondary" data-freq="880">A5 (880 Hz)</button>
+                    <button class="btn secondary" data-freq="1046.5">C6 (1047 Hz)</button>
+                    <button class="btn secondary" data-freq="1760">A6 (1760 Hz)</button>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Packet Debug</h2>
-                <textarea id="debug-input" placeholder="Enter text to see packet structure..."></textarea>
-                <div class="debug-panel" id="packet-debug" style="margin-top: 12px;">
-                    <span class="info">Enter text above to see detailed packet info...</span>
+                <h2>Dual Tone Test</h2>
+                <div class="input-group">
+                    <select id="low-freq-select">
+                        <option value="0">C4 (262 Hz)</option>
+                        <option value="1">D4 (294 Hz)</option>
+                        <option value="2">E4 (330 Hz)</option>
+                        <option value="3">G4 (392 Hz)</option>
+                        <option value="4">A4 (440 Hz)</option>
+                    </select>
+                    <select id="high-freq-select">
+                        <option value="0">C5 (523 Hz)</option>
+                        <option value="1">D5 (587 Hz)</option>
+                        <option value="2">E5 (659 Hz)</option>
+                        <option value="3">G5 (784 Hz)</option>
+                        <option value="4">A5 (880 Hz)</option>
+                    </select>
+                    <button class="btn" id="dual-tone-btn">Play Dual Tone</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Byte Encoding Debug</h2>
+                <textarea id="debug-input" placeholder="Enter text to see encoding details..."></textarea>
+                <div class="debug-panel" id="encoding-debug" style="margin-top:12px">
+                    <span class="info">Enter text to see byte-by-byte encoding...</span>
                 </div>
             </div>
 
             <div class="card">
                 <h2>Audio Context Info</h2>
                 <div class="debug-panel" id="audio-info">
-                    <span class="info">Click any button to initialize audio context...</span>
+                    <span class="info">Click any button to initialize audio...</span>
                 </div>
-            </div>
-
-            <div class="card">
-                <h2>Loopback Test</h2>
-                <div class="info-box">
-                    Send a test message and try to decode it. Requires speakers + microphone.
-                </div>
-                <div class="input-group">
-                    <input type="text" id="loopback-input" placeholder="Test message" value="TEST123">
-                    <button class="action-btn" id="loopback-btn">Run Loopback Test</button>
-                </div>
-                <div id="loopback-result"></div>
             </div>
         </div>
 
         <footer>
-            <p>
-                DanjaBeep - FSK Audio String Encoding<br>
-                Based on <a href="../furbacca/">Furbacca</a> audio protocol
-            </p>
+            <p>JavaScript port of <a href="https://github.com/danja/WebBeep">WebBeep</a> by Danny Ayers</p>
         </footer>
     </div>
 
     <script type="module">
-        import { StringAudioEncoder } from './string-audio-encoder.js';
-        import { StringAudioDecoder } from './string-audio-decoder.js';
+        import { Constants } from './constants.js';
+        import { Maps } from './maps.js';
+        import { WaveMaker } from './wavemaker.js';
+        import { Goertzel } from './goertzel.js';
+        import { Encoder } from './encoder.js';
+        import { Decoder } from './decoder.js';
 
-        // Global state
         let audioContext = null;
         let decoder = null;
         let spectrumAnimationId = null;
 
-        // Initialize audio context
         function getAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -582,11 +330,10 @@
         }
 
         function updateAudioInfo() {
-            const panel = document.getElementById('audio-info');
             if (audioContext) {
-                panel.innerHTML = `<span class="label">Sample Rate:</span> <span class="value">${audioContext.sampleRate} Hz</span>
-<span class="label">State:</span> <span class="value">${audioContext.state}</span>
-<span class="label">Base Latency:</span> <span class="value">${(audioContext.baseLatency * 1000).toFixed(2)} ms</span>`;
+                document.getElementById('audio-info').innerHTML =
+                    `<span class="label">Sample Rate:</span> <span class="value">${audioContext.sampleRate} Hz</span>\n` +
+                    `<span class="label">State:</span> <span class="value">${audioContext.state}</span>`;
             }
         }
 
@@ -608,27 +355,24 @@
             });
         });
 
-        // Update stats on input
+        // Update stats
         document.getElementById('encode-input').addEventListener('input', updateStats);
 
         function updateStats() {
             const text = document.getElementById('encode-input').value;
             if (!text) {
-                document.getElementById('stat-input').textContent = '-';
-                document.getElementById('stat-bytes').textContent = '-';
-                document.getElementById('stat-symbols').textContent = '-';
-                document.getElementById('stat-duration').textContent = '-';
-                document.getElementById('stat-crc').textContent = '-';
+                ['stat-input','stat-bytes','stat-total','stat-duration','stat-checksum'].forEach(id => {
+                    document.getElementById(id).textContent = '-';
+                });
                 return;
             }
-
             try {
-                const stats = StringAudioEncoder.getStats(text);
+                const stats = Encoder.getStats(text);
                 document.getElementById('stat-input').textContent = stats.inputLength;
                 document.getElementById('stat-bytes').textContent = stats.byteLength;
-                document.getElementById('stat-symbols').textContent = stats.symbolCount;
-                document.getElementById('stat-duration').textContent = `${stats.durationMs} ms`;
-                document.getElementById('stat-crc').textContent = `0x${stats.crc16}`;
+                document.getElementById('stat-total').textContent = stats.totalBytes;
+                document.getElementById('stat-duration').textContent = `${stats.estimatedDurationMs} ms`;
+                document.getElementById('stat-checksum').textContent = `0x${stats.checksum}`;
             } catch (e) {
                 document.getElementById('stat-input').textContent = 'Error';
             }
@@ -637,62 +381,45 @@
         // Play button
         document.getElementById('play-btn').addEventListener('click', async () => {
             const text = document.getElementById('encode-input').value;
-            if (!text) {
-                showStatus('encode-status', 'Please enter text to encode', 'error');
-                return;
-            }
-
+            if (!text) return;
             try {
                 const ctx = getAudioContext();
                 if (ctx.state === 'suspended') await ctx.resume();
-
-                const source = StringAudioEncoder.play(text, ctx);
-                showStatus('encode-status', `Playing audio for "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`, 'success');
-
-                // Draw waveform
-                drawSendWaveform(text, ctx);
-
-                source.onended = () => {
-                    showStatus('encode-status', 'Playback complete', 'success');
-                };
+                Encoder.play(text, ctx);
+                document.getElementById('encode-status').innerHTML =
+                    `<span class="status-badge listening">Playing...</span>`;
+                drawWaveform(text, ctx);
+                setTimeout(() => {
+                    document.getElementById('encode-status').innerHTML = '';
+                }, Encoder.getStats(text).estimatedDurationMs + 500);
             } catch (e) {
-                showStatus('encode-status', `Error: ${e.message}`, 'error');
+                document.getElementById('encode-status').innerHTML =
+                    `<span style="color:var(--warning)">Error: ${e.message}</span>`;
             }
         });
 
         // Download button
         document.getElementById('download-btn').addEventListener('click', () => {
             const text = document.getElementById('encode-input').value;
-            if (!text) {
-                showStatus('encode-status', 'Please enter text to encode', 'error');
-                return;
-            }
-
-            try {
-                const safeName = text.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
-                StringAudioEncoder.downloadWav(text, `danjabeep-${safeName}.wav`);
-                showStatus('encode-status', 'WAV file downloaded', 'success');
-            } catch (e) {
-                showStatus('encode-status', `Error: ${e.message}`, 'error');
-            }
+            if (!text) return;
+            const safeName = text.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_');
+            Encoder.downloadWav(text, `danjabeep-${safeName}.wav`);
         });
 
-        // Draw send waveform
-        function drawSendWaveform(text, ctx) {
+        // Draw waveform
+        function drawWaveform(text, ctx) {
             const canvas = document.getElementById('send-waveform');
-            const canvasCtx = canvas.getContext('2d');
-
+            const c = canvas.getContext('2d');
             canvas.width = canvas.offsetWidth * 2;
             canvas.height = canvas.offsetHeight * 2;
 
-            const samples = StringAudioEncoder.encode(text, ctx.sampleRate);
+            const samples = Encoder.encode(text, ctx.sampleRate);
+            c.fillStyle = '#0d1117';
+            c.fillRect(0, 0, canvas.width, canvas.height);
 
-            canvasCtx.fillStyle = '#0d1117';
-            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-            canvasCtx.strokeStyle = '#e94560';
-            canvasCtx.lineWidth = 1;
-            canvasCtx.beginPath();
+            c.strokeStyle = '#e94560';
+            c.lineWidth = 1;
+            c.beginPath();
 
             const step = Math.ceil(samples.length / canvas.width);
             const amp = canvas.height / 2;
@@ -700,18 +427,15 @@
             for (let i = 0; i < canvas.width; i++) {
                 const idx = i * step;
                 let min = 1, max = -1;
-
                 for (let j = 0; j < step && idx + j < samples.length; j++) {
-                    const val = samples[idx + j];
-                    if (val < min) min = val;
-                    if (val > max) max = val;
+                    const v = samples[idx + j];
+                    if (v < min) min = v;
+                    if (v > max) max = v;
                 }
-
-                canvasCtx.moveTo(i, (1 + min) * amp);
-                canvasCtx.lineTo(i, (1 + max) * amp);
+                c.moveTo(i, (1 + min) * amp);
+                c.lineTo(i, (1 + max) * amp);
             }
-
-            canvasCtx.stroke();
+            c.stroke();
         }
 
         // Listen button
@@ -720,23 +444,8 @@
             const status = document.getElementById('receiver-status');
 
             if (!decoder) {
-                decoder = new StringAudioDecoder();
-
-                decoder.onFrequencyUpdate = (analysis) => {
-                    updateSignalIndicator(analysis);
-                };
-
-                decoder.onSymbolDetected = (signal) => {
-                    updateBufferDisplay();
-                };
-
-                decoder.onStringDecoded = (text) => {
-                    addDecodedMessage(text);
-                };
-
-                decoder.onError = (error) => {
-                    showStatus('receiver-status', `Error: ${error.message}`, 'error');
-                };
+                decoder = new Decoder();
+                decoder.onFrequencyUpdate = updateGoertzelDisplay;
             }
 
             if (decoder.isListening) {
@@ -758,52 +467,33 @@
                     status.className = 'status-badge listening';
                     drawSpectrum();
                 } catch (e) {
-                    showStatus('decoded-messages', `Error: ${e.message}. Allow microphone access.`, 'error');
+                    document.getElementById('decoded-output').innerHTML =
+                        `<span style="color:var(--warning)">Error: ${e.message}</span>`;
                 }
             }
         });
 
-        function updateSignalIndicator(analysis) {
-            const bars = document.querySelectorAll('.signal-bar');
-            const strength = analysis.signalStrength;
+        function updateGoertzelDisplay(data) {
+            const panel = document.getElementById('goertzel-display');
+            const mags = data.goertzelMagnitudes;
 
-            bars.forEach((bar, i) => {
-                const level = (i + 1) * 40;
-                bar.classList.toggle('active', strength > level);
+            let html = '<span class="label">Low Frequencies:</span>\n';
+            Maps.LOW_FREQ.forEach((f, i) => {
+                const m = mags.find(m => Math.abs(m.frequency - f) < 1);
+                const mag = m ? m.magnitude.toFixed(4) : '0.0000';
+                const bar = '█'.repeat(Math.min(20, Math.floor(parseFloat(mag) * 100)));
+                html += `  ${Maps.LOW_NOTES[i]}: <span class="value">${mag}</span> ${bar}\n`;
             });
-        }
 
-        function updateBufferDisplay() {
-            if (!decoder) return;
-            const state = decoder.getBufferState();
-            const panel = document.getElementById('buffer-display');
+            html += '\n<span class="label">High Frequencies:</span>\n';
+            Maps.HIGH_FREQ.slice(0, 8).forEach((f, i) => {
+                const m = mags.find(m => Math.abs(m.frequency - f) < 1);
+                const mag = m ? m.magnitude.toFixed(4) : '0.0000';
+                const bar = '█'.repeat(Math.min(20, Math.floor(parseFloat(mag) * 100)));
+                html += `  ${Maps.HIGH_NOTES[i]}: <span class="value">${mag}</span> ${bar}\n`;
+            });
 
-            panel.innerHTML = `<span class="label">Sync:</span> <span class="value">${state.syncDetected ? 'YES' : 'no'}</span>
-<span class="label">Symbols:</span> <span class="value">${state.totalSymbols}</span> (${state.dataSymbols} data)
-<span class="label">Raw:</span> <span class="value">${state.raw.slice(-60) || '(empty)'}</span>
-<span class="label">Data:</span> <span class="value">${state.data.slice(-40) || '(none)'}</span>
-<span class="label">Noise Floor:</span> <span class="info">${state.noiseFloor.toFixed(1)}</span>`;
-        }
-
-        function addDecodedMessage(text) {
-            const container = document.getElementById('decoded-messages');
-            const time = new Date().toLocaleTimeString();
-
-            // Clear "no messages" if present
-            if (container.querySelector('.info')) {
-                container.innerHTML = '';
-            }
-
-            const item = document.createElement('div');
-            item.className = 'message-item';
-            item.innerHTML = `<div class="time">${time}</div><div class="text">${escapeHtml(text)}</div>`;
-
-            container.insertBefore(item, container.firstChild);
-
-            // Keep last 10 messages
-            while (container.children.length > 10) {
-                container.removeChild(container.lastChild);
-            }
+            panel.innerHTML = html;
         }
 
         function drawSpectrum() {
@@ -811,7 +501,6 @@
 
             const canvas = document.getElementById('spectrum-canvas');
             const ctx = canvas.getContext('2d');
-
             canvas.width = canvas.offsetWidth * 2;
             canvas.height = canvas.offsetHeight * 2;
 
@@ -821,183 +510,112 @@
                 return;
             }
 
-            // Clear
             ctx.fillStyle = '#0d1117';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw frequency zones
-            const zoneColors = {
-                '0': 'rgba(255, 107, 107, 0.2)',
-                '1': 'rgba(254, 202, 87, 0.2)',
-                'X': 'rgba(72, 219, 251, 0.2)',
-                '3': 'rgba(29, 209, 161, 0.2)',
-                '2': 'rgba(243, 104, 224, 0.2)',
-            };
+            // Draw relevant frequency range (200-2000 Hz)
+            const startBin = Math.floor(200 / freqData.binWidth);
+            const endBin = Math.ceil(2000 / freqData.binWidth);
+            const data = freqData.data.slice(startBin, endBin);
 
-            const bands = StringAudioDecoder.FREQ_BANDS;
-            const freqRange = freqData.endFreq - freqData.startFreq;
-
-            for (const [symbol, band] of Object.entries(bands)) {
-                const x1 = ((band.min - freqData.startFreq) / freqRange) * canvas.width;
-                const x2 = ((band.max - freqData.startFreq) / freqRange) * canvas.width;
-                ctx.fillStyle = zoneColors[symbol];
-                ctx.fillRect(x1, 0, x2 - x1, canvas.height);
-            }
-
-            // Draw spectrum
             ctx.strokeStyle = '#e94560';
             ctx.lineWidth = 2;
             ctx.beginPath();
 
-            const barWidth = canvas.width / freqData.data.length;
-
-            for (let i = 0; i < freqData.data.length; i++) {
-                const x = i * barWidth;
-                const height = (freqData.data[i] / 255) * canvas.height;
-                const y = canvas.height - height;
-
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+            const barWidth = canvas.width / data.length;
+            for (let i = 0; i < data.length; i++) {
+                const h = (data[i] / 255) * canvas.height;
+                const y = canvas.height - h;
+                if (i === 0) ctx.moveTo(i * barWidth, y);
+                else ctx.lineTo(i * barWidth, y);
             }
-
             ctx.stroke();
+
+            // Mark pentatonic frequencies
+            ctx.fillStyle = 'rgba(126, 231, 135, 0.3)';
+            [...Maps.LOW_FREQ, ...Maps.HIGH_FREQ].forEach(f => {
+                if (f >= 200 && f <= 2000) {
+                    const x = ((f - 200) / 1800) * canvas.width;
+                    ctx.fillRect(x - 2, 0, 4, canvas.height);
+                }
+            });
+
             spectrumAnimationId = requestAnimationFrame(drawSpectrum);
         }
 
         // Test tone buttons
         document.querySelectorAll('[data-freq]').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const freq = parseInt(btn.dataset.freq);
+                const freq = parseFloat(btn.dataset.freq);
                 const ctx = getAudioContext();
                 if (ctx.state === 'suspended') await ctx.resume();
 
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
-
-                gainNode.gain.setValueAtTime(0, ctx.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-                gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.45);
-                gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
-
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-
-                oscillator.start(ctx.currentTime);
-                oscillator.stop(ctx.currentTime + 0.5);
-
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.4);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.5);
                 updateAudioInfo();
             });
+        });
+
+        // Dual tone button
+        document.getElementById('dual-tone-btn').addEventListener('click', async () => {
+            const lowIdx = parseInt(document.getElementById('low-freq-select').value);
+            const highIdx = parseInt(document.getElementById('high-freq-select').value);
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') await ctx.resume();
+
+            const samples = WaveMaker.makeDualTone(lowIdx, highIdx, ctx.sampleRate);
+            const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+            buffer.getChannelData(0).set(samples);
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start();
         });
 
         // Debug input
         document.getElementById('debug-input').addEventListener('input', (e) => {
             const text = e.target.value;
-            const panel = document.getElementById('packet-debug');
-
+            const panel = document.getElementById('encoding-debug');
             if (!text) {
-                panel.innerHTML = '<span class="info">Enter text above to see detailed packet info...</span>';
+                panel.innerHTML = '<span class="info">Enter text to see byte-by-byte encoding...</span>';
                 return;
             }
 
             try {
                 const encoder = new TextEncoder();
                 const bytes = encoder.encode(text);
-                const packet = StringAudioEncoder.buildPacket(bytes);
-                const symbols = StringAudioEncoder.bytesToQuaternary(packet);
-                const interleaved = StringAudioEncoder.interleaveWithCarrier(symbols);
-                const fullSequence = 'XXXX' + interleaved;
+                const checksum = Encoder.calculateChecksum(bytes);
 
-                const stats = StringAudioEncoder.getStats(text);
+                let html = `<span class="label">Input:</span> <span class="value">"${text}"</span>\n\n`;
+                html += `<span class="label">Bytes:</span>\n`;
 
-                panel.innerHTML = `<span class="label">Input:</span> <span class="value">"${escapeHtml(text)}"</span>
-<span class="label">UTF-8 Bytes:</span> <span class="value">[${Array.from(bytes).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]</span>
+                for (let i = 0; i < bytes.length; i++) {
+                    const b = bytes[i];
+                    const char = String.fromCharCode(b);
+                    const highNibble = Math.floor(b / 16);
+                    const lowNibble = b % 16;
+                    const lowFreq = Maps.LOW_FREQ[highNibble % 8].toFixed(0);
+                    const highFreq = Maps.HIGH_FREQ[lowNibble].toFixed(0);
 
-<span class="label">Packet Structure:</span>
-<span class="info">  Magic Header:</span> <span class="value">0x${packet[0].toString(16).toUpperCase()} (0xAE)</span>
-<span class="info">  Length:</span> <span class="value">${packet[1]} bytes</span>
-<span class="info">  Data:</span> <span class="value">[${Array.from(packet.slice(2, 2 + packet[1])).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]</span>
-<span class="info">  CRC-16:</span> <span class="value">0x${stats.crc16}</span>
+                    html += `  [${i}] '${char}' = 0x${b.toString(16).padStart(2,'0')} `;
+                    html += `→ <span class="value">${lowFreq} Hz</span> + <span class="value">${highFreq} Hz</span>\n`;
+                }
 
-<span class="label">Quaternary Symbols:</span> <span class="value">${symbols}</span>
-<span class="label">Interleaved:</span> <span class="value">${interleaved.substring(0, 60)}${interleaved.length > 60 ? '...' : ''}</span>
-<span class="label">Full Sequence:</span> <span class="value">${fullSequence.substring(0, 60)}...</span> <span class="info">(${fullSequence.length} symbols)</span>
+                html += `\n<span class="label">Checksum:</span> <span class="value">0x${checksum.toString(16).padStart(2,'0')}</span>`;
 
-<span class="label">Timing:</span>
-<span class="info">  Symbol Duration:</span> <span class="value">${stats.symbolDurationMs} ms</span>
-<span class="info">  Total Duration:</span> <span class="value">${stats.durationMs} ms</span>`;
+                panel.innerHTML = html;
             } catch (e) {
-                panel.innerHTML = `<span class="label">Error:</span> <span class="value">${e.message}</span>`;
+                panel.innerHTML = `<span class="label">Error:</span> ${e.message}`;
             }
         });
-
-        // Loopback test
-        document.getElementById('loopback-btn').addEventListener('click', async () => {
-            const text = document.getElementById('loopback-input').value;
-            const resultDiv = document.getElementById('loopback-result');
-
-            if (!text) {
-                resultDiv.innerHTML = '<span class="status-badge error">Enter test message</span>';
-                return;
-            }
-
-            resultDiv.innerHTML = '<span class="status-badge listening">Starting loopback test...</span>';
-
-            try {
-                // Start decoder if not running
-                if (!decoder) {
-                    decoder = new StringAudioDecoder();
-                }
-
-                let received = null;
-                decoder.onStringDecoded = (decoded) => {
-                    received = decoded;
-                };
-
-                if (!decoder.isListening) {
-                    await decoder.startListening();
-                }
-
-                // Wait a moment for decoder to stabilize
-                await new Promise(r => setTimeout(r, 500));
-
-                // Play the audio
-                const ctx = getAudioContext();
-                if (ctx.state === 'suspended') await ctx.resume();
-
-                StringAudioEncoder.play(text, ctx);
-
-                // Wait for decode (timeout after 5 seconds)
-                const startTime = Date.now();
-                while (!received && Date.now() - startTime < 5000) {
-                    await new Promise(r => setTimeout(r, 100));
-                }
-
-                if (received === text) {
-                    resultDiv.innerHTML = `<span class="status-badge success">SUCCESS: Decoded "${received}"</span>`;
-                } else if (received) {
-                    resultDiv.innerHTML = `<span class="status-badge error">MISMATCH: Expected "${text}", got "${received}"</span>`;
-                } else {
-                    resultDiv.innerHTML = `<span class="status-badge error">TIMEOUT: No message decoded</span>`;
-                }
-            } catch (e) {
-                resultDiv.innerHTML = `<span class="status-badge error">Error: ${e.message}</span>`;
-            }
-        });
-
-        // Helper functions
-        function showStatus(elementId, message, type) {
-            const el = document.getElementById(elementId);
-            el.innerHTML = `<span class="status-badge ${type}">${message}</span>`;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
     </script>
 </body>
 </html>

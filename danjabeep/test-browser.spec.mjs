@@ -1,22 +1,15 @@
 /**
- * Playwright Browser Tests for DanjaBeep
+ * Playwright Browser Tests for DanjaBeep (WebBeep Port)
  *
  * Run with:
  *   npx playwright test danjabeep/test-browser.spec.mjs
- *
- * Or install and run:
- *   npm install -D @playwright/test
- *   npx playwright install chromium
- *   npx playwright test
  */
 
 import { test, expect } from '@playwright/test';
 
-// Start a local server for testing
-test.describe('DanjaBeep Audio Encoder/Decoder', () => {
+test.describe('DanjaBeep - WebBeep Port', () => {
 
     test.beforeEach(async ({ page }) => {
-        // Navigate to test page - assumes server running on port 8080
         await page.goto('/danjabeep/test-browser.html');
     });
 
@@ -24,201 +17,147 @@ test.describe('DanjaBeep Audio Encoder/Decoder', () => {
         await expect(page.locator('h1')).toContainText('DanjaBeep');
     });
 
-    test('StringAudioEncoder is available', async ({ page }) => {
-        const isDefined = await page.evaluate(() => {
-            return typeof window.StringAudioEncoder !== 'undefined';
-        });
-        expect(isDefined).toBe(true);
-    });
-
-    test('StringAudioDecoder is available', async ({ page }) => {
-        const isDefined = await page.evaluate(() => {
-            return typeof window.StringAudioDecoder !== 'undefined';
-        });
-        expect(isDefined).toBe(true);
-    });
-
-    test('encode produces valid audio samples', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const samples = window.StringAudioEncoder.encode('test');
+    test('all modules are loaded', async ({ page }) => {
+        const loaded = await page.evaluate(() => {
             return {
-                isFloat32Array: samples instanceof Float32Array,
-                length: samples.length,
-                hasSignal: Math.max(...samples.map(Math.abs)) > 0.5
+                Constants: typeof window.Constants !== 'undefined',
+                Maps: typeof window.Maps !== 'undefined',
+                WaveMaker: typeof window.WaveMaker !== 'undefined',
+                Goertzel: typeof window.Goertzel !== 'undefined',
+                Encoder: typeof window.Encoder !== 'undefined',
+                Decoder: typeof window.Decoder !== 'undefined'
             };
         });
-        expect(result.isFloat32Array).toBe(true);
+        expect(loaded.Constants).toBe(true);
+        expect(loaded.Maps).toBe(true);
+        expect(loaded.WaveMaker).toBe(true);
+        expect(loaded.Goertzel).toBe(true);
+        expect(loaded.Encoder).toBe(true);
+        expect(loaded.Decoder).toBe(true);
+    });
+
+    test('Constants has correct values', async ({ page }) => {
+        const constants = await page.evaluate(() => ({
+            sampleRate: window.Constants.SAMPLE_RATE,
+            amplitude: window.Constants.AMPLITUDE,
+            toneDuration: window.Constants.TONE_DURATION
+        }));
+        expect(constants.sampleRate).toBe(22050);
+        expect(constants.amplitude).toBeCloseTo(0.49, 2);
+        expect(constants.toneDuration).toBeGreaterThan(0);
+    });
+
+    test('Maps has pentatonic frequencies', async ({ page }) => {
+        const maps = await page.evaluate(() => ({
+            lowFreqLength: window.Maps.LOW_FREQ.length,
+            highFreqLength: window.Maps.HIGH_FREQ.length,
+            lowFirst: window.Maps.LOW_FREQ[0],
+            highFirst: window.Maps.HIGH_FREQ[0]
+        }));
+        expect(maps.lowFreqLength).toBe(8);
+        expect(maps.highFreqLength).toBe(16);
+        expect(maps.lowFirst).toBeCloseTo(261.63, 1);  // C4
+        expect(maps.highFirst).toBeCloseTo(523.25, 1); // C5
+    });
+
+    test('WaveMaker creates dual tones', async ({ page }) => {
+        const result = await page.evaluate(() => {
+            const tone = window.WaveMaker.makeDualTone(0, 0);
+            return {
+                isFloat32: tone instanceof Float32Array,
+                length: tone.length,
+                hasSignal: Math.max(...Array.from(tone).map(Math.abs)) > 0.1
+            };
+        });
+        expect(result.isFloat32).toBe(true);
         expect(result.length).toBeGreaterThan(0);
         expect(result.hasSignal).toBe(true);
     });
 
-    test('encode handles different string lengths', async ({ page }) => {
+    test('Goertzel detects frequencies accurately', async ({ page }) => {
         const result = await page.evaluate(() => {
-            const short = window.StringAudioEncoder.encode('Hi');
-            const long = window.StringAudioEncoder.encode('Hello World!');
+            const samples = new Float32Array(2048);
+            for (let i = 0; i < samples.length; i++) {
+                samples[i] = Math.sin(2 * Math.PI * 440 * i / 22050);
+            }
+            const result = window.Goertzel.findPeak(samples, [220, 440, 880], 22050);
+            return { detectedFreq: result.frequency };
+        });
+        expect(result.detectedFreq).toBe(440);
+    });
+
+    test('Encoder produces valid samples', async ({ page }) => {
+        const result = await page.evaluate(() => {
+            const samples = window.Encoder.encode('test');
             return {
-                shortLength: short.length,
-                longLength: long.length
+                isFloat32: samples instanceof Float32Array,
+                length: samples.length,
+                maxAbs: Math.max(...Array.from(samples).map(Math.abs))
             };
         });
-        expect(result.longLength).toBeGreaterThan(result.shortLength);
+        expect(result.isFloat32).toBe(true);
+        expect(result.length).toBeGreaterThan(0);
+        expect(result.maxAbs).toBeLessThanOrEqual(1.0);
     });
 
-    test('CRC16 is deterministic', async ({ page }) => {
+    test('Encoder checksum is verifiable', async ({ page }) => {
         const result = await page.evaluate(() => {
-            const data = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-            const crc1 = window.StringAudioEncoder.crc16(data);
-            const crc2 = window.StringAudioEncoder.crc16(data);
-            return { crc1, crc2, match: crc1 === crc2 };
+            const data = new Uint8Array([72, 101, 108, 108, 111]);
+            const cs = window.Encoder.calculateChecksum(data);
+            const withCs = new Uint8Array([...data, cs]);
+            return window.Encoder.verifyChecksum(withCs);
         });
-        expect(result.match).toBe(true);
+        expect(result).toBe(true);
     });
 
-    test('bytesToQuaternary roundtrip preserves data', async ({ page }) => {
+    test('Encoder generates WAV blob', async ({ page }) => {
         const result = await page.evaluate(() => {
-            const original = new Uint8Array([0x12, 0x34, 0xAB, 0xCD]);
-            const quad = window.StringAudioEncoder.bytesToQuaternary(original);
-            const restored = window.StringAudioEncoder.quaternaryToBytes(quad);
+            const blob = window.Encoder.generateWav('test');
             return {
-                original: Array.from(original),
-                restored: Array.from(restored),
-                match: original.every((v, i) => v === restored[i])
-            };
-        });
-        expect(result.match).toBe(true);
-    });
-
-    test('generateWav produces valid WAV blob', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const wav = window.StringAudioEncoder.generateWav('test');
-            return {
-                isBlob: wav instanceof Blob,
-                size: wav.size,
-                type: wav.type
+                isBlob: blob instanceof Blob,
+                type: blob.type,
+                size: blob.size
             };
         });
         expect(result.isBlob).toBe(true);
-        expect(result.size).toBeGreaterThan(44); // WAV header is 44 bytes
         expect(result.type).toBe('audio/wav');
+        expect(result.size).toBeGreaterThan(44);
     });
 
-    test('getStats provides encoding metrics', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const stats = window.StringAudioEncoder.getStats('hello');
-            return {
-                hasInputLength: 'inputLength' in stats,
-                hasByteLength: 'byteLength' in stats,
-                hasSymbolCount: 'symbolCount' in stats,
-                hasDuration: 'durationMs' in stats,
-                hasCrc: 'crc16' in stats,
-                inputLength: stats.inputLength,
-                byteLength: stats.byteLength
-            };
+    test('Encoder getStats provides metrics', async ({ page }) => {
+        const stats = await page.evaluate(() => {
+            return window.Encoder.getStats('Hello');
         });
-        expect(result.hasInputLength).toBe(true);
-        expect(result.hasByteLength).toBe(true);
-        expect(result.hasSymbolCount).toBe(true);
-        expect(result.hasDuration).toBe(true);
-        expect(result.hasCrc).toBe(true);
-        expect(result.inputLength).toBe(5);
-        expect(result.byteLength).toBe(5);
+        expect(stats.inputLength).toBe(5);
+        expect(stats.byteLength).toBe(5);
+        expect(stats.totalBytes).toBe(6); // +1 checksum
+        expect(stats.estimatedDurationMs).toBeGreaterThan(0);
     });
 
-    test('handles UTF-8 encoding correctly', async ({ page }) => {
+    test('Single byte encode/decode roundtrip', async ({ page }) => {
         const result = await page.evaluate(() => {
-            const stats = window.StringAudioEncoder.getStats('日本');
-            return {
-                inputLength: stats.inputLength,
-                byteLength: stats.byteLength
-            };
+            const tone = window.Encoder.byteToDualTone(65); // 'A'
+            const decoded = window.Decoder.decodeChunk(tone, 22050);
+            return { decodedByte: decoded.byte };
         });
-        expect(result.inputLength).toBe(2);      // 2 characters
-        expect(result.byteLength).toBe(6);       // 6 bytes in UTF-8
+        expect(result.decodedByte).toBe(65);
     });
 
-    test('handles URL strings', async ({ page }) => {
+    test('Encoder handles URLs', async ({ page }) => {
         const result = await page.evaluate(() => {
-            const url = 'https://example.com/path?query=1&foo=bar';
-            const samples = window.StringAudioEncoder.encode(url);
-            const stats = window.StringAudioEncoder.getStats(url);
-            return {
-                samplesLength: samples.length,
-                inputLength: stats.inputLength,
-                durationMs: stats.durationMs
-            };
+            const samples = window.Encoder.encode('https://example.com/path?q=1');
+            return { length: samples.length };
         });
-        expect(result.samplesLength).toBeGreaterThan(0);
-        expect(result.durationMs).toBeGreaterThan(0);
+        expect(result.length).toBeGreaterThan(0);
     });
 
-    test('handles special characters', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const text = 'user@example.com!#$%';
-            const samples = window.StringAudioEncoder.encode(text);
-            return {
-                success: samples.length > 0,
-                sampleCount: samples.length
-            };
-        });
-        expect(result.success).toBe(true);
-    });
-
-    test('decoder frequencyToSymbol maps frequencies correctly', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const D = window.StringAudioDecoder;
-            return {
-                sym0: D.frequencyToSymbol(16400),
-                sym1: D.frequencyToSymbol(17000),
-                symX: D.frequencyToSymbol(17500),
-                sym3: D.frequencyToSymbol(18000),
-                sym2: D.frequencyToSymbol(18600)
-            };
-        });
-        expect(result.sym0).toBe('0');
-        expect(result.sym1).toBe('1');
-        expect(result.symX).toBe('X');
-        expect(result.sym3).toBe('3');
-        expect(result.sym2).toBe('2');
-    });
-
-    test('run all embedded browser tests', async ({ page }) => {
-        // Run the test suite embedded in the HTML
+    test('run embedded test suite', async ({ page }) => {
         await page.evaluate(() => window.runTests());
-
-        // Wait for tests to complete
         await page.waitForFunction(() => window.testResults !== undefined);
 
         const results = await page.evaluate(() => window.testResults);
         expect(results.failed).toBe(0);
-        expect(results.passed).toBeGreaterThan(0);
-    });
-
-    test('frequencies are in ultrasonic range', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const freqs = Object.values(window.StringAudioEncoder.FREQUENCIES);
-            return {
-                min: Math.min(...freqs),
-                max: Math.max(...freqs),
-                allInRange: freqs.every(f => f >= 16000 && f <= 20000)
-            };
-        });
-        expect(result.allInRange).toBe(true);
-        expect(result.min).toBeGreaterThanOrEqual(16000);
-        expect(result.max).toBeLessThanOrEqual(20000);
-    });
-
-    test('interleaveWithCarrier produces correct pattern', async ({ page }) => {
-        const result = await page.evaluate(() => {
-            const interleaved = window.StringAudioEncoder.interleaveWithCarrier('0123');
-            return {
-                pattern: interleaved,
-                startsWithX: interleaved.startsWith('X'),
-                endsWithX: interleaved.endsWith('X')
-            };
-        });
-        expect(result.pattern).toBe('X0X1X2X3X');
-        expect(result.startsWithX).toBe(true);
-        expect(result.endsWithX).toBe(true);
+        expect(results.passed).toBeGreaterThan(15);
     });
 
 });

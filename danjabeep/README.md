@@ -1,116 +1,87 @@
-# DanjaBeep - Audio String Encoder/Decoder
+# DanjaBeep - WebBeep JavaScript Port
 
-Encode short strings (identifiers, URIs, short messages) into ultrasonic audio using FSK (Frequency-Shift Keying). Works in browsers using Web Audio API.
+JavaScript/Web Audio port of [WebBeep](https://github.com/danja/WebBeep) by Danny Ayers.
 
-## Features
+Encodes strings (identifiers, URIs, short messages) into audible audio using pentatonic dual-tone FSK.
 
-- Encodes arbitrary UTF-8 strings up to 255 bytes
-- Uses ultrasonic frequencies (16-19 kHz) for minimal audibility
-- CRC-16 checksum for data integrity
-- Real-time microphone decoding
-- WAV file export
-- Debug visualization tools
+## Key Features
 
-## Quick Start
+- **Pentatonic Scale Encoding**: Uses musical notes (C, D, E, G, A) in audible range (~260-1760 Hz)
+- **Dual-Tone**: Each byte encoded as two simultaneous frequencies (low + high)
+- **Goertzel Detection**: Efficient single-frequency pitch detection for decoding
+- **Checksum**: Simple error detection
+- **Web Audio API**: Works in modern browsers
+
+## Protocol
+
+Each ASCII byte is split into two 4-bit nibbles:
+- **High nibble (0-15)** → Low frequency (262-440 Hz, modulo 8)
+- **Low nibble (0-15)** → High frequency (523-1760 Hz)
+
+| Low Frequencies | High Frequencies |
+|----------------|------------------|
+| C4: 262 Hz | C5: 523 Hz |
+| D4: 294 Hz | D5: 587 Hz |
+| E4: 330 Hz | E5: 659 Hz |
+| G4: 392 Hz | G5: 784 Hz |
+| A4: 440 Hz | A5: 880 Hz |
+| | C6: 1047 Hz |
+| | ... up to A6: 1760 Hz |
+
+## Usage
 
 ### Browser
 
 ```html
 <script type="module">
-import { StringAudioEncoder } from './string-audio-encoder.js';
+import { Encoder } from './encoder.js';
 
-// Encode and play a string
-const audioContext = new AudioContext();
-StringAudioEncoder.play('Hello World', audioContext);
+const ctx = new AudioContext();
+Encoder.play('Hello World', ctx);
 
 // Download as WAV
-StringAudioEncoder.downloadWav('https://example.com', 'encoded-url.wav');
-
-// Get encoding statistics
-const stats = StringAudioEncoder.getStats('test');
-console.log(stats.durationMs); // Duration in milliseconds
+Encoder.downloadWav('https://example.com', 'encoded.wav');
 </script>
 ```
 
 ### Node.js (for testing)
 
 ```javascript
-import { StringAudioEncoder } from './string-audio-encoder.js';
+import { Encoder } from './encoder.js';
 
-// Encode to raw samples
-const samples = StringAudioEncoder.encode('test');
+const samples = Encoder.encode('test');
 console.log(`Generated ${samples.length} samples`);
-
-// Get statistics
-const stats = StringAudioEncoder.getStats('Hello');
-console.log(stats);
-```
-
-## Protocol
-
-| Frequency | Symbol | Description |
-|-----------|--------|-------------|
-| 16,386 Hz | 0 | Quaternary digit 0 |
-| 16,943 Hz | 1 | Quaternary digit 1 |
-| 17,500 Hz | X | Carrier/sync |
-| 18,057 Hz | 3 | Quaternary digit 3 |
-| 18,614 Hz | 2 | Quaternary digit 2 |
-
-### Packet Structure
-
-```
-[MAGIC: 0xAE][LENGTH][DATA...][CRC-16]
-```
-
-- Magic header: 0xAE (validates packet start)
-- Length: 1 byte (0-255)
-- Data: UTF-8 encoded string
-- CRC-16: CCITT checksum
-
-### Symbol Encoding
-
-- Each byte encoded as 4 quaternary (base-4) digits
-- Symbols interleaved with 'X' carrier: `X0X1X2X3X`
-- 16ms per symbol, 4ms crossfade
-- Sync preamble: `XXXX`
-
-## Running Tests
-
-### Node.js Tests
-
-```bash
-cd danjabeep
-node test-encoder.mjs
-```
-
-### Browser Tests (Playwright)
-
-```bash
-npm install
-npx playwright install chromium
-npx playwright test
 ```
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `string-audio-encoder.js` | Main encoder module |
-| `string-audio-decoder.js` | Decoder with microphone support |
-| `index.html` | Interactive UI with send/receive |
-| `test-encoder.mjs` | Node.js unit tests |
+| `constants.js` | Audio configuration (sample rate, timing, etc.) |
+| `maps.js` | Pentatonic frequency mappings |
+| `wavemaker.js` | Audio sample generation |
+| `goertzel.js` | Goertzel pitch detection algorithm |
+| `encoder.js` | Main encoder class |
+| `decoder.js` | Decoder with microphone support |
+| `index.html` | Interactive UI |
+| `test.mjs` | Node.js unit tests (32 tests) |
 | `test-browser.spec.mjs` | Playwright browser tests |
-| `test-browser.html` | Browser test page |
 
-## UI Features
+## Running Tests
 
-1. **Send Tab**: Encode text, play audio, download WAV
-2. **Receive Tab**: Listen via microphone, decode messages
-3. **Debug Tab**: Test tones, packet inspection, loopback test
+```bash
+# Node.js tests
+node test.mjs
 
-## Based On
+# Browser tests (requires Playwright)
+npm install
+npx playwright install chromium
+npx playwright test
+```
 
-Protocol adapted from [Furbacca/Hacksby](https://github.com/iafan/Hacksby) Furby audio control system.
+## Original
+
+Ported from [WebBeep](https://github.com/danja/WebBeep) Java implementation.
 
 ## License
 

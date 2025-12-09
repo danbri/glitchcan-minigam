@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DanjaBeep Browser Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #e94560; }
+        .test-result {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .pass { background: rgba(46, 160, 67, 0.2); color: #7ee787; }
+        .fail { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+        #summary {
+            margin-top: 20px;
+            padding: 16px;
+            background: #16213e;
+            border-radius: 8px;
+            font-size: 1.2rem;
+        }
+        #run-btn {
+            padding: 12px 24px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        #run-btn:hover { background: #ff3355; }
+    </style>
+</head>
+<body>
+    <h1>DanjaBeep Browser Tests</h1>
+    <button id="run-btn">Run Tests</button>
+    <div id="results"></div>
+    <div id="summary"></div>
+
+    <script type="module">
+        import { StringAudioEncoder } from './string-audio-encoder.js';
+        import { StringAudioDecoder } from './string-audio-decoder.js';
+
+        // Make available globally for Playwright
+        window.StringAudioEncoder = StringAudioEncoder;
+        window.StringAudioDecoder = StringAudioDecoder;
+
+        let passed = 0;
+        let failed = 0;
+        const resultsDiv = document.getElementById('results');
+
+        function logResult(name, success, error = null) {
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'pass' : 'fail'}`;
+            div.textContent = `${success ? '✓' : '✗'} ${name}`;
+            if (error) {
+                div.textContent += ` - ${error}`;
+            }
+            resultsDiv.appendChild(div);
+            if (success) passed++;
+            else failed++;
+        }
+
+        function test(name, fn) {
+            try {
+                fn();
+                logResult(name, true);
+            } catch (e) {
+                logResult(name, false, e.message);
+            }
+        }
+
+        function assert(condition, msg) {
+            if (!condition) throw new Error(msg || 'Assertion failed');
+        }
+
+        function assertEquals(a, b, msg) {
+            if (a !== b) throw new Error(msg || `Expected ${b}, got ${a}`);
+        }
+
+        async function runTests() {
+            passed = 0;
+            failed = 0;
+            resultsDiv.innerHTML = '';
+
+            // Encoder tests
+            test('StringAudioEncoder is defined', () => {
+                assert(typeof StringAudioEncoder !== 'undefined');
+            });
+
+            test('encode produces Float32Array', () => {
+                const samples = StringAudioEncoder.encode('test');
+                assert(samples instanceof Float32Array, 'Should be Float32Array');
+            });
+
+            test('encode produces samples in valid range', () => {
+                const samples = StringAudioEncoder.encode('hello');
+                let maxAbs = 0;
+                for (const s of samples) maxAbs = Math.max(maxAbs, Math.abs(s));
+                assert(maxAbs <= 1.0, 'Should be in [-1, 1]');
+            });
+
+            test('CRC16 is consistent', () => {
+                const data = new Uint8Array([1, 2, 3]);
+                const crc1 = StringAudioEncoder.crc16(data);
+                const crc2 = StringAudioEncoder.crc16(data);
+                assertEquals(crc1, crc2);
+            });
+
+            test('bytesToQuaternary roundtrip', () => {
+                const original = new Uint8Array([0xAB, 0xCD]);
+                const quad = StringAudioEncoder.bytesToQuaternary(original);
+                const restored = StringAudioEncoder.quaternaryToBytes(quad);
+                assertEquals(restored[0], original[0]);
+                assertEquals(restored[1], original[1]);
+            });
+
+            test('getStats returns duration', () => {
+                const stats = StringAudioEncoder.getStats('test');
+                assert(stats.durationMs > 0, 'Should have positive duration');
+            });
+
+            test('generateWav produces Blob', () => {
+                const wav = StringAudioEncoder.generateWav('test');
+                assert(wav instanceof Blob, 'Should be Blob');
+                assert(wav.size > 44, 'Should have content beyond header');
+            });
+
+            test('encode handles URL', () => {
+                const samples = StringAudioEncoder.encode('https://example.com');
+                assert(samples.length > 0);
+            });
+
+            test('encode handles UTF-8', () => {
+                const samples = StringAudioEncoder.encode('日本語');
+                assert(samples.length > 0);
+            });
+
+            // Decoder tests
+            test('StringAudioDecoder is defined', () => {
+                assert(typeof StringAudioDecoder !== 'undefined');
+            });
+
+            test('frequencyToSymbol maps correctly', () => {
+                assertEquals(StringAudioDecoder.frequencyToSymbol(16400), '0');
+                assertEquals(StringAudioDecoder.frequencyToSymbol(17000), '1');
+                assertEquals(StringAudioDecoder.frequencyToSymbol(17500), 'X');
+            });
+
+            // Web Audio API tests (if available)
+            if (typeof AudioContext !== 'undefined') {
+                test('generateAudioBuffer works with AudioContext', async () => {
+                    const ctx = new AudioContext();
+                    const buffer = StringAudioEncoder.generateAudioBuffer('test', ctx);
+                    assert(buffer instanceof AudioBuffer, 'Should be AudioBuffer');
+                    assert(buffer.length > 0, 'Should have samples');
+                    await ctx.close();
+                });
+            }
+
+            // Update summary
+            document.getElementById('summary').textContent =
+                `${passed} passed, ${failed} failed`;
+
+            // Signal completion for Playwright
+            window.testResults = { passed, failed, total: passed + failed };
+        }
+
+        document.getElementById('run-btn').addEventListener('click', runTests);
+
+        // Auto-run for Playwright
+        window.runTests = runTests;
+    </script>
+</body>
+</html>
