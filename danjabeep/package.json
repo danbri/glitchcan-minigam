@@ -1,0 +1,30 @@
+{
+  "name": "danjabeep",
+  "version": "1.0.0",
+  "description": "Audio string encoder/decoder using FSK (Frequency-Shift Keying)",
+  "type": "module",
+  "main": "string-audio-encoder.js",
+  "exports": {
+    ".": "./string-audio-encoder.js",
+    "./encoder": "./string-audio-encoder.js",
+    "./decoder": "./string-audio-decoder.js"
+  },
+  "scripts": {
+    "test": "node test-encoder.mjs",
+    "test:browser": "npx playwright test test-browser.spec.mjs",
+    "serve": "npx http-server -p 8080 .."
+  },
+  "keywords": [
+    "audio",
+    "fsk",
+    "encoding",
+    "ultrasonic",
+    "web-audio",
+    "string-encoding"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
