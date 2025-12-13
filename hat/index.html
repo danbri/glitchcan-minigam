@@ -418,10 +418,10 @@
 
             // Visualization settings
             this.settings = {
-                particleCount: 5000,
-                trailLength: 50,
-                speed: 1.0,
-                pointSize: 2.0,
+                particleCount: 8000,
+                trailLength: 80,
+                speed: 0.5,
+                pointSize: 3.0,
                 colorTheme: 'fire',
                 autoRotate: true,
                 showTrails: true
@@ -437,12 +437,12 @@
                 mono: [[0.88, 0.88, 0.88], [0.46, 0.46, 0.46]]
             };
 
-            // Camera
+            // Camera - zoom out to see the attractor
             this.camera = {
-                rotationX: 0.4,
+                rotationX: 0.3,
                 rotationY: 0.5,
-                distance: 25,
-                autoRotateSpeed: 0.002
+                distance: 80,
+                autoRotateSpeed: 0.003
             };
 
             // Particles with trails
@@ -746,10 +746,11 @@
             this.trails = [];
 
             for (let i = 0; i < this.settings.particleCount; i++) {
-                // Random initial positions near the attractor
-                const x = (Math.random() - 0.5) * 4;
-                const y = (Math.random() - 0.5) * 4;
-                const z = (Math.random() - 0.5) * 4;
+                // Start particles near the Hadley attractor's basin
+                // The attractor lives roughly around x≈1-3, y≈±1, z≈0-2
+                const x = 1 + Math.random() * 3;
+                const y = (Math.random() - 0.5) * 2;
+                const z = Math.random() * 3;
 
                 this.particles.push({ x, y, z });
                 this.trails.push([{ x, y, z, age: 0 }]);
@@ -959,11 +960,12 @@
                 p.y += (k1.dy + 2*k2.dy + 2*k3.dy + k4.dy) * speed / 6;
                 p.z += (k1.dz + 2*k2.dz + 2*k3.dz + k4.dz) * speed / 6;
 
-                // Reset if particle goes too far
-                if (Math.abs(p.x) > 20 || Math.abs(p.y) > 20 || Math.abs(p.z) > 20) {
-                    p.x = (Math.random() - 0.5) * 4;
-                    p.y = (Math.random() - 0.5) * 4;
-                    p.z = (Math.random() - 0.5) * 4;
+                // Reset if particle goes too far (escapes attractor basin)
+                if (Math.abs(p.x) > 30 || Math.abs(p.y) > 30 || Math.abs(p.z) > 30 ||
+                    isNaN(p.x) || isNaN(p.y) || isNaN(p.z)) {
+                    p.x = 1 + Math.random() * 3;
+                    p.y = (Math.random() - 0.5) * 2;
+                    p.z = Math.random() * 3;
                     this.trails[i] = [];
                 }
 
@@ -1130,16 +1132,19 @@
             const positions = [];
             const ages = [];
 
+            // Scale factor to bring attractor into view (attractor spans roughly -20 to 20)
+            const scale = 2.0;
+
             if (this.settings.showTrails) {
                 for (const trail of this.trails) {
                     for (const p of trail) {
-                        positions.push(p.x, p.y, p.z);
+                        positions.push(p.x * scale, p.y * scale, p.z * scale);
                         ages.push(p.age);
                     }
                 }
             } else {
                 for (const p of this.particles) {
-                    positions.push(p.x, p.y, p.z);
+                    positions.push(p.x * scale, p.y * scale, p.z * scale);
                     ages.push(0);
                 }
             }
@@ -1166,7 +1171,7 @@
             gl.uniformMatrix4fv(this.uViewProjection, false, new Float32Array(mvp));
 
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            gl.uniform1f(this.uPointSize, this.settings.pointSize * dpr * 5); // Much bigger points
+            gl.uniform1f(this.uPointSize, this.settings.pointSize * dpr * 2);
 
             const colors = this.colorThemes[this.settings.colorTheme];
             gl.uniform3fv(this.uColor1, colors[0]);
