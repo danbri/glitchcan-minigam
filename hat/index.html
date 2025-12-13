@@ -1166,11 +1166,22 @@
             gl.uniformMatrix4fv(this.uViewProjection, false, new Float32Array(mvp));
 
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            gl.uniform1f(this.uPointSize, this.settings.pointSize * dpr);
+            gl.uniform1f(this.uPointSize, this.settings.pointSize * dpr * 5); // Much bigger points
 
             const colors = this.colorThemes[this.settings.colorTheme];
             gl.uniform3fv(this.uColor1, colors[0]);
             gl.uniform3fv(this.uColor2, colors[1]);
+
+            // Debug: log first frame data
+            if (!this._logged) {
+                this._logged = true;
+                console.log('First render - positions sample:', positions.slice(0, 9));
+                console.log('MVP matrix:', mvp);
+                console.log('Point size:', this.settings.pointSize * dpr * 5);
+                console.log('Colors:', colors);
+                console.log('Attribute locations:', this.aPosition, this.aAge);
+                console.log('Drawing', positions.length / 3, 'points');
+            }
 
             // Draw
             gl.drawArrays(gl.POINTS, 0, positions.length / 3);
