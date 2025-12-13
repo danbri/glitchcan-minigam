@@ -508,6 +508,10 @@
         }
 
         async initWebGPU() {
+            // WebGPU point-list doesn't support variable point sizes
+            // Force WebGL for now which handles points better
+            return false;
+
             if (!navigator.gpu) return false;
 
             try {
