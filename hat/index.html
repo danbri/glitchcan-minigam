@@ -441,7 +441,7 @@
             this.camera = {
                 rotationX: 0.3,
                 rotationY: 0.5,
-                distance: 80,
+                distance: 200,
                 autoRotateSpeed: 0.003
             };
 
@@ -512,10 +512,6 @@
         }
 
         async initWebGPU() {
-            // WebGPU point-list doesn't support variable point sizes
-            // Force WebGL for now which handles points better
-            return false;
-
             if (!navigator.gpu) return false;
 
             try {
@@ -802,7 +798,7 @@
             canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 this.camera.distance *= 1 + e.deltaY * 0.001;
-                this.camera.distance = Math.max(10, Math.min(100, this.camera.distance));
+                this.camera.distance = Math.max(20, Math.min(500, this.camera.distance));
             }, { passive: false });
 
             // Touch controls
@@ -831,7 +827,7 @@
                     const newDistance = this.getTouchDistance(e.touches);
                     const scale = this.pinchDistance / newDistance;
                     this.camera.distance *= scale;
-                    this.camera.distance = Math.max(10, Math.min(100, this.camera.distance));
+                    this.camera.distance = Math.max(20, Math.min(500, this.camera.distance));
                     this.pinchDistance = newDistance;
                 }
             }, { passive: false });
