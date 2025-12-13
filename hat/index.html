@@ -494,6 +494,10 @@
             }
 
             this.initParticles();
+            console.log(`Initialized ${this.particles.length} particles`);
+            if (this.particles.length > 0) {
+                console.log('Sample particle:', this.particles[0]);
+            }
             this.setupControls();
             this.setupUI();
 
@@ -635,14 +639,24 @@
         }
 
         initWebGL() {
-            this.gl = this.canvas.getContext('webgl2') ||
-                      this.canvas.getContext('webgl') ||
-                      this.canvas.getContext('experimental-webgl');
+            const options = {
+                alpha: false,
+                antialias: true,
+                preserveDrawingBuffer: false,
+                powerPreference: 'high-performance'
+            };
+
+            this.gl = this.canvas.getContext('webgl2', options) ||
+                      this.canvas.getContext('webgl', options) ||
+                      this.canvas.getContext('experimental-webgl', options);
 
             if (!this.gl) {
                 alert('WebGL not supported');
                 return;
             }
+
+            console.log('WebGL version:', this.gl.getParameter(this.gl.VERSION));
+            console.log('WebGL renderer:', this.gl.getParameter(this.gl.RENDERER));
 
             const gl = this.gl;
 
@@ -744,12 +758,19 @@
 
         resize() {
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            this.canvas.width = window.innerWidth * dpr;
-            this.canvas.height = window.innerHeight * dpr;
+            const width = window.innerWidth * dpr;
+            const height = window.innerHeight * dpr;
+
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.canvas.style.width = window.innerWidth + 'px';
+            this.canvas.style.height = window.innerHeight + 'px';
 
             if (this.gl) {
-                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                this.gl.viewport(0, 0, width, height);
             }
+
+            console.log(`Canvas resized: ${width}x${height}, dpr: ${dpr}`);
         }
 
         setupControls() {
@@ -1097,10 +1118,13 @@
 
         renderWebGL() {
             const gl = this.gl;
-            if (!gl) return;
+            if (!gl || !this.program) return;
 
-            gl.clearColor(0.02, 0.02, 0.05, 1);
+            // Clear to dark blue (visible test)
+            gl.clearColor(0.05, 0.05, 0.15, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(this.program);
 
             // Collect points
             const positions = [];
@@ -1120,7 +1144,10 @@
                 }
             }
 
-            if (positions.length === 0) return;
+            if (positions.length === 0) {
+                console.warn('No positions to render');
+                return;
+            }
 
             // Upload position data
             gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
