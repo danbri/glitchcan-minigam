@@ -325,19 +325,19 @@
         <div class="settings-group">
             <div class="settings-label">
                 <span>Particle Count</span>
-                <span class="settings-value" id="particle-count-value">5000</span>
+                <span class="settings-value" id="particle-count-value">3000</span>
             </div>
             <input type="range" class="settings-slider" id="particle-count"
-                   min="1000" max="50000" value="5000" step="1000">
+                   min="500" max="10000" value="3000" step="500">
         </div>
 
         <div class="settings-group">
             <div class="settings-label">
                 <span>Trail Length</span>
-                <span class="settings-value" id="trail-length-value">50</span>
+                <span class="settings-value" id="trail-length-value">40</span>
             </div>
             <input type="range" class="settings-slider" id="trail-length"
-                   min="10" max="200" value="50" step="10">
+                   min="5" max="100" value="40" step="5">
         </div>
 
         <div class="settings-group">
@@ -352,10 +352,10 @@
         <div class="settings-group">
             <div class="settings-label">
                 <span>Point Size</span>
-                <span class="settings-value" id="point-size-value">2.0</span>
+                <span class="settings-value" id="point-size-value">4.0</span>
             </div>
             <input type="range" class="settings-slider" id="point-size"
-                   min="0.5" max="5" value="2" step="0.5">
+                   min="1" max="8" value="4" step="0.5">
         </div>
 
         <div class="settings-group">
@@ -418,13 +418,14 @@
 
             // Visualization settings
             this.settings = {
-                particleCount: 8000,
-                trailLength: 80,
-                speed: 0.5,
-                pointSize: 3.0,
+                particleCount: 3000,
+                trailLength: 40,
+                speed: 0.8,
+                pointSize: 4.0,
                 colorTheme: 'fire',
                 autoRotate: true,
-                showTrails: true
+                showTrails: true,
+                preferWebGL: true  // WebGL has better point rendering
             };
 
             // Color themes
@@ -467,28 +468,30 @@
             this.resize();
             window.addEventListener('resize', () => this.resize());
 
-            // Try WebGPU first, then fall back to WebGL
+            // Initialize renderer (WebGL preferred for better point rendering)
             let rendererReady = false;
 
+            // WebGL first - it has proper point size support
             try {
-                if (await this.initWebGPU()) {
-                    this.useWebGPU = true;
-                    document.getElementById('renderer-info').textContent = 'WebGPU';
-                    rendererReady = true;
-                    console.log('Using WebGPU renderer');
-                }
+                this.initWebGL();
+                document.getElementById('renderer-info').textContent = 'WebGL';
+                rendererReady = true;
+                console.log('Using WebGL renderer');
             } catch (e) {
-                console.warn('WebGPU failed:', e);
+                console.warn('WebGL failed:', e);
             }
 
+            // Fall back to WebGPU if WebGL fails
             if (!rendererReady) {
                 try {
-                    this.initWebGL();
-                    document.getElementById('renderer-info').textContent = 'WebGL';
-                    rendererReady = true;
-                    console.log('Using WebGL renderer');
+                    if (await this.initWebGPU()) {
+                        this.useWebGPU = true;
+                        document.getElementById('renderer-info').textContent = 'WebGPU';
+                        rendererReady = true;
+                        console.log('Using WebGPU renderer (1px points)');
+                    }
                 } catch (e) {
-                    console.error('WebGL failed:', e);
+                    console.error('WebGPU failed:', e);
                     document.getElementById('renderer-info').textContent = 'No renderer!';
                 }
             }
@@ -1172,17 +1175,6 @@
             const colors = this.colorThemes[this.settings.colorTheme];
             gl.uniform3fv(this.uColor1, colors[0]);
             gl.uniform3fv(this.uColor2, colors[1]);
-
-            // Debug: log first frame data
-            if (!this._logged) {
-                this._logged = true;
-                console.log('First render - positions sample:', positions.slice(0, 9));
-                console.log('MVP matrix:', mvp);
-                console.log('Point size:', this.settings.pointSize * dpr * 5);
-                console.log('Colors:', colors);
-                console.log('Attribute locations:', this.aPosition, this.aAge);
-                console.log('Drawing', positions.length / 3, 'points');
-            }
 
             // Draw
             gl.drawArrays(gl.POINTS, 0, positions.length / 3);
