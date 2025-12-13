@@ -439,9 +439,9 @@
 
             // Camera
             this.camera = {
-                rotationX: 0.3,
-                rotationY: 0,
-                distance: 30,
+                rotationX: 0.4,
+                rotationY: 0.5,
+                distance: 25,
                 autoRotateSpeed: 0.002
             };
 
@@ -458,6 +458,7 @@
             this.lastTime = 0;
             this.frameCount = 0;
             this.fps = 0;
+            this.fpsTime = 0;
 
             this.init();
         }
@@ -466,14 +467,30 @@
             this.resize();
             window.addEventListener('resize', () => this.resize());
 
-            // Try WebGPU first
-            if (await this.initWebGPU()) {
-                this.useWebGPU = true;
-                document.getElementById('renderer-info').textContent = 'WebGPU';
-            } else {
-                // Fall back to WebGL
-                this.initWebGL();
-                document.getElementById('renderer-info').textContent = 'WebGL';
+            // Try WebGPU first, then fall back to WebGL
+            let rendererReady = false;
+
+            try {
+                if (await this.initWebGPU()) {
+                    this.useWebGPU = true;
+                    document.getElementById('renderer-info').textContent = 'WebGPU';
+                    rendererReady = true;
+                    console.log('Using WebGPU renderer');
+                }
+            } catch (e) {
+                console.warn('WebGPU failed:', e);
+            }
+
+            if (!rendererReady) {
+                try {
+                    this.initWebGL();
+                    document.getElementById('renderer-info').textContent = 'WebGL';
+                    rendererReady = true;
+                    console.log('Using WebGL renderer');
+                } catch (e) {
+                    console.error('WebGL failed:', e);
+                    document.getElementById('renderer-info').textContent = 'No renderer!';
+                }
             }
 
             this.initParticles();
@@ -485,7 +502,9 @@
                 document.getElementById('loading').classList.add('hidden');
             }, 500);
 
-            this.animate();
+            if (rendererReady) {
+                this.animate();
+            }
         }
 
         async initWebGPU() {
@@ -666,16 +685,25 @@
             const vs = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(vs, vsSource);
             gl.compileShader(vs);
+            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+                console.error('Vertex shader error:', gl.getShaderInfoLog(vs));
+            }
 
             const fs = gl.createShader(gl.FRAGMENT_SHADER);
             gl.shaderSource(fs, fsSource);
             gl.compileShader(fs);
+            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+                console.error('Fragment shader error:', gl.getShaderInfoLog(fs));
+            }
 
             // Create program
             this.program = gl.createProgram();
             gl.attachShader(this.program, vs);
             gl.attachShader(this.program, fs);
             gl.linkProgram(this.program);
+            if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(this.program));
+            }
             gl.useProgram(this.program);
 
             // Get locations
@@ -1065,6 +1093,7 @@
 
         renderWebGL() {
             const gl = this.gl;
+            if (!gl) return;
 
             gl.clearColor(0.02, 0.02, 0.05, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1119,36 +1148,41 @@
         animate(currentTime = 0) {
             requestAnimationFrame((t) => this.animate(t));
 
-            const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
-            this.lastTime = currentTime;
+            try {
+                const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+                this.lastTime = currentTime;
 
-            // FPS counter
-            this.frameCount++;
-            if (currentTime - this.fpsTime > 1000) {
-                this.fps = this.frameCount;
-                this.frameCount = 0;
-                this.fpsTime = currentTime;
-                document.getElementById('fps-info').textContent = `${this.fps} FPS`;
-            }
+                // FPS counter
+                this.frameCount++;
+                if (currentTime - this.fpsTime > 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.fpsTime = currentTime;
+                    document.getElementById('fps-info').textContent = `${this.fps} FPS`;
+                }
 
-            // Auto rotate
-            if (this.settings.autoRotate && !this.isDragging) {
-                this.camera.rotationY += this.camera.autoRotateSpeed;
-            }
+                // Auto rotate
+                if (this.settings.autoRotate && !this.isDragging) {
+                    this.camera.rotationY += this.camera.autoRotateSpeed;
+                }
 
-            // Update physics
-            this.updateParticles(dt);
+                // Update physics
+                this.updateParticles(dt);
 
-            // Render
-            if (this.useWebGPU) {
-                this.renderWebGPU();
-            } else {
-                this.renderWebGL();
+                // Render
+                if (this.useWebGPU) {
+                    this.renderWebGPU();
+                } else {
+                    this.renderWebGL();
+                }
+            } catch (e) {
+                console.error('Render error:', e);
             }
         }
     }
 
     // Initialize
+    console.log('Hadley Attractor initializing...');
     window.attractor = new HadleyAttractor();
     </script>
 </body>
