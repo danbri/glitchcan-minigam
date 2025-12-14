@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxigraph + ImageSnippets SPARQL Demo</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --accent: #e94560;
+            --text-primary: #eee;
+            --text-secondary: #aaa;
+            --success: #4ade80;
+            --warning: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stats-panel {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        #query-input {
+            min-height: 150px;
+        }
+
+        #results-output {
+            min-height: 200px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #d63050;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: #1a4a80;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .example-btn {
+            text-align: left;
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        .example-btn:hover {
+            border-color: var(--accent);
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .status-loading {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .status-ready {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .status-error {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .stats-panel {
+                flex-direction: column;
+            }
+
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Oxigraph + ImageSnippets SPARQL Demo</h1>
+        <p class="subtitle">Client-side RDF store powered by WebAssembly</p>
+
+        <div id="status" class="status status-loading">
+            Initializing Oxigraph WASM...
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-label">Triples Loaded</div>
+                <div class="stat-value" id="triple-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Load Time</div>
+                <div class="stat-value" id="load-time">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Query Time</div>
+                <div class="stat-value" id="query-time">-</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Data Loading</div>
+            <div class="btn-row">
+                <button id="load-demo" class="btn-primary">Load Demo Data</button>
+                <button id="clear-data" class="btn-secondary">Clear Store</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Example Queries</div>
+            <div class="examples-grid">
+                <button class="btn-secondary example-btn" data-query="count">Count Triples</button>
+                <button class="btn-secondary example-btn" data-query="predicates">List Predicates</button>
+                <button class="btn-secondary example-btn" data-query="types">List Types</button>
+                <button class="btn-secondary example-btn" data-query="images">List Images</button>
+                <button class="btn-secondary example-btn" data-query="depicts">Depicts Relations</button>
+                <button class="btn-secondary example-btn" data-query="construct">CONSTRUCT Graph</button>
+                <button class="btn-secondary example-btn" data-query="ask">ASK Query</button>
+                <button class="btn-secondary example-btn" data-query="labels">Entity Labels</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">SPARQL Query</div>
+            <textarea id="query-input" placeholder="Enter your SPARQL query here...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10</textarea>
+            <div class="btn-row">
+                <button id="run-query" class="btn-primary">Run Query</button>
+                <button id="clear-query" class="btn-secondary">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Results</div>
+            <textarea id="results-output" readonly placeholder="Query results will appear here..."></textarea>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { Store } from './web.js';
+
+        let store = null;
+
+        // Example queries
+        const exampleQueries = {
+            count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
+
+            predicates: `SELECT DISTINCT ?p WHERE { ?s ?p ?o } ORDER BY ?p`,
+
+            types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT DISTINCT ?type WHERE { ?s rdf:type ?type }`,
+
+            images: `PREFIX lio: <http://imagesnippets.com/lio/>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+SELECT ?image ?title WHERE {
+    ?image a lio:Image .
+    OPTIONAL { ?image dc:title ?title }
+}`,
+
+            depicts: `PREFIX lio: <http://imagesnippets.com/lio/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?image ?entity ?label WHERE {
+    ?image lio:depicts ?entity .
+    OPTIONAL { ?entity rdfs:label ?label }
+}`,
+
+            construct: `PREFIX lio: <http://imagesnippets.com/lio/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+CONSTRUCT {
+    ?image lio:depicts ?entity .
+    ?image foaf:depiction ?url .
+}
+WHERE {
+    ?image lio:depicts ?entity .
+    OPTIONAL { ?image foaf:depiction ?url }
+}`,
+
+            ask: `PREFIX lio: <http://imagesnippets.com/lio/>
+ASK { ?s a lio:Image }`,
+
+            labels: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?entity ?label WHERE {
+    ?entity rdfs:label ?label
+} ORDER BY ?label`
+        };
+
+        // Demo Turtle data using ImageSnippets LIO ontology
+        const demoTurtle = `
+@prefix lio: <http://imagesnippets.com/lio/> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix dbr: <http://dbpedia.org/resource/> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Image 1: Eiffel Tower
+<http://imagesnippets.com/images/001> a lio:Image ;
+    dc:title "Eiffel Tower at Sunset" ;
+    dc:description "The iconic Eiffel Tower illuminated during golden hour" ;
+    lio:depicts dbr:Eiffel_Tower ;
+    lio:depicts dbr:Paris ;
+    foaf:depiction <https://example.com/images/eiffel_sunset.jpg> .
+
+dbr:Eiffel_Tower rdfs:label "Eiffel Tower"@en ;
+    rdfs:label "Tour Eiffel"@fr .
+
+dbr:Paris rdfs:label "Paris"@en .
+
+# Image 2: Great Wall of China
+<http://imagesnippets.com/images/002> a lio:Image ;
+    dc:title "Great Wall Morning Mist" ;
+    dc:description "The Great Wall of China emerging from morning fog" ;
+    lio:depicts dbr:Great_Wall_of_China ;
+    lio:depicts dbr:China ;
+    foaf:depiction <https://example.com/images/greatwall.jpg> .
+
+dbr:Great_Wall_of_China rdfs:label "Great Wall of China"@en .
+dbr:China rdfs:label "China"@en .
+
+# Image 3: Machu Picchu
+<http://imagesnippets.com/images/003> a lio:Image ;
+    dc:title "Machu Picchu Panorama" ;
+    dc:description "Ancient Incan citadel in the Andes mountains" ;
+    lio:depicts dbr:Machu_Picchu ;
+    lio:depicts wd:Q419 ;
+    foaf:depiction <https://example.com/images/machupicchu.jpg> .
+
+dbr:Machu_Picchu rdfs:label "Machu Picchu"@en .
+wd:Q419 rdfs:label "Peru"@en .
+
+# Image 4: Northern Lights
+<http://imagesnippets.com/images/004> a lio:Image ;
+    dc:title "Aurora Borealis Iceland" ;
+    dc:description "Spectacular northern lights dancing over Icelandic landscape" ;
+    lio:depicts dbr:Aurora ;
+    lio:depicts dbr:Iceland ;
+    foaf:depiction <https://example.com/images/aurora.jpg> .
+
+dbr:Aurora rdfs:label "Aurora Borealis"@en .
+dbr:Iceland rdfs:label "Iceland"@en .
+
+# Image 5: Taj Mahal
+<http://imagesnippets.com/images/005> a lio:Image ;
+    dc:title "Taj Mahal Reflection" ;
+    dc:description "The Taj Mahal reflected in its iconic pool" ;
+    lio:depicts dbr:Taj_Mahal ;
+    lio:depicts dbr:Agra ;
+    foaf:depiction <https://example.com/images/tajmahal.jpg> .
+
+dbr:Taj_Mahal rdfs:label "Taj Mahal"@en .
+dbr:Agra rdfs:label "Agra"@en .
+
+# Image 6: Grand Canyon
+<http://imagesnippets.com/images/006> a lio:Image ;
+    dc:title "Grand Canyon Sunrise" ;
+    dc:description "Layers of red rock illuminated at dawn" ;
+    lio:depicts dbr:Grand_Canyon ;
+    lio:depicts dbr:Arizona ;
+    foaf:depiction <https://example.com/images/grandcanyon.jpg> .
+
+dbr:Grand_Canyon rdfs:label "Grand Canyon"@en .
+dbr:Arizona rdfs:label "Arizona"@en .
+
+# Image 7: Colosseum
+<http://imagesnippets.com/images/007> a lio:Image ;
+    dc:title "Roman Colosseum" ;
+    dc:description "Ancient amphitheater in the heart of Rome" ;
+    lio:depicts dbr:Colosseum ;
+    lio:depicts dbr:Rome ;
+    foaf:depiction <https://example.com/images/colosseum.jpg> .
+
+dbr:Colosseum rdfs:label "Colosseum"@en .
+dbr:Rome rdfs:label "Rome"@en .
+
+# Image 8: Mount Fuji
+<http://imagesnippets.com/images/008> a lio:Image ;
+    dc:title "Mount Fuji Cherry Blossoms" ;
+    dc:description "Japan's iconic mountain framed by spring sakura" ;
+    lio:depicts dbr:Mount_Fuji ;
+    lio:depicts dbr:Cherry_blossom ;
+    foaf:depiction <https://example.com/images/fuji.jpg> .
+
+dbr:Mount_Fuji rdfs:label "Mount Fuji"@en ;
+    rdfs:label "Fujisan"@ja .
+dbr:Cherry_blossom rdfs:label "Cherry blossom"@en .
+
+# Image 9: Santorini
+<http://imagesnippets.com/images/009> a lio:Image ;
+    dc:title "Santorini Blue Domes" ;
+    dc:description "Iconic white buildings with blue domes overlooking the Aegean" ;
+    lio:depicts dbr:Santorini ;
+    lio:depicts dbr:Greece ;
+    foaf:depiction <https://example.com/images/santorini.jpg> .
+
+dbr:Santorini rdfs:label "Santorini"@en .
+dbr:Greece rdfs:label "Greece"@en .
+
+# Image 10: Victoria Falls
+<http://imagesnippets.com/images/010> a lio:Image ;
+    dc:title "Victoria Falls Rainbow" ;
+    dc:description "Massive waterfall with rainbow in the mist" ;
+    lio:depicts dbr:Victoria_Falls ;
+    lio:depicts dbr:Zambezi ;
+    foaf:depiction <https://example.com/images/victoria_falls.jpg> .
+
+dbr:Victoria_Falls rdfs:label "Victoria Falls"@en .
+dbr:Zambezi rdfs:label "Zambezi River"@en .
+`;
+
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const tripleCountEl = document.getElementById('triple-count');
+        const loadTimeEl = document.getElementById('load-time');
+        const queryTimeEl = document.getElementById('query-time');
+        const queryInput = document.getElementById('query-input');
+        const resultsOutput = document.getElementById('results-output');
+
+        function setStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = `status status-${type}`;
+        }
+
+        function updateTripleCount() {
+            if (!store) {
+                tripleCountEl.textContent = '0';
+                return;
+            }
+            const result = store.query('SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }');
+            for (const binding of result) {
+                tripleCountEl.textContent = binding.get('count').value;
+            }
+        }
+
+        function formatTerm(term) {
+            if (!term) return 'null';
+
+            if (term.termType === 'NamedNode') {
+                // Shorten common prefixes
+                const value = term.value;
+                if (value.startsWith('http://imagesnippets.com/lio/')) {
+                    return 'lio:' + value.substring(29);
+                }
+                if (value.startsWith('http://dbpedia.org/resource/')) {
+                    return 'dbr:' + value.substring(28);
+                }
+                if (value.startsWith('http://www.wikidata.org/entity/')) {
+                    return 'wd:' + value.substring(31);
+                }
+                if (value.startsWith('http://purl.org/dc/elements/1.1/')) {
+                    return 'dc:' + value.substring(32);
+                }
+                if (value.startsWith('http://xmlns.com/foaf/0.1/')) {
+                    return 'foaf:' + value.substring(26);
+                }
+                if (value.startsWith('http://www.w3.org/2000/01/rdf-schema#')) {
+                    return 'rdfs:' + value.substring(37);
+                }
+                if (value.startsWith('http://www.w3.org/1999/02/22-rdf-syntax-ns#')) {
+                    return 'rdf:' + value.substring(43);
+                }
+                if (value.startsWith('http://imagesnippets.com/images/')) {
+                    return '<img:' + value.substring(32) + '>';
+                }
+                return '<' + value + '>';
+            }
+
+            if (term.termType === 'Literal') {
+                let result = '"' + term.value + '"';
+                if (term.language) {
+                    result += '@' + term.language;
+                } else if (term.datatype && term.datatype.value !== 'http://www.w3.org/2001/XMLSchema#string') {
+                    result += '^^<' + term.datatype.value + '>';
+                }
+                return result;
+            }
+
+            if (term.termType === 'BlankNode') {
+                return '_:' + term.value;
+            }
+
+            return term.value || String(term);
+        }
+
+        function runQuery() {
+            if (!store) {
+                resultsOutput.value = 'Error: Store not initialized';
+                return;
+            }
+
+            const query = queryInput.value.trim();
+            if (!query) {
+                resultsOutput.value = 'Error: Please enter a query';
+                return;
+            }
+
+            const startTime = performance.now();
+
+            try {
+                const result = store.query(query);
+                const endTime = performance.now();
+                queryTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
+
+                // Check result type
+                if (typeof result === 'boolean') {
+                    // ASK query
+                    resultsOutput.value = `ASK Result: ${result}`;
+                } else if (result[Symbol.iterator]) {
+                    // SELECT or CONSTRUCT
+                    const items = [...result];
+
+                    if (items.length === 0) {
+                        resultsOutput.value = 'No results found.';
+                        return;
+                    }
+
+                    // Check if it's quads (CONSTRUCT) or bindings (SELECT)
+                    const firstItem = items[0];
+
+                    if (firstItem.subject !== undefined) {
+                        // CONSTRUCT query - returns quads
+                        let output = `CONSTRUCT Results (${items.length} triples):\n\n`;
+                        for (const quad of items) {
+                            output += `${formatTerm(quad.subject)} ${formatTerm(quad.predicate)} ${formatTerm(quad.object)} .\n`;
+                        }
+                        resultsOutput.value = output;
+                    } else if (firstItem.get) {
+                        // SELECT query - returns bindings
+                        // Get variable names from first binding
+                        const vars = [];
+                        for (const [key] of firstItem.entries()) {
+                            vars.push(key);
+                        }
+
+                        let output = `SELECT Results (${items.length} rows):\n`;
+                        output += `Variables: ${vars.map(v => '?' + v).join(', ')}\n\n`;
+
+                        for (let i = 0; i < items.length; i++) {
+                            const binding = items[i];
+                            output += `[${i + 1}] `;
+                            const values = vars.map(v => `?${v}=${formatTerm(binding.get(v))}`);
+                            output += values.join('  ') + '\n';
+                        }
+                        resultsOutput.value = output;
+                    } else {
+                        resultsOutput.value = 'Unknown result format: ' + JSON.stringify(firstItem);
+                    }
+                } else {
+                    resultsOutput.value = 'Result: ' + String(result);
+                }
+            } catch (error) {
+                queryTimeEl.textContent = '-';
+                resultsOutput.value = `Error: ${error.message || error}`;
+            }
+        }
+
+        function loadDemoData() {
+            if (!store) {
+                setStatus('Error: Store not initialized', 'error');
+                return;
+            }
+
+            const startTime = performance.now();
+
+            try {
+                store.load(demoTurtle, { format: 'text/turtle' });
+                const endTime = performance.now();
+
+                loadTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
+                updateTripleCount();
+                setStatus('Demo data loaded successfully!', 'ready');
+                resultsOutput.value = 'Demo data loaded. Try running some queries!';
+            } catch (error) {
+                setStatus('Error loading data: ' + error.message, 'error');
+                resultsOutput.value = 'Error: ' + error.message;
+            }
+        }
+
+        function clearStore() {
+            if (store) {
+                // Create a fresh store
+                store = new Store();
+                updateTripleCount();
+                loadTimeEl.textContent = '-';
+                queryTimeEl.textContent = '-';
+                resultsOutput.value = 'Store cleared.';
+                setStatus('Store cleared. Load data to begin.', 'ready');
+            }
+        }
+
+        // Initialize
+        async function initialize() {
+            try {
+                setStatus('Initializing Oxigraph WASM...', 'loading');
+                await init();
+                store = new Store();
+                setStatus('Oxigraph ready! Load demo data or enter a query.', 'ready');
+                updateTripleCount();
+            } catch (error) {
+                setStatus('Failed to initialize: ' + error.message, 'error');
+                console.error('Init error:', error);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('run-query').addEventListener('click', runQuery);
+        document.getElementById('load-demo').addEventListener('click', loadDemoData);
+        document.getElementById('clear-data').addEventListener('click', clearStore);
+        document.getElementById('clear-query').addEventListener('click', () => {
+            queryInput.value = '';
+            resultsOutput.value = '';
+        });
+
+        // Example query buttons
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const queryKey = btn.dataset.query;
+                if (exampleQueries[queryKey]) {
+                    queryInput.value = exampleQueries[queryKey];
+                }
+            });
+        });
+
+        // Allow Ctrl+Enter to run query
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                runQuery();
+            }
+        });
+
+        // Start initialization
+        initialize();
+    </script>
+</body>
+</html>
