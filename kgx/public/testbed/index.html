@@ -585,8 +585,7 @@
             try {
                 const session = await LanguageModel.create({
                     temperature: 0.3,
-                    topK: 5,
-                    expectedOutputLanguages: ['en']
+                    topK: 5
                 });
 
                 const BATCH_SIZE = 5;

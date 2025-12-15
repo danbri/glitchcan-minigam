@@ -2,20 +2,40 @@
 // Runs Chrome's local AI in a separate thread to keep UI responsive
 
 let session = null;
+let aiChecked = false;
+let aiReallyAvailable = false;
 
-// Check if LanguageModel is available in worker context
-const AI_AVAILABLE = typeof LanguageModel !== 'undefined';
+// Check if LanguageModel is REALLY available in worker context
+// (typeof check isn't enough - need to actually try using it)
+async function checkAIInWorker() {
+    if (aiChecked) return aiReallyAvailable;
+    aiChecked = true;
+
+    try {
+        if (typeof LanguageModel === 'undefined') {
+            console.log('Worker: LanguageModel is undefined');
+            return false;
+        }
+        // Actually try to call a method to verify it works
+        const avail = await LanguageModel.availability();
+        console.log('Worker: LanguageModel.availability() =', avail);
+        aiReallyAvailable = (avail === 'available' || avail === 'downloadable');
+        return aiReallyAvailable;
+    } catch (e) {
+        console.log('Worker: LanguageModel check failed:', e.message);
+        return false;
+    }
+}
 
 async function getSession() {
-    if (!AI_AVAILABLE) {
+    if (!aiReallyAvailable) {
         throw new Error('LanguageModel not available in Worker');
     }
     if (session) return session;
     try {
         session = await LanguageModel.create({
             temperature: 0.3,
-            topK: 5,
-            expectedOutputLanguages: ['en']
+            topK: 5
         });
         return session;
     } catch (e) {
@@ -58,16 +78,18 @@ self.onmessage = async function(e) {
 
     if (type === 'check') {
         // Check if AI is available in worker
+        const available = await checkAIInWorker();
         self.postMessage({
             type: 'availability',
-            status: AI_AVAILABLE ? 'available' : 'unavailable'
+            status: available ? 'available' : 'unavailable'
         });
         return;
     }
 
     if (type === 'generate') {
         // First check if AI is available in worker context
-        if (!AI_AVAILABLE) {
+        const available = await checkAIInWorker();
+        if (!available) {
             self.postMessage({
                 type: 'fallback',
                 reason: 'LanguageModel not available in Worker context'
