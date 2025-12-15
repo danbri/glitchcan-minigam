@@ -530,7 +530,8 @@
 
                         // Try to create worker for background processing
                         try {
-                            aiWorker = new Worker('./ai-worker.js');
+                            // Add cache-buster to ensure fresh worker code
+                            aiWorker = new Worker('./ai-worker.js?v=' + Date.now());
                             aiWorker.onmessage = handleWorkerMessage;
                             aiWorker.onerror = (e) => console.error('Worker error:', e);
                             console.log('AI Worker created for background processing');
