@@ -348,8 +348,9 @@
         <div class="controls-panel">
             <div class="btn-row">
                 <button id="load-50k" class="btn-primary btn-large">Load 50k Triples</button>
+                <button id="load-quads" class="btn-secondary">50k Quads</button>
                 <button id="load-10k" class="btn-secondary">Load 10k</button>
-                <button id="load-demo" class="btn-secondary">Demo Data</button>
+                <button id="load-demo" class="btn-secondary">Demo</button>
                 <button id="clear-data" class="btn-secondary">Clear</button>
             </div>
             <div class="search-box">
@@ -400,12 +401,14 @@
         // Local dataset paths (loaded from repo)
         const DATASET_50K = '../../../datasets/upstream/imagesnippets-50k.ttl';
         const DATASET_10K = '../../../datasets/upstream/imagesnippets-10k.ttl';
+        const DATASET_QUADS = '../../../datasets/upstream/imagesnippets-imgtag-50k.nq';
 
+        // Note: ImageSnippets uses http://schema.org/ (not https)
         const exampleQueries = {
             count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
             predicates: `SELECT DISTINCT ?p (COUNT(?s) AS ?n) WHERE { ?s ?p ?o } GROUP BY ?p ORDER BY DESC(?n) LIMIT 50`,
             types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nSELECT DISTINCT ?type (COUNT(?s) AS ?n) WHERE { ?s rdf:type ?type } GROUP BY ?type ORDER BY DESC(?n)`,
-            images: `PREFIX schema: <https://schema.org/>\nSELECT ?img ?name WHERE { ?img schema:name ?name } LIMIT 100`,
+            images: `PREFIX schema: <http://schema.org/>\nSELECT ?img ?name WHERE { ?img schema:name ?name } LIMIT 100`,
             depicts: `PREFIX lio: <https://w3id.org/lio/v1#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?img ?entity ?label WHERE { ?img lio:depicts ?entity . OPTIONAL { ?entity rdfs:label ?label } } LIMIT 100`
         };
 
@@ -432,12 +435,12 @@
                 const r = store.query('SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o }');
                 for (const b of r) tripleCountEl.textContent = b.get('c').value;
 
-                const ir = store.query(`PREFIX schema: <https://schema.org/> SELECT (COUNT(DISTINCT ?i) AS ?c) WHERE { ?i schema:name ?n }`);
+                const ir = store.query(`PREFIX schema: <http://schema.org/> SELECT (COUNT(DISTINCT ?i) AS ?c) WHERE { ?i schema:name ?n }`);
                 for (const b of ir) imageCountEl.textContent = b.get('c').value;
             } catch(e) { console.error(e); }
         }
 
-        async function loadDataset(url, label) {
+        async function loadDataset(url, label, format = 'text/turtle') {
             if (!store) return;
             setStatus(`Loading ${label}...`, 'loading');
             const start = performance.now();
@@ -448,14 +451,14 @@
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-                const turtle = await res.text();
-                console.log('Received turtle data, length:', turtle.length);
+                const data = await res.text();
+                console.log('Received data, length:', data.length);
 
-                if (!turtle || turtle.trim().length === 0) {
+                if (!data || data.trim().length === 0) {
                     throw new Error('Empty file');
                 }
 
-                store.load(turtle, { format: 'text/turtle' });
+                store.load(data, { format: format });
 
                 loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
                 updateStats();
@@ -467,8 +470,9 @@
             }
         }
 
-        function load50k() { loadDataset(DATASET_50K, '50k triples'); }
-        function load10k() { loadDataset(DATASET_10K, '10k triples'); }
+        function load50k() { loadDataset(DATASET_50K, '50k triples', 'text/turtle'); }
+        function load10k() { loadDataset(DATASET_10K, '10k triples', 'text/turtle'); }
+        function loadQuads() { loadDataset(DATASET_QUADS, '50k quads', 'application/n-quads'); }
 
         async function loadDemoData() {
             if (!store) return;
@@ -508,7 +512,7 @@
             if (searchTerm) {
                 // Search by name or depicts label
                 sparql = `
-                    PREFIX schema: <https://schema.org/>
+                    PREFIX schema: <http://schema.org/>
                     PREFIX lio: <https://w3id.org/lio/v1#>
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                     SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
@@ -526,7 +530,7 @@
                 `;
             } else {
                 sparql = `
-                    PREFIX schema: <https://schema.org/>
+                    PREFIX schema: <http://schema.org/>
                     SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
                         ?img schema:name ?name .
                         OPTIONAL { ?img schema:thumbnail ?thumb }
@@ -672,6 +676,7 @@
 
         // Event listeners
         document.getElementById('load-50k').onclick = load50k;
+        document.getElementById('load-quads').onclick = loadQuads;
         document.getElementById('load-10k').onclick = load10k;
         document.getElementById('load-demo').onclick = loadDemoData;
         document.getElementById('clear-data').onclick = clearStore;
