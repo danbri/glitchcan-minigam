@@ -813,22 +813,30 @@ dbr:Agriculture rdfs:label "Agriculture"@en .
             }
         }
 
-        function loadDemoData() {
+        async function loadDemoData() {
             if (!store) {
                 setStatus('Error: Store not initialized', 'error');
                 return;
             }
+            setStatus('Loading demo images...', 'loading');
             const startTime = performance.now();
             try {
-                store.load(demoTurtle, { format: 'text/turtle' });
+                // Fetch local TTL file with 20 demo images
+                const response = await fetch('./demo-data.ttl');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const turtle = await response.text();
+                store.load(turtle, { format: 'text/turtle' });
                 const endTime = performance.now();
                 loadTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
                 updateTripleCount();
                 galleryPanel.classList.add('visible');
-                setStatus('Sample data loaded!', 'ready');
-                resultsOutput.value = 'Sample data loaded. Try browsing images!';
+                setStatus('Demo data loaded! (20 images)', 'ready');
+                resultsOutput.value = 'Demo data loaded with 20 sample images. Click "Browse All Images" to view!';
+                // Auto-browse images
+                browseImages();
             } catch (error) {
                 setStatus('Error: ' + error.message, 'error');
+                resultsOutput.value = 'Error loading demo data: ' + error.message;
             }
         }
 

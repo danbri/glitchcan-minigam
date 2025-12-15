@@ -1,0 +1,241 @@
+@prefix schema: <https://schema.org/> .
+@prefix lio: <https://w3id.org/lio/v1#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dbr: <http://dbpedia.org/resource/> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+
+# === LANDMARKS ===
+
+<http://demo.imagesnippets.com/image/eiffel-tower> a schema:ImageObject ;
+    schema:name "Eiffel Tower at Sunset"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/256px-Tour_Eiffel_Wikimedia_Commons.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg> ;
+    lio:depicts dbr:Eiffel_Tower ;
+    lio:depicts dbr:Paris .
+
+dbr:Eiffel_Tower rdfs:label "Eiffel Tower"@en .
+dbr:Paris rdfs:label "Paris"@en .
+
+<http://demo.imagesnippets.com/image/tower-of-london> a schema:ImageObject ;
+    schema:name "Tower of London"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg/320px-Tower_of_London_viewed_from_the_River_Thames.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg> ;
+    lio:depicts dbr:Tower_of_London ;
+    lio:depicts dbr:London .
+
+dbr:Tower_of_London rdfs:label "Tower of London"@en .
+dbr:London rdfs:label "London"@en .
+
+<http://demo.imagesnippets.com/image/colosseum> a schema:ImageObject ;
+    schema:name "Roman Colosseum"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/320px-Colosseo_2020.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/d/de/Colosseo_2020.jpg> ;
+    lio:depicts dbr:Colosseum ;
+    lio:depicts dbr:Rome .
+
+dbr:Colosseum rdfs:label "Colosseum"@en .
+dbr:Rome rdfs:label "Rome"@en .
+
+<http://demo.imagesnippets.com/image/taj-mahal> a schema:ImageObject ;
+    schema:name "Taj Mahal at Dawn"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Taj_Mahal%2C_Agra%2C_India_edit3.jpg/320px-Taj_Mahal%2C_Agra%2C_India_edit3.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/b/bd/Taj_Mahal%2C_Agra%2C_India_edit3.jpg> ;
+    lio:depicts dbr:Taj_Mahal ;
+    lio:depicts dbr:Agra .
+
+dbr:Taj_Mahal rdfs:label "Taj Mahal"@en .
+dbr:Agra rdfs:label "Agra"@en .
+
+<http://demo.imagesnippets.com/image/machu-picchu> a schema:ImageObject ;
+    schema:name "Machu Picchu Panorama"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/320px-Machu_Picchu%2C_Peru.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/e/eb/Machu_Picchu%2C_Peru.jpg> ;
+    lio:depicts dbr:Machu_Picchu ;
+    lio:depicts dbr:Peru .
+
+dbr:Machu_Picchu rdfs:label "Machu Picchu"@en .
+dbr:Peru rdfs:label "Peru"@en .
+
+<http://demo.imagesnippets.com/image/great-wall> a schema:ImageObject ;
+    schema:name "Great Wall of China"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/The_Great_Wall_of_China_at_Jinshanling-edit.jpg/320px-The_Great_Wall_of_China_at_Jinshanling-edit.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/2/23/The_Great_Wall_of_China_at_Jinshanling-edit.jpg> ;
+    lio:depicts dbr:Great_Wall_of_China ;
+    lio:depicts dbr:China .
+
+dbr:Great_Wall_of_China rdfs:label "Great Wall of China"@en .
+dbr:China rdfs:label "China"@en .
+
+<http://demo.imagesnippets.com/image/statue-liberty> a schema:ImageObject ;
+    schema:name "Statue of Liberty"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Statue_of_Liberty_7.jpg/213px-Statue_of_Liberty_7.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a1/Statue_of_Liberty_7.jpg> ;
+    lio:depicts dbr:Statue_of_Liberty ;
+    lio:depicts dbr:New_York_City .
+
+dbr:Statue_of_Liberty rdfs:label "Statue of Liberty"@en .
+dbr:New_York_City rdfs:label "New York City"@en .
+
+<http://demo.imagesnippets.com/image/sydney-opera> a schema:ImageObject ;
+    schema:name "Sydney Opera House"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Sydney_Australia._%2821339175489%29.jpg/320px-Sydney_Australia._%2821339175489%29.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a0/Sydney_Australia._%2821339175489%29.jpg> ;
+    lio:depicts dbr:Sydney_Opera_House ;
+    lio:depicts dbr:Sydney .
+
+dbr:Sydney_Opera_House rdfs:label "Sydney Opera House"@en .
+dbr:Sydney rdfs:label "Sydney"@en .
+
+# === NATURE ===
+
+<http://demo.imagesnippets.com/image/red-fox> a schema:ImageObject ;
+    schema:name "Red Fox in Snow"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Vulpes_vulpes_laying_in_snow.jpg/320px-Vulpes_vulpes_laying_in_snow.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1f/Vulpes_vulpes_laying_in_snow.jpg> ;
+    lio:depicts dbr:Red_fox ;
+    lio:depicts dbr:Snow .
+
+dbr:Red_fox rdfs:label "Red Fox"@en .
+dbr:Snow rdfs:label "Snow"@en .
+
+<http://demo.imagesnippets.com/image/african-elephant> a schema:ImageObject ;
+    schema:name "African Elephant"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/African_Bush_Elephant.jpg/320px-African_Bush_Elephant.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg> ;
+    lio:depicts dbr:African_elephant ;
+    lio:depicts dbr:Savanna .
+
+dbr:African_elephant rdfs:label "African Elephant"@en .
+dbr:Savanna rdfs:label "Savanna"@en .
+
+<http://demo.imagesnippets.com/image/bald-eagle> a schema:ImageObject ;
+    schema:name "Bald Eagle in Flight"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/About_to_Launch_%2826075320352%29.jpg/320px-About_to_Launch_%2826075320352%29.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1a/About_to_Launch_%2826075320352%29.jpg> ;
+    lio:depicts dbr:Bald_eagle ;
+    lio:depicts dbr:Bird_of_prey .
+
+dbr:Bald_eagle rdfs:label "Bald Eagle"@en .
+dbr:Bird_of_prey rdfs:label "Bird of Prey"@en .
+
+<http://demo.imagesnippets.com/image/giant-panda> a schema:ImageObject ;
+    schema:name "Giant Panda"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Grosser_Panda.JPG/320px-Grosser_Panda.JPG> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/0/0f/Grosser_Panda.JPG> ;
+    lio:depicts dbr:Giant_panda ;
+    lio:depicts dbr:Bamboo .
+
+dbr:Giant_panda rdfs:label "Giant Panda"@en .
+dbr:Bamboo rdfs:label "Bamboo"@en .
+
+<http://demo.imagesnippets.com/image/aurora> a schema:ImageObject ;
+    schema:name "Northern Lights over Iceland"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Polarlicht_2.jpg/320px-Polarlicht_2.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/aa/Polarlicht_2.jpg> ;
+    lio:depicts dbr:Aurora ;
+    lio:depicts dbr:Iceland .
+
+dbr:Aurora rdfs:label "Aurora Borealis"@en .
+dbr:Iceland rdfs:label "Iceland"@en .
+
+<http://demo.imagesnippets.com/image/grand-canyon> a schema:ImageObject ;
+    schema:name "Grand Canyon at Sunrise"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Dawn_on_the_S_rim_of_the_Grand_Canyon_%288645178272%29.jpg/320px-Dawn_on_the_S_rim_of_the_Grand_Canyon_%288645178272%29.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/aa/Dawn_on_the_S_rim_of_the_Grand_Canyon_%288645178272%29.jpg> ;
+    lio:depicts dbr:Grand_Canyon ;
+    lio:depicts dbr:Arizona .
+
+dbr:Grand_Canyon rdfs:label "Grand Canyon"@en .
+dbr:Arizona rdfs:label "Arizona"@en .
+
+# === PEOPLE & CULTURE ===
+
+<http://demo.imagesnippets.com/image/concert> a schema:ImageObject ;
+    schema:name "Rock Concert Crowd"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Metalmania_2008_Megadeth_02.jpg/320px-Metalmania_2008_Megadeth_02.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a8/Metalmania_2008_Megadeth_02.jpg> ;
+    lio:depicts dbr:Concert ;
+    lio:depicts dbr:Crowd .
+
+dbr:Concert rdfs:label "Concert"@en .
+dbr:Crowd rdfs:label "Crowd"@en .
+
+<http://demo.imagesnippets.com/image/bicycle> a schema:ImageObject ;
+    schema:name "Vintage Bicycle"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Велосипед.jpg/320px-Велосипед.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/9/9c/Велосипед.jpg> ;
+    lio:depicts dbr:Bicycle ;
+    lio:depicts dbr:Vintage .
+
+dbr:Bicycle rdfs:label "Bicycle"@en .
+dbr:Vintage rdfs:label "Vintage"@en .
+
+<http://demo.imagesnippets.com/image/tractor> a schema:ImageObject ;
+    schema:name "Farm Tractor"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/John_Deere_4020_tractor.jpg/320px-John_Deere_4020_tractor.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/8/8e/John_Deere_4020_tractor.jpg> ;
+    lio:depicts dbr:Tractor ;
+    lio:depicts dbr:Agriculture .
+
+dbr:Tractor rdfs:label "Tractor"@en .
+dbr:Agriculture rdfs:label "Agriculture"@en .
+
+<http://demo.imagesnippets.com/image/mt-fuji> a schema:ImageObject ;
+    schema:name "Mount Fuji with Cherry Blossoms"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/080103_hakridge_fuji.jpg/320px-080103_hakridge_fuji.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1b/080103_hakridge_fuji.jpg> ;
+    lio:depicts dbr:Mount_Fuji ;
+    lio:depicts dbr:Cherry_blossom .
+
+dbr:Mount_Fuji rdfs:label "Mount Fuji"@en .
+dbr:Cherry_blossom rdfs:label "Cherry Blossom"@en .
+
+<http://demo.imagesnippets.com/image/santorini> a schema:ImageObject ;
+    schema:name "Santorini Blue Domes"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Santorini_HDR_sunset.jpg/320px-Santorini_HDR_sunset.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/3/3e/Santorini_HDR_sunset.jpg> ;
+    lio:depicts dbr:Santorini ;
+    lio:depicts dbr:Greece .
+
+dbr:Santorini rdfs:label "Santorini"@en .
+dbr:Greece rdfs:label "Greece"@en .
+
+<http://demo.imagesnippets.com/image/venice> a schema:ImageObject ;
+    schema:name "Venice Grand Canal"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Venice_-_Grand_Canal.jpg/320px-Venice_-_Grand_Canal.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/2/26/Venice_-_Grand_Canal.jpg> ;
+    lio:depicts dbr:Venice ;
+    lio:depicts dbr:Grand_Canal_(Venice) .
+
+dbr:Venice rdfs:label "Venice"@en .
+dbr:Grand_Canal_(Venice) rdfs:label "Grand Canal"@en .
+
+<http://demo.imagesnippets.com/image/petra> a schema:ImageObject ;
+    schema:name "Petra Treasury"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/The_Monastery%2C_Petra%2C_Jordan8.jpg/214px-The_Monastery%2C_Petra%2C_Jordan8.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1d/The_Monastery%2C_Petra%2C_Jordan8.jpg> ;
+    lio:depicts dbr:Petra ;
+    lio:depicts dbr:Jordan .
+
+dbr:Petra rdfs:label "Petra"@en .
+dbr:Jordan rdfs:label "Jordan"@en .
+
+<http://demo.imagesnippets.com/image/angkor-wat> a schema:ImageObject ;
+    schema:name "Angkor Wat Temple"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Ankor_Wat_temple.jpg/320px-Ankor_Wat_temple.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/4/44/Ankor_Wat_temple.jpg> ;
+    lio:depicts dbr:Angkor_Wat ;
+    lio:depicts dbr:Cambodia .
+
+dbr:Angkor_Wat rdfs:label "Angkor Wat"@en .
+dbr:Cambodia rdfs:label "Cambodia"@en .
+
+<http://demo.imagesnippets.com/image/stonehenge> a schema:ImageObject ;
+    schema:name "Stonehenge at Dusk"@en ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Stonehenge2007_07_30.jpg/320px-Stonehenge2007_07_30.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/3/3c/Stonehenge2007_07_30.jpg> ;
+    lio:depicts dbr:Stonehenge ;
+    lio:depicts dbr:England .
+
+dbr:Stonehenge rdfs:label "Stonehenge"@en .
+dbr:England rdfs:label "England"@en .
