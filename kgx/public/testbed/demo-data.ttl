@@ -1,0 +1,190 @@
+@prefix schema: <https://schema.org/> .
+@prefix lio: <https://w3id.org/lio/v1#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dbr: <http://dbpedia.org/resource/> .
+
+# === LANDMARKS (using reliable Picsum + verified URLs) ===
+
+<http://demo.imagesnippets.com/image/eiffel-tower> a schema:ImageObject ;
+    schema:name "Eiffel Tower at Sunset"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1511739001486-6bfe10ce65f4?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1511739001486-6bfe10ce65f4?w=800> ;
+    lio:depicts dbr:Eiffel_Tower ;
+    lio:depicts dbr:Paris .
+
+dbr:Eiffel_Tower rdfs:label "Eiffel Tower"@en .
+dbr:Paris rdfs:label "Paris"@en .
+
+<http://demo.imagesnippets.com/image/tower-bridge> a schema:ImageObject ;
+    schema:name "Tower Bridge London"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800> ;
+    lio:depicts dbr:Tower_Bridge ;
+    lio:depicts dbr:London .
+
+dbr:Tower_Bridge rdfs:label "Tower Bridge"@en .
+dbr:London rdfs:label "London"@en .
+
+<http://demo.imagesnippets.com/image/colosseum> a schema:ImageObject ;
+    schema:name "Roman Colosseum"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800> ;
+    lio:depicts dbr:Colosseum ;
+    lio:depicts dbr:Rome .
+
+dbr:Colosseum rdfs:label "Colosseum"@en .
+dbr:Rome rdfs:label "Rome"@en .
+
+<http://demo.imagesnippets.com/image/taj-mahal> a schema:ImageObject ;
+    schema:name "Taj Mahal at Dawn"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1564507592333-c60657eea523?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800> ;
+    lio:depicts dbr:Taj_Mahal ;
+    lio:depicts dbr:India .
+
+dbr:Taj_Mahal rdfs:label "Taj Mahal"@en .
+dbr:India rdfs:label "India"@en .
+
+<http://demo.imagesnippets.com/image/machu-picchu> a schema:ImageObject ;
+    schema:name "Machu Picchu"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800> ;
+    lio:depicts dbr:Machu_Picchu ;
+    lio:depicts dbr:Peru .
+
+dbr:Machu_Picchu rdfs:label "Machu Picchu"@en .
+dbr:Peru rdfs:label "Peru"@en .
+
+<http://demo.imagesnippets.com/image/great-wall> a schema:ImageObject ;
+    schema:name "Great Wall of China"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800> ;
+    lio:depicts dbr:Great_Wall_of_China ;
+    lio:depicts dbr:China .
+
+dbr:Great_Wall_of_China rdfs:label "Great Wall of China"@en .
+dbr:China rdfs:label "China"@en .
+
+<http://demo.imagesnippets.com/image/statue-liberty> a schema:ImageObject ;
+    schema:name "Statue of Liberty"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800> ;
+    lio:depicts dbr:Statue_of_Liberty ;
+    lio:depicts dbr:New_York_City .
+
+dbr:Statue_of_Liberty rdfs:label "Statue of Liberty"@en .
+dbr:New_York_City rdfs:label "New York City"@en .
+
+<http://demo.imagesnippets.com/image/sydney-opera> a schema:ImageObject ;
+    schema:name "Sydney Opera House"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1524293581917-878a6d017c71?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1524293581917-878a6d017c71?w=800> ;
+    lio:depicts dbr:Sydney_Opera_House ;
+    lio:depicts dbr:Sydney .
+
+dbr:Sydney_Opera_House rdfs:label "Sydney Opera House"@en .
+dbr:Sydney rdfs:label "Sydney"@en .
+
+# === NATURE ===
+
+<http://demo.imagesnippets.com/image/red-fox> a schema:ImageObject ;
+    schema:name "Red Fox"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=800> ;
+    lio:depicts dbr:Red_fox ;
+    lio:depicts dbr:Wildlife .
+
+dbr:Red_fox rdfs:label "Red Fox"@en .
+dbr:Wildlife rdfs:label "Wildlife"@en .
+
+<http://demo.imagesnippets.com/image/african-elephant> a schema:ImageObject ;
+    schema:name "African Elephant"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=800> ;
+    lio:depicts dbr:African_elephant ;
+    lio:depicts dbr:Savanna .
+
+dbr:African_elephant rdfs:label "African Elephant"@en .
+dbr:Savanna rdfs:label "Savanna"@en .
+
+<http://demo.imagesnippets.com/image/bald-eagle> a schema:ImageObject ;
+    schema:name "Bald Eagle"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1611689342806-0863700ce1e4?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1611689342806-0863700ce1e4?w=800> ;
+    lio:depicts dbr:Bald_eagle ;
+    lio:depicts dbr:Bird_of_prey .
+
+dbr:Bald_eagle rdfs:label "Bald Eagle"@en .
+dbr:Bird_of_prey rdfs:label "Bird of Prey"@en .
+
+<http://demo.imagesnippets.com/image/giant-panda> a schema:ImageObject ;
+    schema:name "Giant Panda"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=800> ;
+    lio:depicts dbr:Giant_panda ;
+    lio:depicts dbr:Bamboo .
+
+dbr:Giant_panda rdfs:label "Giant Panda"@en .
+dbr:Bamboo rdfs:label "Bamboo"@en .
+
+<http://demo.imagesnippets.com/image/aurora> a schema:ImageObject ;
+    schema:name "Northern Lights"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=800> ;
+    lio:depicts dbr:Aurora ;
+    lio:depicts dbr:Iceland .
+
+dbr:Aurora rdfs:label "Aurora Borealis"@en .
+dbr:Iceland rdfs:label "Iceland"@en .
+
+<http://demo.imagesnippets.com/image/grand-canyon> a schema:ImageObject ;
+    schema:name "Grand Canyon"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=800> ;
+    lio:depicts dbr:Grand_Canyon ;
+    lio:depicts dbr:Arizona .
+
+dbr:Grand_Canyon rdfs:label "Grand Canyon"@en .
+dbr:Arizona rdfs:label "Arizona"@en .
+
+# === CITIES & CULTURE ===
+
+<http://demo.imagesnippets.com/image/tokyo> a schema:ImageObject ;
+    schema:name "Tokyo at Night"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800> ;
+    lio:depicts dbr:Tokyo ;
+    lio:depicts dbr:Japan .
+
+dbr:Tokyo rdfs:label "Tokyo"@en .
+dbr:Japan rdfs:label "Japan"@en .
+
+<http://demo.imagesnippets.com/image/venice> a schema:ImageObject ;
+    schema:name "Venice Canal"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1514890547357-a9ee288728e0?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1514890547357-a9ee288728e0?w=800> ;
+    lio:depicts dbr:Venice ;
+    lio:depicts dbr:Italy .
+
+dbr:Venice rdfs:label "Venice"@en .
+dbr:Italy rdfs:label "Italy"@en .
+
+<http://demo.imagesnippets.com/image/santorini> a schema:ImageObject ;
+    schema:name "Santorini Blue Domes"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800> ;
+    lio:depicts dbr:Santorini ;
+    lio:depicts dbr:Greece .
+
+dbr:Santorini rdfs:label "Santorini"@en .
+dbr:Greece rdfs:label "Greece"@en .
+
+<http://demo.imagesnippets.com/image/dubai> a schema:ImageObject ;
+    schema:name "Dubai Skyline"@en ;
+    schema:thumbnail <https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800> ;
+    lio:depicts dbr:Dubai ;
+    lio:depicts dbr:Burj_Khalifa .
+
+dbr:Dubai rdfs:label "Dubai"@en .
+dbr:Burj_Khalifa rdfs:label "Burj Khalifa"@en .
