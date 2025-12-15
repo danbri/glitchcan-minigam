@@ -548,7 +548,7 @@
 
         // Handle messages from AI worker
         function handleWorkerMessage(e) {
-            const { type, processed, total, keywords, results, totalKeywords, error } = e.data;
+            const { type, processed, total, keywords, results, totalKeywords, error, reason } = e.data;
 
             if (type === 'progress') {
                 aiProgress.textContent = `Processing ${processed}/${total} images... (${keywords} keywords)`;
@@ -561,10 +561,81 @@
                 aiEnhanceBtn.disabled = false;
                 aiEnhanceBtn.textContent = 'Generate Keywords';
                 updateStats();
+            } else if (type === 'fallback') {
+                // Worker can't use AI, fall back to main thread
+                console.log('Worker fallback:', reason);
+                aiWorker = null; // Don't use worker anymore
+                runAIOnMainThread();
             } else if (type === 'error') {
                 aiProgress.textContent = 'Error: ' + error;
                 aiEnhanceBtn.disabled = false;
                 aiEnhanceBtn.textContent = 'Generate Keywords';
+            }
+        }
+
+        // Pending metadata for main thread fallback
+        let pendingMetadata = null;
+
+        // Run AI on main thread with yielding to keep UI responsive
+        async function runAIOnMainThread() {
+            if (!pendingMetadata || pendingMetadata.length === 0) return;
+
+            console.log('Running AI on main thread with yielding');
+            try {
+                const session = await LanguageModel.create({
+                    temperature: 0.3,
+                    topK: 5,
+                    expectedOutputLanguages: ['en']
+                });
+
+                const BATCH_SIZE = 5;
+                let processed = 0;
+                let totalKeywords = 0;
+
+                for (let i = 0; i < pendingMetadata.length; i += BATCH_SIZE) {
+                    const batch = pendingMetadata.slice(i, i + BATCH_SIZE);
+                    aiProgress.textContent = `Processing ${processed}/${pendingMetadata.length}... (${totalKeywords} keywords)`;
+
+                    // Yield to event loop to keep UI responsive
+                    await new Promise(r => setTimeout(r, 0));
+
+                    const prompt = `For each image, generate 3-5 search keywords. Return JSON array only.\n\n${batch.map((img, j) => `${j+1}. "${img.name}"`).join('\n')}\n\nReturn: [{"keywords": ["word1", "word2"]}] for each.`;
+
+                    try {
+                        const response = await session.prompt(prompt);
+                        const jsonMatch = response.match(/\[[\s\S]*?\]/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            const results = batch.map((img, j) => ({
+                                uri: img.uri,
+                                keywords: parsed[j]?.keywords || []
+                            }));
+                            storeKeywordsInGraph(results);
+                            totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                        }
+                    } catch (e) {
+                        console.error('Batch error:', e);
+                    }
+
+                    processed += batch.length;
+
+                    // Yield and delay between batches
+                    await new Promise(r => setTimeout(r, 300));
+                }
+
+                aiKeywordsGenerated = true;
+                aiSearchToggle.checked = true;
+                aiSearchLabel.style.display = 'inline';
+                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${pendingMetadata.length} images`;
+                updateStats();
+
+            } catch (e) {
+                console.error('AI generation error:', e);
+                aiProgress.textContent = 'Error: ' + e.message;
+            } finally {
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
+                pendingMetadata = null;
             }
         }
 
@@ -629,64 +700,17 @@
             aiEnhanceBtn.textContent = 'Processing...';
             aiProgress.textContent = `Starting... (${metadata.length} images)`;
 
-            // Use worker if available
+            // Save metadata for potential fallback
+            pendingMetadata = metadata;
+
+            // Try worker first (will fallback if LanguageModel not available in worker)
             if (aiWorker) {
                 aiWorker.postMessage({ type: 'generate', metadata });
                 return;
             }
 
-            // Fallback: run on main thread (may block UI)
-            console.log('Running AI on main thread (no worker)');
-            try {
-                const session = await LanguageModel.create({
-                    temperature: 0.3,
-                    topK: 5,
-                    expectedOutputLanguages: ['en']
-                });
-
-                const BATCH_SIZE = 5;
-                let processed = 0;
-                let totalKeywords = 0;
-
-                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
-                    const batch = metadata.slice(i, i + BATCH_SIZE);
-                    aiProgress.textContent = `Processing ${processed}/${metadata.length}... (${totalKeywords} keywords)`;
-
-                    const prompt = `For each image, generate 3-5 search keywords. Return JSON array only.\n\n${batch.map((img, j) => `${j+1}. "${img.name}"`).join('\n')}\n\nReturn: [{"keywords": ["word1", "word2"]}] for each.`;
-
-                    try {
-                        const response = await session.prompt(prompt);
-                        const jsonMatch = response.match(/\[[\s\S]*?\]/);
-                        if (jsonMatch) {
-                            const parsed = JSON.parse(jsonMatch[0]);
-                            const results = batch.map((img, j) => ({
-                                uri: img.uri,
-                                keywords: parsed[j]?.keywords || []
-                            }));
-                            storeKeywordsInGraph(results);
-                            totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
-                        }
-                    } catch (e) {
-                        console.error('Batch error:', e);
-                    }
-
-                    processed += batch.length;
-                    await new Promise(r => setTimeout(r, 500));
-                }
-
-                aiKeywordsGenerated = true;
-                aiSearchToggle.checked = true;
-                aiSearchLabel.style.display = 'inline';
-                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${metadata.length} images`;
-                updateStats();
-
-            } catch (e) {
-                console.error('AI generation error:', e);
-                aiProgress.textContent = 'Error: ' + e.message;
-            } finally {
-                aiEnhanceBtn.disabled = false;
-                aiEnhanceBtn.textContent = 'Generate Keywords';
-            }
+            // No worker, run directly on main thread with yielding
+            runAIOnMainThread();
         }
 
         // Enhanced search that includes AI keywords

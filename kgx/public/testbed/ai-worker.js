@@ -3,7 +3,13 @@
 
 let session = null;
 
+// Check if LanguageModel is available in worker context
+const AI_AVAILABLE = typeof LanguageModel !== 'undefined';
+
 async function getSession() {
+    if (!AI_AVAILABLE) {
+        throw new Error('LanguageModel not available in Worker');
+    }
     if (session) return session;
     try {
         session = await LanguageModel.create({
@@ -52,20 +58,22 @@ self.onmessage = async function(e) {
 
     if (type === 'check') {
         // Check if AI is available in worker
-        try {
-            if (typeof LanguageModel !== 'undefined') {
-                const availability = await LanguageModel.availability();
-                self.postMessage({ type: 'availability', status: availability });
-            } else {
-                self.postMessage({ type: 'availability', status: 'unavailable' });
-            }
-        } catch (err) {
-            self.postMessage({ type: 'availability', status: 'error', error: err.message });
-        }
+        self.postMessage({
+            type: 'availability',
+            status: AI_AVAILABLE ? 'available' : 'unavailable'
+        });
         return;
     }
 
     if (type === 'generate') {
+        // First check if AI is available in worker context
+        if (!AI_AVAILABLE) {
+            self.postMessage({
+                type: 'fallback',
+                reason: 'LanguageModel not available in Worker context'
+            });
+            return;
+        }
         const BATCH_SIZE = 5;
         const batches = [];
         for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
