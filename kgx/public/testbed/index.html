@@ -275,6 +275,67 @@
 
         .nerdy-toggle:hover { background: var(--bg-tertiary); }
 
+        /* AI Enhancement Panel */
+        .ai-panel {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(79, 70, 229, 0.15));
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .ai-panel.available { display: block; }
+
+        .ai-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .ai-panel-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .ai-panel-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .ai-progress {
+            flex: 1;
+            min-width: 150px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+        }
+
+        .btn-ai:hover { opacity: 0.9; }
+        .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .nerdy-content {
             display: none;
             background: var(--bg-secondary);
@@ -360,6 +421,24 @@
             </div>
         </div>
 
+        <!-- Chrome Built-in AI Panel (shown when available) -->
+        <div id="ai-panel" class="ai-panel">
+            <div class="ai-panel-header">
+                <span class="ai-badge">LOCAL AI</span>
+                <span class="ai-panel-title">Chrome Built-in AI Detected</span>
+            </div>
+            <div class="ai-panel-desc">
+                Enhance search with AI-generated keywords from image descriptions. Runs locally in your browser.
+            </div>
+            <div class="ai-controls">
+                <button id="ai-enhance-btn" class="btn-ai" disabled>Generate Keywords</button>
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                    <input type="checkbox" id="ai-search-toggle"> Use AI search
+                </label>
+                <span id="ai-progress" class="ai-progress"></span>
+            </div>
+        </div>
+
         <div id="image-grid" class="image-grid"></div>
 
         <div id="gallery-info" class="gallery-info"></div>
@@ -424,6 +503,242 @@
         const queryInput = document.getElementById('query-input');
         const resultsOutput = document.getElementById('results-output');
 
+        // Chrome Built-in AI state
+        const AI_GRAPH = 'http://local.ai/keywords';
+        let aiSession = null;
+        let aiAvailable = false;
+        let aiKeywordsGenerated = false;
+        const aiPanel = document.getElementById('ai-panel');
+        const aiEnhanceBtn = document.getElementById('ai-enhance-btn');
+        const aiProgress = document.getElementById('ai-progress');
+        const aiSearchToggle = document.getElementById('ai-search-toggle');
+
+        // Check Chrome Prompt API availability
+        async function checkAIAvailability() {
+            try {
+                if (typeof LanguageModel !== 'undefined') {
+                    const availability = await LanguageModel.availability();
+                    console.log('Chrome AI availability:', availability);
+                    if (availability === 'available' || availability === 'downloadable') {
+                        aiAvailable = true;
+                        aiPanel.classList.add('available');
+                        aiProgress.textContent = availability === 'downloadable' ? 'Model will download on first use' : 'Ready';
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.log('Chrome AI not available:', e.message);
+            }
+            return false;
+        }
+
+        // Create AI session
+        async function getAISession() {
+            if (aiSession) return aiSession;
+            try {
+                aiSession = await LanguageModel.create({
+                    temperature: 0.3,
+                    topK: 5
+                });
+                return aiSession;
+            } catch (e) {
+                console.error('Failed to create AI session:', e);
+                return null;
+            }
+        }
+
+        // Extract image metadata for AI processing
+        function getImageMetadataForAI() {
+            if (!store) return [];
+            try {
+                const results = [...store.query(`
+                    PREFIX schema: <http://schema.org/>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX lio: <https://w3id.org/lio/v1#>
+                    SELECT ?img ?name ?comment WHERE {
+                        ?img schema:name ?name .
+                        OPTIONAL { ?img rdfs:comment ?comment }
+                    } LIMIT 500
+                `)];
+
+                return results.map(b => ({
+                    uri: b.get('img')?.value,
+                    name: b.get('name')?.value || '',
+                    comment: b.get('comment')?.value || ''
+                })).filter(m => m.uri && m.name);
+            } catch (e) {
+                console.error('Error getting metadata:', e);
+                return [];
+            }
+        }
+
+        // Generate keywords for a batch of images
+        async function generateKeywordsForBatch(session, batch) {
+            const prompt = `For each image below, generate 3-5 short search keywords or phrases that someone might use to find this image. Focus on concrete nouns, actions, and descriptive terms.
+
+Images:
+${batch.map((img, i) => `${i+1}. "${img.name}"${img.comment ? ` - ${img.comment.substring(0, 200)}` : ''}`).join('\n')}
+
+Return ONLY a JSON array with one object per image: [{"uri": "...", "keywords": ["word1", "word2", ...]}]
+Use the exact image numbers (1, 2, 3...) as indices.`;
+
+            try {
+                const response = await session.prompt(prompt);
+                // Try to extract JSON from response
+                const jsonMatch = response.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    return batch.map((img, i) => ({
+                        uri: img.uri,
+                        keywords: parsed[i]?.keywords || []
+                    }));
+                }
+            } catch (e) {
+                console.error('AI batch error:', e);
+            }
+            return batch.map(img => ({ uri: img.uri, keywords: [] }));
+        }
+
+        // Store keywords in named graph
+        function storeKeywordsInGraph(keywordData) {
+            if (!store) return;
+            const triples = [];
+            for (const item of keywordData) {
+                if (item.keywords && item.keywords.length > 0) {
+                    for (const kw of item.keywords) {
+                        // Store as: <image> <aiKeyword> "keyword" in named graph
+                        triples.push(`<${item.uri}> <http://local.ai/keyword> "${kw.replace(/"/g, '\\"')}"@en .`);
+                    }
+                }
+            }
+            if (triples.length > 0) {
+                const turtle = triples.join('\n');
+                try {
+                    store.load(turtle, { format: 'text/turtle', base_iri: AI_GRAPH });
+                    console.log(`Stored ${triples.length} AI keywords`);
+                } catch (e) {
+                    console.error('Error storing keywords:', e);
+                }
+            }
+        }
+
+        // Main function to generate AI keywords
+        async function generateAIKeywords() {
+            if (!aiAvailable || !store) return;
+
+            aiEnhanceBtn.disabled = true;
+            aiEnhanceBtn.textContent = 'Processing...';
+
+            try {
+                const session = await getAISession();
+                if (!session) {
+                    aiProgress.textContent = 'Failed to start AI session';
+                    return;
+                }
+
+                const metadata = getImageMetadataForAI();
+                if (metadata.length === 0) {
+                    aiProgress.textContent = 'No images to process';
+                    return;
+                }
+
+                const BATCH_SIZE = 10;
+                const batches = [];
+                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
+                    batches.push(metadata.slice(i, i + BATCH_SIZE));
+                }
+
+                let processed = 0;
+                let totalKeywords = 0;
+
+                for (const batch of batches) {
+                    aiProgress.textContent = `Processing ${processed}/${metadata.length} images...`;
+
+                    const results = await generateKeywordsForBatch(session, batch);
+                    storeKeywordsInGraph(results);
+
+                    totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                    processed += batch.length;
+
+                    // Small delay to not overwhelm
+                    await new Promise(r => setTimeout(r, 100));
+                }
+
+                aiKeywordsGenerated = true;
+                aiSearchToggle.checked = true;
+                aiProgress.textContent = `Generated ${totalKeywords} keywords for ${metadata.length} images`;
+                updateStats();
+
+            } catch (e) {
+                console.error('AI generation error:', e);
+                aiProgress.textContent = 'Error: ' + e.message;
+            } finally {
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
+            }
+        }
+
+        // Enhanced search that includes AI keywords
+        function queryImagesWithAI(searchTerm) {
+            if (!store || !searchTerm) return queryImages(searchTerm);
+
+            // Search both original metadata AND AI-generated keywords
+            const sparql = `
+                PREFIX schema: <http://schema.org/>
+                PREFIX lio: <https://w3id.org/lio/v1#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX ai: <http://local.ai/>
+                SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                    ?img schema:name ?name .
+                    OPTIONAL { ?img schema:thumbnail ?thumb }
+                    OPTIONAL { ?img schema:contentUrl ?url }
+                    {
+                        FILTER(CONTAINS(LCASE(?name), LCASE("${searchTerm}")))
+                    } UNION {
+                        ?img lio:depicts ?entity .
+                        ?entity rdfs:label ?label .
+                        FILTER(CONTAINS(LCASE(?label), LCASE("${searchTerm}")))
+                    } UNION {
+                        ?img ai:keyword ?kw .
+                        FILTER(CONTAINS(LCASE(?kw), LCASE("${searchTerm}")))
+                    }
+                } LIMIT 500
+            `;
+
+            try {
+                const results = [...store.query(sparql)];
+                return results.map(b => {
+                    const imgUri = b.get('img')?.value;
+                    const depicts = [];
+                    if (imgUri) {
+                        try {
+                            const dr = store.query(`
+                                PREFIX lio: <https://w3id.org/lio/v1#>
+                                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                SELECT ?e ?l WHERE { <${imgUri}> lio:depicts ?e . OPTIONAL { ?e rdfs:label ?l } } LIMIT 5
+                            `);
+                            for (const d of dr) {
+                                depicts.push({
+                                    uri: d.get('e')?.value,
+                                    label: d.get('l')?.value || d.get('e')?.value.split('/').pop().replace(/_/g, ' ')
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                    return {
+                        uri: imgUri,
+                        name: b.get('name')?.value || 'Untitled',
+                        thumbnail: b.get('thumb')?.value,
+                        contentUrl: b.get('url')?.value,
+                        depicts
+                    };
+                });
+            } catch (e) {
+                console.error('AI search error:', e);
+                return queryImages(searchTerm);
+            }
+        }
+
         function setStatus(msg, type) {
             statusEl.textContent = msg;
             statusEl.className = `status status-${type}`;
@@ -464,6 +779,9 @@
                 updateStats();
                 setStatus(`${label} loaded! Search or browse images.`, 'ready');
                 showAllImages();
+
+                // Enable AI button if available
+                if (aiAvailable) aiEnhanceBtn.disabled = false;
             } catch (e) {
                 console.error('Load error:', e);
                 setStatus('Error: ' + e.message, 'error');
@@ -486,6 +804,9 @@
                 updateStats();
                 setStatus('Demo loaded!', 'ready');
                 showAllImages();
+
+                // Enable AI button if available
+                if (aiAvailable) aiEnhanceBtn.disabled = false;
             } catch (e) {
                 setStatus('Error: ' + e.message, 'error');
             }
@@ -503,6 +824,12 @@
             showingCountEl.textContent = '0';
             loadTimeEl.textContent = '-';
             setStatus('Cleared. Load data to begin.', 'ready');
+
+            // Reset AI state
+            aiKeywordsGenerated = false;
+            aiSearchToggle.checked = false;
+            aiEnhanceBtn.disabled = true;
+            aiProgress.textContent = aiAvailable ? 'Ready' : '';
         }
 
         function queryImages(searchTerm = '') {
@@ -584,7 +911,12 @@
 
         function searchImages() {
             const term = searchInput.value.trim();
-            allImages = queryImages(term);
+            // Use AI-enhanced search if toggle is checked and keywords generated
+            if (aiSearchToggle.checked && aiKeywordsGenerated && term) {
+                allImages = queryImagesWithAI(term);
+            } else {
+                allImages = queryImages(term);
+            }
             displayedCount = 0;
             imageGrid.innerHTML = '';
 
@@ -669,6 +1001,9 @@
                 await init();
                 store = new Store();
                 setStatus('Ready! Load data to begin.', 'ready');
+
+                // Check for Chrome Built-in AI
+                await checkAIAvailability();
             } catch (e) {
                 setStatus('Init failed: ' + e.message, 'error');
             }
@@ -684,6 +1019,9 @@
         document.getElementById('show-all-btn').onclick = showAllImages;
         document.getElementById('load-more').onclick = loadMoreImages;
         document.getElementById('run-query').onclick = runQuery;
+
+        // AI panel event listeners
+        aiEnhanceBtn.onclick = generateAIKeywords;
 
         searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchImages(); });
 
