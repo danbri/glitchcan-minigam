@@ -440,12 +440,29 @@
             const start = performance.now();
 
             try {
-                // Fetch large dataset
+                // Fetch large dataset via SPARQL endpoint
                 const query = encodeURIComponent('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 50000');
-                const res = await fetch(`${ENDPOINT}?query=${query}`, { headers: { 'Accept': 'text/turtle' } });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const url = `${ENDPOINT}?query=${query}`;
+                console.log('Fetching from:', url);
+
+                const res = await fetch(url, {
+                    headers: { 'Accept': 'text/turtle' },
+                    mode: 'cors'
+                });
+
+                console.log('Response status:', res.status, res.statusText);
+                console.log('Response headers:', [...res.headers.entries()]);
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
                 const turtle = await res.text();
+                console.log('Received turtle data, length:', turtle.length);
+                console.log('First 500 chars:', turtle.substring(0, 500));
+
+                if (!turtle || turtle.trim().length === 0) {
+                    throw new Error('Empty response from server');
+                }
+
                 store.load(turtle, { format: 'text/turtle' });
 
                 loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
@@ -453,7 +470,13 @@
                 setStatus('All data loaded! Search or browse images.', 'ready');
                 showAllImages();
             } catch (e) {
-                setStatus('Error: ' + e.message, 'error');
+                console.error('Load all data error:', e);
+                // Check if it's a CORS error
+                if (e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+                    setStatus('CORS blocked: ImageSnippets endpoint may not allow browser access. Use Demo Data instead.', 'error');
+                } else {
+                    setStatus('Error: ' + e.message, 'error');
+                }
             }
         }
 

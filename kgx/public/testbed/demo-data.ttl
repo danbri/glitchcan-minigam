@@ -7,8 +7,8 @@
 
 <http://demo.imagesnippets.com/image/eiffel-tower> a schema:ImageObject ;
     schema:name "Eiffel Tower at Sunset"@en ;
-    schema:thumbnail <https://images.unsplash.com/photo-1543349689-9a4d426bee8e?w=320&h=213&fit=crop> ;
-    schema:contentUrl <https://images.unsplash.com/photo-1543349689-9a4d426bee8e?w=800> ;
+    schema:thumbnail <https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800> ;
     lio:depicts dbr:Eiffel_Tower ;
     lio:depicts dbr:Paris .
 
@@ -89,8 +89,8 @@ dbr:Sydney rdfs:label "Sydney"@en .
 
 <http://demo.imagesnippets.com/image/red-fox> a schema:ImageObject ;
     schema:name "Red Fox"@en ;
-    schema:thumbnail <https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=320&h=213&fit=crop> ;
-    schema:contentUrl <https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=800> ;
+    schema:thumbnail <https://images.unsplash.com/photo-1516934024742-b461fba47600?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1516934024742-b461fba47600?w=800> ;
     lio:depicts dbr:Red_fox ;
     lio:depicts dbr:Wildlife .
 
