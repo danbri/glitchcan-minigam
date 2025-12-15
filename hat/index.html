@@ -406,7 +406,7 @@
             this.ctx = null;
             this.gl = null;
             this.gpuDevice = null;
-            this.useWebGPU = false;
+            this.useGPUCompute = false;
 
             // Hadley parameters
             this.params = {
@@ -468,173 +468,190 @@
             this.resize();
             window.addEventListener('resize', () => this.resize());
 
-            // Initialize renderer (WebGL preferred for better point rendering)
-            let rendererReady = false;
-
-            // WebGL first - it has proper point size support
+            // Try WebGPU for compute (physics)
             try {
-                this.initWebGL();
-                document.getElementById('renderer-info').textContent = 'WebGL';
-                rendererReady = true;
-                console.log('Using WebGL renderer');
+                if (await this.initWebGPUCompute()) {
+                    this.useGPUCompute = true;
+                    console.log('Using WebGPU for physics compute');
+                }
             } catch (e) {
-                console.warn('WebGL failed:', e);
+                console.warn('WebGPU compute failed:', e);
             }
 
-            // Fall back to WebGPU if WebGL fails
-            if (!rendererReady) {
-                try {
-                    if (await this.initWebGPU()) {
-                        this.useWebGPU = true;
-                        document.getElementById('renderer-info').textContent = 'WebGPU';
-                        rendererReady = true;
-                        console.log('Using WebGPU renderer (1px points)');
-                    }
-                } catch (e) {
-                    console.error('WebGPU failed:', e);
-                    document.getElementById('renderer-info').textContent = 'No renderer!';
-                }
+            // WebGL for rendering (always - better point support)
+            try {
+                this.initWebGL();
+                document.getElementById('renderer-info').textContent =
+                    this.useGPUCompute ? 'WebGPU+WebGL' : 'WebGL';
+                console.log('Using WebGL for rendering');
+            } catch (e) {
+                console.error('WebGL failed:', e);
+                document.getElementById('renderer-info').textContent = 'No renderer!';
+                return;
             }
 
             this.initParticles();
             console.log(`Initialized ${this.particles.length} particles`);
-            if (this.particles.length > 0) {
-                console.log('Sample particle:', this.particles[0]);
-            }
             this.setupControls();
             this.setupUI();
 
-            // Hide loading screen
             setTimeout(() => {
                 document.getElementById('loading').classList.add('hidden');
             }, 500);
 
-            if (rendererReady) {
-                this.animate();
-            }
+            this.animate();
         }
 
-        async initWebGPU() {
+        async initWebGPUCompute() {
             if (!navigator.gpu) return false;
 
-            try {
-                const adapter = await navigator.gpu.requestAdapter();
-                if (!adapter) return false;
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) return false;
 
-                this.gpuDevice = await adapter.requestDevice();
-                this.gpuContext = this.canvas.getContext('webgpu');
+            this.gpuDevice = await adapter.requestDevice();
 
-                if (!this.gpuContext) return false;
-
-                const format = navigator.gpu.getPreferredCanvasFormat();
-                this.gpuContext.configure({
-                    device: this.gpuDevice,
-                    format: format,
-                    alphaMode: 'premultiplied'
-                });
-
-                this.gpuFormat = format;
-                await this.createWebGPUPipeline();
-
-                return true;
-            } catch (e) {
-                console.log('WebGPU init failed:', e);
-                return false;
-            }
-        }
-
-        async createWebGPUPipeline() {
-            const shaderCode = `
-                struct Uniforms {
-                    viewProjection: mat4x4<f32>,
-                    color1: vec3<f32>,
-                    pointSize: f32,
-                    color2: vec3<f32>,
-                    time: f32,
+            // Compute shader for Hadley attractor physics
+            const computeShader = `
+                struct Params {
+                    a: f32,
+                    b: f32,
+                    F: f32,
+                    G: f32,
+                    dt: f32,
+                    count: u32,
                 }
 
-                @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+                @group(0) @binding(0) var<uniform> params: Params;
+                @group(0) @binding(1) var<storage, read_write> positions: array<vec4<f32>>;
 
-                struct VertexOutput {
-                    @builtin(position) position: vec4<f32>,
-                    @location(0) color: vec3<f32>,
-                    @location(1) alpha: f32,
+                @compute @workgroup_size(64)
+                fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+                    let i = id.x;
+                    if (i >= params.count) { return; }
+
+                    var p = positions[i].xyz;
+                    let speed = params.dt * 0.5;
+
+                    // Hadley attractor: RK4 integration
+                    let k1 = hadley(p);
+                    let k2 = hadley(p + k1 * speed * 0.5);
+                    let k3 = hadley(p + k2 * speed * 0.5);
+                    let k4 = hadley(p + k3 * speed);
+
+                    p = p + (k1 + 2.0*k2 + 2.0*k3 + k4) * speed / 6.0;
+
+                    // Reset if escaped
+                    if (abs(p.x) > 30.0 || abs(p.y) > 30.0 || abs(p.z) > 30.0) {
+                        p = vec3<f32>(
+                            1.0 + fract(sin(f32(i) * 12.9898) * 43758.5453) * 3.0,
+                            (fract(sin(f32(i) * 78.233) * 43758.5453) - 0.5) * 2.0,
+                            fract(sin(f32(i) * 39.425) * 43758.5453) * 3.0
+                        );
+                    }
+
+                    positions[i] = vec4<f32>(p, positions[i].w);
                 }
 
-                @vertex
-                fn vertexMain(
-                    @location(0) pos: vec3<f32>,
-                    @location(1) age: f32
-                ) -> VertexOutput {
-                    var output: VertexOutput;
-                    output.position = uniforms.viewProjection * vec4<f32>(pos, 1.0);
-
-                    let t = clamp(age, 0.0, 1.0);
-                    output.color = mix(uniforms.color1, uniforms.color2, t);
-                    output.alpha = 1.0 - t * 0.8;
-
-                    return output;
-                }
-
-                @fragment
-                fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-                    return vec4<f32>(input.color * input.alpha, input.alpha);
+                fn hadley(p: vec3<f32>) -> vec3<f32> {
+                    let x = p.x; let y = p.y; let z = p.z;
+                    return vec3<f32>(
+                        -y*y - z*z - params.a*x + params.a*params.F,
+                        x*y - params.b*x*z - y + params.G,
+                        params.b*x*y + x*z - z
+                    );
                 }
             `;
 
-            this.shaderModule = this.gpuDevice.createShaderModule({ code: shaderCode });
+            this.computeModule = this.gpuDevice.createShaderModule({ code: computeShader });
 
-            this.uniformBuffer = this.gpuDevice.createBuffer({
-                size: 128,
+            this.computeParamsBuffer = this.gpuDevice.createBuffer({
+                size: 32,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             });
 
+            return true;
+        }
+
+        setupComputeBuffers() {
+            const count = this.settings.particleCount;
+
+            // Position buffer (vec4 for alignment: xyz + age)
+            const posData = new Float32Array(count * 4);
+            for (let i = 0; i < count; i++) {
+                posData[i * 4] = 1 + Math.random() * 3;
+                posData[i * 4 + 1] = (Math.random() - 0.5) * 2;
+                posData[i * 4 + 2] = Math.random() * 3;
+                posData[i * 4 + 3] = 0; // age
+            }
+
+            this.gpuPositionBuffer = this.gpuDevice.createBuffer({
+                size: posData.byteLength,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+            });
+            this.gpuDevice.queue.writeBuffer(this.gpuPositionBuffer, 0, posData);
+
+            // Readback buffer
+            this.gpuReadbackBuffer = this.gpuDevice.createBuffer({
+                size: posData.byteLength,
+                usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+            });
+
+            // Compute pipeline
             const bindGroupLayout = this.gpuDevice.createBindGroupLayout({
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' }
-                }]
+                entries: [
+                    { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+                    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
+                ]
             });
 
-            this.bindGroup = this.gpuDevice.createBindGroup({
+            this.computePipeline = this.gpuDevice.createComputePipeline({
+                layout: this.gpuDevice.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+                compute: { module: this.computeModule, entryPoint: 'main' }
+            });
+
+            this.computeBindGroup = this.gpuDevice.createBindGroup({
                 layout: bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: { buffer: this.uniformBuffer }
-                }]
+                entries: [
+                    { binding: 0, resource: { buffer: this.computeParamsBuffer } },
+                    { binding: 1, resource: { buffer: this.gpuPositionBuffer } }
+                ]
             });
 
-            this.pipeline = this.gpuDevice.createRenderPipeline({
-                layout: this.gpuDevice.createPipelineLayout({
-                    bindGroupLayouts: [bindGroupLayout]
-                }),
-                vertex: {
-                    module: this.shaderModule,
-                    entryPoint: 'vertexMain',
-                    buffers: [{
-                        arrayStride: 16,
-                        attributes: [
-                            { shaderLocation: 0, offset: 0, format: 'float32x3' },
-                            { shaderLocation: 1, offset: 12, format: 'float32' }
-                        ]
-                    }]
-                },
-                fragment: {
-                    module: this.shaderModule,
-                    entryPoint: 'fragmentMain',
-                    targets: [{
-                        format: this.gpuFormat,
-                        blend: {
-                            color: { srcFactor: 'src-alpha', dstFactor: 'one', operation: 'add' },
-                            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' }
-                        }
-                    }]
-                },
-                primitive: {
-                    topology: 'point-list'
-                }
-            });
+            this.positionData = posData;
+        }
+
+        async updateParticlesGPU(dt) {
+            const params = new Float32Array([
+                this.params.a, this.params.b, this.params.F, this.params.G,
+                dt * this.settings.speed, this.settings.particleCount, 0, 0
+            ]);
+            this.gpuDevice.queue.writeBuffer(this.computeParamsBuffer, 0, params);
+
+            const encoder = this.gpuDevice.createCommandEncoder();
+            const pass = encoder.beginComputePass();
+            pass.setPipeline(this.computePipeline);
+            pass.setBindGroup(0, this.computeBindGroup);
+            pass.dispatchWorkgroups(Math.ceil(this.settings.particleCount / 64));
+            pass.end();
+
+            encoder.copyBufferToBuffer(
+                this.gpuPositionBuffer, 0,
+                this.gpuReadbackBuffer, 0,
+                this.positionData.byteLength
+            );
+            this.gpuDevice.queue.submit([encoder.finish()]);
+
+            // Read back positions
+            await this.gpuReadbackBuffer.mapAsync(GPUMapMode.READ);
+            const data = new Float32Array(this.gpuReadbackBuffer.getMappedRange().slice(0));
+            this.gpuReadbackBuffer.unmap();
+
+            // Update CPU particles for trail rendering
+            for (let i = 0; i < this.particles.length; i++) {
+                this.particles[i].x = data[i * 4];
+                this.particles[i].y = data[i * 4 + 1];
+                this.particles[i].z = data[i * 4 + 2];
+            }
         }
 
         initWebGL() {
@@ -753,6 +770,11 @@
 
                 this.particles.push({ x, y, z });
                 this.trails.push([{ x, y, z, age: 0 }]);
+            }
+
+            // Setup GPU compute buffers if available
+            if (this.useGPUCompute) {
+                this.setupComputeBuffers();
             }
         }
 
@@ -985,6 +1007,28 @@
             }
         }
 
+        // Separate trail update for when using GPU compute
+        updateTrails() {
+            if (!this.settings.showTrails) return;
+
+            const trailLength = this.settings.trailLength;
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+
+                this.trails[i].unshift({ x: p.x, y: p.y, z: p.z, age: 0 });
+
+                // Age trail points
+                for (let j = 0; j < this.trails[i].length; j++) {
+                    this.trails[i][j].age = j / trailLength;
+                }
+
+                // Trim trail
+                if (this.trails[i].length > trailLength) {
+                    this.trails[i].length = trailLength;
+                }
+            }
+        }
+
         getViewProjectionMatrix() {
             const aspect = this.canvas.width / this.canvas.height;
             const fov = Math.PI / 4;
@@ -1058,65 +1102,6 @@
             return result;
         }
 
-        renderWebGPU() {
-            // Collect all trail points
-            const points = [];
-            const colors = this.colorThemes[this.settings.colorTheme];
-
-            if (this.settings.showTrails) {
-                for (const trail of this.trails) {
-                    for (const p of trail) {
-                        points.push(p.x, p.y, p.z, p.age);
-                    }
-                }
-            } else {
-                for (const p of this.particles) {
-                    points.push(p.x, p.y, p.z, 0);
-                }
-            }
-
-            if (points.length === 0) return;
-
-            // Create vertex buffer
-            const vertexData = new Float32Array(points);
-            const vertexBuffer = this.gpuDevice.createBuffer({
-                size: vertexData.byteLength,
-                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-            });
-            this.gpuDevice.queue.writeBuffer(vertexBuffer, 0, vertexData);
-
-            // Update uniforms
-            const mvp = this.getViewProjectionMatrix();
-            const uniformData = new Float32Array([
-                ...mvp,
-                colors[0][0], colors[0][1], colors[0][2], this.settings.pointSize,
-                colors[1][0], colors[1][1], colors[1][2], performance.now() / 1000
-            ]);
-            this.gpuDevice.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-
-            // Render
-            const commandEncoder = this.gpuDevice.createCommandEncoder();
-            const textureView = this.gpuContext.getCurrentTexture().createView();
-
-            const renderPass = commandEncoder.beginRenderPass({
-                colorAttachments: [{
-                    view: textureView,
-                    clearValue: { r: 0.02, g: 0.02, b: 0.05, a: 1 },
-                    loadOp: 'clear',
-                    storeOp: 'store'
-                }]
-            });
-
-            renderPass.setPipeline(this.pipeline);
-            renderPass.setBindGroup(0, this.bindGroup);
-            renderPass.setVertexBuffer(0, vertexBuffer);
-            renderPass.draw(points.length / 4);
-            renderPass.end();
-
-            this.gpuDevice.queue.submit([commandEncoder.finish()]);
-            vertexBuffer.destroy();
-        }
-
         renderWebGL() {
             const gl = this.gl;
             if (!gl || !this.program) return;
@@ -1180,7 +1165,7 @@
             gl.drawArrays(gl.POINTS, 0, positions.length / 3);
         }
 
-        animate(currentTime = 0) {
+        async animate(currentTime = 0) {
             requestAnimationFrame((t) => this.animate(t));
 
             try {
@@ -1201,15 +1186,18 @@
                     this.camera.rotationY += this.camera.autoRotateSpeed;
                 }
 
-                // Update physics
-                this.updateParticles(dt);
-
-                // Render
-                if (this.useWebGPU) {
-                    this.renderWebGPU();
+                // Update physics (GPU compute if available, else CPU)
+                if (this.useGPUCompute && this.computePipeline) {
+                    await this.updateParticlesGPU(dt);
+                    // Update trails on CPU (GPU only does particle positions)
+                    this.updateTrails();
                 } else {
-                    this.renderWebGL();
+                    // CPU physics includes trail updates
+                    this.updateParticles(dt);
                 }
+
+                // Render with WebGL
+                this.renderWebGL();
             } catch (e) {
                 console.error('Render error:', e);
             }
