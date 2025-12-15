@@ -535,13 +535,14 @@
             return false;
         }
 
-        // Create AI session
+        // Create AI session with English output
         async function getAISession() {
             if (aiSession) return aiSession;
             try {
                 aiSession = await LanguageModel.create({
                     temperature: 0.3,
-                    topK: 5
+                    topK: 5,
+                    expectedOutputLanguages: ['en']
                 });
                 return aiSession;
             } catch (e) {
@@ -554,14 +555,14 @@
         function getImageMetadataForAI() {
             if (!store) return [];
             try {
+                // Limit to 100 images to avoid overwhelming the local AI
                 const results = [...store.query(`
                     PREFIX schema: <http://schema.org/>
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                    PREFIX lio: <https://w3id.org/lio/v1#>
                     SELECT ?img ?name ?comment WHERE {
                         ?img schema:name ?name .
                         OPTIONAL { ?img rdfs:comment ?comment }
-                    } LIMIT 500
+                    } LIMIT 100
                 `)];
 
                 return results.map(b => ({
@@ -653,7 +654,8 @@ Return: [{"keywords": ["word1", "word2"]}] for each image.`;
                     return;
                 }
 
-                const BATCH_SIZE = 10;
+                // Small batches with longer delays to prevent system lockup
+                const BATCH_SIZE = 5;
                 const batches = [];
                 for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
                     batches.push(metadata.slice(i, i + BATCH_SIZE));
@@ -663,7 +665,7 @@ Return: [{"keywords": ["word1", "word2"]}] for each image.`;
                 let totalKeywords = 0;
 
                 for (const batch of batches) {
-                    aiProgress.textContent = `Processing ${processed}/${metadata.length} images...`;
+                    aiProgress.textContent = `Processing ${processed}/${metadata.length} images... (${totalKeywords} keywords)`;
 
                     const results = await generateKeywordsForBatch(session, batch);
                     storeKeywordsInGraph(results);
@@ -671,8 +673,8 @@ Return: [{"keywords": ["word1", "word2"]}] for each image.`;
                     totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
                     processed += batch.length;
 
-                    // Small delay to not overwhelm
-                    await new Promise(r => setTimeout(r, 100));
+                    // Longer delay (500ms) to give system breathing room
+                    await new Promise(r => setTimeout(r, 500));
                 }
 
                 aiKeywordsGenerated = true;
