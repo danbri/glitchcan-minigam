@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oxigraph + ImageSnippets SPARQL Demo (Testbed)</title>
+    <title>ImageSnippets Explorer (Testbed)</title>
     <style>
         :root {
             --bg-primary: #0f0f1a;
@@ -20,9 +20,7 @@
             --gradient-2: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -35,540 +33,358 @@
 
         .header {
             background: var(--gradient-1);
-            padding: 30px 20px;
+            padding: 20px;
             text-align: center;
         }
 
         h1 {
             color: white;
-            margin: 0 0 10px 0;
-            font-size: 1.8rem;
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
             text-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
         .subtitle {
             color: rgba(255,255,255,0.9);
             margin: 0;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
+
+        .subtitle a { color: #ffd700; text-decoration: none; }
 
         .disclaimer {
-            background: rgba(0,0,0,0.2);
-            color: rgba(255,255,255,0.95);
-            padding: 12px 20px;
+            background: rgba(0,0,0,0.3);
+            color: rgba(255,255,255,0.9);
+            padding: 8px 15px;
             text-align: center;
-            font-size: 0.85rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.8rem;
         }
 
-        .disclaimer a {
-            color: #ffd700;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .disclaimer a:hover {
-            text-decoration: underline;
-        }
+        .disclaimer a { color: #ffd700; text-decoration: none; }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
 
-        .stats-panel {
+        .stats-bar {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
             justify-content: center;
-        }
-
-        .stat-card {
+            padding: 10px;
             background: var(--bg-secondary);
-            padding: 12px 20px;
-            border-radius: 12px;
-            text-align: center;
-            min-width: 120px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: var(--success);
-        }
-
-        .panel {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        .panel-title {
-            font-size: 1.1rem;
-            font-weight: 600;
+            border-radius: 10px;
             margin-bottom: 15px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            font-size: 0.85rem;
         }
 
-        .panel-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: var(--accent);
-            border-radius: 2px;
+        .stat { display: flex; gap: 5px; align-items: center; }
+        .stat-label { color: var(--text-secondary); }
+        .stat-value { color: var(--success); font-weight: bold; }
+
+        .controls-panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
 
         .btn-row {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            margin-bottom: 15px;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            transition: all 0.2s;
         }
 
         .btn-primary {
             background: var(--gradient-2);
             color: white;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
+        .btn-primary:hover { opacity: 0.9; }
 
         .btn-secondary {
             background: var(--bg-tertiary);
             color: var(--text-primary);
         }
 
-        .btn-secondary:hover {
-            background: #1f4a7a;
+        .btn-secondary:hover { background: #1f4a7a; }
+
+        .btn-large {
+            padding: 12px 24px;
+            font-size: 1rem;
         }
 
-        .btn-gallery {
-            background: var(--gradient-1);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-gallery:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-        }
-
-        .examples-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        .search-box {
+            display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .example-btn {
-            text-align: center;
-            background: var(--bg-primary);
-            border: 1px solid var(--bg-tertiary);
-            padding: 10px 15px;
-            font-size: 0.85rem;
-        }
-
-        .example-btn:hover {
-            border-color: var(--accent);
-            background: var(--bg-tertiary);
-        }
-
-        textarea {
-            width: 100%;
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 8px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            border: 2px solid var(--bg-tertiary);
-            border-radius: 10px;
-            padding: 15px;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 13px;
-            resize: vertical;
-            transition: border-color 0.3s;
+            font-size: 1rem;
         }
 
-        textarea:focus {
+        .search-input:focus {
             outline: none;
             border-color: var(--accent);
         }
 
-        #query-input {
-            min-height: 120px;
-        }
-
-        #results-output {
-            min-height: 150px;
-        }
+        .search-input::placeholder { color: var(--text-secondary); }
 
         .status {
-            padding: 12px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             text-align: center;
-            font-weight: 500;
+            font-size: 0.9rem;
         }
 
-        .status-loading {
-            background: rgba(251, 191, 36, 0.15);
-            border: 1px solid var(--warning);
-            color: var(--warning);
-        }
+        .status-loading { background: rgba(251, 191, 36, 0.15); border: 1px solid var(--warning); color: var(--warning); }
+        .status-ready { background: rgba(74, 222, 128, 0.15); border: 1px solid var(--success); color: var(--success); }
+        .status-error { background: rgba(233, 69, 96, 0.15); border: 1px solid var(--accent); color: var(--accent); }
 
-        .status-ready {
-            background: rgba(74, 222, 128, 0.15);
-            border: 1px solid var(--success);
-            color: var(--success);
-        }
-
-        .status-error {
-            background: rgba(233, 69, 96, 0.15);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-        }
-
-        /* Image Gallery Styles */
-        .gallery-container {
-            display: none;
-        }
-
-        .gallery-container.visible {
-            display: block;
-        }
-
+        /* Image Gallery */
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
         }
 
         .image-card {
             background: var(--bg-card);
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.2s;
         }
 
-        .image-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-        }
+        .image-card:hover { transform: translateY(-3px); }
 
         .image-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 66.67%; /* 3:2 aspect ratio */
+            padding-top: 66%;
             background: var(--bg-tertiary);
-            overflow: hidden;
         }
 
         .image-wrapper img {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.3s;
         }
 
-        .image-wrapper img.loaded {
-            opacity: 1;
-        }
+        .image-wrapper img.loaded { opacity: 1; }
 
-        .image-wrapper .placeholder {
+        .image-wrapper .placeholder, .image-wrapper .loading-spinner {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            color: var(--text-secondary);
-            font-size: 3rem;
         }
 
-        .image-wrapper .loading-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
+        .placeholder { color: var(--text-secondary); font-size: 2.5rem; }
+
+        .loading-spinner {
+            width: 30px; height: 30px;
             border: 3px solid var(--bg-tertiary);
             border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-        .image-info {
-            padding: 15px;
-        }
+        .image-info { padding: 12px; }
 
         .image-title {
             font-weight: 600;
-            font-size: 1rem;
-            margin: 0 0 8px 0;
-            color: var(--text-primary);
-            line-height: 1.3;
+            font-size: 0.9rem;
+            margin: 0 0 6px 0;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .image-depicts {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
+            gap: 4px;
         }
 
         .depicts-tag {
-            background: var(--gradient-1);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .depicts-tag a {
-            color: white;
-            text-decoration: none;
-        }
-
-        .depicts-tag:hover {
-            opacity: 0.9;
-        }
-
-        .image-source {
-            margin-top: 10px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .image-source a {
-            color: var(--accent-light);
-            text-decoration: none;
-        }
-
-        .image-source a:hover {
-            text-decoration: underline;
-        }
-
-        .gallery-empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .gallery-empty-icon {
-            font-size: 4rem;
-            margin-bottom: 15px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--bg-tertiary);
-            padding-bottom: 10px;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: 8px 8px 0 0;
-        }
-
-        .tab-btn.active {
             background: var(--bg-tertiary);
-            color: var(--text-primary);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
         }
 
-        .tab-content {
+        .depicts-tag a { color: inherit; text-decoration: none; }
+
+        .load-more-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .gallery-info {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+
+        /* Nerdy Section */
+        .nerdy-section {
+            margin-top: 20px;
+        }
+
+        .nerdy-toggle {
+            width: 100%;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nerdy-toggle:hover { background: var(--bg-tertiary); }
+
+        .nerdy-content {
             display: none;
+            background: var(--bg-secondary);
+            border-radius: 0 0 10px 10px;
+            padding: 15px;
+            margin-top: -5px;
         }
 
-        .tab-content.active {
-            display: block;
+        .nerdy-content.open { display: block; }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            resize: vertical;
         }
 
-        .hidden {
-            display: none !important;
+        textarea:focus { outline: none; border-color: var(--accent); }
+
+        #query-input { min-height: 100px; }
+        #results-output { min-height: 120px; margin-top: 10px; }
+
+        .examples-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
         }
 
-        @media (max-width: 768px) {
-            .header {
-                padding: 20px 15px;
-            }
-
-            h1 {
-                font-size: 1.4rem;
-            }
-
-            .container {
-                padding: 15px;
-            }
-
-            .stats-panel {
-                justify-content: space-between;
-            }
-
-            .stat-card {
-                flex: 1;
-                min-width: 90px;
-                padding: 10px 12px;
-            }
-
-            .stat-value {
-                font-size: 1.2rem;
-            }
-
-            .image-grid {
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-                gap: 15px;
-            }
-
-            .examples-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .btn-row {
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
-            }
+        .example-btn {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-tertiary);
         }
 
-        @media (max-width: 480px) {
-            .image-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .examples-grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 600px) {
+            .image-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+            .btn-row { flex-direction: column; }
+            button { width: 100%; }
+            .search-input { width: 100%; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Oxigraph + ImageSnippets Testbed</h1>
-        <p class="subtitle">Experimental features - <a href="../" style="color: #ffd700;">back to stable version</a></p>
+        <h1>ImageSnippets Explorer</h1>
+        <p class="subtitle">Testbed - <a href="../">back to stable</a></p>
     </div>
 
     <div class="disclaimer">
-        Demo only - data from <a href="https://imagesnippets.com" target="_blank" rel="noopener">ImageSnippets.com</a>.
-        Contact <a href="mailto:info@metadata.rocks">info@metadata.rocks</a> for licensing information.
+        Demo only - data from <a href="https://imagesnippets.com" target="_blank">ImageSnippets.com</a> |
+        <a href="mailto:info@metadata.rocks">Contact for licensing</a>
     </div>
 
     <div class="container">
-        <div id="status" class="status status-loading">
-            Initializing Oxigraph WASM...
+        <div id="status" class="status status-loading">Initializing...</div>
+
+        <div class="stats-bar">
+            <div class="stat"><span class="stat-label">Triples:</span><span class="stat-value" id="triple-count">0</span></div>
+            <div class="stat"><span class="stat-label">Images:</span><span class="stat-value" id="image-count">0</span></div>
+            <div class="stat"><span class="stat-label">Showing:</span><span class="stat-value" id="showing-count">0</span></div>
+            <div class="stat"><span class="stat-label">Load:</span><span class="stat-value" id="load-time">-</span></div>
         </div>
 
-        <div class="stats-panel">
-            <div class="stat-card">
-                <div class="stat-label">Triples</div>
-                <div class="stat-value" id="triple-count">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Images</div>
-                <div class="stat-value" id="image-count">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Load Time</div>
-                <div class="stat-value" id="load-time">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Query Time</div>
-                <div class="stat-value" id="query-time">-</div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-title">Data Loading</div>
+        <div class="controls-panel">
             <div class="btn-row">
-                <button id="load-imagesnippets" class="btn-primary">Load ImageSnippets Data</button>
-                <button id="load-demo" class="btn-secondary">Load Sample Data</button>
-                <button id="clear-data" class="btn-secondary">Clear Store</button>
+                <button id="load-all" class="btn-primary btn-large">Load All ImageSnippets Data</button>
+                <button id="load-demo" class="btn-secondary">Demo Data</button>
+                <button id="clear-data" class="btn-secondary">Clear</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" placeholder="Search images (e.g. tower, animal, paris...)">
+                <button id="search-btn" class="btn-primary">Search</button>
+                <button id="show-all-btn" class="btn-secondary">Show All</button>
             </div>
         </div>
 
-        <div class="panel gallery-container" id="gallery-panel">
-            <div class="panel-title">Image Gallery</div>
-            <div class="btn-row" style="margin-bottom: 15px;">
-                <button id="browse-images" class="btn-gallery">Browse All Images</button>
-            </div>
-            <div id="image-grid" class="image-grid"></div>
-            <div id="gallery-empty" class="gallery-empty hidden">
-                <div class="gallery-empty-icon">🖼️</div>
-                <p>No images to display. Load data and click "Browse All Images".</p>
-            </div>
+        <div id="image-grid" class="image-grid"></div>
+
+        <div id="gallery-info" class="gallery-info"></div>
+
+        <div id="load-more-container" class="load-more-container" style="display:none;">
+            <button id="load-more" class="btn-secondary">Load More Images</button>
         </div>
 
-        <div class="panel">
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="queries">Example Queries</button>
-                <button class="tab-btn" data-tab="sparql">Custom SPARQL</button>
-            </div>
-
-            <div class="tab-content active" id="tab-queries">
-                <div class="examples-grid">
-                    <button class="btn-secondary example-btn" data-query="count">Count Triples</button>
-                    <button class="btn-secondary example-btn" data-query="predicates">List Predicates</button>
-                    <button class="btn-secondary example-btn" data-query="types">List Types</button>
-                    <button class="btn-secondary example-btn" data-query="images">List Images</button>
-                    <button class="btn-secondary example-btn" data-query="depicts">Depicts Relations</button>
-                    <button class="btn-secondary example-btn" data-query="labels">Entity Labels</button>
+        <div class="nerdy-section">
+            <button id="nerdy-toggle" class="nerdy-toggle">
+                <span>🤓 Advanced SPARQL</span>
+                <span id="nerdy-arrow">▼</span>
+            </button>
+            <div id="nerdy-content" class="nerdy-content">
+                <div class="examples-row">
+                    <button class="example-btn" data-query="count">Count</button>
+                    <button class="example-btn" data-query="predicates">Predicates</button>
+                    <button class="example-btn" data-query="types">Types</button>
+                    <button class="example-btn" data-query="images">Images</button>
+                    <button class="example-btn" data-query="depicts">Depicts</button>
                 </div>
-            </div>
-
-            <div class="tab-content" id="tab-sparql">
-                <textarea id="query-input" placeholder="Enter your SPARQL query here...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20</textarea>
-                <div class="btn-row" style="margin-top: 15px;">
+                <textarea id="query-input" placeholder="SPARQL query...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20</textarea>
+                <div class="btn-row" style="margin-top:10px;">
                     <button id="run-query" class="btn-primary">Run Query</button>
-                    <button id="clear-query" class="btn-secondary">Clear</button>
                 </div>
+                <textarea id="results-output" readonly placeholder="Results..."></textarea>
             </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-title">Results</div>
-            <textarea id="results-output" readonly placeholder="Query results will appear here..."></textarea>
         </div>
     </div>
 
@@ -576,467 +392,297 @@
         import init, { Store } from '../web.js';
 
         let store = null;
+        let allImages = [];
+        let displayedCount = 0;
+        const PAGE_SIZE = 24;
 
-        // ImageSnippets SPARQL endpoints
-        // /sparql/imgtag = quads (more accurate), /sparql/images = triples only
-        const IMAGESNIPPETS_ENDPOINT = 'https://imagesnippets.com/sparql/imgtag';
+        const ENDPOINT = 'https://imagesnippets.com/sparql/imgtag';
 
-        // Example queries
         const exampleQueries = {
             count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
-            predicates: `SELECT DISTINCT ?p WHERE { ?s ?p ?o } ORDER BY ?p`,
-            types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-SELECT DISTINCT ?type (COUNT(?s) AS ?count) WHERE { ?s rdf:type ?type } GROUP BY ?type ORDER BY DESC(?count)`,
-            images: `PREFIX schema: <https://schema.org/>
-SELECT ?image ?name ?thumbnail WHERE {
-    ?image schema:name ?name .
-    OPTIONAL { ?image schema:thumbnail ?thumbnail }
-} LIMIT 50`,
-            depicts: `PREFIX lio: <https://w3id.org/lio/v1#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?image ?entity ?label WHERE {
-    ?image lio:depicts ?entity .
-    OPTIONAL { ?entity rdfs:label ?label }
-} LIMIT 100`,
-            labels: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT DISTINCT ?entity ?label WHERE {
-    ?entity rdfs:label ?label
-} ORDER BY ?label LIMIT 100`
+            predicates: `SELECT DISTINCT ?p (COUNT(?s) AS ?n) WHERE { ?s ?p ?o } GROUP BY ?p ORDER BY DESC(?n) LIMIT 50`,
+            types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nSELECT DISTINCT ?type (COUNT(?s) AS ?n) WHERE { ?s rdf:type ?type } GROUP BY ?type ORDER BY DESC(?n)`,
+            images: `PREFIX schema: <https://schema.org/>\nSELECT ?img ?name WHERE { ?img schema:name ?name } LIMIT 100`,
+            depicts: `PREFIX lio: <https://w3id.org/lio/v1#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?img ?entity ?label WHERE { ?img lio:depicts ?entity . OPTIONAL { ?entity rdfs:label ?label } } LIMIT 100`
         };
 
-        // Demo Turtle data
-        const demoTurtle = `
-@prefix schema: <https://schema.org/> .
-@prefix lio: <https://w3id.org/lio/v1#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix dbr: <http://dbpedia.org/resource/> .
-
-<http://example.com/image/001> a schema:ImageObject ;
-    schema:name "Man with Bicycle" ;
-    schema:thumbnail <https://farm4.staticflickr.com/3703/11299363325_782935bea3_q.jpg> ;
-    schema:contentUrl <https://farm4.staticflickr.com/3703/11299363325_782935bea3_c.jpg> ;
-    lio:depicts dbr:Bicycle ;
-    lio:depicts dbr:Man .
-
-dbr:Bicycle rdfs:label "Bicycle"@en .
-dbr:Man rdfs:label "Man"@en .
-
-<http://example.com/image/002> a schema:ImageObject ;
-    schema:name "Tower of London" ;
-    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg/320px-Tower_of_London_viewed_from_the_River_Thames.jpg> ;
-    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg> ;
-    lio:depicts dbr:Tower_of_London ;
-    lio:depicts dbr:London .
-
-dbr:Tower_of_London rdfs:label "Tower of London"@en .
-dbr:London rdfs:label "London"@en .
-
-<http://example.com/image/003> a schema:ImageObject ;
-    schema:name "Red Fox in Snow" ;
-    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Vulpes_vulpes_laying_in_snow.jpg/320px-Vulpes_vulpes_laying_in_snow.jpg> ;
-    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1f/Vulpes_vulpes_laying_in_snow.jpg> ;
-    lio:depicts dbr:Red_fox ;
-    lio:depicts dbr:Snow .
-
-dbr:Red_fox rdfs:label "Red Fox"@en .
-dbr:Snow rdfs:label "Snow"@en .
-
-<http://example.com/image/004> a schema:ImageObject ;
-    schema:name "Concert Crowd" ;
-    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Metalmania_2008_Megadeth_02.jpg/320px-Metalmania_2008_Megadeth_02.jpg> ;
-    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a8/Metalmania_2008_Megadeth_02.jpg> ;
-    lio:depicts dbr:Concert ;
-    lio:depicts dbr:Crowd .
-
-dbr:Concert rdfs:label "Concert"@en .
-dbr:Crowd rdfs:label "Crowd"@en .
-
-<http://example.com/image/005> a schema:ImageObject ;
-    schema:name "Old Tractor" ;
-    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/John_Deere_4020_tractor.jpg/320px-John_Deere_4020_tractor.jpg> ;
-    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/8/8e/John_Deere_4020_tractor.jpg> ;
-    lio:depicts dbr:Tractor ;
-    lio:depicts dbr:Agriculture .
-
-dbr:Tractor rdfs:label "Tractor"@en .
-dbr:Agriculture rdfs:label "Agriculture"@en .
-`;
-
-        // DOM elements
         const statusEl = document.getElementById('status');
         const tripleCountEl = document.getElementById('triple-count');
         const imageCountEl = document.getElementById('image-count');
+        const showingCountEl = document.getElementById('showing-count');
         const loadTimeEl = document.getElementById('load-time');
-        const queryTimeEl = document.getElementById('query-time');
+        const imageGrid = document.getElementById('image-grid');
+        const galleryInfo = document.getElementById('gallery-info');
+        const loadMoreContainer = document.getElementById('load-more-container');
+        const searchInput = document.getElementById('search-input');
         const queryInput = document.getElementById('query-input');
         const resultsOutput = document.getElementById('results-output');
-        const imageGrid = document.getElementById('image-grid');
-        const galleryPanel = document.getElementById('gallery-panel');
-        const galleryEmpty = document.getElementById('gallery-empty');
 
-        function setStatus(message, type) {
-            statusEl.textContent = message;
+        function setStatus(msg, type) {
+            statusEl.textContent = msg;
             statusEl.className = `status status-${type}`;
         }
 
-        function updateTripleCount() {
-            if (!store) {
-                tripleCountEl.textContent = '0';
-                imageCountEl.textContent = '0';
-                return;
-            }
+        function updateStats() {
+            if (!store) return;
             try {
-                const result = store.query('SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }');
-                for (const binding of result) {
-                    tripleCountEl.textContent = binding.get('count').value;
-                }
+                const r = store.query('SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o }');
+                for (const b of r) tripleCountEl.textContent = b.get('c').value;
 
-                // Count images
-                const imgResult = store.query(`
-                    PREFIX schema: <https://schema.org/>
-                    SELECT (COUNT(DISTINCT ?img) AS ?count) WHERE {
-                        { ?img schema:contentUrl ?url } UNION { ?img schema:thumbnail ?url }
-                    }
-                `);
-                for (const binding of imgResult) {
-                    imageCountEl.textContent = binding.get('count').value;
-                }
-            } catch (e) {
-                console.error('Count error:', e);
-            }
+                const ir = store.query(`PREFIX schema: <https://schema.org/> SELECT (COUNT(DISTINCT ?i) AS ?c) WHERE { ?i schema:name ?n }`);
+                for (const b of ir) imageCountEl.textContent = b.get('c').value;
+            } catch(e) { console.error(e); }
         }
 
-        function formatTerm(term) {
-            if (!term) return 'null';
-            if (term.termType === 'NamedNode') {
-                const value = term.value;
-                const prefixes = [
-                    ['https://schema.org/', 'schema:'],
-                    ['https://w3id.org/lio/v1#', 'lio:'],
-                    ['http://dbpedia.org/resource/', 'dbr:'],
-                    ['http://www.wikidata.org/entity/', 'wd:'],
-                    ['http://www.w3.org/2000/01/rdf-schema#', 'rdfs:'],
-                    ['http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'rdf:'],
-                ];
-                for (const [uri, prefix] of prefixes) {
-                    if (value.startsWith(uri)) return prefix + value.substring(uri.length);
-                }
-                return '<' + value + '>';
-            }
-            if (term.termType === 'Literal') {
-                let result = '"' + term.value + '"';
-                if (term.language) result += '@' + term.language;
-                return result;
-            }
-            if (term.termType === 'BlankNode') return '_:' + term.value;
-            return term.value || String(term);
-        }
-
-        function runQuery() {
-            if (!store) {
-                resultsOutput.value = 'Error: Store not initialized';
-                return;
-            }
-            const query = queryInput.value.trim();
-            if (!query) {
-                resultsOutput.value = 'Error: Please enter a query';
-                return;
-            }
-            const startTime = performance.now();
-            try {
-                const result = store.query(query);
-                const endTime = performance.now();
-                queryTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
-
-                if (typeof result === 'boolean') {
-                    resultsOutput.value = `ASK Result: ${result}`;
-                } else if (result[Symbol.iterator]) {
-                    const items = [...result];
-                    if (items.length === 0) {
-                        resultsOutput.value = 'No results found.';
-                        return;
-                    }
-                    const firstItem = items[0];
-                    if (firstItem.subject !== undefined) {
-                        let output = `CONSTRUCT Results (${items.length} triples):\n\n`;
-                        for (const quad of items) {
-                            output += `${formatTerm(quad.subject)} ${formatTerm(quad.predicate)} ${formatTerm(quad.object)} .\n`;
-                        }
-                        resultsOutput.value = output;
-                    } else if (firstItem.get) {
-                        const vars = [...firstItem.entries()].map(([k]) => k);
-                        let output = `SELECT Results (${items.length} rows):\n`;
-                        output += `Variables: ${vars.map(v => '?' + v).join(', ')}\n\n`;
-                        for (let i = 0; i < items.length; i++) {
-                            const binding = items[i];
-                            output += `[${i + 1}] `;
-                            output += vars.map(v => `?${v}=${formatTerm(binding.get(v))}`).join('  ') + '\n';
-                        }
-                        resultsOutput.value = output;
-                    }
-                }
-            } catch (error) {
-                queryTimeEl.textContent = '-';
-                resultsOutput.value = `Error: ${error.message || error}`;
-            }
-        }
-
-        async function loadImageSnippetsData() {
-            if (!store) {
-                setStatus('Error: Store not initialized', 'error');
-                return;
-            }
-
-            setStatus('Fetching data from ImageSnippets...', 'loading');
-            const startTime = performance.now();
+        async function loadAllData() {
+            if (!store) return;
+            setStatus('Fetching all data from ImageSnippets (this may take a moment)...', 'loading');
+            const start = performance.now();
 
             try {
-                const query = encodeURIComponent('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 2000');
-                const response = await fetch(`${IMAGESNIPPETS_ENDPOINT}?query=${query}`, {
-                    headers: { 'Accept': 'text/turtle' }
-                });
+                // Fetch large dataset
+                const query = encodeURIComponent('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 50000');
+                const res = await fetch(`${ENDPOINT}?query=${query}`, { headers: { 'Accept': 'text/turtle' } });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const turtle = await response.text();
+                const turtle = await res.text();
                 store.load(turtle, { format: 'text/turtle' });
 
-                const endTime = performance.now();
-                loadTimeEl.textContent = (endTime - startTime).toFixed(0) + 'ms';
-                updateTripleCount();
-                galleryPanel.classList.add('visible');
-                setStatus('ImageSnippets data loaded!', 'ready');
-                resultsOutput.value = 'ImageSnippets data loaded. Try browsing images or running queries!';
-            } catch (error) {
-                setStatus('Error loading: ' + error.message, 'error');
-                resultsOutput.value = 'Error: ' + error.message + '\n\nTry loading sample data instead.';
+                loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
+                updateStats();
+                setStatus('All data loaded! Search or browse images.', 'ready');
+                showAllImages();
+            } catch (e) {
+                setStatus('Error: ' + e.message, 'error');
             }
         }
 
         async function loadDemoData() {
-            if (!store) {
-                setStatus('Error: Store not initialized', 'error');
-                return;
-            }
-            setStatus('Loading demo images...', 'loading');
-            const startTime = performance.now();
+            if (!store) return;
+            setStatus('Loading demo...', 'loading');
+            const start = performance.now();
             try {
-                // Fetch local TTL file with 20 demo images
-                const response = await fetch('./demo-data.ttl');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const turtle = await response.text();
-                store.load(turtle, { format: 'text/turtle' });
-                const endTime = performance.now();
-                loadTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
-                updateTripleCount();
-                galleryPanel.classList.add('visible');
-                setStatus('Demo data loaded! (20 images)', 'ready');
-                resultsOutput.value = 'Demo data loaded with 20 sample images. Click "Browse All Images" to view!';
-                // Auto-browse images
-                browseImages();
-            } catch (error) {
-                setStatus('Error: ' + error.message, 'error');
-                resultsOutput.value = 'Error loading demo data: ' + error.message;
+                const res = await fetch('./demo-data.ttl');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                store.load(await res.text(), { format: 'text/turtle' });
+                loadTimeEl.textContent = (performance.now() - start).toFixed(0) + 'ms';
+                updateStats();
+                setStatus('Demo loaded!', 'ready');
+                showAllImages();
+            } catch (e) {
+                setStatus('Error: ' + e.message, 'error');
             }
         }
 
         function clearStore() {
-            if (store) {
-                store = new Store();
-                updateTripleCount();
-                loadTimeEl.textContent = '-';
-                queryTimeEl.textContent = '-';
-                resultsOutput.value = 'Store cleared.';
-                imageGrid.innerHTML = '';
-                galleryEmpty.classList.add('hidden');
-                setStatus('Store cleared. Load data to begin.', 'ready');
-            }
+            store = new Store();
+            allImages = [];
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+            galleryInfo.textContent = '';
+            loadMoreContainer.style.display = 'none';
+            tripleCountEl.textContent = '0';
+            imageCountEl.textContent = '0';
+            showingCountEl.textContent = '0';
+            loadTimeEl.textContent = '-';
+            setStatus('Cleared. Load data to begin.', 'ready');
         }
 
-        function browseImages() {
-            if (!store) return;
+        function queryImages(searchTerm = '') {
+            if (!store) return [];
 
-            const query = `
-                PREFIX schema: <https://schema.org/>
-                PREFIX lio: <https://w3id.org/lio/v1#>
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                SELECT DISTINCT ?image ?name ?thumbnail ?contentUrl WHERE {
-                    ?image schema:name ?name .
-                    OPTIONAL { ?image schema:thumbnail ?thumbnail }
-                    OPTIONAL { ?image schema:contentUrl ?contentUrl }
-                } LIMIT 50
-            `;
-
-            const startTime = performance.now();
+            let sparql;
+            if (searchTerm) {
+                // Search by name or depicts label
+                sparql = `
+                    PREFIX schema: <https://schema.org/>
+                    PREFIX lio: <https://w3id.org/lio/v1#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                        ?img schema:name ?name .
+                        OPTIONAL { ?img schema:thumbnail ?thumb }
+                        OPTIONAL { ?img schema:contentUrl ?url }
+                        {
+                            FILTER(CONTAINS(LCASE(?name), LCASE("${searchTerm}")))
+                        } UNION {
+                            ?img lio:depicts ?entity .
+                            ?entity rdfs:label ?label .
+                            FILTER(CONTAINS(LCASE(?label), LCASE("${searchTerm}")))
+                        }
+                    } LIMIT 500
+                `;
+            } else {
+                sparql = `
+                    PREFIX schema: <https://schema.org/>
+                    SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                        ?img schema:name ?name .
+                        OPTIONAL { ?img schema:thumbnail ?thumb }
+                        OPTIONAL { ?img schema:contentUrl ?url }
+                    } LIMIT 1000
+                `;
+            }
 
             try {
-                const result = store.query(query);
-                const items = [...result];
-                queryTimeEl.textContent = (performance.now() - startTime).toFixed(2) + 'ms';
-
-                if (items.length === 0) {
-                    imageGrid.innerHTML = '';
-                    galleryEmpty.classList.remove('hidden');
-                    return;
-                }
-
-                galleryEmpty.classList.add('hidden');
-
-                // Get depicts info for each image
-                const imagesData = items.map(binding => {
-                    const imageUri = binding.get('image')?.value;
+                const results = [...store.query(sparql)];
+                return results.map(b => {
+                    const imgUri = b.get('img')?.value;
                     const depicts = [];
 
-                    if (imageUri) {
-                        const depictsQuery = `
-                            PREFIX lio: <https://w3id.org/lio/v1#>
-                            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                            SELECT ?entity ?label WHERE {
-                                <${imageUri}> lio:depicts ?entity .
-                                OPTIONAL { ?entity rdfs:label ?label }
-                            }
-                        `;
+                    if (imgUri) {
                         try {
-                            const depictsResult = store.query(depictsQuery);
-                            for (const d of depictsResult) {
+                            const dr = store.query(`
+                                PREFIX lio: <https://w3id.org/lio/v1#>
+                                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                SELECT ?e ?l WHERE { <${imgUri}> lio:depicts ?e . OPTIONAL { ?e rdfs:label ?l } } LIMIT 5
+                            `);
+                            for (const d of dr) {
                                 depicts.push({
-                                    uri: d.get('entity')?.value,
-                                    label: d.get('label')?.value || d.get('entity')?.value.split('/').pop()
+                                    uri: d.get('e')?.value,
+                                    label: d.get('l')?.value || d.get('e')?.value.split('/').pop().replace(/_/g, ' ')
                                 });
                             }
-                        } catch (e) {}
+                        } catch(e) {}
                     }
 
                     return {
-                        uri: imageUri,
-                        name: binding.get('name')?.value || 'Untitled',
-                        thumbnail: binding.get('thumbnail')?.value,
-                        contentUrl: binding.get('contentUrl')?.value,
+                        uri: imgUri,
+                        name: b.get('name')?.value || 'Untitled',
+                        thumbnail: b.get('thumb')?.value,
+                        contentUrl: b.get('url')?.value,
                         depicts
                     };
                 });
-
-                renderImageGrid(imagesData);
-
-            } catch (error) {
-                resultsOutput.value = 'Error: ' + error.message;
+            } catch (e) {
+                console.error(e);
+                return [];
             }
         }
 
-        function renderImageGrid(images) {
-            imageGrid.innerHTML = images.map(img => {
+        function showAllImages() {
+            allImages = queryImages('');
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+            loadMoreImages();
+        }
+
+        function searchImages() {
+            const term = searchInput.value.trim();
+            allImages = queryImages(term);
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+
+            if (allImages.length === 0) {
+                galleryInfo.textContent = term ? `No images found for "${term}"` : 'No images in store.';
+                loadMoreContainer.style.display = 'none';
+            } else {
+                loadMoreImages();
+            }
+        }
+
+        function loadMoreImages() {
+            const batch = allImages.slice(displayedCount, displayedCount + PAGE_SIZE);
+            displayedCount += batch.length;
+
+            const html = batch.map(img => {
                 const imgUrl = img.thumbnail || img.contentUrl;
-                const depicts = img.depicts.slice(0, 4).map(d => {
-                    const label = d.label.replace(/_/g, ' ');
-                    if (d.uri.includes('dbpedia.org') || d.uri.includes('wikidata.org')) {
-                        return `<span class="depicts-tag"><a href="${d.uri}" target="_blank" rel="noopener">${label}</a></span>`;
-                    }
-                    return `<span class="depicts-tag">${label}</span>`;
-                }).join('');
+                const tags = img.depicts.slice(0, 3).map(d =>
+                    `<span class="depicts-tag">${d.label}</span>`
+                ).join('');
 
                 return `
                     <div class="image-card">
                         <div class="image-wrapper">
-                            ${imgUrl ? `
-                                <div class="loading-spinner"></div>
-                                <img data-src="${imgUrl}" alt="${img.name}" loading="lazy">
-                            ` : `
-                                <div class="placeholder">🖼️</div>
-                            `}
+                            ${imgUrl ? `<div class="loading-spinner"></div><img data-src="${imgUrl}" alt="${img.name}">` : `<div class="placeholder">🖼️</div>`}
                         </div>
                         <div class="image-info">
                             <h3 class="image-title">${img.name}</h3>
-                            ${depicts ? `<div class="image-depicts">${depicts}</div>` : ''}
-                            ${img.contentUrl ? `
-                                <div class="image-source">
-                                    <a href="${img.contentUrl}" target="_blank" rel="noopener">View full image →</a>
-                                </div>
-                            ` : ''}
+                            ${tags ? `<div class="image-depicts">${tags}</div>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Lazy load images with IntersectionObserver
-            const lazyImages = imageGrid.querySelectorAll('img[data-src]');
-            const imageObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        img.src = img.dataset.src;
-                        img.onload = () => {
-                            img.classList.add('loaded');
-                            const spinner = img.parentElement.querySelector('.loading-spinner');
-                            if (spinner) spinner.remove();
-                        };
-                        img.onerror = () => {
-                            const spinner = img.parentElement.querySelector('.loading-spinner');
-                            if (spinner) spinner.remove();
-                            img.parentElement.innerHTML = '<div class="placeholder">⚠️</div>';
-                        };
-                        observer.unobserve(img);
-                    }
-                });
-            }, { rootMargin: '100px' });
+            imageGrid.insertAdjacentHTML('beforeend', html);
 
-            lazyImages.forEach(img => imageObserver.observe(img));
+            // Lazy load new images
+            imageGrid.querySelectorAll('img[data-src]:not([src])').forEach(img => {
+                const observer = new IntersectionObserver((entries, obs) => {
+                    if (entries[0].isIntersecting) {
+                        img.src = img.dataset.src;
+                        img.onload = () => { img.classList.add('loaded'); img.parentElement.querySelector('.loading-spinner')?.remove(); };
+                        img.onerror = () => { img.parentElement.querySelector('.loading-spinner')?.remove(); img.parentElement.innerHTML = '<div class="placeholder">⚠️</div>'; };
+                        obs.disconnect();
+                    }
+                }, { rootMargin: '200px' });
+                observer.observe(img);
+            });
+
+            showingCountEl.textContent = displayedCount;
+            galleryInfo.textContent = `Showing ${displayedCount} of ${allImages.length} images`;
+            loadMoreContainer.style.display = displayedCount < allImages.length ? 'block' : 'none';
         }
 
-        async function initialize() {
+        function runQuery() {
+            if (!store) return;
+            const q = queryInput.value.trim();
+            if (!q) return;
+
             try {
-                setStatus('Initializing Oxigraph WASM...', 'loading');
+                const r = store.query(q);
+                if (typeof r === 'boolean') {
+                    resultsOutput.value = `Result: ${r}`;
+                } else {
+                    const items = [...r];
+                    if (items.length === 0) {
+                        resultsOutput.value = 'No results.';
+                    } else if (items[0].subject !== undefined) {
+                        resultsOutput.value = items.slice(0, 100).map(q => `${q.subject.value} ${q.predicate.value} ${q.object.value}`).join('\n');
+                    } else if (items[0].get) {
+                        const vars = [...items[0].entries()].map(([k]) => k);
+                        resultsOutput.value = `${items.length} results\n\n` + items.slice(0, 100).map(b => vars.map(v => `${v}=${b.get(v)?.value || ''}`).join(' | ')).join('\n');
+                    }
+                }
+            } catch (e) {
+                resultsOutput.value = 'Error: ' + e.message;
+            }
+        }
+
+        async function init_app() {
+            try {
                 await init();
                 store = new Store();
                 setStatus('Ready! Load data to begin.', 'ready');
-                updateTripleCount();
-            } catch (error) {
-                setStatus('Failed to initialize: ' + error.message, 'error');
-                console.error('Init error:', error);
+            } catch (e) {
+                setStatus('Init failed: ' + e.message, 'error');
             }
         }
 
         // Event listeners
-        document.getElementById('run-query').addEventListener('click', runQuery);
-        document.getElementById('load-imagesnippets').addEventListener('click', loadImageSnippetsData);
-        document.getElementById('load-demo').addEventListener('click', loadDemoData);
-        document.getElementById('clear-data').addEventListener('click', clearStore);
-        document.getElementById('browse-images').addEventListener('click', browseImages);
-        document.getElementById('clear-query').addEventListener('click', () => {
-            queryInput.value = '';
-            resultsOutput.value = '';
-        });
+        document.getElementById('load-all').onclick = loadAllData;
+        document.getElementById('load-demo').onclick = loadDemoData;
+        document.getElementById('clear-data').onclick = clearStore;
+        document.getElementById('search-btn').onclick = searchImages;
+        document.getElementById('show-all-btn').onclick = showAllImages;
+        document.getElementById('load-more').onclick = loadMoreImages;
+        document.getElementById('run-query').onclick = runQuery;
 
-        // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-            });
-        });
+        searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchImages(); });
 
-        // Example query buttons
+        document.getElementById('nerdy-toggle').onclick = () => {
+            const content = document.getElementById('nerdy-content');
+            const arrow = document.getElementById('nerdy-arrow');
+            content.classList.toggle('open');
+            arrow.textContent = content.classList.contains('open') ? '▲' : '▼';
+        };
+
         document.querySelectorAll('.example-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const queryKey = btn.dataset.query;
-                if (exampleQueries[queryKey]) {
-                    queryInput.value = exampleQueries[queryKey];
-                    // Switch to SPARQL tab
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    document.querySelector('[data-tab="sparql"]').classList.add('active');
-                    document.getElementById('tab-sparql').classList.add('active');
-                    runQuery();
-                }
-            });
+            btn.onclick = () => {
+                queryInput.value = exampleQueries[btn.dataset.query];
+                runQuery();
+            };
         });
 
-        queryInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') runQuery();
-        });
-
-        initialize();
+        init_app();
     </script>
 </body>
 </html>
