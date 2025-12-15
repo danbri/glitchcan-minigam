@@ -347,7 +347,8 @@
 
         <div class="controls-panel">
             <div class="btn-row">
-                <button id="load-all" class="btn-primary btn-large">Load All ImageSnippets Data</button>
+                <button id="load-50k" class="btn-primary btn-large">Load 50k Triples</button>
+                <button id="load-10k" class="btn-secondary">Load 10k</button>
                 <button id="load-demo" class="btn-secondary">Demo Data</button>
                 <button id="clear-data" class="btn-secondary">Clear</button>
             </div>
@@ -396,7 +397,9 @@
         let displayedCount = 0;
         const PAGE_SIZE = 24;
 
-        const ENDPOINT = 'https://imagesnippets.com/sparql/imgtag';
+        // Local dataset paths (loaded from repo)
+        const DATASET_50K = '../../../datasets/upstream/imagesnippets-50k.ttl';
+        const DATASET_10K = '../../../datasets/upstream/imagesnippets-10k.ttl';
 
         const exampleQueries = {
             count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
@@ -434,51 +437,38 @@
             } catch(e) { console.error(e); }
         }
 
-        async function loadAllData() {
+        async function loadDataset(url, label) {
             if (!store) return;
-            setStatus('Fetching all data from ImageSnippets (this may take a moment)...', 'loading');
+            setStatus(`Loading ${label}...`, 'loading');
             const start = performance.now();
 
             try {
-                // Fetch large dataset via SPARQL endpoint
-                const query = encodeURIComponent('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 50000');
-                const url = `${ENDPOINT}?query=${query}`;
                 console.log('Fetching from:', url);
-
-                const res = await fetch(url, {
-                    headers: { 'Accept': 'text/turtle' },
-                    mode: 'cors'
-                });
-
-                console.log('Response status:', res.status, res.statusText);
-                console.log('Response headers:', [...res.headers.entries()]);
+                const res = await fetch(url);
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
                 const turtle = await res.text();
                 console.log('Received turtle data, length:', turtle.length);
-                console.log('First 500 chars:', turtle.substring(0, 500));
 
                 if (!turtle || turtle.trim().length === 0) {
-                    throw new Error('Empty response from server');
+                    throw new Error('Empty file');
                 }
 
                 store.load(turtle, { format: 'text/turtle' });
 
                 loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
                 updateStats();
-                setStatus('All data loaded! Search or browse images.', 'ready');
+                setStatus(`${label} loaded! Search or browse images.`, 'ready');
                 showAllImages();
             } catch (e) {
-                console.error('Load all data error:', e);
-                // Check if it's a CORS error
-                if (e.message.includes('Failed to fetch') || e.name === 'TypeError') {
-                    setStatus('CORS blocked: ImageSnippets endpoint may not allow browser access. Use Demo Data instead.', 'error');
-                } else {
-                    setStatus('Error: ' + e.message, 'error');
-                }
+                console.error('Load error:', e);
+                setStatus('Error: ' + e.message, 'error');
             }
         }
+
+        function load50k() { loadDataset(DATASET_50K, '50k triples'); }
+        function load10k() { loadDataset(DATASET_10K, '10k triples'); }
 
         async function loadDemoData() {
             if (!store) return;
@@ -681,7 +671,8 @@
         }
 
         // Event listeners
-        document.getElementById('load-all').onclick = loadAllData;
+        document.getElementById('load-50k').onclick = load50k;
+        document.getElementById('load-10k').onclick = load10k;
         document.getElementById('load-demo').onclick = loadDemoData;
         document.getElementById('clear-data').onclick = clearStore;
         document.getElementById('search-btn').onclick = searchImages;
