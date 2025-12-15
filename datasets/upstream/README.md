@@ -12,10 +12,18 @@ This folder contains RDF data dumps from [ImageSnippets.com](https://imagesnippe
 
 ## Files
 
+### Triples (from /sparql/images endpoint)
 | File | Description | Triples | Size |
 |------|-------------|---------|------|
-| `imagesnippets-10k.ttl` | Small sample (10k triples) | ~10,000 | ~1MB |
-| `imagesnippets-50k.ttl` | Medium sample (50k triples) | ~50,000 | ~6MB |
+| `imagesnippets-10k.ttl` | Small sample | ~10,000 | ~1MB |
+| `imagesnippets-50k.ttl` | Medium sample | ~50,000 | ~6MB |
+
+### Quads (from /sparql/imgtag endpoint)
+| File | Description | Quads | Size |
+|------|-------------|-------|------|
+| `imagesnippets-imgtag-50k.nq` | N-Quads with provenance | 50,000 | ~10MB |
+
+The N-Quads format includes the fourth element (named graph) which indicates which image each triple belongs to. This is useful for provenance tracking.
 
 ## Vocabularies Used
 

@@ -348,8 +348,9 @@
         <div class="controls-panel">
             <div class="btn-row">
                 <button id="load-50k" class="btn-primary btn-large">Load 50k Triples</button>
+                <button id="load-quads" class="btn-secondary">50k Quads</button>
                 <button id="load-10k" class="btn-secondary">Load 10k</button>
-                <button id="load-demo" class="btn-secondary">Demo Data</button>
+                <button id="load-demo" class="btn-secondary">Demo</button>
                 <button id="clear-data" class="btn-secondary">Clear</button>
             </div>
             <div class="search-box">
@@ -400,6 +401,7 @@
         // Local dataset paths (loaded from repo)
         const DATASET_50K = '../../../datasets/upstream/imagesnippets-50k.ttl';
         const DATASET_10K = '../../../datasets/upstream/imagesnippets-10k.ttl';
+        const DATASET_QUADS = '../../../datasets/upstream/imagesnippets-imgtag-50k.nq';
 
         const exampleQueries = {
             count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
@@ -437,7 +439,7 @@
             } catch(e) { console.error(e); }
         }
 
-        async function loadDataset(url, label) {
+        async function loadDataset(url, label, format = 'text/turtle') {
             if (!store) return;
             setStatus(`Loading ${label}...`, 'loading');
             const start = performance.now();
@@ -448,14 +450,14 @@
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-                const turtle = await res.text();
-                console.log('Received turtle data, length:', turtle.length);
+                const data = await res.text();
+                console.log('Received data, length:', data.length);
 
-                if (!turtle || turtle.trim().length === 0) {
+                if (!data || data.trim().length === 0) {
                     throw new Error('Empty file');
                 }
 
-                store.load(turtle, { format: 'text/turtle' });
+                store.load(data, { format: format });
 
                 loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
                 updateStats();
@@ -467,8 +469,9 @@
             }
         }
 
-        function load50k() { loadDataset(DATASET_50K, '50k triples'); }
-        function load10k() { loadDataset(DATASET_10K, '10k triples'); }
+        function load50k() { loadDataset(DATASET_50K, '50k triples', 'text/turtle'); }
+        function load10k() { loadDataset(DATASET_10K, '10k triples', 'text/turtle'); }
+        function loadQuads() { loadDataset(DATASET_QUADS, '50k quads', 'application/n-quads'); }
 
         async function loadDemoData() {
             if (!store) return;
@@ -672,6 +675,7 @@
 
         // Event listeners
         document.getElementById('load-50k').onclick = load50k;
+        document.getElementById('load-quads').onclick = loadQuads;
         document.getElementById('load-10k').onclick = load10k;
         document.getElementById('load-demo').onclick = loadDemoData;
         document.getElementById('clear-data').onclick = clearStore;
