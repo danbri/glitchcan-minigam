@@ -7,8 +7,8 @@
 
 <http://demo.imagesnippets.com/image/eiffel-tower> a schema:ImageObject ;
     schema:name "Eiffel Tower at Sunset"@en ;
-    schema:thumbnail <https://images.unsplash.com/photo-1511739001486-6bfe10ce65f4?w=320&h=213&fit=crop> ;
-    schema:contentUrl <https://images.unsplash.com/photo-1511739001486-6bfe10ce65f4?w=800> ;
+    schema:thumbnail <https://images.unsplash.com/photo-1543349689-9a4d426bee8e?w=320&h=213&fit=crop> ;
+    schema:contentUrl <https://images.unsplash.com/photo-1543349689-9a4d426bee8e?w=800> ;
     lio:depicts dbr:Eiffel_Tower ;
     lio:depicts dbr:Paris .
 
