@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oxigraph + ImageSnippets SPARQL Demo</title>
+    <title>Oxigraph + ImageSnippets SPARQL Demo (Testbed)</title>
     <style>
         :root {
             --bg-primary: #0f0f1a;
@@ -16,8 +16,8 @@
             --text-secondary: #a0a0b0;
             --success: #4ade80;
             --warning: #fbbf24;
-            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-1: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+            --gradient-2: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
         }
 
         * {
@@ -486,8 +486,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>Oxigraph + ImageSnippets SPARQL Demo</h1>
-        <p class="subtitle">Client-side RDF store powered by WebAssembly - <a href="testbed/" style="color: #ffd700;">try experimental testbed</a></p>
+        <h1>Oxigraph + ImageSnippets Testbed</h1>
+        <p class="subtitle">Experimental features - <a href="../" style="color: #ffd700;">back to stable version</a></p>
     </div>
 
     <div class="disclaimer">
@@ -573,7 +573,7 @@
     </div>
 
     <script type="module">
-        import init, { Store } from './web.js';
+        import init, { Store } from '../web.js';
 
         let store = null;
 
