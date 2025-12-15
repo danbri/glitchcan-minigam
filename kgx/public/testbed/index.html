@@ -603,15 +603,38 @@
 
                     try {
                         const response = await session.prompt(prompt);
-                        const jsonMatch = response.match(/\[[\s\S]*?\]/);
+                        // Try to extract and parse JSON array (greedy match for full array)
+                        const jsonMatch = response.match(/\[[\s\S]*\]/);
                         if (jsonMatch) {
-                            const parsed = JSON.parse(jsonMatch[0]);
-                            const results = batch.map((img, j) => ({
-                                uri: img.uri,
-                                keywords: parsed[j]?.keywords || []
-                            }));
-                            storeKeywordsInGraph(results);
-                            totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                            let jsonStr = jsonMatch[0];
+                            // Clean up common AI JSON issues
+                            jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas
+                            jsonStr = jsonStr.replace(/'/g, '"'); // Single to double quotes
+
+                            try {
+                                const parsed = JSON.parse(jsonStr);
+                                const results = batch.map((img, j) => ({
+                                    uri: img.uri,
+                                    keywords: parsed[j]?.keywords || []
+                                }));
+                                storeKeywordsInGraph(results);
+                                totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                            } catch (parseErr) {
+                                // Fallback: extract keywords with regex if JSON fails
+                                console.log('JSON parse failed, using regex fallback');
+                                const kwMatches = response.matchAll(/"keywords"\s*:\s*\[(.*?)\]/g);
+                                let idx = 0;
+                                for (const m of kwMatches) {
+                                    if (idx < batch.length) {
+                                        const kws = m[1].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, '')) || [];
+                                        if (kws.length > 0) {
+                                            storeKeywordsInGraph([{ uri: batch[idx].uri, keywords: kws }]);
+                                            totalKeywords += kws.length;
+                                        }
+                                    }
+                                    idx++;
+                                }
+                            }
                         }
                     } catch (e) {
                         console.error('Batch error:', e);

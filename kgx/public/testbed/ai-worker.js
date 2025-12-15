@@ -59,13 +59,32 @@ Return: [{"keywords": ["word1", "word2"]}] for each.`;
         const response = await s.prompt(prompt, { signal: controller.signal });
         clearTimeout(timeoutId);
 
-        const jsonMatch = response.match(/\[[\s\S]*?\]/);
+        // Greedy match for full JSON array
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return batch.map((img, i) => ({
-                uri: img.uri,
-                keywords: parsed[i]?.keywords || []
-            }));
+            let jsonStr = jsonMatch[0];
+            // Clean up common AI JSON issues
+            jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas
+            jsonStr = jsonStr.replace(/'/g, '"'); // Single to double quotes
+
+            try {
+                const parsed = JSON.parse(jsonStr);
+                return batch.map((img, i) => ({
+                    uri: img.uri,
+                    keywords: parsed[i]?.keywords || []
+                }));
+            } catch (parseErr) {
+                // Fallback: extract keywords with regex if JSON fails
+                console.log('JSON parse failed, using regex fallback');
+                const results = [];
+                const kwMatches = [...response.matchAll(/"keywords"\s*:\s*\[(.*?)\]/g)];
+                for (let i = 0; i < batch.length; i++) {
+                    const m = kwMatches[i];
+                    const kws = m ? (m[1].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, '')) || []) : [];
+                    results.push({ uri: batch[i].uri, keywords: kws });
+                }
+                return results;
+            }
         }
     } catch (e) {
         console.log('Batch error:', e.name === 'AbortError' ? 'timeout' : e.message);
