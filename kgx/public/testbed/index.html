@@ -577,8 +577,9 @@
 
         let store = null;
 
-        // ImageSnippets SPARQL endpoint
-        const IMAGESNIPPETS_ENDPOINT = 'https://imagesnippets.com/sparql/images';
+        // ImageSnippets SPARQL endpoints
+        // /sparql/imgtag = quads (more accurate), /sparql/images = triples only
+        const IMAGESNIPPETS_ENDPOINT = 'https://imagesnippets.com/sparql/imgtag';
 
         // Example queries
         const exampleQueries = {
