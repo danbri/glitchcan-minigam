@@ -432,9 +432,11 @@
             </div>
             <div class="ai-controls">
                 <button id="ai-enhance-btn" class="btn-ai" disabled>Generate Keywords</button>
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
-                    <input type="checkbox" id="ai-search-toggle"> Use AI search
-                </label>
+                <span id="ai-search-label" style="display: none;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                        <input type="checkbox" id="ai-search-toggle" checked> Use AI keywords in search
+                    </label>
+                </span>
                 <span id="ai-progress" class="ai-progress"></span>
             </div>
         </div>
@@ -512,6 +514,7 @@
         const aiEnhanceBtn = document.getElementById('ai-enhance-btn');
         const aiProgress = document.getElementById('ai-progress');
         const aiSearchToggle = document.getElementById('ai-search-toggle');
+        const aiSearchLabel = document.getElementById('ai-search-label');
 
         // Check Chrome Prompt API availability
         async function checkAIAvailability() {
@@ -572,20 +575,24 @@
             }
         }
 
-        // Generate keywords for a batch of images
+        // Generate keywords for a batch of images with timeout
         async function generateKeywordsForBatch(session, batch) {
-            const prompt = `For each image below, generate 3-5 short search keywords or phrases that someone might use to find this image. Focus on concrete nouns, actions, and descriptive terms.
+            const prompt = `For each image below, generate 3-5 short search keywords. Return JSON array only.
 
-Images:
-${batch.map((img, i) => `${i+1}. "${img.name}"${img.comment ? ` - ${img.comment.substring(0, 200)}` : ''}`).join('\n')}
+${batch.map((img, i) => `${i+1}. "${img.name}"`).join('\n')}
 
-Return ONLY a JSON array with one object per image: [{"uri": "...", "keywords": ["word1", "word2", ...]}]
-Use the exact image numbers (1, 2, 3...) as indices.`;
+Return: [{"keywords": ["word1", "word2"]}] for each image.`;
 
             try {
-                const response = await session.prompt(prompt);
+                // Add timeout - abort after 30 seconds
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+                const response = await session.prompt(prompt, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 // Try to extract JSON from response
-                const jsonMatch = response.match(/\[[\s\S]*\]/);
+                const jsonMatch = response.match(/\[[\s\S]*?\]/);
                 if (jsonMatch) {
                     const parsed = JSON.parse(jsonMatch[0]);
                     return batch.map((img, i) => ({
@@ -594,7 +601,11 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
                     }));
                 }
             } catch (e) {
-                console.error('AI batch error:', e);
+                if (e.name === 'AbortError') {
+                    console.log('AI batch timed out');
+                } else {
+                    console.error('AI batch error:', e);
+                }
             }
             return batch.map(img => ({ uri: img.uri, keywords: [] }));
         }
@@ -666,7 +677,8 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
 
                 aiKeywordsGenerated = true;
                 aiSearchToggle.checked = true;
-                aiProgress.textContent = `Generated ${totalKeywords} keywords for ${metadata.length} images`;
+                aiSearchLabel.style.display = 'inline';
+                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${metadata.length} images`;
                 updateStats();
 
             } catch (e) {
@@ -828,6 +840,7 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
             // Reset AI state
             aiKeywordsGenerated = false;
             aiSearchToggle.checked = false;
+            aiSearchLabel.style.display = 'none';
             aiEnhanceBtn.disabled = true;
             aiProgress.textContent = aiAvailable ? 'Ready' : '';
         }
