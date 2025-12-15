@@ -1,4 +1,4 @@
-@prefix schema: <https://schema.org/> .
+@prefix schema: <http://schema.org/> .
 @prefix lio: <https://w3id.org/lio/v1#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix dbr: <http://dbpedia.org/resource/> .
