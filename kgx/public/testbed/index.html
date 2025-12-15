@@ -432,9 +432,11 @@
             </div>
             <div class="ai-controls">
                 <button id="ai-enhance-btn" class="btn-ai" disabled>Generate Keywords</button>
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
-                    <input type="checkbox" id="ai-search-toggle"> Use AI search
-                </label>
+                <span id="ai-search-label" style="display: none;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                        <input type="checkbox" id="ai-search-toggle" checked> Use AI keywords in search
+                    </label>
+                </span>
                 <span id="ai-progress" class="ai-progress"></span>
             </div>
         </div>
@@ -505,16 +507,18 @@
 
         // Chrome Built-in AI state
         const AI_GRAPH = 'http://local.ai/keywords';
-        let aiSession = null;
+        let aiWorker = null;
         let aiAvailable = false;
         let aiKeywordsGenerated = false;
         const aiPanel = document.getElementById('ai-panel');
         const aiEnhanceBtn = document.getElementById('ai-enhance-btn');
         const aiProgress = document.getElementById('ai-progress');
         const aiSearchToggle = document.getElementById('ai-search-toggle');
+        const aiSearchLabel = document.getElementById('ai-search-label');
 
-        // Check Chrome Prompt API availability
+        // Check Chrome Prompt API availability (try worker first, fallback to main thread check)
         async function checkAIAvailability() {
+            // First check main thread
             try {
                 if (typeof LanguageModel !== 'undefined') {
                     const availability = await LanguageModel.availability();
@@ -523,6 +527,16 @@
                         aiAvailable = true;
                         aiPanel.classList.add('available');
                         aiProgress.textContent = availability === 'downloadable' ? 'Model will download on first use' : 'Ready';
+
+                        // Try to create worker for background processing
+                        try {
+                            aiWorker = new Worker('./ai-worker.js');
+                            aiWorker.onmessage = handleWorkerMessage;
+                            aiWorker.onerror = (e) => console.error('Worker error:', e);
+                            console.log('AI Worker created for background processing');
+                        } catch (e) {
+                            console.log('Worker not available, will use main thread:', e.message);
+                        }
                         return true;
                     }
                 }
@@ -532,18 +546,25 @@
             return false;
         }
 
-        // Create AI session
-        async function getAISession() {
-            if (aiSession) return aiSession;
-            try {
-                aiSession = await LanguageModel.create({
-                    temperature: 0.3,
-                    topK: 5
-                });
-                return aiSession;
-            } catch (e) {
-                console.error('Failed to create AI session:', e);
-                return null;
+        // Handle messages from AI worker
+        function handleWorkerMessage(e) {
+            const { type, processed, total, keywords, results, totalKeywords, error } = e.data;
+
+            if (type === 'progress') {
+                aiProgress.textContent = `Processing ${processed}/${total} images... (${keywords} keywords)`;
+            } else if (type === 'complete') {
+                storeKeywordsInGraph(results);
+                aiKeywordsGenerated = true;
+                aiSearchToggle.checked = true;
+                aiSearchLabel.style.display = 'inline';
+                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${processed} images`;
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
+                updateStats();
+            } else if (type === 'error') {
+                aiProgress.textContent = 'Error: ' + error;
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
             }
         }
 
@@ -551,14 +572,14 @@
         function getImageMetadataForAI() {
             if (!store) return [];
             try {
+                // Limit to 100 images to avoid overwhelming the local AI
                 const results = [...store.query(`
                     PREFIX schema: <http://schema.org/>
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                    PREFIX lio: <https://w3id.org/lio/v1#>
                     SELECT ?img ?name ?comment WHERE {
                         ?img schema:name ?name .
                         OPTIONAL { ?img rdfs:comment ?comment }
-                    } LIMIT 500
+                    } LIMIT 100
                 `)];
 
                 return results.map(b => ({
@@ -572,33 +593,6 @@
             }
         }
 
-        // Generate keywords for a batch of images
-        async function generateKeywordsForBatch(session, batch) {
-            const prompt = `For each image below, generate 3-5 short search keywords or phrases that someone might use to find this image. Focus on concrete nouns, actions, and descriptive terms.
-
-Images:
-${batch.map((img, i) => `${i+1}. "${img.name}"${img.comment ? ` - ${img.comment.substring(0, 200)}` : ''}`).join('\n')}
-
-Return ONLY a JSON array with one object per image: [{"uri": "...", "keywords": ["word1", "word2", ...]}]
-Use the exact image numbers (1, 2, 3...) as indices.`;
-
-            try {
-                const response = await session.prompt(prompt);
-                // Try to extract JSON from response
-                const jsonMatch = response.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    return batch.map((img, i) => ({
-                        uri: img.uri,
-                        keywords: parsed[i]?.keywords || []
-                    }));
-                }
-            } catch (e) {
-                console.error('AI batch error:', e);
-            }
-            return batch.map(img => ({ uri: img.uri, keywords: [] }));
-        }
-
         // Store keywords in named graph
         function storeKeywordsInGraph(keywordData) {
             if (!store) return;
@@ -606,7 +600,6 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
             for (const item of keywordData) {
                 if (item.keywords && item.keywords.length > 0) {
                     for (const kw of item.keywords) {
-                        // Store as: <image> <aiKeyword> "keyword" in named graph
                         triples.push(`<${item.uri}> <http://local.ai/keyword> "${kw.replace(/"/g, '\\"')}"@en .`);
                     }
                 }
@@ -622,51 +615,69 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
             }
         }
 
-        // Main function to generate AI keywords
+        // Main function to generate AI keywords (uses worker if available)
         async function generateAIKeywords() {
             if (!aiAvailable || !store) return;
 
+            const metadata = getImageMetadataForAI();
+            if (metadata.length === 0) {
+                aiProgress.textContent = 'No images to process';
+                return;
+            }
+
             aiEnhanceBtn.disabled = true;
             aiEnhanceBtn.textContent = 'Processing...';
+            aiProgress.textContent = `Starting... (${metadata.length} images)`;
 
+            // Use worker if available
+            if (aiWorker) {
+                aiWorker.postMessage({ type: 'generate', metadata });
+                return;
+            }
+
+            // Fallback: run on main thread (may block UI)
+            console.log('Running AI on main thread (no worker)');
             try {
-                const session = await getAISession();
-                if (!session) {
-                    aiProgress.textContent = 'Failed to start AI session';
-                    return;
-                }
+                const session = await LanguageModel.create({
+                    temperature: 0.3,
+                    topK: 5,
+                    expectedOutputLanguages: ['en']
+                });
 
-                const metadata = getImageMetadataForAI();
-                if (metadata.length === 0) {
-                    aiProgress.textContent = 'No images to process';
-                    return;
-                }
-
-                const BATCH_SIZE = 10;
-                const batches = [];
-                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
-                    batches.push(metadata.slice(i, i + BATCH_SIZE));
-                }
-
+                const BATCH_SIZE = 5;
                 let processed = 0;
                 let totalKeywords = 0;
 
-                for (const batch of batches) {
-                    aiProgress.textContent = `Processing ${processed}/${metadata.length} images...`;
+                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
+                    const batch = metadata.slice(i, i + BATCH_SIZE);
+                    aiProgress.textContent = `Processing ${processed}/${metadata.length}... (${totalKeywords} keywords)`;
 
-                    const results = await generateKeywordsForBatch(session, batch);
-                    storeKeywordsInGraph(results);
+                    const prompt = `For each image, generate 3-5 search keywords. Return JSON array only.\n\n${batch.map((img, j) => `${j+1}. "${img.name}"`).join('\n')}\n\nReturn: [{"keywords": ["word1", "word2"]}] for each.`;
 
-                    totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                    try {
+                        const response = await session.prompt(prompt);
+                        const jsonMatch = response.match(/\[[\s\S]*?\]/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            const results = batch.map((img, j) => ({
+                                uri: img.uri,
+                                keywords: parsed[j]?.keywords || []
+                            }));
+                            storeKeywordsInGraph(results);
+                            totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                        }
+                    } catch (e) {
+                        console.error('Batch error:', e);
+                    }
+
                     processed += batch.length;
-
-                    // Small delay to not overwhelm
-                    await new Promise(r => setTimeout(r, 100));
+                    await new Promise(r => setTimeout(r, 500));
                 }
 
                 aiKeywordsGenerated = true;
                 aiSearchToggle.checked = true;
-                aiProgress.textContent = `Generated ${totalKeywords} keywords for ${metadata.length} images`;
+                aiSearchLabel.style.display = 'inline';
+                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${metadata.length} images`;
                 updateStats();
 
             } catch (e) {
@@ -828,6 +839,7 @@ Use the exact image numbers (1, 2, 3...) as indices.`;
             // Reset AI state
             aiKeywordsGenerated = false;
             aiSearchToggle.checked = false;
+            aiSearchLabel.style.display = 'none';
             aiEnhanceBtn.disabled = true;
             aiProgress.textContent = aiAvailable ? 'Ready' : '';
         }
