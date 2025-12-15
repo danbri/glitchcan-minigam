@@ -6,14 +6,18 @@
     <title>Oxigraph + ImageSnippets SPARQL Demo</title>
     <style>
         :root {
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --bg-tertiary: #0f3460;
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --bg-card: #1e1e32;
             --accent: #e94560;
-            --text-primary: #eee;
-            --text-secondary: #aaa;
+            --accent-light: #ff6b8a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0b0;
             --success: #4ade80;
             --warning: #fbbf24;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
         * {
@@ -21,60 +25,94 @@
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             margin: 0;
-            padding: 20px;
+            padding: 0;
             min-height: 100vh;
         }
 
+        .header {
+            background: var(--gradient-1);
+            padding: 30px 20px;
+            text-align: center;
+        }
+
         h1 {
-            color: var(--accent);
-            margin-bottom: 10px;
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
         .subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 30px;
+            color: rgba(255,255,255,0.9);
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .disclaimer {
+            background: rgba(0,0,0,0.2);
+            color: rgba(255,255,255,0.95);
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .disclaimer a {
+            color: #ffd700;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .disclaimer a:hover {
+            text-decoration: underline;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 20px;
         }
 
         .stats-panel {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: wrap;
             margin-bottom: 20px;
+            justify-content: center;
         }
 
         .stat-card {
             background: var(--bg-secondary);
-            padding: 15px 25px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent);
+            padding: 12px 20px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         .stat-label {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: var(--text-secondary);
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: bold;
             color: var(--success);
         }
 
         .panel {
             background: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 16px;
             padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
         .panel-title {
@@ -82,56 +120,48 @@
             font-weight: 600;
             margin-bottom: 15px;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        textarea {
-            width: 100%;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            border: 1px solid var(--bg-tertiary);
-            border-radius: 6px;
-            padding: 15px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            resize: vertical;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        #query-input {
-            min-height: 150px;
-        }
-
-        #results-output {
-            min-height: 200px;
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 2px;
         }
 
         .btn-row {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 15px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 6px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.2s;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
         }
 
         .btn-primary {
-            background: var(--accent);
+            background: var(--gradient-2);
             color: white;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
         }
 
         .btn-primary:hover {
-            background: #d63050;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
@@ -140,65 +170,312 @@
         }
 
         .btn-secondary:hover {
-            background: #1a4a80;
+            background: #1f4a7a;
         }
 
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.85rem;
+        .btn-gallery {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-gallery:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
         }
 
         .examples-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
         }
 
         .example-btn {
-            text-align: left;
+            text-align: center;
             background: var(--bg-primary);
             border: 1px solid var(--bg-tertiary);
+            padding: 10px 15px;
+            font-size: 0.85rem;
         }
 
         .example-btn:hover {
             border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        #query-input {
+            min-height: 120px;
+        }
+
+        #results-output {
+            min-height: 150px;
         }
 
         .status {
-            padding: 10px 15px;
-            border-radius: 6px;
+            padding: 12px 20px;
+            border-radius: 10px;
             margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
         }
 
         .status-loading {
-            background: rgba(251, 191, 36, 0.2);
+            background: rgba(251, 191, 36, 0.15);
             border: 1px solid var(--warning);
             color: var(--warning);
         }
 
         .status-ready {
-            background: rgba(74, 222, 128, 0.2);
+            background: rgba(74, 222, 128, 0.15);
             border: 1px solid var(--success);
             color: var(--success);
         }
 
         .status-error {
-            background: rgba(233, 69, 96, 0.2);
+            background: rgba(233, 69, 96, 0.15);
             border: 1px solid var(--accent);
             color: var(--accent);
         }
 
-        .hidden {
+        /* Image Gallery Styles */
+        .gallery-container {
             display: none;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
+        .gallery-container.visible {
+            display: block;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 66.67%; /* 3:2 aspect ratio */
+            background: var(--bg-tertiary);
+            overflow: hidden;
+        }
+
+        .image-wrapper img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .image-wrapper img.loaded {
+            opacity: 1;
+        }
+
+        .image-wrapper .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-secondary);
+            font-size: 3rem;
+        }
+
+        .image-wrapper .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .image-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .image-depicts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .depicts-tag {
+            background: var(--gradient-1);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .depicts-tag a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .depicts-tag:hover {
+            opacity: 0.9;
+        }
+
+        .image-source {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .image-source a {
+            color: var(--accent-light);
+            text-decoration: none;
+        }
+
+        .image-source a:hover {
+            text-decoration: underline;
+        }
+
+        .gallery-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .gallery-empty-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--bg-tertiary);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-btn.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px 15px;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .container {
+                padding: 15px;
             }
 
             .stats-panel {
+                justify-content: space-between;
+            }
+
+            .stat-card {
+                flex: 1;
+                min-width: 90px;
+                padding: 10px 12px;
+            }
+
+            .stat-value {
+                font-size: 1.2rem;
+            }
+
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 15px;
+            }
+
+            .examples-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .btn-row {
                 flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .image-grid {
+                grid-template-columns: 1fr;
             }
 
             .examples-grid {
@@ -208,18 +485,29 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="header">
         <h1>Oxigraph + ImageSnippets SPARQL Demo</h1>
         <p class="subtitle">Client-side RDF store powered by WebAssembly</p>
+    </div>
 
+    <div class="disclaimer">
+        Demo only - data from <a href="https://imagesnippets.com" target="_blank" rel="noopener">ImageSnippets.com</a>.
+        Contact <a href="mailto:info@metadata.rocks">info@metadata.rocks</a> for licensing information.
+    </div>
+
+    <div class="container">
         <div id="status" class="status status-loading">
             Initializing Oxigraph WASM...
         </div>
 
         <div class="stats-panel">
             <div class="stat-card">
-                <div class="stat-label">Triples Loaded</div>
+                <div class="stat-label">Triples</div>
                 <div class="stat-value" id="triple-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Images</div>
+                <div class="stat-value" id="image-count">0</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Load Time</div>
@@ -234,31 +522,47 @@
         <div class="panel">
             <div class="panel-title">Data Loading</div>
             <div class="btn-row">
-                <button id="load-demo" class="btn-primary">Load Demo Data</button>
+                <button id="load-imagesnippets" class="btn-primary">Load ImageSnippets Data</button>
+                <button id="load-demo" class="btn-secondary">Load Sample Data</button>
                 <button id="clear-data" class="btn-secondary">Clear Store</button>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-title">Example Queries</div>
-            <div class="examples-grid">
-                <button class="btn-secondary example-btn" data-query="count">Count Triples</button>
-                <button class="btn-secondary example-btn" data-query="predicates">List Predicates</button>
-                <button class="btn-secondary example-btn" data-query="types">List Types</button>
-                <button class="btn-secondary example-btn" data-query="images">List Images</button>
-                <button class="btn-secondary example-btn" data-query="depicts">Depicts Relations</button>
-                <button class="btn-secondary example-btn" data-query="construct">CONSTRUCT Graph</button>
-                <button class="btn-secondary example-btn" data-query="ask">ASK Query</button>
-                <button class="btn-secondary example-btn" data-query="labels">Entity Labels</button>
+        <div class="panel gallery-container" id="gallery-panel">
+            <div class="panel-title">Image Gallery</div>
+            <div class="btn-row" style="margin-bottom: 15px;">
+                <button id="browse-images" class="btn-gallery">Browse All Images</button>
+            </div>
+            <div id="image-grid" class="image-grid"></div>
+            <div id="gallery-empty" class="gallery-empty hidden">
+                <div class="gallery-empty-icon">🖼️</div>
+                <p>No images to display. Load data and click "Browse All Images".</p>
             </div>
         </div>
 
         <div class="panel">
-            <div class="panel-title">SPARQL Query</div>
-            <textarea id="query-input" placeholder="Enter your SPARQL query here...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10</textarea>
-            <div class="btn-row">
-                <button id="run-query" class="btn-primary">Run Query</button>
-                <button id="clear-query" class="btn-secondary">Clear</button>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="queries">Example Queries</button>
+                <button class="tab-btn" data-tab="sparql">Custom SPARQL</button>
+            </div>
+
+            <div class="tab-content active" id="tab-queries">
+                <div class="examples-grid">
+                    <button class="btn-secondary example-btn" data-query="count">Count Triples</button>
+                    <button class="btn-secondary example-btn" data-query="predicates">List Predicates</button>
+                    <button class="btn-secondary example-btn" data-query="types">List Types</button>
+                    <button class="btn-secondary example-btn" data-query="images">List Images</button>
+                    <button class="btn-secondary example-btn" data-query="depicts">Depicts Relations</button>
+                    <button class="btn-secondary example-btn" data-query="labels">Entity Labels</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-sparql">
+                <textarea id="query-input" placeholder="Enter your SPARQL query here...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20</textarea>
+                <div class="btn-row" style="margin-top: 15px;">
+                    <button id="run-query" class="btn-primary">Run Query</button>
+                    <button id="clear-query" class="btn-secondary">Clear</button>
+                </div>
             </div>
         </div>
 
@@ -273,180 +577,101 @@
 
         let store = null;
 
+        // ImageSnippets SPARQL endpoint
+        const IMAGESNIPPETS_ENDPOINT = 'https://imagesnippets.com/sparql/images';
+
         // Example queries
         const exampleQueries = {
             count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
-
             predicates: `SELECT DISTINCT ?p WHERE { ?s ?p ?o } ORDER BY ?p`,
-
             types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-SELECT DISTINCT ?type WHERE { ?s rdf:type ?type }`,
-
-            images: `PREFIX lio: <http://imagesnippets.com/lio/>
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-SELECT ?image ?title WHERE {
-    ?image a lio:Image .
-    OPTIONAL { ?image dc:title ?title }
-}`,
-
-            depicts: `PREFIX lio: <http://imagesnippets.com/lio/>
+SELECT DISTINCT ?type (COUNT(?s) AS ?count) WHERE { ?s rdf:type ?type } GROUP BY ?type ORDER BY DESC(?count)`,
+            images: `PREFIX schema: <https://schema.org/>
+SELECT ?image ?name ?thumbnail WHERE {
+    ?image schema:name ?name .
+    OPTIONAL { ?image schema:thumbnail ?thumbnail }
+} LIMIT 50`,
+            depicts: `PREFIX lio: <https://w3id.org/lio/v1#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT ?image ?entity ?label WHERE {
     ?image lio:depicts ?entity .
     OPTIONAL { ?entity rdfs:label ?label }
-}`,
-
-            construct: `PREFIX lio: <http://imagesnippets.com/lio/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-CONSTRUCT {
-    ?image lio:depicts ?entity .
-    ?image foaf:depiction ?url .
-}
-WHERE {
-    ?image lio:depicts ?entity .
-    OPTIONAL { ?image foaf:depiction ?url }
-}`,
-
-            ask: `PREFIX lio: <http://imagesnippets.com/lio/>
-ASK { ?s a lio:Image }`,
-
+} LIMIT 100`,
             labels: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?entity ?label WHERE {
+SELECT DISTINCT ?entity ?label WHERE {
     ?entity rdfs:label ?label
-} ORDER BY ?label`
+} ORDER BY ?label LIMIT 100`
         };
 
-        // Demo Turtle data using ImageSnippets LIO ontology
+        // Demo Turtle data
         const demoTurtle = `
-@prefix lio: <http://imagesnippets.com/lio/> .
-@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix schema: <https://schema.org/> .
+@prefix lio: <https://w3id.org/lio/v1#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dbr: <http://dbpedia.org/resource/> .
-@prefix wd: <http://www.wikidata.org/entity/> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-# Image 1: Eiffel Tower
-<http://imagesnippets.com/images/001> a lio:Image ;
-    dc:title "Eiffel Tower at Sunset" ;
-    dc:description "The iconic Eiffel Tower illuminated during golden hour" ;
-    lio:depicts dbr:Eiffel_Tower ;
-    lio:depicts dbr:Paris ;
-    foaf:depiction <https://example.com/images/eiffel_sunset.jpg> .
+<http://example.com/image/001> a schema:ImageObject ;
+    schema:name "Man with Bicycle" ;
+    schema:thumbnail <https://farm4.staticflickr.com/3703/11299363325_782935bea3_q.jpg> ;
+    schema:contentUrl <https://farm4.staticflickr.com/3703/11299363325_782935bea3_c.jpg> ;
+    lio:depicts dbr:Bicycle ;
+    lio:depicts dbr:Man .
 
-dbr:Eiffel_Tower rdfs:label "Eiffel Tower"@en ;
-    rdfs:label "Tour Eiffel"@fr .
+dbr:Bicycle rdfs:label "Bicycle"@en .
+dbr:Man rdfs:label "Man"@en .
 
-dbr:Paris rdfs:label "Paris"@en .
+<http://example.com/image/002> a schema:ImageObject ;
+    schema:name "Tower of London" ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg/320px-Tower_of_London_viewed_from_the_River_Thames.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/2/2c/Tower_of_London_viewed_from_the_River_Thames.jpg> ;
+    lio:depicts dbr:Tower_of_London ;
+    lio:depicts dbr:London .
 
-# Image 2: Great Wall of China
-<http://imagesnippets.com/images/002> a lio:Image ;
-    dc:title "Great Wall Morning Mist" ;
-    dc:description "The Great Wall of China emerging from morning fog" ;
-    lio:depicts dbr:Great_Wall_of_China ;
-    lio:depicts dbr:China ;
-    foaf:depiction <https://example.com/images/greatwall.jpg> .
+dbr:Tower_of_London rdfs:label "Tower of London"@en .
+dbr:London rdfs:label "London"@en .
 
-dbr:Great_Wall_of_China rdfs:label "Great Wall of China"@en .
-dbr:China rdfs:label "China"@en .
+<http://example.com/image/003> a schema:ImageObject ;
+    schema:name "Red Fox in Snow" ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Vulpes_vulpes_laying_in_snow.jpg/320px-Vulpes_vulpes_laying_in_snow.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/1/1f/Vulpes_vulpes_laying_in_snow.jpg> ;
+    lio:depicts dbr:Red_fox ;
+    lio:depicts dbr:Snow .
 
-# Image 3: Machu Picchu
-<http://imagesnippets.com/images/003> a lio:Image ;
-    dc:title "Machu Picchu Panorama" ;
-    dc:description "Ancient Incan citadel in the Andes mountains" ;
-    lio:depicts dbr:Machu_Picchu ;
-    lio:depicts wd:Q419 ;
-    foaf:depiction <https://example.com/images/machupicchu.jpg> .
+dbr:Red_fox rdfs:label "Red Fox"@en .
+dbr:Snow rdfs:label "Snow"@en .
 
-dbr:Machu_Picchu rdfs:label "Machu Picchu"@en .
-wd:Q419 rdfs:label "Peru"@en .
+<http://example.com/image/004> a schema:ImageObject ;
+    schema:name "Concert Crowd" ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Metalmania_2008_Megadeth_02.jpg/320px-Metalmania_2008_Megadeth_02.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/a/a8/Metalmania_2008_Megadeth_02.jpg> ;
+    lio:depicts dbr:Concert ;
+    lio:depicts dbr:Crowd .
 
-# Image 4: Northern Lights
-<http://imagesnippets.com/images/004> a lio:Image ;
-    dc:title "Aurora Borealis Iceland" ;
-    dc:description "Spectacular northern lights dancing over Icelandic landscape" ;
-    lio:depicts dbr:Aurora ;
-    lio:depicts dbr:Iceland ;
-    foaf:depiction <https://example.com/images/aurora.jpg> .
+dbr:Concert rdfs:label "Concert"@en .
+dbr:Crowd rdfs:label "Crowd"@en .
 
-dbr:Aurora rdfs:label "Aurora Borealis"@en .
-dbr:Iceland rdfs:label "Iceland"@en .
+<http://example.com/image/005> a schema:ImageObject ;
+    schema:name "Old Tractor" ;
+    schema:thumbnail <https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/John_Deere_4020_tractor.jpg/320px-John_Deere_4020_tractor.jpg> ;
+    schema:contentUrl <https://upload.wikimedia.org/wikipedia/commons/8/8e/John_Deere_4020_tractor.jpg> ;
+    lio:depicts dbr:Tractor ;
+    lio:depicts dbr:Agriculture .
 
-# Image 5: Taj Mahal
-<http://imagesnippets.com/images/005> a lio:Image ;
-    dc:title "Taj Mahal Reflection" ;
-    dc:description "The Taj Mahal reflected in its iconic pool" ;
-    lio:depicts dbr:Taj_Mahal ;
-    lio:depicts dbr:Agra ;
-    foaf:depiction <https://example.com/images/tajmahal.jpg> .
-
-dbr:Taj_Mahal rdfs:label "Taj Mahal"@en .
-dbr:Agra rdfs:label "Agra"@en .
-
-# Image 6: Grand Canyon
-<http://imagesnippets.com/images/006> a lio:Image ;
-    dc:title "Grand Canyon Sunrise" ;
-    dc:description "Layers of red rock illuminated at dawn" ;
-    lio:depicts dbr:Grand_Canyon ;
-    lio:depicts dbr:Arizona ;
-    foaf:depiction <https://example.com/images/grandcanyon.jpg> .
-
-dbr:Grand_Canyon rdfs:label "Grand Canyon"@en .
-dbr:Arizona rdfs:label "Arizona"@en .
-
-# Image 7: Colosseum
-<http://imagesnippets.com/images/007> a lio:Image ;
-    dc:title "Roman Colosseum" ;
-    dc:description "Ancient amphitheater in the heart of Rome" ;
-    lio:depicts dbr:Colosseum ;
-    lio:depicts dbr:Rome ;
-    foaf:depiction <https://example.com/images/colosseum.jpg> .
-
-dbr:Colosseum rdfs:label "Colosseum"@en .
-dbr:Rome rdfs:label "Rome"@en .
-
-# Image 8: Mount Fuji
-<http://imagesnippets.com/images/008> a lio:Image ;
-    dc:title "Mount Fuji Cherry Blossoms" ;
-    dc:description "Japan's iconic mountain framed by spring sakura" ;
-    lio:depicts dbr:Mount_Fuji ;
-    lio:depicts dbr:Cherry_blossom ;
-    foaf:depiction <https://example.com/images/fuji.jpg> .
-
-dbr:Mount_Fuji rdfs:label "Mount Fuji"@en ;
-    rdfs:label "Fujisan"@ja .
-dbr:Cherry_blossom rdfs:label "Cherry blossom"@en .
-
-# Image 9: Santorini
-<http://imagesnippets.com/images/009> a lio:Image ;
-    dc:title "Santorini Blue Domes" ;
-    dc:description "Iconic white buildings with blue domes overlooking the Aegean" ;
-    lio:depicts dbr:Santorini ;
-    lio:depicts dbr:Greece ;
-    foaf:depiction <https://example.com/images/santorini.jpg> .
-
-dbr:Santorini rdfs:label "Santorini"@en .
-dbr:Greece rdfs:label "Greece"@en .
-
-# Image 10: Victoria Falls
-<http://imagesnippets.com/images/010> a lio:Image ;
-    dc:title "Victoria Falls Rainbow" ;
-    dc:description "Massive waterfall with rainbow in the mist" ;
-    lio:depicts dbr:Victoria_Falls ;
-    lio:depicts dbr:Zambezi ;
-    foaf:depiction <https://example.com/images/victoria_falls.jpg> .
-
-dbr:Victoria_Falls rdfs:label "Victoria Falls"@en .
-dbr:Zambezi rdfs:label "Zambezi River"@en .
+dbr:Tractor rdfs:label "Tractor"@en .
+dbr:Agriculture rdfs:label "Agriculture"@en .
 `;
 
         // DOM elements
         const statusEl = document.getElementById('status');
         const tripleCountEl = document.getElementById('triple-count');
+        const imageCountEl = document.getElementById('image-count');
         const loadTimeEl = document.getElementById('load-time');
         const queryTimeEl = document.getElementById('query-time');
         const queryInput = document.getElementById('query-input');
         const resultsOutput = document.getElementById('results-output');
+        const imageGrid = document.getElementById('image-grid');
+        const galleryPanel = document.getElementById('gallery-panel');
+        const galleryEmpty = document.getElementById('gallery-empty');
 
         function setStatus(message, type) {
             statusEl.textContent = message;
@@ -456,61 +681,53 @@ dbr:Zambezi rdfs:label "Zambezi River"@en .
         function updateTripleCount() {
             if (!store) {
                 tripleCountEl.textContent = '0';
+                imageCountEl.textContent = '0';
                 return;
             }
-            const result = store.query('SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }');
-            for (const binding of result) {
-                tripleCountEl.textContent = binding.get('count').value;
+            try {
+                const result = store.query('SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }');
+                for (const binding of result) {
+                    tripleCountEl.textContent = binding.get('count').value;
+                }
+
+                // Count images
+                const imgResult = store.query(`
+                    PREFIX schema: <https://schema.org/>
+                    SELECT (COUNT(DISTINCT ?img) AS ?count) WHERE {
+                        { ?img schema:contentUrl ?url } UNION { ?img schema:thumbnail ?url }
+                    }
+                `);
+                for (const binding of imgResult) {
+                    imageCountEl.textContent = binding.get('count').value;
+                }
+            } catch (e) {
+                console.error('Count error:', e);
             }
         }
 
         function formatTerm(term) {
             if (!term) return 'null';
-
             if (term.termType === 'NamedNode') {
-                // Shorten common prefixes
                 const value = term.value;
-                if (value.startsWith('http://imagesnippets.com/lio/')) {
-                    return 'lio:' + value.substring(29);
-                }
-                if (value.startsWith('http://dbpedia.org/resource/')) {
-                    return 'dbr:' + value.substring(28);
-                }
-                if (value.startsWith('http://www.wikidata.org/entity/')) {
-                    return 'wd:' + value.substring(31);
-                }
-                if (value.startsWith('http://purl.org/dc/elements/1.1/')) {
-                    return 'dc:' + value.substring(32);
-                }
-                if (value.startsWith('http://xmlns.com/foaf/0.1/')) {
-                    return 'foaf:' + value.substring(26);
-                }
-                if (value.startsWith('http://www.w3.org/2000/01/rdf-schema#')) {
-                    return 'rdfs:' + value.substring(37);
-                }
-                if (value.startsWith('http://www.w3.org/1999/02/22-rdf-syntax-ns#')) {
-                    return 'rdf:' + value.substring(43);
-                }
-                if (value.startsWith('http://imagesnippets.com/images/')) {
-                    return '<img:' + value.substring(32) + '>';
+                const prefixes = [
+                    ['https://schema.org/', 'schema:'],
+                    ['https://w3id.org/lio/v1#', 'lio:'],
+                    ['http://dbpedia.org/resource/', 'dbr:'],
+                    ['http://www.wikidata.org/entity/', 'wd:'],
+                    ['http://www.w3.org/2000/01/rdf-schema#', 'rdfs:'],
+                    ['http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'rdf:'],
+                ];
+                for (const [uri, prefix] of prefixes) {
+                    if (value.startsWith(uri)) return prefix + value.substring(uri.length);
                 }
                 return '<' + value + '>';
             }
-
             if (term.termType === 'Literal') {
                 let result = '"' + term.value + '"';
-                if (term.language) {
-                    result += '@' + term.language;
-                } else if (term.datatype && term.datatype.value !== 'http://www.w3.org/2001/XMLSchema#string') {
-                    result += '^^<' + term.datatype.value + '>';
-                }
+                if (term.language) result += '@' + term.language;
                 return result;
             }
-
-            if (term.termType === 'BlankNode') {
-                return '_:' + term.value;
-            }
-
+            if (term.termType === 'BlankNode') return '_:' + term.value;
             return term.value || String(term);
         }
 
@@ -519,70 +736,79 @@ dbr:Zambezi rdfs:label "Zambezi River"@en .
                 resultsOutput.value = 'Error: Store not initialized';
                 return;
             }
-
             const query = queryInput.value.trim();
             if (!query) {
                 resultsOutput.value = 'Error: Please enter a query';
                 return;
             }
-
             const startTime = performance.now();
-
             try {
                 const result = store.query(query);
                 const endTime = performance.now();
                 queryTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
 
-                // Check result type
                 if (typeof result === 'boolean') {
-                    // ASK query
                     resultsOutput.value = `ASK Result: ${result}`;
                 } else if (result[Symbol.iterator]) {
-                    // SELECT or CONSTRUCT
                     const items = [...result];
-
                     if (items.length === 0) {
                         resultsOutput.value = 'No results found.';
                         return;
                     }
-
-                    // Check if it's quads (CONSTRUCT) or bindings (SELECT)
                     const firstItem = items[0];
-
                     if (firstItem.subject !== undefined) {
-                        // CONSTRUCT query - returns quads
                         let output = `CONSTRUCT Results (${items.length} triples):\n\n`;
                         for (const quad of items) {
                             output += `${formatTerm(quad.subject)} ${formatTerm(quad.predicate)} ${formatTerm(quad.object)} .\n`;
                         }
                         resultsOutput.value = output;
                     } else if (firstItem.get) {
-                        // SELECT query - returns bindings
-                        // Get variable names from first binding
-                        const vars = [];
-                        for (const [key] of firstItem.entries()) {
-                            vars.push(key);
-                        }
-
+                        const vars = [...firstItem.entries()].map(([k]) => k);
                         let output = `SELECT Results (${items.length} rows):\n`;
                         output += `Variables: ${vars.map(v => '?' + v).join(', ')}\n\n`;
-
                         for (let i = 0; i < items.length; i++) {
                             const binding = items[i];
                             output += `[${i + 1}] `;
-                            const values = vars.map(v => `?${v}=${formatTerm(binding.get(v))}`);
-                            output += values.join('  ') + '\n';
+                            output += vars.map(v => `?${v}=${formatTerm(binding.get(v))}`).join('  ') + '\n';
                         }
                         resultsOutput.value = output;
-                    } else {
-                        resultsOutput.value = 'Unknown result format: ' + JSON.stringify(firstItem);
                     }
-                } else {
-                    resultsOutput.value = 'Result: ' + String(result);
                 }
             } catch (error) {
                 queryTimeEl.textContent = '-';
                 resultsOutput.value = `Error: ${error.message || error}`;
+            }
+        }
+
+        async function loadImageSnippetsData() {
+            if (!store) {
+                setStatus('Error: Store not initialized', 'error');
+                return;
+            }
+
+            setStatus('Fetching data from ImageSnippets...', 'loading');
+            const startTime = performance.now();
+
+            try {
+                const query = encodeURIComponent('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 2000');
+                const response = await fetch(`${IMAGESNIPPETS_ENDPOINT}?query=${query}`, {
+                    headers: { 'Accept': 'text/turtle' }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const turtle = await response.text();
+                store.load(turtle, { format: 'text/turtle' });
+
+                const endTime = performance.now();
+                loadTimeEl.textContent = (endTime - startTime).toFixed(0) + 'ms';
+                updateTripleCount();
+                galleryPanel.classList.add('visible');
+                setStatus('ImageSnippets data loaded!', 'ready');
+                resultsOutput.value = 'ImageSnippets data loaded. Try browsing images or running queries!';
+            } catch (error) {
+                setStatus('Error loading: ' + error.message, 'error');
+                resultsOutput.value = 'Error: ' + error.message + '\n\nTry loading sample data instead.';
             }
         }
 
@@ -591,42 +817,168 @@ dbr:Zambezi rdfs:label "Zambezi River"@en .
                 setStatus('Error: Store not initialized', 'error');
                 return;
             }
-
             const startTime = performance.now();
-
             try {
                 store.load(demoTurtle, { format: 'text/turtle' });
                 const endTime = performance.now();
-
                 loadTimeEl.textContent = (endTime - startTime).toFixed(2) + 'ms';
                 updateTripleCount();
-                setStatus('Demo data loaded successfully!', 'ready');
-                resultsOutput.value = 'Demo data loaded. Try running some queries!';
+                galleryPanel.classList.add('visible');
+                setStatus('Sample data loaded!', 'ready');
+                resultsOutput.value = 'Sample data loaded. Try browsing images!';
             } catch (error) {
-                setStatus('Error loading data: ' + error.message, 'error');
-                resultsOutput.value = 'Error: ' + error.message;
+                setStatus('Error: ' + error.message, 'error');
             }
         }
 
         function clearStore() {
             if (store) {
-                // Create a fresh store
                 store = new Store();
                 updateTripleCount();
                 loadTimeEl.textContent = '-';
                 queryTimeEl.textContent = '-';
                 resultsOutput.value = 'Store cleared.';
+                imageGrid.innerHTML = '';
+                galleryEmpty.classList.add('hidden');
                 setStatus('Store cleared. Load data to begin.', 'ready');
             }
         }
 
-        // Initialize
+        function browseImages() {
+            if (!store) return;
+
+            const query = `
+                PREFIX schema: <https://schema.org/>
+                PREFIX lio: <https://w3id.org/lio/v1#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?image ?name ?thumbnail ?contentUrl WHERE {
+                    ?image schema:name ?name .
+                    OPTIONAL { ?image schema:thumbnail ?thumbnail }
+                    OPTIONAL { ?image schema:contentUrl ?contentUrl }
+                } LIMIT 50
+            `;
+
+            const startTime = performance.now();
+
+            try {
+                const result = store.query(query);
+                const items = [...result];
+                queryTimeEl.textContent = (performance.now() - startTime).toFixed(2) + 'ms';
+
+                if (items.length === 0) {
+                    imageGrid.innerHTML = '';
+                    galleryEmpty.classList.remove('hidden');
+                    return;
+                }
+
+                galleryEmpty.classList.add('hidden');
+
+                // Get depicts info for each image
+                const imagesData = items.map(binding => {
+                    const imageUri = binding.get('image')?.value;
+                    const depicts = [];
+
+                    if (imageUri) {
+                        const depictsQuery = `
+                            PREFIX lio: <https://w3id.org/lio/v1#>
+                            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                            SELECT ?entity ?label WHERE {
+                                <${imageUri}> lio:depicts ?entity .
+                                OPTIONAL { ?entity rdfs:label ?label }
+                            }
+                        `;
+                        try {
+                            const depictsResult = store.query(depictsQuery);
+                            for (const d of depictsResult) {
+                                depicts.push({
+                                    uri: d.get('entity')?.value,
+                                    label: d.get('label')?.value || d.get('entity')?.value.split('/').pop()
+                                });
+                            }
+                        } catch (e) {}
+                    }
+
+                    return {
+                        uri: imageUri,
+                        name: binding.get('name')?.value || 'Untitled',
+                        thumbnail: binding.get('thumbnail')?.value,
+                        contentUrl: binding.get('contentUrl')?.value,
+                        depicts
+                    };
+                });
+
+                renderImageGrid(imagesData);
+
+            } catch (error) {
+                resultsOutput.value = 'Error: ' + error.message;
+            }
+        }
+
+        function renderImageGrid(images) {
+            imageGrid.innerHTML = images.map(img => {
+                const imgUrl = img.thumbnail || img.contentUrl;
+                const depicts = img.depicts.slice(0, 4).map(d => {
+                    const label = d.label.replace(/_/g, ' ');
+                    if (d.uri.includes('dbpedia.org') || d.uri.includes('wikidata.org')) {
+                        return `<span class="depicts-tag"><a href="${d.uri}" target="_blank" rel="noopener">${label}</a></span>`;
+                    }
+                    return `<span class="depicts-tag">${label}</span>`;
+                }).join('');
+
+                return `
+                    <div class="image-card">
+                        <div class="image-wrapper">
+                            ${imgUrl ? `
+                                <div class="loading-spinner"></div>
+                                <img data-src="${imgUrl}" alt="${img.name}" loading="lazy">
+                            ` : `
+                                <div class="placeholder">🖼️</div>
+                            `}
+                        </div>
+                        <div class="image-info">
+                            <h3 class="image-title">${img.name}</h3>
+                            ${depicts ? `<div class="image-depicts">${depicts}</div>` : ''}
+                            ${img.contentUrl ? `
+                                <div class="image-source">
+                                    <a href="${img.contentUrl}" target="_blank" rel="noopener">View full image →</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Lazy load images with IntersectionObserver
+            const lazyImages = imageGrid.querySelectorAll('img[data-src]');
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.onload = () => {
+                            img.classList.add('loaded');
+                            const spinner = img.parentElement.querySelector('.loading-spinner');
+                            if (spinner) spinner.remove();
+                        };
+                        img.onerror = () => {
+                            const spinner = img.parentElement.querySelector('.loading-spinner');
+                            if (spinner) spinner.remove();
+                            img.parentElement.innerHTML = '<div class="placeholder">⚠️</div>';
+                        };
+                        observer.unobserve(img);
+                    }
+                });
+            }, { rootMargin: '100px' });
+
+            lazyImages.forEach(img => imageObserver.observe(img));
+        }
+
         async function initialize() {
             try {
                 setStatus('Initializing Oxigraph WASM...', 'loading');
                 await init();
                 store = new Store();
-                setStatus('Oxigraph ready! Load demo data or enter a query.', 'ready');
+                setStatus('Ready! Load data to begin.', 'ready');
                 updateTripleCount();
             } catch (error) {
                 setStatus('Failed to initialize: ' + error.message, 'error');
@@ -636,11 +988,23 @@ dbr:Zambezi rdfs:label "Zambezi River"@en .
 
         // Event listeners
         document.getElementById('run-query').addEventListener('click', runQuery);
+        document.getElementById('load-imagesnippets').addEventListener('click', loadImageSnippetsData);
         document.getElementById('load-demo').addEventListener('click', loadDemoData);
         document.getElementById('clear-data').addEventListener('click', clearStore);
+        document.getElementById('browse-images').addEventListener('click', browseImages);
         document.getElementById('clear-query').addEventListener('click', () => {
             queryInput.value = '';
             resultsOutput.value = '';
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
         });
 
         // Example query buttons
@@ -649,18 +1013,20 @@ dbr:Zambezi rdfs:label "Zambezi River"@en .
                 const queryKey = btn.dataset.query;
                 if (exampleQueries[queryKey]) {
                     queryInput.value = exampleQueries[queryKey];
+                    // Switch to SPARQL tab
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('[data-tab="sparql"]').classList.add('active');
+                    document.getElementById('tab-sparql').classList.add('active');
+                    runQuery();
                 }
             });
         });
 
-        // Allow Ctrl+Enter to run query
         queryInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                runQuery();
-            }
+            if (e.ctrlKey && e.key === 'Enter') runQuery();
         });
 
-        // Start initialization
         initialize();
     </script>
 </body>
