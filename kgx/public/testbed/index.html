@@ -507,7 +507,7 @@
 
         // Chrome Built-in AI state
         const AI_GRAPH = 'http://local.ai/keywords';
-        let aiSession = null;
+        let aiWorker = null;
         let aiAvailable = false;
         let aiKeywordsGenerated = false;
         const aiPanel = document.getElementById('ai-panel');
@@ -516,8 +516,9 @@
         const aiSearchToggle = document.getElementById('ai-search-toggle');
         const aiSearchLabel = document.getElementById('ai-search-label');
 
-        // Check Chrome Prompt API availability
+        // Check Chrome Prompt API availability (try worker first, fallback to main thread check)
         async function checkAIAvailability() {
+            // First check main thread
             try {
                 if (typeof LanguageModel !== 'undefined') {
                     const availability = await LanguageModel.availability();
@@ -526,6 +527,16 @@
                         aiAvailable = true;
                         aiPanel.classList.add('available');
                         aiProgress.textContent = availability === 'downloadable' ? 'Model will download on first use' : 'Ready';
+
+                        // Try to create worker for background processing
+                        try {
+                            aiWorker = new Worker('./ai-worker.js');
+                            aiWorker.onmessage = handleWorkerMessage;
+                            aiWorker.onerror = (e) => console.error('Worker error:', e);
+                            console.log('AI Worker created for background processing');
+                        } catch (e) {
+                            console.log('Worker not available, will use main thread:', e.message);
+                        }
                         return true;
                     }
                 }
@@ -535,19 +546,25 @@
             return false;
         }
 
-        // Create AI session with English output
-        async function getAISession() {
-            if (aiSession) return aiSession;
-            try {
-                aiSession = await LanguageModel.create({
-                    temperature: 0.3,
-                    topK: 5,
-                    expectedOutputLanguages: ['en']
-                });
-                return aiSession;
-            } catch (e) {
-                console.error('Failed to create AI session:', e);
-                return null;
+        // Handle messages from AI worker
+        function handleWorkerMessage(e) {
+            const { type, processed, total, keywords, results, totalKeywords, error } = e.data;
+
+            if (type === 'progress') {
+                aiProgress.textContent = `Processing ${processed}/${total} images... (${keywords} keywords)`;
+            } else if (type === 'complete') {
+                storeKeywordsInGraph(results);
+                aiKeywordsGenerated = true;
+                aiSearchToggle.checked = true;
+                aiSearchLabel.style.display = 'inline';
+                aiProgress.textContent = `✓ ${totalKeywords} keywords for ${processed} images`;
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
+                updateStats();
+            } else if (type === 'error') {
+                aiProgress.textContent = 'Error: ' + error;
+                aiEnhanceBtn.disabled = false;
+                aiEnhanceBtn.textContent = 'Generate Keywords';
             }
         }
 
@@ -576,41 +593,6 @@
             }
         }
 
-        // Generate keywords for a batch of images with timeout
-        async function generateKeywordsForBatch(session, batch) {
-            const prompt = `For each image below, generate 3-5 short search keywords. Return JSON array only.
-
-${batch.map((img, i) => `${i+1}. "${img.name}"`).join('\n')}
-
-Return: [{"keywords": ["word1", "word2"]}] for each image.`;
-
-            try {
-                // Add timeout - abort after 30 seconds
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-                const response = await session.prompt(prompt, { signal: controller.signal });
-                clearTimeout(timeoutId);
-
-                // Try to extract JSON from response
-                const jsonMatch = response.match(/\[[\s\S]*?\]/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    return batch.map((img, i) => ({
-                        uri: img.uri,
-                        keywords: parsed[i]?.keywords || []
-                    }));
-                }
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    console.log('AI batch timed out');
-                } else {
-                    console.error('AI batch error:', e);
-                }
-            }
-            return batch.map(img => ({ uri: img.uri, keywords: [] }));
-        }
-
         // Store keywords in named graph
         function storeKeywordsInGraph(keywordData) {
             if (!store) return;
@@ -618,7 +600,6 @@ Return: [{"keywords": ["word1", "word2"]}] for each image.`;
             for (const item of keywordData) {
                 if (item.keywords && item.keywords.length > 0) {
                     for (const kw of item.keywords) {
-                        // Store as: <image> <aiKeyword> "keyword" in named graph
                         triples.push(`<${item.uri}> <http://local.ai/keyword> "${kw.replace(/"/g, '\\"')}"@en .`);
                     }
                 }
@@ -634,46 +615,62 @@ Return: [{"keywords": ["word1", "word2"]}] for each image.`;
             }
         }
 
-        // Main function to generate AI keywords
+        // Main function to generate AI keywords (uses worker if available)
         async function generateAIKeywords() {
             if (!aiAvailable || !store) return;
 
+            const metadata = getImageMetadataForAI();
+            if (metadata.length === 0) {
+                aiProgress.textContent = 'No images to process';
+                return;
+            }
+
             aiEnhanceBtn.disabled = true;
             aiEnhanceBtn.textContent = 'Processing...';
+            aiProgress.textContent = `Starting... (${metadata.length} images)`;
 
+            // Use worker if available
+            if (aiWorker) {
+                aiWorker.postMessage({ type: 'generate', metadata });
+                return;
+            }
+
+            // Fallback: run on main thread (may block UI)
+            console.log('Running AI on main thread (no worker)');
             try {
-                const session = await getAISession();
-                if (!session) {
-                    aiProgress.textContent = 'Failed to start AI session';
-                    return;
-                }
+                const session = await LanguageModel.create({
+                    temperature: 0.3,
+                    topK: 5,
+                    expectedOutputLanguages: ['en']
+                });
 
-                const metadata = getImageMetadataForAI();
-                if (metadata.length === 0) {
-                    aiProgress.textContent = 'No images to process';
-                    return;
-                }
-
-                // Small batches with longer delays to prevent system lockup
                 const BATCH_SIZE = 5;
-                const batches = [];
-                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
-                    batches.push(metadata.slice(i, i + BATCH_SIZE));
-                }
-
                 let processed = 0;
                 let totalKeywords = 0;
 
-                for (const batch of batches) {
-                    aiProgress.textContent = `Processing ${processed}/${metadata.length} images... (${totalKeywords} keywords)`;
+                for (let i = 0; i < metadata.length; i += BATCH_SIZE) {
+                    const batch = metadata.slice(i, i + BATCH_SIZE);
+                    aiProgress.textContent = `Processing ${processed}/${metadata.length}... (${totalKeywords} keywords)`;
 
-                    const results = await generateKeywordsForBatch(session, batch);
-                    storeKeywordsInGraph(results);
+                    const prompt = `For each image, generate 3-5 search keywords. Return JSON array only.\n\n${batch.map((img, j) => `${j+1}. "${img.name}"`).join('\n')}\n\nReturn: [{"keywords": ["word1", "word2"]}] for each.`;
 
-                    totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                    try {
+                        const response = await session.prompt(prompt);
+                        const jsonMatch = response.match(/\[[\s\S]*?\]/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            const results = batch.map((img, j) => ({
+                                uri: img.uri,
+                                keywords: parsed[j]?.keywords || []
+                            }));
+                            storeKeywordsInGraph(results);
+                            totalKeywords += results.reduce((sum, r) => sum + (r.keywords?.length || 0), 0);
+                        }
+                    } catch (e) {
+                        console.error('Batch error:', e);
+                    }
+
                     processed += batch.length;
-
-                    // Longer delay (500ms) to give system breathing room
                     await new Promise(r => setTimeout(r, 500));
                 }
 
