@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucid SDF to Radiance Mesh Export</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+      color: #eee;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* Control Panel */
+    .panel {
+      background: rgba(20, 25, 45, 0.98);
+      border-right: 1px solid rgba(255, 100, 50, 0.3);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .panel h1 {
+      font-size: 1.2em;
+      color: #ff6432;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel h1::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #ff6432;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #ff6432;
+    }
+
+    .subtitle {
+      font-size: 0.75em;
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 0.7em;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 100, 50, 0.2);
+    }
+
+    select, button, input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(30, 35, 55, 0.9);
+      border: 1px solid rgba(255, 100, 50, 0.3);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    select:hover, button:hover, input:hover {
+      border-color: #ff6432;
+      background: rgba(40, 45, 65, 0.9);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #ff6432 0%, #cc4020 100%);
+      border-color: #ff6432;
+      font-weight: 600;
+    }
+
+    button.primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: rgba(50, 55, 75, 0.9);
+      border-color: rgba(100, 100, 120, 0.5);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .control-row label {
+      flex: 1;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+
+    .control-row input[type="range"] {
+      width: 100px;
+      accent-color: #ff6432;
+    }
+
+    .control-row .value {
+      width: 50px;
+      text-align: right;
+      font-size: 0.75em;
+      color: #ff6432;
+      font-family: monospace;
+    }
+
+    .progress-container {
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff6432, #ff9060);
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .status-text {
+      font-size: 0.75em;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 100, 50, 0.1);
+    }
+
+    .stat-label {
+      font-size: 0.65em;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.1em;
+      color: #ff6432;
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    /* Pipeline Visualization */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      border-left: 3px solid #333;
+      font-size: 0.8em;
+      transition: all 0.3s;
+    }
+
+    .pipeline-step.active {
+      border-left-color: #ff6432;
+      background: rgba(255, 100, 50, 0.1);
+    }
+
+    .pipeline-step.complete {
+      border-left-color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+    }
+
+    .pipeline-step .icon {
+      font-size: 1.1em;
+    }
+
+    .pipeline-step .label {
+      flex: 1;
+      color: #888;
+    }
+
+    .pipeline-step.active .label,
+    .pipeline-step.complete .label {
+      color: #fff;
+    }
+
+    .pipeline-step .time {
+      font-family: monospace;
+      font-size: 0.75em;
+      color: #666;
+    }
+
+    /* Canvas area */
+    .viewer {
+      position: relative;
+      background: #0a0a12;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .viewer-overlay {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .viewer-overlay button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 1.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .viewer-overlay button.active {
+      background: #ff6432;
+      color: #000;
+    }
+
+    /* Info panel */
+    .info-panel {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      right: 15px;
+      background: rgba(20, 25, 45, 0.95);
+      border: 1px solid rgba(255, 100, 50, 0.3);
+      border-radius: 8px;
+      padding: 12px 15px;
+      font-size: 0.75em;
+      color: #888;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .info-panel .title {
+      color: #ff6432;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* Log entries */
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .log-entry.error { color: #f87171; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.warn { color: #fbbf24; }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      margin: 0;
+      border-radius: 6px;
+      font-size: 0.75em;
+      padding: 8px;
+    }
+
+    .mode-toggle button.active {
+      background: #ff6432;
+      color: #000;
+      border-color: #ff6432;
+    }
+
+    /* Tetrahedra view controls */
+    .tet-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tet-controls label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75em;
+      color: #888;
+      cursor: pointer;
+    }
+
+    .tet-controls input[type="checkbox"] {
+      accent-color: #ff6432;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Control Panel -->
+    <div class="panel">
+      <h1>Radiance Mesh Export</h1>
+      <p class="subtitle">SDF to Tetrahedral Mesh Pipeline</p>
+
+      <!-- Scene Selection -->
+      <div class="section">
+        <div class="section-title">Scene</div>
+        <select id="sceneSelect">
+          <option value="">Select scene...</option>
+          <optgroup label="Simple Primitives">
+            <option value="prim/catalogue.json">Shape Catalogue</option>
+            <option value="prim/capsule.json">Capsule</option>
+            <option value="prim/ellipsoid.json">Ellipsoid</option>
+          </optgroup>
+          <optgroup label="CSG Operations">
+            <option value="csg/subtract.json" selected>Box - Torus (CSG)</option>
+            <option value="csg/smooth-union.json">Smooth Union</option>
+            <option value="csg/nested.json">Nested CSG</option>
+          </optgroup>
+          <optgroup label="Complex Scenes">
+            <option value="creatures/snowman.json">Snowman</option>
+            <option value="creatures/invaders.json">Space Invaders</option>
+            <option value="nature/sunflower.json">Sunflower</option>
+            <option value="ships/cobra-mk3.json">Cobra Mk III</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Sampling Parameters -->
+      <div class="section">
+        <div class="section-title">Surface Sampling</div>
+        <div class="control-row">
+          <label>Resolution</label>
+          <input type="range" id="resolution" min="16" max="128" step="8" value="48">
+          <span class="value" id="resolutionVal">48</span>
+        </div>
+        <div class="control-row">
+          <label>Point Density</label>
+          <input type="range" id="density" min="0.5" max="3" step="0.1" value="1.0">
+          <span class="value" id="densityVal">1.0x</span>
+        </div>
+        <div class="control-row">
+          <label>Interior Points</label>
+          <input type="range" id="interiorRatio" min="0" max="0.5" step="0.05" value="0.2">
+          <span class="value" id="interiorRatioVal">20%</span>
+        </div>
+      </div>
+
+      <!-- Tetrahedralization -->
+      <div class="section">
+        <div class="section-title">Tetrahedralization</div>
+        <div class="control-row">
+          <label>Max Tets</label>
+          <input type="range" id="maxTets" min="1000" max="100000" step="1000" value="20000">
+          <span class="value" id="maxTetsVal">20k</span>
+        </div>
+        <div class="tet-controls">
+          <label><input type="checkbox" id="preserveSharp" checked> Preserve Sharp</label>
+          <label><input type="checkbox" id="adaptiveTets"> Adaptive</label>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="section">
+        <div class="section-title">Pipeline</div>
+        <div class="pipeline">
+          <div class="pipeline-step" id="step-load">
+            <span class="icon">1</span>
+            <span class="label">Load SDF Scene</span>
+            <span class="time" id="time-load">-</span>
+          </div>
+          <div class="pipeline-step" id="step-sample">
+            <span class="icon">2</span>
+            <span class="label">Surface Sampling</span>
+            <span class="time" id="time-sample">-</span>
+          </div>
+          <div class="pipeline-step" id="step-tet">
+            <span class="icon">3</span>
+            <span class="label">Tetrahedralization</span>
+            <span class="time" id="time-tet">-</span>
+          </div>
+          <div class="pipeline-step" id="step-bake">
+            <span class="icon">4</span>
+            <span class="label">Radiance Baking</span>
+            <span class="time" id="time-bake">-</span>
+          </div>
+          <div class="pipeline-step" id="step-export">
+            <span class="icon">5</span>
+            <span class="label">Export Mesh</span>
+            <span class="time" id="time-export">-</span>
+          </div>
+        </div>
+
+        <button id="runBtn" class="primary">Run Pipeline</button>
+        <button id="exportBtn" class="secondary" disabled>Download .rm</button>
+
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="status-text" id="statusText">Select a scene and click Run Pipeline</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="section">
+        <div class="section-title">Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Surface Pts</div>
+            <div class="stat-value" id="statPoints">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Tetrahedra</div>
+            <div class="stat-value" id="statTets">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Vertices</div>
+            <div class="stat-value" id="statVerts">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">File Size</div>
+            <div class="stat-value" id="statSize">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- References -->
+      <div class="section">
+        <div class="section-title">References</div>
+        <div style="font-size: 0.7em; color: #666; line-height: 1.6;">
+          <a href="https://radiancefields.com/radiance-meshes" target="_blank" style="color: #ff6432;">Radiance Meshes Paper</a><br>
+          <a href="https://github.com/half-potato/radiance_meshes" target="_blank" style="color: #ff6432;">GitHub: radiance_meshes</a><br>
+          <a href="https://github.com/half-potato/webrm" target="_blank" style="color: #ff6432;">GitHub: webrm viewer</a><br>
+          <a href="https://half-potato.gitlab.io/rm/#demos" target="_blank" style="color: #ff6432;">Live Demos</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer -->
+    <div class="viewer">
+      <canvas id="canvas"></canvas>
+
+      <div class="viewer-overlay">
+        <div class="mode-toggle">
+          <button id="viewSDF" class="active" title="SDF Raymarch">SDF</button>
+          <button id="viewPoints" title="Point Cloud">Pts</button>
+          <button id="viewTets" title="Tetrahedra">Tets</button>
+          <button id="viewRM" title="Radiance Mesh">RM</button>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div class="title">Pipeline Log</div>
+        <div id="logContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import Lucid core modules
+    import { SimpleRaymarcher } from './ui/raymarcher.js';
+    import { generateGlslFromJson } from './core/json-codegen.js';
+    import { loadJsonScene } from './core/json-loader.js';
+
+    // =========================================================================
+    // State
+    // =========================================================================
+    let currentScene = null;
+    let raymarcher = null;
+    let pointCloud = null;
+    let tetrahedralMesh = null;
+    let radianceMesh = null;
+    let viewMode = 'sdf';
+    let animationId = null;
+
+    // Camera state
+    let camTheta = 0.5;
+    let camPhi = 0.4;
+    let camDist = 6;
+
+    // =========================================================================
+    // DOM Elements
+    // =========================================================================
+    const canvas = document.getElementById('canvas');
+    const ctx2d = canvas.getContext('2d');
+
+    // Slider displays
+    const sliders = [
+      ['resolution', 'resolutionVal', v => v],
+      ['density', 'densityVal', v => v.toFixed(1) + 'x'],
+      ['interiorRatio', 'interiorRatioVal', v => Math.round(v * 100) + '%'],
+      ['maxTets', 'maxTetsVal', v => v >= 1000 ? (v/1000) + 'k' : v]
+    ];
+
+    // =========================================================================
+    // Surface Point Sampler
+    // =========================================================================
+    class SurfaceSampler {
+      constructor(options = {}) {
+        this.resolution = options.resolution || 48;
+        this.threshold = options.threshold || 0.002;
+        this.normalDelta = 0.001;
+        this.bounds = options.bounds || { min: [-3, -3, -3], max: [3, 3, 3] };
+        this.interiorRatio = options.interiorRatio || 0.2;
+      }
+
+      /**
+       * Sample SDF to generate surface point cloud
+       * Uses a combination of grid sampling and sphere tracing
+       */
+      sample(sdfFunc, onProgress) {
+        const points = [];
+        const normals = [];
+        const colors = [];
+        const densities = [];
+
+        const { min, max } = this.bounds;
+        const step = [
+          (max[0] - min[0]) / this.resolution,
+          (max[1] - min[1]) / this.resolution,
+          (max[2] - min[2]) / this.resolution
+        ];
+
+        const totalCells = this.resolution * this.resolution * this.resolution;
+        let processedCells = 0;
+
+        // Grid sampling - find surface crossings
+        for (let ix = 0; ix < this.resolution; ix++) {
+          for (let iy = 0; iy < this.resolution; iy++) {
+            for (let iz = 0; iz < this.resolution; iz++) {
+              const x = min[0] + (ix + 0.5) * step[0];
+              const y = min[1] + (iy + 0.5) * step[1];
+              const z = min[2] + (iz + 0.5) * step[2];
+
+              const result = sdfFunc(x, y, z);
+              const dist = result.distance;
+
+              // Check if near surface
+              if (Math.abs(dist) < step[0] * 0.7) {
+                // Refine position to lie on surface
+                const refined = this.refinePosition(sdfFunc, x, y, z);
+                if (refined) {
+                  points.push(refined.x, refined.y, refined.z);
+
+                  // Compute normal
+                  const normal = this.estimateNormal(sdfFunc, refined.x, refined.y, refined.z);
+                  normals.push(normal[0], normal[1], normal[2]);
+
+                  // Get color from SDF
+                  const colorResult = sdfFunc(refined.x, refined.y, refined.z);
+                  colors.push(
+                    colorResult.color?.[0] ?? 0.8,
+                    colorResult.color?.[1] ?? 0.8,
+                    colorResult.color?.[2] ?? 0.8
+                  );
+
+                  // Density = 1 at surface
+                  densities.push(1.0);
+                }
+              }
+
+              // Add interior points for volume
+              if (dist < -step[0] * 0.5 && Math.random() < this.interiorRatio) {
+                points.push(x, y, z);
+                normals.push(0, 0, 0);  // No normal for interior
+                const colorResult = sdfFunc(x, y, z);
+                colors.push(
+                  colorResult.color?.[0] ?? 0.5,
+                  colorResult.color?.[1] ?? 0.5,
+                  colorResult.color?.[2] ?? 0.5
+                );
+                // Density falls off inside
+                densities.push(Math.exp(dist * 2));
+              }
+
+              processedCells++;
+              if (processedCells % 1000 === 0 && onProgress) {
+                onProgress(processedCells / totalCells);
+              }
+            }
+          }
+        }
+
+        return {
+          positions: new Float32Array(points),
+          normals: new Float32Array(normals),
+          colors: new Float32Array(colors),
+          densities: new Float32Array(densities),
+          count: points.length / 3
+        };
+      }
+
+      refinePosition(sdfFunc, x, y, z, maxIter = 5) {
+        for (let i = 0; i < maxIter; i++) {
+          const result = sdfFunc(x, y, z);
+          const dist = result.distance;
+
+          if (Math.abs(dist) < this.threshold) {
+            return { x, y, z };
+          }
+
+          const normal = this.estimateNormal(sdfFunc, x, y, z);
+          x -= normal[0] * dist;
+          y -= normal[1] * dist;
+          z -= normal[2] * dist;
+        }
+
+        const finalDist = sdfFunc(x, y, z).distance;
+        if (Math.abs(finalDist) < this.threshold * 10) {
+          return { x, y, z };
+        }
+
+        return null;
+      }
+
+      estimateNormal(sdfFunc, x, y, z) {
+        const d = this.normalDelta;
+        const dx = sdfFunc(x + d, y, z).distance - sdfFunc(x - d, y, z).distance;
+        const dy = sdfFunc(x, y + d, z).distance - sdfFunc(x, y - d, z).distance;
+        const dz = sdfFunc(x, y, z + d).distance - sdfFunc(x, y, z - d).distance;
+        const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (len < 1e-10) return [0, 1, 0];
+        return [dx / len, dy / len, dz / len];
+      }
+    }
+
+    // =========================================================================
+    // Delaunay Tetrahedralization (simplified implementation)
+    // =========================================================================
+    class Delaunay3D {
+      constructor(options = {}) {
+        this.maxTetrahedra = options.maxTetrahedra || 20000;
+      }
+
+      /**
+       * Compute 3D Delaunay tetrahedralization from point cloud
+       * Simplified incremental algorithm
+       */
+      tetrahedralize(pointCloud, onProgress) {
+        const { positions, count } = pointCloud;
+
+        if (count < 4) {
+          return { vertices: positions, tetrahedra: new Uint32Array(0), count: 0 };
+        }
+
+        // Build initial super-tetrahedron containing all points
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+        for (let i = 0; i < count; i++) {
+          const x = positions[i * 3];
+          const y = positions[i * 3 + 1];
+          const z = positions[i * 3 + 2];
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+          minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+        }
+
+        const dx = maxX - minX;
+        const dy = maxY - minY;
+        const dz = maxZ - minZ;
+        const dmax = Math.max(dx, dy, dz) * 2;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        const midZ = (minZ + maxZ) / 2;
+
+        // Super-tetrahedron vertices (indices count, count+1, count+2, count+3)
+        const superVerts = [
+          midX - dmax, midY - dmax, midZ - dmax,  // 0
+          midX + dmax, midY - dmax, midZ - dmax,  // 1
+          midX, midY + dmax, midZ - dmax,         // 2
+          midX, midY, midZ + dmax                 // 3
+        ];
+
+        // Combine point cloud with super-tet vertices
+        const allVerts = new Float32Array(count * 3 + 12);
+        allVerts.set(positions);
+        allVerts.set(superVerts, count * 3);
+
+        // Initial tetrahedra list: just the super-tet
+        let tets = [[count, count + 1, count + 2, count + 3]];
+
+        // Incrementally add points using Bowyer-Watson algorithm
+        for (let i = 0; i < count; i++) {
+          const px = positions[i * 3];
+          const py = positions[i * 3 + 1];
+          const pz = positions[i * 3 + 2];
+
+          // Find all tets whose circumsphere contains the point
+          const badTets = [];
+          const boundary = [];
+
+          for (let j = tets.length - 1; j >= 0; j--) {
+            const tet = tets[j];
+            if (this.inCircumsphere(allVerts, tet, px, py, pz)) {
+              badTets.push(tet);
+              tets.splice(j, 1);
+            }
+          }
+
+          // Find boundary faces of the cavity
+          for (const tet of badTets) {
+            const faces = [
+              [tet[0], tet[1], tet[2]],
+              [tet[0], tet[1], tet[3]],
+              [tet[0], tet[2], tet[3]],
+              [tet[1], tet[2], tet[3]]
+            ];
+
+            for (const face of faces) {
+              // Check if face is shared with another bad tet
+              let shared = false;
+              for (const other of badTets) {
+                if (other === tet) continue;
+                if (this.sharesFace(other, face)) {
+                  shared = true;
+                  break;
+                }
+              }
+              if (!shared) {
+                boundary.push(face);
+              }
+            }
+          }
+
+          // Create new tetrahedra from boundary faces to new point
+          for (const face of boundary) {
+            tets.push([face[0], face[1], face[2], i]);
+          }
+
+          // Limit tetrahedra count
+          if (tets.length > this.maxTetrahedra * 1.5) {
+            // Simple pruning - remove smallest tets
+            tets.sort((a, b) => {
+              return this.tetVolume(allVerts, b) - this.tetVolume(allVerts, a);
+            });
+            tets = tets.slice(0, this.maxTetrahedra);
+          }
+
+          if (i % 100 === 0 && onProgress) {
+            onProgress(i / count);
+          }
+        }
+
+        // Remove tetrahedra that share vertices with super-tet
+        tets = tets.filter(tet => {
+          return !tet.some(v => v >= count);
+        });
+
+        // Convert to flat array
+        const tetrahedra = new Uint32Array(tets.length * 4);
+        for (let i = 0; i < tets.length; i++) {
+          tetrahedra[i * 4] = tets[i][0];
+          tetrahedra[i * 4 + 1] = tets[i][1];
+          tetrahedra[i * 4 + 2] = tets[i][2];
+          tetrahedra[i * 4 + 3] = tets[i][3];
+        }
+
+        return {
+          vertices: positions,
+          tetrahedra,
+          count: tets.length
+        };
+      }
+
+      inCircumsphere(verts, tet, px, py, pz) {
+        // Get tet vertices
+        const ax = verts[tet[0] * 3], ay = verts[tet[0] * 3 + 1], az = verts[tet[0] * 3 + 2];
+        const bx = verts[tet[1] * 3], by = verts[tet[1] * 3 + 1], bz = verts[tet[1] * 3 + 2];
+        const cx = verts[tet[2] * 3], cy = verts[tet[2] * 3 + 1], cz = verts[tet[2] * 3 + 2];
+        const dx = verts[tet[3] * 3], dy = verts[tet[3] * 3 + 1], dz = verts[tet[3] * 3 + 2];
+
+        // Use determinant method to check if point is inside circumsphere
+        // Simplified - use distance to centroid as approximation
+        const centerX = (ax + bx + cx + dx) / 4;
+        const centerY = (ay + by + cy + dy) / 4;
+        const centerZ = (az + bz + cz + dz) / 4;
+
+        const r2 = Math.pow(ax - centerX, 2) + Math.pow(ay - centerY, 2) + Math.pow(az - centerZ, 2);
+        const d2 = Math.pow(px - centerX, 2) + Math.pow(py - centerY, 2) + Math.pow(pz - centerZ, 2);
+
+        return d2 < r2 * 1.2;  // Slightly larger for robustness
+      }
+
+      sharesFace(tet, face) {
+        let matches = 0;
+        for (const v of face) {
+          if (tet.includes(v)) matches++;
+        }
+        return matches === 3;
+      }
+
+      tetVolume(verts, tet) {
+        const ax = verts[tet[0] * 3], ay = verts[tet[0] * 3 + 1], az = verts[tet[0] * 3 + 2];
+        const bx = verts[tet[1] * 3], by = verts[tet[1] * 3 + 1], bz = verts[tet[1] * 3 + 2];
+        const cx = verts[tet[2] * 3], cy = verts[tet[2] * 3 + 1], cz = verts[tet[2] * 3 + 2];
+        const dx = verts[tet[3] * 3], dy = verts[tet[3] * 3 + 1], dz = verts[tet[3] * 3 + 2];
+
+        // Volume = |det(b-a, c-a, d-a)| / 6
+        const v1 = [bx - ax, by - ay, bz - az];
+        const v2 = [cx - ax, cy - ay, cz - az];
+        const v3 = [dx - ax, dy - ay, dz - az];
+
+        const det = v1[0] * (v2[1] * v3[2] - v2[2] * v3[1]) -
+                    v1[1] * (v2[0] * v3[2] - v2[2] * v3[0]) +
+                    v1[2] * (v2[0] * v3[1] - v2[1] * v3[0]);
+
+        return Math.abs(det) / 6;
+      }
+    }
+
+    // =========================================================================
+    // Radiance Baker
+    // =========================================================================
+    class RadianceBaker {
+      constructor(options = {}) {
+        this.samples = options.samples || 8;
+      }
+
+      /**
+       * Bake radiance values into tetrahedral mesh
+       * For each tetrahedron, compute density and color at vertices/centroid
+       */
+      bake(tetMesh, pointCloud, sdfFunc, onProgress) {
+        const { vertices, tetrahedra, count } = tetMesh;
+        const { colors, densities } = pointCloud;
+
+        // Per-vertex colors (interpolated from point cloud)
+        const vertexCount = vertices.length / 3;
+        const vertexColors = new Float32Array(vertexCount * 3);
+        const vertexDensities = new Float32Array(vertexCount);
+
+        // Copy from point cloud
+        for (let i = 0; i < vertexCount; i++) {
+          vertexColors[i * 3] = colors[i * 3] || 0.8;
+          vertexColors[i * 3 + 1] = colors[i * 3 + 1] || 0.8;
+          vertexColors[i * 3 + 2] = colors[i * 3 + 2] || 0.8;
+          vertexDensities[i] = densities[i] || 1.0;
+        }
+
+        // Per-tetrahedron data
+        const tetColors = new Float32Array(count * 3);
+        const tetDensities = new Float32Array(count);
+        const tetCentroids = new Float32Array(count * 3);
+
+        for (let i = 0; i < count; i++) {
+          const v0 = tetrahedra[i * 4];
+          const v1 = tetrahedra[i * 4 + 1];
+          const v2 = tetrahedra[i * 4 + 2];
+          const v3 = tetrahedra[i * 4 + 3];
+
+          // Centroid
+          const cx = (vertices[v0 * 3] + vertices[v1 * 3] + vertices[v2 * 3] + vertices[v3 * 3]) / 4;
+          const cy = (vertices[v0 * 3 + 1] + vertices[v1 * 3 + 1] + vertices[v2 * 3 + 1] + vertices[v3 * 3 + 1]) / 4;
+          const cz = (vertices[v0 * 3 + 2] + vertices[v1 * 3 + 2] + vertices[v2 * 3 + 2] + vertices[v3 * 3 + 2]) / 4;
+
+          tetCentroids[i * 3] = cx;
+          tetCentroids[i * 3 + 1] = cy;
+          tetCentroids[i * 3 + 2] = cz;
+
+          // Sample SDF at centroid for density
+          const sdfResult = sdfFunc(cx, cy, cz);
+          const dist = sdfResult.distance;
+
+          // Density: high at surface, falls off inside/outside
+          const surfaceDist = Math.abs(dist);
+          tetDensities[i] = Math.exp(-surfaceDist * 5);
+
+          // Color from SDF or average vertex colors
+          if (sdfResult.color) {
+            tetColors[i * 3] = sdfResult.color[0];
+            tetColors[i * 3 + 1] = sdfResult.color[1];
+            tetColors[i * 3 + 2] = sdfResult.color[2];
+          } else {
+            tetColors[i * 3] = (vertexColors[v0 * 3] + vertexColors[v1 * 3] + vertexColors[v2 * 3] + vertexColors[v3 * 3]) / 4;
+            tetColors[i * 3 + 1] = (vertexColors[v0 * 3 + 1] + vertexColors[v1 * 3 + 1] + vertexColors[v2 * 3 + 1] + vertexColors[v3 * 3 + 1]) / 4;
+            tetColors[i * 3 + 2] = (vertexColors[v0 * 3 + 2] + vertexColors[v1 * 3 + 2] + vertexColors[v2 * 3 + 2] + vertexColors[v3 * 3 + 2]) / 4;
+          }
+
+          if (i % 500 === 0 && onProgress) {
+            onProgress(i / count);
+          }
+        }
+
+        return {
+          vertices,
+          tetrahedra,
+          vertexColors,
+          vertexDensities,
+          tetColors,
+          tetDensities,
+          tetCentroids,
+          tetCount: count,
+          vertexCount
+        };
+      }
+    }
+
+    // =========================================================================
+    // Radiance Mesh Exporter
+    // =========================================================================
+    class RadianceMeshExporter {
+      /**
+       * Export to a JSON format compatible with webrm viewer
+       * Based on inspection of webrm format expectations
+       */
+      exportJSON(radianceMesh) {
+        const {
+          vertices, tetrahedra, vertexColors, vertexDensities,
+          tetColors, tetDensities, tetCount, vertexCount
+        } = radianceMesh;
+
+        return JSON.stringify({
+          version: "1.0",
+          type: "radiance_mesh",
+          generator: "lucid_sdf",
+
+          // Vertex data
+          vertices: {
+            count: vertexCount,
+            positions: Array.from(vertices),
+            colors: Array.from(vertexColors),
+            densities: Array.from(vertexDensities)
+          },
+
+          // Tetrahedra
+          tetrahedra: {
+            count: tetCount,
+            indices: Array.from(tetrahedra),
+            colors: Array.from(tetColors),
+            densities: Array.from(tetDensities)
+          },
+
+          // Metadata
+          bounds: this.computeBounds(vertices, vertexCount)
+        }, null, 2);
+      }
+
+      /**
+       * Export to binary format (more compact)
+       */
+      exportBinary(radianceMesh) {
+        const {
+          vertices, tetrahedra, vertexColors, vertexDensities,
+          tetColors, tetDensities, tetCount, vertexCount
+        } = radianceMesh;
+
+        // Calculate total size
+        const headerSize = 32;  // Magic + version + counts
+        const vertexDataSize = vertexCount * (3 + 3 + 1) * 4;  // pos, color, density
+        const tetDataSize = tetCount * (4 + 3 + 1) * 4;  // indices, color, density
+        const totalSize = headerSize + vertexDataSize + tetDataSize;
+
+        const buffer = new ArrayBuffer(totalSize);
+        const view = new DataView(buffer);
+        let offset = 0;
+
+        // Header
+        view.setUint32(offset, 0x524D4553, true);  // "RMES" magic
+        offset += 4;
+        view.setUint32(offset, 0x00010000, true);  // Version 1.0
+        offset += 4;
+        view.setUint32(offset, vertexCount, true);
+        offset += 4;
+        view.setUint32(offset, tetCount, true);
+        offset += 4;
+        // Padding
+        offset = headerSize;
+
+        // Vertex positions
+        for (let i = 0; i < vertexCount * 3; i++) {
+          view.setFloat32(offset, vertices[i], true);
+          offset += 4;
+        }
+
+        // Vertex colors
+        for (let i = 0; i < vertexCount * 3; i++) {
+          view.setFloat32(offset, vertexColors[i], true);
+          offset += 4;
+        }
+
+        // Vertex densities
+        for (let i = 0; i < vertexCount; i++) {
+          view.setFloat32(offset, vertexDensities[i], true);
+          offset += 4;
+        }
+
+        // Tetrahedra indices
+        for (let i = 0; i < tetCount * 4; i++) {
+          view.setUint32(offset, tetrahedra[i], true);
+          offset += 4;
+        }
+
+        // Tet colors
+        for (let i = 0; i < tetCount * 3; i++) {
+          view.setFloat32(offset, tetColors[i], true);
+          offset += 4;
+        }
+
+        // Tet densities
+        for (let i = 0; i < tetCount; i++) {
+          view.setFloat32(offset, tetDensities[i], true);
+          offset += 4;
+        }
+
+        return new Uint8Array(buffer);
+      }
+
+      computeBounds(vertices, count) {
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+        for (let i = 0; i < count; i++) {
+          const x = vertices[i * 3];
+          const y = vertices[i * 3 + 1];
+          const z = vertices[i * 3 + 2];
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+          minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+        }
+
+        return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+      }
+    }
+
+    // =========================================================================
+    // Simple SDF Evaluator (from scene JSON)
+    // =========================================================================
+    function createSDFEvaluator(scene) {
+      // Simple CPU-based SDF evaluation for common primitives
+      const defs = scene.defs || {};
+
+      function evalNode(node, p) {
+        if (!node) return { distance: 1000, color: [0.8, 0.8, 0.8] };
+
+        // Apply transform
+        let tp = [...p];
+        if (node.transform?.translate) {
+          const t = node.transform.translate;
+          tp[0] -= typeof t[0] === 'number' ? t[0] : 0;
+          tp[1] -= typeof t[1] === 'number' ? t[1] : 0;
+          tp[2] -= typeof t[2] === 'number' ? t[2] : 0;
+        }
+
+        const type = node.type;
+        const params = node.params || {};
+        let color = params.color || [0.8, 0.8, 0.8];
+
+        let dist = 1000;
+
+        switch (type) {
+          case 'sphere':
+            const r = params.r || 1;
+            dist = Math.sqrt(tp[0]*tp[0] + tp[1]*tp[1] + tp[2]*tp[2]) - r;
+            break;
+
+          case 'box':
+            const size = params.size || [1, 1, 1];
+            const qx = Math.abs(tp[0]) - size[0];
+            const qy = Math.abs(tp[1]) - size[1];
+            const qz = Math.abs(tp[2]) - size[2];
+            dist = Math.sqrt(
+              Math.pow(Math.max(qx, 0), 2) +
+              Math.pow(Math.max(qy, 0), 2) +
+              Math.pow(Math.max(qz, 0), 2)
+            ) + Math.min(Math.max(qx, Math.max(qy, qz)), 0);
+            break;
+
+          case 'torus':
+            const major = params.major || 1;
+            const minor = params.minor || 0.3;
+            const qTorus = Math.sqrt(tp[0]*tp[0] + tp[2]*tp[2]) - major;
+            dist = Math.sqrt(qTorus*qTorus + tp[1]*tp[1]) - minor;
+            break;
+
+          case 'capsule':
+            const h = params.h || 1;
+            const rc = params.r || 0.3;
+            const cpy = Math.max(-h/2, Math.min(h/2, tp[1]));
+            dist = Math.sqrt(tp[0]*tp[0] + Math.pow(tp[1] - cpy, 2) + tp[2]*tp[2]) - rc;
+            break;
+
+          case 'union':
+            if (node.children && node.children.length >= 2) {
+              const a = evalNode(node.children[0], p);
+              const b = evalNode(node.children[1], p);
+              dist = Math.min(a.distance, b.distance);
+              color = a.distance < b.distance ? a.color : b.color;
+            }
+            break;
+
+          case 'subtract':
+            if (node.children && node.children.length >= 2) {
+              const a = evalNode(node.children[0], p);
+              const b = evalNode(node.children[1], p);
+              dist = Math.max(a.distance, -b.distance);
+              color = a.color;
+            }
+            break;
+
+          case 'intersect':
+            if (node.children && node.children.length >= 2) {
+              const a = evalNode(node.children[0], p);
+              const b = evalNode(node.children[1], p);
+              dist = Math.max(a.distance, b.distance);
+              color = a.distance > b.distance ? a.color : b.color;
+            }
+            break;
+
+          case 'smooth-union':
+            if (node.children && node.children.length >= 2) {
+              const a = evalNode(node.children[0], p);
+              const b = evalNode(node.children[1], p);
+              const k = params.k || 0.3;
+              const h = Math.max(k - Math.abs(a.distance - b.distance), 0) / k;
+              dist = Math.min(a.distance, b.distance) - h * h * k * 0.25;
+              const t = 0.5 + 0.5 * (a.distance - b.distance) / k;
+              color = [
+                a.color[0] * (1-t) + b.color[0] * t,
+                a.color[1] * (1-t) + b.color[1] * t,
+                a.color[2] * (1-t) + b.color[2] * t
+              ];
+            }
+            break;
+
+          case 'ref':
+            if (node.id && defs[node.id]) {
+              return evalNode(defs[node.id], tp);
+            }
+            break;
+
+          case 'group':
+            if (node.children) {
+              let closest = { distance: 1000, color: [0.8, 0.8, 0.8] };
+              for (const child of node.children) {
+                const result = evalNode(child, tp);
+                if (result.distance < closest.distance) {
+                  closest = result;
+                }
+              }
+              return closest;
+            }
+            break;
+        }
+
+        return { distance: dist, color };
+      }
+
+      return (x, y, z) => evalNode(scene.root, [x, y, z]);
+    }
+
+    // =========================================================================
+    // 2D Renderer for visualization
+    // =========================================================================
+    class Viewer2D {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+      }
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width * window.devicePixelRatio;
+        this.canvas.height = rect.height * window.devicePixelRatio;
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+      }
+
+      clear() {
+        this.ctx.fillStyle = '#0a0a12';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      }
+
+      project(x, y, z) {
+        // Simple orbit camera projection
+        const cosT = Math.cos(camTheta);
+        const sinT = Math.sin(camTheta);
+        const cosP = Math.cos(camPhi);
+        const sinP = Math.sin(camPhi);
+
+        // Rotate point
+        const rx = x * cosT - z * sinT;
+        const rz = x * sinT + z * cosT;
+        const ry = y * cosP - rz * sinP;
+
+        // Perspective
+        const scale = this.canvas.width * 0.15 / camDist;
+        const px = this.canvas.width / 2 + rx * scale;
+        const py = this.canvas.height / 2 - ry * scale;
+
+        return { x: px, y: py, z: rz };
+      }
+
+      drawPoints(pointCloud) {
+        if (!pointCloud) return;
+
+        this.clear();
+        const { positions, colors, count } = pointCloud;
+
+        // Sort by depth for proper rendering
+        const points = [];
+        for (let i = 0; i < count; i++) {
+          const x = positions[i * 3];
+          const y = positions[i * 3 + 1];
+          const z = positions[i * 3 + 2];
+          const proj = this.project(x, y, z);
+          points.push({
+            x: proj.x,
+            y: proj.y,
+            z: proj.z,
+            r: colors[i * 3],
+            g: colors[i * 3 + 1],
+            b: colors[i * 3 + 2]
+          });
+        }
+
+        points.sort((a, b) => b.z - a.z);
+
+        for (const p of points) {
+          const size = Math.max(1, 3 - p.z * 0.3);
+          this.ctx.fillStyle = `rgb(${Math.round(p.r * 255)}, ${Math.round(p.g * 255)}, ${Math.round(p.b * 255)})`;
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+
+        // Info
+        this.ctx.fillStyle = '#888';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText(`Points: ${count.toLocaleString()}`, 10, 20);
+      }
+
+      drawTetrahedra(tetMesh, radianceMesh) {
+        if (!tetMesh) return;
+
+        this.clear();
+        const { vertices, tetrahedra, count } = tetMesh;
+        const tetColors = radianceMesh?.tetColors;
+        const tetDensities = radianceMesh?.tetDensities;
+
+        // Draw edges of tetrahedra
+        this.ctx.strokeStyle = 'rgba(255, 100, 50, 0.3)';
+        this.ctx.lineWidth = 0.5;
+
+        // Collect all edges with depth info
+        const edges = [];
+        for (let i = 0; i < count; i++) {
+          const v0 = tetrahedra[i * 4];
+          const v1 = tetrahedra[i * 4 + 1];
+          const v2 = tetrahedra[i * 4 + 2];
+          const v3 = tetrahedra[i * 4 + 3];
+
+          const p0 = this.project(vertices[v0 * 3], vertices[v0 * 3 + 1], vertices[v0 * 3 + 2]);
+          const p1 = this.project(vertices[v1 * 3], vertices[v1 * 3 + 1], vertices[v1 * 3 + 2]);
+          const p2 = this.project(vertices[v2 * 3], vertices[v2 * 3 + 1], vertices[v2 * 3 + 2]);
+          const p3 = this.project(vertices[v3 * 3], vertices[v3 * 3 + 1], vertices[v3 * 3 + 2]);
+
+          const avgZ = (p0.z + p1.z + p2.z + p3.z) / 4;
+          const density = tetDensities ? tetDensities[i] : 1;
+          const color = tetColors ? [tetColors[i * 3], tetColors[i * 3 + 1], tetColors[i * 3 + 2]] : [1, 0.4, 0.2];
+
+          edges.push({ p0, p1, z: avgZ, density, color });
+          edges.push({ p0, p2, z: avgZ, density, color });
+          edges.push({ p0, p3, z: avgZ, density, color });
+          edges.push({ p1, p2, z: avgZ, density, color });
+          edges.push({ p1, p3, z: avgZ, density, color });
+          edges.push({ p2, p3, z: avgZ, density, color });
+        }
+
+        // Sort by depth
+        edges.sort((a, b) => b.z - a.z);
+
+        // Draw
+        for (const edge of edges) {
+          const alpha = Math.min(1, edge.density * 0.5 + 0.1);
+          this.ctx.strokeStyle = `rgba(${Math.round(edge.color[0] * 255)}, ${Math.round(edge.color[1] * 255)}, ${Math.round(edge.color[2] * 255)}, ${alpha})`;
+          this.ctx.beginPath();
+          this.ctx.moveTo(edge.p0.x, edge.p0.y);
+          this.ctx.lineTo(edge.p1.x, edge.p1.y);
+          this.ctx.stroke();
+        }
+
+        // Info
+        this.ctx.fillStyle = '#888';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText(`Tetrahedra: ${count.toLocaleString()}`, 10, 20);
+      }
+
+      drawRadianceMesh(radianceMesh) {
+        if (!radianceMesh) return;
+
+        // For now, same as tetrahedra but with better coloring
+        this.drawTetrahedra(
+          { vertices: radianceMesh.vertices, tetrahedra: radianceMesh.tetrahedra, count: radianceMesh.tetCount },
+          radianceMesh
+        );
+
+        // Additional info
+        this.ctx.fillStyle = '#ff6432';
+        this.ctx.fillText('Radiance Mesh', 10, 35);
+      }
+    }
+
+    // =========================================================================
+    // WebGL Raymarcher for SDF view
+    // =========================================================================
+    let glRaymarcher = null;
+
+    function initRaymarcher() {
+      if (!glRaymarcher) {
+        // Create a hidden canvas for WebGL raymarching
+        const glCanvas = document.createElement('canvas');
+        glCanvas.width = canvas.width;
+        glCanvas.height = canvas.height;
+        glRaymarcher = new SimpleRaymarcher(glCanvas);
+      }
+    }
+
+    function renderSDF() {
+      if (!currentScene || !glRaymarcher) return;
+
+      try {
+        const processedScene = loadJsonScene(currentScene);
+        const glslCode = generateGlslFromJson(processedScene);
+        glRaymarcher.updateScene(glslCode);
+
+        // Sync canvas size
+        const rect = canvas.parentElement.getBoundingClientRect();
+        glRaymarcher.canvas.width = rect.width * window.devicePixelRatio;
+        glRaymarcher.canvas.height = rect.height * window.devicePixelRatio;
+        glRaymarcher.resize();
+
+        // Update camera
+        glRaymarcher.camera.theta = camTheta;
+        glRaymarcher.camera.phi = camPhi;
+        glRaymarcher.camera.distance = camDist;
+
+        glRaymarcher.render();
+
+        // Copy to visible canvas
+        ctx2d.drawImage(glRaymarcher.canvas, 0, 0, canvas.width, canvas.height);
+      } catch (e) {
+        console.error('SDF render error:', e);
+      }
+    }
+
+    // =========================================================================
+    // Main Pipeline
+    // =========================================================================
+    const viewer = new Viewer2D(canvas);
+
+    async function runPipeline() {
+      const path = document.getElementById('sceneSelect').value;
+      if (!path) {
+        log('Please select a scene first', 'error');
+        return;
+      }
+
+      const runBtn = document.getElementById('runBtn');
+      runBtn.disabled = true;
+
+      // Reset pipeline steps
+      document.querySelectorAll('.pipeline-step').forEach(el => {
+        el.classList.remove('active', 'complete');
+        el.querySelector('.time').textContent = '-';
+      });
+
+      try {
+        // Step 1: Load scene
+        setStep('load', 'active');
+        const t1 = performance.now();
+
+        log(`Loading ${path}...`);
+        updateStatus('Loading scene...', 10);
+
+        const resp = await fetch(`./scenes/${path}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        currentScene = await resp.json();
+
+        const loadTime = performance.now() - t1;
+        document.getElementById('time-load').textContent = loadTime.toFixed(0) + 'ms';
+        setStep('load', 'complete');
+        log(`Loaded: ${currentScene.title || path}`, 'success');
+
+        // Step 2: Surface sampling
+        setStep('sample', 'active');
+        const t2 = performance.now();
+
+        const resolution = parseInt(document.getElementById('resolution').value);
+        const density = parseFloat(document.getElementById('density').value);
+        const interiorRatio = parseFloat(document.getElementById('interiorRatio').value);
+
+        log(`Sampling surface (res=${resolution})...`);
+        updateStatus('Sampling SDF surface...', 30);
+
+        const sdfFunc = createSDFEvaluator(currentScene);
+        const sampler = new SurfaceSampler({
+          resolution: Math.round(resolution * density),
+          interiorRatio,
+          bounds: computeBounds(currentScene)
+        });
+
+        pointCloud = sampler.sample(sdfFunc, progress => {
+          updateStatus(`Sampling: ${Math.round(progress * 100)}%`, 30 + progress * 20);
+        });
+
+        const sampleTime = performance.now() - t2;
+        document.getElementById('time-sample').textContent = sampleTime.toFixed(0) + 'ms';
+        document.getElementById('statPoints').textContent = pointCloud.count.toLocaleString();
+        setStep('sample', 'complete');
+        log(`Sampled ${pointCloud.count} points`, 'success');
+
+        // Step 3: Tetrahedralization
+        setStep('tet', 'active');
+        const t3 = performance.now();
+
+        const maxTets = parseInt(document.getElementById('maxTets').value);
+        log(`Building tetrahedra (max=${maxTets})...`);
+        updateStatus('Building tetrahedral mesh...', 55);
+
+        const delaunay = new Delaunay3D({ maxTetrahedra: maxTets });
+        tetrahedralMesh = delaunay.tetrahedralize(pointCloud, progress => {
+          updateStatus(`Tetrahedralization: ${Math.round(progress * 100)}%`, 55 + progress * 20);
+        });
+
+        const tetTime = performance.now() - t3;
+        document.getElementById('time-tet').textContent = tetTime.toFixed(0) + 'ms';
+        document.getElementById('statTets').textContent = tetrahedralMesh.count.toLocaleString();
+        document.getElementById('statVerts').textContent = (pointCloud.count).toLocaleString();
+        setStep('tet', 'complete');
+        log(`Created ${tetrahedralMesh.count} tetrahedra`, 'success');
+
+        // Step 4: Radiance baking
+        setStep('bake', 'active');
+        const t4 = performance.now();
+
+        log('Baking radiance values...');
+        updateStatus('Baking radiance...', 80);
+
+        const baker = new RadianceBaker();
+        radianceMesh = baker.bake(tetrahedralMesh, pointCloud, sdfFunc, progress => {
+          updateStatus(`Baking: ${Math.round(progress * 100)}%`, 80 + progress * 15);
+        });
+
+        const bakeTime = performance.now() - t4;
+        document.getElementById('time-bake').textContent = bakeTime.toFixed(0) + 'ms';
+        setStep('bake', 'complete');
+        log('Radiance baking complete', 'success');
+
+        // Step 5: Export ready
+        setStep('export', 'active');
+        const t5 = performance.now();
+
+        const exporter = new RadianceMeshExporter();
+        const jsonData = exporter.exportJSON(radianceMesh);
+        const size = new TextEncoder().encode(jsonData).length;
+
+        document.getElementById('statSize').textContent = formatBytes(size);
+        document.getElementById('time-export').textContent = (performance.now() - t5).toFixed(0) + 'ms';
+        setStep('export', 'complete');
+
+        document.getElementById('exportBtn').disabled = false;
+        updateStatus('Pipeline complete! Click Download to export.', 100);
+        log(`Ready to export (${formatBytes(size)})`, 'success');
+
+        // Switch to appropriate view
+        setViewMode('tets');
+
+      } catch (err) {
+        log(`Error: ${err.message}`, 'error');
+        updateStatus(`Error: ${err.message}`, 0);
+        console.error(err);
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    function computeBounds(scene) {
+      // Simple bounds estimation
+      const bounds = { min: [-3, -3, -3], max: [3, 3, 3] };
+
+      function scanNode(node, offset = [0, 0, 0]) {
+        if (!node) return;
+
+        const t = node.transform?.translate || [0, 0, 0];
+        const pos = [
+          offset[0] + (typeof t[0] === 'number' ? t[0] : 0),
+          offset[1] + (typeof t[1] === 'number' ? t[1] : 0),
+          offset[2] + (typeof t[2] === 'number' ? t[2] : 0)
+        ];
+
+        let size = 2;
+        if (node.params?.r) size = node.params.r * 2;
+        if (node.params?.size) size = Math.max(...node.params.size) * 2;
+        if (node.params?.major) size = (node.params.major + node.params.minor) * 2;
+
+        for (let i = 0; i < 3; i++) {
+          bounds.min[i] = Math.min(bounds.min[i], pos[i] - size);
+          bounds.max[i] = Math.max(bounds.max[i], pos[i] + size);
+        }
+
+        if (node.children) {
+          for (const child of node.children) {
+            scanNode(child, pos);
+          }
+        }
+      }
+
+      scanNode(scene.root);
+
+      // Clamp and add margin
+      for (let i = 0; i < 3; i++) {
+        bounds.min[i] = Math.max(bounds.min[i], -10) - 0.5;
+        bounds.max[i] = Math.min(bounds.max[i], 10) + 0.5;
+      }
+
+      return bounds;
+    }
+
+    function downloadMesh() {
+      if (!radianceMesh) return;
+
+      const exporter = new RadianceMeshExporter();
+      const jsonData = exporter.exportJSON(radianceMesh);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${(currentScene?.title || 'scene').replace(/[^a-z0-9]/gi, '_')}.rm.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      log('Downloaded radiance mesh', 'success');
+    }
+
+    // =========================================================================
+    // View Mode Handling
+    // =========================================================================
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.querySelectorAll('.mode-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.id === 'view' + mode.charAt(0).toUpperCase() + mode.slice(1));
+      });
+
+      // Render based on mode
+      render();
+    }
+
+    function render() {
+      viewer.resize();
+
+      switch (viewMode) {
+        case 'sdf':
+          canvas.width = viewer.canvas.width;
+          canvas.height = viewer.canvas.height;
+          renderSDF();
+          break;
+        case 'points':
+          viewer.drawPoints(pointCloud);
+          break;
+        case 'tets':
+          viewer.drawTetrahedra(tetrahedralMesh, radianceMesh);
+          break;
+        case 'rm':
+          viewer.drawRadianceMesh(radianceMesh);
+          break;
+      }
+    }
+
+    // =========================================================================
+    // Animation Loop
+    // =========================================================================
+    function animate() {
+      animationId = requestAnimationFrame(animate);
+
+      if (viewMode === 'sdf' && currentScene) {
+        renderSDF();
+      }
+    }
+
+    // =========================================================================
+    // UI Helpers
+    // =========================================================================
+    function setStep(step, state) {
+      const el = document.getElementById(`step-${step}`);
+      el.classList.remove('active', 'complete');
+      if (state) el.classList.add(state);
+    }
+
+    function updateStatus(text, progress) {
+      document.getElementById('statusText').textContent = text;
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+
+    function log(msg, type = '') {
+      const div = document.createElement('div');
+      div.className = `log-entry ${type}`;
+      div.textContent = `${new Date().toLocaleTimeString().slice(0,5)} ${msg}`;
+      const content = document.getElementById('logContent');
+      content.insertBefore(div, content.firstChild);
+      console.log(`[RM] ${msg}`);
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // =========================================================================
+    // Mouse Controls
+    // =========================================================================
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    canvas.addEventListener('mousedown', e => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      camTheta += dx * 0.01;
+      camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, camPhi + dy * 0.01));
+      lastX = e.clientX;
+      lastY = e.clientY;
+      render();
+    });
+
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mouseleave', () => isDragging = false);
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      camDist = Math.max(2, Math.min(20, camDist + e.deltaY * 0.01));
+      render();
+    }, { passive: false });
+
+    // Touch support
+    let lastTouch = null;
+    canvas.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    });
+
+    canvas.addEventListener('touchmove', e => {
+      if (e.touches.length === 1 && lastTouch) {
+        const dx = e.touches[0].clientX - lastTouch.x;
+        const dy = e.touches[0].clientY - lastTouch.y;
+        camTheta += dx * 0.01;
+        camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, camPhi + dy * 0.01));
+        lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        render();
+      }
+    });
+
+    canvas.addEventListener('touchend', () => lastTouch = null);
+
+    // =========================================================================
+    // Initialize
+    // =========================================================================
+    function init() {
+      // Slider event listeners
+      sliders.forEach(([id, valId, fmt]) => {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(valId);
+        el.addEventListener('input', () => {
+          valEl.textContent = fmt(parseFloat(el.value));
+        });
+      });
+
+      // Button handlers
+      document.getElementById('runBtn').addEventListener('click', runPipeline);
+      document.getElementById('exportBtn').addEventListener('click', downloadMesh);
+
+      // View mode buttons
+      document.getElementById('viewSDF').addEventListener('click', () => setViewMode('sdf'));
+      document.getElementById('viewPoints').addEventListener('click', () => setViewMode('points'));
+      document.getElementById('viewTets').addEventListener('click', () => setViewMode('tets'));
+      document.getElementById('viewRM').addEventListener('click', () => setViewMode('rm'));
+
+      // Scene change
+      document.getElementById('sceneSelect').addEventListener('change', async () => {
+        const path = document.getElementById('sceneSelect').value;
+        if (path) {
+          try {
+            const resp = await fetch(`./scenes/${path}`);
+            currentScene = await resp.json();
+            initRaymarcher();
+            render();
+            log(`Loaded preview: ${currentScene.title || path}`);
+          } catch (e) {
+            log(`Preview error: ${e.message}`, 'error');
+          }
+        }
+      });
+
+      // Resize handler
+      window.addEventListener('resize', () => {
+        viewer.resize();
+        if (glRaymarcher) {
+          glRaymarcher.resize();
+        }
+        render();
+      });
+
+      // Initial setup
+      viewer.resize();
+      initRaymarcher();
+
+      log('Radiance Mesh Export Demo ready');
+      log('Select a scene and click Run Pipeline');
+
+      // Auto-load default scene
+      const defaultPath = document.getElementById('sceneSelect').value;
+      if (defaultPath) {
+        fetch(`./scenes/${defaultPath}`)
+          .then(r => r.json())
+          .then(scene => {
+            currentScene = scene;
+            render();
+          })
+          .catch(() => {});
+      }
+
+      // Start animation loop for SDF view
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>
