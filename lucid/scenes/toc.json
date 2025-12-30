@@ -85,7 +85,10 @@
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
         { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" },
         { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped dragon" },
-        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Context-ablated conversion" }
+        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Context-ablated conversion" },
+        { "path": "creatures/subag1/candidate-a.json", "title": "Candidate A 🅰️", "subtitle": "Nested a/b structure" },
+        { "path": "creatures/subag1/candidate-b.json", "title": "Candidate B 🅱️", "subtitle": "Flat object graph" },
+        { "path": "creatures/subag1/candidate-c.json", "title": "Candidate C ©️", "subtitle": "Nested geometry" }
       ]
     },
     {
