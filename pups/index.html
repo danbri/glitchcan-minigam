@@ -96,25 +96,27 @@ body {
   position: fixed;
   bottom: 16px;
   right: 16px;
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.25);
+  width: 48px;
+  height: 48px;
+  background: rgba(33, 150, 243, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: none;
-  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
   cursor: pointer;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
   touch-action: manipulation;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 #fullscreen-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(33, 150, 243, 1);
+  border-color: white;
 }
 
 #fullscreen-btn:active {
@@ -122,36 +124,38 @@ body {
 }
 
 #fullscreen-btn.is-fullscreen {
-  opacity: 0.4;
+  background: rgba(156, 39, 176, 0.85);
 }
 
 #fullscreen-btn.is-fullscreen:hover {
-  opacity: 1;
+  background: rgba(156, 39, 176, 1);
 }
 
 #audio-btn {
   position: fixed;
   bottom: 16px;
   left: 16px;
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.25);
+  width: 48px;
+  height: 48px;
+  background: rgba(76, 175, 80, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: none;
-  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
   cursor: pointer;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  transition: background 0.2s, transform 0.15s;
+  font-size: 22px;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
   touch-action: manipulation;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 #audio-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(76, 175, 80, 1);
+  border-color: white;
 }
 
 #audio-btn:active {
@@ -159,7 +163,11 @@ body {
 }
 
 #audio-btn.muted {
-  opacity: 0.5;
+  background: rgba(244, 67, 54, 0.85);
+}
+
+#audio-btn.muted:hover {
+  background: rgba(244, 67, 54, 1);
 }
 
 /* Prevent pull-to-refresh */
@@ -175,8 +183,8 @@ body {
 </head>
 <body>
 <div id="game"></div>
-<button id="fullscreen-btn" aria-label="Toggle fullscreen">⛶</button>
-<button id="audio-btn" aria-label="Toggle audio">🔊</button>
+<button id="fullscreen-btn" aria-label="Toggle fullscreen">⤢</button>
+<button id="audio-btn" aria-label="Toggle audio">♪</button>
 
 <script>
 // ============ AUDIO ENGINE ============
@@ -203,28 +211,41 @@ class ShepardAudioEngine {
   }
 
   async init() {
-    if (this.ctx) return;
+    if (this.ctx && this.isPlaying) return true;
 
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
 
-    // Master gain
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.3;
-    this.masterGain.connect(this.ctx.destination);
+      // Resume if suspended (browser autoplay policy)
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+      }
 
-    // Compressor for smoother sound
-    this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.value = -24;
-    this.compressor.knee.value = 30;
-    this.compressor.ratio.value = 12;
-    this.compressor.connect(this.masterGain);
+      // Master gain
+      if (!this.masterGain) {
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.4;
+        this.masterGain.connect(this.ctx.destination);
 
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
+        // Compressor for smoother sound
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.value = -20;
+        this.compressor.knee.value = 30;
+        this.compressor.ratio.value = 8;
+        this.compressor.connect(this.masterGain);
+      }
+
+      this.isPlaying = true;
+      this.isMuted = false;
+      this.startMusic();
+      console.log('Audio initialized, context state:', this.ctx.state);
+      return true;
+    } catch (e) {
+      console.error('Audio init failed:', e);
+      return false;
     }
-
-    this.isPlaying = true;
-    this.startMusic();
   }
 
   // Create choir-like pad sound
@@ -726,7 +747,12 @@ class Puppy {
   }
 }
 
+// Track collision pairs to detect stuck oscillations
+const collisionPairs = new Map();
+
 function checkCollisions() {
+  const currentPairs = new Set();
+
   for (let i = 0; i < puppies.length; i++) {
     for (let j = i + 1; j < puppies.length; j++) {
       const a = puppies[i];
@@ -747,6 +773,45 @@ function checkCollisions() {
         const aMovable = !a.isDragging;
         const bMovable = !b.isDragging;
 
+        // Track this collision pair
+        const pairKey = `${i}-${j}`;
+        currentPairs.add(pairKey);
+
+        const pairData = collisionPairs.get(pairKey) || { count: 0, lastTime: 0 };
+        const now = Date.now();
+
+        if (now - pairData.lastTime < 100) {
+          pairData.count++;
+        } else {
+          pairData.count = 1;
+        }
+        pairData.lastTime = now;
+        collisionPairs.set(pairKey, pairData);
+
+        // If stuck oscillating, apply strong separation and damping
+        if (pairData.count > 8) {
+          const separationForce = 0.8;
+          const randomAngle = (Math.random() - 0.5) * 0.5;
+          const sepX = nx * Math.cos(randomAngle) - ny * Math.sin(randomAngle);
+          const sepY = nx * Math.sin(randomAngle) + ny * Math.cos(randomAngle);
+
+          if (aMovable) {
+            a.x -= sepX * (overlap + 2);
+            a.y -= sepY * (overlap + 2);
+            a.vx = -sepX * separationForce;
+            a.vy = -sepY * separationForce;
+          }
+          if (bMovable) {
+            b.x += sepX * (overlap + 2);
+            b.y += sepY * (overlap + 2);
+            b.vx = sepX * separationForce;
+            b.vy = sepY * separationForce;
+          }
+          pairData.count = 0;
+          continue;
+        }
+
+        // Normal collision response
         if (aMovable && bMovable) {
           a.x -= nx * overlap * 0.5;
           a.y -= ny * overlap * 0.5;
@@ -789,6 +854,13 @@ function checkCollisions() {
       }
     }
   }
+
+  // Clean up old collision pairs
+  for (const [key, data] of collisionPairs) {
+    if (!currentPairs.has(key) || Date.now() - data.lastTime > 500) {
+      collisionPairs.delete(key);
+    }
+  }
 }
 
 let bgTime = 0;
@@ -810,33 +882,48 @@ const audioBtn = document.getElementById('audio-btn');
 
 function updateFullscreenButton() {
   const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-  fullscreenBtn.textContent = isFS ? '⛶' : '⛶';
+  fullscreenBtn.textContent = isFS ? '⤡' : '⤢';
   fullscreenBtn.classList.toggle('is-fullscreen', !!isFS);
 }
 
-fullscreenBtn.addEventListener('click', async (e) => {
-  e.stopPropagation();
-
+async function toggleFullscreen() {
   const isFS = document.fullscreenElement || document.webkitFullscreenElement;
 
-  if (!isFS) {
-    try {
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      } else if (document.documentElement.webkitRequestFullscreen) {
-        await document.documentElement.webkitRequestFullscreen();
+  try {
+    if (!isFS) {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        await elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        await elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        await elem.msRequestFullscreen();
       }
-    } catch (err) {
-      console.log('Fullscreen not available');
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
     }
-  } else {
-    if (document.exitFullscreen) {
-      await document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      await document.webkitExitFullscreen();
-    }
+  } catch (err) {
+    console.log('Fullscreen error:', err);
   }
+}
+
+fullscreenBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  toggleFullscreen();
 });
+
+fullscreenBtn.addEventListener('touchend', (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  toggleFullscreen();
+}, { passive: false });
 
 document.addEventListener('fullscreenchange', updateFullscreenButton);
 document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
@@ -844,15 +931,18 @@ document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
 // ============ AUDIO BUTTON ============
 audioBtn.addEventListener('click', async (e) => {
   e.stopPropagation();
+  e.preventDefault();
 
-  if (!audioEngine.ctx) {
-    await audioEngine.init();
-    audioBtn.classList.remove('muted');
-    audioBtn.textContent = '🔊';
+  if (!audioEngine.ctx || !audioEngine.isPlaying) {
+    const success = await audioEngine.init();
+    if (success) {
+      audioBtn.classList.remove('muted');
+      audioBtn.textContent = '♪';
+    }
   } else {
     const isPlaying = audioEngine.toggle();
     audioBtn.classList.toggle('muted', !isPlaying);
-    audioBtn.textContent = isPlaying ? '🔊' : '🔇';
+    audioBtn.textContent = isPlaying ? '♪' : '✕';
   }
 });
 
@@ -861,15 +951,28 @@ async function init() {
   puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
   gameLoop();
 
-  // Try to auto-start audio (will likely be blocked, user needs to tap audio button)
-  try {
-    await audioEngine.init();
-    audioBtn.classList.remove('muted');
-  } catch (e) {
-    audioBtn.classList.add('muted');
-    audioBtn.textContent = '🔇';
-  }
+  // Audio starts muted - user must tap to enable (browser policy)
+  audioBtn.classList.add('muted');
+  audioBtn.textContent = '✕';
 }
+
+// Add touchend for audio button on mobile
+audioBtn.addEventListener('touchend', async (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+
+  if (!audioEngine.ctx || !audioEngine.isPlaying) {
+    const success = await audioEngine.init();
+    if (success) {
+      audioBtn.classList.remove('muted');
+      audioBtn.textContent = '♪';
+    }
+  } else {
+    const isPlaying = audioEngine.toggle();
+    audioBtn.classList.toggle('muted', !isPlaying);
+    audioBtn.textContent = isPlaying ? '♪' : '✕';
+  }
+}, { passive: false });
 
 // ============ EVENT PREVENTION ============
 document.addEventListener('contextmenu', e => e.preventDefault());
