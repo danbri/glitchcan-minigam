@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="screen-orientation" content="portrait">
+<title>Puppy Pop!</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+html {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  background: linear-gradient(135deg,
+    hsl(var(--bg-hue1), 80%, 92%) 0%,
+    hsl(var(--bg-hue2), 70%, 94%) 50%,
+    hsl(var(--bg-hue3), 75%, 93%) 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  --bg-hue1: 340;
+  --bg-hue2: 40;
+  --bg-hue3: 210;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#game {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.puppy {
+  position: absolute;
+  cursor: pointer;
+  transform-origin: center center;
+  z-index: 1;
+  will-change: transform, left, top;
+}
+
+.puppy.dragging {
+  z-index: 100;
+  cursor: grabbing;
+}
+
+.puppy.splitting {
+  animation: split-pop 0.25s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes split-pop {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0; transform: scale(0); }
+}
+
+.puppy.spawning {
+  animation: spawn-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes spawn-in {
+  0% { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+#fullscreen-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: background 0.2s, transform 0.15s;
+  touch-action: manipulation;
+}
+
+#fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+#fullscreen-btn:active {
+  transform: scale(0.92);
+}
+
+#fullscreen-btn.is-fullscreen {
+  opacity: 0.4;
+}
+
+#fullscreen-btn.is-fullscreen:hover {
+  opacity: 1;
+}
+
+#audio-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: background 0.2s, transform 0.15s;
+  touch-action: manipulation;
+}
+
+#audio-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+#audio-btn:active {
+  transform: scale(0.92);
+}
+
+#audio-btn.muted {
+  opacity: 0.5;
+}
+
+/* Prevent pull-to-refresh */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbars */
+::-webkit-scrollbar {
+  display: none;
+}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<button id="fullscreen-btn" aria-label="Toggle fullscreen">⛶</button>
+<button id="audio-btn" aria-label="Toggle audio">🔊</button>
+
+<script>
+// ============ AUDIO ENGINE ============
+class ShepardAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.isPlaying = false;
+    this.isMuted = false;
+    this.chordIndex = 0;
+    this.shepardPhase = 0;
+    this.oscillators = [];
+    this.intervalId = null;
+
+    // I - V - vi - IV progression in C major (upbeat pop progression)
+    this.chords = [
+      [261.63, 329.63, 392.00],  // C major (C E G)
+      [392.00, 493.88, 587.33],  // G major (G B D)
+      [440.00, 523.25, 659.25],  // A minor (A C E)
+      [349.23, 440.00, 523.25]   // F major (F A C)
+    ];
+
+    this.baseFreqs = [65.41, 130.81, 261.63, 523.25, 1046.50]; // C octaves for Shepard
+  }
+
+  async init() {
+    if (this.ctx) return;
+
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Master gain
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.3;
+    this.masterGain.connect(this.ctx.destination);
+
+    // Compressor for smoother sound
+    this.compressor = this.ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -24;
+    this.compressor.knee.value = 30;
+    this.compressor.ratio.value = 12;
+    this.compressor.connect(this.masterGain);
+
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
+
+    this.isPlaying = true;
+    this.startMusic();
+  }
+
+  // Create choir-like pad sound
+  createChoirVoice(freq, duration) {
+    const numVoices = 4;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(this.compressor);
+
+    const oscs = [];
+    for (let i = 0; i < numVoices; i++) {
+      const osc = this.ctx.createOscillator();
+      const detune = (i - numVoices/2) * 8 + (Math.random() - 0.5) * 6;
+      osc.frequency.value = freq;
+      osc.detune.value = detune;
+      osc.type = 'sine';
+
+      // Add slight vibrato
+      const vibrato = this.ctx.createOscillator();
+      const vibratoGain = this.ctx.createGain();
+      vibrato.frequency.value = 4 + Math.random() * 2;
+      vibratoGain.gain.value = 3;
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+      vibrato.start();
+
+      const voiceGain = this.ctx.createGain();
+      voiceGain.gain.value = 0.15;
+      osc.connect(voiceGain);
+      voiceGain.connect(gain);
+
+      osc.start();
+      oscs.push({ osc, vibrato });
+    }
+
+    const now = this.ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.3);
+    gain.gain.setValueAtTime(0.12, now + duration - 0.4);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+
+    setTimeout(() => {
+      oscs.forEach(({ osc, vibrato }) => {
+        osc.stop();
+        vibrato.stop();
+      });
+    }, duration * 1000);
+  }
+
+  // Create cello-like bass
+  createCelloVoice(freq, duration) {
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq / 2; // One octave lower
+
+    // Low-pass filter for warmth
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    filter.Q.value = 1;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    const now = this.ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.15);
+    gain.gain.setValueAtTime(0.06, now + duration - 0.3);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+
+    osc.start();
+    setTimeout(() => osc.stop(), duration * 1000);
+  }
+
+  // Create tinkly cymbal/bell shimmer
+  createShimmer() {
+    const numPartials = 6;
+    const baseFreq = 2000 + Math.random() * 3000;
+
+    for (let i = 0; i < numPartials; i++) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = baseFreq * (1 + i * 0.5 + Math.random() * 0.3);
+
+      const gain = this.ctx.createGain();
+      const peakGain = 0.015 / (i + 1);
+      gain.gain.value = 0;
+
+      osc.connect(gain);
+      gain.connect(this.compressor);
+
+      const now = this.ctx.currentTime;
+      const delay = i * 0.02;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(peakGain, now + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.8);
+
+      osc.start(now + delay);
+      osc.stop(now + delay + 1);
+    }
+  }
+
+  // Create Shepard tone layer (continuously rising illusion)
+  createShepardLayer() {
+    const numOctaves = this.baseFreqs.length;
+
+    this.baseFreqs.forEach((baseFreq, i) => {
+      // Calculate frequency based on rising phase
+      const risingFactor = Math.pow(2, this.shepardPhase);
+      let freq = baseFreq * risingFactor;
+
+      // Wrap around when reaching next octave
+      while (freq > baseFreq * 2) freq /= 2;
+
+      // Gaussian amplitude envelope - louder in middle octaves
+      const octavePos = (i + this.shepardPhase) / numOctaves;
+      const amp = Math.exp(-Math.pow((octavePos - 0.5) * 3, 2)) * 0.04;
+
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+
+      const gain = this.ctx.createGain();
+      gain.gain.value = amp;
+
+      osc.connect(gain);
+      gain.connect(this.compressor);
+
+      const now = this.ctx.currentTime;
+      const duration = 2.0;
+
+      // Crossfade
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(amp, now + 0.3);
+      gain.gain.setValueAtTime(amp, now + duration - 0.3);
+      gain.gain.linearRampToValueAtTime(0, now + duration);
+
+      osc.start(now);
+      osc.stop(now + duration);
+    });
+
+    // Advance phase for rising effect
+    this.shepardPhase += 0.05;
+    if (this.shepardPhase >= 1) this.shepardPhase = 0;
+  }
+
+  playChord() {
+    if (!this.isPlaying || this.isMuted) return;
+
+    const chord = this.chords[this.chordIndex];
+    const duration = 2.0;
+
+    // Choir voices for each note in chord
+    chord.forEach(freq => this.createChoirVoice(freq, duration));
+
+    // Cello bass on root
+    this.createCelloVoice(chord[0], duration);
+
+    // Shepard rising tone layer
+    this.createShepardLayer();
+
+    // Occasional shimmer
+    if (Math.random() < 0.4) {
+      setTimeout(() => this.createShimmer(), Math.random() * 500);
+    }
+
+    this.chordIndex = (this.chordIndex + 1) % this.chords.length;
+  }
+
+  startMusic() {
+    this.playChord();
+    this.intervalId = setInterval(() => this.playChord(), 2000);
+  }
+
+  toggle() {
+    this.isMuted = !this.isMuted;
+    if (this.masterGain) {
+      this.masterGain.gain.linearRampToValueAtTime(
+        this.isMuted ? 0 : 0.3,
+        this.ctx.currentTime + 0.1
+      );
+    }
+    return !this.isMuted;
+  }
+
+  stop() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    this.isPlaying = false;
+  }
+}
+
+const audioEngine = new ShepardAudioEngine();
+
+// ============ GAME ENGINE ============
+const game = document.getElementById('game');
+const puppies = [];
+
+const MIN_SIZE = 24;
+const MAX_PUPPIES = 25;
+const GROWTH_RATE = 0.15;
+const SPLIT_SIZE_RATIO = 0.5;
+
+const FRICTION = 0.98;
+const BOUNCE_DAMPING = 0.5;
+const COLLISION_PUSH = 0.2;
+const TAP_THRESHOLD = 180;
+const DRAG_DISTANCE_THRESHOLD = 8;
+
+class Puppy {
+  constructor(x, y, vx = 0, vy = 0, size = MIN_SIZE) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.size = Math.max(MIN_SIZE, size);
+
+    this.scaleVariation = 0.8 + Math.random() * 0.4;
+    this.rotation = (Math.random() - 0.5) * 20;
+
+    const colorChance = Math.random();
+    if (colorChance < 0.7) {
+      this.hueRotate = (Math.random() - 0.5) * 50;
+    } else if (colorChance < 0.9) {
+      this.hueRotate = 280 + Math.random() * 40;
+    } else {
+      this.hueRotate = Math.random() * 360;
+    }
+
+    this.saturate = 0.85 + Math.random() * 0.4;
+    this.brightness = 0.95 + Math.random() * 0.15;
+
+    this.element = document.createElement('div');
+    this.element.className = 'puppy spawning';
+    this.element.textContent = '🐶';
+    this.element.style.lineHeight = '1';
+
+    game.appendChild(this.element);
+
+    this.pointerDown = false;
+    this.pointerStartTime = 0;
+    this.pointerStartX = 0;
+    this.pointerStartY = 0;
+    this.isDragging = false;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.lastMoveX = 0;
+    this.lastMoveY = 0;
+    this.lastMoveTime = 0;
+
+    this.posHistory = [];
+    this.historyMax = 30;
+
+    this.setupEvents();
+
+    setTimeout(() => this.element.classList.remove('spawning'), 350);
+
+    this.updatePosition();
+  }
+
+  buildFilter(isDragging) {
+    const shadow = isDragging
+      ? 'drop-shadow(4px 8px 12px rgba(0,0,0,0.3))'
+      : 'drop-shadow(2px 4px 6px rgba(0,0,0,0.15))';
+    return `hue-rotate(${this.hueRotate}deg) saturate(${this.saturate}) brightness(${this.brightness}) ${shadow}`;
+  }
+
+  setupEvents() {
+    const onPointerDown = (e) => {
+      if (this.splitting) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      this.pointerDown = true;
+      this.pointerStartTime = Date.now();
+
+      const point = e.touches ? e.touches[0] : e;
+      this.pointerStartX = point.clientX;
+      this.pointerStartY = point.clientY;
+      this.dragOffsetX = point.clientX - this.x;
+      this.dragOffsetY = point.clientY - this.y;
+      this.lastMoveX = point.clientX;
+      this.lastMoveY = point.clientY;
+      this.lastMoveTime = Date.now();
+
+      if (e.pointerId !== undefined) {
+        this.element.setPointerCapture(e.pointerId);
+      }
+    };
+
+    const onPointerMove = (e) => {
+      if (!this.pointerDown || this.splitting) return;
+      e.preventDefault();
+
+      const point = e.touches ? e.touches[0] : e;
+      const dx = point.clientX - this.pointerStartX;
+      const dy = point.clientY - this.pointerStartY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_DISTANCE_THRESHOLD) {
+        if (!this.isDragging) {
+          this.isDragging = true;
+          this.element.classList.add('dragging');
+          this.element.style.filter = this.buildFilter(true);
+          this.vx = 0;
+          this.vy = 0;
+        }
+
+        const now = Date.now();
+        const dt = now - this.lastMoveTime;
+        if (dt > 0) {
+          this.throwVx = (point.clientX - this.lastMoveX) / dt * 16;
+          this.throwVy = (point.clientY - this.lastMoveY) / dt * 16;
+        }
+        this.lastMoveX = point.clientX;
+        this.lastMoveY = point.clientY;
+        this.lastMoveTime = now;
+
+        this.x = point.clientX - this.dragOffsetX;
+        this.y = point.clientY - this.dragOffsetY;
+        this.updatePosition();
+      }
+    };
+
+    const onPointerUp = (e) => {
+      if (!this.pointerDown) return;
+      e.preventDefault();
+
+      const elapsed = Date.now() - this.pointerStartTime;
+
+      if (this.isDragging) {
+        this.vx = Math.max(-20, Math.min(20, this.throwVx || 0));
+        this.vy = Math.max(-20, Math.min(20, this.throwVy || 0));
+        this.element.classList.remove('dragging');
+        this.element.style.filter = this.buildFilter(false);
+      } else if (elapsed < TAP_THRESHOLD) {
+        this.split();
+      }
+
+      this.pointerDown = false;
+      this.isDragging = false;
+
+      if (e.pointerId !== undefined) {
+        this.element.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    const onPointerCancel = (e) => {
+      this.pointerDown = false;
+      this.isDragging = false;
+      this.element.classList.remove('dragging');
+      this.element.style.filter = this.buildFilter(false);
+      if (e.pointerId !== undefined) {
+        this.element.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    this.element.addEventListener('pointerdown', onPointerDown);
+    this.element.addEventListener('pointermove', onPointerMove);
+    this.element.addEventListener('pointerup', onPointerUp);
+    this.element.addEventListener('pointercancel', onPointerCancel);
+
+    this.element.addEventListener('touchstart', onPointerDown, { passive: false });
+    this.element.addEventListener('touchmove', onPointerMove, { passive: false });
+    this.element.addEventListener('touchend', onPointerUp, { passive: false });
+    this.element.addEventListener('touchcancel', onPointerCancel);
+  }
+
+  updatePosition() {
+    const displaySize = this.size * this.scaleVariation;
+    this.element.style.left = `${this.x - displaySize / 2}px`;
+    this.element.style.top = `${this.y - displaySize / 2}px`;
+    this.element.style.fontSize = `${this.size}px`;
+    this.element.style.transform = `scale(${this.scaleVariation}) rotate(${this.rotation}deg)`;
+    this.element.style.filter = this.buildFilter(this.isDragging);
+  }
+
+  split() {
+    if (this.splitting) return;
+    this.splitting = true;
+    this.element.classList.add('splitting');
+
+    // Play shimmer sound on pop
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    const angle1 = Math.random() * Math.PI * 2;
+    const angle2 = angle1 + Math.PI + (Math.random() - 0.5) * 0.5;
+    const speed = 5 + Math.random() * 4;
+
+    setTimeout(() => {
+      const idx = puppies.indexOf(this);
+      if (idx > -1) puppies.splice(idx, 1);
+      this.element.remove();
+
+      if (puppies.length >= MAX_PUPPIES) return;
+
+      const newSize = Math.max(MIN_SIZE, this.size * SPLIT_SIZE_RATIO);
+      const spawnCount = Math.min(2, MAX_PUPPIES - puppies.length);
+
+      if (spawnCount >= 1) {
+        puppies.push(
+          new Puppy(
+            this.x + Math.cos(angle1) * 20,
+            this.y + Math.sin(angle1) * 20,
+            Math.cos(angle1) * speed + this.vx * 0.3,
+            Math.sin(angle1) * speed + this.vy * 0.3,
+            newSize
+          )
+        );
+      }
+      if (spawnCount >= 2) {
+        puppies.push(
+          new Puppy(
+            this.x + Math.cos(angle2) * 20,
+            this.y + Math.sin(angle2) * 20,
+            Math.cos(angle2) * speed + this.vx * 0.3,
+            Math.sin(angle2) * speed + this.vy * 0.3,
+            newSize
+          )
+        );
+      }
+    }, 250);
+  }
+
+  getRadius() {
+    return (this.size * this.scaleVariation) / 2;
+  }
+
+  update() {
+    if (this.splitting) return;
+
+    this.size += GROWTH_RATE;
+
+    if (this.isDragging) {
+      this.posHistory.length = 0;
+      this.updatePosition();
+      return;
+    }
+
+    this.vx *= FRICTION;
+    this.vy *= FRICTION;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const r = this.getRadius();
+
+    if (this.x - r < 0) {
+      this.x = r;
+      this.vx = Math.abs(this.vx) * BOUNCE_DAMPING;
+    } else if (this.x + r > w) {
+      this.x = w - r;
+      this.vx = -Math.abs(this.vx) * BOUNCE_DAMPING;
+    }
+
+    if (this.y - r < 0) {
+      this.y = r;
+      this.vy = Math.abs(this.vy) * BOUNCE_DAMPING;
+    } else if (this.y + r > h) {
+      this.y = h - r;
+      this.vy = -Math.abs(this.vy) * BOUNCE_DAMPING;
+    }
+
+    this.posHistory.push(this.x + this.y * 10000);
+    if (this.posHistory.length > this.historyMax) this.posHistory.shift();
+
+    if (this.posHistory.length === this.historyMax) {
+      const sorted = [...this.posHistory].sort((a, b) => a - b);
+      const mid = this.historyMax / 2;
+      const lo = sorted.slice(0, mid);
+      const hi = sorted.slice(mid);
+
+      const avgLo = lo.reduce((a, b) => a + b, 0) / mid;
+      const avgHi = hi.reduce((a, b) => a + b, 0) / mid;
+      const varLo = lo.reduce((a, v) => a + (v - avgLo) ** 2, 0) / mid;
+      const varHi = hi.reduce((a, v) => a + (v - avgHi) ** 2, 0) / mid;
+
+      const gap = avgHi - avgLo;
+      const avgVar = (varLo + varHi) / 2;
+
+      if (avgVar < 50 && gap > 0.5 && gap < 500) {
+        this.vx *= 0.3;
+        this.vy *= 0.3;
+        this.posHistory.length = 0;
+      }
+    }
+
+    this.updatePosition();
+  }
+}
+
+function checkCollisions() {
+  for (let i = 0; i < puppies.length; i++) {
+    for (let j = i + 1; j < puppies.length; j++) {
+      const a = puppies[i];
+      const b = puppies[j];
+
+      if (a.splitting || b.splitting) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minDist = a.getRadius() + b.getRadius();
+
+      if (dist < minDist && dist > 0.1) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = minDist - dist;
+
+        const aMovable = !a.isDragging;
+        const bMovable = !b.isDragging;
+
+        if (aMovable && bMovable) {
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+        } else if (aMovable) {
+          a.x -= nx * overlap;
+          a.y -= ny * overlap;
+        } else if (bMovable) {
+          b.x += nx * overlap;
+          b.y += ny * overlap;
+        }
+
+        if (aMovable || bMovable) {
+          const relVx = a.vx - b.vx;
+          const relVy = a.vy - b.vy;
+          const relVn = relVx * nx + relVy * ny;
+
+          if (relVn > 0) {
+            if (aMovable) {
+              a.vx -= relVn * nx * COLLISION_PUSH;
+              a.vy -= relVn * ny * COLLISION_PUSH;
+            }
+            if (bMovable) {
+              b.vx += relVn * nx * COLLISION_PUSH;
+              b.vy += relVn * ny * COLLISION_PUSH;
+            }
+          }
+
+          const push = 0.08;
+          if (aMovable) {
+            a.vx = (a.vx - nx * push) * 0.95;
+            a.vy = (a.vy - ny * push) * 0.95;
+          }
+          if (bMovable) {
+            b.vx = (b.vx + nx * push) * 0.95;
+            b.vy = (b.vy + ny * push) * 0.95;
+          }
+        }
+      }
+    }
+  }
+}
+
+let bgTime = 0;
+
+function gameLoop() {
+  bgTime += 0.0003;
+  document.body.style.setProperty('--bg-hue1', (340 + Math.sin(bgTime) * 60 + 360) % 360);
+  document.body.style.setProperty('--bg-hue2', (40 + Math.sin(bgTime + 2) * 50 + 360) % 360);
+  document.body.style.setProperty('--bg-hue3', (210 + Math.sin(bgTime + 4) * 70 + 360) % 360);
+
+  checkCollisions();
+  for (const p of puppies) p.update();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============ FULLSCREEN HANDLING ============
+const fullscreenBtn = document.getElementById('fullscreen-btn');
+const audioBtn = document.getElementById('audio-btn');
+
+function updateFullscreenButton() {
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+  fullscreenBtn.textContent = isFS ? '⛶' : '⛶';
+  fullscreenBtn.classList.toggle('is-fullscreen', !!isFS);
+}
+
+fullscreenBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+
+  if (!isFS) {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        await document.documentElement.webkitRequestFullscreen();
+      }
+    } catch (err) {
+      console.log('Fullscreen not available');
+    }
+  } else {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      await document.webkitExitFullscreen();
+    }
+  }
+});
+
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+
+// ============ AUDIO BUTTON ============
+audioBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+
+  if (!audioEngine.ctx) {
+    await audioEngine.init();
+    audioBtn.classList.remove('muted');
+    audioBtn.textContent = '🔊';
+  } else {
+    const isPlaying = audioEngine.toggle();
+    audioBtn.classList.toggle('muted', !isPlaying);
+    audioBtn.textContent = isPlaying ? '🔊' : '🔇';
+  }
+});
+
+// ============ INIT ============
+async function init() {
+  puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
+  gameLoop();
+
+  // Try to auto-start audio (will likely be blocked, user needs to tap audio button)
+  try {
+    await audioEngine.init();
+    audioBtn.classList.remove('muted');
+  } catch (e) {
+    audioBtn.classList.add('muted');
+    audioBtn.textContent = '🔇';
+  }
+}
+
+// ============ EVENT PREVENTION ============
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('gestureend', e => e.preventDefault());
+
+// Prevent zoom on double-tap
+let lastTap = 0;
+document.addEventListener('touchstart', e => {
+  const now = Date.now();
+  if (now - lastTap < 300 && e.touches.length === 1) {
+    e.preventDefault();
+  }
+  lastTap = now;
+}, { passive: false });
+
+// Lock orientation if possible
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('portrait').catch(() => {});
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
