@@ -82,6 +82,17 @@ body {
   100% { opacity: 0; transform: scale(0); }
 }
 
+.puppy.fading-out {
+  animation: fade-out 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fade-out {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.3); }
+}
+
 .puppy.spawning {
   animation: spawn-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
@@ -187,27 +198,28 @@ body {
 <button id="audio-btn" aria-label="Toggle audio">♪</button>
 
 <script>
-// ============ AUDIO ENGINE ============
+// ============ AUDIO ENGINE - Upbeat Shepard Tones ============
 class ShepardAudioEngine {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
     this.isPlaying = false;
     this.isMuted = false;
+    this.shepardOscs = [];
     this.chordIndex = 0;
-    this.shepardPhase = 0;
-    this.oscillators = [];
+    this.beatCount = 0;
     this.intervalId = null;
+    this.animationId = null;
 
-    // I - V - vi - IV progression in C major (upbeat pop progression)
-    this.chords = [
-      [261.63, 329.63, 392.00],  // C major (C E G)
-      [392.00, 493.88, 587.33],  // G major (G B D)
-      [440.00, 523.25, 659.25],  // A minor (A C E)
-      [349.23, 440.00, 523.25]   // F major (F A C)
-    ];
+    // Upbeat major key progression (I - IV - V - I)
+    this.chordRoots = [261.63, 349.23, 392.00, 261.63]; // C F G C
+    this.tempo = 140; // BPM - upbeat!
+    this.beatDuration = 60 / this.tempo;
 
-    this.baseFreqs = [65.41, 130.81, 261.63, 523.25, 1046.50]; // C octaves for Shepard
+    // Shepard tone octave layers (continuous)
+    this.shepardBaseFreqs = [55, 110, 220, 440, 880, 1760];
+    this.shepardSpeed = 0.015; // Rise speed per frame
+    this.shepardPhase = 0;
   }
 
   async init() {
@@ -218,29 +230,26 @@ class ShepardAudioEngine {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       }
 
-      // Resume if suspended (browser autoplay policy)
       if (this.ctx.state === 'suspended') {
         await this.ctx.resume();
       }
 
-      // Master gain
       if (!this.masterGain) {
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.4;
+        this.masterGain.gain.value = 0.5;
         this.masterGain.connect(this.ctx.destination);
 
-        // Compressor for smoother sound
         this.compressor = this.ctx.createDynamicsCompressor();
-        this.compressor.threshold.value = -20;
-        this.compressor.knee.value = 30;
-        this.compressor.ratio.value = 8;
+        this.compressor.threshold.value = -18;
+        this.compressor.knee.value = 20;
+        this.compressor.ratio.value = 6;
         this.compressor.connect(this.masterGain);
       }
 
       this.isPlaying = true;
       this.isMuted = false;
+      this.startContinuousShepard();
       this.startMusic();
-      console.log('Audio initialized, context state:', this.ctx.state);
       return true;
     } catch (e) {
       console.error('Audio init failed:', e);
@@ -248,64 +257,117 @@ class ShepardAudioEngine {
     }
   }
 
-  // Create choir-like pad sound
-  createChoirVoice(freq, duration) {
-    const numVoices = 4;
-    const gain = this.ctx.createGain();
-    gain.gain.value = 0;
-    gain.connect(this.compressor);
-
-    const oscs = [];
-    for (let i = 0; i < numVoices; i++) {
+  // Continuous Shepard tones - the classic rising illusion
+  startContinuousShepard() {
+    this.shepardOscs = this.shepardBaseFreqs.map((baseFreq, i) => {
       const osc = this.ctx.createOscillator();
-      const detune = (i - numVoices/2) * 8 + (Math.random() - 0.5) * 6;
-      osc.frequency.value = freq;
-      osc.detune.value = detune;
-      osc.type = 'sine';
+      osc.type = 'triangle'; // Brighter than sine
+      osc.frequency.value = baseFreq;
 
-      // Add slight vibrato
-      const vibrato = this.ctx.createOscillator();
-      const vibratoGain = this.ctx.createGain();
-      vibrato.frequency.value = 4 + Math.random() * 2;
-      vibratoGain.gain.value = 3;
-      vibrato.connect(vibratoGain);
-      vibratoGain.connect(osc.frequency);
-      vibrato.start();
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
 
-      const voiceGain = this.ctx.createGain();
-      voiceGain.gain.value = 0.15;
-      osc.connect(voiceGain);
-      voiceGain.connect(gain);
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 800;
+      filter.Q.value = 0.5;
 
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.compressor);
       osc.start();
-      oscs.push({ osc, vibrato });
-    }
 
-    const now = this.ctx.currentTime;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.12, now + 0.3);
-    gain.gain.setValueAtTime(0.12, now + duration - 0.4);
-    gain.gain.linearRampToValueAtTime(0, now + duration);
+      return { osc, gain, baseFreq, index: i };
+    });
 
-    setTimeout(() => {
-      oscs.forEach(({ osc, vibrato }) => {
-        osc.stop();
-        vibrato.stop();
+    // Animate Shepard tones
+    const animateShepard = () => {
+      if (!this.isPlaying || this.isMuted) {
+        this.animationId = requestAnimationFrame(animateShepard);
+        return;
+      }
+
+      this.shepardPhase += this.shepardSpeed;
+      if (this.shepardPhase >= 1) this.shepardPhase = 0;
+
+      const numLayers = this.shepardOscs.length;
+      const centerFreq = 400; // Peak loudness frequency
+
+      this.shepardOscs.forEach((layer, i) => {
+        // Calculate rising frequency with wraparound
+        const risingFactor = Math.pow(2, this.shepardPhase);
+        let freq = layer.baseFreq * risingFactor;
+
+        // Set frequency (continuous glide)
+        layer.osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+
+        // Gaussian amplitude envelope centered around centerFreq
+        const logFreq = Math.log2(freq);
+        const logCenter = Math.log2(centerFreq);
+        const distance = Math.abs(logFreq - logCenter);
+        const amp = Math.exp(-distance * distance * 0.5) * 0.08;
+
+        layer.gain.gain.setTargetAtTime(amp, this.ctx.currentTime, 0.1);
       });
-    }, duration * 1000);
+
+      this.animationId = requestAnimationFrame(animateShepard);
+    };
+
+    animateShepard();
   }
 
-  // Create cello-like bass
-  createCelloVoice(freq, duration) {
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq / 2; // One octave lower
+  // Bright plucky synth for arpeggios
+  playArpNote(freq, time, duration) {
+    if (this.isMuted) return;
 
-    // Low-pass filter for warmth
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.value = freq * 1.002; // Slight detune
+
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 800;
-    filter.Q.value = 1;
+    filter.frequency.value = 2000;
+    filter.Q.value = 2;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    // Snappy envelope
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.12, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.04, time + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+    // Filter sweep for brightness
+    filter.frequency.setValueAtTime(4000, time);
+    filter.frequency.exponentialRampToValueAtTime(800, time + duration * 0.5);
+
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + duration + 0.1);
+    osc2.stop(time + duration + 0.1);
+  }
+
+  // Punchy bass
+  playBass(freq, time, duration) {
+    if (this.isMuted) return;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq / 2;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 400;
 
     const gain = this.ctx.createGain();
     gain.gain.value = 0;
@@ -314,122 +376,111 @@ class ShepardAudioEngine {
     filter.connect(gain);
     gain.connect(this.compressor);
 
-    const now = this.ctx.currentTime;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.08, now + 0.15);
-    gain.gain.setValueAtTime(0.06, now + duration - 0.3);
-    gain.gain.linearRampToValueAtTime(0, now + duration);
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.15, time + 0.01);
+    gain.gain.setValueAtTime(0.12, time + duration * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
-    osc.start();
-    setTimeout(() => osc.stop(), duration * 1000);
+    osc.start(time);
+    osc.stop(time + duration + 0.1);
   }
 
-  // Create tinkly cymbal/bell shimmer
-  createShimmer() {
-    const numPartials = 6;
-    const baseFreq = 2000 + Math.random() * 3000;
+  // Hi-hat / shaker
+  playHiHat(time, accent = false) {
+    if (this.isMuted) return;
 
-    for (let i = 0; i < numPartials; i++) {
+    const bufferSize = this.ctx.sampleRate * 0.05;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 8000;
+
+    const gain = this.ctx.createGain();
+    const vol = accent ? 0.08 : 0.04;
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    noise.start(time);
+    noise.stop(time + 0.1);
+  }
+
+  // Sparkle effect
+  createShimmer() {
+    if (!this.ctx || this.isMuted) return;
+
+    const baseFreq = 1500 + Math.random() * 2000;
+    const now = this.ctx.currentTime;
+
+    for (let i = 0; i < 4; i++) {
       const osc = this.ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.value = baseFreq * (1 + i * 0.5 + Math.random() * 0.3);
+      osc.frequency.value = baseFreq * (1 + i * 0.25);
 
       const gain = this.ctx.createGain();
-      const peakGain = 0.015 / (i + 1);
-      gain.gain.value = 0;
+      gain.gain.setValueAtTime(0.02 / (i + 1), now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
       osc.connect(gain);
       gain.connect(this.compressor);
-
-      const now = this.ctx.currentTime;
-      const delay = i * 0.02;
-      gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(peakGain, now + delay + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.8);
-
-      osc.start(now + delay);
-      osc.stop(now + delay + 1);
+      osc.start(now);
+      osc.stop(now + 0.5);
     }
   }
 
-  // Create Shepard tone layer (continuously rising illusion)
-  createShepardLayer() {
-    const numOctaves = this.baseFreqs.length;
-
-    this.baseFreqs.forEach((baseFreq, i) => {
-      // Calculate frequency based on rising phase
-      const risingFactor = Math.pow(2, this.shepardPhase);
-      let freq = baseFreq * risingFactor;
-
-      // Wrap around when reaching next octave
-      while (freq > baseFreq * 2) freq /= 2;
-
-      // Gaussian amplitude envelope - louder in middle octaves
-      const octavePos = (i + this.shepardPhase) / numOctaves;
-      const amp = Math.exp(-Math.pow((octavePos - 0.5) * 3, 2)) * 0.04;
-
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-
-      const gain = this.ctx.createGain();
-      gain.gain.value = amp;
-
-      osc.connect(gain);
-      gain.connect(this.compressor);
-
-      const now = this.ctx.currentTime;
-      const duration = 2.0;
-
-      // Crossfade
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(amp, now + 0.3);
-      gain.gain.setValueAtTime(amp, now + duration - 0.3);
-      gain.gain.linearRampToValueAtTime(0, now + duration);
-
-      osc.start(now);
-      osc.stop(now + duration);
-    });
-
-    // Advance phase for rising effect
-    this.shepardPhase += 0.05;
-    if (this.shepardPhase >= 1) this.shepardPhase = 0;
-  }
-
-  playChord() {
+  playBeat() {
     if (!this.isPlaying || this.isMuted) return;
 
-    const chord = this.chords[this.chordIndex];
-    const duration = 2.0;
+    const now = this.ctx.currentTime;
+    const root = this.chordRoots[this.chordIndex];
+    const beat = this.beatCount % 8;
 
-    // Choir voices for each note in chord
-    chord.forEach(freq => this.createChoirVoice(freq, duration));
-
-    // Cello bass on root
-    this.createCelloVoice(chord[0], duration);
-
-    // Shepard rising tone layer
-    this.createShepardLayer();
-
-    // Occasional shimmer
-    if (Math.random() < 0.4) {
-      setTimeout(() => this.createShimmer(), Math.random() * 500);
+    // Bass on beats 0 and 4
+    if (beat === 0 || beat === 4) {
+      this.playBass(root, now, this.beatDuration * 1.5);
     }
 
-    this.chordIndex = (this.chordIndex + 1) % this.chords.length;
+    // Arpeggio pattern (upward, upbeat feel)
+    const arpNotes = [root, root * 1.25, root * 1.5, root * 2]; // 1 3 5 8
+    const arpPattern = [0, 1, 2, 3, 2, 1, 0, 1];
+    const noteIndex = arpPattern[beat];
+    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.8);
+
+    // Hi-hats on every beat, accent on 0 and 4
+    this.playHiHat(now, beat === 0 || beat === 4);
+
+    // Offbeat hi-hats for energy
+    this.playHiHat(now + this.beatDuration * 0.5, false);
+
+    this.beatCount++;
+    if (this.beatCount % 8 === 0) {
+      this.chordIndex = (this.chordIndex + 1) % this.chordRoots.length;
+    }
   }
 
   startMusic() {
-    this.playChord();
-    this.intervalId = setInterval(() => this.playChord(), 2000);
+    this.playBeat();
+    this.intervalId = setInterval(() => this.playBeat(), this.beatDuration * 1000);
   }
 
   toggle() {
     this.isMuted = !this.isMuted;
     if (this.masterGain) {
-      this.masterGain.gain.linearRampToValueAtTime(
-        this.isMuted ? 0 : 0.3,
-        this.ctx.currentTime + 0.1
+      this.masterGain.gain.setTargetAtTime(
+        this.isMuted ? 0 : 0.5,
+        this.ctx.currentTime,
+        0.1
       );
     }
     return !this.isMuted;
@@ -440,6 +491,14 @@ class ShepardAudioEngine {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    this.shepardOscs.forEach(layer => {
+      layer.osc.stop();
+    });
+    this.shepardOscs = [];
     this.isPlaying = false;
   }
 }
@@ -452,7 +511,7 @@ const puppies = [];
 
 const MIN_SIZE = 24;
 const MAX_PUPPIES = 25;
-const GROWTH_RATE = 0.15;
+const BASE_GROWTH_RATE = 0.15;
 const SPLIT_SIZE_RATIO = 0.5;
 
 const FRICTION = 0.98;
@@ -460,6 +519,59 @@ const BOUNCE_DAMPING = 0.5;
 const COLLISION_PUSH = 0.2;
 const TAP_THRESHOLD = 180;
 const DRAG_DISTANCE_THRESHOLD = 8;
+
+// Overcrowding thresholds
+const CROWDING_THRESHOLD = 0.35;  // 35% screen coverage triggers slowdown
+const CRITICAL_CROWDING = 0.50;   // 50% coverage triggers culling
+const CULL_CHECK_INTERVAL = 60;   // Check every 60 frames
+let frameCount = 0;
+let currentGrowthRate = BASE_GROWTH_RATE;
+
+function calculateCrowding() {
+  const screenArea = window.innerWidth * window.innerHeight;
+  let totalPuppyArea = 0;
+
+  for (const p of puppies) {
+    if (p.splitting) continue;
+    const r = p.getRadius();
+    totalPuppyArea += Math.PI * r * r;
+  }
+
+  return totalPuppyArea / screenArea;
+}
+
+function cullLargestPuppy() {
+  // Find the largest non-dragging, non-splitting puppy
+  let largest = null;
+  let largestSize = 0;
+
+  for (const p of puppies) {
+    if (p.splitting || p.isDragging || p.fadingOut) continue;
+    if (p.size > largestSize) {
+      largestSize = p.size;
+      largest = p;
+    }
+  }
+
+  if (largest && largestSize > MIN_SIZE * 2) {
+    largest.fadingOut = true;
+    largest.element.classList.add('fading-out');
+
+    // Play a soft shimmer when culling
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    setTimeout(() => {
+      const idx = puppies.indexOf(largest);
+      if (idx > -1) puppies.splice(idx, 1);
+      largest.element.remove();
+    }, 600);
+
+    return true;
+  }
+  return false;
+}
 
 class Puppy {
   constructor(x, y, vx = 0, vy = 0, size = MIN_SIZE) {
@@ -683,9 +795,9 @@ class Puppy {
   }
 
   update() {
-    if (this.splitting) return;
+    if (this.splitting || this.fadingOut) return;
 
-    this.size += GROWTH_RATE;
+    this.size += currentGrowthRate;
 
     if (this.isDragging) {
       this.posHistory.length = 0;
@@ -758,7 +870,7 @@ function checkCollisions() {
       const a = puppies[i];
       const b = puppies[j];
 
-      if (a.splitting || b.splitting) continue;
+      if (a.splitting || b.splitting || a.fadingOut || b.fadingOut) continue;
 
       const dx = b.x - a.x;
       const dy = b.y - a.y;
@@ -866,10 +978,30 @@ function checkCollisions() {
 let bgTime = 0;
 
 function gameLoop() {
+  frameCount++;
   bgTime += 0.0003;
   document.body.style.setProperty('--bg-hue1', (340 + Math.sin(bgTime) * 60 + 360) % 360);
   document.body.style.setProperty('--bg-hue2', (40 + Math.sin(bgTime + 2) * 50 + 360) % 360);
   document.body.style.setProperty('--bg-hue3', (210 + Math.sin(bgTime + 4) * 70 + 360) % 360);
+
+  // Check crowding periodically
+  if (frameCount % CULL_CHECK_INTERVAL === 0) {
+    const crowding = calculateCrowding();
+
+    // Adjust growth rate based on crowding
+    if (crowding > CROWDING_THRESHOLD) {
+      // Slow down growth proportionally
+      const slowdownFactor = 1 - ((crowding - CROWDING_THRESHOLD) / (1 - CROWDING_THRESHOLD));
+      currentGrowthRate = BASE_GROWTH_RATE * Math.max(0, slowdownFactor);
+    } else {
+      currentGrowthRate = BASE_GROWTH_RATE;
+    }
+
+    // Cull if critically overcrowded
+    if (crowding > CRITICAL_CROWDING) {
+      cullLargestPuppy();
+    }
+  }
 
   checkCollisions();
   for (const p of puppies) p.update();
