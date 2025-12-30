@@ -83,7 +83,8 @@
         { "path": "creatures/draggo5.json", "title": "Solaris Drake ☀️", "subtitle": "Solar-panel wings" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
-        { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" }
+        { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" },
+        { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped dragon" }
       ]
     },
     {
