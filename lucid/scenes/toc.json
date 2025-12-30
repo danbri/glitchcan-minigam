@@ -85,7 +85,7 @@
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
         { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" },
         { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped dragon" },
-        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Blind mechanical conversion" }
+        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Context-ablated conversion" }
       ]
     },
     {

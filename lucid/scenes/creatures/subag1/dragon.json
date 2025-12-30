@@ -1,9 +1,9 @@
 {
   "title": "SubAgent Draggo",
-  "subtitle": "Blind mechanical conversion from Graph-GLSL format",
+  "subtitle": "Context-ablated mechanical conversion from Graph-GLSL format",
   "version": "1.0",
   "quality": "high",
-  "notes": "Converted by blind subagents with no knowledge of target shape. Preserves original nested SMin topology and computed capsule dimensions. MembraneStrips marked as unconvertible.",
+  "notes": "Converted by goal-agnostic subagents given only geometry data with semantic hints removed. Preserves original nested SMin topology and computed capsule dimensions. MembraneStrips marked as unconvertible.",
   "camera": {
     "distance": 9,
     "phi": 0.25,
@@ -14,7 +14,7 @@
     "type": "union",
     "children": [
       {
-        "notes": "BODY - blind converted, nested smoothUnion preserved",
+        "notes": "BODY - goal-agnostic conversion, nested smoothUnion preserved",
         "type": "material",
         "params": { "color": [0.18, 0.34, 0.26] },
         "child": {
@@ -46,7 +46,7 @@
         }
       },
       {
-        "notes": "HEAD - blind converted, 5-level nested smoothUnion chain",
+        "notes": "HEAD - 5-level nested smoothUnion chain preserved",
         "type": "material",
         "params": { "color": [0.198, 0.374, 0.286] },
         "child": {
@@ -111,7 +111,7 @@
         }
       },
       {
-        "notes": "NECK - blind converted, computed capsule h values",
+        "notes": "NECK - computed capsule h values from endpoints",
         "type": "material",
         "params": { "color": [0.18, 0.357, 0.26] },
         "child": {
@@ -143,7 +143,7 @@
         }
       },
       {
-        "notes": "LEGS - blind converted with computed endpoints",
+        "notes": "LEGS - computed endpoints from CapsuleAt data",
         "type": "material",
         "params": { "color": [0.171, 0.323, 0.247] },
         "child": {
@@ -186,7 +186,7 @@
         }
       },
       {
-        "notes": "TAIL - blind converted, 4 capsule backbone + cone barb",
+        "notes": "TAIL - 4 capsule backbone + cone barb, nested topology",
         "type": "material",
         "params": { "color": [0.171, 0.34, 0.247] },
         "child": {
@@ -240,7 +240,7 @@
         }
       },
       {
-        "notes": "WINGS - blind converted bone structure only. MembraneStrips not convertible.",
+        "notes": "WINGS - bone structure only. MembraneStrips not convertible.",
         "type": "material",
         "params": { "color": [0.16, 0.32, 0.36] },
         "child": {
