@@ -118,7 +118,8 @@
         { "path": "creatures/subag1/round9/r9-c.json", "title": "R9-C", "subtitle": "Muscular legs" },
         { "path": "creatures/subag1/round10/r10-a.json", "title": "R10-A", "subtitle": "Belly scales" },
         { "path": "creatures/subag1/round10/r10-b.json", "title": "R10-B", "subtitle": "Thicker legs" },
-        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Brow ridges" }
+        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Brow ridges" },
+        { "path": "creatures/subag1/silhouette-v1.json", "title": "Silhouette v1 🔲", "subtitle": "Topology-first approach" }
       ]
     },
     {
