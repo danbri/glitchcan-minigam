@@ -4,13 +4,13 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
-const SCENE = 'creatures.subag1.silhouette-v1';
+const SCENE = 'creatures.subag1.silhouette-v4';
 
-// Camera angles: [theta, phi, distance, name]
+// Camera angles for v4 - show wings clearly
 const ANGLES = [
-  { theta: 0,    phi: 0.2, distance: 10, name: 'side' },
-  { theta: 1.57, phi: 0.15, distance: 10, name: 'front' },
-  { theta: 0.4,  phi: 0.3, distance: 10, name: 'three-quarter' }
+  { theta: 0.3,  phi: 0.45, distance: 16, name: 'side' },
+  { theta: 0.9,  phi: 0.4, distance: 16, name: 'quarter' },
+  { theta: 0.6,  phi: 0.6, distance: 18, name: 'above' }
 ];
 
 async function main() {
