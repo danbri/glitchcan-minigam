@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
-const SCENE = 'creatures.subag1.silhouette-v4';
+const SCENE = 'creatures.subag1.silhouette-v5';
 
 // Camera angles for v4 - show wings clearly
 const ANGLES = [

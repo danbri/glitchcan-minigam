@@ -122,7 +122,8 @@
         { "path": "creatures/subag1/silhouette-v1.json", "title": "Silhouette v1 🔲", "subtitle": "Topology-first approach" },
         { "path": "creatures/subag1/silhouette-v2.json", "title": "Silhouette v2 🐉", "subtitle": "Horizontal body, visible appendages" },
         { "path": "creatures/subag1/silhouette-v3.json", "title": "Silhouette v3 🦖", "subtitle": "True horizontal spine, large wings" },
-        { "path": "creatures/subag1/silhouette-v4.json", "title": "Silhouette v4 🦅", "subtitle": "Hard union appendages" }
+        { "path": "creatures/subag1/silhouette-v4.json", "title": "Silhouette v4 🦅", "subtitle": "Hard union appendages" },
+        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5 🐲", "subtitle": "Dragon details: horns, claws, spines" }
       ]
     },
     {
