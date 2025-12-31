@@ -4,9 +4,9 @@ import { mkdirSync } from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
 const CANDIDATES = [
-  'creatures.subag1.round2.r2-a',
-  'creatures.subag1.round2.r2-b',
-  'creatures.subag1.round2.r2-c'
+  'creatures.subag1.round3.r3-a',
+  'creatures.subag1.round3.r3-b',
+  'creatures.subag1.round3.r3-c'
 ];
 
 async function captureCandidate(browser, sceneHash, outputPath) {
