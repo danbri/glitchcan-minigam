@@ -78,6 +78,7 @@
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
         { "path": "creatures/test-a.json", "title": "Test A", "subtitle": "Form study" },
         { "path": "creatures/test-b.json", "title": "Test B", "subtitle": "Form study v2" },
+        { "path": "creatures/test-c.json", "title": "Test C", "subtitle": "Form study" },
         { "path": "creatures/hippo-v1.json", "title": "Hippo v1 🦛", "subtitle": "Cute but realistic" },
         { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
         { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
