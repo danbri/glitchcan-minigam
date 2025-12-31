@@ -91,7 +91,10 @@
         { "path": "creatures/subag1/candidate-c.json", "title": "Candidate C ©️", "subtitle": "Nested geometry" },
         { "path": "creatures/subag1/improved-a.json", "title": "Improved A 🦴", "subtitle": "Horns and spines" },
         { "path": "creatures/subag1/improved-b.json", "title": "Improved B 🦇", "subtitle": "Enhanced wings" },
-        { "path": "creatures/subag1/improved-c.json", "title": "Improved C 👁️", "subtitle": "Eyes and details" }
+        { "path": "creatures/subag1/improved-c.json", "title": "Improved C 👁️", "subtitle": "Eyes and details" },
+        { "path": "creatures/subag1/round2/r2-a.json", "title": "R2-A 🦴👁️", "subtitle": "Horns, spines, eyes" },
+        { "path": "creatures/subag1/round2/r2-b.json", "title": "R2-B 🔥", "subtitle": "Fire breath dragon" },
+        { "path": "creatures/subag1/round2/r2-c.json", "title": "R2-C 🗡️", "subtitle": "Claws and tail blade" }
       ]
     },
     {
