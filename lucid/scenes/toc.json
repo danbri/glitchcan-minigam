@@ -88,7 +88,10 @@
         { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Context-ablated conversion" },
         { "path": "creatures/subag1/candidate-a.json", "title": "Candidate A 🅰️", "subtitle": "Nested a/b structure" },
         { "path": "creatures/subag1/candidate-b.json", "title": "Candidate B 🅱️", "subtitle": "Flat object graph" },
-        { "path": "creatures/subag1/candidate-c.json", "title": "Candidate C ©️", "subtitle": "Nested geometry" }
+        { "path": "creatures/subag1/candidate-c.json", "title": "Candidate C ©️", "subtitle": "Nested geometry" },
+        { "path": "creatures/subag1/improved-a.json", "title": "Improved A 🦴", "subtitle": "Horns and spines" },
+        { "path": "creatures/subag1/improved-b.json", "title": "Improved B 🦇", "subtitle": "Enhanced wings" },
+        { "path": "creatures/subag1/improved-c.json", "title": "Improved C 👁️", "subtitle": "Eyes and details" }
       ]
     },
     {
