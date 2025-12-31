@@ -1,0 +1,63 @@
+{
+  "title": "Creature Test A",
+  "subtitle": "Streamlined aquatic form",
+  "version": "1.0",
+  "camera": { "distance": 10, "phi": 0.3, "theta": 0.4, "target": [0, 0, 0] },
+  "root": {
+    "type": "material",
+    "params": { "color": [0.4, 0.5, 0.55] },
+    "child": {
+      "type": "smoothUnion", "k": 0.15,
+      "children": [
+        {
+          "comment": "Main body - torpedo shape",
+          "type": "ellipsoid",
+          "params": { "radii": [0.5, 0.45, 1.8] },
+          "transform": { "translate": [0, 0, 0] }
+        },
+        {
+          "comment": "Rounded forehead",
+          "type": "sphere",
+          "params": { "r": 0.38 },
+          "transform": { "translate": [0, 0.1, 1.5] }
+        },
+        {
+          "comment": "Beak/snout",
+          "type": "capsule",
+          "params": { "h": 0.5, "r": 0.12 },
+          "transform": { "translate": [0, -0.05, 2.1], "rotate": [-10, 0, 0] }
+        },
+        {
+          "comment": "Dorsal fin",
+          "type": "ellipsoid",
+          "params": { "radii": [0.06, 0.4, 0.3] },
+          "transform": { "translate": [0, 0.55, -0.2], "rotate": [0, 0, 0] }
+        },
+        {
+          "comment": "Pectoral fins",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "ellipsoid",
+            "params": { "radii": [0.5, 0.04, 0.2] },
+            "transform": { "translate": [0.45, -0.1, 0.5], "rotate": [0, 20, -25] }
+          }
+        },
+        {
+          "comment": "Tail stock - narrowing",
+          "type": "capsule",
+          "params": { "h": 0.6, "r": 0.2 },
+          "transform": { "translate": [0, 0, -2.0] }
+        },
+        {
+          "comment": "Tail flukes - HORIZONTAL spread",
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "ellipsoid",
+            "params": { "radii": [0.5, 0.04, 0.25] },
+            "transform": { "translate": [0.3, 0, -2.6], "rotate": [0, 15, 0] }
+          }
+        }
+      ]
+    }
+  }
+}
