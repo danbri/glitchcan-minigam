@@ -1,33 +1,17 @@
 // Multi-angle silhouette capture for blind evaluation
+// Uses single model, rotates camera via JavaScript
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
+const SCENE = 'creatures.subag1.silhouette-v1';
 
-// 3 angles: front, side, 3/4 view
+// Camera angles: [theta, phi, distance, name]
 const ANGLES = [
-  { hash: 'creatures.subag1.silhouette-front', name: 'angle1' },
-  { hash: 'creatures.subag1.silhouette-side', name: 'angle2' },
-  { hash: 'creatures.subag1.silhouette-v1', name: 'angle3' }
+  { theta: 0,    phi: 0.2, distance: 10, name: 'side' },
+  { theta: 1.57, phi: 0.15, distance: 10, name: 'front' },
+  { theta: 0.4,  phi: 0.3, distance: 10, name: 'three-quarter' }
 ];
-
-async function captureAngle(browser, sceneHash, outputPath) {
-  const page = await browser.newPage();
-  await page.setViewportSize({ width: 800, height: 600 });
-
-  const url = `${BASE_URL}/lucid/index.html#${sceneHash}`;
-  console.log(`Loading: ${url}`);
-  await page.goto(url);
-
-  // Wait for scene to render
-  await page.waitForTimeout(4000);
-
-  // Take screenshot
-  await page.screenshot({ path: outputPath });
-  console.log(`Captured: ${outputPath}`);
-
-  await page.close();
-}
 
 async function main() {
   mkdirSync('lucid/screenshots/silhouette', { recursive: true });
@@ -37,13 +21,40 @@ async function main() {
     args: ['--headless=new']
   });
 
+  const page = await browser.newPage();
+  await page.setViewportSize({ width: 800, height: 600 });
+
+  // Load the scene once
+  const url = `${BASE_URL}/lucid/index.html#${SCENE}`;
+  console.log(`Loading: ${url}`);
+  await page.goto(url);
+  await page.waitForTimeout(3000); // Wait for initial render
+
+  // Capture from each angle
   for (const angle of ANGLES) {
-    await captureAngle(browser, angle.hash, `lucid/screenshots/silhouette/${angle.name}.png`);
+    console.log(`Setting camera: theta=${angle.theta}, phi=${angle.phi}`);
+
+    // Set camera via JavaScript
+    await page.evaluate(({ theta, phi, distance }) => {
+      if (window.renderer && window.renderer.camera) {
+        window.renderer.camera.theta = theta;
+        window.renderer.camera.phi = phi;
+        window.renderer.camera.distance = distance;
+      }
+    }, angle);
+
+    // Wait for re-render
+    await page.waitForTimeout(500);
+
+    // Screenshot
+    const path = `lucid/screenshots/silhouette/${angle.name}.png`;
+    await page.screenshot({ path });
+    console.log(`Captured: ${path}`);
   }
 
   await browser.close();
-  console.log('\\nDone. Screenshots in lucid/screenshots/silhouette/');
-  console.log('\\nFor blind eval, show these to evaluator WITHOUT mentioning the target subject.');
+  console.log('\nDone. Screenshots in lucid/screenshots/silhouette/');
+  console.log('\nFor blind eval, show these WITHOUT mentioning target subject.');
   console.log('Ask: "What does this 3D model look like to you?"');
 }
 
