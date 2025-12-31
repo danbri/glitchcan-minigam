@@ -1,7 +1,7 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "85% blind eval confidence",
-  "version": "2.6",
+  "subtitle": "85% confidence, 9 primitives",
+  "version": "2.8",
   "camera": { "distance": 16, "phi": 0.45, "theta": 0.15, "target": [0, 0, 0] },
   "root": {
     "type": "union",
@@ -19,18 +19,8 @@
             },
             {
               "type": "ellipsoid",
-              "params": { "radii": [0.95, 0.75, 1.35] },
-              "transform": { "translate": [0, 0.2, 2.6] }
-            },
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.6, 0.45, 0.95] },
-              "transform": { "translate": [0, 0.1, 3.55] }
-            },
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.8, 0.7, 0.85] },
-              "transform": { "translate": [0, 0, 2.45] }
+              "params": { "radii": [0.9, 0.7, 1.5] },
+              "transform": { "translate": [0, 0.15, 2.8] }
             },
             {
               "type": "ellipsoid",
@@ -49,42 +39,16 @@
         "type": "material",
         "params": { "color": [0.6, 0.63, 0.65] },
         "child": {
-          "type": "smoothUnion", "k": 0.2,
-          "children": [
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.88, 0.48, 2.4] },
-              "transform": { "translate": [0, -0.55, 0.15] }
-            },
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.7, 0.38, 1.15] },
-              "transform": { "translate": [0, -0.4, 2.5] }
-            }
-          ]
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.22, 0.26, 0.32] },
-        "child": {
-          "type": "union",
-          "children": [
-            { "type": "sphere", "params": { "r": 0.12 }, "transform": { "translate": [0, 0.38, 3.85] } },
-            { "type": "sphere", "params": { "r": 0.11 }, "transform": { "translate": [0.22, 0.32, 3.65] } },
-            { "type": "sphere", "params": { "r": 0.11 }, "transform": { "translate": [-0.22, 0.32, 3.65] } },
-            { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [0.38, 0.25, 3.4] } },
-            { "type": "sphere", "params": { "r": 0.1 }, "transform": { "translate": [-0.38, 0.25, 3.4] } },
-            { "type": "sphere", "params": { "r": 0.09 }, "transform": { "translate": [0.5, 0.18, 3.15] } },
-            { "type": "sphere", "params": { "r": 0.09 }, "transform": { "translate": [-0.5, 0.18, 3.15] } }
-          ]
+          "type": "ellipsoid",
+          "params": { "radii": [0.85, 0.45, 2.6] },
+          "transform": { "translate": [0, -0.5, 0.3] }
         }
       },
       {
         "type": "material",
         "params": { "color": [0.11, 0.14, 0.19] },
         "child": {
-          "type": "smoothUnion", "k": 0.12,
+          "type": "smoothUnion", "k": 0.15,
           "children": [
             {
               "type": "ellipsoid",
@@ -105,19 +69,9 @@
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "smoothUnion", "k": 0.1,
-            "children": [
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [4.8, 0.22, 0.75] },
-                "transform": { "translate": [1.1, -0.22, 0.2], "rotate": [12, -3, -18] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [2.5, 0.14, 0.45] },
-                "transform": { "translate": [5.3, -0.45, -0.3], "rotate": [22, -6, -28] }
-              }
-            ]
+            "type": "ellipsoid",
+            "params": { "radii": [5.0, 0.2, 0.7] },
+            "transform": { "translate": [1.2, -0.25, 0.2], "rotate": [15, -5, -20] }
           }
         }
       },
@@ -127,19 +81,9 @@
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "smoothUnion", "k": 0.1,
-            "children": [
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [1.6, 0.1, 0.58] },
-                "transform": { "translate": [0.14, 0.1, -4.1], "rotate": [0, 14, 0] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [0.72, 0.055, 0.3] },
-                "transform": { "translate": [1.65, 0.12, -4.65], "rotate": [2, 28, 0] }
-              }
-            ]
+            "type": "ellipsoid",
+            "params": { "radii": [1.8, 0.09, 0.55] },
+            "transform": { "translate": [0.2, 0.1, -4.3], "rotate": [0, 18, 0] }
           }
         }
       }
