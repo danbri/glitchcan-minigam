@@ -118,7 +118,12 @@
         { "path": "creatures/subag1/round9/r9-c.json", "title": "R9-C", "subtitle": "Muscular legs" },
         { "path": "creatures/subag1/round10/r10-a.json", "title": "R10-A", "subtitle": "Belly scales" },
         { "path": "creatures/subag1/round10/r10-b.json", "title": "R10-B", "subtitle": "Thicker legs" },
-        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Brow ridges" }
+        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Brow ridges" },
+        { "path": "creatures/subag1/silhouette-v1.json", "title": "Silhouette v1 🔲", "subtitle": "Topology-first approach" },
+        { "path": "creatures/subag1/silhouette-v2.json", "title": "Silhouette v2 🐉", "subtitle": "Horizontal body, visible appendages" },
+        { "path": "creatures/subag1/silhouette-v3.json", "title": "Silhouette v3 🦖", "subtitle": "True horizontal spine, large wings" },
+        { "path": "creatures/subag1/silhouette-v4.json", "title": "Silhouette v4 🦅", "subtitle": "Hard union appendages" },
+        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5 🐲", "subtitle": "Dragon details: horns, claws, spines" }
       ]
     },
     {
