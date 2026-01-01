@@ -498,6 +498,55 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 - Don't run `python -m http.server` or similar commands
 - Focus on the code implementation, not server management
 
+## ABCD Subagent Parliament - Model Evaluation Methodology
+
+### Overview
+Multi-perspective evaluation system for 3D model quality assessment using four specialized subagents.
+
+### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
+**NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
+
+### The Four Agents
+
+**Agent A - Blind Evaluator**
+- Has NO context about the target
+- Sees only the rendered image
+- Prompt: "What creature/object is this? Confidence %?"
+- Returns: Primary identification + alternatives + reasoning
+
+**Agent B - Informed Evaluator**
+- Knows the goal (e.g., "this should be a humpback whale")
+- Sees the geometry/DSL tree
+- Has vision access to the render
+- Prompt: "Given the goal of [X], evaluate how well this model achieves it"
+- Returns: Assessment of goal achievement, specific strengths/weaknesses
+
+**Agent C - Skeptical Slop Detector**
+- Persona: "Visual models editor receiving excruciating amounts of AI slop"
+- Knows the goal, sees the visual
+- Enjoys creativity, modern artistry, nuance
+- BUT knows AI slop and halfbaked incomplete work when they see it
+- Prompt: "Raise a skeptical perspective on weak points of how this model appears wrt its goal"
+- Returns: Critique of weak points, what feels incomplete/generic/sloppy
+
+**Agent D - Parliament Moderator**
+- Receives brief writeups from A, B, C
+- Gets one-line bio for each agent
+- Simulates a debate between the parties
+- Returns: Clerk's Report synthesizing the debate
+
+### Workflow
+1. Capture model at canonical view (NO view shopping!)
+2. Run Agent A (blind)
+3. Run Agent B (informed)
+4. Run Agent C (skeptical)
+5. Run Agent D (parliament synthesis)
+6. Main process receives Clerk's Report
+7. Make modeling decisions based on synthesis
+
+### Output Format
+Each agent returns structured feedback. Agent D produces final Clerk's Report that informs next iteration decisions.
+
 ## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
 
 **CRITICAL**: FINK .js files are NOT standard JavaScript modules!
