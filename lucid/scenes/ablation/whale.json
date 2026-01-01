@@ -1,8 +1,8 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "v6.1 - Slim profile head",
-  "version": "6.1",
-  "camera": { "distance": 28, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
+  "subtitle": "v6.2 - Chunky barrel body",
+  "version": "6.2",
+  "camera": { "distance": 35, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "type": "smoothUnion", "k": 1.0,
     "children": [
@@ -14,28 +14,34 @@
           "type": "smoothUnion", "k": 0.9,
           "children": [
             {
-              "comment": "Main torso - chunky mid-section",
+              "comment": "Main torso - CHUNKY barrel (7:1 ratio for 18-unit whale = 2.6 wide)",
               "type": "ellipsoid",
-              "params": { "radii": [1.5, 1.3, 4.5] },
+              "params": { "radii": [2.4, 2.0, 4.0] },
               "transform": { "translate": [0, 0, 0] }
+            },
+            {
+              "comment": "Rear body - maintains bulk before tapering",
+              "type": "ellipsoid",
+              "params": { "radii": [1.8, 1.5, 2.5] },
+              "transform": { "translate": [0, -0.1, -3.5] }
             },
             {
               "comment": "Tail stock - tapers toward flukes",
               "type": "ellipsoid",
-              "params": { "radii": [0.55, 0.45, 2.8] },
-              "transform": { "translate": [0, -0.1, -5.5] }
+              "params": { "radii": [0.7, 0.55, 2.5] },
+              "transform": { "translate": [0, -0.2, -6.0] }
             },
             {
               "comment": "Head section - broad from above, slim in profile",
               "type": "ellipsoid",
-              "params": { "radii": [1.4, 0.85, 2.5] },
-              "transform": { "translate": [0, 0.1, 5.0] }
+              "params": { "radii": [1.8, 1.2, 2.2] },
+              "transform": { "translate": [0, 0.2, 4.5] }
             },
             {
               "comment": "Snout/rostrum - slim profile, elongated",
               "type": "ellipsoid",
-              "params": { "radii": [0.9, 0.5, 2.0] },
-              "transform": { "translate": [0, 0.0, 7.2] }
+              "params": { "radii": [1.1, 0.7, 2.0] },
+              "transform": { "translate": [0, 0.1, 6.8] }
             }
           ]
         }
@@ -77,7 +83,7 @@
         }
       },
       {
-        "comment": "PECTORAL FLIPPERS - 33% body, THICK, mirrored",
+        "comment": "PECTORAL FLIPPERS - 33% body (~6 units), THICK, mirrored",
         "type": "material",
         "params": { "color": [0.18, 0.20, 0.24] },
         "child": {
@@ -86,41 +92,41 @@
             "type": "smoothUnion", "k": 0.5,
             "children": [
               {
-                "comment": "Flipper base - connects to body",
+                "comment": "Flipper base - connects to chunky body",
                 "type": "ellipsoid",
-                "params": { "radii": [0.6, 0.4, 0.5] },
-                "transform": { "translate": [1.3, -0.4, 1.5] }
+                "params": { "radii": [0.8, 0.5, 0.6] },
+                "transform": { "translate": [2.2, -0.8, 1.0] }
               },
               {
-                "comment": "Flipper section 1 - THICK (y=0.35)",
+                "comment": "Flipper section 1 - THICK paddle",
                 "type": "ellipsoid",
-                "params": { "radii": [1.4, 0.35, 0.55] },
-                "transform": { "translate": [2.0, -0.6, 0.8], "rotate": [12, 28, -8] }
+                "params": { "radii": [1.6, 0.4, 0.65] },
+                "transform": { "translate": [3.2, -1.2, 0.3], "rotate": [10, 25, -8] }
               },
               {
                 "comment": "Flipper section 2 - tapers",
                 "type": "ellipsoid",
-                "params": { "radii": [1.1, 0.28, 0.45] },
-                "transform": { "translate": [3.0, -0.9, 0.2], "rotate": [18, 35, -12] }
+                "params": { "radii": [1.3, 0.32, 0.55] },
+                "transform": { "translate": [4.4, -1.6, -0.3], "rotate": [15, 32, -12] }
               },
               {
-                "comment": "Flipper tip - smallest",
+                "comment": "Flipper tip",
                 "type": "ellipsoid",
-                "params": { "radii": [0.7, 0.20, 0.32] },
-                "transform": { "translate": [3.8, -1.1, -0.3], "rotate": [22, 40, -15] }
+                "params": { "radii": [0.9, 0.22, 0.40] },
+                "transform": { "translate": [5.4, -1.9, -0.8], "rotate": [18, 38, -15] }
               }
             ]
           }
         }
       },
       {
-        "comment": "DORSAL FIN - small, 2/3 back on body",
+        "comment": "DORSAL FIN - small hump 2/3 back on body",
         "type": "material",
         "params": { "color": [0.18, 0.20, 0.24] },
         "child": {
           "type": "ellipsoid",
-          "params": { "radii": [0.22, 0.55, 0.35] },
-          "transform": { "translate": [0, 1.15, -2.0] }
+          "params": { "radii": [0.28, 0.7, 0.45] },
+          "transform": { "translate": [0, 1.8, -2.5] }
         }
       },
       {
@@ -128,20 +134,21 @@
         "type": "material",
         "params": { "color": [0.25, 0.27, 0.30] },
         "child": {
-          "type": "smoothUnion", "k": 0.35,
+          "type": "smoothUnion", "k": 0.4,
           "children": [
-            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.40, 0.45, 6.5] } },
-            { "type": "sphere", "params": { "r": 0.32 }, "transform": { "translate": [-0.35, 0.48, 7.0] } },
-            { "type": "sphere", "params": { "r": 0.26 }, "transform": { "translate": [0.30, 0.42, 7.5] } },
-            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [-0.25, 0.40, 8.0] } },
-            { "type": "sphere", "params": { "r": 0.24 }, "transform": { "translate": [0.15, 0.35, 8.4] } },
-            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.50, 0.50, 6.0] } },
-            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [-0.45, 0.52, 6.2] } }
+            { "type": "sphere", "params": { "r": 0.35 }, "transform": { "translate": [0.50, 0.85, 5.5] } },
+            { "type": "sphere", "params": { "r": 0.40 }, "transform": { "translate": [-0.45, 0.90, 6.0] } },
+            { "type": "sphere", "params": { "r": 0.32 }, "transform": { "translate": [0.40, 0.80, 6.5] } },
+            { "type": "sphere", "params": { "r": 0.38 }, "transform": { "translate": [-0.35, 0.75, 7.0] } },
+            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [0.25, 0.65, 7.5] } },
+            { "type": "sphere", "params": { "r": 0.35 }, "transform": { "translate": [0.65, 0.70, 5.0] } },
+            { "type": "sphere", "params": { "r": 0.38 }, "transform": { "translate": [-0.60, 0.75, 5.2] } },
+            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.0, 0.55, 8.0] } }
           ]
         }
       },
       {
-        "comment": "VENTRAL - lighter belly region",
+        "comment": "VENTRAL - lighter belly region (matches chunky body)",
         "type": "material",
         "params": { "color": [0.75, 0.78, 0.82] },
         "child": {
@@ -149,13 +156,13 @@
           "children": [
             {
               "type": "ellipsoid",
-              "params": { "radii": [1.1, 0.5, 3.5] },
-              "transform": { "translate": [0, -0.85, 0.5] }
+              "params": { "radii": [1.8, 0.7, 3.8] },
+              "transform": { "translate": [0, -1.5, 0.5] }
             },
             {
               "type": "ellipsoid",
-              "params": { "radii": [0.8, 0.35, 2.2] },
-              "transform": { "translate": [0, -0.65, 5.0] }
+              "params": { "radii": [1.3, 0.5, 2.5] },
+              "transform": { "translate": [0, -1.0, 4.0] }
             }
           ]
         }
@@ -171,13 +178,13 @@
             "children": [
               {
                 "type": "ellipsoid",
-                "params": { "radii": [1.2, 0.18, 0.45] },
-                "transform": { "translate": [2.1, -0.75, 0.7], "rotate": [12, 28, -8] }
+                "params": { "radii": [1.4, 0.22, 0.55] },
+                "transform": { "translate": [3.3, -1.35, 0.2], "rotate": [10, 25, -8] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [0.9, 0.14, 0.35] },
-                "transform": { "translate": [3.1, -1.05, 0.15], "rotate": [18, 35, -12] }
+                "params": { "radii": [1.1, 0.18, 0.45] },
+                "transform": { "translate": [4.5, -1.75, -0.4], "rotate": [15, 32, -12] }
               }
             ]
           }
