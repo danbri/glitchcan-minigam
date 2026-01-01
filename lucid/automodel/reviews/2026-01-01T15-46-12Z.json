@@ -67,6 +67,6 @@
       }
     }
   },
-  "captures_path": "/tmp/eval/2026-01-01T15-46-12Z",
+  "captures_folder": "v5.10-2026-01-01T15-46-12Z",
   "commit_recommendation": "ITERATE to v5.11 - fix tail fluke size first"
 }

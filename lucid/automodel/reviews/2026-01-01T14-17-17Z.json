@@ -62,6 +62,6 @@
       }
     }
   },
-  "captures_path": "lucid/automodel/captures/2026-01-01T14-17-17Z",
+  "captures_folder": "v5.9-2026-01-01T14-17-17Z",
   "commit_recommendation": "ITERATE to v5.10 - fix tail flukes first"
 }
