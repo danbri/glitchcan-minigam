@@ -580,12 +580,45 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 6. Only if showstoppers empty → consider commit based on scores
 7. Fix P0 issues before attempting next iteration
 
-### Log Viewer
-View all Parliament history at: `lucid/automodel/index.html`
-Reviews stored in: `lucid/automodel/reviews/*.json`
+### Log Viewer & Review Storage
 
-### Output Format
-Each agent returns structured feedback. Agent D produces final Clerk's Report that informs next iteration decisions.
+**View history**: `https://danbri.github.io/glitchcan-minigam/lucid/automodel/`
+**Local**: `lucid/automodel/index.html`
+
+**Adding new reviews**:
+1. Save review JSON to `lucid/automodel/reviews/YYYY-MM-DDTHH-MM-SSZ.json`
+2. Update `lucid/automodel/reviews/index.json` to include new filename
+3. Commit and push
+
+**Review JSON structure**:
+```json
+{
+  "session_id": "2026-01-01T16-05-00Z",
+  "model_version": "5.11",
+  "timestamp": "2026-01-01T16:12:00Z",
+  "note": "Optional context note",
+  "timings": {
+    "abc_parallel_start": "ISO8601",
+    "abc_parallel_end": "ISO8601",
+    "abc_parallel_wall_ms": 118589,
+    "agent_d_start": "ISO8601",
+    "agent_d_end": "ISO8601",
+    "agent_d_ms": 45064
+  },
+  "agents": {
+    "A": { "type": "blanked", "primary": "creature", "confidence": 95, "showstoppers": [] },
+    "B": { "type": "informed", "score": 45, "verdict": "summary", "showstoppers": [] },
+    "C": { "type": "skeptical", "issues": [...], "verdict": "4/10", "showstoppers": ["P0 ISSUE"] },
+    "D": { "type": "moderator", "verdict": "DO NOT COMMIT", "all_showstoppers": ["P0 ISSUE"], "next_fix": "..." }
+  },
+  "status": "commit status and next steps"
+}
+```
+
+**Skills files**:
+- `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
+- `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
+- `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
 
 ### Lucid Tools for Parliament Workflow
 
