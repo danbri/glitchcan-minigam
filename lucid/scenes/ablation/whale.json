@@ -1,7 +1,7 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "v6.0 - Complete rebuild",
-  "version": "6.0",
+  "subtitle": "v6.1 - Slim profile head",
+  "version": "6.1",
   "camera": { "distance": 28, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "type": "smoothUnion", "k": 1.0,
@@ -26,16 +26,16 @@
               "transform": { "translate": [0, -0.1, -5.5] }
             },
             {
-              "comment": "Head section - slightly narrower",
+              "comment": "Head section - broad from above, slim in profile",
               "type": "ellipsoid",
-              "params": { "radii": [1.2, 1.0, 2.2] },
-              "transform": { "translate": [0, 0.15, 5.2] }
+              "params": { "radii": [1.4, 0.85, 2.5] },
+              "transform": { "translate": [0, 0.1, 5.0] }
             },
             {
-              "comment": "Snout - tapered rostrum",
+              "comment": "Snout/rostrum - slim profile, elongated",
               "type": "ellipsoid",
-              "params": { "radii": [0.8, 0.6, 1.5] },
-              "transform": { "translate": [0, 0.1, 7.0] }
+              "params": { "radii": [0.9, 0.5, 2.0] },
+              "transform": { "translate": [0, 0.0, 7.2] }
             }
           ]
         }
@@ -130,13 +130,13 @@
         "child": {
           "type": "smoothUnion", "k": 0.35,
           "children": [
-            { "type": "sphere", "params": { "r": 0.32 }, "transform": { "translate": [0.35, 0.65, 6.2] } },
-            { "type": "sphere", "params": { "r": 0.38 }, "transform": { "translate": [-0.30, 0.70, 6.5] } },
-            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [0.25, 0.72, 6.9] } },
-            { "type": "sphere", "params": { "r": 0.35 }, "transform": { "translate": [-0.20, 0.68, 7.2] } },
-            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.0, 0.60, 7.5] } },
-            { "type": "sphere", "params": { "r": 0.33 }, "transform": { "translate": [0.42, 0.58, 5.8] } },
-            { "type": "sphere", "params": { "r": 0.36 }, "transform": { "translate": [-0.38, 0.62, 6.0] } }
+            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.40, 0.45, 6.5] } },
+            { "type": "sphere", "params": { "r": 0.32 }, "transform": { "translate": [-0.35, 0.48, 7.0] } },
+            { "type": "sphere", "params": { "r": 0.26 }, "transform": { "translate": [0.30, 0.42, 7.5] } },
+            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [-0.25, 0.40, 8.0] } },
+            { "type": "sphere", "params": { "r": 0.24 }, "transform": { "translate": [0.15, 0.35, 8.4] } },
+            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.50, 0.50, 6.0] } },
+            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [-0.45, 0.52, 6.2] } }
           ]
         }
       },
@@ -154,8 +154,8 @@
             },
             {
               "type": "ellipsoid",
-              "params": { "radii": [0.7, 0.35, 1.8] },
-              "transform": { "translate": [0, -0.75, 4.5] }
+              "params": { "radii": [0.8, 0.35, 2.2] },
+              "transform": { "translate": [0, -0.65, 5.0] }
             }
           ]
         }
