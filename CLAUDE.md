@@ -1,6 +1,9 @@
 # CLAUDE.md - Guide for 🐥 Minigames
 <!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
 
+## 🔐 TRUST THE USER
+The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
+
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
 **ONLY ALLOWED:** Real ink-full.js compiler and Story API
