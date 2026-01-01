@@ -1061,10 +1061,14 @@
             <span id="tree-nav-indicator" style="font-size:0.8rem;color:#8b949e;min-width:3rem;text-align:center;">0/0</span>
             <button class="btn" id="btn-tree-next" title="Next value">▶</button>
             <span style="flex:1"></span>
-            <!-- Slider for numeric values -->
-            <span id="tree-slider-label" style="font-size:0.7rem;color:#fbbf24;display:none;"></span>
-            <input type="range" id="tree-slider" style="width:100px;accent-color:#fbbf24;display:none;">
-            <span id="tree-slider-value" style="font-size:0.75rem;color:#fbbf24;font-family:monospace;display:none;"></span>
+          </div>
+          <!-- Tree slider widget for numeric values -->
+          <div id="tree-slider-panel" style="display:none;padding:0.5rem 0.75rem;background:#1a1f26;border-bottom:1px solid #333;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <span id="tree-slider-label" style="font-size:0.75rem;color:#fbbf24;min-width:4rem;"></span>
+              <input type="range" id="tree-slider" style="flex:1;min-width:100px;accent-color:#fbbf24;">
+              <span id="tree-slider-value" style="font-size:0.8rem;color:#fbbf24;min-width:3.5rem;text-align:right;font-family:monospace;"></span>
+            </div>
           </div>
           <!-- GLSL/Expression popup display -->
           <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.75rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;"></div>
