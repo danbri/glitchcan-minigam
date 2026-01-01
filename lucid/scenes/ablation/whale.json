@@ -1,14 +1,14 @@
 {
   "title": "Test C",
-  "subtitle": "Form study v4.1",
-  "version": "4.1",
+  "subtitle": "Form study v4.2",
+  "version": "4.2",
   "camera": { "distance": 22, "phi": 0.25, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "type": "union",
     "children": [
       {
         "type": "material",
-        "params": { "color": [0.12, 0.15, 0.2] },
+        "params": { "color": [0.18, 0.2, 0.24] },
         "child": {
           "type": "smoothUnion", "k": 0.5,
           "children": [
@@ -37,7 +37,7 @@
       },
       {
         "type": "material",
-        "params": { "color": [0.8, 0.82, 0.85] },
+        "params": { "color": [0.55, 0.58, 0.62] },
         "child": {
           "type": "smoothUnion", "k": 0.3,
           "children": [
