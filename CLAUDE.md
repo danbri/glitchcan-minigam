@@ -553,6 +553,57 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 ### Output Format
 Each agent returns structured feedback. Agent D produces final Clerk's Report that informs next iteration decisions.
 
+### Lucid Tools for Parliament Workflow
+
+**Capture Tool:**
+```bash
+node lucid/capture-silhouette.mjs <scene.model> /tmp/eval-session
+```
+- Captures canonical view to `/tmp/eval-session/1.png`
+- Scene format: `ablation.whale` loads `lucid/scenes/ablation/whale.json`
+
+**Model Files:**
+- Location: `lucid/scenes/ablation/*.json`
+- Format: Lucid SDF JSON (ellipsoids, smoothUnion, subtract, mirror, etc.)
+
+**Full Cycle Commands:**
+```bash
+# 1. Start server if needed
+python3 -m http.server 8080 &
+
+# 2. Capture canonical view
+node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-session
+
+# 3. Run Agents A, B, C in parallel (via Task tool)
+# 4. Run Agent D with A, B, C reports
+# 5. Implement Clerk's Report P1 fixes
+# 6. Re-run Agent A blind test
+# 7. Commit if improved, iterate if not
+```
+
+### Clerk's Report Format
+
+Agent D returns structured report with:
+- **Consensus Findings**: What all agents agree on
+- **P1 Critical Fixes**: Must fix or model fails goal
+- **P2 High Priority**: Required for credibility
+- **P3 Medium Priority**: Polish and character
+- **Recommended Next Steps**: Specific actions
+
+### Iteration Loop
+
+```
+┌─────────────────────────────────────────┐
+│  1. Capture canonical view              │
+│  2. Run ABCD Parliament                 │
+│  3. Receive Clerk's Report              │
+│  4. Implement P1 fixes                  │
+│  5. Re-run Agent A blind test           │
+│  6. If improved → commit, next P level  │
+│     If not → fix geometry, NOT angle    │
+└─────────────────────────────────────────┘
+```
+
 ## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
 
 **CRITICAL**: FINK .js files are NOT standard JavaScript modules!
