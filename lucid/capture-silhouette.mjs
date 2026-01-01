@@ -8,11 +8,14 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
 const SCENE = process.argv[2] || 'creatures.subag1.silhouette-v5';
 const OUTPUT_DIR = process.argv[3] || 'lucid/screenshots/eval';
 
-// Camera angles: side, 3/4, above
+// Camera angles: 6 neutral viewpoints for comprehensive evaluation
 const ANGLES = [
-  { theta: 0.0,  phi: 0.3, distance: 12, name: '1' },
-  { theta: 0.5,  phi: 0.4, distance: 12, name: '2' },
-  { theta: 0.8,  phi: 0.6, distance: 14, name: '3' }
+  { theta: 0.0,  phi: 0.3, distance: 12, name: '1' },   // front-side
+  { theta: 0.5,  phi: 0.4, distance: 12, name: '2' },   // 3/4 view
+  { theta: 0.8,  phi: 0.6, distance: 14, name: '3' },   // above-side
+  { theta: 1.57, phi: 0.35, distance: 12, name: '4' },  // opposite side
+  { theta: 0.25, phi: 0.15, distance: 13, name: '5' },  // low angle
+  { theta: 1.2,  phi: 0.5, distance: 13, name: '6' }    // high 3/4
 ];
 
 async function main() {
