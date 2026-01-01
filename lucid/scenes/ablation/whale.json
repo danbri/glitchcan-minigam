@@ -1,7 +1,7 @@
 {
   "title": "Test C",
-  "subtitle": "Form study v5.7",
-  "version": "5.7",
+  "subtitle": "Form study v5.8",
+  "version": "5.8",
   "camera": { "distance": 24, "phi": 0.25, "theta": 0.25, "target": [0, 0, 0] },
   "root": {
     "type": "union",
@@ -114,18 +114,18 @@
             "children": [
               {
                 "type": "ellipsoid",
-                "params": { "radii": [3.2, 0.25, 0.65] },
-                "transform": { "translate": [1.5, -0.4, 1.5], "rotate": [20, 28, -15] }
+                "params": { "radii": [5.0, 0.28, 0.70] },
+                "transform": { "translate": [1.8, -0.4, 1.5], "rotate": [20, 28, -15] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [2.6, 0.18, 0.5] },
-                "transform": { "translate": [4.0, -0.9, 0.2], "rotate": [28, 35, -20] }
+                "params": { "radii": [4.2, 0.20, 0.55] },
+                "transform": { "translate": [5.5, -1.0, 0.0], "rotate": [28, 35, -20] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [1.8, 0.12, 0.38] },
-                "transform": { "translate": [6.0, -1.5, -1.2], "rotate": [35, 42, -25] }
+                "params": { "radii": [3.0, 0.14, 0.42] },
+                "transform": { "translate": [9.5, -1.8, -1.5], "rotate": [35, 42, -25] }
               }
             ]
           }
@@ -141,18 +141,18 @@
             "children": [
               {
                 "type": "ellipsoid",
-                "params": { "radii": [2.9, 0.12, 0.55] },
-                "transform": { "translate": [1.7, -0.55, 1.45], "rotate": [20, 28, -15] }
+                "params": { "radii": [4.6, 0.14, 0.60] },
+                "transform": { "translate": [2.0, -0.55, 1.45], "rotate": [20, 28, -15] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [2.3, 0.1, 0.42] },
-                "transform": { "translate": [4.2, -1.05, 0.15], "rotate": [28, 35, -20] }
+                "params": { "radii": [3.8, 0.11, 0.48] },
+                "transform": { "translate": [5.8, -1.15, -0.05], "rotate": [28, 35, -20] }
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [1.5, 0.07, 0.32] },
-                "transform": { "translate": [6.0, -1.65, -1.25], "rotate": [35, 42, -25] }
+                "params": { "radii": [2.6, 0.08, 0.36] },
+                "transform": { "translate": [9.5, -1.95, -1.55], "rotate": [35, 42, -25] }
               }
             ]
           }
@@ -166,11 +166,12 @@
           "child": {
             "type": "union",
             "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.18, 0.15, 0.15] }, "transform": { "translate": [1.8, -0.25, 1.8] } },
-              { "type": "ellipsoid", "params": { "radii": [0.16, 0.13, 0.13] }, "transform": { "translate": [2.8, -0.55, 1.2] } },
-              { "type": "ellipsoid", "params": { "radii": [0.15, 0.12, 0.12] }, "transform": { "translate": [3.8, -0.85, 0.5] } },
-              { "type": "ellipsoid", "params": { "radii": [0.14, 0.11, 0.11] }, "transform": { "translate": [4.8, -1.15, -0.2] } },
-              { "type": "ellipsoid", "params": { "radii": [0.12, 0.10, 0.10] }, "transform": { "translate": [5.6, -1.4, -0.8] } }
+              { "type": "ellipsoid", "params": { "radii": [0.22, 0.18, 0.18] }, "transform": { "translate": [2.2, -0.25, 1.9] } },
+              { "type": "ellipsoid", "params": { "radii": [0.20, 0.16, 0.16] }, "transform": { "translate": [3.5, -0.50, 1.4] } },
+              { "type": "ellipsoid", "params": { "radii": [0.18, 0.15, 0.15] }, "transform": { "translate": [5.0, -0.80, 0.7] } },
+              { "type": "ellipsoid", "params": { "radii": [0.17, 0.14, 0.14] }, "transform": { "translate": [6.5, -1.10, 0.0] } },
+              { "type": "ellipsoid", "params": { "radii": [0.15, 0.12, 0.12] }, "transform": { "translate": [7.8, -1.40, -0.6] } },
+              { "type": "ellipsoid", "params": { "radii": [0.13, 0.10, 0.10] }, "transform": { "translate": [9.0, -1.70, -1.2] } }
             ]
           }
         }
