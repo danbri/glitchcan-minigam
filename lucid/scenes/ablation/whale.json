@@ -89,12 +89,22 @@
         "type": "material",
         "params": { "color": [0.1, 0.12, 0.16] },
         "child": {
-          "type": "mirror", "axis": "x",
-          "child": {
-            "type": "ellipsoid",
-            "params": { "radii": [2.2, 0.08, 0.55] },
-            "transform": { "translate": [1.2, 0.0, -4.0], "rotate": [0, 8, 0] }
-          }
+          "type": "subtract",
+          "children": [
+            {
+              "type": "mirror", "axis": "x",
+              "child": {
+                "type": "ellipsoid",
+                "params": { "radii": [2.2, 0.08, 0.55] },
+                "transform": { "translate": [1.2, 0.0, -4.0], "rotate": [0, 8, 0] }
+              }
+            },
+            {
+              "type": "ellipsoid",
+              "params": { "radii": [0.25, 0.15, 0.4] },
+              "transform": { "translate": [0, 0, -4.3] }
+            }
+          ]
         }
       }
     ]
