@@ -544,6 +544,26 @@ Multi-perspective evaluation system for 3D model quality assessment using four s
 
 The model must read correctly from a neutral view. Angle optimization is cheating.
 
+### 🚨 CRITICAL RULE: NO AGENT A PROMPT CONTAMINATION 🚨
+**Agent A's prompt must contain ZERO species-specific terminology or hints.**
+
+**FORBIDDEN in Agent A prompts:**
+- ❌ Species-specific terms (e.g., "tubercles", "flukes", "rostrum", "baleen")
+- ❌ Descriptive geometry hints (e.g., "bumpy texture on head", "swept-back pectoral appendages")
+- ❌ Any terminology that implies what the model is supposed to be
+- ❌ Color descriptions that match target species (e.g., "counter-shading")
+- ❌ Proportion hints (e.g., "7:1 ratio", "31% body length")
+
+**ALLOWED in Agent A prompts:**
+- ✅ Generic SDF skill reference (primitives, operations)
+- ✅ Blanked geometry file path (with no revealing comments)
+- ✅ Image file paths only (no descriptive names)
+- ✅ Simple instruction: "What creature/object is this? Give confidence %"
+
+**WHY THIS EXISTS**: We invalidated a v6.10 evaluation by including "tubercles" and geometry descriptions in Agent A's prompt. This leaked the answer and made the "blind" test meaningless. Agent A must identify the model with ZERO context - that's the whole point.
+
+**VALIDATION CHECK**: Before running Agent A, review the prompt and ask: "Could someone guess the target species from this prompt alone?" If yes, the prompt is contaminated.
+
 ### The Four Agents
 
 **Agent A - Blanked Evaluator**
