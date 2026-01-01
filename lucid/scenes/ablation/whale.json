@@ -1,212 +1,185 @@
 {
-  "title": "Test C",
-  "subtitle": "Form study v5.11",
-  "version": "5.11",
-  "camera": { "distance": 24, "phi": 0.25, "theta": 0.25, "target": [0, 0, 0] },
+  "title": "Humpback Whale",
+  "subtitle": "v6.0 - Complete rebuild",
+  "version": "6.0",
+  "camera": { "distance": 28, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
-    "type": "union",
+    "type": "smoothUnion", "k": 1.0,
     "children": [
       {
+        "comment": "MAIN BODY - chunky barrel-shaped torso (7:1 ratio)",
         "type": "material",
         "params": { "color": [0.22, 0.24, 0.28] },
         "child": {
-          "type": "smoothUnion", "k": 0.7,
+          "type": "smoothUnion", "k": 0.9,
           "children": [
             {
+              "comment": "Main torso - chunky mid-section",
               "type": "ellipsoid",
-              "params": { "radii": [0.95, 0.75, 4.7] },
+              "params": { "radii": [1.5, 1.3, 4.5] },
               "transform": { "translate": [0, 0, 0] }
             },
             {
+              "comment": "Tail stock - tapers toward flukes",
               "type": "ellipsoid",
-              "params": { "radii": [0.35, 0.3, 1.4] },
-              "transform": { "translate": [0, -0.05, -4.2] }
+              "params": { "radii": [0.55, 0.45, 2.8] },
+              "transform": { "translate": [0, -0.1, -5.5] }
             },
             {
+              "comment": "Head section - slightly narrower",
               "type": "ellipsoid",
-              "params": { "radii": [1.0, 0.65, 1.4] },
-              "transform": { "translate": [0, 0.1, 4.7] }
+              "params": { "radii": [1.2, 1.0, 2.2] },
+              "transform": { "translate": [0, 0.15, 5.2] }
             },
             {
+              "comment": "Snout - tapered rostrum",
               "type": "ellipsoid",
-              "params": { "radii": [0.85, 0.55, 1.2] },
-              "transform": { "translate": [0, 0.15, 6.2] }
+              "params": { "radii": [0.8, 0.6, 1.5] },
+              "transform": { "translate": [0, 0.1, 7.0] }
             }
           ]
         }
       },
       {
-        "type": "material",
-        "params": { "color": [0.28, 0.30, 0.34] },
-        "child": {
-          "type": "union",
-          "children": [
-            { "type": "ellipsoid", "params": { "radii": [0.45, 0.40, 0.40] }, "transform": { "translate": [0.45, 0.55, 6.0] } },
-            { "type": "ellipsoid", "params": { "radii": [0.42, 0.38, 0.38] }, "transform": { "translate": [-0.42, 0.52, 6.3] } },
-            { "type": "ellipsoid", "params": { "radii": [0.48, 0.42, 0.42] }, "transform": { "translate": [0.30, 0.62, 6.6] } },
-            { "type": "ellipsoid", "params": { "radii": [0.40, 0.35, 0.35] }, "transform": { "translate": [-0.28, 0.58, 6.9] } },
-            { "type": "ellipsoid", "params": { "radii": [0.44, 0.40, 0.40] }, "transform": { "translate": [0.0, 0.65, 7.2] } },
-            { "type": "ellipsoid", "params": { "radii": [0.46, 0.42, 0.42] }, "transform": { "translate": [0.55, 0.48, 5.6] } },
-            { "type": "ellipsoid", "params": { "radii": [0.42, 0.38, 0.38] }, "transform": { "translate": [-0.52, 0.45, 5.8] } },
-            { "type": "ellipsoid", "params": { "radii": [0.38, 0.34, 0.34] }, "transform": { "translate": [0.15, 0.60, 7.1] } },
-            { "type": "ellipsoid", "params": { "radii": [0.36, 0.32, 0.32] }, "transform": { "translate": [-0.12, 0.56, 6.7] } },
-            { "type": "ellipsoid", "params": { "radii": [0.40, 0.36, 0.36] }, "transform": { "translate": [0.38, 0.50, 6.4] } }
-          ]
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.45, 0.48, 0.52] },
-        "child": {
-          "type": "smoothUnion", "k": 0.3,
-          "children": [
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.75, 0.35, 3.2] },
-              "transform": { "translate": [0, -0.5, 0.8] }
-            },
-            {
-              "type": "ellipsoid",
-              "params": { "radii": [0.5, 0.25, 1.2] },
-              "transform": { "translate": [0, -0.4, 4.5] }
-            }
-          ]
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.32, 0.35, 0.40] },
-        "child": {
-          "type": "union",
-          "children": [
-            { "type": "ellipsoid", "params": { "radii": [0.60, 0.12, 3.8] }, "transform": { "translate": [0.35, -0.62, 1.5] } },
-            { "type": "ellipsoid", "params": { "radii": [0.60, 0.12, 3.8] }, "transform": { "translate": [-0.35, -0.62, 1.5] } },
-            { "type": "ellipsoid", "params": { "radii": [0.55, 0.10, 3.6] }, "transform": { "translate": [0.18, -0.65, 1.3] } },
-            { "type": "ellipsoid", "params": { "radii": [0.55, 0.10, 3.6] }, "transform": { "translate": [-0.18, -0.65, 1.3] } },
-            { "type": "ellipsoid", "params": { "radii": [0.50, 0.09, 3.4] }, "transform": { "translate": [0.0, -0.68, 1.2] } },
-            { "type": "ellipsoid", "params": { "radii": [0.58, 0.11, 3.5] }, "transform": { "translate": [0.50, -0.58, 1.8] } },
-            { "type": "ellipsoid", "params": { "radii": [0.58, 0.11, 3.5] }, "transform": { "translate": [-0.50, -0.58, 1.8] } },
-            { "type": "ellipsoid", "params": { "radii": [0.53, 0.09, 3.3] }, "transform": { "translate": [0.28, -0.64, 1.4] } },
-            { "type": "ellipsoid", "params": { "radii": [0.53, 0.09, 3.3] }, "transform": { "translate": [-0.28, -0.64, 1.4] } },
-            { "type": "ellipsoid", "params": { "radii": [0.48, 0.08, 3.0] }, "transform": { "translate": [0.08, -0.67, 1.1] } },
-            { "type": "ellipsoid", "params": { "radii": [0.48, 0.08, 3.0] }, "transform": { "translate": [-0.08, -0.67, 1.1] } },
-            { "type": "ellipsoid", "params": { "radii": [0.62, 0.12, 3.6] }, "transform": { "translate": [0.62, -0.55, 2.0] } },
-            { "type": "ellipsoid", "params": { "radii": [0.62, 0.12, 3.6] }, "transform": { "translate": [-0.62, -0.55, 2.0] } }
-          ]
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.18, 0.2, 0.24] },
-        "child": {
-          "type": "ellipsoid",
-          "params": { "radii": [0.18, 0.40, 0.25] },
-          "transform": { "translate": [0, 0.75, -1.8] }
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.18, 0.2, 0.24] },
-        "child": {
-          "type": "mirror", "axis": "x",
-          "child": {
-            "type": "smoothUnion", "k": 0.25,
-            "children": [
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [5.0, 0.30, 1.4] },
-                "transform": { "translate": [1.8, -0.4, 1.5], "rotate": [20, 28, -15] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [4.2, 0.25, 1.8] },
-                "transform": { "translate": [5.5, -1.0, 0.0], "rotate": [28, 35, -20] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [3.0, 0.18, 1.0] },
-                "transform": { "translate": [9.5, -1.8, -1.5], "rotate": [35, 42, -25] }
-              }
-            ]
-          }
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.92, 0.94, 0.96] },
-        "child": {
-          "type": "mirror", "axis": "x",
-          "child": {
-            "type": "smoothUnion", "k": 0.18,
-            "children": [
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [4.6, 0.16, 1.25] },
-                "transform": { "translate": [2.0, -0.55, 1.45], "rotate": [20, 28, -15] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [3.8, 0.14, 1.6] },
-                "transform": { "translate": [5.8, -1.15, -0.05], "rotate": [28, 35, -20] }
-              },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [2.6, 0.10, 0.85] },
-                "transform": { "translate": [9.5, -1.95, -1.55], "rotate": [35, 42, -25] }
-              }
-            ]
-          }
-        }
-      },
-      {
+        "comment": "TAIL FLUKES - 40% body span, THICK, with notch",
         "type": "material",
         "params": { "color": [0.20, 0.22, 0.26] },
         "child": {
-          "type": "mirror", "axis": "x",
-          "child": {
-            "type": "union",
-            "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.22, 0.18, 0.18] }, "transform": { "translate": [2.2, -0.25, 1.9] } },
-              { "type": "ellipsoid", "params": { "radii": [0.20, 0.16, 0.16] }, "transform": { "translate": [3.5, -0.50, 1.4] } },
-              { "type": "ellipsoid", "params": { "radii": [0.18, 0.15, 0.15] }, "transform": { "translate": [5.0, -0.80, 0.7] } },
-              { "type": "ellipsoid", "params": { "radii": [0.17, 0.14, 0.14] }, "transform": { "translate": [6.5, -1.10, 0.0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.15, 0.12, 0.12] }, "transform": { "translate": [7.8, -1.40, -0.6] } },
-              { "type": "ellipsoid", "params": { "radii": [0.13, 0.10, 0.10] }, "transform": { "translate": [9.0, -1.70, -1.2] } }
-            ]
-          }
-        }
-      },
-      {
-        "type": "material",
-        "params": { "color": [0.18, 0.2, 0.24] },
-        "child": {
-          "type": "subtract",
+          "type": "smoothUnion", "k": 0.6,
           "children": [
             {
-              "type": "mirror", "axis": "x",
-              "child": {
-                "type": "ellipsoid",
-                "params": { "radii": [2.2, 0.22, 0.8] },
-                "transform": { "translate": [1.5, 0.0, -5.5], "rotate": [0, 12, 0] }
-              }
+              "comment": "Fluke connection to tail stock",
+              "type": "ellipsoid",
+              "params": { "radii": [0.5, 0.4, 1.2] },
+              "transform": { "translate": [0, 0, -7.5] }
             },
             {
-              "type": "ellipsoid",
-              "params": { "radii": [0.4, 0.28, 0.6] },
-              "transform": { "translate": [0, 0, -5.5] }
+              "type": "subtract",
+              "children": [
+                {
+                  "type": "mirror", "axis": "x",
+                  "child": {
+                    "comment": "Individual fluke - THICK (y=0.28)",
+                    "type": "ellipsoid",
+                    "params": { "radii": [2.2, 0.28, 0.85] },
+                    "transform": { "translate": [1.2, 0, -8.8], "rotate": [0, 15, 5] }
+                  }
+                },
+                {
+                  "comment": "Center notch",
+                  "type": "ellipsoid",
+                  "params": { "radii": [0.4, 0.35, 0.6] },
+                  "transform": { "translate": [0, 0, -9.2] }
+                }
+              ]
             }
           ]
         }
       },
       {
+        "comment": "PECTORAL FLIPPERS - 33% body, THICK, mirrored",
         "type": "material",
-        "params": { "color": [0.88, 0.90, 0.94] },
+        "params": { "color": [0.18, 0.20, 0.24] },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "ellipsoid",
-            "params": { "radii": [2.0, 0.10, 0.7] },
-            "transform": { "translate": [1.6, -0.12, -5.5], "rotate": [0, 12, 0] }
+            "type": "smoothUnion", "k": 0.5,
+            "children": [
+              {
+                "comment": "Flipper base - connects to body",
+                "type": "ellipsoid",
+                "params": { "radii": [0.6, 0.4, 0.5] },
+                "transform": { "translate": [1.3, -0.4, 1.5] }
+              },
+              {
+                "comment": "Flipper section 1 - THICK (y=0.35)",
+                "type": "ellipsoid",
+                "params": { "radii": [1.4, 0.35, 0.55] },
+                "transform": { "translate": [2.0, -0.6, 0.8], "rotate": [12, 28, -8] }
+              },
+              {
+                "comment": "Flipper section 2 - tapers",
+                "type": "ellipsoid",
+                "params": { "radii": [1.1, 0.28, 0.45] },
+                "transform": { "translate": [3.0, -0.9, 0.2], "rotate": [18, 35, -12] }
+              },
+              {
+                "comment": "Flipper tip - smallest",
+                "type": "ellipsoid",
+                "params": { "radii": [0.7, 0.20, 0.32] },
+                "transform": { "translate": [3.8, -1.1, -0.3], "rotate": [22, 40, -15] }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "comment": "DORSAL FIN - small, 2/3 back on body",
+        "type": "material",
+        "params": { "color": [0.18, 0.20, 0.24] },
+        "child": {
+          "type": "ellipsoid",
+          "params": { "radii": [0.22, 0.55, 0.35] },
+          "transform": { "translate": [0, 1.15, -2.0] }
+        }
+      },
+      {
+        "comment": "HEAD TUBERCLES - blended into head surface",
+        "type": "material",
+        "params": { "color": [0.25, 0.27, 0.30] },
+        "child": {
+          "type": "smoothUnion", "k": 0.35,
+          "children": [
+            { "type": "sphere", "params": { "r": 0.32 }, "transform": { "translate": [0.35, 0.65, 6.2] } },
+            { "type": "sphere", "params": { "r": 0.38 }, "transform": { "translate": [-0.30, 0.70, 6.5] } },
+            { "type": "sphere", "params": { "r": 0.30 }, "transform": { "translate": [0.25, 0.72, 6.9] } },
+            { "type": "sphere", "params": { "r": 0.35 }, "transform": { "translate": [-0.20, 0.68, 7.2] } },
+            { "type": "sphere", "params": { "r": 0.28 }, "transform": { "translate": [0.0, 0.60, 7.5] } },
+            { "type": "sphere", "params": { "r": 0.33 }, "transform": { "translate": [0.42, 0.58, 5.8] } },
+            { "type": "sphere", "params": { "r": 0.36 }, "transform": { "translate": [-0.38, 0.62, 6.0] } }
+          ]
+        }
+      },
+      {
+        "comment": "VENTRAL - lighter belly region",
+        "type": "material",
+        "params": { "color": [0.75, 0.78, 0.82] },
+        "child": {
+          "type": "smoothUnion", "k": 0.6,
+          "children": [
+            {
+              "type": "ellipsoid",
+              "params": { "radii": [1.1, 0.5, 3.5] },
+              "transform": { "translate": [0, -0.85, 0.5] }
+            },
+            {
+              "type": "ellipsoid",
+              "params": { "radii": [0.7, 0.35, 1.8] },
+              "transform": { "translate": [0, -0.75, 4.5] }
+            }
+          ]
+        }
+      },
+      {
+        "comment": "FLIPPER UNDERSIDES - white patches",
+        "type": "material",
+        "params": { "color": [0.88, 0.90, 0.92] },
+        "child": {
+          "type": "mirror", "axis": "x",
+          "child": {
+            "type": "smoothUnion", "k": 0.4,
+            "children": [
+              {
+                "type": "ellipsoid",
+                "params": { "radii": [1.2, 0.18, 0.45] },
+                "transform": { "translate": [2.1, -0.75, 0.7], "rotate": [12, 28, -8] }
+              },
+              {
+                "type": "ellipsoid",
+                "params": { "radii": [0.9, 0.14, 0.35] },
+                "transform": { "translate": [3.1, -1.05, 0.15], "rotate": [18, 35, -12] }
+              }
+            ]
           }
         }
       }

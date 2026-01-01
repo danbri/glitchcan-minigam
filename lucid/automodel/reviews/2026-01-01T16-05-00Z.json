@@ -48,5 +48,6 @@
       "next_fix": "Reduce flipper x-radii by 45%"
     }
   },
+  "captures_folder": "v5.11-2026-01-01T16-05-00Z-full",
   "status": "v5.11 already pushed (prematurely), needs v5.12 with flipper fix"
 }

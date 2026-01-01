@@ -199,6 +199,34 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
+    .captures-gallery {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 0;
+      margin-top: 12px;
+    }
+    .captures-gallery img {
+      height: 120px;
+      border-radius: 6px;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .captures-gallery img:hover {
+      transform: scale(1.05);
+      border-color: var(--commit);
+    }
+    .captures-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    .no-captures {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-style: italic;
+    }
     .stats-bar {
       display: flex;
       gap: 20px;
@@ -285,6 +313,13 @@
           });
         });
 
+        // Load captures for each review
+        reviews.forEach((review, idx) => {
+          if (review.captures_folder) {
+            loadCaptures(review.captures_folder, idx);
+          }
+        });
+
       } catch (err) {
         timeline.innerHTML = `<div class="error">Error loading reviews: ${err.message}</div>`;
       }
@@ -339,6 +374,13 @@
             </div>
           </div>
 
+          ${review.captures_folder ? `
+            <div class="captures-title">Captures</div>
+            <div class="captures-gallery" id="gallery-${idx}">
+              <span class="no-captures">Loading...</span>
+            </div>
+          ` : ''}
+
           ${showstoppers.length > 0 ? `
             <div class="showstoppers">
               <div class="showstoppers-title">SHOWSTOPPERS (${showstoppers.length})</div>
@@ -382,6 +424,47 @@
 
     function truncate(str, len) {
       return str.length > len ? str.slice(0, len) + '...' : str;
+    }
+
+    async function loadCaptures(folder, idx) {
+      const gallery = document.getElementById(`gallery-${idx}`);
+      if (!gallery) return;
+
+      // Try common image names
+      const imageNames = [
+        'view-01.png', 'view-02.png', 'view-03.png',
+        'view-04.png', 'view-05.png', 'view-06.png',
+        '01-front-side.png', '02-quarter-right.png', '03-above-right.png',
+        '04-side-left.png', '05-low-front.png', '06-high-quarter.png'
+      ];
+
+      const basePath = `captures/${folder}/`;
+      const loadedImages = [];
+
+      for (const name of imageNames) {
+        const img = new Image();
+        const src = basePath + name;
+
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = src;
+          });
+          img.title = name;
+          img.onclick = () => window.open(src, '_blank');
+          loadedImages.push(img);
+        } catch (e) {
+          // Image doesn't exist, skip
+        }
+      }
+
+      if (loadedImages.length > 0) {
+        gallery.innerHTML = '';
+        loadedImages.forEach(img => gallery.appendChild(img));
+      } else {
+        gallery.innerHTML = '<span class="no-captures">No captures found</span>';
+      }
     }
 
     loadReviews();
