@@ -519,6 +519,22 @@ Multi-perspective evaluation system for 3D model quality assessment using four s
 **Blanked Geometry**: Title="Model Under Evaluation", no species names, no revealing comments.
 **Individual Timings**: REQUIRED for A, B, C, D separately.
 
+### 🚨 CRITICAL: SHOWSTOPPER REQUIREMENT 🚨
+
+**Every agent MUST return an explicit `showstoppers` array.**
+
+```json
+{
+  "showstoppers": ["FLIPPERS READ AS AIRPLANE WINGS - 100% body length instead of 30-33%"]
+}
+```
+
+**COMMIT RULE**: If ANY agent's `showstoppers` array is non-empty → **DO NOT COMMIT**.
+**NO EXCEPTIONS**: Even if Agent A achieves 95% identification, showstoppers block commit.
+**Agent D MUST aggregate** all showstoppers from A+B+C into `all_showstoppers`.
+
+**WHY THIS EXISTS**: We had a session where Agent C explicitly said "airplane wings for a tail" but the main process ignored this P0 and committed anyway because Agent A showed 95% confidence. This rule prevents that failure mode.
+
 ### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
 **NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
 
@@ -530,44 +546,79 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 
 ### The Four Agents
 
-**Agent A - Blind Evaluator**
-- Has NO context about the target
-- Sees only the rendered image
+**Agent A - Blanked Evaluator**
+- Has NO context about the target (blanked geometry, no goal)
+- Sees rendered images + blanked geometry + SDF skill
 - Prompt: "What creature/object is this? Confidence %?"
-- Returns: Primary identification + alternatives + reasoning
+- Returns: Primary identification + alternatives + **showstoppers array**
 
 **Agent B - Informed Evaluator**
 - Knows the goal (e.g., "this should be a humpback whale")
-- Sees the geometry/DSL tree
-- Has vision access to the render
+- Sees blanked + real geometry + SDF skill + rendered images
 - Prompt: "Given the goal of [X], evaluate how well this model achieves it"
-- Returns: Assessment of goal achievement, specific strengths/weaknesses
+- Returns: Score, strengths/weaknesses, geometry fixes + **showstoppers array**
 
 **Agent C - Skeptical Slop Detector**
 - Persona: "Visual models editor receiving excruciating amounts of AI slop"
-- Knows the goal, sees the visual
-- Enjoys creativity, modern artistry, nuance
-- BUT knows AI slop and halfbaked incomplete work when they see it
-- Prompt: "Raise a skeptical perspective on weak points of how this model appears wrt its goal"
-- Returns: Critique of weak points, what feels incomplete/generic/sloppy
+- Knows the goal, sees everything B sees
+- Enjoys creativity but HATES halfbaked incomplete work
+- Prompt: "Raise a skeptical perspective on weak points"
+- Returns: P0/P1/P2 issues, marine biologist test + **showstoppers array**
 
 **Agent D - Parliament Moderator**
-- Receives brief writeups from A, B, C
-- Gets one-line bio for each agent
-- Simulates a debate between the parties
-- Returns: Clerk's Report synthesizing the debate
+- Receives full reports from A, B, C
+- **MUST aggregate all showstoppers** into `all_showstoppers`
+- If `all_showstoppers.length > 0` → verdict MUST be DO NOT COMMIT
+- Returns: Clerk's Report with verdict and next fix
 
 ### Workflow
 1. Capture model at canonical view (NO view shopping!)
-2. Run Agent A (blind)
-3. Run Agent B (informed)
-4. Run Agent C (skeptical)
-5. Run Agent D (parliament synthesis)
-6. Main process receives Clerk's Report
-7. Make modeling decisions based on synthesis
+2. Create blanked geometry (remove identifying info)
+3. Run Agents A, B, C **in parallel** - each returns showstoppers array
+4. Run Agent D - aggregates all showstoppers
+5. **CHECK SHOWSTOPPERS FIRST**: If any exist → DO NOT COMMIT
+6. Only if showstoppers empty → consider commit based on scores
+7. Fix P0 issues before attempting next iteration
 
-### Output Format
-Each agent returns structured feedback. Agent D produces final Clerk's Report that informs next iteration decisions.
+### Log Viewer & Review Storage
+
+**View history**: `https://danbri.github.io/glitchcan-minigam/lucid/automodel/`
+**Local**: `lucid/automodel/index.html`
+
+**Adding new reviews**:
+1. Save review JSON to `lucid/automodel/reviews/YYYY-MM-DDTHH-MM-SSZ.json`
+2. Update `lucid/automodel/reviews/index.json` to include new filename
+3. Commit and push
+
+**Review JSON structure**:
+```json
+{
+  "session_id": "2026-01-01T16-05-00Z",
+  "model_version": "5.11",
+  "timestamp": "2026-01-01T16:12:00Z",
+  "note": "Optional context note",
+  "timings": {
+    "abc_parallel_start": "ISO8601",
+    "abc_parallel_end": "ISO8601",
+    "abc_parallel_wall_ms": 118589,
+    "agent_d_start": "ISO8601",
+    "agent_d_end": "ISO8601",
+    "agent_d_ms": 45064
+  },
+  "agents": {
+    "A": { "type": "blanked", "primary": "creature", "confidence": 95, "showstoppers": [] },
+    "B": { "type": "informed", "score": 45, "verdict": "summary", "showstoppers": [] },
+    "C": { "type": "skeptical", "issues": [...], "verdict": "4/10", "showstoppers": ["P0 ISSUE"] },
+    "D": { "type": "moderator", "verdict": "DO NOT COMMIT", "all_showstoppers": ["P0 ISSUE"], "next_fix": "..." }
+  },
+  "status": "commit status and next steps"
+}
+```
+
+**Skills files**:
+- `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
+- `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
+- `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
 
 ### Lucid Tools for Parliament Workflow
 
