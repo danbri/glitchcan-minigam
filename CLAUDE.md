@@ -506,6 +506,12 @@ Multi-perspective evaluation system for 3D model quality assessment using four s
 ### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
 **NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
 
+**When vision results are unfavorable:**
+- ✅ FIX THE GEOMETRY
+- ❌ NEVER conclude "we need a more flattering angle"
+
+The model must read correctly from a neutral view. Angle optimization is cheating.
+
 ### The Four Agents
 
 **Agent A - Blind Evaluator**
