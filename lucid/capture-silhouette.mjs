@@ -43,6 +43,10 @@ async function main() {
         window.renderer.camera.theta = theta;
         window.renderer.camera.phi = phi;
         window.renderer.camera.distance = distance;
+        // Force re-render after camera change
+        if (window.renderer.render) {
+          window.renderer.render();
+        }
       }
     }, angle);
 

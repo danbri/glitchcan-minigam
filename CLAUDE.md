@@ -506,6 +506,19 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 ### Overview
 Multi-perspective evaluation system for 3D model quality assessment using four specialized subagents.
 
+### 📋 MANDATORY RULES - See `lucid/automodel/parliament-rules.md`
+
+| Agent | SDF Skill | Blanked Geometry | Real Geometry | Goal/Target | Clean Imagery |
+|-------|-----------|------------------|---------------|-------------|---------------|
+| A | ✅ YES | ✅ YES | ❌ NO | ❌ NO | ✅ YES |
+| B | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
+| C | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
+| D | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ❌ N/A |
+
+**Clean Imagery**: NO leaky filenames, NO page headers, NO webapp UI, canvas-only screenshots.
+**Blanked Geometry**: Title="Model Under Evaluation", no species names, no revealing comments.
+**Individual Timings**: REQUIRED for A, B, C, D separately.
+
 ### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
 **NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
 
