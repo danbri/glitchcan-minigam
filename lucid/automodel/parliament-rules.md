@@ -1,5 +1,25 @@
 # ABCD Parliament Rules - MANDATORY
 
+## 🚨 CRITICAL: SHOWSTOPPER REQUIREMENT 🚨
+
+Every agent MUST return an explicit `showstoppers` array in their response.
+A showstopper is ANY issue that makes the model **fail to read as the target**.
+
+```json
+{
+  "showstoppers": [
+    "FLIPPERS READ AS AIRPLANE WINGS - 100% body length instead of 30-33%",
+    "BODY IS TORPEDO SHAPED - missing characteristic chunky proportions"
+  ]
+}
+```
+
+**COMMIT RULE**: If ANY agent's `showstoppers` array is non-empty, the verdict MUST be **DO NOT COMMIT**.
+
+**NO EXCEPTIONS**: Even if Agent A achieves 95% identification, showstoppers block commit.
+
+---
+
 ## Agent Information Access Matrix
 
 | Agent | SDF Skill | Blanked Geometry | Real Geometry | Goal/Target | Imagery |
@@ -102,6 +122,65 @@ Phase 4: Synthesis (sequential)
     Record D timing separately
 ```
 
+## Required Return Formats
+
+### Agent A Return Format
+```json
+{
+  "agent": "A",
+  "primary_identification": "creature/object",
+  "confidence": 0-100,
+  "showstoppers": ["ANY issues that undermine identification"],
+  "geometry_observations": ["SDF structures observed"],
+  "visual_evidence": ["features leading to ID"],
+  "concerns": ["anything unclear"]
+}
+```
+
+### Agent B Return Format
+```json
+{
+  "agent": "B",
+  "goal": "TARGET",
+  "score": 0-100,
+  "showstoppers": ["ANY issues that make model fail as target"],
+  "strengths": ["what works"],
+  "remaining_issues": ["what needs work"],
+  "geometry_recommendations": ["specific fixes"]
+}
+```
+
+### Agent C Return Format
+```json
+{
+  "agent": "C",
+  "goal": "TARGET",
+  "showstoppers": ["P0 issues that BLOCK commit - model fails to read as target"],
+  "issues": [
+    {"name": "ISSUE NAME", "severity": "P0-P3", "evidence": "what's wrong", "fix": "specific fix"}
+  ],
+  "marine_biologist_test": "What would expert say?",
+  "verdict": "X/10 with explanation"
+}
+```
+
+### Agent D Return Format
+```json
+{
+  "agent": "D",
+  "model_version": "X.X",
+  "all_showstoppers": ["COMBINED from A + B + C"],
+  "consensus": {"a_confidence": 0, "b_score": 0, "c_verdict": ""},
+  "action_items": {"P0": [], "P1": [], "P2": []},
+  "verdict": "COMMIT / DO NOT COMMIT",
+  "next_iteration_focus": "single thing to fix"
+}
+```
+
+**Agent D MUST aggregate all showstoppers**: If `all_showstoppers.length > 0`, verdict MUST be DO NOT COMMIT.
+
+---
+
 ## Prompt Templates
 
 ### Agent A Prompt Structure
@@ -114,6 +193,9 @@ IMAGERY: /tmp/eval/view-01.png through view-12.png
 
 You have NO context about what this model is supposed to be.
 Identify the creature/object using SDF terminology where helpful.
+
+CRITICAL: Return a "showstoppers" array listing ANY issues that
+undermine identification or make the model look wrong/unnatural.
 ```
 
 ### Agent B/C Prompt Structure
@@ -125,6 +207,9 @@ BLANKED GEOMETRY: [path to blanked geometry]
 REAL GEOMETRY: [path to real geometry]
 GOAL: [e.g., HUMPBACK WHALE]
 IMAGERY: /tmp/eval/view-01.png through view-12.png
+
+CRITICAL: Return a "showstoppers" array listing ANY P0 issues that
+make the model FAIL to read as the target creature.
 
 [Role-specific instructions...]
 ```
@@ -141,6 +226,9 @@ GOAL: [e.g., HUMPBACK WHALE]
 Agent A Report: [full report]
 Agent B Report: [full report]
 Agent C Report: [full report, MUST BE SURFACED PROMINENTLY]
+
+CRITICAL: Aggregate ALL showstoppers from A, B, C into "all_showstoppers".
+If this array is non-empty, verdict MUST be DO NOT COMMIT.
 
 [Synthesis instructions...]
 ```
