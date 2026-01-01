@@ -636,9 +636,10 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 ```
 
 **Skills files**:
+- `lucid/automodel/parliament-maker-skill.md` - **AUTHORITATIVE** PMAC methodology (Parliamentary Multi-Agent Chat)
 - `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
 - `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
-- `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
+- `lucid/automodel/parliament-rules.md` - Detailed ABCD rules and return formats
 
 ### 📸 MANDATORY: Image Capture & Logging
 
