@@ -620,6 +620,37 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 - `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
 - `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
 
+### 📸 MANDATORY: Image Capture & Logging
+
+**ALWAYS capture and save rendered images for every model version evaluation.**
+
+**Capture Requirements:**
+- **Minimum 6 angles**: Use `capture-silhouette.mjs` which captures 6 standard views
+- **Systematic naming**: `v{VERSION}-{TIMESTAMP}/1.png` through `6.png`
+- **Permanent storage**: Save to `lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/`
+- **Never delete captures**: They are the permanent record of model evolution
+
+**Standard Camera Angles (capture-silhouette.mjs):**
+1. Front-quarter view (default camera position)
+2. Side-quarter with appendages visible
+3. 3/4 rear showing tail/flukes
+4. Pure side profile
+5. Opposite side-quarter
+6. Wide shot with all features visible
+
+**Capture Command:**
+```bash
+mkdir -p lucid/automodel/captures/v{VERSION}-$(date -u +%Y-%m-%dT%H-%M-%SZ)
+node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-captures
+cp /tmp/eval-captures/*.png lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/
+```
+
+**Why This Matters:**
+- Visual record for comparing iterations
+- Required for ABCD Parliament evaluation
+- Enables retrospective analysis of what changed between versions
+- User can review progress without re-running evaluations
+
 ### Lucid Tools for Parliament Workflow
 
 **Capture Tool:**
