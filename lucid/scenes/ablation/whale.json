@@ -1,7 +1,7 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "v6.4 - Correct 32% flipper length",
-  "version": "6.4",
+  "subtitle": "v6.5 - Flippers at 31% (ideal range)",
+  "version": "6.5",
   "camera": { "distance": 38, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "type": "smoothUnion", "k": 1.0,
@@ -112,14 +112,14 @@
               {
                 "comment": "Flipper section 3 - tapers",
                 "type": "ellipsoid",
-                "params": { "radii": [0.8, 0.22, 0.38] },
-                "transform": { "translate": [4.2, -1.9, -2.3], "rotate": [20, 55, -18] }
+                "params": { "radii": [0.85, 0.22, 0.38] },
+                "transform": { "translate": [4.3, -2.0, -2.5], "rotate": [20, 55, -18] }
               },
               {
-                "comment": "Flipper tip - 6.4 units from base = 32%",
+                "comment": "Flipper tip - 6.2 units from base = 31%",
                 "type": "ellipsoid",
-                "params": { "radii": [0.5, 0.16, 0.28] },
-                "transform": { "translate": [4.8, -2.3, -3.2], "rotate": [22, 58, -20] }
+                "params": { "radii": [0.55, 0.17, 0.30] },
+                "transform": { "translate": [5.0, -2.4, -3.5], "rotate": [22, 58, -20] }
               }
             ]
           }
@@ -194,8 +194,8 @@
               },
               {
                 "type": "ellipsoid",
-                "params": { "radii": [0.6, 0.10, 0.28] },
-                "transform": { "translate": [4.3, -2.05, -2.4], "rotate": [20, 55, -18] }
+                "params": { "radii": [0.65, 0.11, 0.30] },
+                "transform": { "translate": [4.4, -2.15, -2.6], "rotate": [20, 55, -18] }
               }
             ]
           }
