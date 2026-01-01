@@ -4,7 +4,7 @@
 
 | Agent | SDF Skill | Blanked Geometry | Real Geometry | Goal/Target | Imagery |
 |-------|-----------|------------------|---------------|-------------|---------|
-| A (Blind) | ✅ YES | ✅ YES | ❌ NO | ❌ NO | ✅ Clean |
+| A (Blanked) | ✅ YES | ✅ YES | ❌ NO | ❌ NO | ✅ Clean |
 | B (Informed) | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ Clean |
 | C (Skeptic) | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ Clean |
 | D (Moderator) | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ❌ N/A |
@@ -17,7 +17,7 @@ ALL agents (A, B, C, D) receive the SDF skill reference.
 - Agents B, C use it to specify exact fixes
 - Agent D uses it to validate proposed changes
 
-## Rule 2: Blanked Geometry for Agent A
+## Rule 2: Blanked Geometry for Agent A (Blanked Evaluator)
 
 Agent A receives geometry with ALL identifying information removed:
 - Title: "Model Under Evaluation"
@@ -106,7 +106,7 @@ Phase 4: Synthesis (sequential)
 
 ### Agent A Prompt Structure
 ```
-You are Agent A - Blind Evaluator.
+You are Agent A - Blanked Evaluator.
 
 SDF SKILL: [path to sdf-skill.md]
 GEOMETRY: [path to BLANKED geometry]
