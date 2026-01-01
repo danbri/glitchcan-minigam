@@ -1551,6 +1551,7 @@
 
         const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
+        window.renderer = renderer; // Expose for automation/capture scripts
         renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
 
         // Build hierarchical demos submenu

@@ -1,6 +1,9 @@
 # CLAUDE.md - Guide for 🐥 Minigames
 <!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
 
+## 🔐 TRUST THE USER
+The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
+
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
 **ONLY ALLOWED:** Real ink-full.js compiler and Story API
@@ -497,6 +500,176 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 - User always arranges their own HTTP server setup
 - Don't run `python -m http.server` or similar commands
 - Focus on the code implementation, not server management
+
+## ABCD Subagent Parliament - Model Evaluation Methodology
+
+### Overview
+Multi-perspective evaluation system for 3D model quality assessment using four specialized subagents.
+
+### 📋 MANDATORY RULES - See `lucid/automodel/parliament-rules.md`
+
+| Agent | SDF Skill | Blanked Geometry | Real Geometry | Goal/Target | Clean Imagery |
+|-------|-----------|------------------|---------------|-------------|---------------|
+| A | ✅ YES | ✅ YES | ❌ NO | ❌ NO | ✅ YES |
+| B | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
+| C | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
+| D | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ❌ N/A |
+
+**Clean Imagery**: NO leaky filenames, NO page headers, NO webapp UI, canvas-only screenshots.
+**Blanked Geometry**: Title="Model Under Evaluation", no species names, no revealing comments.
+**Individual Timings**: REQUIRED for A, B, C, D separately.
+
+### 🚨 CRITICAL: SHOWSTOPPER REQUIREMENT 🚨
+
+**Every agent MUST return an explicit `showstoppers` array.**
+
+```json
+{
+  "showstoppers": ["FLIPPERS READ AS AIRPLANE WINGS - 100% body length instead of 30-33%"]
+}
+```
+
+**COMMIT RULE**: If ANY agent's `showstoppers` array is non-empty → **DO NOT COMMIT**.
+**NO EXCEPTIONS**: Even if Agent A achieves 95% identification, showstoppers block commit.
+**Agent D MUST aggregate** all showstoppers from A+B+C into `all_showstoppers`.
+
+**WHY THIS EXISTS**: We had a session where Agent C explicitly said "airplane wings for a tail" but the main process ignored this P0 and committed anyway because Agent A showed 95% confidence. This rule prevents that failure mode.
+
+### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
+**NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
+
+**When vision results are unfavorable:**
+- ✅ FIX THE GEOMETRY
+- ❌ NEVER conclude "we need a more flattering angle"
+
+The model must read correctly from a neutral view. Angle optimization is cheating.
+
+### The Four Agents
+
+**Agent A - Blanked Evaluator**
+- Has NO context about the target (blanked geometry, no goal)
+- Sees rendered images + blanked geometry + SDF skill
+- Prompt: "What creature/object is this? Confidence %?"
+- Returns: Primary identification + alternatives + **showstoppers array**
+
+**Agent B - Informed Evaluator**
+- Knows the goal (e.g., "this should be a humpback whale")
+- Sees blanked + real geometry + SDF skill + rendered images
+- Prompt: "Given the goal of [X], evaluate how well this model achieves it"
+- Returns: Score, strengths/weaknesses, geometry fixes + **showstoppers array**
+
+**Agent C - Skeptical Slop Detector**
+- Persona: "Visual models editor receiving excruciating amounts of AI slop"
+- Knows the goal, sees everything B sees
+- Enjoys creativity but HATES halfbaked incomplete work
+- Prompt: "Raise a skeptical perspective on weak points"
+- Returns: P0/P1/P2 issues, marine biologist test + **showstoppers array**
+
+**Agent D - Parliament Moderator**
+- Receives full reports from A, B, C
+- **MUST aggregate all showstoppers** into `all_showstoppers`
+- If `all_showstoppers.length > 0` → verdict MUST be DO NOT COMMIT
+- Returns: Clerk's Report with verdict and next fix
+
+### Workflow
+1. Capture model at canonical view (NO view shopping!)
+2. Create blanked geometry (remove identifying info)
+3. Run Agents A, B, C **in parallel** - each returns showstoppers array
+4. Run Agent D - aggregates all showstoppers
+5. **CHECK SHOWSTOPPERS FIRST**: If any exist → DO NOT COMMIT
+6. Only if showstoppers empty → consider commit based on scores
+7. Fix P0 issues before attempting next iteration
+
+### Log Viewer & Review Storage
+
+**View history**: `https://danbri.github.io/glitchcan-minigam/lucid/automodel/`
+**Local**: `lucid/automodel/index.html`
+
+**Adding new reviews**:
+1. Save review JSON to `lucid/automodel/reviews/YYYY-MM-DDTHH-MM-SSZ.json`
+2. Update `lucid/automodel/reviews/index.json` to include new filename
+3. Commit and push
+
+**Review JSON structure**:
+```json
+{
+  "session_id": "2026-01-01T16-05-00Z",
+  "model_version": "5.11",
+  "timestamp": "2026-01-01T16:12:00Z",
+  "note": "Optional context note",
+  "timings": {
+    "abc_parallel_start": "ISO8601",
+    "abc_parallel_end": "ISO8601",
+    "abc_parallel_wall_ms": 118589,
+    "agent_d_start": "ISO8601",
+    "agent_d_end": "ISO8601",
+    "agent_d_ms": 45064
+  },
+  "agents": {
+    "A": { "type": "blanked", "primary": "creature", "confidence": 95, "showstoppers": [] },
+    "B": { "type": "informed", "score": 45, "verdict": "summary", "showstoppers": [] },
+    "C": { "type": "skeptical", "issues": [...], "verdict": "4/10", "showstoppers": ["P0 ISSUE"] },
+    "D": { "type": "moderator", "verdict": "DO NOT COMMIT", "all_showstoppers": ["P0 ISSUE"], "next_fix": "..." }
+  },
+  "status": "commit status and next steps"
+}
+```
+
+**Skills files**:
+- `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
+- `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
+- `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
+
+### Lucid Tools for Parliament Workflow
+
+**Capture Tool:**
+```bash
+node lucid/capture-silhouette.mjs <scene.model> /tmp/eval-session
+```
+- Captures canonical view to `/tmp/eval-session/1.png`
+- Scene format: `ablation.whale` loads `lucid/scenes/ablation/whale.json`
+
+**Model Files:**
+- Location: `lucid/scenes/ablation/*.json`
+- Format: Lucid SDF JSON (ellipsoids, smoothUnion, subtract, mirror, etc.)
+
+**Full Cycle Commands:**
+```bash
+# 1. Start server if needed
+python3 -m http.server 8080 &
+
+# 2. Capture canonical view
+node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-session
+
+# 3. Run Agents A, B, C in parallel (via Task tool)
+# 4. Run Agent D with A, B, C reports
+# 5. Implement Clerk's Report P1 fixes
+# 6. Re-run Agent A blind test
+# 7. Commit if improved, iterate if not
+```
+
+### Clerk's Report Format
+
+Agent D returns structured report with:
+- **Consensus Findings**: What all agents agree on
+- **P1 Critical Fixes**: Must fix or model fails goal
+- **P2 High Priority**: Required for credibility
+- **P3 Medium Priority**: Polish and character
+- **Recommended Next Steps**: Specific actions
+
+### Iteration Loop
+
+```
+┌─────────────────────────────────────────┐
+│  1. Capture canonical view              │
+│  2. Run ABCD Parliament                 │
+│  3. Receive Clerk's Report              │
+│  4. Implement P1 fixes                  │
+│  5. Re-run Agent A blind test           │
+│  6. If improved → commit, next P level  │
+│     If not → fix geometry, NOT angle    │
+└─────────────────────────────────────────┘
+```
 
 ## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
 

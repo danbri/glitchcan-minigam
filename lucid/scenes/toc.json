@@ -73,52 +73,12 @@
     {
       "id": "creatures",
       "title": "Creatures",
-      "description": "Characters & beings",
+      "description": "Polished characters & beings",
       "scenes": [
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
-        { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
-        { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
-        { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },
-        { "path": "creatures/draggo4.json", "title": "Ignis Drake 🔥", "subtitle": "Muscular wyvern" },
-        { "path": "creatures/draggo5.json", "title": "Solaris Drake ☀️", "subtitle": "Solar-panel wings" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
-        { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" },
-        { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped dragon" },
-        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Draggo 🤖", "subtitle": "Context-ablated conversion" },
-        { "path": "creatures/subag1/candidate-a.json", "title": "Candidate A 🅰️", "subtitle": "Nested a/b structure" },
-        { "path": "creatures/subag1/candidate-b.json", "title": "Candidate B 🅱️", "subtitle": "Flat object graph" },
-        { "path": "creatures/subag1/candidate-c.json", "title": "Candidate C ©️", "subtitle": "Nested geometry" },
-        { "path": "creatures/subag1/improved-a.json", "title": "Improved A 🦴", "subtitle": "Horns and spines" },
-        { "path": "creatures/subag1/improved-b.json", "title": "Improved B 🦇", "subtitle": "Enhanced wings" },
-        { "path": "creatures/subag1/improved-c.json", "title": "Improved C 👁️", "subtitle": "Eyes and details" },
-        { "path": "creatures/subag1/round2/r2-a.json", "title": "R2-A 🦴👁️", "subtitle": "Horns, spines, eyes" },
-        { "path": "creatures/subag1/round2/r2-b.json", "title": "R2-B 🔥", "subtitle": "Fire breath dragon" },
-        { "path": "creatures/subag1/round2/r2-c.json", "title": "R2-C 🗡️", "subtitle": "Claws and tail blade" },
-        { "path": "creatures/subag1/round3/r3-a.json", "title": "R3-A 🦴🔥", "subtitle": "Horns and spines" },
-        { "path": "creatures/subag1/round3/r3-b.json", "title": "R3-B 🦶🔥", "subtitle": "Claws and tail spade" },
-        { "path": "creatures/subag1/round3/r3-c.json", "title": "R3-C 🛡️🔥", "subtitle": "Scales and armor" },
-        { "path": "creatures/subag1/round4/r4-a.json", "title": "R4-A", "subtitle": "Added horns" },
-        { "path": "creatures/subag1/round4/r4-b.json", "title": "R4-B", "subtitle": "Added belly scales" },
-        { "path": "creatures/subag1/round4/r4-c.json", "title": "R4-C", "subtitle": "Added back spines" },
-        { "path": "creatures/subag1/round5/r5-a.json", "title": "R5-A", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round5/r5-b.json", "title": "R5-B", "subtitle": "Back spines" },
-        { "path": "creatures/subag1/round5/r5-c.json", "title": "R5-C", "subtitle": "Extended fire" },
-        { "path": "creatures/subag1/round6/r6-a.json", "title": "R6-A", "subtitle": "Back spines" },
-        { "path": "creatures/subag1/round6/r6-b.json", "title": "R6-B", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round6/r6-c.json", "title": "R6-C", "subtitle": "Shoulder armor" },
-        { "path": "creatures/subag1/round7/r7-a.json", "title": "R7-A", "subtitle": "Back spines" },
-        { "path": "creatures/subag1/round7/r7-b.json", "title": "R7-B", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round7/r7-c.json", "title": "R7-C", "subtitle": "Larger wings" },
-        { "path": "creatures/subag1/round8/r8-a.json", "title": "R8-A", "subtitle": "Back spines" },
-        { "path": "creatures/subag1/round8/r8-b.json", "title": "R8-B", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round8/r8-c.json", "title": "R8-C", "subtitle": "Neck frill" },
-        { "path": "creatures/subag1/round9/r9-a.json", "title": "R9-A", "subtitle": "Back spines" },
-        { "path": "creatures/subag1/round9/r9-b.json", "title": "R9-B", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round9/r9-c.json", "title": "R9-C", "subtitle": "Muscular legs" },
-        { "path": "creatures/subag1/round10/r10-a.json", "title": "R10-A", "subtitle": "Belly scales" },
-        { "path": "creatures/subag1/round10/r10-b.json", "title": "R10-B", "subtitle": "Thicker legs" },
-        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Brow ridges" }
+        { "path": "creatures/spirit-creatures.json", "title": "Spirits 👻", "subtitle": "Ethereal beings" }
       ]
     },
     {
@@ -127,11 +87,10 @@
       "description": "Plants & organic",
       "scenes": [
         { "path": "nature/celly.json", "title": "Celly 🦠", "subtitle": "Dividing microbes" },
-        { "path": "nature/single-sunflower.json", "title": "Single Sunflower 🔬", "subtitle": "Scale test - no repeat" },
-        { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed poppies & sunflowers" },
         { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
         { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers" },
-        { "path": "nature/poppy-field.json", "title": "Poppy Field 🌺", "subtitle": "Red poppies" }
+        { "path": "nature/poppy-field.json", "title": "Poppy Field 🌺", "subtitle": "Red poppies" },
+        { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed poppies & sunflowers" }
       ]
     },
     {
@@ -149,6 +108,33 @@
       "description": "Multi-element showcases",
       "scenes": [
         { "path": "combined/cobra-vs-invaders.json", "title": "Cobra vs Invaders 🎮", "subtitle": "Elite ship attacks space invaders" }
+      ]
+    },
+    {
+      "id": "ablation",
+      "title": "🧪 Ablation Drafts",
+      "description": "Context-ablated blind evaluation models",
+      "scenes": [
+        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale", "subtitle": "85% confidence, 9 primitives" },
+        { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
+        { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
+        { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },
+        { "path": "creatures/draggo4.json", "title": "Ignis Drake 🔥", "subtitle": "Muscular wyvern" },
+        { "path": "creatures/draggo5.json", "title": "Solaris Drake ☀️", "subtitle": "Solar-panel wings" },
+        { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped" }
+      ]
+    },
+    {
+      "id": "ablation-old",
+      "title": "   └─ Old Experiments",
+      "description": "Archived iteration experiments",
+      "scenes": [
+        { "path": "ablation/old/test-a.json", "title": "Test A", "subtitle": "Initial form study" },
+        { "path": "ablation/old/test-b.json", "title": "Test B (Dolphin)", "subtitle": "75% confidence" },
+        { "path": "ablation/old/hippo-v1.json", "title": "Hippo v1 🦛", "subtitle": "Early test" },
+        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Dragon", "subtitle": "Context-ablated conversion" },
+        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5", "subtitle": "Dragon silhouette final" },
+        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Final dragon iteration" }
       ]
     }
   ]
