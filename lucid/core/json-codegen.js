@@ -655,7 +655,7 @@ function generateSmoothUnion(node, ctx) {
     return walkNode(children[0], ctx);
   }
 
-  // Generate helper function
+  // Generate helper function for N children (not just 2!)
   const funcName = `smoothUnion_${ctx.helperCounter++}`;
   const idParam = ctx.instanceIdParam;
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
@@ -669,29 +669,38 @@ function generateSmoothUnion(node, ctx) {
     childP = 'tp';
   }
 
-  // Wrap each child in a helper function
-  const child0FuncName = `smoothUnion_child_${ctx.helperCounter++}`;
-  const child0Expr = walkNode(children[0], ctx);
-  ctx.helpers.push(`vec4 ${child0FuncName}(${paramList}) {
-  return ${child0Expr};
-}`);
-
-  const child1FuncName = `smoothUnion_child_${ctx.helperCounter++}`;
-  const child1Expr = walkNode(children[1], ctx);
-  ctx.helpers.push(`vec4 ${child1FuncName}(${paramList}) {
-  return ${child1Expr};
-}`);
-
   const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
 
-  // Blend colors based on smooth union blend factor
+  // Generate a helper function for each child
+  const childFuncNames = [];
+  for (let i = 0; i < children.length; i++) {
+    const childFuncName = `smoothUnion_child_${ctx.helperCounter++}`;
+    const childExpr = walkNode(children[i], ctx);
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    childFuncNames.push(childFuncName);
+  }
+
+  // Build the smooth union body by chaining all children
+  // result = smin(child0, smin(child1, smin(child2, ...)))
+  let bodyLines = [];
+  bodyLines.push(`  vec4 result = ${childFuncNames[0]}(${childCallArgs});`);
+
+  for (let i = 1; i < childFuncNames.length; i++) {
+    bodyLines.push(`  {`);
+    bodyLines.push(`    vec4 b = ${childFuncNames[i]}(${childCallArgs});`);
+    bodyLines.push(`    float h = clamp(0.5 + 0.5 * (b.x - result.x) / ${k}, 0.0, 1.0);`);
+    bodyLines.push(`    float d = mix(b.x, result.x, h) - ${k} * h * (1.0 - h);`);
+    bodyLines.push(`    vec3 col = mix(b.yzw, result.yzw, h);`);
+    bodyLines.push(`    result = vec4(d, col);`);
+    bodyLines.push(`  }`);
+  }
+
+  bodyLines.push(`  return result;`);
+
   const helperFunc = `vec4 ${funcName}(${paramList}) {
-${bodyPrefix}  vec4 a = ${child0FuncName}(${childCallArgs});
-  vec4 b = ${child1FuncName}(${childCallArgs});
-  float h = clamp(0.5 + 0.5 * (b.x - a.x) / ${k}, 0.0, 1.0);
-  float d = mix(b.x, a.x, h) - ${k} * h * (1.0 - h);
-  vec3 col = mix(b.yzw, a.yzw, h);
-  return vec4(d, col);
+${bodyPrefix}${bodyLines.join('\n')}
 }`;
 
   ctx.helpers.push(helperFunc);
