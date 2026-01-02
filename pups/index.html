@@ -326,7 +326,7 @@ body {
 </div>
 
 <script>
-// ============ AUDIO ENGINE - Cheerful Bouncy Music ============
+// ============ AUDIO ENGINE - Joyful Uplifting Music ============
 class ShepardAudioEngine {
   constructor() {
     this.ctx = null;
@@ -339,14 +339,16 @@ class ShepardAudioEngine {
     this.intervalId = null;
     this.animationId = null;
 
-    // Happy major progression with brightness (C - G - Am - F - C - G - F - G)
-    this.chordRoots = [523.25, 392.00, 440.00, 349.23, 523.25, 392.00, 349.23, 392.00]; // Higher octave!
-    this.tempo = 156; // BPM - bouncy and energetic!
+    // Emotionally uplifting progression: I - V - vi - IV (the "happy" progression)
+    // In D major for brightness: D - A - Bm - G, with major 7ths for warmth
+    this.chordRoots = [587.33, 440.00, 493.88, 392.00]; // D5 - A4 - B4 - G4
+    this.chordTypes = ['maj7', 'maj', 'min', 'maj7']; // Chord qualities
+    this.tempo = 132; // BPM - uplifting but not frantic
     this.beatDuration = 60 / this.tempo;
 
-    // Shepard tone octave layers (continuous) - higher and brighter
-    this.shepardBaseFreqs = [110, 220, 440, 880, 1760, 3520];
-    this.shepardSpeed = 0.012; // Slightly slower rise for more pleasant feel
+    // Shepard tone octave layers - warm and enveloping
+    this.shepardBaseFreqs = [146.83, 293.66, 587.33, 1174.66]; // D notes for harmony
+    this.shepardSpeed = 0.008; // Gentle rise
     this.shepardPhase = 0;
   }
 
@@ -385,27 +387,37 @@ class ShepardAudioEngine {
     }
   }
 
-  // Continuous Shepard tones - bright and uplifting
+  // Continuous Shepard tones - warm pad sound
   startContinuousShepard() {
     this.shepardOscs = this.shepardBaseFreqs.map((baseFreq, i) => {
       const osc = this.ctx.createOscillator();
-      osc.type = 'sine'; // Pure and pleasant
+      osc.type = 'sine';
       osc.frequency.value = baseFreq;
+
+      // Add slight vibrato for warmth
+      const vibrato = this.ctx.createOscillator();
+      vibrato.type = 'sine';
+      vibrato.frequency.value = 4 + i * 0.5; // Slight variation per layer
+      const vibratoGain = this.ctx.createGain();
+      vibratoGain.gain.value = 2; // Subtle pitch wobble
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+      vibrato.start();
 
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 2000;
-      filter.Q.value = 0.7;
+      filter.frequency.value = 1200;
+      filter.Q.value = 0.5;
 
       osc.connect(filter);
       filter.connect(gain);
       gain.connect(this.compressor);
       osc.start();
 
-      return { osc, gain, baseFreq, index: i };
+      return { osc, gain, baseFreq, index: i, vibrato };
     });
 
     // Animate Shepard tones
@@ -418,23 +430,21 @@ class ShepardAudioEngine {
       this.shepardPhase += this.shepardSpeed;
       if (this.shepardPhase >= 1) this.shepardPhase = 0;
 
-      const centerFreq = 600; // Higher center for brighter feel
+      const centerFreq = 400; // Warmer center frequency
 
       this.shepardOscs.forEach((layer, i) => {
-        // Calculate rising frequency with wraparound
         const risingFactor = Math.pow(2, this.shepardPhase);
         let freq = layer.baseFreq * risingFactor;
 
-        // Set frequency (continuous glide)
-        layer.osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+        layer.osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
 
-        // Gaussian amplitude envelope centered around centerFreq
+        // Softer gaussian envelope for pad-like feel
         const logFreq = Math.log2(freq);
         const logCenter = Math.log2(centerFreq);
         const distance = Math.abs(logFreq - logCenter);
-        const amp = Math.exp(-distance * distance * 0.4) * 0.05; // Softer, more pleasant
+        const amp = Math.exp(-distance * distance * 0.3) * 0.04;
 
-        layer.gain.gain.setTargetAtTime(amp, this.ctx.currentTime, 0.1);
+        layer.gain.gain.setTargetAtTime(amp, this.ctx.currentTime, 0.15);
       });
 
       this.animationId = requestAnimationFrame(animateShepard);
@@ -582,25 +592,42 @@ class ShepardAudioEngine {
 
     const now = this.ctx.currentTime;
     const root = this.chordRoots[this.chordIndex];
+    const chordType = this.chordTypes[this.chordIndex];
     const beat = this.beatCount % 8;
 
-    // Bouncy bass on 1 and 5
+    // Warm bass on 1 and 5
     if (beat === 0 || beat === 4) {
-      this.playBass(root, now, this.beatDuration * 1.2);
+      this.playBass(root, now, this.beatDuration * 1.5);
     }
 
-    // Happy ascending arpeggio pattern
-    const arpNotes = [root, root * 1.25, root * 1.5, root * 2];
-    const arpPattern = [0, 2, 1, 3, 0, 3, 2, 1]; // More playful pattern
+    // Build chord notes based on type (major 7th for extra warmth)
+    let arpNotes;
+    if (chordType === 'maj7') {
+      arpNotes = [root, root * 1.25, root * 1.5, root * 1.875, root * 2]; // 1 3 5 7 8
+    } else if (chordType === 'min') {
+      arpNotes = [root, root * 1.2, root * 1.5, root * 2]; // 1 b3 5 8
+    } else {
+      arpNotes = [root, root * 1.25, root * 1.5, root * 2]; // 1 3 5 8
+    }
+
+    // Uplifting arpeggio pattern - rising then gently falling
+    const arpPattern = [0, 1, 2, 3, 4 % arpNotes.length, 3, 2, 1];
     const noteIndex = arpPattern[beat];
-    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.6);
+    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.7);
 
-    // Soft clicks instead of harsh hi-hats
-    this.playClick(now, beat === 0 || beat === 4);
-    this.playClick(now + this.beatDuration * 0.5, false);
+    // Add harmony note on some beats for richness
+    if (beat === 0 || beat === 4) {
+      this.playArpNote(arpNotes[2], now + 0.02, this.beatDuration * 0.5); // 5th harmony
+    }
 
-    // Occasional sparkle on beat 3 and 7
-    if ((beat === 2 || beat === 6) && Math.random() > 0.5) {
+    // Gentle percussion
+    this.playClick(now, beat === 0);
+    if (beat % 2 === 0) {
+      this.playClick(now + this.beatDuration * 0.5, false);
+    }
+
+    // Sparkles for magic - more frequent
+    if (beat === 2 || beat === 6) {
       this.createShimmer();
     }
 
@@ -638,6 +665,7 @@ class ShepardAudioEngine {
     }
     this.shepardOscs.forEach(layer => {
       layer.osc.stop();
+      if (layer.vibrato) layer.vibrato.stop();
     });
     this.shepardOscs = [];
     this.isPlaying = false;
@@ -675,6 +703,10 @@ class EmojiCarousel {
     this.friction = 0.92;
     this.snapStrength = 0.15;
     this.minVelocity = 0.1;
+
+    // Selection animation state
+    this.isSelecting = false;
+    this.selectionHue = 0;
 
     this.buildCarousel();
     this.setupEvents();
@@ -898,7 +930,7 @@ class EmojiCarousel {
     this.animationId = requestAnimationFrame(animate);
   }
 
-  render() {
+  render(selectionMode = false) {
     const containerWidth = document.getElementById('carousel-container').offsetWidth;
     const center = containerWidth / 2;
     const items = this.track.querySelectorAll('.carousel-item');
@@ -916,20 +948,36 @@ class EmojiCarousel {
       const itemCenter = itemPos + this.itemWidth / 2;
       const distFromCenter = itemCenter - center + this.itemWidth / 2;
       const normalizedDist = Math.abs(distFromCenter) / (containerWidth / 2);
+      const isSelected = this.wrapIndex(Math.round(this.position / this.itemWidth)) === i;
 
       // Dramatic fisheye: center = 2.5x, edges = 0.4x
       const scale = Math.max(0.4, 2.5 - normalizedDist * 2.1);
-      const opacity = Math.max(0.2, 1 - normalizedDist * 0.8);
 
-      // Colorize filter: sepia adds color to grayscale emoji, then hue-rotate shifts it
-      const hueShift = ((i * 47) % 360);
+      // In selection mode, fade out non-selected items
+      let opacity = Math.max(0.2, 1 - normalizedDist * 0.8);
+      if (selectionMode && !isSelected) {
+        opacity = 0.1;
+      }
+
+      // Stronger colorization: more sepia and saturation for pale emoji
+      const hueShift = selectionMode && isSelected ? this.selectionHue : ((i * 47) % 360);
+
+      // Build filter with optional selection border effect
+      let filter = `sepia(0.5) saturate(2) hue-rotate(${hueShift}deg) brightness(1.1)`;
+      if (selectionMode && isSelected) {
+        // Rainbow shimmer with thick black outline via multiple drop-shadows
+        filter += ` drop-shadow(0 0 2px black) drop-shadow(0 0 2px black) drop-shadow(0 0 3px black)`;
+        filter += ` drop-shadow(0 0 15px hsl(${this.selectionHue}, 100%, 60%))`;
+      } else {
+        filter += ` drop-shadow(0 ${scale * 4}px ${scale * 8}px rgba(0,0,0,0.3))`;
+      }
 
       item.style.transform = `translateX(${itemPos}px) scale(${scale})`;
       item.style.opacity = opacity;
-      item.style.filter = `sepia(0.3) saturate(1.5) hue-rotate(${hueShift}deg) drop-shadow(0 ${scale * 4}px ${scale * 8}px rgba(0,0,0,0.3))`;
+      item.style.filter = filter;
       item.style.zIndex = Math.round((1 - normalizedDist) * 100);
 
-      item.classList.toggle('active', this.wrapIndex(Math.round(this.position / this.itemWidth)) === i);
+      item.classList.toggle('active', isSelected);
     });
   }
 
@@ -941,20 +989,47 @@ class EmojiCarousel {
   }
 
   selectCurrent() {
+    if (this.isSelecting) return;
+    this.isSelecting = true;
+
     currentEmojiIndex = this.currentIndex;
     currentEmoji = EMOJI_OPTIONS[this.currentIndex];
 
-    this.settingsBtn.textContent = currentEmoji;
+    // Start rainbow shimmer animation
+    this.selectionHue = 0;
+    const shimmerDuration = 800;
+    const startTime = Date.now();
 
-    puppies.forEach(p => {
-      if (p.element) p.element.textContent = currentEmoji;
-    });
-
+    // Play celebratory shimmer
     if (audioEngine.isPlaying && !audioEngine.isMuted) {
       audioEngine.createShimmer();
     }
 
-    this.close();
+    const animateSelection = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / shimmerDuration;
+
+      if (progress < 1) {
+        // Rainbow cycle: go through full spectrum
+        this.selectionHue = (progress * 720) % 360;
+        this.render(true); // Selection mode
+        requestAnimationFrame(animateSelection);
+      } else {
+        // Animation complete - update everything and close
+        this.settingsBtn.textContent = currentEmoji;
+
+        puppies.forEach(p => {
+          if (p.element) p.element.textContent = currentEmoji;
+        });
+
+        this.isSelecting = false;
+        this.close();
+      }
+    };
+
+    // Animate to center first, then start shimmer
+    this.animateToIndex(this.currentIndex);
+    setTimeout(() => animateSelection(), 150);
   }
 
   open() {
@@ -1097,8 +1172,8 @@ class Puppy {
     const shadow = isDragging
       ? 'drop-shadow(4px 8px 12px rgba(0,0,0,0.3))'
       : 'drop-shadow(2px 4px 6px rgba(0,0,0,0.15))';
-    // sepia(0.3) adds color to grayscale emoji (panda, polar bear) so hue-rotate works
-    return `sepia(0.3) saturate(${this.saturate}) hue-rotate(${this.hueRotate}deg) brightness(${this.brightness}) ${shadow}`;
+    // sepia(0.5) adds stronger color to grayscale emoji, saturate(2) makes all emoji more vibrant
+    return `sepia(0.5) saturate(${this.saturate * 1.5}) hue-rotate(${this.hueRotate}deg) brightness(${this.brightness}) ${shadow}`;
   }
 
   setupEvents() {
