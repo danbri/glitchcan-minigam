@@ -103,13 +103,13 @@ body {
   100% { opacity: 1; }
 }
 
-#fullscreen-btn {
+#settings-btn {
   position: fixed;
   bottom: 16px;
   right: 16px;
   width: 48px;
   height: 48px;
-  background: rgba(33, 150, 243, 0.85);
+  background: rgba(156, 39, 176, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 2px solid rgba(255, 255, 255, 0.5);
@@ -119,27 +119,145 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 24px;
   transition: background 0.2s, transform 0.15s, border-color 0.2s;
   touch-action: manipulation;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-#fullscreen-btn:hover {
-  background: rgba(33, 150, 243, 1);
+#settings-btn:hover {
+  background: rgba(156, 39, 176, 1);
   border-color: white;
 }
 
-#fullscreen-btn:active {
+#settings-btn:active {
   transform: scale(0.92);
 }
 
-#fullscreen-btn.is-fullscreen {
-  background: rgba(156, 39, 176, 0.85);
+/* ============ EMOJI CAROUSEL ============ */
+#carousel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
-#fullscreen-btn.is-fullscreen:hover {
-  background: rgba(156, 39, 176, 1);
+#carousel-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#carousel-title {
+  color: white;
+  font-size: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+#carousel-container {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+#carousel-container:active {
+  cursor: grabbing;
+}
+
+#carousel-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.carousel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  font-size: 50px;
+  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  cursor: pointer;
+  filter: grayscale(0.3);
+}
+
+.carousel-item.active {
+  filter: grayscale(0) drop-shadow(0 0 20px rgba(255,255,255,0.8));
+}
+
+#carousel-indicator {
+  margin-top: 2rem;
+  display: flex;
+  gap: 8px;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.indicator-dot.active {
+  background: white;
+  transform: scale(1.3);
+}
+
+#carousel-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+
+#carousel-close:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+#carousel-close:active {
+  transform: scale(0.9);
+}
+
+#carousel-hint {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.9rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin-top: 1.5rem;
 }
 
 #audio-btn {
@@ -194,8 +312,19 @@ body {
 </head>
 <body>
 <div id="game"></div>
-<button id="fullscreen-btn" aria-label="Toggle fullscreen">⤢</button>
+<button id="settings-btn" aria-label="Choose emoji">🐶</button>
 <button id="audio-btn" aria-label="Toggle audio">♪</button>
+
+<!-- Emoji Carousel Overlay -->
+<div id="carousel-overlay">
+  <button id="carousel-close" aria-label="Close">✕</button>
+  <div id="carousel-title">Choose Your Critter</div>
+  <div id="carousel-container">
+    <div id="carousel-track"></div>
+  </div>
+  <div id="carousel-indicator"></div>
+  <div id="carousel-hint">Swipe or tap to select</div>
+</div>
 
 <script>
 // ============ AUDIO ENGINE - Upbeat Shepard Tones ============
@@ -505,6 +634,255 @@ class ShepardAudioEngine {
 
 const audioEngine = new ShepardAudioEngine();
 
+// ============ EMOJI CAROUSEL ============
+const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️', '🐲'];
+let currentEmojiIndex = 0;
+let currentEmoji = EMOJI_OPTIONS[0];
+
+class EmojiCarousel {
+  constructor() {
+    this.overlay = document.getElementById('carousel-overlay');
+    this.track = document.getElementById('carousel-track');
+    this.indicator = document.getElementById('carousel-indicator');
+    this.closeBtn = document.getElementById('carousel-close');
+    this.settingsBtn = document.getElementById('settings-btn');
+
+    this.currentIndex = 0;
+    this.itemWidth = 80;
+    this.isDragging = false;
+    this.startX = 0;
+    this.currentTranslate = 0;
+    this.prevTranslate = 0;
+    this.animationId = null;
+
+    this.buildCarousel();
+    this.setupEvents();
+  }
+
+  buildCarousel() {
+    // Build emoji items
+    this.track.innerHTML = '';
+    EMOJI_OPTIONS.forEach((emoji, i) => {
+      const item = document.createElement('div');
+      item.className = 'carousel-item' + (i === this.currentIndex ? ' active' : '');
+      item.textContent = emoji;
+      item.dataset.index = i;
+      this.track.appendChild(item);
+    });
+
+    // Build indicator dots
+    this.indicator.innerHTML = '';
+    EMOJI_OPTIONS.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'indicator-dot' + (i === this.currentIndex ? ' active' : '');
+      dot.dataset.index = i;
+      this.indicator.appendChild(dot);
+    });
+
+    this.updateFisheye();
+  }
+
+  setupEvents() {
+    // Open carousel
+    this.settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.open();
+    });
+    this.settingsBtn.addEventListener('touchend', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.open();
+    }, { passive: false });
+
+    // Close carousel
+    this.closeBtn.addEventListener('click', () => this.close());
+    this.closeBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.close();
+    }, { passive: false });
+
+    // Close on overlay background click
+    this.overlay.addEventListener('click', (e) => {
+      if (e.target === this.overlay) this.close();
+    });
+
+    // Drag/swipe on track
+    const container = document.getElementById('carousel-container');
+
+    container.addEventListener('pointerdown', (e) => this.dragStart(e));
+    container.addEventListener('pointermove', (e) => this.drag(e));
+    container.addEventListener('pointerup', (e) => this.dragEnd(e));
+    container.addEventListener('pointercancel', (e) => this.dragEnd(e));
+    container.addEventListener('pointerleave', (e) => this.dragEnd(e));
+
+    // Touch events for mobile
+    container.addEventListener('touchstart', (e) => this.dragStart(e), { passive: false });
+    container.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
+    container.addEventListener('touchend', (e) => this.dragEnd(e), { passive: false });
+
+    // Click on items
+    this.track.addEventListener('click', (e) => {
+      const item = e.target.closest('.carousel-item');
+      if (item && !this.isDragging) {
+        const index = parseInt(item.dataset.index);
+        this.goToIndex(index);
+        this.selectCurrent();
+      }
+    });
+
+    // Click on indicator dots
+    this.indicator.addEventListener('click', (e) => {
+      const dot = e.target.closest('.indicator-dot');
+      if (dot) {
+        const index = parseInt(dot.dataset.index);
+        this.goToIndex(index);
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (!this.overlay.classList.contains('visible')) return;
+      if (e.key === 'ArrowLeft') this.goToIndex(this.currentIndex - 1);
+      else if (e.key === 'ArrowRight') this.goToIndex(this.currentIndex + 1);
+      else if (e.key === 'Enter') this.selectCurrent();
+      else if (e.key === 'Escape') this.close();
+    });
+  }
+
+  dragStart(e) {
+    if (e.target.closest('#carousel-close')) return;
+    this.isDragging = true;
+    this.startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    this.prevTranslate = this.currentTranslate;
+    this.track.style.transition = 'none';
+
+    if (e.type.includes('pointer')) {
+      document.getElementById('carousel-container').setPointerCapture(e.pointerId);
+    }
+  }
+
+  drag(e) {
+    if (!this.isDragging) return;
+    e.preventDefault();
+
+    const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const diff = currentX - this.startX;
+    this.currentTranslate = this.prevTranslate + diff;
+
+    this.setTrackPosition();
+    this.updateFisheyeFromPosition();
+  }
+
+  dragEnd(e) {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    this.track.style.transition = '';
+
+    // Calculate which item to snap to
+    const movedBy = this.currentTranslate - this.prevTranslate;
+
+    if (Math.abs(movedBy) > this.itemWidth / 3) {
+      if (movedBy > 0 && this.currentIndex > 0) {
+        this.currentIndex--;
+      } else if (movedBy < 0 && this.currentIndex < EMOJI_OPTIONS.length - 1) {
+        this.currentIndex++;
+      }
+    }
+
+    this.goToIndex(this.currentIndex);
+
+    if (e.type.includes('pointer') && e.pointerId !== undefined) {
+      try {
+        document.getElementById('carousel-container').releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+  }
+
+  goToIndex(index) {
+    // Clamp index
+    this.currentIndex = Math.max(0, Math.min(EMOJI_OPTIONS.length - 1, index));
+
+    // Calculate position to center the item
+    const containerWidth = document.getElementById('carousel-container').offsetWidth;
+    const centerOffset = containerWidth / 2 - this.itemWidth / 2;
+    this.currentTranslate = centerOffset - (this.currentIndex * this.itemWidth);
+
+    this.setTrackPosition();
+    this.updateFisheye();
+    this.updateIndicator();
+  }
+
+  setTrackPosition() {
+    this.track.style.transform = `translateX(${this.currentTranslate}px)`;
+  }
+
+  updateFisheye() {
+    const items = this.track.querySelectorAll('.carousel-item');
+    const containerWidth = document.getElementById('carousel-container').offsetWidth;
+    const center = containerWidth / 2;
+
+    items.forEach((item, i) => {
+      const itemCenter = (i * this.itemWidth) + this.currentTranslate + this.itemWidth / 2;
+      const distance = Math.abs(center - itemCenter);
+      const maxDistance = containerWidth / 2;
+
+      // Fisheye effect: center items are larger, edges are smaller
+      const normalizedDistance = Math.min(distance / maxDistance, 1);
+      const scale = 1.8 - (normalizedDistance * 1.2); // 1.8x at center, 0.6x at edges
+      const opacity = 1 - (normalizedDistance * 0.6);
+
+      item.style.transform = `scale(${Math.max(0.5, scale)})`;
+      item.style.opacity = Math.max(0.3, opacity);
+
+      // Mark active
+      item.classList.toggle('active', i === this.currentIndex);
+    });
+  }
+
+  updateFisheyeFromPosition() {
+    this.updateFisheye();
+  }
+
+  updateIndicator() {
+    const dots = this.indicator.querySelectorAll('.indicator-dot');
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.currentIndex);
+    });
+  }
+
+  selectCurrent() {
+    currentEmojiIndex = this.currentIndex;
+    currentEmoji = EMOJI_OPTIONS[this.currentIndex];
+
+    // Update settings button
+    this.settingsBtn.textContent = currentEmoji;
+
+    // Update all existing puppies
+    puppies.forEach(p => {
+      if (p.element) p.element.textContent = currentEmoji;
+    });
+
+    // Play shimmer sound
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    this.close();
+  }
+
+  open() {
+    this.currentIndex = currentEmojiIndex;
+    this.goToIndex(this.currentIndex);
+    this.overlay.classList.add('visible');
+  }
+
+  close() {
+    this.overlay.classList.remove('visible');
+  }
+}
+
+let emojiCarousel;
+
 // ============ GAME ENGINE ============
 const game = document.getElementById('game');
 const puppies = [];
@@ -598,7 +976,7 @@ class Puppy {
 
     this.element = document.createElement('div');
     this.element.className = 'puppy spawning';
-    this.element.textContent = '🐶';
+    this.element.textContent = currentEmoji;
     this.element.style.lineHeight = '1';
 
     game.appendChild(this.element);
@@ -1013,59 +1391,8 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// ============ FULLSCREEN HANDLING ============
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-const audioBtn = document.getElementById('audio-btn');
-
-function updateFullscreenButton() {
-  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-  fullscreenBtn.textContent = isFS ? '⤡' : '⤢';
-  fullscreenBtn.classList.toggle('is-fullscreen', !!isFS);
-}
-
-async function toggleFullscreen() {
-  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-
-  try {
-    if (!isFS) {
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        await elem.requestFullscreen();
-      } else if (elem.webkitRequestFullscreen) {
-        await elem.webkitRequestFullscreen();
-      } else if (elem.msRequestFullscreen) {
-        await elem.msRequestFullscreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        await document.msExitFullscreen();
-      }
-    }
-  } catch (err) {
-    console.log('Fullscreen error:', err);
-  }
-}
-
-fullscreenBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  toggleFullscreen();
-});
-
-fullscreenBtn.addEventListener('touchend', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  toggleFullscreen();
-}, { passive: false });
-
-document.addEventListener('fullscreenchange', updateFullscreenButton);
-document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-
 // ============ AUDIO BUTTON ============
+const audioBtn = document.getElementById('audio-btn');
 audioBtn.addEventListener('click', async (e) => {
   e.stopPropagation();
   e.preventDefault();
@@ -1085,6 +1412,9 @@ audioBtn.addEventListener('click', async (e) => {
 
 // ============ INIT ============
 async function init() {
+  // Initialize emoji carousel
+  emojiCarousel = new EmojiCarousel();
+
   puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
   gameLoop();
 
