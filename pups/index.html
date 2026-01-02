@@ -169,7 +169,7 @@ body {
 
 #carousel-container {
   width: 100%;
-  height: 200px;
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,29 +183,28 @@ body {
 }
 
 #carousel-track {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  will-change: transform;
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .carousel-item {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  margin-top: -50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  font-size: 50px;
-  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  width: 100px;
+  height: 100px;
+  font-size: 70px;
   cursor: pointer;
-  filter: grayscale(0.3);
+  will-change: transform, opacity, filter;
 }
 
 .carousel-item.active {
-  filter: grayscale(0) drop-shadow(0 0 20px rgba(255,255,255,0.8));
+  /* Active styling handled in JS */
 }
 
 #carousel-indicator {
@@ -327,7 +326,7 @@ body {
 </div>
 
 <script>
-// ============ AUDIO ENGINE - Upbeat Shepard Tones ============
+// ============ AUDIO ENGINE - Cheerful Bouncy Music ============
 class ShepardAudioEngine {
   constructor() {
     this.ctx = null;
@@ -340,14 +339,14 @@ class ShepardAudioEngine {
     this.intervalId = null;
     this.animationId = null;
 
-    // Upbeat major key progression (I - IV - V - I)
-    this.chordRoots = [261.63, 349.23, 392.00, 261.63]; // C F G C
-    this.tempo = 140; // BPM - upbeat!
+    // Happy major progression with brightness (C - G - Am - F - C - G - F - G)
+    this.chordRoots = [523.25, 392.00, 440.00, 349.23, 523.25, 392.00, 349.23, 392.00]; // Higher octave!
+    this.tempo = 156; // BPM - bouncy and energetic!
     this.beatDuration = 60 / this.tempo;
 
-    // Shepard tone octave layers (continuous)
-    this.shepardBaseFreqs = [55, 110, 220, 440, 880, 1760];
-    this.shepardSpeed = 0.015; // Rise speed per frame
+    // Shepard tone octave layers (continuous) - higher and brighter
+    this.shepardBaseFreqs = [110, 220, 440, 880, 1760, 3520];
+    this.shepardSpeed = 0.012; // Slightly slower rise for more pleasant feel
     this.shepardPhase = 0;
   }
 
@@ -386,20 +385,20 @@ class ShepardAudioEngine {
     }
   }
 
-  // Continuous Shepard tones - the classic rising illusion
+  // Continuous Shepard tones - bright and uplifting
   startContinuousShepard() {
     this.shepardOscs = this.shepardBaseFreqs.map((baseFreq, i) => {
       const osc = this.ctx.createOscillator();
-      osc.type = 'triangle'; // Brighter than sine
+      osc.type = 'sine'; // Pure and pleasant
       osc.frequency.value = baseFreq;
 
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 800;
-      filter.Q.value = 0.5;
+      filter.type = 'lowpass';
+      filter.frequency.value = 2000;
+      filter.Q.value = 0.7;
 
       osc.connect(filter);
       filter.connect(gain);
@@ -419,8 +418,7 @@ class ShepardAudioEngine {
       this.shepardPhase += this.shepardSpeed;
       if (this.shepardPhase >= 1) this.shepardPhase = 0;
 
-      const numLayers = this.shepardOscs.length;
-      const centerFreq = 400; // Peak loudness frequency
+      const centerFreq = 600; // Higher center for brighter feel
 
       this.shepardOscs.forEach((layer, i) => {
         // Calculate rising frequency with wraparound
@@ -434,7 +432,7 @@ class ShepardAudioEngine {
         const logFreq = Math.log2(freq);
         const logCenter = Math.log2(centerFreq);
         const distance = Math.abs(logFreq - logCenter);
-        const amp = Math.exp(-distance * distance * 0.5) * 0.08;
+        const amp = Math.exp(-distance * distance * 0.4) * 0.05; // Softer, more pleasant
 
         layer.gain.gain.setTargetAtTime(amp, this.ctx.currentTime, 0.1);
       });
@@ -445,22 +443,71 @@ class ShepardAudioEngine {
     animateShepard();
   }
 
-  // Bright plucky synth for arpeggios
+  // Cheerful bell-like synth for melody
   playArpNote(freq, time, duration) {
     if (this.isMuted) return;
 
+    // Main tone - bright triangle
     const osc = this.ctx.createOscillator();
-    osc.type = 'square';
+    osc.type = 'triangle';
     osc.frequency.value = freq;
 
+    // Harmonics for sparkle
     const osc2 = this.ctx.createOscillator();
-    osc2.type = 'sawtooth';
-    osc2.frequency.value = freq * 1.002; // Slight detune
+    osc2.type = 'sine';
+    osc2.frequency.value = freq * 2; // Octave up
+
+    const osc3 = this.ctx.createOscillator();
+    osc3.type = 'sine';
+    osc3.frequency.value = freq * 3; // Fifth above octave
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 2000;
-    filter.Q.value = 2;
+    filter.frequency.value = 3000;
+    filter.Q.value = 1;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    osc3.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    // Bouncy envelope - quick attack, sustain, gentle release
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.1, time + 0.015);
+    gain.gain.setValueAtTime(0.08, time + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.9);
+
+    // Bright filter sweep
+    filter.frequency.setValueAtTime(5000, time);
+    filter.frequency.exponentialRampToValueAtTime(1500, time + duration * 0.3);
+
+    osc.start(time);
+    osc2.start(time);
+    osc3.start(time);
+    osc.stop(time + duration);
+    osc2.stop(time + duration);
+    osc3.stop(time + duration);
+  }
+
+  // Warm bouncy bass
+  playBass(freq, time, duration) {
+    if (this.isMuted) return;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq / 2;
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.value = freq / 2;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 600;
 
     const gain = this.ctx.createGain();
     gain.gain.value = 0;
@@ -470,101 +517,63 @@ class ShepardAudioEngine {
     filter.connect(gain);
     gain.connect(this.compressor);
 
-    // Snappy envelope
+    // Bouncy envelope
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(0.12, time + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.04, time + 0.1);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-
-    // Filter sweep for brightness
-    filter.frequency.setValueAtTime(4000, time);
-    filter.frequency.exponentialRampToValueAtTime(800, time + duration * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.08, time + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.8);
 
     osc.start(time);
     osc2.start(time);
-    osc.stop(time + duration + 0.1);
-    osc2.stop(time + duration + 0.1);
+    osc.stop(time + duration);
+    osc2.stop(time + duration);
   }
 
-  // Punchy bass
-  playBass(freq, time, duration) {
+  // Soft clicky percussion
+  playClick(time, accent = false) {
     if (this.isMuted) return;
 
     const osc = this.ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq / 2;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 400;
+    osc.type = 'sine';
+    osc.frequency.value = accent ? 1800 : 1400;
 
     const gain = this.ctx.createGain();
-    gain.gain.value = 0;
+    const vol = accent ? 0.06 : 0.03;
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
 
-    osc.connect(filter);
-    filter.connect(gain);
+    osc.connect(gain);
     gain.connect(this.compressor);
-
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(0.15, time + 0.01);
-    gain.gain.setValueAtTime(0.12, time + duration * 0.5);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
     osc.start(time);
-    osc.stop(time + duration + 0.1);
+    osc.stop(time + 0.05);
   }
 
-  // Hi-hat / shaker
-  playHiHat(time, accent = false) {
-    if (this.isMuted) return;
-
-    const bufferSize = this.ctx.sampleRate * 0.05;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.value = 8000;
-
-    const gain = this.ctx.createGain();
-    const vol = accent ? 0.08 : 0.04;
-    gain.gain.setValueAtTime(vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.compressor);
-
-    noise.start(time);
-    noise.stop(time + 0.1);
-  }
-
-  // Sparkle effect
+  // Sparkle effect - brighter and more magical
   createShimmer() {
     if (!this.ctx || this.isMuted) return;
 
-    const baseFreq = 1500 + Math.random() * 2000;
+    const baseFreq = 2000 + Math.random() * 1500;
     const now = this.ctx.currentTime;
 
-    for (let i = 0; i < 4; i++) {
+    // Major chord sparkle
+    const intervals = [1, 1.25, 1.5, 2, 2.5, 3];
+
+    for (let i = 0; i < intervals.length; i++) {
       const osc = this.ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.value = baseFreq * (1 + i * 0.25);
+      osc.frequency.value = baseFreq * intervals[i];
 
       const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.02 / (i + 1), now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      const delay = i * 0.02;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.025 / (i + 1), now + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.5);
 
       osc.connect(gain);
       gain.connect(this.compressor);
-      osc.start(now);
-      osc.stop(now + 0.5);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.6);
     }
   }
 
@@ -575,22 +584,25 @@ class ShepardAudioEngine {
     const root = this.chordRoots[this.chordIndex];
     const beat = this.beatCount % 8;
 
-    // Bass on beats 0 and 4
+    // Bouncy bass on 1 and 5
     if (beat === 0 || beat === 4) {
-      this.playBass(root, now, this.beatDuration * 1.5);
+      this.playBass(root, now, this.beatDuration * 1.2);
     }
 
-    // Arpeggio pattern (upward, upbeat feel)
-    const arpNotes = [root, root * 1.25, root * 1.5, root * 2]; // 1 3 5 8
-    const arpPattern = [0, 1, 2, 3, 2, 1, 0, 1];
+    // Happy ascending arpeggio pattern
+    const arpNotes = [root, root * 1.25, root * 1.5, root * 2];
+    const arpPattern = [0, 2, 1, 3, 0, 3, 2, 1]; // More playful pattern
     const noteIndex = arpPattern[beat];
-    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.8);
+    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.6);
 
-    // Hi-hats on every beat, accent on 0 and 4
-    this.playHiHat(now, beat === 0 || beat === 4);
+    // Soft clicks instead of harsh hi-hats
+    this.playClick(now, beat === 0 || beat === 4);
+    this.playClick(now + this.beatDuration * 0.5, false);
 
-    // Offbeat hi-hats for energy
-    this.playHiHat(now + this.beatDuration * 0.5, false);
+    // Occasional sparkle on beat 3 and 7
+    if ((beat === 2 || beat === 6) && Math.random() > 0.5) {
+      this.createShimmer();
+    }
 
     this.beatCount++;
     if (this.beatCount % 8 === 0) {
@@ -635,7 +647,7 @@ class ShepardAudioEngine {
 const audioEngine = new ShepardAudioEngine();
 
 // ============ EMOJI CAROUSEL ============
-const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️', '🐲'];
+const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️'];
 let currentEmojiIndex = 0;
 let currentEmoji = EMOJI_OPTIONS[0];
 
@@ -648,29 +660,36 @@ class EmojiCarousel {
     this.settingsBtn = document.getElementById('settings-btn');
 
     this.currentIndex = 0;
-    this.itemWidth = 80;
+    this.itemWidth = 100;
+    this.position = 0; // Continuous position for physics
+    this.velocity = 0;
     this.isDragging = false;
     this.startX = 0;
-    this.currentTranslate = 0;
-    this.prevTranslate = 0;
+    this.startPosition = 0;
+    this.lastX = 0;
+    this.lastTime = 0;
     this.animationId = null;
+    this.isAnimating = false;
+
+    // Physics constants
+    this.friction = 0.92;
+    this.snapStrength = 0.15;
+    this.minVelocity = 0.1;
 
     this.buildCarousel();
     this.setupEvents();
   }
 
   buildCarousel() {
-    // Build emoji items
     this.track.innerHTML = '';
     EMOJI_OPTIONS.forEach((emoji, i) => {
       const item = document.createElement('div');
-      item.className = 'carousel-item' + (i === this.currentIndex ? ' active' : '');
+      item.className = 'carousel-item';
       item.textContent = emoji;
       item.dataset.index = i;
       this.track.appendChild(item);
     });
 
-    // Build indicator dots
     this.indicator.innerHTML = '';
     EMOJI_OPTIONS.forEach((_, i) => {
       const dot = document.createElement('div');
@@ -678,12 +697,9 @@ class EmojiCarousel {
       dot.dataset.index = i;
       this.indicator.appendChild(dot);
     });
-
-    this.updateFisheye();
   }
 
   setupEvents() {
-    // Open carousel
     this.settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.open();
@@ -694,70 +710,78 @@ class EmojiCarousel {
       this.open();
     }, { passive: false });
 
-    // Close carousel
     this.closeBtn.addEventListener('click', () => this.close());
     this.closeBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       this.close();
     }, { passive: false });
 
-    // Close on overlay background click
     this.overlay.addEventListener('click', (e) => {
       if (e.target === this.overlay) this.close();
     });
 
-    // Drag/swipe on track
     const container = document.getElementById('carousel-container');
-
     container.addEventListener('pointerdown', (e) => this.dragStart(e));
     container.addEventListener('pointermove', (e) => this.drag(e));
     container.addEventListener('pointerup', (e) => this.dragEnd(e));
     container.addEventListener('pointercancel', (e) => this.dragEnd(e));
-    container.addEventListener('pointerleave', (e) => this.dragEnd(e));
 
-    // Touch events for mobile
     container.addEventListener('touchstart', (e) => this.dragStart(e), { passive: false });
     container.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
     container.addEventListener('touchend', (e) => this.dragEnd(e), { passive: false });
 
-    // Click on items
     this.track.addEventListener('click', (e) => {
+      if (this.isDragging || Math.abs(this.velocity) > 1) return;
       const item = e.target.closest('.carousel-item');
-      if (item && !this.isDragging) {
+      if (item) {
         const index = parseInt(item.dataset.index);
-        this.goToIndex(index);
-        this.selectCurrent();
+        this.animateToIndex(index);
+        setTimeout(() => this.selectCurrent(), 300);
       }
     });
 
-    // Click on indicator dots
     this.indicator.addEventListener('click', (e) => {
       const dot = e.target.closest('.indicator-dot');
       if (dot) {
         const index = parseInt(dot.dataset.index);
-        this.goToIndex(index);
+        this.animateToIndex(index);
       }
     });
 
-    // Keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (!this.overlay.classList.contains('visible')) return;
-      if (e.key === 'ArrowLeft') this.goToIndex(this.currentIndex - 1);
-      else if (e.key === 'ArrowRight') this.goToIndex(this.currentIndex + 1);
+      if (e.key === 'ArrowLeft') this.animateToIndex(this.wrapIndex(this.currentIndex - 1));
+      else if (e.key === 'ArrowRight') this.animateToIndex(this.wrapIndex(this.currentIndex + 1));
       else if (e.key === 'Enter') this.selectCurrent();
       else if (e.key === 'Escape') this.close();
     });
   }
 
+  wrapIndex(index) {
+    const len = EMOJI_OPTIONS.length;
+    return ((index % len) + len) % len;
+  }
+
+  wrapPosition(pos) {
+    const totalWidth = EMOJI_OPTIONS.length * this.itemWidth;
+    return ((pos % totalWidth) + totalWidth) % totalWidth;
+  }
+
   dragStart(e) {
     if (e.target.closest('#carousel-close')) return;
     this.isDragging = true;
-    this.startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    this.prevTranslate = this.currentTranslate;
-    this.track.style.transition = 'none';
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
 
-    if (e.type.includes('pointer')) {
-      document.getElementById('carousel-container').setPointerCapture(e.pointerId);
+    const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    this.startX = x;
+    this.lastX = x;
+    this.startPosition = this.position;
+    this.lastTime = Date.now();
+    this.velocity = 0;
+
+    if (e.type.includes('pointer') && e.pointerId !== undefined) {
+      try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
     }
   }
 
@@ -765,82 +789,148 @@ class EmojiCarousel {
     if (!this.isDragging) return;
     e.preventDefault();
 
-    const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    const diff = currentX - this.startX;
-    this.currentTranslate = this.prevTranslate + diff;
+    const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const now = Date.now();
+    const dt = now - this.lastTime;
 
-    this.setTrackPosition();
-    this.updateFisheyeFromPosition();
+    if (dt > 0) {
+      this.velocity = (this.lastX - x) / dt * 16;
+    }
+
+    this.position = this.startPosition + (this.startX - x);
+    this.lastX = x;
+    this.lastTime = now;
+
+    this.render();
   }
 
   dragEnd(e) {
     if (!this.isDragging) return;
     this.isDragging = false;
-    this.track.style.transition = '';
 
-    // Calculate which item to snap to
-    const movedBy = this.currentTranslate - this.prevTranslate;
+    if (e && e.type.includes('pointer') && e.pointerId !== undefined) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
 
-    if (Math.abs(movedBy) > this.itemWidth / 3) {
-      if (movedBy > 0 && this.currentIndex > 0) {
-        this.currentIndex--;
-      } else if (movedBy < 0 && this.currentIndex < EMOJI_OPTIONS.length - 1) {
-        this.currentIndex++;
+    // Start physics animation
+    this.startPhysicsAnimation();
+  }
+
+  startPhysicsAnimation() {
+    this.isAnimating = true;
+
+    const animate = () => {
+      if (!this.isAnimating) return;
+
+      // Apply friction
+      this.velocity *= this.friction;
+
+      // Apply velocity
+      this.position += this.velocity;
+
+      // When velocity is low, snap to nearest
+      if (Math.abs(this.velocity) < this.minVelocity) {
+        const targetIndex = Math.round(this.position / this.itemWidth);
+        const targetPosition = targetIndex * this.itemWidth;
+        const diff = targetPosition - this.position;
+
+        if (Math.abs(diff) < 0.5) {
+          this.position = targetPosition;
+          this.currentIndex = this.wrapIndex(targetIndex);
+          this.updateIndicator();
+          this.isAnimating = false;
+          this.render();
+          return;
+        }
+
+        // Snap towards target
+        this.position += diff * this.snapStrength;
+        this.velocity = 0;
       }
-    }
 
-    this.goToIndex(this.currentIndex);
+      this.currentIndex = this.wrapIndex(Math.round(this.position / this.itemWidth));
+      this.updateIndicator();
+      this.render();
 
-    if (e.type.includes('pointer') && e.pointerId !== undefined) {
-      try {
-        document.getElementById('carousel-container').releasePointerCapture(e.pointerId);
-      } catch (err) {}
-    }
+      this.animationId = requestAnimationFrame(animate);
+    };
+
+    this.animationId = requestAnimationFrame(animate);
   }
 
-  goToIndex(index) {
-    // Clamp index
-    this.currentIndex = Math.max(0, Math.min(EMOJI_OPTIONS.length - 1, index));
+  animateToIndex(targetIndex) {
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
 
-    // Calculate position to center the item
-    const containerWidth = document.getElementById('carousel-container').offsetWidth;
-    const centerOffset = containerWidth / 2 - this.itemWidth / 2;
-    this.currentTranslate = centerOffset - (this.currentIndex * this.itemWidth);
+    const currentWrapped = this.wrapIndex(Math.round(this.position / this.itemWidth));
+    let diff = targetIndex - currentWrapped;
+    const len = EMOJI_OPTIONS.length;
 
-    this.setTrackPosition();
-    this.updateFisheye();
-    this.updateIndicator();
+    // Find shortest path (wrapping)
+    if (diff > len / 2) diff -= len;
+    if (diff < -len / 2) diff += len;
+
+    const targetPosition = this.position + diff * this.itemWidth;
+
+    this.isAnimating = true;
+    const startPosition = this.position;
+    const startTime = Date.now();
+    const duration = 300;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease out cubic
+
+      this.position = startPosition + (targetPosition - startPosition) * eased;
+      this.currentIndex = this.wrapIndex(Math.round(this.position / this.itemWidth));
+      this.updateIndicator();
+      this.render();
+
+      if (progress < 1) {
+        this.animationId = requestAnimationFrame(animate);
+      } else {
+        this.isAnimating = false;
+        this.position = targetPosition;
+      }
+    };
+
+    this.animationId = requestAnimationFrame(animate);
   }
 
-  setTrackPosition() {
-    this.track.style.transform = `translateX(${this.currentTranslate}px)`;
-  }
-
-  updateFisheye() {
-    const items = this.track.querySelectorAll('.carousel-item');
+  render() {
     const containerWidth = document.getElementById('carousel-container').offsetWidth;
     const center = containerWidth / 2;
+    const items = this.track.querySelectorAll('.carousel-item');
+    const len = EMOJI_OPTIONS.length;
+    const totalWidth = len * this.itemWidth;
 
     items.forEach((item, i) => {
-      const itemCenter = (i * this.itemWidth) + this.currentTranslate + this.itemWidth / 2;
-      const distance = Math.abs(center - itemCenter);
-      const maxDistance = containerWidth / 2;
+      // Calculate wrapped position for infinite scroll
+      let itemPos = i * this.itemWidth - this.position;
 
-      // Fisheye effect: center items are larger, edges are smaller
-      const normalizedDistance = Math.min(distance / maxDistance, 1);
-      const scale = 1.8 - (normalizedDistance * 1.2); // 1.8x at center, 0.6x at edges
-      const opacity = 1 - (normalizedDistance * 0.6);
+      // Wrap items to create infinite effect
+      while (itemPos < -this.itemWidth * 1.5) itemPos += totalWidth;
+      while (itemPos > totalWidth - this.itemWidth * 1.5) itemPos -= totalWidth;
 
-      item.style.transform = `scale(${Math.max(0.5, scale)})`;
-      item.style.opacity = Math.max(0.3, opacity);
+      const itemCenter = itemPos + this.itemWidth / 2;
+      const distFromCenter = itemCenter - center + this.itemWidth / 2;
+      const normalizedDist = Math.abs(distFromCenter) / (containerWidth / 2);
 
-      // Mark active
-      item.classList.toggle('active', i === this.currentIndex);
+      // Dramatic fisheye: center = 2.5x, edges = 0.4x
+      const scale = Math.max(0.4, 2.5 - normalizedDist * 2.1);
+      const opacity = Math.max(0.2, 1 - normalizedDist * 0.8);
+
+      // Random hue variation for each emoji (seeded by index)
+      const hueShift = ((i * 47) % 60) - 30;
+
+      item.style.transform = `translateX(${itemPos}px) scale(${scale})`;
+      item.style.opacity = opacity;
+      item.style.filter = `hue-rotate(${hueShift}deg) saturate(1.1) drop-shadow(0 ${scale * 4}px ${scale * 8}px rgba(0,0,0,0.3))`;
+      item.style.zIndex = Math.round((1 - normalizedDist) * 100);
+
+      item.classList.toggle('active', this.wrapIndex(Math.round(this.position / this.itemWidth)) === i);
     });
-  }
-
-  updateFisheyeFromPosition() {
-    this.updateFisheye();
   }
 
   updateIndicator() {
@@ -854,15 +944,12 @@ class EmojiCarousel {
     currentEmojiIndex = this.currentIndex;
     currentEmoji = EMOJI_OPTIONS[this.currentIndex];
 
-    // Update settings button
     this.settingsBtn.textContent = currentEmoji;
 
-    // Update all existing puppies
     puppies.forEach(p => {
       if (p.element) p.element.textContent = currentEmoji;
     });
 
-    // Play shimmer sound
     if (audioEngine.isPlaying && !audioEngine.isMuted) {
       audioEngine.createShimmer();
     }
@@ -872,12 +959,16 @@ class EmojiCarousel {
 
   open() {
     this.currentIndex = currentEmojiIndex;
-    this.goToIndex(this.currentIndex);
+    this.position = this.currentIndex * this.itemWidth;
+    this.velocity = 0;
     this.overlay.classList.add('visible');
+    this.render();
   }
 
   close() {
     this.overlay.classList.remove('visible');
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
   }
 }
 
