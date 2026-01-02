@@ -184,6 +184,29 @@ Hollows out shapes.
 { "type": "shell", "thickness": 0.03, "child": { /* shape */ } }
 ```
 
+### Displace
+**Adds noise-based surface texture** - useful for organic detail, rocky surfaces, skin texture.
+```json
+{
+  "type": "displace",
+  "amount": 0.15,
+  "scale": 5.0,
+  "octaves": 3,
+  "noiseType": "turbulence",
+  "child": { /* shape */ }
+}
+```
+- `amount`: Displacement strength (0.05-0.3 typical)
+- `scale`: Noise frequency (1-20, higher = finer detail)
+- `octaves`: Detail levels (2-6, more = finer detail but slower)
+- `noiseType`: `"noise"` (smooth), `"fbm"` (layered), `"turbulence"` (sharp ridges)
+- `animate`: Set `true` for animated noise
+
+**Use cases:**
+- Organic skin texture (amount: 0.1, scale: 8, turbulence)
+- Rocky asteroid (amount: 0.3, scale: 3, turbulence)
+- Subtle surface variation (amount: 0.05, scale: 10, fbm)
+
 ## Definitions & References
 
 Define once, reuse many times.
@@ -263,6 +286,27 @@ Available:
 }
 ```
 
+## Known SDF Limitations
+
+### Surface Bumps on Large Bodies
+**Problem**: Small spheres added to create bumps on a large body get absorbed or appear as floating disconnected objects.
+
+**Why**:
+- `smoothUnion` with ANY k value absorbs small surface features
+- Hard `union` preserves geometry but creates disconnected floaters
+- No SDF operation creates integrated surface bumps from discrete primitives
+
+**Solution**: Use `displace` modifier with noise instead of adding spheres.
+```json
+{
+  "type": "displace",
+  "amount": 0.12,
+  "scale": 6.0,
+  "noiseType": "turbulence",
+  "child": { /* body to add texture to */ }
+}
+```
+
 ## Debugging Tips
 
 1. **Feature not visible?** Increase size 50-100%
@@ -271,3 +315,4 @@ Available:
 4. **Color not showing?** Ensure material wrapper is outermost
 5. **Shapes disappearing?** Check transform positions - may be off-camera
 6. **Proportions wrong?** Measure ratios against reference
+7. **Surface bumps absorbed?** Use `displace` modifier instead of small spheres

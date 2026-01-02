@@ -1,24 +1,43 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "v6.51 - PMAC APPROVED: Maximum SDF accuracy (85% blind ID, tubercles impossible)",
-  "version": "6.51",
+  "subtitle": "v6.58 - Prominent tubercles (scale 1.8, amount 0.28)",
+  "version": "6.58",
   "camera": { "distance": 42, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "comment": "ALL BODY PARTS - blended together with smoothUnion",
     "type": "smoothUnion", "k": 0.5,
     "children": [
       {
-        "comment": "MAIN BODY - CHUNKY 7:1 ratio",
+        "comment": "MAIN BODY - smooth torso + displaced head joined with hard union",
         "type": "material",
         "params": { "color": [0.15, 0.17, 0.22] },
         "child": {
-          "type": "smoothUnion", "k": 0.9,
+          "type": "union",
           "children": [
-            { "type": "ellipsoid", "params": { "radii": [1.8, 1.55, 6.0] }, "transform": { "translate": [0, 0, 0] } },
-            { "type": "ellipsoid", "params": { "radii": [1.45, 1.25, 3.2] }, "transform": { "translate": [0, -0.1, -5.5] } },
-            { "type": "ellipsoid", "params": { "radii": [0.65, 0.60, 3.0] }, "transform": { "translate": [0, -0.15, -8.5] } },
-            { "type": "ellipsoid", "params": { "radii": [1.65, 1.15, 2.8] }, "transform": { "translate": [0, 0.12, 6.5] } },
-            { "type": "ellipsoid", "params": { "radii": [1.1, 0.7, 2.5] }, "transform": { "translate": [0, 0.02, 9.5] } }
+            {
+              "comment": "Smooth torso and tail section",
+              "type": "smoothUnion", "k": 0.9,
+              "children": [
+                { "type": "ellipsoid", "params": { "radii": [1.8, 1.55, 6.0] }, "transform": { "translate": [0, 0, 0] } },
+                { "type": "ellipsoid", "params": { "radii": [1.45, 1.25, 3.2] }, "transform": { "translate": [0, -0.1, -5.5] } },
+                { "type": "ellipsoid", "params": { "radii": [0.65, 0.60, 3.0] }, "transform": { "translate": [0, -0.15, -8.5] } }
+              ]
+            },
+            {
+              "comment": "HEAD with PROMINENT tubercle bumps",
+              "type": "displace",
+              "amount": 0.28,
+              "scale": 1.8,
+              "octaves": 2,
+              "noiseType": "fbm",
+              "child": {
+                "type": "smoothUnion", "k": 0.5,
+                "children": [
+                  { "type": "ellipsoid", "params": { "radii": [1.65, 1.15, 2.8] }, "transform": { "translate": [0, 0.12, 6.5] } },
+                  { "type": "ellipsoid", "params": { "radii": [1.1, 0.7, 2.5] }, "transform": { "translate": [0, 0.02, 9.5] } }
+                ]
+              }
+            }
           ]
         }
       },
