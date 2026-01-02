@@ -1,8 +1,8 @@
 {
   "title": "Div Expression Test",
   "subtitle": "Minimal test: does div expression work?",
-  "version": "1.1",
-  "notes": "Two spheres: left uses direct var, right uses div. Both should scale with 'length' slider. Check GLSL tab for 'uniform float u_length' and '(u_length / 2.0)'.",
+  "version": "1.2",
+  "notes": "Three spheres test uniform binding: GREEN=direct var, RED=div expr, BLUE=mul expr. All should scale with 'length' slider.",
   "params": {
     "length": { "value": 2.0, "type": "scalar", "min": 0.5, "max": 4.0 }
   },
@@ -10,22 +10,31 @@
     "type": "union",
     "children": [
       {
-        "comment": "LEFT sphere - uses length DIRECTLY (should work)",
+        "comment": "LEFT GREEN sphere - uses length DIRECTLY",
         "type": "sphere",
         "params": {
           "r": { "var": "length" },
           "color": [0.2, 0.8, 0.2]
         },
-        "transform": { "translate": [-3, 0, 0] }
+        "transform": { "translate": [-4, 0, 0] }
       },
       {
-        "comment": "RIGHT sphere - uses length in DIV expression",
+        "comment": "MIDDLE RED sphere - uses length in DIV expression",
         "type": "sphere",
         "params": {
           "r": { "expr": "div", "args": [{ "var": "length" }, 2] },
           "color": [0.8, 0.2, 0.2]
         },
-        "transform": { "translate": [3, 0, 0] }
+        "transform": { "translate": [0, 0, 0] }
+      },
+      {
+        "comment": "RIGHT BLUE sphere - uses length in MUL expression",
+        "type": "sphere",
+        "params": {
+          "r": { "expr": "mul", "args": [{ "var": "length" }, 0.5] },
+          "color": [0.2, 0.2, 0.8]
+        },
+        "transform": { "translate": [4, 0, 0] }
       }
     ]
   }
