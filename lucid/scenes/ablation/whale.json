@@ -1,7 +1,7 @@
 {
   "title": "Humpback Whale",
-  "subtitle": "v6.58 - Prominent tubercles (scale 1.8, amount 0.28)",
-  "version": "6.58",
+  "subtitle": "v6.65 - Tubercles 0.35 (pushing for 90+)",
+  "version": "6.65",
   "camera": { "distance": 42, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "root": {
     "comment": "ALL BODY PARTS - blended together with smoothUnion",
@@ -24,9 +24,9 @@
               ]
             },
             {
-              "comment": "HEAD with PROMINENT tubercle bumps",
+              "comment": "HEAD with prominent tubercle bumps (maximum clarity)",
               "type": "displace",
-              "amount": 0.28,
+              "amount": 0.35,
               "scale": 1.8,
               "octaves": 2,
               "noiseType": "fbm",
@@ -114,9 +114,9 @@
         }
       },
       {
-        "comment": "FLIPPER UNDERSIDES",
+        "comment": "FLIPPER UNDERSIDES - balanced visibility",
         "type": "material",
-        "params": { "color": [0.95, 0.96, 0.97] },
+        "params": { "color": [0.70, 0.73, 0.77] },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
