@@ -1,0 +1,16 @@
+{
+  "title": "Div Expression Test",
+  "subtitle": "Minimal test: does div expression work?",
+  "version": "1.0",
+  "notes": "If length slider changes the sphere's Z-radius, div expressions work. If not, there's a bug.",
+  "params": {
+    "length": { "value": 2.0, "type": "scalar", "min": 1.0, "max": 4.0 }
+  },
+  "root": {
+    "type": "ellipsoid",
+    "params": {
+      "radii": [0.5, 0.5, { "expr": "div", "args": [{ "var": "length" }, 2] }],
+      "color": [0.8, 0.4, 0.2]
+    }
+  }
+}

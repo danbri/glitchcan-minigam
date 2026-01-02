@@ -131,6 +131,7 @@
       "title": "   └─ Old Experiments",
       "description": "Archived iteration experiments",
       "scenes": [
+        { "path": "test/div-test.json", "title": "Div Test 🧪", "subtitle": "Minimal div expression test" },
         { "path": "ablation/old/test-a.json", "title": "Test A", "subtitle": "Initial form study" },
         { "path": "ablation/old/test-b.json", "title": "Test B (Dolphin)", "subtitle": "75% confidence" },
         { "path": "ablation/old/hippo-v1.json", "title": "Hippo v1 🦛", "subtitle": "Early test" },
