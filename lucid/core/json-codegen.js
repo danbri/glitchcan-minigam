@@ -3,6 +3,8 @@
  * Refactored: walkNode returns expressions, not return statements
  */
 
+import { getAllParamNames } from './rig-evaluator.js';
+
 /**
  * Generate GLSL code from processed JSON scene
  * @param {Object} scene - The processed scene IR
@@ -18,15 +20,18 @@ export function generateGlslFromJson(scene, options = {}) {
     showCutters: options.showCutters || false,
     localVars: {},  // For instance IDs and other scoped variables
     instanceIdParam: null,  // When set, pass this ID through to helper functions
-    sceneParams: scene.params || {}  // Scene-level parameters for parametric rigging
+    sceneParams: scene.params || {},  // Scene-level parameters for parametric rigging
+    sceneRig: scene.rig || null       // Rig layer for derived params, bounds, phase
   };
 
-  // Register scene params as uniforms (with proper types)
-  for (const [name, param] of Object.entries(scene.params || {})) {
+  // Register ALL params as uniforms (base + derived + phase from rig layer)
+  // This ensures derived params and phase-coupled values have uniforms declared
+  const allParams = getAllParamNames(scene.params || {}, scene.rig);
+  for (const [name, paramInfo] of Object.entries(allParams)) {
     const uniformName = `u_${name}`;
-    if (param.type === 'scalar') {
+    if (paramInfo.type === 'scalar') {
       ctx.uniforms.add(uniformName);
-    } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+    } else if (paramInfo.type === 'color3' || paramInfo.type === 'position3' || paramInfo.type === 'radii3' || paramInfo.type === 'direction3') {
       // Mark as vec3 uniform (handled specially in uniform declaration)
       ctx.uniforms.add(`${uniformName}:vec3`);
     }

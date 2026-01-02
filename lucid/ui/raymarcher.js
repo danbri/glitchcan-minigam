@@ -2,6 +2,9 @@
  * Simple WebGL raymarcher for SDF scenes
  * Supports orbit camera, ground plane, and volume rendering modes
  */
+
+import { evaluateRig } from '../core/rig-evaluator.js';
+
 export class SimpleRaymarcher {
   // Quality presets for raymarch parameters
   static QUALITY_PRESETS = {
@@ -72,6 +75,11 @@ export class SimpleRaymarcher {
     // Scene parameters for parametric rigging
     this.sceneParams = {};      // { name: { value, type } }
 
+    // Rig layer for constraint-based relationships
+    this.rig = null;            // { derived, bounds, phase, chains }
+    this.lastViolations = [];   // Most recent constraint violations
+    this.onConstraintViolation = null;  // Callback: (violations) => void
+
     // Lighting settings
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
@@ -94,9 +102,10 @@ export class SimpleRaymarcher {
     }
   }
 
-  updateScene(glslCode, sceneParams = {}) {
+  updateScene(glslCode, sceneParams = {}, rig = null) {
     this.currentGlsl = glslCode;
     this.sceneParams = sceneParams;
+    this.rig = rig;
     this.compileShaders();
   }
 
@@ -590,17 +599,56 @@ export class SimpleRaymarcher {
     const shininessLocation = gl.getUniformLocation(this.program, 'u_shininess');
     gl.uniform1f(shininessLocation, this.lighting.shininess);
 
-    // Bind scene parameters
+    // Evaluate rig layer if present (computes derived params, checks constraints, evaluates phase)
+    let rigResult = null;
+    if (this.rig) {
+      rigResult = evaluateRig(this.sceneParams, this.rig, time);
+
+      // Report constraint violations if callback is set
+      if (rigResult.violations.length > 0 || this.lastViolations.length > 0) {
+        // Only call if violations changed
+        const violationsChanged = JSON.stringify(rigResult.violations) !== JSON.stringify(this.lastViolations);
+        if (violationsChanged) {
+          this.lastViolations = rigResult.violations;
+          if (this.onConstraintViolation) {
+            this.onConstraintViolation(rigResult.violations);
+          }
+        }
+      }
+    }
+
+    // Bind scene parameters (base params)
     for (const [name, param] of Object.entries(this.sceneParams)) {
       const loc = gl.getUniformLocation(this.program, `u_${name}`);
       if (loc === null) continue;  // Uniform not used in shader
 
-      const value = param.value;
+      // Use rig-evaluated value if available, otherwise raw param value
+      const value = rigResult ? (rigResult.values[name] ?? param.value) : param.value;
+
       if (param.type === 'scalar') {
         gl.uniform1f(loc, value);
       } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
         if (Array.isArray(value) && value.length >= 3) {
           gl.uniform3f(loc, value[0], value[1], value[2]);
+        }
+      }
+    }
+
+    // Bind derived and phase-generated params from rig
+    if (rigResult) {
+      // Bind derived params
+      for (const [name, value] of Object.entries(rigResult.derived)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc !== null) {
+          gl.uniform1f(loc, value);
+        }
+      }
+
+      // Bind phase-coupled animation params
+      for (const [name, value] of Object.entries(rigResult.phaseValues)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc !== null) {
+          gl.uniform1f(loc, value);
         }
       }
     }
