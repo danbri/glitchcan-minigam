@@ -27,7 +27,6 @@ export function generateGlslFromJson(scene, options = {}) {
   // Register ALL params as uniforms (base + derived + phase from rig layer)
   // This ensures derived params and phase-coupled values have uniforms declared
   const allParams = getAllParamNames(scene.params || {}, scene.rig);
-  console.log('📦 Registering param uniforms:', Object.keys(allParams));
   for (const [name, paramInfo] of Object.entries(allParams)) {
     const uniformName = `u_${name}`;
     if (paramInfo.type === 'scalar') {
@@ -84,15 +83,6 @@ export function generateGlslFromJson(scene, options = {}) {
   glsl += 'vec4 g_df_scene(vec3 p) {\n';
   glsl += `  return ${sceneExpr};\n`;
   glsl += '}\n';
-
-  // Debug: Check which uniforms are actually used in the generated code
-  const declaredUniforms = [...ctx.uniforms].map(u => u.split(':')[0]);
-  const usedUniforms = declaredUniforms.filter(u => glsl.includes(u + ')') || glsl.includes(u + ',') || glsl.includes(u + ' '));
-  const unusedUniforms = declaredUniforms.filter(u => !usedUniforms.includes(u));
-  if (unusedUniforms.length > 0) {
-    console.warn('⚠️ Declared but UNUSED uniforms (will be optimized out):', unusedUniforms);
-  }
-  console.log('✅ Used uniforms in GLSL:', usedUniforms);
 
   return glsl;
 }
