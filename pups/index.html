@@ -984,6 +984,11 @@ function gameLoop() {
   document.body.style.setProperty('--bg-hue2', (40 + Math.sin(bgTime + 2) * 50 + 360) % 360);
   document.body.style.setProperty('--bg-hue3', (210 + Math.sin(bgTime + 4) * 70 + 360) % 360);
 
+  // SAFETY: Always ensure at least one puppy exists after pops
+  if (puppies.length === 0) {
+    puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
+  }
+
   // Check crowding periodically
   if (frameCount % CULL_CHECK_INTERVAL === 0) {
     const crowding = calculateCrowding();
