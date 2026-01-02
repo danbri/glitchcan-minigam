@@ -209,7 +209,7 @@ Hollows out shapes.
 
 ## Definitions & References
 
-Define once, reuse many times.
+Define once, reuse many times. Used in 72% of demo scenes.
 ```json
 {
   "defs": {
@@ -225,18 +225,86 @@ Define once, reuse many times.
 }
 ```
 
+### Defs/Ref vs Symmetry: When to Use Each
+
+**Use Defs/Ref when:**
+- Asymmetric placement (table legs at specific positions)
+- Parameter variation needed (same shape, different sizes/colors)
+- Explicit control over instance positions required
+- Non-geometric patterns (placement doesn't follow domain symmetry)
+
+**Use Mirror/Radial/Repeat when:**
+- Bilateral symmetry (flipper pairs, eyes, ears) → `mirror`
+- Rotational symmetry (flower petals, wheel spokes) → `radial`
+- Infinite tiling (fields, grids, particle systems) → `repeat`
+- Performance critical - O(1) cost vs O(n) for union
+
+### ExposeId for Per-Instance Variation
+```json
+{
+  "type": "repeat",
+  "period": [1.2, 2.0, 1.2],
+  "exposeId": "flakeId",
+  "child": {
+    "type": "sphere",
+    "params": {
+      "r": { "expr": "add", "args": [
+        0.02,
+        { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "var": "flakeId" }] }, 0.02] }
+      ]}
+    }
+  }
+}
+```
+- Used in 13% of demos (snowman, flower-meadow, celly)
+- `hash(instanceId)` returns 0.0-1.0 pseudo-random per instance
+
 ## Expressions (Animation)
 
-Animate any numeric value with math expressions.
+Animate any numeric value with math expressions. Used in 52% of demo scenes.
 ```json
 {
   "r": { "expr": "add", "args": [0.5, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }] }
 }
 ```
 
-Available:
-- **Variables**: `{ "var": "time" }`
-- **Math**: `sin`, `cos`, `add`, `mul`, `sub`, `div`, `abs`, `min`, `max`
+### Available Variables
+- `{ "var": "time" }` - Elapsed time in seconds
+- `{ "var": "x" }`, `{ "var": "y" }`, `{ "var": "z" }` - Current position
+- `{ "var": "instanceId" }` - Per-instance ID (when using `exposeId`)
+
+### Available Operations
+- **Arithmetic**: `add`, `sub`, `mul`, `div`, `mod`, `neg`
+- **Trigonometry**: `sin`, `cos`, `tan`
+- **Math**: `abs`, `floor`, `ceil`, `fract`, `min`, `max`, `pow`, `sqrt`
+- **Interpolation**: `clamp`, `step`, `smoothstep`, `mix`
+- **Noise**: `noise`, `fbm`, `turbulence`, `hash`
+
+### Expression Patterns
+```json
+// Speed up time: mul(time, 2.0)
+// Phase offset: add(time, 2.1)
+// Per-instance offset: add(time, hash(instanceId))
+// Conditional gate: smoothstep(0.0, 1.0, time)
+// Random decision: step(0.6, hash(id))  → 60% true
+```
+
+## Value Semantics (Vec3 Types)
+
+When working with 3-component vectors, understand the semantic type:
+
+| Type | Description | Bounds | Example |
+|------|-------------|--------|---------|
+| `position3` | XYZ location | unbounded | `"translate": [1.0, 0.5, -2.0]` |
+| `radii3` | Ellipsoid axes | positive only | `"radii": [1.8, 1.55, 6.0]` |
+| `color3` | RGB color | 0.0-1.0 each | `"color": [0.15, 0.17, 0.22]` |
+| `direction3` | Unit vector | normalized | `"normal": [0, 1, 0]` |
+| `rotation3` | Euler angles | degrees | `"rotate": [45, 0, 90]` |
+
+**Why this matters:**
+- UI can show appropriate widgets (color picker vs sliders)
+- Validation can enforce constraints (positive radii, normalized directions)
+- Future parametric rigging can track proportions correctly
 
 ## Common Patterns
 
@@ -316,3 +384,51 @@ Available:
 5. **Shapes disappearing?** Check transform positions - may be off-camera
 6. **Proportions wrong?** Measure ratios against reference
 7. **Surface bumps absorbed?** Use `displace` modifier instead of small spheres
+
+## Future: Scene-Level Parameters (Planned)
+
+Scene parameters will allow named values that expressions can reference:
+
+```json
+{
+  "params": {
+    "bodyLength": { "value": 12.0, "type": "scalar", "min": 8, "max": 16 },
+    "bodyRadius": { "value": 1.8, "type": "scalar", "min": 1, "max": 3 },
+    "flipperRatio": { "value": 0.31, "type": "scalar", "min": 0.2, "max": 0.4 }
+  },
+  "root": {
+    "type": "ellipsoid",
+    "params": {
+      "radii": [
+        { "var": "bodyRadius" },
+        { "expr": "mul", "args": [{ "var": "bodyRadius" }, 0.86] },
+        { "expr": "div", "args": [{ "var": "bodyLength" }, 2] }
+      ]
+    }
+  }
+}
+```
+
+**Benefits:**
+- Replace magic numbers with named params
+- Enable constraint checking (e.g., flipperSpan/bodyLength = 0.31)
+- Live parameter tweaking in UI
+- Goal-blind critics can validate numeric ratios
+
+See `lucid/PARAMETRIC-RIGGING-PLAN.md` for implementation details.
+
+## Demo Scene Statistics
+
+Analysis of all 54 demo scenes reveals common patterns:
+
+| Pattern | Usage | Primary Use Case |
+|---------|-------|------------------|
+| Defs/Ref | 72% | Reusable shapes (legs, arms, invaders) |
+| Expressions | 52% | Animation, per-instance variation |
+| Mirror | 48% | Bilateral symmetry (creatures, ships) |
+| SmoothUnion | 41% | Organic blending (bodies, joints) |
+| Ellipsoid | 33% | Organic forms (creatures, whale) |
+| Repeat | 26% | Fields, grids, particle systems |
+| Radial | 22% | Flowers, starfish, wheel spokes |
+| Displace | 15% | Surface texture (skin, rock) |
+| ExposeId | 13% | Per-instance randomization |
