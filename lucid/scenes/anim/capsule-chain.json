@@ -1,49 +1,125 @@
 {
-  "title": "Capsule Chain",
-  "subtitle": "Animated rope-like segments",
-  "version": "1.0",
-  "notes": "Three capsules connected end-to-end with smooth blending. Each segment animates independently creating flowing, rope-like motion. smoothUnion eliminates color flickering at joints.",
+  "title": "Swinging Chain",
+  "subtitle": "Pendulum chain with autumnal colors",
+  "version": "2.0",
+  "camera": { "distance": 8, "phi": 0.4, "theta": 0.1, "target": [0, -1.5, 0] },
+  "notes": "8 capsule links hanging from top, swinging with phase-propagated motion. Autumnal color gradient from golden yellow at anchor to deep reddish brown. Heavy ball at the end adds weight and momentum.",
   "root": {
     "type": "smoothUnion",
-    "k": 0.15,
+    "k": 0.08,
     "children": [
       {
+        "comment": "Anchor point - fixed at top",
+        "type": "sphere",
+        "params": { "r": 0.15, "color": [0.3, 0.25, 0.2] },
+        "transform": { "translate": [0, 2.5, 0] }
+      },
+      {
+        "comment": "Link 1 - Golden yellow, minimal swing",
         "type": "capsule",
-        "notes": "Left segment - fixed left end, animated right end",
-        "params": { "h": 0.5, "r": 0.12, "color": [1.0, 0.3, 0.3] },
+        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.85, 0.25] },
         "transform": {
           "translate": [
-            -0.8,
-            { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 2.0] }] }] },
+            { "expr": "mul", "args": [0.08, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
+            2.15,
             0
-          ],
-          "rotate": [0, 0, 90]
+          ]
         }
       },
       {
+        "comment": "Link 2 - Yellow-orange",
         "type": "capsule",
-        "notes": "Middle segment - both ends animated",
-        "params": { "h": 0.5, "r": 0.12, "color": [0.3, 1.0, 0.3] },
+        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.75, 0.2] },
         "transform": {
           "translate": [
-            0,
-            { "expr": "mul", "args": [0.4, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.5] }] }] },
+            { "expr": "mul", "args": [0.14, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.2] }] }] },
+            1.55,
             0
-          ],
-          "rotate": [0, 0, 90]
+          ]
         }
       },
       {
+        "comment": "Link 3 - Orange",
         "type": "capsule",
-        "notes": "Right segment - animated left end, fixed right end",
-        "params": { "h": 0.5, "r": 0.12, "color": [0.3, 0.3, 1.0] },
+        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.6, 0.15] },
         "transform": {
           "translate": [
-            0.8,
-            { "expr": "mul", "args": [-0.3, { "expr": "cos", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
+            { "expr": "mul", "args": [0.2, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.4] }] }] },
+            0.95,
             0
-          ],
-          "rotate": [0, 0, 90]
+          ]
+        }
+      },
+      {
+        "comment": "Link 4 - Burnt orange",
+        "type": "capsule",
+        "params": { "h": 0.28, "r": 0.06, "color": [0.9, 0.45, 0.12] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.26, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.6] }] }] },
+            0.35,
+            0
+          ]
+        }
+      },
+      {
+        "comment": "Link 5 - Rust",
+        "type": "capsule",
+        "params": { "h": 0.28, "r": 0.06, "color": [0.8, 0.35, 0.1] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.32, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.8] }] }] },
+            -0.25,
+            0
+          ]
+        }
+      },
+      {
+        "comment": "Link 6 - Dark rust",
+        "type": "capsule",
+        "params": { "h": 0.28, "r": 0.06, "color": [0.65, 0.25, 0.08] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.38, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.0] }] }] },
+            -0.85,
+            0
+          ]
+        }
+      },
+      {
+        "comment": "Link 7 - Reddish brown",
+        "type": "capsule",
+        "params": { "h": 0.28, "r": 0.06, "color": [0.5, 0.18, 0.06] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.44, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.2] }] }] },
+            -1.45,
+            0
+          ]
+        }
+      },
+      {
+        "comment": "Link 8 - Deep brown",
+        "type": "capsule",
+        "params": { "h": 0.28, "r": 0.06, "color": [0.35, 0.12, 0.05] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.5, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.4] }] }] },
+            -2.05,
+            0
+          ]
+        }
+      },
+      {
+        "comment": "Weight ball - heavy end piece",
+        "type": "sphere",
+        "params": { "r": 0.22, "color": [0.25, 0.08, 0.03] },
+        "transform": {
+          "translate": [
+            { "expr": "mul", "args": [0.56, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.6] }] }] },
+            -2.6,
+            0
+          ]
         }
       }
     ]
