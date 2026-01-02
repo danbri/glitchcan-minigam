@@ -407,7 +407,7 @@
               "transform": { "translate": [0, 0, 0] }
             },
             {
-              "comment": "Peduncle transition - uses peduncleTaper",
+              "comment": "Peduncle transition - uses peduncleTaper, subtle undulation",
               "type": "ellipsoid",
               "params": {
                 "radii": [
@@ -416,10 +416,22 @@
                   3.2
                 ]
               },
-              "transform": { "translate": [0, -0.1, -5.5] }
+              "transform": {
+                "translate": [0, -0.1, -5.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] },
+                      -1.88
+                    ]}] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.18] }
+                  ]},
+                  0, 0
+                ]
+              }
             },
             {
-              "comment": "Peduncle (tail stalk) - uses peduncleTaper fully",
+              "comment": "Peduncle (tail stalk) - uses peduncleTaper fully, animated",
               "type": "ellipsoid",
               "params": {
                 "radii": [
@@ -428,7 +440,19 @@
                   3.0
                 ]
               },
-              "transform": { "translate": [0, -0.15, -8.5] }
+              "transform": {
+                "translate": [0, -0.15, -8.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] },
+                      -0.94
+                    ]}] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.35] }
+                  ]},
+                  0, 0
+                ]
+              }
             }
           ]
         }
@@ -487,10 +511,19 @@
           "k": 0.6,
           "children": [
             {
-              "comment": "Fluke base connection",
+              "comment": "Fluke base connection - rotates with peduncle animation",
               "type": "ellipsoid",
               "params": { "radii": [0.55, 0.45, 2.0] },
-              "transform": { "translate": [0, -0.1, -10.5] }
+              "transform": {
+                "translate": [0, -0.1, -10.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] }] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.53] }
+                  ]},
+                  0, 0
+                ]
+              }
             },
             {
               "comment": "Fluke paddles with center notch - uses tailFlukeSpan, tailForkDepth, tailForkAngle",
@@ -515,7 +548,10 @@
                         -11.8
                       ],
                       "rotate": [
-                        0,
+                        { "expr": "mul", "args": [
+                          { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] }] },
+                          { "var": "tailAmplitude" }
+                        ]},
                         { "var": "tailForkAngle" },
                         10
                       ]
