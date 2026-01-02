@@ -106,9 +106,6 @@ export class SimpleRaymarcher {
     this.currentGlsl = glslCode;
     this.sceneParams = sceneParams;
     this.rig = rig;
-    // Reset debug state for new scene
-    this._loggedMissingUniforms = null;
-    this._loggedBindings = null;
     this.compileShaders();
   }
 
@@ -623,25 +620,10 @@ export class SimpleRaymarcher {
     // Bind scene parameters (base params)
     for (const [name, param] of Object.entries(this.sceneParams)) {
       const loc = gl.getUniformLocation(this.program, `u_${name}`);
-      if (loc === null) {
-        // Debug: log uniforms that are declared but not found (optimized out?)
-        if (!this._loggedMissingUniforms) this._loggedMissingUniforms = new Set();
-        if (!this._loggedMissingUniforms.has(name)) {
-          console.warn(`⚠️ Uniform u_${name} not found in shader (may be optimized out)`);
-          this._loggedMissingUniforms.add(name);
-        }
-        continue;  // Uniform not used in shader
-      }
+      if (loc === null) continue;  // Uniform not used in shader
 
       // Use rig-evaluated value if available, otherwise raw param value
       const value = rigResult ? (rigResult.values[name] ?? param.value) : param.value;
-
-      // Debug log for key params on first bind
-      if (!this._loggedBindings) this._loggedBindings = new Set();
-      if (!this._loggedBindings.has(name) && (name === 'bodyLength' || name === 'flipperRatio' || name === 'bodyRadius')) {
-        console.log(`🎯 Binding u_${name} = ${value} (type: ${param.type}, loc: ${loc})`);
-        this._loggedBindings.add(name);
-      }
 
       if (param.type === 'scalar') {
         gl.uniform1f(loc, value);
