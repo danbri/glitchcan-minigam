@@ -115,7 +115,7 @@
       "title": "🧪 Ablation Drafts",
       "description": "Context-ablated blind evaluation models",
       "scenes": [
-        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale", "subtitle": "85% confidence, 9 primitives" },
+        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale v6.51", "subtitle": "PMAC approved, 85% blind ID" },
         { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
         { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
         { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },
