@@ -428,14 +428,217 @@ function generateParamWidgets(params) {
 }
 ```
 
+### Phase 5: Rig Layer (Constraint-Based Relationships)
+
+**Goal:** Treat params as constraints, not just knobs. Add a declarative layer that defines what must move together and what must not.
+
+> "The key next step is to treat params as constraints, not just knobs: some should be derived (e.g. flipper length = bodyLength × ratio), some bounded by morphology, and some linked across nodes (phase-locked, monotonic, or conserved)." — GPT synthesis
+
+#### 5.1 Architecture
+
+```
+BEFORE:
+  params (independent) → expressions → SDF tree → GLSL
+
+AFTER:
+  params (constrained) → rig layer → expressions → SDF tree → GLSL
+                           ↓
+                    relationships:
+                    - derived values
+                    - bounds enforcement
+                    - phase/motion coupling
+                    - conserved quantities
+```
+
+The rig layer is **species-agnostic** - it provides primitives (chains, phase, bounds) that any creature can use with different topology.
+
+#### 5.2 Schema Extension
+
+```json
+{
+  "params": {
+    "bodyLength": { "value": 12.0, "type": "scalar", "min": 8, "max": 16 },
+    "flipperRatio": { "value": 0.31, "type": "scalar", "min": 0.25, "max": 0.35 }
+  },
+  "rig": {
+    "derived": {
+      "flipperLength": { "expr": "mul", "args": [{ "var": "bodyLength" }, { "var": "flipperRatio" }] },
+      "headLength": { "expr": "mul", "args": [{ "var": "bodyLength" }, 0.22] }
+    },
+    "bounds": {
+      "flipperRatio": { "min": 0.25, "max": 0.35, "reason": "Humpback pectoral fins are 25-35% body length" },
+      "bodyAspect": { "min": 0.7, "max": 1.0, "reason": "Cetacean body cross-section constraints" }
+    },
+    "chains": {
+      "spine": {
+        "joints": ["head", "torso", "peduncle", "flukes"],
+        "type": "sequential",
+        "constraints": { "maxBend": 15 }
+      },
+      "flipper_L": {
+        "joints": ["shoulder", "mid", "tip"],
+        "type": "sequential",
+        "constraints": { "maxBend": 25, "taper": 0.7 }
+      }
+    },
+    "phase": {
+      "swimCycle": {
+        "driver": { "expr": "mul", "args": [{ "var": "time" }, 1.5] },
+        "followers": {
+          "flukeAngle": { "amplitude": 20, "phase": 0.0 },
+          "peduncleAngle": { "amplitude": 12, "phase": -0.2 },
+          "torsoAngle": { "amplitude": 5, "phase": -0.4 }
+        }
+      }
+    },
+    "conserved": {
+      "volume": { "tolerance": 0.05, "warn": true }
+    }
+  },
+  "root": { ... }
+}
+```
+
+#### 5.3 Rig Evaluator (`lucid/core/rig-evaluator.js`)
+
+**Purpose:** Evaluate rig relationships before SDF tree processing
+
+```javascript
+/**
+ * Evaluate rig layer to produce final param values
+ * @param {Object} params - Base params from scene
+ * @param {Object} rig - Rig definition with derived, bounds, chains, phase
+ * @param {number} time - Current time for animation
+ * @returns {{ values: Object, violations: Array }}
+ */
+export function evaluateRig(params, rig, time = 0) {
+  const values = {};
+  const violations = [];
+
+  // 1. Copy base param values
+  for (const [name, param] of Object.entries(params)) {
+    values[name] = param.value;
+  }
+
+  // 2. Evaluate derived params (topologically sorted)
+  if (rig.derived) {
+    const sorted = topologicalSort(rig.derived, values);
+    for (const name of sorted) {
+      values[name] = evaluateExpr(rig.derived[name], values, time);
+    }
+  }
+
+  // 3. Check bounds constraints
+  if (rig.bounds) {
+    for (const [name, bound] of Object.entries(rig.bounds)) {
+      const val = values[name];
+      if (val < bound.min || val > bound.max) {
+        violations.push({
+          type: 'bounds',
+          param: name,
+          value: val,
+          min: bound.min,
+          max: bound.max,
+          reason: bound.reason
+        });
+      }
+    }
+  }
+
+  // 4. Evaluate phase-coupled animations
+  if (rig.phase) {
+    for (const [cycleName, cycle] of Object.entries(rig.phase)) {
+      const driver = evaluateExpr(cycle.driver, values, time);
+      for (const [follower, config] of Object.entries(cycle.followers)) {
+        const phase = config.phase || 0;
+        const amplitude = config.amplitude || 1;
+        values[`${cycleName}_${follower}`] = Math.sin(driver + phase * Math.PI * 2) * amplitude;
+      }
+    }
+  }
+
+  return { values, violations };
+}
+```
+
+#### 5.4 Integration Points
+
+**json-loader.js:**
+```javascript
+export function loadJsonScene(json) {
+  // ... existing code ...
+  return {
+    version: json.version || '1.0',
+    root: nodeRegistry.root,
+    defs: nodeRegistry.defs,
+    params: json.params || {},
+    rig: json.rig || null,  // NEW: pass through rig definition
+    quality: json.quality || 'medium',
+    camera: json.camera || null
+  };
+}
+```
+
+**raymarcher.js:**
+```javascript
+// In render():
+if (this.rig) {
+  const { values, violations } = evaluateRig(this.sceneParams, this.rig, time);
+  // Bind evaluated values as uniforms
+  for (const [name, value] of Object.entries(values)) {
+    const loc = gl.getUniformLocation(this.program, `u_${name}`);
+    if (loc) gl.uniform1f(loc, value);
+  }
+  // Report violations
+  if (violations.length > 0) {
+    this.onConstraintViolation?.(violations);
+  }
+}
+```
+
+#### 5.5 UI: Constraint Violations Panel
+
+```html
+<div id="rig-violations" class="violations-panel">
+  <h4>⚠️ Constraint Violations</h4>
+  <ul id="violation-list"></ul>
+</div>
+```
+
+```javascript
+raymarcher.onConstraintViolation = (violations) => {
+  const list = document.getElementById('violation-list');
+  list.innerHTML = violations.map(v => `
+    <li class="violation ${v.type}">
+      <strong>${v.param}</strong>: ${v.value.toFixed(3)}
+      (expected ${v.min}–${v.max})
+      <br><small>${v.reason}</small>
+    </li>
+  `).join('');
+};
+```
+
+#### 5.6 Why This Scales
+
+| Feature | What It Enables |
+|---------|-----------------|
+| **Derived params** | Dimension reduction: control ratios, not absolute values |
+| **Bounds** | Morphological validity without hardcoding species rules |
+| **Chains** | Skeletal coherence for any articulated creature |
+| **Phase coupling** | Coordinated motion without per-node animation code |
+| **Conserved quantities** | Volume/mass preservation during deformation |
+
+The rig layer is **declarative and portable** - it doesn't know about SDFs, it just produces param values that the existing expression system consumes.
+
 ---
 
 ## Migration Strategy
 
-1. **Phase 1: Non-breaking** - Add `params` block support, existing scenes unchanged
-2. **Phase 2: Gradual** - Refactor whale.json one section at a time
+1. **Phase 1: Non-breaking** - Add `params` block support, existing scenes unchanged ✅
+2. **Phase 2: Gradual** - Refactor whale.json one section at a time ✅
 3. **Phase 3: Validation** - Add constraints, run PMAC parliament with metrics
-4. **Phase 4: UI** - Parameter panel for live editing
+4. **Phase 4: UI** - Parameter panel for live editing ✅
+5. **Phase 5: Rig Layer** - Derived params, bounds, chains, phase coupling (NEW)
 
 ---
 
@@ -443,12 +646,13 @@ function generateParamWidgets(params) {
 
 | File | Changes |
 |------|---------|
-| `lucid/core/json-loader.js` | Add params passthrough, complete ref overrides TODO |
-| `lucid/core/json-codegen.js` | Add sceneParams to context, modify valueToGlsl |
-| `lucid/ui/raymarcher.js` | Add sceneParams field, bind param uniforms |
-| `lucid/index.html` | Add params panel, typed widgets |
+| `lucid/core/json-loader.js` | Add params passthrough, complete ref overrides TODO, pass rig block |
+| `lucid/core/json-codegen.js` | Add sceneParams to context, modify valueToGlsl, register derived params |
+| `lucid/core/rig-evaluator.js` | NEW: Rig layer evaluation (derived, bounds, phase, chains) |
+| `lucid/ui/raymarcher.js` | Add sceneParams field, bind param uniforms, integrate rig evaluator |
+| `lucid/index.html` | Add params panel, typed widgets, constraint violations display |
 | `lucid/core/metrics.js` | NEW: AABB computation, constraint validation |
-| `lucid/automodel/sdf-skill.md` | Document params, metrics, constraints |
+| `lucid/automodel/sdf-skill.md` | Document params, rig layer, metrics, constraints |
 
 ---
 
@@ -459,3 +663,7 @@ function generateParamWidgets(params) {
 3. ✅ Constraint checker reports `flipperSpan/bodyLength = 0.31 ± 0.03`
 4. ✅ PMAC Agent B can report numeric violations, not just "looks wrong"
 5. ✅ No regression in existing demos (params optional)
+6. ⬜ Derived params computed from rig.derived expressions
+7. ⬜ Bounds violations reported in UI with reason text
+8. ⬜ Phase-coupled animation produces coordinated motion
+9. ⬜ Rig layer is species-agnostic (same code works for dolphin, dragon, etc.)

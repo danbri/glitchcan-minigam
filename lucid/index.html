@@ -1333,6 +1333,16 @@
         No params in this scene
       </div>
     </div>
+    <!-- Rig Info Section (derived params, constraints) -->
+    <div id="rig-info" style="display: none; border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 8px;">
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">📐 Derived Values</div>
+      <div id="rig-derived" style="font-size: 0.7rem; padding-left: 8px;"></div>
+    </div>
+    <!-- Constraint Violations -->
+    <div id="rig-violations" style="display: none; border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 8px;">
+      <div style="font-size: 0.75rem; color: #f59e0b; margin-bottom: 4px;">⚠️ Constraint Violations</div>
+      <div id="violations-list" style="font-size: 0.7rem; padding-left: 8px;"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -1571,6 +1581,7 @@
         renderer = new SimpleRaymarcher(canvas);
         window.renderer = renderer; // Expose for automation/capture scripts
         renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
+        setupRigCallbacks(); // Set up rig layer constraint violation callback
 
         // Build hierarchical demos submenu
         buildDemosSubmenu();
@@ -1733,11 +1744,14 @@
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
 
-      // Pass scene params to renderer for uniform binding
-      renderer.updateScene(glsl, scene.params || {});
+      // Pass scene params and rig to renderer for uniform binding
+      renderer.updateScene(glsl, scene.params || {}, scene.rig || null);
 
       // Update params panel with new scene params
       updateParamsPanel(scene.params || {});
+
+      // Update rig info display
+      updateRigInfo(scene.rig);
 
       // Update GLSL tab if visible
       if (activeTab === 'glsl') {
@@ -3563,6 +3577,75 @@
         parseInt(result[2], 16) / 255,
         parseInt(result[3], 16) / 255
       ] : [1, 1, 1];
+    }
+
+    // ============================================
+    // RIG LAYER UI (Phase 5: Constraint-Based Relationships)
+    // ============================================
+
+    /**
+     * Update rig info display with derived values
+     */
+    function updateRigInfo(rig) {
+      const rigInfo = $('rig-info');
+      const rigDerived = $('rig-derived');
+
+      if (!rigInfo || !rigDerived) return;
+
+      if (!rig || !rig.derived || Object.keys(rig.derived).length === 0) {
+        rigInfo.style.display = 'none';
+        return;
+      }
+
+      // Show derived param names (values will be updated by rig evaluator during render)
+      let html = '';
+      for (const name of Object.keys(rig.derived)) {
+        html += `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
+          <span style="color: var(--text-dim);">${name}:</span>
+          <span id="derived-${name}" style="font-family: monospace;">--</span>
+        </div>`;
+      }
+      rigDerived.innerHTML = html;
+      rigInfo.style.display = 'block';
+    }
+
+    /**
+     * Update constraint violations display
+     */
+    function updateViolationsDisplay(violations) {
+      const panel = $('rig-violations');
+      const list = $('violations-list');
+
+      if (!panel || !list) return;
+
+      if (!violations || violations.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      for (const v of violations) {
+        const color = v.severity === 'error' ? '#ef4444' : '#f59e0b';
+        html += `<div style="padding: 4px 0; border-bottom: 1px solid var(--border-dim);">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: ${color}; font-weight: 500;">${v.param}</span>
+            <span style="font-family: monospace;">${v.value.toFixed(3)}</span>
+          </div>
+          <div style="color: var(--text-dim); font-size: 0.65rem;">
+            Expected: ${v.min.toFixed(2)} – ${v.max.toFixed(2)}
+          </div>
+          ${v.reason ? `<div style="color: ${color}; font-size: 0.6rem; margin-top: 2px;">${v.reason}</div>` : ''}
+        </div>`;
+      }
+      list.innerHTML = html;
+      panel.style.display = 'block';
+    }
+
+    // Set up constraint violation callback on renderer
+    function setupRigCallbacks() {
+      if (renderer) {
+        renderer.onConstraintViolation = updateViolationsDisplay;
+      }
     }
 
     // ============================================

@@ -41,6 +41,9 @@ export function loadJsonScene(json) {
     defs: nodeRegistry.defs,
     // Scene-level parameters for parametric rigging
     params: processSceneParams(json.params || {}),
+    // Rig layer for constraint-based relationships (Phase 5)
+    // Defines: derived params, bounds, phase coupling, chains
+    rig: json.rig || null,
     // Pass through rendering hints
     quality: json.quality || 'medium',  // 'low', 'medium', 'high'
     camera: json.camera || null          // Optional camera settings
