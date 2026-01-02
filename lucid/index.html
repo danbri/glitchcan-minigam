@@ -979,6 +979,7 @@
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
+          <button class="icon-btn" id="btn-params" title="Scene Params (P)">🎛️</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🚁</button>
           <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
@@ -1317,6 +1318,19 @@
         <span class="debug-label">Shininess</span>
         <input type="range" min="1" max="128" step="1" value="32" id="slider-shininess" style="width: 100px;">
         <span id="shininess-val" style="font-size: 0.7rem; min-width: 3rem; text-align: right;">32</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scene Parameters Panel -->
+  <div class="debug-panel" id="params-panel" style="left: auto; right: 50px;">
+    <button class="panel-close" id="btn-params-close" title="Close parameters">×</button>
+    <div class="debug-header">
+      <h3>🎛️ Scene Params</h3>
+    </div>
+    <div class="debug-content" id="params-content">
+      <div class="debug-row" style="color: var(--text-dim); font-style: italic;">
+        No params in this scene
       </div>
     </div>
   </div>
@@ -1718,7 +1732,12 @@
 
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
-      renderer.updateScene(glsl);
+
+      // Pass scene params to renderer for uniform binding
+      renderer.updateScene(glsl, scene.params || {});
+
+      // Update params panel with new scene params
+      updateParamsPanel(scene.params || {});
 
       // Update GLSL tab if visible
       if (activeTab === 'glsl') {
@@ -3412,6 +3431,141 @@
     }
 
     // ============================================
+    // PARAMS PANEL - Live parameter tweaking
+    // ============================================
+    let paramsOpen = false;
+    const paramsPanel = $('params-panel');
+
+    function setupParamsPanel() {
+      try {
+        // Close button
+        addClick('btn-params-close', () => {
+          paramsOpen = false;
+          paramsPanel?.classList.remove('open');
+          $('btn-params')?.classList.remove('active');
+        });
+
+        // Params button toggle
+        addClick('btn-params', () => {
+          paramsOpen = !paramsOpen;
+          if (paramsOpen) {
+            paramsPanel?.classList.add('open');
+            $('btn-params')?.classList.add('active');
+          } else {
+            paramsPanel?.classList.remove('open');
+            $('btn-params')?.classList.remove('active');
+          }
+        });
+      } catch (e) { console.error('setupParamsPanel error:', e); }
+    }
+
+    /**
+     * Update params panel with sliders for current scene
+     */
+    function updateParamsPanel(params) {
+      const content = $('params-content');
+      if (!content) return;
+
+      if (!params || Object.keys(params).length === 0) {
+        content.innerHTML = `<div class="debug-row" style="color: var(--text-dim); font-style: italic;">
+          No params in this scene
+        </div>`;
+        return;
+      }
+
+      let html = '';
+      for (const [name, param] of Object.entries(params)) {
+        const value = param.value;
+        const min = param.min !== undefined ? param.min : (param.type === 'scalar' ? 0 : -10);
+        const max = param.max !== undefined ? param.max : (param.type === 'scalar' ? 10 : 10);
+        const step = param.step || (max - min) / 100;
+
+        if (param.type === 'scalar') {
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+              <span id="param-val-${name}" style="font-size: 0.7rem; min-width: 3rem; text-align: right; font-family: monospace;">${value.toFixed(2)}</span>
+            </div>
+            <input type="range" min="${min}" max="${max}" step="${step}" value="${value}"
+                   id="param-slider-${name}" data-param="${name}" style="width: 100%;">
+          </div>`;
+        } else if (param.type === 'color3' && Array.isArray(value)) {
+          const hex = rgbToHex(value);
+          html += `<div class="debug-row">
+            <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+            <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
+          </div>`;
+        } else if (Array.isArray(value) && value.length === 3) {
+          // position3, radii3, direction3 - show as 3 sliders
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+            <span class="debug-label" style="font-size: 0.75rem;">${name} [x,y,z]</span>
+            <div style="display: flex; gap: 0.25rem; width: 100%;">
+              <input type="number" value="${value[0].toFixed(2)}" step="0.1" id="param-vec-${name}-0" data-param="${name}" data-index="0" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+              <input type="number" value="${value[1].toFixed(2)}" step="0.1" id="param-vec-${name}-1" data-param="${name}" data-index="1" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+              <input type="number" value="${value[2].toFixed(2)}" step="0.1" id="param-vec-${name}-2" data-param="${name}" data-index="2" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+            </div>
+          </div>`;
+        }
+      }
+
+      content.innerHTML = html;
+
+      // Attach event listeners for sliders
+      for (const [name, param] of Object.entries(params)) {
+        if (param.type === 'scalar') {
+          const slider = $(`param-slider-${name}`);
+          if (slider) {
+            slider.addEventListener('input', function() {
+              const val = parseFloat(this.value);
+              param.value = val;
+              const valEl = $(`param-val-${name}`);
+              if (valEl) valEl.textContent = val.toFixed(2);
+              renderer.setParam(name, val);
+            });
+          }
+        } else if (param.type === 'color3') {
+          const picker = $(`param-color-${name}`);
+          if (picker) {
+            picker.addEventListener('input', function() {
+              const rgb = hexToRgb(this.value);
+              param.value = rgb;
+              renderer.setParam(name, rgb);
+            });
+          }
+        } else if (Array.isArray(param.value) && param.value.length === 3) {
+          for (let i = 0; i < 3; i++) {
+            const input = $(`param-vec-${name}-${i}`);
+            if (input) {
+              input.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                param.value[parseInt(this.dataset.index)] = val;
+                renderer.setParam(name, param.value);
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Helper: RGB array [0-1] to hex color
+    function rgbToHex(rgb) {
+      const r = Math.round(rgb[0] * 255).toString(16).padStart(2, '0');
+      const g = Math.round(rgb[1] * 255).toString(16).padStart(2, '0');
+      const b = Math.round(rgb[2] * 255).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`;
+    }
+
+    // Helper: Hex color to RGB array [0-1]
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? [
+        parseInt(result[1], 16) / 255,
+        parseInt(result[2], 16) / 255,
+        parseInt(result[3], 16) / 255
+      ] : [1, 1, 1];
+    }
+
+    // ============================================
     // MENU KEYBOARD NAVIGATION
     // ============================================
     let menuFocusIndex = -1;  // Current focused item in menu navigation
@@ -3655,6 +3809,11 @@
         } else if (e.key === 'a' || e.key === 'A') {
           e.preventDefault();
           $('btn-anim').click(); // Cycle animation state
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          paramsOpen = !paramsOpen;
+          paramsPanel?.classList.toggle('open', paramsOpen);
+          $('btn-params')?.classList.toggle('active', paramsOpen);
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -3663,6 +3822,9 @@
           debugPanel.classList.remove('open');
           lightingOpen = false;
           lightingPanel.classList.remove('open');
+          paramsOpen = false;
+          paramsPanel?.classList.remove('open');
+          $('btn-params')?.classList.remove('active');
           editorOpen = false;
           editorPanel.classList.remove('open');
           $('btn-editor')?.classList.remove('active');
@@ -3674,6 +3836,7 @@
       setupTouchControls();
       setupDebugPanel();
       setupLightingPanel();
+      setupParamsPanel();
       setupResizer();
 
       // Editor toggle

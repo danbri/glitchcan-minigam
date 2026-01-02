@@ -17,8 +17,20 @@ export function generateGlslFromJson(scene, options = {}) {
     helperCounter: 0,
     showCutters: options.showCutters || false,
     localVars: {},  // For instance IDs and other scoped variables
-    instanceIdParam: null  // When set, pass this ID through to helper functions
+    instanceIdParam: null,  // When set, pass this ID through to helper functions
+    sceneParams: scene.params || {}  // Scene-level parameters for parametric rigging
   };
+
+  // Register scene params as uniforms (with proper types)
+  for (const [name, param] of Object.entries(scene.params || {})) {
+    const uniformName = `u_${name}`;
+    if (param.type === 'scalar') {
+      ctx.uniforms.add(uniformName);
+    } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+      // Mark as vec3 uniform (handled specially in uniform declaration)
+      ctx.uniforms.add(`${uniformName}:vec3`);
+    }
+  }
 
   // Generate main scene expression
   const sceneExpr = walkNode(scene.root, ctx);
@@ -29,12 +41,21 @@ export function generateGlslFromJson(scene, options = {}) {
   // Note: u_time, u_resolution, u_cameraPos etc. are already declared
   // by raymarcher.js - we only declare additional custom uniforms here
   const builtinUniforms = new Set(['u_time', 'u_resolution', 'u_cameraPos', 'u_cameraTarget', 'u_showGroundPlane', 'u_volumeRender']);
-  const customUniforms = [...ctx.uniforms].filter(u => !builtinUniforms.has(u));
+  const customUniforms = [...ctx.uniforms].filter(u => {
+    const baseName = u.split(':')[0];
+    return !builtinUniforms.has(baseName);
+  });
 
   if (customUniforms.length > 0) {
-    glsl += '// Custom uniforms\n';
+    glsl += '// Custom uniforms (including scene params)\n';
     for (const uniform of customUniforms) {
-      glsl += `uniform float ${uniform};\n`;
+      // Handle typed uniforms (e.g., "u_bodyColor:vec3")
+      if (uniform.includes(':')) {
+        const [name, type] = uniform.split(':');
+        glsl += `uniform ${type} ${name};\n`;
+      } else {
+        glsl += `uniform float ${uniform};\n`;
+      }
     }
     glsl += '\n';
   }
@@ -1346,7 +1367,11 @@ function valueToGlsl(value, ctx) {
       if (ctx.localVars && ctx.localVars[value.name]) {
         return ctx.localVars[value.name];
       }
-      // Fall back to uniform
+      // Check scene params (already registered as uniforms)
+      if (ctx.sceneParams && ctx.sceneParams[value.name]) {
+        return `u_${value.name}`;
+      }
+      // Fall back to dynamic uniform (e.g., time)
       ctx.uniforms.add(`u_${value.name}`);
       return `u_${value.name}`;
 
