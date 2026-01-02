@@ -544,6 +544,26 @@ Multi-perspective evaluation system for 3D model quality assessment using four s
 
 The model must read correctly from a neutral view. Angle optimization is cheating.
 
+### 🚨 CRITICAL RULE: NO AGENT A PROMPT CONTAMINATION 🚨
+**Agent A's prompt must contain ZERO species-specific terminology or hints.**
+
+**FORBIDDEN in Agent A prompts:**
+- ❌ Species-specific terms (e.g., "tubercles", "flukes", "rostrum", "baleen")
+- ❌ Descriptive geometry hints (e.g., "bumpy texture on head", "swept-back pectoral appendages")
+- ❌ Any terminology that implies what the model is supposed to be
+- ❌ Color descriptions that match target species (e.g., "counter-shading")
+- ❌ Proportion hints (e.g., "7:1 ratio", "31% body length")
+
+**ALLOWED in Agent A prompts:**
+- ✅ Generic SDF skill reference (primitives, operations)
+- ✅ Blanked geometry file path (with no revealing comments)
+- ✅ Image file paths only (no descriptive names)
+- ✅ Simple instruction: "What creature/object is this? Give confidence %"
+
+**WHY THIS EXISTS**: We invalidated a v6.10 evaluation by including "tubercles" and geometry descriptions in Agent A's prompt. This leaked the answer and made the "blind" test meaningless. Agent A must identify the model with ZERO context - that's the whole point.
+
+**VALIDATION CHECK**: Before running Agent A, review the prompt and ask: "Could someone guess the target species from this prompt alone?" If yes, the prompt is contaminated.
+
 ### The Four Agents
 
 **Agent A - Blanked Evaluator**
@@ -616,9 +636,41 @@ The model must read correctly from a neutral view. Angle optimization is cheatin
 ```
 
 **Skills files**:
+- `lucid/automodel/parliament-maker-skill.md` - **AUTHORITATIVE** PMAC methodology (Parliamentary Multi-Agent Chat)
 - `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
 - `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
-- `lucid/automodel/parliament-rules.md` - Full ABCD rules and return formats
+- `lucid/automodel/parliament-rules.md` - Detailed ABCD rules and return formats
+
+### 📸 MANDATORY: Image Capture & Logging
+
+**ALWAYS capture and save rendered images for every model version evaluation.**
+
+**Capture Requirements:**
+- **Minimum 6 angles**: Use `capture-silhouette.mjs` which captures 6 standard views
+- **Systematic naming**: `v{VERSION}-{TIMESTAMP}/1.png` through `6.png`
+- **Permanent storage**: Save to `lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/`
+- **Never delete captures**: They are the permanent record of model evolution
+
+**Standard Camera Angles (capture-silhouette.mjs):**
+1. Front-quarter view (default camera position)
+2. Side-quarter with appendages visible
+3. 3/4 rear showing tail/flukes
+4. Pure side profile
+5. Opposite side-quarter
+6. Wide shot with all features visible
+
+**Capture Command:**
+```bash
+mkdir -p lucid/automodel/captures/v{VERSION}-$(date -u +%Y-%m-%dT%H-%M-%SZ)
+node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-captures
+cp /tmp/eval-captures/*.png lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/
+```
+
+**Why This Matters:**
+- Visual record for comparing iterations
+- Required for ABCD Parliament evaluation
+- Enables retrospective analysis of what changed between versions
+- User can review progress without re-running evaluations
 
 ### Lucid Tools for Parliament Workflow
 
