@@ -69,6 +69,9 @@ export class SimpleRaymarcher {
     this.volumeComposite = 0.0; // 0-1: blend with surface render
     this.volumeColorMode = 0;   // 0=material, 1=rainbow, 2=depth
 
+    // Scene parameters for parametric rigging
+    this.sceneParams = {};      // { name: { value, type } }
+
     // Lighting settings
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
@@ -91,9 +94,19 @@ export class SimpleRaymarcher {
     }
   }
 
-  updateScene(glslCode) {
+  updateScene(glslCode, sceneParams = {}) {
     this.currentGlsl = glslCode;
+    this.sceneParams = sceneParams;
     this.compileShaders();
+  }
+
+  /**
+   * Update a single scene parameter value (for live tweaking)
+   */
+  setParam(name, value) {
+    if (this.sceneParams[name]) {
+      this.sceneParams[name].value = value;
+    }
   }
 
   /**
@@ -576,6 +589,21 @@ export class SimpleRaymarcher {
 
     const shininessLocation = gl.getUniformLocation(this.program, 'u_shininess');
     gl.uniform1f(shininessLocation, this.lighting.shininess);
+
+    // Bind scene parameters
+    for (const [name, param] of Object.entries(this.sceneParams)) {
+      const loc = gl.getUniformLocation(this.program, `u_${name}`);
+      if (loc === null) continue;  // Uniform not used in shader
+
+      const value = param.value;
+      if (param.type === 'scalar') {
+        gl.uniform1f(loc, value);
+      } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+        if (Array.isArray(value) && value.length >= 3) {
+          gl.uniform3f(loc, value[0], value[1], value[2]);
+        }
+      }
+    }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

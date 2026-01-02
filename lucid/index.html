@@ -1718,7 +1718,9 @@
 
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
-      renderer.updateScene(glsl);
+
+      // Pass scene params to renderer for uniform binding
+      renderer.updateScene(glsl, scene.params || {});
 
       // Update GLSL tab if visible
       if (activeTab === 'glsl') {

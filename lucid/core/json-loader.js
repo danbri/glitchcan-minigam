@@ -39,10 +39,42 @@ export function loadJsonScene(json) {
     version: json.version || '1.0',
     root: nodeRegistry.root,
     defs: nodeRegistry.defs,
+    // Scene-level parameters for parametric rigging
+    params: processSceneParams(json.params || {}),
     // Pass through rendering hints
     quality: json.quality || 'medium',  // 'low', 'medium', 'high'
     camera: json.camera || null          // Optional camera settings
   };
+}
+
+/**
+ * Process scene-level parameters
+ * Supports typed parameters: scalar, color3, position3, radii3, direction3
+ */
+function processSceneParams(params) {
+  const processed = {};
+  for (const [name, param] of Object.entries(params)) {
+    if (typeof param === 'number') {
+      // Simple number shorthand
+      processed[name] = { value: param, type: 'scalar' };
+    } else if (Array.isArray(param)) {
+      // Array shorthand - infer type from length
+      processed[name] = {
+        value: param,
+        type: param.length === 3 ? 'position3' : 'array'
+      };
+    } else if (typeof param === 'object' && param !== null) {
+      // Full parameter definition
+      processed[name] = {
+        value: param.value,
+        type: param.type || 'scalar',
+        min: param.min,
+        max: param.max,
+        step: param.step
+      };
+    }
+  }
+  return processed;
 }
 
 const MAX_RECURSION_DEPTH = 100;
@@ -300,11 +332,57 @@ export function expandRef(refNode, registry, depth = 0) {
   // Clone the definition
   const expanded = JSON.parse(JSON.stringify(def));
 
-  // Apply overrides (if any)
+  // Apply parameter overrides (if any)
   if (refNode.overrides) {
-    // TODO: Implement parameter override logic
-    // For now, just wrap in a material/transform node if needed
+    applyOverrides(expanded, refNode.overrides);
   }
 
   return processNode(expanded, registry, depth);
+}
+
+/**
+ * Apply parameter overrides to a cloned node tree
+ * Recursively merges override values into the node's params
+ */
+function applyOverrides(node, overrides) {
+  if (!node || typeof node !== 'object') return;
+
+  // Apply overrides to this node's params
+  if (node.params && overrides) {
+    for (const [key, value] of Object.entries(overrides)) {
+      // Convert processed value back to raw format for re-processing
+      node.params[key] = valueToRaw(value);
+    }
+  }
+
+  // Recurse into children
+  if (node.children) {
+    node.children.forEach(child => applyOverrides(child, overrides));
+  }
+  if (node.child) {
+    applyOverrides(node.child, overrides);
+  }
+}
+
+/**
+ * Convert processed value back to raw JSON format
+ */
+function valueToRaw(processed) {
+  if (!processed || typeof processed !== 'object') return processed;
+
+  switch (processed.type) {
+    case 'const':
+      return processed.value;
+    case 'array':
+      return processed.values.map(v => valueToRaw(v));
+    case 'var':
+      return { var: processed.name };
+    case 'expr':
+      return {
+        expr: processed.op,
+        args: processed.args.map(a => valueToRaw(a))
+      };
+    default:
+      return processed;
+  }
 }

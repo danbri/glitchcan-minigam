@@ -34,7 +34,8 @@
         { "path": "tut/material-emission.json", "title": "Materials", "subtitle": "Colors and glow" },
         { "path": "tut/grouping.json", "title": "Grouping", "subtitle": "Organize complex scenes" },
         { "path": "tut/expressions.json", "title": "Expressions", "subtitle": "Math for animation" },
-        { "path": "tut/modifiers.json", "title": "Modifiers", "subtitle": "Shell, displace, more" }
+        { "path": "tut/modifiers.json", "title": "Modifiers", "subtitle": "Shell, displace, more" },
+        { "path": "tut/parametric.json", "title": "Parametric 🎛️", "subtitle": "Named params for rigging" }
       ]
     },
     {
@@ -116,6 +117,7 @@
       "description": "Context-ablated blind evaluation models",
       "scenes": [
         { "path": "ablation/whale.json", "title": "🐋 Humpback Whale v6.65", "subtitle": "PMAC 91/100 - Tubercles 0.35" },
+        { "path": "ablation/whale-parametric.json", "title": "🐋 Parametric Whale", "subtitle": "Named params for rigging" },
         { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
         { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
         { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },

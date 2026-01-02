@@ -1,0 +1,57 @@
+{
+  "title": "Parametric Demo",
+  "subtitle": "Scene-level parameters for rigging",
+  "version": "1.0",
+  "notes": "Demonstrates scene params: adjust bodyRadius and armLength to see live changes. Parameters replace magic numbers with named values that expressions can reference.",
+  "params": {
+    "bodyRadius": { "value": 0.5, "type": "scalar", "min": 0.2, "max": 1.0 },
+    "armLength": { "value": 0.8, "type": "scalar", "min": 0.3, "max": 1.5 },
+    "bodyColor": { "value": [0.8, 0.4, 0.2], "type": "color3" }
+  },
+  "root": {
+    "type": "smoothUnion",
+    "k": 0.2,
+    "children": [
+      {
+        "comment": "Body - uses bodyRadius param",
+        "type": "sphere",
+        "params": {
+          "r": { "var": "bodyRadius" },
+          "color": { "var": "bodyColor" }
+        }
+      },
+      {
+        "comment": "Head - derived from bodyRadius",
+        "type": "sphere",
+        "params": {
+          "r": { "expr": "mul", "args": [{ "var": "bodyRadius" }, 0.6] },
+          "color": { "var": "bodyColor" }
+        },
+        "transform": {
+          "translate": [0, { "expr": "add", "args": [{ "var": "bodyRadius" }, 0.2] }, 0]
+        }
+      },
+      {
+        "comment": "Arms - uses armLength param with mirror",
+        "type": "mirror",
+        "axis": "x",
+        "child": {
+          "type": "capsule",
+          "params": {
+            "h": { "var": "armLength" },
+            "r": { "expr": "mul", "args": [{ "var": "bodyRadius" }, 0.15] },
+            "color": [0.6, 0.3, 0.1]
+          },
+          "transform": {
+            "translate": [
+              { "expr": "add", "args": [{ "var": "bodyRadius" }, { "expr": "mul", "args": [{ "var": "armLength" }, 0.5] }] },
+              0,
+              0
+            ],
+            "rotate": [0, 0, 90]
+          }
+        }
+      }
+    ]
+  }
+}
