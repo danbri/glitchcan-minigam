@@ -56,7 +56,14 @@
     "fixtureColor": { "value": [0.25, 0.22, 0.20], "type": "color3", "description": "Mounting bracket color" },
     "chainTopColor": { "value": [0.95, 0.85, 0.25], "type": "color3", "description": "Chain color at top (golden)" },
     "chainBottomColor": { "value": [0.35, 0.12, 0.05], "type": "color3", "description": "Chain color at bottom (brown)" },
-    "ballColor": { "value": [0.75, 0.55, 0.20], "type": "color3", "description": "Weight ball color (brass)" }
+    "ballColor": { "value": [0.75, 0.55, 0.20], "type": "color3", "description": "Weight ball color (brass)" },
+    "linkTiltAngle": {
+      "value": 18,
+      "type": "scalar",
+      "min": 0,
+      "max": 35,
+      "description": "Maximum link rotation (degrees)"
+    }
   },
 
   "root": {
@@ -119,7 +126,11 @@
                   { "expr": "mul", "args": [0.08, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] }] }] },
                   2.10,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.12] },
+                  { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] }] }
+                ]}]
               }
             }
           },
@@ -141,7 +152,14 @@
                   ]},
                   1.50,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.25] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -1] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -163,7 +181,14 @@
                   ]},
                   0.90,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.40] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -2] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -185,7 +210,14 @@
                   ]},
                   0.30,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.55] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -3] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -207,7 +239,14 @@
                   ]},
                   -0.30,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.70] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -4] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -229,7 +268,14 @@
                   ]},
                   -0.90,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.82] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -5] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -251,7 +297,14 @@
                   ]},
                   -1.50,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "expr": "mul", "args": [{ "var": "linkTiltAngle" }, 0.92] },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -6] }
+                  ]}] }
+                ]}]
               }
             }
           },
@@ -273,7 +326,14 @@
                   ]},
                   -2.10,
                   0
-                ]
+                ],
+                "rotate": [0, 0, { "expr": "mul", "args": [
+                  { "var": "linkTiltAngle" },
+                  { "expr": "sin", "args": [{ "expr": "add", "args": [
+                    { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                    { "expr": "mul", "args": [{ "var": "waveDelay" }, -7] }
+                  ]}] }
+                ]}]
               }
             }
           }
