@@ -529,6 +529,55 @@ Scene parameters enable rigging - named controls that drive geometry. See `lucid
 - Live parameter tweaking in UI slider panel
 - Goal-blind critics can validate numeric ratios
 
+### Physical Constraints
+
+The `rig.constraints` block defines physical limits and coupled parameter relationships. When a "driver" parameter changes, the UI automatically adjusts "follower" parameters to maintain valid configurations.
+
+**Constraint Types:**
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `min/max` | Simple bounds | Elbow cannot hyperextend past 135° |
+| `coupled` | Auto-adjust followers | When shoulder > 120°, reduce elbow max |
+
+**Coupled Constraint Format:**
+
+```json
+"rig": {
+  "constraints": {
+    "shoulderElbowCoupling": {
+      "type": "coupled",
+      "driver": "shoulderAngle",
+      "follower": "elbowAngle",
+      "rule": "when shoulderAngle > 120, elbowAngle.max = 135 - (shoulderAngle - 120) * 1.5",
+      "reason": "Prevent forearm collision with upper arm",
+      "severity": "HIGH"
+    }
+  }
+}
+```
+
+**Rule Syntax:**
+- Pattern: `when DRIVER > THRESHOLD, FOLLOWER.max = EXPRESSION`
+- The expression can use arithmetic operators and the driver variable name
+- When driver exceeds threshold, follower is clamped to new max
+
+**UI Enforcement:**
+
+The slider panel in `lucid/index.html` enforces constraints in real-time:
+
+1. When user adjusts a slider, `enforceConstraints()` is called
+2. Function scans all constraints where this param is the driver
+3. For coupled constraints:
+   - Parse the rule to extract threshold and expression
+   - If driver > threshold, calculate new max for follower
+   - If follower.value > newMax, clamp it down
+   - Update follower's slider position, displayed value, and max attribute
+   - Update renderer with clamped value
+4. Console logs constraint activations: `⚙️ Constraint: elbowAngle clamped to 112.50 (max=112.50) due to shoulderAngle=135`
+
+**Example Scene:** `tut/constraints.json` - Robotic arm demonstrating coupled angle constraints.
+
 ## Demo Scene Statistics
 
 Analysis of all 54 demo scenes reveals common patterns:

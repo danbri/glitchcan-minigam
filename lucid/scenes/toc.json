@@ -46,7 +46,8 @@
         { "path": "tut/grouping.json", "title": "Grouping", "subtitle": "Organize complex scenes" },
         { "path": "tut/expressions.json", "title": "Expressions", "subtitle": "Math for animation" },
         { "path": "tut/modifiers.json", "title": "Modifiers", "subtitle": "Shell, displace, more" },
-        { "path": "tut/parametric.json", "title": "Artist Mannequin 🎛️", "subtitle": "Articulated wooden figure" }
+        { "path": "tut/parametric.json", "title": "Artist Mannequin 🎛️", "subtitle": "Articulated wooden figure" },
+        { "path": "tut/constraints.json", "title": "Physical Constraints ⚙️", "subtitle": "Robotic arm with angle limits" }
       ]
     },
     {
