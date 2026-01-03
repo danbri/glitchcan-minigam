@@ -1365,8 +1365,23 @@ function generateCustomExpr(node, ctx) {
  * Convert a value to GLSL expression
  */
 function valueToGlsl(value, ctx) {
-  if (!value) return '0.0';
+  if (value === null || value === undefined) return '0.0';
 
+  // Raw number (most common case)
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) {
+      return value + '.0';
+    }
+    return String(value);
+  }
+
+  // Raw JS array like [0, 1, 2] or [0, { "var": "foo" }, 0]
+  if (Array.isArray(value)) {
+    const components = value.map(v => valueToGlsl(v, ctx));
+    return `vec${components.length}(${components.join(', ')})`;
+  }
+
+  // Object with explicit type field
   switch (value.type) {
     case 'const':
       // Ensure floats have decimal point for GLSL
@@ -1397,8 +1412,27 @@ function valueToGlsl(value, ctx) {
       return exprToGlsl(value, ctx);
 
     default:
-      return '0.0';
+      break;
   }
+
+  // Inline { var: "name" } without explicit type field
+  if (value.var) {
+    if (ctx.localVars && ctx.localVars[value.var]) {
+      return ctx.localVars[value.var];
+    }
+    if (ctx.sceneParams && ctx.sceneParams[value.var]) {
+      return `u_${value.var}`;
+    }
+    ctx.uniforms.add(`u_${value.var}`);
+    return `u_${value.var}`;
+  }
+
+  // Inline { expr: "op", args: [...] } without explicit type field
+  if (value.expr) {
+    return exprToGlsl({ op: value.expr, args: value.args }, ctx);
+  }
+
+  return '0.0';
 }
 
 /**
@@ -1526,7 +1560,7 @@ function applyTransform(pVar, transform, ctx) {
     const rot = transform.rotate;
     // Handle both static and expression-based rotations
     if (rot.type === 'array' && rot.values) {
-      // Expression-based rotation - wrap in radians conversion
+      // Explicit expression-based rotation - wrap in radians conversion
       const rx = wrapDegreesToRadians(valueToGlsl(rot.values[0], ctx));
       const ry = wrapDegreesToRadians(valueToGlsl(rot.values[1], ctx));
       const rz = wrapDegreesToRadians(valueToGlsl(rot.values[2], ctx));
@@ -1536,15 +1570,27 @@ function applyTransform(pVar, transform, ctx) {
       result = `rotY(${result}, ${ry})`;
       result = `rotX(${result}, ${rx})`;
     } else if (Array.isArray(rot)) {
-      // Static rotation values - convert degrees to radians at compile time
-      const DEG2RAD = Math.PI / 180;
-      const rx = ((rot[0] || 0) * DEG2RAD).toFixed(6);
-      const ry = ((rot[1] || 0) * DEG2RAD).toFixed(6);
-      const rz = ((rot[2] || 0) * DEG2RAD).toFixed(6);
-      // Apply rotations in XYZ order (X first, then Y, then Z)
-      result = `rotZ(${result}, ${rz})`;
-      result = `rotY(${result}, ${ry})`;
-      result = `rotX(${result}, ${rx})`;
+      // Check if any element is an expression (object with var/expr)
+      const hasExpressions = rot.some(v => typeof v === 'object' && v !== null);
+      if (hasExpressions) {
+        // Array contains expressions - use valueToGlsl for each element
+        const rx = wrapDegreesToRadians(valueToGlsl(rot[0], ctx));
+        const ry = wrapDegreesToRadians(valueToGlsl(rot[1], ctx));
+        const rz = wrapDegreesToRadians(valueToGlsl(rot[2], ctx));
+        result = `rotZ(${result}, ${rz})`;
+        result = `rotY(${result}, ${ry})`;
+        result = `rotX(${result}, ${rx})`;
+      } else {
+        // Static rotation values - convert degrees to radians at compile time
+        const DEG2RAD = Math.PI / 180;
+        const rx = ((rot[0] || 0) * DEG2RAD).toFixed(6);
+        const ry = ((rot[1] || 0) * DEG2RAD).toFixed(6);
+        const rz = ((rot[2] || 0) * DEG2RAD).toFixed(6);
+        // Apply rotations in XYZ order (X first, then Y, then Z)
+        result = `rotZ(${result}, ${rz})`;
+        result = `rotY(${result}, ${ry})`;
+        result = `rotX(${result}, ${rx})`;
+      }
     }
   }
 
