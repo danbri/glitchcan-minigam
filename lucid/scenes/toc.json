@@ -46,7 +46,7 @@
         { "path": "tut/grouping.json", "title": "Grouping", "subtitle": "Organize complex scenes" },
         { "path": "tut/expressions.json", "title": "Expressions", "subtitle": "Math for animation" },
         { "path": "tut/modifiers.json", "title": "Modifiers", "subtitle": "Shell, displace, more" },
-        { "path": "tut/parametric.json", "title": "Parametric 🎛️", "subtitle": "Named params for rigging" }
+        { "path": "tut/parametric.json", "title": "Artist Mannequin 🎛️", "subtitle": "Articulated wooden figure" }
       ]
     },
     {
@@ -56,8 +56,8 @@
       "scenes": [
         { "path": "anim/pulsing-sphere.json", "title": "Pulsing Sphere 💓", "subtitle": "Animated radius" },
         { "path": "anim/breathing-torus.json", "title": "Breathing Torus 🫁", "subtitle": "Animated ring" },
-        { "path": "anim/capsule-chain.json", "title": "Capsule Chain ⛓️", "subtitle": "Swinging pendulum" },
-        { "path": "anim/expressions.json", "title": "Expression Demo 📐", "subtitle": "sin, cos, mix" }
+        { "path": "anim/capsule-chain.json", "title": "Pendulum Chain ⛓️", "subtitle": "Parametric swinging chain" },
+        { "path": "anim/expressions.json", "title": "Orbital System 📐", "subtitle": "Parametric orbiters" }
       ]
     },
     {
