@@ -430,8 +430,9 @@
       const gallery = document.getElementById(`gallery-${idx}`);
       if (!gallery) return;
 
-      // Try common image names
+      // Try common image names (including numeric format from capture-silhouette.mjs)
       const imageNames = [
+        '1.png', '2.png', '3.png', '4.png', '5.png', '6.png',
         'view-01.png', 'view-02.png', 'view-03.png',
         'view-04.png', 'view-05.png', 'view-06.png',
         '01-front-side.png', '02-quarter-right.png', '03-above-right.png',

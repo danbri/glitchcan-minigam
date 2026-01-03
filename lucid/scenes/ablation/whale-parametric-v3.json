@@ -1,7 +1,7 @@
 {
   "title": "Parametric Humpback Whale",
-  "subtitle": "v3.0 - Semantic parameters with decoupled regions",
-  "version": "3.0",
+  "subtitle": "v3.2 - Parliament-verified parametric flippers",
+  "version": "3.2",
   "camera": { "distance": 42, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
   "notes": "Expert-guided parametric design with semantic knobs, spatial decoupling, and comprehensive documentation. Each parameter has clear biological meaning and predictable monotonic effects.",
 
@@ -589,7 +589,7 @@
             "k": 0.35,
             "children": [
               {
-                "comment": "Flipper segment 1 (base) - attachment point",
+                "comment": "Flipper segment 1 (base) - attachment point - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -599,12 +599,16 @@
                   ]
                 },
                 "transform": {
-                  "translate": [1.8, -0.5, 2.0],
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.08] }] },
+                    -0.5,
+                    2.0
+                  ],
                   "rotate": [5, 0, -25]
                 }
               },
               {
-                "comment": "Flipper segment 2 - humerus region",
+                "comment": "Flipper segment 2 - humerus region - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -614,7 +618,11 @@
                   ]
                 },
                 "transform": {
-                  "translate": [2.9, -0.72, 0.9],
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.38] }] },
+                    -0.72,
+                    0.9
+                  ],
                   "rotate": [
                     8,
                     { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.25] },
@@ -623,7 +631,7 @@
                 }
               },
               {
-                "comment": "Flipper segment 3 - radius/ulna region",
+                "comment": "Flipper segment 3 - radius/ulna region - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -633,7 +641,11 @@
                   ]
                 },
                 "transform": {
-                  "translate": [4.0, -0.95, -0.3],
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.67] }] },
+                    -0.95,
+                    -0.3
+                  ],
                   "rotate": [
                     10,
                     { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.47] },
@@ -642,7 +654,7 @@
                 }
               },
               {
-                "comment": "Flipper segment 4 - carpal region",
+                "comment": "Flipper segment 4 - carpal region - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -652,7 +664,11 @@
                   ]
                 },
                 "transform": {
-                  "translate": [4.9, -1.15, -1.7],
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.91] }] },
+                    -1.15,
+                    -1.7
+                  ],
                   "rotate": [
                     12,
                     { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.62] },
@@ -661,7 +677,7 @@
                 }
               },
               {
-                "comment": "Flipper segment 5 - metacarpal/phalangeal region",
+                "comment": "Flipper segment 5 - metacarpal/phalangeal region - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -671,7 +687,11 @@
                   ]
                 },
                 "transform": {
-                  "translate": [5.6, -1.32, -3.0],
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 1.10] }] },
+                    -1.32,
+                    -3.0
+                  ],
                   "rotate": [
                     14,
                     { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.78] },
@@ -680,7 +700,7 @@
                 }
               },
               {
-                "comment": "Flipper segment 6 (tip) - distal phalanges, position controlled by flipperSpan",
+                "comment": "Flipper segment 6 (tip) - distal phalanges - PARAMETRIC",
                 "type": "ellipsoid",
                 "params": {
                   "radii": [
@@ -691,7 +711,7 @@
                 },
                 "transform": {
                   "translate": [
-                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.51] },
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 1.25] }] },
                     -1.45,
                     -4.0
                   ],
@@ -715,8 +735,9 @@
           "type": "mirror",
           "axis": "x",
           "child": {
+            "comment": "Flipper underside panels - FULLY PARAMETRIC",
             "type": "smoothUnion",
-            "k": 0.3,
+            "k": 0.4,
             "children": [
               {
                 "type": "ellipsoid",
@@ -727,7 +748,13 @@
                     { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.88] }
                   ]
                 },
-                "transform": { "translate": [2.4, -0.85, 1.1], "rotate": [8, -8, -28] }
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.24] }] },
+                    -0.85, 1.1
+                  ],
+                  "rotate": [8, -8, -28]
+                }
               },
               {
                 "type": "ellipsoid",
@@ -738,7 +765,13 @@
                     { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.96] }
                   ]
                 },
-                "transform": { "translate": [3.6, -1.08, 0.0], "rotate": [10, -14, -32] }
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.56] }] },
+                    -1.08, 0.0
+                  ],
+                  "rotate": [10, -14, -32]
+                }
               },
               {
                 "type": "ellipsoid",
@@ -749,7 +782,13 @@
                     { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.88] }
                   ]
                 },
-                "transform": { "translate": [4.5, -1.25, -1.4], "rotate": [12, -18, -36] }
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.80] }] },
+                    -1.25, -1.4
+                  ],
+                  "rotate": [12, -18, -36]
+                }
               },
               {
                 "type": "ellipsoid",
@@ -760,7 +799,13 @@
                     { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.75] }
                   ]
                 },
-                "transform": { "translate": [5.2, -1.40, -2.6], "rotate": [14, -22, -38] }
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.99] }] },
+                    -1.40, -2.6
+                  ],
+                  "rotate": [14, -22, -38]
+                }
               }
             ]
           }

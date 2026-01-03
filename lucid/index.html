@@ -866,21 +866,22 @@
     /* Close button (X) for panels */
     .panel-close {
       position: absolute;
-      top: 1.5rem;
+      top: 0.25rem;
       right: 0.5rem;
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 1.75rem;
+      height: 1.75rem;
       border: none;
-      background: rgba(248, 81, 73, 0.15);
+      background: rgba(248, 81, 73, 0.2);
       color: var(--error);
       border-radius: 4px;
-      font-size: 0.9rem;
+      font-size: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.15s ease;
-      z-index: 10;
+      z-index: 100;
+      pointer-events: auto;
     }
     .panel-close:hover {
       background: var(--error);
@@ -1985,8 +1986,8 @@
       // Pass scene params and rig to renderer for uniform binding
       renderer.updateScene(glsl, scene.params || {}, scene.rig || null);
 
-      // Update params panel with new scene params
-      updateParamsPanel(scene.params || {});
+      // Update params panel with new scene params and rig constraints
+      updateParamsPanel(scene.params || {}, scene.rig);
 
       // Update rig info display
       updateRigInfo(scene.rig);
@@ -3821,10 +3822,15 @@
 
     /**
      * Update params panel with sliders for current scene
+     * @param {Object} params - Scene parameters
+     * @param {Object} rig - Optional rig with constraints
      */
-    function updateParamsPanel(params) {
+    function updateParamsPanel(params, rig) {
       const content = $('params-content');
       if (!content) return;
+
+      // Store rig for constraint enforcement
+      const constraints = rig?.constraints || {};
 
       if (!params || Object.keys(params).length === 0) {
         content.innerHTML = `<div class="debug-row" style="color: var(--text-dim); font-style: italic;">
@@ -3870,18 +3876,89 @@
 
       content.innerHTML = html;
 
+      /**
+       * Enforce coupled constraints when a driver param changes.
+       * Looks for constraints where this param is the driver,
+       * calculates new bounds for followers, and clamps if needed.
+       */
+      function enforceConstraints(driverName, driverValue) {
+        for (const [constraintName, constraint] of Object.entries(constraints)) {
+          if (constraint.type !== 'coupled') continue;
+          if (constraint.driver !== driverName) continue;
+
+          const followerName = constraint.follower;
+          const followerParam = params[followerName];
+          if (!followerParam) continue;
+
+          // Parse and evaluate constraint rule
+          // Format: "when shoulderAngle > 120, elbowAngle.max = 135 - (shoulderAngle - 120) * 1.5"
+          const rule = constraint.rule;
+          const whenMatch = rule.match(/when\s+(\w+)\s*>\s*([\d.]+)/);
+          const maxMatch = rule.match(/\.max\s*=\s*(.+)$/);
+
+          if (whenMatch && maxMatch) {
+            const threshold = parseFloat(whenMatch[2]);
+            if (driverValue > threshold) {
+              // Evaluate the expression (simple parser for common patterns)
+              let expr = maxMatch[1].trim();
+              // Replace variable references with values
+              expr = expr.replace(new RegExp(`\\b${driverName}\\b`, 'g'), driverValue.toString());
+              try {
+                // Safely evaluate arithmetic expression
+                const newMax = Function('"use strict"; return (' + expr + ')')();
+                const originalMin = followerParam.min !== undefined ? followerParam.min : 0;
+
+                // If follower value exceeds new max, clamp it
+                if (followerParam.value > newMax) {
+                  const clampedValue = Math.max(originalMin, newMax);
+                  followerParam.value = clampedValue;
+
+                  // Update follower's slider and display
+                  const followerSlider = $(`param-slider-${followerName}`);
+                  const followerValEl = $(`param-val-${followerName}`);
+                  if (followerSlider) {
+                    followerSlider.value = clampedValue;
+                    // Also update the max attribute for visual feedback
+                    followerSlider.max = newMax;
+                  }
+                  if (followerValEl) {
+                    followerValEl.textContent = clampedValue.toFixed(2);
+                  }
+
+                  // Update renderer with clamped value
+                  renderer.setParam(followerName, clampedValue);
+
+                  console.log(`⚙️ Constraint: ${followerName} clamped to ${clampedValue.toFixed(2)} (max=${newMax.toFixed(2)}) due to ${driverName}=${driverValue}`);
+                }
+              } catch (e) {
+                console.warn(`Failed to evaluate constraint rule: ${expr}`, e);
+              }
+            } else {
+              // Driver below threshold - restore original max
+              const followerSlider = $(`param-slider-${followerName}`);
+              if (followerSlider && followerParam.max !== undefined) {
+                followerSlider.max = followerParam.max;
+              }
+            }
+          }
+        }
+      }
+
       // Attach event listeners for sliders
       for (const [name, param] of Object.entries(params)) {
         if (param.type === 'scalar') {
           const slider = $(`param-slider-${name}`);
           if (slider) {
-            // Value change handler
+            // Value change handler with constraint enforcement
             slider.addEventListener('input', function() {
               const val = parseFloat(this.value);
               param.value = val;
               const valEl = $(`param-val-${name}`);
               if (valEl) valEl.textContent = val.toFixed(2);
               renderer.setParam(name, val);
+
+              // Check and enforce any coupled constraints
+              enforceConstraints(name, val);
             });
 
             // Touch handling for better mobile experience
