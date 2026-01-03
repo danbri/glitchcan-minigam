@@ -203,11 +203,6 @@
             border-color: var(--accent-primary);
         }
 
-        #toggle-controls.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
         /* Quick action buttons */
         .quick-actions {
             position: fixed;
@@ -1362,16 +1357,12 @@
                 const controls = document.getElementById('controls');
                 const toggle = document.getElementById('toggle-controls');
 
+                // Toggle panel open/close - settings icon always visible
                 toggle.addEventListener('click', () => {
-                    const isHidden = controls.classList.contains('hidden');
-                    if (isHidden) {
-                        controls.classList.remove('hidden');
-                        toggle.classList.add('hidden');
-                    }
+                    controls.classList.toggle('hidden');
                 });
 
                 // Close button - add X to panel header
-                const header = controls.querySelector('h2');
                 const closeBtn = document.createElement('button');
                 closeBtn.innerHTML = '×';
                 closeBtn.style.cssText = `
@@ -1392,9 +1383,8 @@
                 `;
                 closeBtn.addEventListener('click', () => {
                     controls.classList.add('hidden');
-                    toggle.classList.remove('hidden');
                 });
-                controls.style.position = 'fixed'; // Ensure relative positioning for absolute child
+                controls.style.position = 'fixed';
                 controls.insertBefore(closeBtn, controls.firstChild);
             }
 
