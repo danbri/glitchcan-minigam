@@ -1,6 +1,6 @@
 {
   "title": "Lucid SDF Scene Library",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Table of contents for all SDF-CSG demo scenes",
   "categories": [
     {
@@ -25,8 +25,19 @@
       ]
     },
     {
+      "id": "objects",
+      "title": "3. Objects",
+      "description": "Simple constructed objects",
+      "scenes": [
+        { "path": "objects/table.json", "title": "Table 🪑", "subtitle": "Box top with cylinder legs" },
+        { "path": "objects/box-torus-subtract.json", "title": "Carved Box 🕳️", "subtitle": "Torus cut from cube" },
+        { "path": "objects/cylinder-array.json", "title": "Cylinder Grid 🎯", "subtitle": "Array of colored cylinders" },
+        { "path": "objects/rotated-boxes.json", "title": "Rotated Boxes 📐", "subtitle": "Boxes at various angles" }
+      ]
+    },
+    {
       "id": "tut",
-      "title": "3. Tutorials",
+      "title": "4. Tutorials",
       "description": "Learn SDF concepts",
       "scenes": [
         { "path": "tut/transforms.json", "title": "Transforms", "subtitle": "Move, rotate, scale" },
@@ -40,18 +51,18 @@
     },
     {
       "id": "anim",
-      "title": "4. Animation",
+      "title": "5. Animation",
       "description": "Time-based motion",
       "scenes": [
         { "path": "anim/pulsing-sphere.json", "title": "Pulsing Sphere 💓", "subtitle": "Animated radius" },
         { "path": "anim/breathing-torus.json", "title": "Breathing Torus 🫁", "subtitle": "Animated ring" },
-        { "path": "anim/capsule-chain.json", "title": "Capsule Chain ⛓️", "subtitle": "Multiple elements" },
+        { "path": "anim/capsule-chain.json", "title": "Capsule Chain ⛓️", "subtitle": "Swinging pendulum" },
         { "path": "anim/expressions.json", "title": "Expression Demo 📐", "subtitle": "sin, cos, mix" }
       ]
     },
     {
       "id": "patterns",
-      "title": "5. Patterns",
+      "title": "6. Patterns",
       "description": "Repetition & symmetry",
       "scenes": [
         { "path": "patterns/mirror.json", "title": "Mirror 🪞", "subtitle": "Axis reflection" },
@@ -62,7 +73,7 @@
     },
     {
       "id": "fx",
-      "title": "6. Effects",
+      "title": "7. Effects",
       "description": "Visual polish",
       "scenes": [
         { "path": "fx/glowing-orb.json", "title": "Glowing Orb 🔮", "subtitle": "Emission + shell" },
@@ -72,9 +83,22 @@
       ]
     },
     {
+      "id": "nature",
+      "title": "Nature",
+      "description": "Plants & organic forms",
+      "scenes": [
+        { "path": "nature/celly.json", "title": "Celly 🦠", "subtitle": "Dividing microbes" },
+        { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
+        { "path": "nature/single-sunflower.json", "title": "Sunflower Test 🌻", "subtitle": "Isolated SDF test" },
+        { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers" },
+        { "path": "nature/poppy-field.json", "title": "Poppy Field 🌺", "subtitle": "Red poppies" },
+        { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed blooms" }
+      ]
+    },
+    {
       "id": "creatures",
       "title": "Creatures",
-      "description": "Polished characters & beings",
+      "description": "Characters & beings",
       "scenes": [
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
@@ -83,21 +107,9 @@
       ]
     },
     {
-      "id": "nature",
-      "title": "Nature",
-      "description": "Plants & organic",
-      "scenes": [
-        { "path": "nature/celly.json", "title": "Celly 🦠", "subtitle": "Dividing microbes" },
-        { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
-        { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers" },
-        { "path": "nature/poppy-field.json", "title": "Poppy Field 🌺", "subtitle": "Red poppies" },
-        { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed poppies & sunflowers" }
-      ]
-    },
-    {
       "id": "ships",
       "title": "Spaceships",
-      "description": "Vehicles",
+      "description": "Vehicles & craft",
       "scenes": [
         { "path": "ships/cobra-mk3.json", "title": "Cobra Mk III 🚀", "subtitle": "Elite ship" },
         { "path": "ships/elite-wireframe.json", "title": "Elite Wireframe ✨", "subtitle": "Vector style" }
@@ -108,17 +120,24 @@
       "title": "Combined Scenes",
       "description": "Multi-element showcases",
       "scenes": [
-        { "path": "combined/cobra-vs-invaders.json", "title": "Cobra vs Invaders 🎮", "subtitle": "Elite ship attacks space invaders" }
+        { "path": "combined/cobra-vs-invaders.json", "title": "Cobra vs Invaders 🎮", "subtitle": "Elite ship attacks invaders" }
       ]
     },
     {
       "id": "ablation",
-      "title": "🧪 Ablation Drafts",
-      "description": "Context-ablated blind evaluation models",
+      "title": "🧪 Ablation Models",
+      "description": "Parametric creatures & evaluation subjects",
       "scenes": [
-        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale v6.65", "subtitle": "PMAC 91/100 - Tubercles 0.35" },
+        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale", "subtitle": "v6.65 - PMAC evaluated" },
         { "path": "ablation/whale-parametric.json", "title": "🐋 Parametric Whale v2", "subtitle": "Named params for rigging" },
-        { "path": "ablation/whale-parametric-v3.json", "title": "🐋 Parametric Whale v3 🎛️", "subtitle": "Semantic knobs + decoupled regions" },
+        { "path": "ablation/whale-parametric-v3.json", "title": "🐋 Parametric Whale v3 🎛️", "subtitle": "24 semantic parameters" }
+      ]
+    },
+    {
+      "id": "dragons",
+      "title": "🐉 Dragon Gallery",
+      "description": "Dragon model iterations",
+      "scenes": [
         { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
         { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
         { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },
@@ -128,17 +147,17 @@
       ]
     },
     {
-      "id": "ablation-old",
-      "title": "   └─ Old Experiments",
-      "description": "Archived iteration experiments",
+      "id": "archive",
+      "title": "📁 Archive",
+      "description": "Old experiments & iterations",
       "scenes": [
-        { "path": "test/div-test.json", "title": "Div Test 🧪", "subtitle": "Minimal div expression test" },
+        { "path": "test/div-test.json", "title": "Div Test 🧪", "subtitle": "Expression test" },
         { "path": "ablation/old/test-a.json", "title": "Test A", "subtitle": "Initial form study" },
-        { "path": "ablation/old/test-b.json", "title": "Test B (Dolphin)", "subtitle": "75% confidence" },
+        { "path": "ablation/old/test-b.json", "title": "Test B", "subtitle": "Dolphin attempt" },
         { "path": "ablation/old/hippo-v1.json", "title": "Hippo v1 🦛", "subtitle": "Early test" },
-        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Dragon", "subtitle": "Context-ablated conversion" },
-        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5", "subtitle": "Dragon silhouette final" },
-        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Final dragon iteration" }
+        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Dragon", "subtitle": "Context-ablated" },
+        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5", "subtitle": "Dragon silhouette" },
+        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Final iteration" }
       ]
     }
   ]
