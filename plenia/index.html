@@ -194,14 +194,99 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        #toggle-controls.visible {
-            opacity: 1;
-            pointer-events: all;
+        #toggle-controls:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-primary);
+        }
+
+        #toggle-controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Quick action buttons */
+        .quick-actions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .quick-btn {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            border-radius: 50%;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .quick-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Toggle switch */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .toggle-row label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--accent-primary);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(22px);
         }
 
         /* Stats Display */
@@ -424,8 +509,18 @@
 
     <button id="toggle-controls">⚙️</button>
 
-    <div id="controls">
+    <div class="quick-actions">
+        <button class="quick-btn" id="btn-zoom-in" title="Zoom In">+</button>
+        <button class="quick-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+    </div>
+
+    <div id="controls" class="hidden">
         <h2>Simulation Controls</h2>
+
+        <div class="toggle-row">
+            <label>Wraparound</label>
+            <div class="toggle-switch active" id="toggle-wrap" title="Particles wrap at edges"></div>
+        </div>
 
         <div class="control-group">
             <label>Particles <span class="value" id="val-particles">400</span></label>
@@ -555,14 +650,16 @@
                 this.paused = false;
                 this.colorScheme = 'cosmic';
 
+                // View settings
+                this.zoom = 1.0;
+                this.minZoom = 0.3;
+                this.maxZoom = 3.0;
+                this.wraparound = true;
+
                 // Mouse/touch interaction
                 this.mousePos = { x: 0, y: 0 };
                 this.mouseActive = false;
                 this.mouseAttract = true; // true = attract, false = repel
-
-                // Trail effect
-                this.trailEnabled = true;
-                this.trailAlpha = 0.92;
 
                 // Spatial hash for O(n) neighbor lookup
                 this.gridCellSize = 4.0;
@@ -686,13 +783,14 @@
                     uniform vec2 u_resolution;
                     uniform float u_bounds;
                     uniform float u_pointSize;
+                    uniform float u_zoom;
 
                     out float v_energy;
                     out vec2 v_pos;
 
                     void main() {
-                        // Map simulation coords to clip space
-                        vec2 pos = a_position / u_bounds;
+                        // Map simulation coords to clip space with zoom
+                        vec2 pos = (a_position / u_bounds) * u_zoom;
 
                         // Adjust for aspect ratio
                         float aspect = u_resolution.x / u_resolution.y;
@@ -703,7 +801,7 @@
                         }
 
                         gl_Position = vec4(pos, 0.0, 1.0);
-                        gl_PointSize = u_pointSize;
+                        gl_PointSize = u_pointSize * u_zoom;
 
                         v_energy = a_energy;
                         v_pos = a_position;
@@ -806,7 +904,8 @@
                     u_resolution: gl.getUniformLocation(this.program, 'u_resolution'),
                     u_bounds: gl.getUniformLocation(this.program, 'u_bounds'),
                     u_pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
-                    u_colorScheme: gl.getUniformLocation(this.program, 'u_colorScheme')
+                    u_colorScheme: gl.getUniformLocation(this.program, 'u_colorScheme'),
+                    u_zoom: gl.getUniformLocation(this.program, 'u_zoom')
                 };
 
                 // Create buffers
@@ -973,12 +1072,33 @@
                         }
                     }
 
-                    // Soft boundary wrapping
+                    // Boundary handling
                     const bound = this.bounds;
-                    if (this.positions[i * 2] < -bound) this.positions[i * 2] += bound * 2;
-                    if (this.positions[i * 2] > bound) this.positions[i * 2] -= bound * 2;
-                    if (this.positions[i * 2 + 1] < -bound) this.positions[i * 2 + 1] += bound * 2;
-                    if (this.positions[i * 2 + 1] > bound) this.positions[i * 2 + 1] -= bound * 2;
+                    if (this.wraparound) {
+                        // Wrap around edges
+                        if (this.positions[i * 2] < -bound) this.positions[i * 2] += bound * 2;
+                        if (this.positions[i * 2] > bound) this.positions[i * 2] -= bound * 2;
+                        if (this.positions[i * 2 + 1] < -bound) this.positions[i * 2 + 1] += bound * 2;
+                        if (this.positions[i * 2 + 1] > bound) this.positions[i * 2 + 1] -= bound * 2;
+                    } else {
+                        // Bounce off edges
+                        if (this.positions[i * 2] < -bound) {
+                            this.positions[i * 2] = -bound;
+                            gradients[i * 2] *= -0.5;
+                        }
+                        if (this.positions[i * 2] > bound) {
+                            this.positions[i * 2] = bound;
+                            gradients[i * 2] *= -0.5;
+                        }
+                        if (this.positions[i * 2 + 1] < -bound) {
+                            this.positions[i * 2 + 1] = -bound;
+                            gradients[i * 2 + 1] *= -0.5;
+                        }
+                        if (this.positions[i * 2 + 1] > bound) {
+                            this.positions[i * 2 + 1] = bound;
+                            gradients[i * 2 + 1] *= -0.5;
+                        }
+                    }
                 }
 
                 // Rebuild grid for energy calculation
@@ -1011,6 +1131,7 @@
                 // Set uniforms
                 gl.uniform2f(this.locations.u_resolution, this.canvas.width, this.canvas.height);
                 gl.uniform1f(this.locations.u_bounds, this.bounds);
+                gl.uniform1f(this.locations.u_zoom, this.zoom);
 
                 // Dynamic point size based on screen and particle count
                 const baseSize = Math.min(this.canvas.width, this.canvas.height) / 80;
@@ -1067,6 +1188,19 @@
             togglePause() {
                 this.paused = !this.paused;
                 return this.paused;
+            }
+
+            zoomIn() {
+                this.zoom = Math.min(this.maxZoom, this.zoom * 1.2);
+            }
+
+            zoomOut() {
+                this.zoom = Math.max(this.minZoom, this.zoom / 1.2);
+            }
+
+            toggleWraparound() {
+                this.wraparound = !this.wraparound;
+                return this.wraparound;
             }
 
             applyPreset(name) {
@@ -1143,6 +1277,8 @@
                 this.setupPresets();
                 this.setupColorSchemes();
                 this.setupToggle();
+                this.setupZoom();
+                this.setupWraparound();
                 this.startStatsUpdate();
             }
 
@@ -1205,21 +1341,98 @@
                 const toggle = document.getElementById('toggle-controls');
 
                 toggle.addEventListener('click', () => {
-                    controls.classList.remove('hidden');
-                    toggle.classList.remove('visible');
+                    const isHidden = controls.classList.contains('hidden');
+                    if (isHidden) {
+                        controls.classList.remove('hidden');
+                        toggle.classList.add('hidden');
+                    }
                 });
 
-                // Add close button behavior (click outside)
-                document.addEventListener('click', (e) => {
-                    if (!controls.contains(e.target) &&
-                        !toggle.contains(e.target) &&
-                        !controls.classList.contains('hidden')) {
-                        // Don't hide on mobile for now
-                        if (window.innerWidth > 768) {
-                            // controls.classList.add('hidden');
-                            // toggle.classList.add('visible');
-                        }
+                // Close button - add X to panel header
+                const header = controls.querySelector('h2');
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 16px;
+                    right: 16px;
+                    width: 32px;
+                    height: 32px;
+                    border: none;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 50%;
+                    color: white;
+                    font-size: 1.25rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                closeBtn.addEventListener('click', () => {
+                    controls.classList.add('hidden');
+                    toggle.classList.remove('hidden');
+                });
+                controls.style.position = 'fixed'; // Ensure relative positioning for absolute child
+                controls.insertBefore(closeBtn, controls.firstChild);
+            }
+
+            setupZoom() {
+                document.getElementById('btn-zoom-in').addEventListener('click', () => {
+                    this.sim.zoomIn();
+                });
+
+                document.getElementById('btn-zoom-out').addEventListener('click', () => {
+                    this.sim.zoomOut();
+                });
+
+                // Pinch zoom for touch
+                const canvas = this.sim.canvas;
+                let lastPinchDist = 0;
+
+                canvas.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 2) {
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        lastPinchDist = Math.sqrt(dx * dx + dy * dy);
                     }
+                }, { passive: true });
+
+                canvas.addEventListener('touchmove', (e) => {
+                    if (e.touches.length === 2) {
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (lastPinchDist > 0) {
+                            const scale = dist / lastPinchDist;
+                            this.sim.zoom = Math.max(this.sim.minZoom,
+                                Math.min(this.sim.maxZoom, this.sim.zoom * scale));
+                        }
+                        lastPinchDist = dist;
+                    }
+                }, { passive: true });
+
+                canvas.addEventListener('touchend', () => {
+                    lastPinchDist = 0;
+                }, { passive: true });
+
+                // Mouse wheel zoom
+                canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (e.deltaY < 0) {
+                        this.sim.zoomIn();
+                    } else {
+                        this.sim.zoomOut();
+                    }
+                }, { passive: false });
+            }
+
+            setupWraparound() {
+                const toggle = document.getElementById('toggle-wrap');
+
+                toggle.addEventListener('click', () => {
+                    const isActive = this.sim.toggleWraparound();
+                    toggle.classList.toggle('active', isActive);
                 });
             }
 
