@@ -1,124 +1,330 @@
 {
-  "title": "Swinging Chain",
-  "subtitle": "Pendulum chain with autumnal colors",
-  "version": "2.0",
-  "camera": { "distance": 8, "phi": 0.4, "theta": 0.1, "target": [0, -1.5, 0] },
-  "notes": "8 capsule links hanging from top, swinging with phase-propagated motion. Autumnal color gradient from golden yellow at anchor to deep reddish brown. Heavy ball at the end adds weight and momentum.",
+  "title": "Pendulum Chain",
+  "subtitle": "Articulated chain with parametric physics and mounting fixture",
+  "version": "3.0",
+  "camera": { "distance": 7, "phi": 0.35, "theta": 0.15, "target": [0, -0.5, 0] },
+  "notes": "8 capsule links swinging from ceiling mount with phase-propagated wave motion. Heavy brass ball at end provides inertia. Adjust swing speed, amplitude, and colors.",
+
+  "params": {
+    "_motion": "=== MOTION PARAMETERS ===",
+    "swingSpeed": {
+      "value": 1.8,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 4.0,
+      "description": "Pendulum frequency (radians/sec)"
+    },
+    "swingAmplitude": {
+      "value": 0.55,
+      "type": "scalar",
+      "min": 0.2,
+      "max": 1.0,
+      "description": "Maximum swing displacement"
+    },
+    "waveDelay": {
+      "value": 0.2,
+      "type": "scalar",
+      "min": 0.05,
+      "max": 0.4,
+      "description": "Phase delay between links (wave propagation)"
+    },
+
+    "_chain": "=== CHAIN PARAMETERS ===",
+    "linkRadius": {
+      "value": 0.055,
+      "type": "scalar",
+      "min": 0.03,
+      "max": 0.10,
+      "description": "Chain link thickness"
+    },
+    "linkLength": {
+      "value": 0.30,
+      "type": "scalar",
+      "min": 0.15,
+      "max": 0.50,
+      "description": "Length of each link"
+    },
+    "ballWeight": {
+      "value": 0.28,
+      "type": "scalar",
+      "min": 0.15,
+      "max": 0.45,
+      "description": "Weight ball radius"
+    },
+
+    "_colors": "=== COLORS ===",
+    "fixtureColor": { "value": [0.25, 0.22, 0.20], "type": "color3", "description": "Mounting bracket color" },
+    "chainTopColor": { "value": [0.95, 0.85, 0.25], "type": "color3", "description": "Chain color at top (golden)" },
+    "chainBottomColor": { "value": [0.35, 0.12, 0.05], "type": "color3", "description": "Chain color at bottom (brown)" },
+    "ballColor": { "value": [0.75, 0.55, 0.20], "type": "color3", "description": "Weight ball color (brass)" }
+  },
+
   "root": {
-    "type": "smoothUnion",
-    "k": 0.08,
+    "type": "union",
     "children": [
       {
-        "comment": "Anchor point - fixed at top",
-        "type": "sphere",
-        "params": { "r": 0.15, "color": [0.3, 0.25, 0.2] },
-        "transform": { "translate": [0, 2.5, 0] }
-      },
-      {
-        "comment": "Link 1 - Golden yellow, minimal swing",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.85, 0.25] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.08, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }] }] },
-            2.15,
-            0
+        "comment": "=== CEILING MOUNTING BRACKET ===",
+        "type": "material",
+        "params": { "color": { "var": "fixtureColor" } },
+        "child": {
+          "type": "smoothUnion",
+          "k": 0.08,
+          "children": [
+            {
+              "comment": "Ceiling plate",
+              "type": "box",
+              "params": { "size": [0.35, 0.04, 0.20] },
+              "transform": { "translate": [0, 2.72, 0] }
+            },
+            {
+              "comment": "Mounting bracket arms",
+              "type": "mirror",
+              "axis": "x",
+              "child": {
+                "type": "capsule",
+                "params": { "r": 0.035, "h": 0.12 },
+                "transform": { "translate": [0.12, 2.60, 0] }
+              }
+            },
+            {
+              "comment": "Hook ring",
+              "type": "torus",
+              "params": { "major": 0.08, "minor": 0.025 },
+              "transform": { "translate": [0, 2.48, 0] }
+            },
+            {
+              "comment": "Hook connector",
+              "type": "sphere",
+              "params": { "r": 0.045 },
+              "transform": { "translate": [0, 2.40, 0] }
+            }
           ]
         }
       },
+
       {
-        "comment": "Link 2 - Yellow-orange",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.75, 0.2] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.14, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.2] }] }] },
-            1.55,
-            0
-          ]
-        }
+        "comment": "=== CHAIN LINKS (8 segments with smooth blending) ===",
+        "type": "smoothUnion",
+        "k": 0.12,
+        "children": [
+          {
+            "comment": "Link 1 - Top, minimal swing",
+            "type": "material",
+            "params": { "color": { "var": "chainTopColor" } },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [0.08, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] }] }] },
+                  2.10,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 2",
+            "type": "material",
+            "params": { "color": [0.95, 0.78, 0.22] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.25] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -1] }
+                    ]}] }
+                  ]},
+                  1.50,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 3",
+            "type": "material",
+            "params": { "color": [0.92, 0.65, 0.18] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.40] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -2] }
+                    ]}] }
+                  ]},
+                  0.90,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 4",
+            "type": "material",
+            "params": { "color": [0.85, 0.50, 0.15] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.55] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -3] }
+                    ]}] }
+                  ]},
+                  0.30,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 5",
+            "type": "material",
+            "params": { "color": [0.75, 0.38, 0.12] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.70] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -4] }
+                    ]}] }
+                  ]},
+                  -0.30,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 6",
+            "type": "material",
+            "params": { "color": [0.62, 0.28, 0.10] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.82] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -5] }
+                    ]}] }
+                  ]},
+                  -0.90,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 7",
+            "type": "material",
+            "params": { "color": [0.48, 0.20, 0.08] },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 0.92] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -6] }
+                    ]}] }
+                  ]},
+                  -1.50,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "comment": "Link 8 - Bottom",
+            "type": "material",
+            "params": { "color": { "var": "chainBottomColor" } },
+            "child": {
+              "type": "capsule",
+              "params": { "h": { "var": "linkLength" }, "r": { "var": "linkRadius" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "var": "swingAmplitude" },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -7] }
+                    ]}] }
+                  ]},
+                  -2.10,
+                  0
+                ]
+              }
+            }
+          }
+        ]
       },
+
       {
-        "comment": "Link 3 - Orange",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.95, 0.6, 0.15] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.2, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.4] }] }] },
-            0.95,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Link 4 - Burnt orange",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.9, 0.45, 0.12] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.26, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.6] }] }] },
-            0.35,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Link 5 - Rust",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.8, 0.35, 0.1] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.32, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -0.8] }] }] },
-            -0.25,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Link 6 - Dark rust",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.65, 0.25, 0.08] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.38, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.0] }] }] },
-            -0.85,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Link 7 - Reddish brown",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.5, 0.18, 0.06] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.44, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.2] }] }] },
-            -1.45,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Link 8 - Deep brown",
-        "type": "capsule",
-        "params": { "h": 0.28, "r": 0.06, "color": [0.35, 0.12, 0.05] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.5, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.4] }] }] },
-            -2.05,
-            0
-          ]
-        }
-      },
-      {
-        "comment": "Weight ball - heavy end piece",
-        "type": "sphere",
-        "params": { "r": 0.22, "color": [0.25, 0.08, 0.03] },
-        "transform": {
-          "translate": [
-            { "expr": "mul", "args": [0.56, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.8] }, -1.6] }] }] },
-            -2.6,
-            0
+        "comment": "=== WEIGHT BALL (brass pendulum bob) ===",
+        "type": "material",
+        "params": { "color": { "var": "ballColor" }, "roughness": 0.3 },
+        "child": {
+          "type": "smoothUnion",
+          "k": 0.06,
+          "children": [
+            {
+              "comment": "Main weight sphere",
+              "type": "sphere",
+              "params": { "r": { "var": "ballWeight" } },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 1.08] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -8] }
+                    ]}] }
+                  ]},
+                  -2.65,
+                  0
+                ]
+              }
+            },
+            {
+              "comment": "Attachment ring on ball",
+              "type": "torus",
+              "params": { "major": 0.08, "minor": 0.02 },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "swingAmplitude" }, 1.05] },
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                      { "expr": "mul", "args": [{ "var": "waveDelay" }, -7.5] }
+                    ]}] }
+                  ]},
+                  -2.38,
+                  0
+                ],
+                "rotate": [90, 0, 0]
+              }
+            }
           ]
         }
       }

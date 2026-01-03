@@ -979,6 +979,143 @@
       transform: translateX(20px);
     }
 
+    /* Mobile-friendly slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      touch-action: none; /* Prevent scroll while dragging */
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover,
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Larger touch target on mobile */
+    @media (pointer: coarse) {
+      input[type="range"] {
+        height: 12px;
+        padding: 8px 0;
+        margin: 4px 0;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 32px;
+        height: 32px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 32px;
+        height: 32px;
+      }
+
+      /* Ensure slider rows have enough padding for touch */
+      .debug-row {
+        padding: 0.5rem 0;
+        min-height: 44px;
+      }
+    }
+
+    /* Tree slider panel - enhanced for better visibility and touch */
+    .tree-slider-panel,
+    .tree-vec3-panel {
+      display: none;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
+      border-bottom: 2px solid #fbbf24;
+    }
+
+    .tree-slider-panel.visible,
+    .tree-vec3-panel.visible {
+      display: block;
+    }
+
+    .tree-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tree-slider-label {
+      font-size: 0.8rem;
+      color: #fbbf24;
+      font-weight: 600;
+      min-width: 5rem;
+    }
+
+    .tree-slider-input {
+      flex: 1;
+      min-width: 120px;
+      accent-color: #fbbf24;
+    }
+
+    .tree-slider-number {
+      width: 5rem;
+      padding: 0.4rem 0.5rem;
+      background: var(--bg);
+      color: #fbbf24;
+      border: 1px solid #fbbf24;
+      border-radius: 4px;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.85rem;
+      text-align: right;
+    }
+
+    .tree-slider-number:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+    }
+
+    /* Vec3 picker styling */
+    .tree-vec3-sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tree-vec3-axis {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tree-vec3-axis-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      width: 1.5rem;
+      text-align: center;
+    }
+
     /* Debug toggle button - now in header, keep for mobile fallback */
     .debug-toggle {
       display: none;
@@ -1140,11 +1277,34 @@
             <span style="flex:1"></span>
           </div>
           <!-- Tree slider widget for numeric values -->
-          <div id="tree-slider-panel" style="display:none;padding:0.5rem 0.75rem;background:#1a1f26;border-bottom:1px solid #333;">
-            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-              <span id="tree-slider-label" style="font-size:0.75rem;color:#fbbf24;min-width:4rem;"></span>
-              <input type="range" id="tree-slider" style="flex:1;min-width:100px;accent-color:#fbbf24;">
-              <span id="tree-slider-value" style="font-size:0.8rem;color:#fbbf24;min-width:3.5rem;text-align:right;font-family:monospace;"></span>
+          <div id="tree-slider-panel" class="tree-slider-panel">
+            <div class="tree-slider-row">
+              <span id="tree-slider-label" class="tree-slider-label"></span>
+              <input type="range" id="tree-slider" class="tree-slider-input">
+              <input type="number" id="tree-slider-number" class="tree-slider-number">
+            </div>
+          </div>
+          <!-- Vec3 picker for position/color/scale arrays -->
+          <div id="tree-vec3-panel" class="tree-vec3-panel">
+            <div class="tree-slider-row">
+              <span id="tree-vec3-label" class="tree-slider-label"></span>
+            </div>
+            <div class="tree-vec3-sliders">
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#f87171">X</span>
+                <input type="range" id="tree-vec3-x" class="tree-slider-input" style="accent-color:#f87171">
+                <input type="number" id="tree-vec3-x-num" class="tree-slider-number">
+              </div>
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#4ade80">Y</span>
+                <input type="range" id="tree-vec3-y" class="tree-slider-input" style="accent-color:#4ade80">
+                <input type="number" id="tree-vec3-y-num" class="tree-slider-number">
+              </div>
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#60a5fa">Z</span>
+                <input type="range" id="tree-vec3-z" class="tree-slider-input" style="accent-color:#60a5fa">
+                <input type="number" id="tree-vec3-z-num" class="tree-slider-number">
+              </div>
             </div>
           </div>
           <!-- GLSL/Expression popup display -->
@@ -3090,7 +3250,8 @@
       const treeSliderPanel = $('tree-slider-panel');
       const treeSlider = $('tree-slider');
       const treeSliderLabel = $('tree-slider-label');
-      const treeSliderValue = $('tree-slider-value');
+      const treeSliderNumber = $('tree-slider-number');
+      const treeVec3Panel = $('tree-vec3-panel');
 
       if (treeSliderPanel && treeSlider) {
         treeSlider.min = min;
@@ -3098,12 +3259,21 @@
         treeSlider.step = step;
         treeSlider.value = value;
 
-        // Show param name and notes in label
-        const labelText = nodeNotes ? `${paramName}` : paramName;
-        treeSliderLabel.textContent = labelText.substring(0, 20);
-        treeSliderValue.textContent = formatNumber(value);
+        // Setup number input
+        if (treeSliderNumber) {
+          treeSliderNumber.min = min;
+          treeSliderNumber.max = max;
+          treeSliderNumber.step = step;
+          treeSliderNumber.value = formatNumber(value);
+        }
 
-        treeSliderPanel.style.display = 'block';
+        // Show param name in label
+        const labelText = paramName || 'value';
+        treeSliderLabel.textContent = labelText.substring(0, 20);
+
+        // Show slider panel, hide vec3 panel
+        treeSliderPanel.classList.add('visible');
+        if (treeVec3Panel) treeVec3Panel.classList.remove('visible');
 
         // Hide GLSL display when showing slider
         hideGlslDisplay();
@@ -3114,8 +3284,8 @@
       if (!treeEditState.path) return;
 
       const formatted = formatNumber(newValue);
-      const treeSliderValue = $('tree-slider-value');
-      if (treeSliderValue) treeSliderValue.textContent = formatted;
+      const treeSliderNumber = $('tree-slider-number');
+      if (treeSliderNumber) treeSliderNumber.value = formatted;
 
       // Update JSON using path
       const json = demos[currentDemo].json;
@@ -3136,7 +3306,9 @@
     // Hide tree slider panel
     function hideTreeSlider() {
       const treeSliderPanel = $('tree-slider-panel');
-      if (treeSliderPanel) treeSliderPanel.style.display = 'none';
+      const treeVec3Panel = $('tree-vec3-panel');
+      if (treeSliderPanel) treeSliderPanel.classList.remove('visible');
+      if (treeVec3Panel) treeVec3Panel.classList.remove('visible');
     }
 
     function setValueByPath(obj, path, value) {
@@ -3703,12 +3875,30 @@
         if (param.type === 'scalar') {
           const slider = $(`param-slider-${name}`);
           if (slider) {
+            // Value change handler
             slider.addEventListener('input', function() {
               const val = parseFloat(this.value);
               param.value = val;
               const valEl = $(`param-val-${name}`);
               if (valEl) valEl.textContent = val.toFixed(2);
               renderer.setParam(name, val);
+            });
+
+            // Touch handling for better mobile experience
+            slider.addEventListener('touchstart', function(e) {
+              // Mark that we're interacting with a slider
+              this.dataset.touching = 'true';
+              e.stopPropagation(); // Prevent scroll
+            }, { passive: false });
+
+            slider.addEventListener('touchmove', function(e) {
+              if (this.dataset.touching === 'true') {
+                e.stopPropagation(); // Prevent scroll while dragging
+              }
+            }, { passive: false });
+
+            slider.addEventListener('touchend', function() {
+              this.dataset.touching = 'false';
             });
           }
         } else if (param.type === 'color3') {
@@ -4239,12 +4429,31 @@
 
       // Tree slider for numeric value editing
       const treeSlider = $('tree-slider');
+      const treeSliderNumber = $('tree-slider-number');
+
       if (treeSlider) {
         treeSlider.addEventListener('input', (e) => {
           const newValue = parseFloat(e.target.value);
           updateTreeSliderValue(newValue);
+          // Sync number input
+          if (treeSliderNumber) treeSliderNumber.value = formatNumber(newValue);
         });
         treeSlider.addEventListener('change', () => {
+          updateTreeView();
+        });
+      }
+
+      // Number input for precise value entry
+      if (treeSliderNumber) {
+        treeSliderNumber.addEventListener('input', (e) => {
+          const newValue = parseFloat(e.target.value);
+          if (!isNaN(newValue)) {
+            updateTreeSliderValue(newValue);
+            // Sync slider
+            if (treeSlider) treeSlider.value = newValue;
+          }
+        });
+        treeSliderNumber.addEventListener('change', () => {
           updateTreeView();
         });
       }
@@ -4514,6 +4723,26 @@
           clearMenuFocus();
         }
       });
+
+      // Global slider touch handling - prevents scroll interference on all sliders
+      document.addEventListener('touchstart', (e) => {
+        if (e.target.matches('input[type="range"]')) {
+          e.target.dataset.touching = 'true';
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (e.target.matches('input[type="range"]') && e.target.dataset.touching === 'true') {
+          e.stopPropagation();
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchend', (e) => {
+        if (e.target.matches('input[type="range"]')) {
+          e.target.dataset.touching = 'false';
+        }
+      }, { passive: true });
+
       } catch (e) { console.error('setupEventListeners error:', e); }
     }
 

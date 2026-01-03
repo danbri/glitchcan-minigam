@@ -553,7 +553,7 @@
                           { "var": "tailAmplitude" }
                         ]},
                         { "var": "tailForkAngle" },
-                        10
+                        -10
                       ]
                     }
                   }
