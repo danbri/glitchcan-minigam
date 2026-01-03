@@ -259,19 +259,96 @@ Define once, reuse many times. Used in 72% of demo scenes.
 - Used in 13% of demos (snowman, flower-meadow, celly)
 - `hash(instanceId)` returns 0.0-1.0 pseudo-random per instance
 
-## Expressions (Animation)
+## Scene Parameters (Rigging)
 
-Animate any numeric value with math expressions. Used in 52% of demo scenes.
+Scene parameters replace magic numbers with named, sliders-adjustable values. Used in 60%+ of demo scenes.
+
 ```json
 {
-  "r": { "expr": "add", "args": [0.5, { "expr": "mul", "args": [0.1, { "expr": "sin", "args": [{ "var": "time" }] }] }] }
+  "title": "Parametric Demo",
+  "params": {
+    "bodyLength": { "value": 12.0, "type": "scalar", "min": 8, "max": 16, "description": "Total body length" },
+    "pulseSpeed": { "value": 1.0, "type": "scalar", "min": 0.2, "max": 5.0, "description": "Animation speed" },
+    "mainColor": { "value": [0.4, 0.8, 1.0], "type": "color3", "description": "Primary color" }
+  },
+  "root": {
+    "type": "sphere",
+    "params": {
+      "r": { "var": "bodyLength" },
+      "color": { "var": "mainColor" }
+    }
+  }
 }
 ```
 
+### Parameter Types
+| Type | Description | UI Widget | Example Value |
+|------|-------------|-----------|---------------|
+| `scalar` | Single number | Slider | `1.5` |
+| `color3` | RGB 0-1 | Color picker | `[1.0, 0.5, 0.2]` |
+| `position3` | XYZ location | 3 sliders | `[0, 1.5, -2]` |
+| `radii3` | Ellipsoid axes | 3 sliders (positive) | `[1.8, 1.2, 0.6]` |
+
+### Variable References
+Use `{ "var": "paramName" }` to reference scene parameters:
+```json
+"r": { "var": "sphereRadius" }
+```
+
+---
+
+## Expressions (Animation)
+
+Animate any numeric value with math expressions. Used in 52% of demo scenes.
+
+### Two Serialization Formats
+
+Lucid supports **two equivalent expression formats** for different use cases:
+
+#### Explicit JSON Format (Canonical, Stored in Files)
+Machine-friendly nested structure. This is what gets saved in `.json` scene files:
+```json
+{
+  "expr": "add",
+  "args": [
+    0.5,
+    { "expr": "mul", "args": [
+      0.1,
+      { "expr": "sin", "args": [{ "var": "time" }] }
+    ]}
+  ]
+}
+```
+
+#### Flat Readable Format (Tree View Display)
+Human-friendly function-call syntax. Displayed in Tree view for readability:
+```
+add(0.5, mul(0.1, sin(time)))
+```
+
+#### S-Expression DSL Format (DSL View)
+Lisp-style prefix notation, used in DSL view:
+```
+(add 0.5 (mul 0.1 (sin $time)))
+```
+
+**Round-trip:** All three formats represent the same expression tree and can be converted between each other.
+
+### Expression Syntax Reference
+
+| JSON Format | Flat Format | DSL Format |
+|-------------|-------------|------------|
+| `{ "var": "time" }` | `time` | `$time` |
+| `{ "expr": "sin", "args": [x] }` | `sin(x)` | `(sin x)` |
+| `{ "expr": "add", "args": [a, b] }` | `add(a, b)` | `(add a b)` |
+| `{ "expr": "mul", "args": [a, b, c] }` | `mul(a, b, c)` | `(mul a b c)` |
+| `[1.0, 0.5, 0.2]` | `vec3(1.0, 0.5, 0.2)` | `[1 0.5 0.2]` |
+
 ### Available Variables
 - `{ "var": "time" }` - Elapsed time in seconds
-- `{ "var": "x" }`, `{ "var": "y" }`, `{ "var": "z" }` - Current position
+- `{ "var": "x" }`, `{ "var": "y" }`, `{ "var": "z" }` - Current position (in custom GLSL)
 - `{ "var": "instanceId" }` - Per-instance ID (when using `exposeId`)
+- `{ "var": "paramName" }` - Any scene parameter defined in `params` block
 
 ### Available Operations
 - **Arithmetic**: `add`, `sub`, `mul`, `div`, `mod`, `neg`
@@ -281,12 +358,37 @@ Animate any numeric value with math expressions. Used in 52% of demo scenes.
 - **Noise**: `noise`, `fbm`, `turbulence`, `hash`
 
 ### Expression Patterns
-```json
-// Speed up time: mul(time, 2.0)
-// Phase offset: add(time, 2.1)
-// Per-instance offset: add(time, hash(instanceId))
+
+Flat format examples (equivalent JSON shown in comments):
+```
+// Pulsing: add(baseRadius, mul(amplitude, sin(mul(time, speed))))
+// JSON: { "expr": "add", "args": [{ "var": "baseRadius" }, { "expr": "mul", "args": [{ "var": "amplitude" }, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "speed" }] }] }] }] }
+
+// Phase offset: sin(add(mul(time, speed), phase))
+// Per-instance random: add(time, hash(instanceId))
 // Conditional gate: smoothstep(0.0, 1.0, time)
 // Random decision: step(0.6, hash(id))  → 60% true
+```
+
+### Expressions in Params (Derived Values)
+Combine params with expressions for computed properties:
+```json
+{
+  "params": {
+    "bodyLength": { "value": 12.0, "type": "scalar" },
+    "flipperRatio": { "value": 0.31, "type": "scalar" }
+  },
+  "root": {
+    "type": "ellipsoid",
+    "params": {
+      "radii": [
+        { "var": "bodyLength" },
+        { "expr": "mul", "args": [{ "var": "bodyLength" }, 0.15] },
+        { "expr": "mul", "args": [{ "var": "bodyLength" }, { "var": "flipperRatio" }] }
+      ]
+    }
+  }
+}
 ```
 
 ## Value Semantics (Vec3 Types)
@@ -385,37 +487,47 @@ When working with 3-component vectors, understand the semantic type:
 6. **Proportions wrong?** Measure ratios against reference
 7. **Surface bumps absorbed?** Use `displace` modifier instead of small spheres
 
-## Future: Scene-Level Parameters (Planned)
+## View Formats & Round-Trip
 
-Scene parameters will allow named values that expressions can reference:
+Lucid provides three synchronized views of scene data:
 
-```json
-{
-  "params": {
-    "bodyLength": { "value": 12.0, "type": "scalar", "min": 8, "max": 16 },
-    "bodyRadius": { "value": 1.8, "type": "scalar", "min": 1, "max": 3 },
-    "flipperRatio": { "value": 0.31, "type": "scalar", "min": 0.2, "max": 0.4 }
-  },
-  "root": {
-    "type": "ellipsoid",
-    "params": {
-      "radii": [
-        { "var": "bodyRadius" },
-        { "expr": "mul", "args": [{ "var": "bodyRadius" }, 0.86] },
-        { "expr": "div", "args": [{ "var": "bodyLength" }, 2] }
-      ]
-    }
-  }
-}
+### JSON View (Canonical)
+- Primary storage format (`.json` files)
+- Explicit expression syntax: `{ "expr": "sin", "args": [...] }`
+- Editable - changes update Tree and DSL views
+
+### Tree View (Interactive)
+- Collapsible node hierarchy
+- Readable expression format: `sin(time)`
+- Clickable values open sliders/pickers
+- Path-based navigation for keyboard editing
+
+### DSL View (Read-Only)
+- S-expression syntax for compact overview
+- Variables prefixed with `$`: `$time`, `$bodyLength`
+- Future: will be made editable for expert users
+
+### Round-Trip Architecture
 ```
+JSON (storage) ←→ Tree (editing) ←→ DSL (overview)
+     ↓                  ↓                ↓
+  Explicit          Readable        S-expression
+  { "expr":... }    sin(time)       (sin $time)
+```
+
+All formats represent the same expression AST. Editing in JSON or Tree view updates the others.
+
+---
+
+## Rigging & Parametric Control
+
+Scene parameters enable rigging - named controls that drive geometry. See `lucid/PARAMETRIC-RIGGING-PLAN.md` for full architecture.
 
 **Benefits:**
 - Replace magic numbers with named params
 - Enable constraint checking (e.g., flipperSpan/bodyLength = 0.31)
-- Live parameter tweaking in UI
+- Live parameter tweaking in UI slider panel
 - Goal-blind critics can validate numeric ratios
-
-See `lucid/PARAMETRIC-RIGGING-PLAN.md` for implementation details.
 
 ## Demo Scene Statistics
 
