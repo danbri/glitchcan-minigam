@@ -203,11 +203,6 @@
             border-color: var(--accent-primary);
         }
 
-        #toggle-controls.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
         /* Quick action buttons */
         .quick-actions {
             position: fixed;
@@ -466,6 +461,24 @@
             color: var(--accent-tertiary);
         }
 
+        .credit {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .credit a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .credit a:hover {
+            opacity: 1;
+            color: var(--accent-tertiary);
+        }
+
         /* Mobile adjustments */
         @media (max-width: 768px) {
             #controls {
@@ -601,6 +614,10 @@
         <div class="interaction-hint">
             <p><strong>Interact:</strong> Click & drag to attract particles</p>
             <p>Right-click or two-finger touch to repel</p>
+        </div>
+
+        <div class="credit">
+            <a href="https://x.com/danbri/status/2007583723739627756?s=46" target="_blank" rel="noopener">credit</a>
         </div>
     </div>
 
@@ -1340,16 +1357,12 @@
                 const controls = document.getElementById('controls');
                 const toggle = document.getElementById('toggle-controls');
 
+                // Toggle panel open/close - settings icon always visible
                 toggle.addEventListener('click', () => {
-                    const isHidden = controls.classList.contains('hidden');
-                    if (isHidden) {
-                        controls.classList.remove('hidden');
-                        toggle.classList.add('hidden');
-                    }
+                    controls.classList.toggle('hidden');
                 });
 
                 // Close button - add X to panel header
-                const header = controls.querySelector('h2');
                 const closeBtn = document.createElement('button');
                 closeBtn.innerHTML = '×';
                 closeBtn.style.cssText = `
@@ -1370,9 +1383,8 @@
                 `;
                 closeBtn.addEventListener('click', () => {
                     controls.classList.add('hidden');
-                    toggle.classList.remove('hidden');
                 });
-                controls.style.position = 'fixed'; // Ensure relative positioning for absolute child
+                controls.style.position = 'fixed';
                 controls.insertBefore(closeBtn, controls.firstChild);
             }
 
