@@ -466,6 +466,24 @@
             color: var(--accent-tertiary);
         }
 
+        .credit {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .credit a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .credit a:hover {
+            opacity: 1;
+            color: var(--accent-tertiary);
+        }
+
         /* Mobile adjustments */
         @media (max-width: 768px) {
             #controls {
@@ -601,6 +619,10 @@
         <div class="interaction-hint">
             <p><strong>Interact:</strong> Click & drag to attract particles</p>
             <p>Right-click or two-finger touch to repel</p>
+        </div>
+
+        <div class="credit">
+            <a href="https://x.com/danbri/status/2007583723739627756?s=46" target="_blank" rel="noopener">credit</a>
         </div>
     </div>
 
