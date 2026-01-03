@@ -809,16 +809,29 @@ export class GPUSampler {
 
     if (this.program) {
       gl.deleteProgram(this.program);
+      this.program = null;
     }
     if (this.fbo) {
       gl.deleteFramebuffer(this.fbo);
+      this.fbo = null;
     }
-    Object.values(this.textures).forEach(tex => gl.deleteTexture(tex));
+    Object.values(this.textures).forEach(tex => {
+      if (tex) gl.deleteTexture(tex);
+    });
+    this.textures = {};
+
     if (this.positionBuffer) {
       gl.deleteBuffer(this.positionBuffer);
+      this.positionBuffer = null;
     }
     if (this.vao) {
       gl.deleteVertexArray(this.vao);
+      this.vao = null;
+    }
+
+    // Remove canvas from DOM if attached
+    if (this.canvas && this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas);
     }
   }
 }
