@@ -63,6 +63,13 @@
       "min": 0,
       "max": 35,
       "description": "Maximum link rotation (degrees)"
+    },
+    "arcDrop": {
+      "value": 0.12,
+      "type": "scalar",
+      "min": 0,
+      "max": 0.3,
+      "description": "Height drop at max swing (arc compensation)"
     }
   },
 
@@ -124,7 +131,12 @@
               "transform": {
                 "translate": [
                   { "expr": "mul", "args": [0.08, { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] }] }] },
-                  2.10,
+                  { "expr": "sub", "args": [2.10, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.12] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] }] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -150,7 +162,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -1] }
                     ]}] }
                   ]},
-                  1.50,
+                  { "expr": "sub", "args": [1.50, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.25] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -1] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -179,7 +199,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -2] }
                     ]}] }
                   ]},
-                  0.90,
+                  { "expr": "sub", "args": [0.90, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.40] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -2] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -208,7 +236,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -3] }
                     ]}] }
                   ]},
-                  0.30,
+                  { "expr": "sub", "args": [0.30, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.55] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -3] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -237,7 +273,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -4] }
                     ]}] }
                   ]},
-                  -0.30,
+                  { "expr": "sub", "args": [-0.30, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.70] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -4] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -266,7 +310,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -5] }
                     ]}] }
                   ]},
-                  -0.90,
+                  { "expr": "sub", "args": [-0.90, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.82] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -5] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -295,7 +347,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -6] }
                     ]}] }
                   ]},
-                  -1.50,
+                  { "expr": "sub", "args": [-1.50, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 0.92] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -6] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -324,7 +384,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -7] }
                     ]}] }
                   ]},
-                  -2.10,
+                  { "expr": "sub", "args": [-2.10, { "expr": "mul", "args": [
+                    { "var": "arcDrop" },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -7] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [0, 0, { "expr": "mul", "args": [
@@ -361,7 +429,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -8] }
                     ]}] }
                   ]},
-                  -2.65,
+                  { "expr": "sub", "args": [-2.65, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 1.08] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -8] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ]
               }
@@ -379,7 +455,15 @@
                       { "expr": "mul", "args": [{ "var": "waveDelay" }, -7.5] }
                     ]}] }
                   ]},
-                  -2.38,
+                  { "expr": "sub", "args": [-2.38, { "expr": "mul", "args": [
+                    { "expr": "mul", "args": [{ "var": "arcDrop" }, 1.05] },
+                    { "expr": "mul", "args": [0.5, { "expr": "sub", "args": [1, { "expr": "cos", "args": [
+                      { "expr": "mul", "args": [2, { "expr": "add", "args": [
+                        { "expr": "mul", "args": [{ "var": "time" }, { "var": "swingSpeed" }] },
+                        { "expr": "mul", "args": [{ "var": "waveDelay" }, -7.5] }
+                      ]}] }
+                    ]}] }] }
+                  ]}] },
                   0
                 ],
                 "rotate": [90, 0, 0]
