@@ -13,6 +13,11 @@ concurrency: preview-${{ github.ref }}
 jobs:
   preview:
     runs-on: ubuntu-latest
+    # Only deploy previews for org members/collaborators (security)
+    if: >
+      github.event.pull_request.author_association == 'OWNER' ||
+      github.event.pull_request.author_association == 'MEMBER' ||
+      github.event.pull_request.author_association == 'COLLABORATOR'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
