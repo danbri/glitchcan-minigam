@@ -1,0 +1,895 @@
+{
+  "title": "Parametric Humpback Whale",
+  "subtitle": "v3.2 - Parliament-verified parametric flippers",
+  "version": "3.2",
+  "camera": { "distance": 42, "phi": 0.35, "theta": 0.3, "target": [0, 0, 0] },
+  "notes": "Expert-guided parametric design with semantic knobs, spatial decoupling, and comprehensive documentation. Each parameter has clear biological meaning and predictable monotonic effects.",
+
+  "params": {
+    "_comment_body": "=== BODY PARAMETERS ===",
+    "bodyLength": {
+      "value": 12.0,
+      "type": "scalar",
+      "min": 8,
+      "max": 16,
+      "description": "Total body length from rostrum to tail notch",
+      "units": "meters (relative)",
+      "affects": ["all proportions"]
+    },
+    "girthAtBlowhole": {
+      "value": 1.8,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 3.0,
+      "description": "Maximum body width at the widest point (shoulder area)",
+      "units": "meters (relative)",
+      "affects": ["body", "flippers", "ventral"],
+      "constraint": "bodyLength/girthAtBlowhole should be 6.5-8.0 for humpback"
+    },
+    "bodyAspectRatio": {
+      "value": 0.86,
+      "type": "scalar",
+      "min": 0.75,
+      "max": 0.95,
+      "description": "Height-to-width ratio (0.86 = slightly compressed vertically)",
+      "affects": ["body cross-section"]
+    },
+    "peduncleTaper": {
+      "value": 0.36,
+      "type": "scalar",
+      "min": 0.25,
+      "max": 0.50,
+      "description": "How much the tail narrows (as fraction of max girth). Lower = more dramatic taper",
+      "units": "ratio",
+      "affects": ["tail peduncle"],
+      "constraint": "0.25-0.40 for realistic cetacean taper"
+    },
+
+    "_comment_head": "=== HEAD PARAMETERS ===",
+    "headWidth": {
+      "value": 0.92,
+      "type": "scalar",
+      "min": 0.75,
+      "max": 1.05,
+      "description": "Head width as fraction of max girth. Humpbacks have robust heads",
+      "units": "ratio",
+      "affects": ["head shape"]
+    },
+    "tubercleCount": {
+      "value": 12,
+      "type": "scalar",
+      "min": 8,
+      "max": 20,
+      "description": "Number of prominent head tubercles (bumps with hair follicles)",
+      "units": "count",
+      "affects": ["head texture"],
+      "constraint": "Humpbacks typically have 10-15 visible tubercles"
+    },
+    "tubercleSize": {
+      "value": 0.35,
+      "type": "scalar",
+      "min": 0.20,
+      "max": 0.50,
+      "description": "Tubercle prominence. Higher = more visible bumps",
+      "units": "displacement amount",
+      "affects": ["head surface detail"],
+      "constraint": "0.30-0.45 for clear humpback identification"
+    },
+
+    "_comment_flippers": "=== FLIPPER PARAMETERS ===",
+    "flipperSpan": {
+      "value": 0.31,
+      "type": "scalar",
+      "min": 0.20,
+      "max": 0.40,
+      "description": "Flipper length as ratio of body length. THE defining humpback feature",
+      "units": "ratio",
+      "affects": ["pectoral flipper length"],
+      "constraint": "MUST be 0.30-0.33 for humpback identification"
+    },
+    "flipperWidth": {
+      "value": 0.28,
+      "type": "scalar",
+      "min": 0.20,
+      "max": 0.35,
+      "description": "Flipper width as ratio of flipper length. Humpbacks have paddle-shaped flippers",
+      "units": "ratio",
+      "affects": ["flipper breadth"]
+    },
+    "flipperSweepAngle": {
+      "value": 32,
+      "type": "scalar",
+      "min": 20,
+      "max": 45,
+      "description": "How much flippers curve back from body (degrees). Higher = more swept back",
+      "units": "degrees",
+      "affects": ["flipper pose"]
+    },
+    "flipperThickness": {
+      "value": 0.15,
+      "type": "scalar",
+      "min": 0.10,
+      "max": 0.25,
+      "description": "Flipper vertical thickness as ratio of width. Lower = flatter paddle",
+      "units": "ratio",
+      "affects": ["flipper cross-section"]
+    },
+
+    "_comment_dorsal": "=== DORSAL FIN PARAMETERS ===",
+    "dorsalProminence": {
+      "value": 0.50,
+      "type": "scalar",
+      "min": 0.30,
+      "max": 0.80,
+      "description": "Dorsal fin height. Humpbacks have small, variable dorsal fins",
+      "units": "relative height",
+      "affects": ["dorsal fin size"],
+      "constraint": "Humpback dorsals are notably small compared to other whales"
+    },
+    "dorsalCurvature": {
+      "value": 0.0,
+      "type": "scalar",
+      "min": -15,
+      "max": 15,
+      "description": "Dorsal fin rake angle. Negative = hooked back, positive = forward lean",
+      "units": "degrees",
+      "affects": ["dorsal fin shape"]
+    },
+
+    "_comment_tail": "=== TAIL FLUKE PARAMETERS ===",
+    "tailFlukeSpan": {
+      "value": 4.0,
+      "type": "scalar",
+      "min": 2.5,
+      "max": 5.5,
+      "description": "Total fluke width (tip to tip). Should be ~33% of body length",
+      "units": "meters (relative)",
+      "affects": ["tail flukes"],
+      "constraint": "flukeSpan/bodyLength should be 0.30-0.40 for cetaceans"
+    },
+    "tailForkDepth": {
+      "value": 0.55,
+      "type": "scalar",
+      "min": 0.30,
+      "max": 0.80,
+      "description": "Depth of center notch as ratio of fluke width. Higher = deeper V-notch",
+      "units": "ratio",
+      "affects": ["tail notch"]
+    },
+    "tailForkAngle": {
+      "value": 22,
+      "type": "scalar",
+      "min": 10,
+      "max": 35,
+      "description": "Angle between fluke halves (degrees). Higher = more V-shaped",
+      "units": "degrees",
+      "affects": ["fluke sweep"]
+    },
+    "tailFlukeThickness": {
+      "value": 0.28,
+      "type": "scalar",
+      "min": 0.15,
+      "max": 0.40,
+      "description": "Fluke vertical thickness. Should be very flat for cetaceans",
+      "units": "relative thickness",
+      "affects": ["fluke profile"]
+    },
+
+    "_comment_ventral": "=== VENTRAL PARAMETERS ===",
+    "ventralGrooveCount": {
+      "value": 7,
+      "type": "scalar",
+      "min": 4,
+      "max": 10,
+      "description": "Number of visible throat pleats. Humpbacks have 12-36, we model 4-10",
+      "units": "count",
+      "affects": ["throat grooves"]
+    },
+    "grooveDepth": {
+      "value": 0.12,
+      "type": "scalar",
+      "min": 0.06,
+      "max": 0.20,
+      "description": "Throat groove depth. Higher = more pronounced pleats",
+      "units": "relative depth",
+      "affects": ["ventral texture"]
+    },
+
+    "_comment_animation": "=== ANIMATION PARAMETERS ===",
+    "tailBeatFrequency": {
+      "value": 0.4,
+      "type": "scalar",
+      "min": 0.1,
+      "max": 1.0,
+      "description": "Swimming speed - tail beats per second",
+      "units": "Hz",
+      "affects": ["animation speed"]
+    },
+    "tailAmplitude": {
+      "value": 15,
+      "type": "scalar",
+      "min": 5,
+      "max": 30,
+      "description": "Maximum tail deflection angle during swimming",
+      "units": "degrees",
+      "affects": ["tail swing range"]
+    },
+    "spineCurvature": {
+      "value": 0.0,
+      "type": "scalar",
+      "min": -10,
+      "max": 10,
+      "description": "Body bend during swimming. Positive = upward arc, negative = downward",
+      "units": "degrees",
+      "affects": ["whole body pose"]
+    },
+    "bodyRoll": {
+      "value": 0.0,
+      "type": "scalar",
+      "min": -30,
+      "max": 30,
+      "description": "Banking angle (rotation around length axis)",
+      "units": "degrees",
+      "affects": ["whole body orientation"]
+    },
+    "bodyYaw": {
+      "value": 0.0,
+      "type": "scalar",
+      "min": -20,
+      "max": 20,
+      "description": "Turning angle (rotation around vertical axis)",
+      "units": "degrees",
+      "affects": ["whole body orientation"]
+    },
+
+    "_comment_color": "=== COLOR PARAMETERS ===",
+    "bodyColor": {
+      "value": [0.15, 0.17, 0.22],
+      "type": "color3",
+      "description": "Dorsal surface color (dark gray-black for humpback)"
+    },
+    "ventralColor": {
+      "value": [0.85, 0.88, 0.92],
+      "type": "color3",
+      "description": "Ventral surface color (white to mottled for humpback)"
+    },
+    "flipperUndersideColor": {
+      "value": [0.70, 0.73, 0.77],
+      "type": "color3",
+      "description": "Flipper underside color (intermediate gray-white)"
+    }
+  },
+
+  "rig": {
+    "_comment": "Derived values, constraints, and animation coupling",
+
+    "derived": {
+      "flipperLength": {
+        "expr": "mul",
+        "args": [{ "var": "bodyLength" }, { "var": "flipperSpan" }],
+        "description": "Absolute flipper length in scene units"
+      },
+      "flipperWidthAbsolute": {
+        "expr": "mul",
+        "args": [
+          { "expr": "mul", "args": [{ "var": "bodyLength" }, { "var": "flipperSpan" }] },
+          { "var": "flipperWidth" }
+        ],
+        "description": "Absolute flipper width in scene units"
+      },
+      "headLengthRatio": {
+        "value": 0.22,
+        "description": "Head is ~22% of body length for humpback"
+      },
+      "bodyLengthToGirthRatio": {
+        "expr": "div",
+        "args": [{ "var": "bodyLength" }, { "var": "girthAtBlowhole" }],
+        "description": "Should be 6.5-8.0 for chunky humpback body plan"
+      },
+      "flukeSpanRatio": {
+        "expr": "div",
+        "args": [{ "var": "tailFlukeSpan" }, { "var": "bodyLength" }],
+        "description": "Should be 0.30-0.40 for realistic cetacean"
+      }
+    },
+
+    "constraints": {
+      "flipperSpan": {
+        "min": 0.30,
+        "max": 0.33,
+        "reason": "THE humpback identifier - longest pectoral fins of any cetacean",
+        "severity": "CRITICAL"
+      },
+      "bodyLengthToGirthRatio": {
+        "min": 6.5,
+        "max": 8.0,
+        "reason": "Humpbacks are chunky, barrel-bodied - NOT sleek torpedoes",
+        "severity": "HIGH"
+      },
+      "tubercleSize": {
+        "min": 0.30,
+        "max": 0.45,
+        "reason": "Tubercles must be prominent enough for species identification",
+        "severity": "HIGH"
+      },
+      "flukeSpanRatio": {
+        "min": 0.30,
+        "max": 0.40,
+        "reason": "Flukes should be proportional, not airplane wings",
+        "severity": "HIGH"
+      }
+    },
+
+    "animation": {
+      "swimCycle": {
+        "driver": {
+          "expr": "mul",
+          "args": [
+            { "var": "time" },
+            { "var": "tailBeatFrequency" },
+            6.28318
+          ],
+          "description": "2*PI * time * frequency = radians"
+        },
+        "coupling": {
+          "flukeAngle": {
+            "amplitude": { "var": "tailAmplitude" },
+            "phase": 0.0,
+            "description": "Tail flukes beat in phase with swim cycle"
+          },
+          "peduncleAngle": {
+            "amplitude": { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.53] },
+            "phase": -0.15,
+            "description": "Peduncle bends slightly before tail (wave propagation)"
+          },
+          "torsoAngle": {
+            "amplitude": { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.20] },
+            "phase": -0.30,
+            "description": "Body undulates with decreasing amplitude toward head"
+          }
+        }
+      }
+    },
+
+    "spatialGating": {
+      "head": {
+        "zMin": 4.0,
+        "zMax": 12.0,
+        "description": "Head region - tubercles only affect this zone"
+      },
+      "torso": {
+        "zMin": -6.0,
+        "zMax": 4.0,
+        "description": "Main body - girth parameters apply here"
+      },
+      "peduncle": {
+        "zMin": -10.0,
+        "zMax": -6.0,
+        "description": "Tail stalk - taper parameters apply here"
+      },
+      "flukes": {
+        "zMin": -14.0,
+        "zMax": -10.0,
+        "description": "Tail flukes - fork/span parameters apply here"
+      },
+      "flippers": {
+        "xMin": 1.5,
+        "xMax": 7.0,
+        "zMin": -5.0,
+        "zMax": 3.0,
+        "description": "Flipper region - span/sweep/width parameters apply here only"
+      }
+    }
+  },
+
+  "root": {
+    "comment": "SPATIALLY DECOUPLED REGIONS - reduced smoothUnion coupling",
+    "type": "union",
+    "children": [
+      {
+        "comment": "=== MAIN BODY REGION (girth, taper parameters) ===",
+        "type": "material",
+        "params": { "color": { "var": "bodyColor" } },
+        "child": {
+          "type": "smoothUnion",
+          "k": 0.7,
+          "children": [
+            {
+              "comment": "Torso - uses girthAtBlowhole, bodyAspectRatio",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "var": "girthAtBlowhole" },
+                  { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "bodyAspectRatio" }] },
+                  { "expr": "div", "args": [{ "var": "bodyLength" }, 2] }
+                ]
+              },
+              "transform": { "translate": [0, 0, 0] }
+            },
+            {
+              "comment": "Peduncle transition - uses peduncleTaper, subtle undulation",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, 0.8] },
+                  { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "bodyAspectRatio" }, 0.8] },
+                  3.2
+                ]
+              },
+              "transform": {
+                "translate": [0, -0.1, -5.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] },
+                      -1.88
+                    ]}] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.18] }
+                  ]},
+                  0, 0
+                ]
+              }
+            },
+            {
+              "comment": "Peduncle (tail stalk) - uses peduncleTaper fully, animated",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "peduncleTaper" }] },
+                  { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "bodyAspectRatio" }, { "var": "peduncleTaper" }] },
+                  3.0
+                ]
+              },
+              "transform": {
+                "translate": [0, -0.15, -8.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "add", "args": [
+                      { "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] },
+                      -0.94
+                    ]}] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.35] }
+                  ]},
+                  0, 0
+                ]
+              }
+            }
+          ]
+        }
+      },
+
+      {
+        "comment": "=== HEAD REGION (headWidth, tubercleSize parameters) ===",
+        "type": "material",
+        "params": { "color": { "var": "bodyColor" } },
+        "child": {
+          "type": "displace",
+          "amount": { "var": "tubercleSize" },
+          "scale": 1.8,
+          "octaves": 2,
+          "noiseType": "fbm",
+          "comment": "TODO: Replace with masked bump lattice driven by tubercleCount parameter",
+          "child": {
+            "type": "smoothUnion",
+            "k": 0.5,
+            "children": [
+              {
+                "comment": "Head forward section - uses headWidth",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "headWidth" }] },
+                    { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "headWidth" }, 0.70] },
+                    2.8
+                  ]
+                },
+                "transform": { "translate": [0, 0.12, 6.5] }
+              },
+              {
+                "comment": "Rostrum (snout)",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "headWidth" }, 0.66] },
+                    { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, { "var": "headWidth" }, 0.46] },
+                    2.5
+                  ]
+                },
+                "transform": { "translate": [0, 0.02, 9.5] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== TAIL FLUKE REGION (tailFlukeSpan, tailForkDepth, tailForkAngle) ===",
+        "type": "material",
+        "params": { "color": [0.12, 0.14, 0.18] },
+        "child": {
+          "type": "smoothUnion",
+          "k": 0.6,
+          "children": [
+            {
+              "comment": "Fluke base connection - rotates with peduncle animation",
+              "type": "ellipsoid",
+              "params": { "radii": [0.55, 0.45, 2.0] },
+              "transform": {
+                "translate": [0, -0.1, -10.5],
+                "rotate": [
+                  { "expr": "mul", "args": [
+                    { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] }] },
+                    { "expr": "mul", "args": [{ "var": "tailAmplitude" }, 0.53] }
+                  ]},
+                  0, 0
+                ]
+              }
+            },
+            {
+              "comment": "Fluke paddles with center notch - uses tailFlukeSpan, tailForkDepth, tailForkAngle",
+              "type": "subtract",
+              "children": [
+                {
+                  "type": "mirror",
+                  "axis": "x",
+                  "child": {
+                    "type": "ellipsoid",
+                    "params": {
+                      "radii": [
+                        { "var": "tailFlukeSpan" },
+                        { "var": "tailFlukeThickness" },
+                        1.2
+                      ]
+                    },
+                    "transform": {
+                      "translate": [
+                        { "expr": "div", "args": [{ "var": "tailFlukeSpan" }, 2] },
+                        0,
+                        -11.8
+                      ],
+                      "rotate": [
+                        { "expr": "mul", "args": [
+                          { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "tailBeatFrequency" }, 6.28318] }] },
+                          { "var": "tailAmplitude" }
+                        ]},
+                        { "var": "tailForkAngle" },
+                        -10
+                      ]
+                    }
+                  }
+                },
+                {
+                  "comment": "Center notch - size driven by tailForkDepth",
+                  "type": "ellipsoid",
+                  "params": {
+                    "radii": [
+                      { "expr": "mul", "args": [{ "var": "tailForkDepth" }, 0.8] },
+                      0.45,
+                      0.80
+                    ]
+                  },
+                  "transform": { "translate": [0, 0, -12.5] }
+                }
+              ]
+            }
+          ]
+        }
+      },
+
+      {
+        "comment": "=== PECTORAL FLIPPER REGION (flipperSpan, flipperWidth, flipperSweepAngle, flipperThickness) ===",
+        "type": "material",
+        "params": { "color": [0.18, 0.20, 0.24] },
+        "child": {
+          "type": "mirror",
+          "axis": "x",
+          "child": {
+            "comment": "Multi-segment flipper with skeletal pose - uses flipperSpan, flipperSweepAngle",
+            "type": "smoothUnion",
+            "k": 0.35,
+            "children": [
+              {
+                "comment": "Flipper segment 1 (base) - attachment point - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.17] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.08] }] },
+                    -0.5,
+                    2.0
+                  ],
+                  "rotate": [5, 0, -25]
+                }
+              },
+              {
+                "comment": "Flipper segment 2 - humerus region - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.24] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }, 0.86] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 1.05] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.38] }] },
+                    -0.72,
+                    0.9
+                  ],
+                  "rotate": [
+                    8,
+                    { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.25] },
+                    -30
+                  ]
+                }
+              },
+              {
+                "comment": "Flipper segment 3 - radius/ulna region - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.22] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }, 0.73] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 1.10] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.67] }] },
+                    -0.95,
+                    -0.3
+                  ],
+                  "rotate": [
+                    10,
+                    { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.47] },
+                    -35
+                  ]
+                }
+              },
+              {
+                "comment": "Flipper segment 4 - carpal region - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.17] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }, 0.59] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 1.01] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.91] }] },
+                    -1.15,
+                    -1.7
+                  ],
+                  "rotate": [
+                    12,
+                    { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.62] },
+                    -38
+                  ]
+                }
+              },
+              {
+                "comment": "Flipper segment 5 - metacarpal/phalangeal region - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.13] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }, 0.45] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.88] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 1.10] }] },
+                    -1.32,
+                    -3.0
+                  ],
+                  "rotate": [
+                    14,
+                    { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.78] },
+                    -40
+                  ]
+                }
+              },
+              {
+                "comment": "Flipper segment 6 (tip) - distal phalanges - PARAMETRIC",
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.09] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperThickness" }, 0.32] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.70] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 1.25] }] },
+                    -1.45,
+                    -4.0
+                  ],
+                  "rotate": [
+                    16,
+                    { "expr": "mul", "args": [{ "var": "flipperSweepAngle" }, -0.88] },
+                    -42
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== FLIPPER UNDERSIDE REGION (lighter color) ===",
+        "type": "material",
+        "params": { "color": { "var": "flipperUndersideColor" } },
+        "child": {
+          "type": "mirror",
+          "axis": "x",
+          "child": {
+            "comment": "Flipper underside panels - FULLY PARAMETRIC",
+            "type": "smoothUnion",
+            "k": 0.4,
+            "children": [
+              {
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.15] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.027] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.88] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.24] }] },
+                    -0.85, 1.1
+                  ],
+                  "rotate": [8, -8, -28]
+                }
+              },
+              {
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.13] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.025] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.96] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.56] }] },
+                    -1.08, 0.0
+                  ],
+                  "rotate": [10, -14, -32]
+                }
+              },
+              {
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.11] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.023] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.88] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.80] }] },
+                    -1.25, -1.4
+                  ],
+                  "rotate": [12, -18, -36]
+                }
+              },
+              {
+                "type": "ellipsoid",
+                "params": {
+                  "radii": [
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.09] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.018] },
+                    { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, { "var": "flipperWidth" }, 0.75] }
+                  ]
+                },
+                "transform": {
+                  "translate": [
+                    { "expr": "add", "args": [1.5, { "expr": "mul", "args": [{ "var": "flipperSpan" }, { "var": "bodyLength" }, 0.99] }] },
+                    -1.40, -2.6
+                  ],
+                  "rotate": [14, -22, -38]
+                }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== DORSAL FIN REGION (dorsalProminence, dorsalCurvature) ===",
+        "type": "material",
+        "params": { "color": [0.18, 0.20, 0.24] },
+        "child": {
+          "type": "ellipsoid",
+          "params": {
+            "radii": [
+              0.28,
+              { "expr": "mul", "args": [{ "var": "dorsalProminence" }, 1.0] },
+              0.50
+            ]
+          },
+          "transform": {
+            "translate": [0, 1.35, -4.0],
+            "rotate": [
+              { "var": "dorsalCurvature" },
+              0,
+              0
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== VENTRAL REGION (ventralColor, ventralGrooveCount, grooveDepth) ===",
+        "type": "material",
+        "params": { "color": { "var": "ventralColor" } },
+        "child": {
+          "type": "smoothSubtract",
+          "k": { "var": "grooveDepth" },
+          "children": [
+            {
+              "comment": "Ventral body shape",
+              "type": "smoothUnion",
+              "k": 0.5,
+              "children": [
+                {
+                  "type": "ellipsoid",
+                  "params": {
+                    "radii": [
+                      { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, 0.8] },
+                      0.6,
+                      5.0
+                    ]
+                  },
+                  "transform": { "translate": [0, -1.0, 0.5] }
+                },
+                {
+                  "type": "ellipsoid",
+                  "params": {
+                    "radii": [
+                      { "expr": "mul", "args": [{ "var": "girthAtBlowhole" }, 0.61] },
+                      0.5,
+                      3.0
+                    ]
+                  },
+                  "transform": { "translate": [0, -0.75, 6.0] }
+                }
+              ]
+            },
+            {
+              "comment": "Throat pleats - count driven by ventralGrooveCount (simplified to 7 for now)",
+              "type": "smoothUnion",
+              "k": 0.06,
+              "children": [
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.12, 4.0] }, "transform": { "translate": [0.0, -1.0, 2.5] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.11, 3.8] }, "transform": { "translate": [0.20, -0.95, 2.7] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.11, 3.8] }, "transform": { "translate": [-0.20, -0.95, 2.7] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.10, 3.5] }, "transform": { "translate": [0.38, -0.88, 2.9] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.10, 3.5] }, "transform": { "translate": [-0.38, -0.88, 2.9] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.09, 3.2] }, "transform": { "translate": [0.54, -0.80, 3.1] } },
+                { "type": "ellipsoid", "params": { "radii": [0.06, 0.09, 3.2] }, "transform": { "translate": [-0.54, -0.80, 3.1] } }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

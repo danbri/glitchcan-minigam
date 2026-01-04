@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG to PNG Converter</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+        .converter { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { padding: 10px 20px; margin: 5px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .svg-container { display: inline-block; margin: 10px; vertical-align: top; }
+        .status { color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Classic 80s Hobbit Adventure Art</h1>
+    <p>Converting SVG illustrations to PNG for FINK story system...</p>
+    
+    <div class="converter">
+        <h3>Generated Images:</h3>
+        <div id="images-container"></div>
+        <button onclick="convertAll()">Convert All SVGs to PNG</button>
+        <button onclick="downloadAll()">Download All PNGs</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const svgFiles = [
+            'bag_end_exterior.svg',
+            'gandalf_at_door.svg', 
+            'hobbit_pantry.svg',
+            'adventure_path.svg'
+        ];
+        
+        let convertedImages = {};
+        
+        async function loadSVG(filename) {
+            try {
+                const response = await fetch(filename);
+                const svgText = await response.text();
+                return svgText;
+            } catch (error) {
+                console.error('Error loading SVG:', error);
+                return null;
+            }
+        }
+        
+        function svgToPng(svgText, filename) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = 400;
+                canvas.height = 300;
+                
+                img.onload = function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const pngDataUrl = canvas.toDataURL('image/png');
+                    convertedImages[filename] = pngDataUrl;
+                    
+                    // Display the result
+                    const container = document.createElement('div');
+                    container.className = 'svg-container';
+                    container.innerHTML = `
+                        <h4>${filename.replace('.svg', '.png')}</h4>
+                        <canvas width="400" height="300"></canvas>
+                        <br>
+                        <button onclick="downloadImage('${filename}')">Download PNG</button>
+                    `;
+                    
+                    const displayCanvas = container.querySelector('canvas');
+                    const displayCtx = displayCanvas.getContext('2d');
+                    displayCtx.fillStyle = 'white';
+                    displayCtx.fillRect(0, 0, 400, 300);
+                    displayCtx.drawImage(img, 0, 0);
+                    
+                    document.getElementById('images-container').appendChild(container);
+                    resolve(pngDataUrl);
+                };
+                
+                const blob = new Blob([svgText], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            });
+        }
+        
+        async function convertAll() {
+            document.getElementById('status').textContent = 'Converting SVGs...';
+            document.getElementById('images-container').innerHTML = '';
+            
+            for (const filename of svgFiles) {
+                const svgText = await loadSVG(filename);
+                if (svgText) {
+                    await svgToPng(svgText, filename);
+                    document.getElementById('status').textContent = `Converted ${filename}`;
+                }
+            }
+            
+            document.getElementById('status').textContent = 'All conversions complete!';
+        }
+        
+        function downloadImage(filename) {
+            const pngData = convertedImages[filename];
+            if (pngData) {
+                const link = document.createElement('a');
+                link.download = filename.replace('.svg', '.png');
+                link.href = pngData;
+                link.click();
+            }
+        }
+        
+        function downloadAll() {
+            Object.keys(convertedImages).forEach(filename => {
+                setTimeout(() => downloadImage(filename), 100);
+            });
+        }
+        
+        // Auto-convert on page load
+        window.addEventListener('load', () => {
+            setTimeout(convertAll, 1000);
+        });
+    </script>
+</body>
+</html>

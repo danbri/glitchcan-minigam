@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safari Digital Credentials – Minimal Age Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+    button { font-size: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f6f6f6; padding: 1rem; border-radius: 0.5rem; }
+    .note { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Safari (iOS 26 beta) – Minimal “Over‑18” Test</h1>
+  <p class="note">This page calls the <strong>Digital Credentials API</strong>. It requests only a boolean age attribute.<br>
+  On iOS 26 beta you’ll see a system sheet if a Wallet app can satisfy the request. If none is available you’ll get <code>NotFoundError</code>.</p>
+
+  <button id="btn">Prove you’re over 18</button>
+  <p id="status" class="note"></p>
+  <pre id="out"></pre>
+
+  <script>
+  const statusEl = document.getElementById('status');
+  const outEl = document.getElementById('out');
+  const btn = document.getElementById('btn');
+
+  function log(msg) { statusEl.textContent = msg; }
+  function show(obj) { outEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2); }
+
+  // Basic feature detection
+  const hasCreds = 'credentials' in navigator && typeof navigator.credentials.get === 'function';
+
+  if (!hasCreds) {
+    log('Digital Credentials API not detected. Check iOS version / Safari feature flags.');
+  }
+
+  btn.addEventListener('click', async () => {
+    if (!hasCreds) return;
+
+    // Build two parallel requests: ISO mDoc (Safari path) and OID4VP (future compatibility)
+    const mdocRequest = {
+      protocol: 'org-iso-mdoc',
+      request: {
+        // Request the ISO mDL docType and only the derived boolean element
+        docType: 'org.iso.18013.5.1.mDL',
+        nameSpaces: [
+          { name: 'org.iso.18013.5.1', dataElements: ['age_over_18'] }
+        ]
+      }
+    };
+
+    const oid4vpRequest = {
+      protocol: 'openid4vp',
+      presentation_definition: {
+        input_descriptors: [{
+          id: 'ageOver18',
+          constraints: {
+            fields: [{
+              path: ['ageOver18'],
+              filter: { const: true }
+            }]
+          }
+        }]
+      }
+    };
+
+    try {
+      log('Requesting…');
+      // Some Safari builds expect {identity:{requests:[…], reason:'…'}}; others accept {digital:{requests:[…]}}
+      // Try identity-first, then fall back to digital.
+      let vp;
+      try {
+        vp = await navigator.credentials.get({
+          mediation: 'required',
+          identity: {
+            reason: 'Prove you are over 18',
+            requests: [mdocRequest, oid4vpRequest]
+          }
+        });
+      } catch (e) {
+        // Fallback shape used in some origin trials
+        if (e && e.name !== 'NotFoundError') {
+          // Retry using the alternate top-level key
+          vp = await navigator.credentials.get({
+            mediation: 'required',
+            digital: { requests: [mdocRequest, oid4vpRequest] }
+          });
+        } else {
+          throw e;
+        }
+      }
+
+      log('Success: got a response from a Wallet.');
+      show(vp);
+
+      // In a real app, you would POST this object to your server for cryptographic verification:
+      // await fetch('/verify', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(vp) });
+    } catch (err) {
+      log(err.name + (err.message ? (': ' + err.message) : ''));
+      show(err && err.stack || String(err));
+    }
+  });
+  </script>
+</body>
+</html>
