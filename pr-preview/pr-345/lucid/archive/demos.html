@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SDF Demos – Lucid</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .demo-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none; /* Disable browser touch gestures */
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none; /* Prevent iOS Safari pinch-zoom */
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-dot.active {
+      background: #22d3ee;
+      transform: scale(1.3);
+    }
+
+    .nav-dot:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Code Panel */
+    .code-panel {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      transition: right 0.3s ease;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .code-panel.open {
+      right: 0;
+    }
+
+    .code-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #22d3ee;
+    }
+
+    .code-close {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .code-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .code-content {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .code-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Code Toggle Button */
+    .code-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #22d3ee;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      transition: all 0.3s ease;
+    }
+
+    .code-toggle:hover {
+      background: rgba(34, 211, 238, 0.2);
+      transform: scale(1.1);
+    }
+
+    /* Demo Title */
+    .demo-title {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+    }
+
+    .demo-title h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .demo-title p {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* Loading */
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #22d3ee;
+      font-size: 14px;
+      z-index: 200;
+    }
+
+    /* View Controls */
+    .view-controls {
+      position: fixed;
+      bottom: 80px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+      font-size: 13px;
+    }
+
+    .view-controls label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+      color: #e5e7eb;
+      user-select: none;
+    }
+
+    .view-controls label:hover {
+      color: #22d3ee;
+    }
+
+    .view-controls input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #22d3ee;
+    }
+
+    .camera-hint {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 60;
+      font-size: 11px;
+      color: #9ca3af;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .camera-hint:hover {
+      opacity: 1;
+    }
+
+    /* Edit Mode */
+    .edit-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .edit-panel.active {
+      display: flex;
+    }
+
+    .edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .edit-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #22d3ee;
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .edit-button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .edit-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #22d3ee;
+    }
+
+    .edit-button.primary {
+      background: #22d3ee;
+      border-color: #22d3ee;
+      color: #000;
+      font-weight: 600;
+    }
+
+    .edit-button.primary:hover {
+      background: #06b6d4;
+    }
+
+    .edit-textarea {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      color: #e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    .edit-textarea:focus {
+      border-color: #22d3ee;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .edit-error {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 13px;
+      font-family: ui-monospace, monospace;
+      display: none;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .edit-error.visible {
+      display: block;
+    }
+
+    .edit-toggle {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #22d3ee;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      transition: all 0.3s ease;
+    }
+
+    .edit-toggle:hover {
+      background: rgba(34, 211, 238, 0.2);
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+      .code-panel {
+        width: 100vw;
+        right: -100vw;
+      }
+
+      .demo-title {
+        left: 10px;
+        right: 70px;
+        padding: 8px 12px;
+      }
+
+      .demo-title h1 {
+        font-size: 16px;
+      }
+
+      .demo-title p {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">Loading...</div>
+
+  <div class="demo-title">
+    <h1 id="title">Loading...</h1>
+    <p id="subtitle">SDF Raymarching Demo</p>
+  </div>
+
+  <button class="code-toggle" title="View DSL Code">{ }</button>
+  <button class="edit-toggle" title="Edit DSL">✏️</button>
+
+  <div class="view-controls">
+    <label>
+      <input type="checkbox" id="groundPlaneToggle" checked>
+      Ground Plane
+    </label>
+    <label>
+      <input type="checkbox" id="volumeRenderToggle">
+      Volume Rendering
+    </label>
+  </div>
+
+  <div class="camera-hint">
+    🖱️ Drag to orbit • Scroll to zoom<br>
+    📱 Two-finger drag to orbit • Pinch to zoom
+  </div>
+
+  <div class="demo-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <nav class="nav" id="nav"></nav>
+
+  <aside class="code-panel" id="codePanel">
+    <div class="code-header">
+      <span class="code-title">DSL Source</span>
+      <button class="code-close" title="Close">&times;</button>
+    </div>
+    <div class="code-content">
+      <div class="code-block">
+        <div class="code-label">Scene Definition</div>
+        <pre id="dslCode">...</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-label">Description</div>
+        <pre id="dslDescription">...</pre>
+      </div>
+    </div>
+  </aside>
+
+  <div class="edit-panel" id="editPanel">
+    <div class="edit-header">
+      <span class="edit-title">Edit DSL Source</span>
+      <div class="edit-actions">
+        <button class="edit-button" id="editCancel">Cancel</button>
+        <button class="edit-button primary" id="editApply">Apply Changes</button>
+      </div>
+    </div>
+    <textarea class="edit-textarea" id="editTextarea" placeholder="Enter DSL code here..."></textarea>
+    <div class="edit-error" id="editError"></div>
+  </div>
+
+  <script type="module">
+    import {
+      parseDslToSceneGraph,
+      generateGlslFromSceneGraph,
+      log
+    } from './core/index.js';
+
+    // ============================================================
+    // Demo Scenes
+    // ============================================================
+
+    const demos = [
+      {
+        title: "Pulsing Sphere",
+        subtitle: "Animated radius with color shift",
+        dsl: `# Pulsing sphere with color shift
+s0 = sphere(
+  r = 1.0 + 0.3*sin(time),
+  color = [0.4 + 0.4*sin(time), 0.6, 1.0],
+  offset = [0.0, 0.3*sin(time*0.7), 0.0]
+)
+out = s0`,
+        description: "A simple animated sphere demonstrating time-based parameter modulation. The radius pulses between 0.7 and 1.3 units, while the color shifts through cyan tones and the position oscillates vertically."
+      },
+      {
+        title: "Rotating Torus",
+        subtitle: "Classic donut with orbit",
+        dsl: `# Rotating torus
+t0 = torus(
+  majorR = 1.2,
+  minorR = 0.3,
+  center = [sin(time), 0.0, cos(time)],
+  color = [1.0, 0.5 + 0.3*sin(time*2.0), 0.3]
+)
+out = t0`,
+        description: "A torus orbiting in a circle while its color shifts between orange and reddish tones. Demonstrates circular motion using sin/cos functions."
+      },
+      {
+        title: "Smooth Union",
+        subtitle: "Two spheres blending together",
+        dsl: `# Smooth union of two spheres
+s1 = sphere(
+  r = 0.8,
+  center = [sin(time)*0.5, 0.3, 0.0],
+  color = [0.3, 0.8, 1.0]
+)
+
+s2 = sphere(
+  r = 0.8,
+  center = [-sin(time)*0.5, -0.3, 0.0],
+  color = [1.0, 0.3, 0.8]
+)
+
+blend = smoothUnion(a=s1, b=s2, k=0.4)
+out = blend`,
+        description: "Two spheres oscillating horizontally and blending together smoothly. The smooth union operator creates organic-looking connections between shapes."
+      },
+      {
+        title: "Box & Sphere Dance",
+        subtitle: "Geometric shapes in harmony",
+        dsl: `# Box and sphere composition
+b1 = box(
+  size = [0.6, 0.6, 0.6],
+  center = [0.0, sin(time*1.5)*0.4, 0.0],
+  color = [1.0, 0.7, 0.2]
+)
+
+s1 = sphere(
+  r = 0.5,
+  center = [cos(time)*0.8, 0.0, sin(time)*0.8],
+  color = [0.2, 0.7, 1.0]
+)
+
+combo = union(a=b1, b=s1)
+out = combo`,
+        description: "A golden box bobbing vertically while a cyan sphere orbits around it. Demonstrates the union operator combining different primitive shapes."
+      },
+      {
+        title: "Animated Capsule",
+        subtitle: "Single segment with moving endpoints",
+        dsl: `# Capsule with dynamic endpoints
+cap = capsule(
+  a = [0.0, sin(time)*0.5, 0.0],
+  b = [cos(time)*0.8, -sin(time)*0.5, sin(time)*0.4],
+  radius = 0.2,
+  color = [0.8, 1.0, 0.3]
+)
+out = cap`,
+        description: "A single capsule (rounded cylinder) with endpoints moving independently, creating a snake-like animation. Capsules define line segments perfect for limbs and connections."
+      },
+      {
+        title: "Smooth Subtract",
+        subtitle: "Organic boolean operation",
+        dsl: `# Smooth subtraction - carved sphere
+s1 = sphere(
+  r = 1.0,
+  center = [0.0, 0.0, 0.0],
+  color = [0.9, 0.4, 0.6]
+)
+
+s2 = sphere(
+  r = 0.8,
+  center = [sin(time)*0.4, cos(time*1.3)*0.4, 0.0],
+  color = [0.3, 0.6, 1.0]
+)
+
+carved = smoothSubtract(a=s1, b=s2, k=0.3)
+out = carved`,
+        description: "A sphere being carved by another moving sphere using smooth subtraction. Creates organic indentations that move across the surface."
+      },
+      {
+        title: "Capsule Chain",
+        subtitle: "Multiple connected segments",
+        dsl: `# Real capsule chain with smooth blending
+c1 = capsule(
+  a = [-1.0, 0.0, 0.0],
+  b = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  radius = 0.15,
+  color = [1.0, 0.3, 0.3]
+)
+
+c2 = capsule(
+  a = [-0.3 + sin(time)*0.3, sin(time*2.0)*0.3, 0.0],
+  b = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  radius = 0.15,
+  color = [0.3, 1.0, 0.3]
+)
+
+c3 = capsule(
+  a = [0.3 + sin(time*1.5)*0.3, -sin(time*1.8)*0.3, 0.0],
+  b = [1.0, 0.0, 0.0],
+  radius = 0.15,
+  color = [0.3, 0.3, 1.0]
+)
+
+chain = smoothUnion(c1, c2, c3, k=0.1)
+out = chain`,
+        description: "Three capsules connected end-to-end with smooth color blending at joints. Each segment moves independently creating a flowing, rope-like motion. The smoothUnion operator eliminates color flickering where segments meet."
+      },
+      (() => {
+        // Helper function to generate invader DSL
+        function makeInvader(id, x, y, z, color) {
+          return `
+body${id} = box(size=[0.5, 0.4, 0.3], center=[${x}, ${y}, ${z}], color=[${color.join(', ')}])
+eye${id}a = sphere(r=0.1, center=[${x-0.12}, ${y+0.08}, ${z+0.2}], color=[0.0, 0.0, 0.0])
+eye${id}b = sphere(r=0.1, center=[${x+0.12}, ${y+0.08}, ${z+0.2}], color=[0.0, 0.0, 0.0])
+temp${id} = subtract(a=body${id}, b=eye${id}a)
+inv${id} = subtract(a=temp${id}, b=eye${id}b)`;
+        }
+
+        // Define grid of invaders - reduced to 6 for better performance
+        const invaders = [
+          // Top row - green
+          { x: -1.5, y: 0.6, z: 0.3, color: [0.0, 1.0, 0.5] },
+          { x: 0.0, y: 0.6, z: 0.0, color: [0.0, 1.0, 0.5] },
+          { x: 1.5, y: 0.6, z: -0.3, color: [0.0, 1.0, 0.5] },
+          // Bottom row - pink
+          { x: -1.5, y: -0.6, z: -0.2, color: [1.0, 0.3, 0.8] },
+          { x: 0.0, y: -0.6, z: 0.1, color: [1.0, 0.3, 0.8] },
+          { x: 1.5, y: -0.6, z: 0.4, color: [1.0, 0.3, 0.8] },
+        ];
+
+        // Generate DSL for all invaders
+        const invaderDefs = invaders.map((inv, i) =>
+          makeInvader(i + 1, inv.x, inv.y, inv.z, inv.color)
+        ).join('\n');
+
+        const invaderIds = invaders.map((_, i) => `inv${i + 1}`).join(', ');
+
+        return {
+          title: "Space Invaders",
+          subtitle: "CSG aliens - 6 instances with staggered depth",
+          dsl: `# Invader grid - programmatically generated with reduced count
+${invaderDefs}
+
+formation = union(${invaderIds})
+out = formation`,
+          description: "6 alien invaders generated programmatically using JavaScript template strings. Each invader is a CSG construction (box body with carved sphere eyes). Reduced count and staggered Z-depth prevent GLSL bloat and rendering artifacts."
+        };
+      })(),
+      {
+        title: "Space Invaders (Template)",
+        subtitle: "Reusable invader template with unified DSL syntax",
+        dsl: `# Define a reusable invader template
+template invader(x, y, color):
+  body = box(size=[0.5, 0.4, 0.3], center=[x, y, 0], color=color)
+  eye1 = sphere(r=0.1, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  eye2 = sphere(r=0.1, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  temp = subtract(a=body, b=eye1)
+  return subtract(a=temp, b=eye2)
+
+# Create invader instances - template generates GLSL function
+i1 = invader(-1.5, 0.6, [0.0, 1.0, 0.5])
+i2 = invader(0.0, 0.6, [0.0, 1.0, 0.5])
+i3 = invader(1.5, 0.6, [0.0, 1.0, 0.5])
+i4 = invader(-1.5, -0.6, [1.0, 0.3, 0.8])
+i5 = invader(0.0, -0.6, [1.0, 0.3, 0.8])
+i6 = invader(1.5, -0.6, [1.0, 0.3, 0.8])
+
+# Combine into formation
+formation = union(i1, i2, i3, i4, i5, i6)
+out = formation`,
+        description: "6 invaders using unified DSL template syntax. The invader() template is compiled into a GLSL function (10x smaller code). Templates used 2+ times become functions automatically. Check console for 'Template invader used 6 times - generating GLSL function' message!"
+      },
+      {
+        title: "Animated Invaders (Instance-Level)",
+        subtitle: "sin(time) passed as template parameters",
+        dsl: `# Same invader template
+template invader(x, y, color):
+  body = box(size=[0.5, 0.4, 0.3], center=[x, y, 0], color=color)
+  eye1 = sphere(r=0.1, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  eye2 = sphere(r=0.1, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  temp = subtract(a=body, b=eye1)
+  return subtract(a=temp, b=eye2)
+
+# Instance-level animation: pass sin(time) to x/y positions
+i1 = invader(-1.5 + sin(time)*0.3, 0.6, [0.0, 1.0, 0.5])
+i2 = invader(0.0, 0.6 + sin(time+1.0)*0.2, [0.0, 1.0, 0.5])
+i3 = invader(1.5 + sin(time)*0.3, 0.6, [0.0, 1.0, 0.5])
+i4 = invader(-1.5, -0.6 + sin(time+2.0)*0.2, [1.0, 0.3, 0.8])
+i5 = invader(0.0 + sin(time)*0.3, -0.6, [1.0, 0.3, 0.8])
+i6 = invader(1.5, -0.6 + sin(time+3.0)*0.2, [1.0, 0.3, 0.8])
+
+formation = union(i1, i2, i3, i4, i5, i6)
+out = formation`,
+        description: "Instance-level animation: Each invader receives sin(time) expressions as parameters. The template generates a GLSL function once, and each instance calls it with animated values. Demonstrates parameter-driven animation with template reuse."
+      },
+      {
+        title: "Animated Invaders (Template-Level)",
+        subtitle: "sin(time) inside template definition",
+        dsl: `# Template with internal animation
+template pulsing_invader(x, y, color):
+  pulse = 0.3 + sin(time*2.0)*0.1
+  body = box(size=[pulse, pulse*0.8, 0.3], center=[x, y, 0], color=color)
+  eye_size = 0.08 + sin(time*3.0)*0.02
+  eye1 = sphere(r=eye_size, center=[x-0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  eye2 = sphere(r=eye_size, center=[x+0.12, y+0.08, 0.2], color=[0.0, 0.0, 0.0])
+  temp = subtract(a=body, b=eye1)
+  return subtract(a=temp, b=eye2)
+
+# Static positions, animation is inside template
+i1 = pulsing_invader(-1.5, 0.6, [0.0, 1.0, 0.5])
+i2 = pulsing_invader(0.0, 0.6, [0.0, 1.0, 0.5])
+i3 = pulsing_invader(1.5, 0.6, [0.0, 1.0, 0.5])
+i4 = pulsing_invader(-1.5, -0.6, [1.0, 0.3, 0.8])
+i5 = pulsing_invader(0.0, -0.6, [1.0, 0.3, 0.8])
+i6 = pulsing_invader(1.5, -0.6, [1.0, 0.3, 0.8])
+
+formation = union(i1, i2, i3, i4, i5, i6)
+out = formation`,
+        description: "Template-level animation: sin(time) is used INSIDE the template for pulsing body size and blinking eyes. All instances animate synchronously. Shows how templates can encapsulate animated behavior."
+      },
+      {
+        title: "Cylinder Tower",
+        subtitle: "Stacked geometric primitives",
+        dsl: `# Tower of cylinders and cone top
+base = cylinder(
+  r = 0.5,
+  h = 0.3,
+  center = [0.0, -0.8, 0.0],
+  color = [0.8, 0.4, 0.2]
+)
+
+mid = cylinder(
+  r = 0.4,
+  h = 0.3,
+  center = [0.0, -0.3, 0.0],
+  rot = [0.0, time*0.5, 0.0],
+  color = [0.4, 0.7, 0.9]
+)
+
+top = cone(
+  r = 0.5,
+  h = 0.6,
+  center = [0.0, 0.4, 0.0],
+  color = [1.0, 0.8, 0.2]
+)
+
+tower = union(base, mid, top)
+out = tower`,
+        description: "A tower made from cylinders and a cone. The middle cylinder rotates independently. Demonstrates cylinder and cone primitives with rotation transforms."
+      }
+    ];
+
+    // ============================================================
+    // WebGL Renderer (Simplified Raymarcher)
+    // ============================================================
+
+    class SimpleRaymarcher {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!this.gl) {
+          throw new Error('WebGL not supported');
+        }
+
+        this.params = {
+          maxSteps: 100,
+          maxDist: 50.0,
+          surfDist: 0.001,
+          stepSize: 1.0
+        };
+
+        this.currentGlsl = '';
+        this.program = null;
+        this.startTime = performance.now();
+
+        // Camera orbit controls
+        this.camera = {
+          distance: 4.0,
+          theta: 0.0,      // horizontal angle
+          phi: Math.PI / 4, // vertical angle (45 degrees)
+          target: [0, 0, 0]
+        };
+
+        this.showGroundPlane = true;
+        this.volumeRender = false;
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        if (this.gl) {
+          this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        }
+      }
+
+      updateScene(glslCode) {
+        this.currentGlsl = glslCode;
+        this.compileShaders();
+      }
+
+      compileShaders() {
+        const gl = this.gl;
+
+        const vertexShaderSource = `
+          attribute vec4 a_position;
+          void main() {
+            gl_Position = a_position;
+          }
+        `;
+
+        const fragmentShaderSource = `
+          precision highp float;
+          uniform vec2 u_resolution;
+          uniform float u_time;
+          uniform vec3 u_cameraPos;
+          uniform vec3 u_cameraTarget;
+          uniform float u_showGroundPlane;
+          uniform float u_volumeRender;
+
+          ${this.currentGlsl}
+
+          // Ground plane SDF with checkerboard pattern
+          float sdGroundPlane(vec3 p) {
+            return p.y + 1.5; // Plane at y = -1.5
+          }
+
+          vec3 getGroundColor(vec3 p) {
+            // Checkerboard pattern
+            float scale = 0.5;
+            vec2 q = floor(p.xz / scale);
+            float checker = mod(q.x + q.y, 2.0);
+            vec3 color1 = vec3(0.15, 0.15, 0.2);
+            vec3 color2 = vec3(0.25, 0.25, 0.3);
+            return mix(color1, color2, checker);
+          }
+
+          vec3 calcNormal(vec3 p) {
+            vec2 e = vec2(0.001, 0.0);
+            return normalize(vec3(
+              g_df_scene(p + e.xyy).x - g_df_scene(p - e.xyy).x,
+              g_df_scene(p + e.yxy).x - g_df_scene(p - e.yxy).x,
+              g_df_scene(p + e.yyx).x - g_df_scene(p - e.yyx).x
+            ));
+          }
+
+          vec4 raymarch(vec3 ro, vec3 rd) {
+            float t = 0.0;
+            vec3 colVol = vec3(0.0);
+            float trans = 1.0;
+            bool hitGround = false;
+            vec3 hitPos = vec3(0.0);
+            float stepSize = 0.05;
+
+            for (int i = 0; i < 100; i++) {
+              if (t > 50.0) break;
+              if (u_volumeRender > 0.5 && trans < 0.01) break;
+
+              vec3 p = ro + rd * t;
+              vec4 scene = g_df_scene(p);
+              float d = scene.x;
+
+              // Check ground plane if enabled
+              if (u_showGroundPlane > 0.5) {
+                float dGround = sdGroundPlane(p);
+                if (dGround < d) {
+                  d = dGround;
+                  if (abs(d) < 0.001) {
+                    hitGround = true;
+                    hitPos = p;
+                  }
+                }
+              }
+
+              // Surface mode - traditional raymarching
+              if (u_volumeRender < 0.5) {
+                if (abs(d) < 0.001 && !hitGround) {
+                  vec3 normal = calcNormal(p);
+                  vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                  float diff = max(dot(normal, light), 0.0);
+                  float amb = 0.3;
+                  float spec = pow(max(dot(reflect(-light, normal), -rd), 0.0), 32.0);
+                  vec3 col = scene.yzw * (amb + diff * 0.7) + spec * 0.3;
+                  return vec4(col, 1.0);
+                }
+
+                if (hitGround) {
+                  vec3 normal = vec3(0.0, 1.0, 0.0);
+                  vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                  float diff = max(dot(normal, light), 0.0);
+                  float amb = 0.3;
+                  vec3 col = getGroundColor(hitPos) * (amb + diff * 0.7);
+                  return vec4(col, 1.0);
+                }
+
+                t += abs(d) * 0.9;
+              } else {
+                // Volume mode - accumulate density near surface
+                // Use smooth density falloff instead of hard inside/outside
+                float density = exp(-abs(d) * 5.0); // Density peaks at surface (d=0)
+
+                // Accumulate color with proper weighting
+                float absorption = density * stepSize * 8.0;
+                colVol += trans * scene.yzw * absorption;
+                trans *= 1.0 - absorption; // Reduce transmission
+
+                // Fixed step size for consistent appearance
+                t += stepSize;
+              }
+            }
+
+            // Return background or accumulated volume
+            if (u_volumeRender > 0.5) {
+              return vec4(colVol, 1.0);
+            }
+            return vec4(0.0);
+          }
+
+          void main() {
+            vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+            // Camera setup with orbit controls
+            vec3 ro = u_cameraPos;
+            vec3 forward = normalize(u_cameraTarget - u_cameraPos);
+            vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
+            vec3 up = cross(forward, right);
+            vec3 rd = normalize(forward + uv.x * right + uv.y * up);
+
+            vec4 col = raymarch(ro, rd);
+
+            // Background gradient
+            if (col.a < 0.5) {
+              vec3 bg = mix(vec3(0.02, 0.02, 0.08), vec3(0.05, 0.0, 0.1), uv.y * 0.5 + 0.5);
+              col = vec4(bg, 1.0);
+            }
+
+            gl_FragColor = col;
+          }
+        `;
+
+        // Clean up old program
+        if (this.program) {
+          gl.deleteProgram(this.program);
+        }
+
+        // Compile shaders
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+          const error = gl.getShaderInfoLog(fragmentShader);
+          console.error('❌ Fragment shader compilation FAILED:');
+          console.error(error);
+          console.log('Shader source:', fragmentShaderSource);
+          return;
+        }
+
+        // Link program
+        this.program = gl.createProgram();
+        gl.attachShader(this.program, vertexShader);
+        gl.attachShader(this.program, fragmentShader);
+        gl.linkProgram(this.program);
+
+        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+          const error = gl.getProgramInfoLog(this.program);
+          console.error('❌ Program linking FAILED:');
+          console.error(error);
+          return;
+        }
+
+        console.log('✅ Shader compiled and linked successfully');
+
+        // Set up geometry
+        const positions = new Float32Array([
+          -1, -1,
+           1, -1,
+          -1,  1,
+           1,  1,
+        ]);
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(this.program, 'a_position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+      }
+
+      getCameraPosition() {
+        const { distance, theta, phi, target } = this.camera;
+        return [
+          target[0] + distance * Math.sin(phi) * Math.sin(theta),
+          target[1] + distance * Math.cos(phi),
+          target[2] + distance * Math.sin(phi) * Math.cos(theta)
+        ];
+      }
+
+      render() {
+        if (!this.program) return;
+
+        const gl = this.gl;
+        gl.useProgram(this.program);
+
+        const resolutionLocation = gl.getUniformLocation(this.program, 'u_resolution');
+        gl.uniform2f(resolutionLocation, this.canvas.width, this.canvas.height);
+
+        const timeLocation = gl.getUniformLocation(this.program, 'u_time');
+        const time = (performance.now() - this.startTime) / 1000.0;
+        gl.uniform1f(timeLocation, time);
+
+        // Camera uniforms
+        const cameraPos = this.getCameraPosition();
+        const cameraPosLocation = gl.getUniformLocation(this.program, 'u_cameraPos');
+        gl.uniform3f(cameraPosLocation, cameraPos[0], cameraPos[1], cameraPos[2]);
+
+        const cameraTargetLocation = gl.getUniformLocation(this.program, 'u_cameraTarget');
+        gl.uniform3f(cameraTargetLocation, this.camera.target[0], this.camera.target[1], this.camera.target[2]);
+
+        const groundPlaneLocation = gl.getUniformLocation(this.program, 'u_showGroundPlane');
+        gl.uniform1f(groundPlaneLocation, this.showGroundPlane ? 1.0 : 0.0);
+
+        const volumeRenderLocation = gl.getUniformLocation(this.program, 'u_volumeRender');
+        gl.uniform1f(volumeRenderLocation, this.volumeRender ? 1.0 : 0.0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    }
+
+    // ============================================================
+    // Demo Controller
+    // ============================================================
+
+    let currentDemo = 0;
+    let renderer = null;
+
+    function init() {
+      const canvas = document.getElementById('canvas');
+      renderer = new SimpleRaymarcher(canvas);
+
+      // Create navigation dots
+      const nav = document.getElementById('nav');
+      demos.forEach((demo, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+        dot.addEventListener('click', () => switchDemo(i));
+        nav.appendChild(dot);
+      });
+
+      // Code panel toggle
+      const codeToggle = document.querySelector('.code-toggle');
+      const codePanel = document.getElementById('codePanel');
+      const codeClose = document.querySelector('.code-close');
+
+      codeToggle.addEventListener('click', () => {
+        codePanel.classList.toggle('open');
+      });
+
+      codeClose.addEventListener('click', () => {
+        codePanel.classList.remove('open');
+      });
+
+      // Edit panel toggle
+      const editToggle = document.querySelector('.edit-toggle');
+      const editPanel = document.getElementById('editPanel');
+      const editTextarea = document.getElementById('editTextarea');
+      const editApply = document.getElementById('editApply');
+      const editCancel = document.getElementById('editCancel');
+      const editError = document.getElementById('editError');
+
+      editToggle.addEventListener('click', () => {
+        editPanel.classList.add('active');
+        editTextarea.value = demos[currentDemo].dsl;
+        editError.classList.remove('visible');
+        editTextarea.focus();
+      });
+
+      editCancel.addEventListener('click', () => {
+        editPanel.classList.remove('active');
+        editError.classList.remove('visible');
+      });
+
+      editApply.addEventListener('click', () => {
+        const newDsl = editTextarea.value;
+
+        try {
+          // Parse the new DSL
+          const parsed = parseDslToSceneGraph(newDsl);
+
+          if (parsed.errors.length > 0) {
+            // Show parse errors
+            editError.textContent = 'Parse Errors:\n' + parsed.errors.map(e => `  • ${e}`).join('\n');
+            editError.classList.add('visible');
+            return;
+          }
+
+          // Generate GLSL
+          const glsl = generateGlslFromSceneGraph(parsed.nodes);
+          console.log('=== Custom DSL Applied ===');
+          console.log('Parsed nodes:', parsed.nodes);
+          console.log('Generated GLSL:\n', glsl);
+
+          // Update renderer
+          renderer.updateScene(glsl);
+
+          // Update the demo object with new DSL
+          demos[currentDemo].dsl = newDsl;
+          document.getElementById('dslCode').textContent = newDsl;
+
+          // Close edit panel
+          editPanel.classList.remove('active');
+          editError.classList.remove('visible');
+
+        } catch (error) {
+          // Show compilation errors
+          editError.textContent = 'Compilation Error:\n  ' + error.message;
+          editError.classList.add('visible');
+          console.error('Edit error:', error);
+        }
+      });
+
+      // Touch controls - single finger swipe OR two-finger orbit
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchEndX = 0;
+      let touchEndY = 0;
+      let lastTouchX = 0;
+      let lastTouchY = 0;
+      let lastPinchDistance = 0;
+      let isTwoFingerDrag = false;
+
+      const demoContainer = document.querySelector('.demo-container');
+
+      demoContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          // Single finger - prepare for swipe
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          isTwoFingerDrag = false;
+        } else if (e.touches.length === 2) {
+          // Two fingers - orbit mode
+          isTwoFingerDrag = true;
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          lastTouchX = (touch1.clientX + touch2.clientX) / 2;
+          lastTouchY = (touch1.clientY + touch2.clientY) / 2;
+
+          // Calculate initial pinch distance
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+        }
+      }, { passive: true });
+
+      demoContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && isTwoFingerDrag) {
+          // Two-finger drag for orbit
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+          const centerX = (touch1.clientX + touch2.clientX) / 2;
+          const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+          const deltaX = centerX - lastTouchX;
+          const deltaY = centerY - lastTouchY;
+
+          renderer.camera.theta -= deltaX * 0.01;
+          renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - deltaY * 0.01));
+
+          lastTouchX = centerX;
+          lastTouchY = centerY;
+
+          // Pinch to zoom
+          const dx = touch2.clientX - touch1.clientX;
+          const dy = touch2.clientY - touch1.clientY;
+          const pinchDistance = Math.sqrt(dx * dx + dy * dy);
+          const pinchDelta = pinchDistance - lastPinchDistance;
+
+          renderer.camera.distance = Math.max(2.0, Math.min(10.0, renderer.camera.distance - pinchDelta * 0.01));
+          lastPinchDistance = pinchDistance;
+        }
+      }, { passive: true });
+
+      demoContainer.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0 && !isTwoFingerDrag) {
+          // Single finger swipe ended
+          touchEndX = e.changedTouches[0].clientX;
+          touchEndY = e.changedTouches[0].clientY;
+          handleSwipe();
+        }
+        if (e.touches.length < 2) {
+          isTwoFingerDrag = false;
+        }
+      }, { passive: true });
+
+      function handleSwipe() {
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const minSwipeDistance = 50;
+
+        // Only trigger if horizontal swipe is dominant
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+          if (deltaX > 0) {
+            // Swipe right - previous demo
+            switchDemo((currentDemo - 1 + demos.length) % demos.length);
+          } else {
+            // Swipe left - next demo
+            switchDemo((currentDemo + 1) % demos.length);
+          }
+        }
+      }
+
+      // Orbit controls
+      let isDragging = false;
+      let lastMouseX = 0;
+      let lastMouseY = 0;
+
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+
+        renderer.camera.theta -= deltaX * 0.01;
+        renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - deltaY * 0.01));
+
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      });
+
+      canvas.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isDragging = false;
+      });
+
+      // Zoom with mouse wheel
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        renderer.camera.distance = Math.max(2.0, Math.min(10.0, renderer.camera.distance + e.deltaY * 0.01));
+      }, { passive: false });
+
+      // Ground plane toggle
+      const groundPlaneToggle = document.getElementById('groundPlaneToggle');
+      groundPlaneToggle.addEventListener('change', (e) => {
+        renderer.showGroundPlane = e.target.checked;
+      });
+
+      // Volume rendering toggle
+      const volumeRenderToggle = document.getElementById('volumeRenderToggle');
+      volumeRenderToggle.addEventListener('change', (e) => {
+        renderer.volumeRender = e.target.checked;
+      });
+
+      // Load first demo
+      switchDemo(0);
+
+      // Start render loop
+      function renderLoop() {
+        renderer.render();
+        requestAnimationFrame(renderLoop);
+      }
+      renderLoop();
+
+      // Hide loading
+      document.querySelector('.loading').style.display = 'none';
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          switchDemo((currentDemo + 1) % demos.length);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          switchDemo((currentDemo - 1 + demos.length) % demos.length);
+        } else if (e.key === 'c' || e.key === 'C') {
+          codePanel.classList.toggle('open');
+        }
+      });
+    }
+
+    function switchDemo(index) {
+      currentDemo = index;
+      const demo = demos[index];
+
+      // Update UI
+      document.getElementById('title').textContent = demo.title;
+      document.getElementById('subtitle').textContent = demo.subtitle;
+      document.getElementById('dslCode').textContent = demo.dsl;
+      document.getElementById('dslDescription').textContent = demo.description;
+
+      // Update nav dots
+      document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+      });
+
+      // Parse and generate GLSL
+      const parsed = parseDslToSceneGraph(demo.dsl);
+      if (parsed.errors.length > 0) {
+        console.error('Parse errors:', parsed.errors);
+        return;
+      }
+
+      console.log('=== Demo:', demo.title, '===');
+      console.log('Parsed nodes:', parsed.nodes);
+      const glsl = generateGlslFromSceneGraph(parsed.nodes);
+      console.log('Generated GLSL:\n', glsl);
+      renderer.updateScene(glsl);
+    }
+
+    // Start on load
+    init();
+  </script>
+</body>
+</html>
