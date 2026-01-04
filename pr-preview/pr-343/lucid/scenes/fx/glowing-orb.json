@@ -1,0 +1,111 @@
+{
+  "title": "Glowing Orb",
+  "subtitle": "Parametric emission + shell + noise",
+  "version": "2.0",
+  "notes": "Combining effects: shell creates hollow sphere, displace adds organic texture, material with emit creates glow. Adjust glow intensity, shell thickness, and displacement.",
+
+  "params": {
+    "orbRadius": {
+      "value": 0.9,
+      "type": "scalar",
+      "min": 0.4,
+      "max": 1.5,
+      "description": "Outer orb radius"
+    },
+    "shellThickness": {
+      "value": 0.08,
+      "type": "scalar",
+      "min": 0.03,
+      "max": 0.20,
+      "description": "Shell wall thickness"
+    },
+    "displaceAmount": {
+      "value": 0.03,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 0.10,
+      "description": "Surface displacement amount"
+    },
+    "displaceScale": {
+      "value": 4.0,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 10.0,
+      "description": "Noise frequency"
+    },
+    "glowIntensity": {
+      "value": 0.6,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 1.0,
+      "description": "Shell glow intensity"
+    },
+    "coreIntensity": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 1.0,
+      "description": "Core brightness"
+    },
+    "coreRadius": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.1,
+      "max": 0.5,
+      "description": "Inner core radius"
+    },
+    "orbColor": {
+      "value": [0.2, 0.8, 1.0],
+      "type": "color3",
+      "description": "Orb shell color"
+    },
+    "coreColor": {
+      "value": [1.0, 1.0, 1.0],
+      "type": "color3",
+      "description": "Core color"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "comment": "Outer glowing shell with displacement",
+        "type": "displace",
+        "amount": { "var": "displaceAmount" },
+        "scale": { "var": "displaceScale" },
+        "octaves": 3,
+        "animate": true,
+        "child": {
+          "type": "shell",
+          "thickness": { "var": "shellThickness" },
+          "child": {
+            "type": "material",
+            "params": {
+              "color": { "var": "orbColor" },
+              "emit": { "var": "glowIntensity" }
+            },
+            "child": {
+              "type": "sphere",
+              "params": { "r": { "var": "orbRadius" } }
+            }
+          }
+        },
+        "transform": { "translate": [0, 0.5, 0] }
+      },
+      {
+        "comment": "Bright inner core",
+        "type": "material",
+        "params": {
+          "color": { "var": "coreColor" },
+          "emit": { "var": "coreIntensity" }
+        },
+        "child": {
+          "type": "sphere",
+          "params": { "r": { "var": "coreRadius" } },
+          "transform": { "translate": [0, 0.5, 0] }
+        }
+      }
+    ]
+  }
+}

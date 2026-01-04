@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>App2 - FINK Player with Minigames</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Real INK compiler integration -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+
+    <!-- Eruda mobile debugging console -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        // Initialize Eruda for mobile debugging
+        // Always initialize to prevent "Please call eruda.init() first" errors
+        // It will only show on mobile or with ?eruda=true
+        if (typeof eruda !== 'undefined') {
+            eruda.init();
+            // Auto-show only on mobile or with URL param
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const erudaParam = new URLSearchParams(window.location.search).get('eruda');
+            if (!isMobile && erudaParam !== 'true') {
+                eruda.hide();
+            }
+        }
+
+        // Console buffer capture for easy copying (mobile dev workflow)
+        window.consoleBuffer = [];
+        const maxBufferSize = 300;
+
+        function captureConsoleMethod(method) {
+            const original = console[method];
+            console[method] = function(...args) {
+                const timestamp = new Date().toLocaleTimeString();
+                const message = args.map(arg => {
+                    if (typeof arg === 'object') {
+                        try {
+                            return JSON.stringify(arg, null, 2);
+                        } catch (e) {
+                            return String(arg);
+                        }
+                    }
+                    return String(arg);
+                }).join(' ');
+
+                window.consoleBuffer.push(`[${timestamp}] ${method.toUpperCase()}: ${message}`);
+                if (window.consoleBuffer.length > maxBufferSize) {
+                    window.consoleBuffer.shift();
+                }
+
+                original.apply(console, args);
+            };
+        }
+
+        // Capture all console methods
+        ['log', 'warn', 'error', 'info', 'debug'].forEach(captureConsoleMethod);
+
+        // Add copy button after DOM loads
+        window.addEventListener('DOMContentLoaded', () => {
+            const copyBtn = document.createElement('button');
+            copyBtn.id = 'copy-console-btn';
+            copyBtn.textContent = '📋 COPY';
+            copyBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: #ff6b6b;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 4px;
+                z-index: 10002;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                cursor: pointer;
+                font-family: monospace;
+            `;
+
+            copyBtn.onclick = async () => {
+                const fullLog = window.consoleBuffer.join('\n');
+                try {
+                    await navigator.clipboard.writeText(fullLog);
+                    copyBtn.textContent = '✅ COPIED!';
+                    copyBtn.style.background = '#51cf66';
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 COPY';
+                        copyBtn.style.background = '#ff6b6b';
+                    }, 1500);
+                } catch (err) {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = fullLog;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    copyBtn.textContent = '✅ COPIED!';
+                    copyBtn.style.background = '#51cf66';
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 COPY';
+                        copyBtn.style.background = '#ff6b6b';
+                    }, 1500);
+                }
+            };
+
+            document.body.appendChild(copyBtn);
+        });
+    </script>
+
+    <!-- Modular JS files (iOS compatible - no ES6 modules) -->
+    <script src="fink-utils.js"></script>
+    <script src="fink-config.js"></script>
+    <script src="fink-sandbox.js"></script>
+    <script src="fink-knot-nav.js"></script>
+    <script src="fink-ink-engine.js"></script>
+    <script src="fink-ui.js"></script>
+    <script src="fink-player.js"></script>
+
+    <link rel="stylesheet" href="fink-player.css">
+
+    <style>
+        /* Visible debug info for iOS testing */
+        #knot-debug {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 200px;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            z-index: 10000;
+            display: none;
+        }
+        #knot-debug.active {
+            display: block;
+        }
+        #knot-debug-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #0f0;
+            color: #000;
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            z-index: 10001;
+            font-weight: bold;
+        }
+    </style>
+
+    <style>
+        /* App2-specific: Minigame overlay */
+        .minigame-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .minigame-container.active {
+            display: flex;
+        }
+
+        .minigame-demo {
+            background: #222;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            color: #fff;
+            max-width: 600px;
+        }
+
+        .minigame-demo h2 {
+            margin-top: 0;
+            color: #4af;
+        }
+
+        .minigame-demo button {
+            background: #4af;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px;
+        }
+
+        .minigame-demo button:hover {
+            background: #6cf;
+        }
+
+        .minigame-demo p {
+            margin: 12px 0;
+        }
+
+        /* App2 badge */
+        .app2-badge {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(68, 170, 255, 0.9);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 10001;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-family: monospace;
+            max-width: 200px;
+            word-break: break-all;
+        }
+        .app2-badge .hash-id {
+            display: block;
+            font-size: 9px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Visible debug toggle for iOS -->
+    <button id="knot-debug-toggle" onclick="document.getElementById('knot-debug').classList.toggle('active')">KNOT</button>
+    <div id="knot-debug">
+        <div id="knot-debug-content">Loading...</div>
+    </div>
+    <div class="app2-badge" id="app2-badge">
+        APP2 v3
+        <span class="hash-id" id="hash-display"></span>
+    </div>
+
+    <div class="app-container" id="app-container">
+        <div class="menu-trigger" id="menu-trigger"></div>
+        <div class="title-bar" id="title-bar">
+            <div class="story-menu">
+                <h1 class="story-title" id="story-title">App2</h1>
+                <div class="story-dropdown" id="story-dropdown">
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Story</div>
+                        <button class="dropdown-item" id="story-restart">🔄 Restart Story</button>
+                        <button class="dropdown-item" id="return-to-main">🏠 Return to Main Menu</button>
+                        <button class="dropdown-item" id="story-bookmark">🔖 Bookmark Current</button>
+                        <button class="dropdown-item" id="story-goto-bookmark">📍 Go to Bookmark</button>
+                    </div>
+                    <div class="dropdown-section" id="dynamic-menu-section" style="display: none;">
+                        <div class="dropdown-header">Navigation</div>
+                        <!-- Dynamic menu items from MENU: tags will be added here -->
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Tools</div>
+                        <button class="dropdown-item" id="open-devtools">🤖 Open DevTools</button>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="fullscreen-button" id="fullscreen-button">📺</button>
+                <button class="menu-button" id="menu-button">⚙️</button>
+            </div>
+        </div>
+
+        <div class="story-container">
+            <div class="image-container" id="image-container">
+                <img id="story-image" alt="Story scene" class="hidden">
+                <video id="story-video" loop muted playsinline class="hidden"></video>
+                <div class="image-overlay"></div>
+                <button class="choice-toggle" id="choice-toggle" title="Toggle choices">👁️</button>
+                <button class="fullscreen-toggle" id="fullscreen-toggle" title="Fullscreen">⛶</button>
+            </div>
+
+            <div class="story-content" id="story-content-container">
+                <div id="story"></div>
+            </div>
+        </div>
+
+        <div class="choices-container" id="choices-container">
+            <!-- Choices will be added here dynamically -->
+        </div>
+
+        <div class="status-overlay" id="status-overlay">
+            <div id="status">
+                <div class="status-spinner"></div>
+                <div id="status-text">Loading story...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App2-specific: Minigame container -->
+    <div class="minigame-container" id="minigame-container">
+        <div class="minigame-demo">
+            <h2 id="minigame-title">Minigame Demo</h2>
+            <p id="minigame-instructions">Click buttons to simulate minigame results</p>
+            <div id="minigame-controls"></div>
+        </div>
+    </div>
+
+    <!-- Hidden sandbox iframe for loading fink.js files -->
+    <iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
+
+    <!-- Debug console -->
+    <div id="debug-console"></div>
+    <button id="debug-toggle">DEBUG</button>
+
+    <!-- App2-specific: Minigame integration -->
+    <script>
+    // Extend FinkInkEngine to handle MINIGAME tags
+    (function() {
+        // Store original continueStory function
+        const originalContinueStory = FinkInkEngine.continueStory;
+
+        // State for minigame
+        let activeMinigame = null;
+        const minigameContainer = document.getElementById('minigame-container');
+        const minigameTitle = document.getElementById('minigame-title');
+        const minigameInstructions = document.getElementById('minigame-instructions');
+        const minigameControls = document.getElementById('minigame-controls');
+
+        // Override continueStory to intercept MINIGAME tags ONLY
+        FinkInkEngine.continueStory = function(choiceIndex = null) {
+            const story = this.story;
+            if (!story) {
+                FinkUtils.debugLog('ERROR: Cannot continue - no story instance');
+                return;
+            }
+
+            // Make choice if provided
+            if (choiceIndex !== null && typeof choiceIndex === 'number') {
+                FinkUtils.debugLog('Making choice: ' + choiceIndex);
+                story.ChooseChoiceIndex(choiceIndex);
+                FinkUI.clearChoices();
+            }
+
+            // Use a wrapper to intercept MINIGAME tags during normal processing
+            let minigameIntercepted = false;
+
+            // Call original function but intercept if we see a MINIGAME tag
+            try {
+                FinkUI.clearChoices();
+                let storyFragment = document.createDocumentFragment();
+                let lastImageTag = null;
+                let lastBasehrefTag = null;
+
+                while (story.canContinue) {
+                    const text = story.Continue();
+                    const tags = story.currentTags || [];
+
+                    // Check for MINIGAME tag FIRST
+                    const minigameTag = tags.find(t => t.startsWith('MINIGAME:'));
+                    if (minigameTag) {
+                        const gameName = minigameTag.split(':')[1].trim();
+                        FinkUtils.debugLog('MINIGAME tag detected: ' + gameName);
+
+                        // Append any accumulated content
+                        if (storyFragment.hasChildNodes()) {
+                            FinkUI.replaceStoryContent(storyFragment);
+                        }
+
+                        // Add current text before launching
+                        if (text.trim()) {
+                            const p = document.createElement('p');
+                            p.textContent = text.trim();
+                            FinkUI.elements.storyElement.appendChild(p);
+                        }
+
+                        launchMinigame(gameName);
+                        minigameIntercepted = true;
+                        return;
+                    }
+
+                    // Normal text processing
+                    if (text.trim()) {
+                        const p = document.createElement('p');
+                        let escapedText = FinkUtils.escapeHtml(text.trim());
+                        let formattedText = escapedText
+                            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                            .replace(/\*(.*?)\*/g, '<i>$1</i>');
+                        p.innerHTML = formattedText;
+                        storyFragment.appendChild(p);
+                    }
+
+                    // Track all INK tags (IMAGE, BASEHREF, FINK, etc.)
+                    tags.forEach(tag => {
+                        const parts = tag.split(':');
+                        const key = parts[0]?.trim().toUpperCase();
+                        const value = parts[1]?.trim();
+                        if (key === 'IMAGE') {
+                            lastImageTag = value;
+                        } else if (key === 'BASEHREF') {
+                            lastBasehrefTag = value.replace(/^\s*["']?|["']?\s*$/g, '');
+                        } else if (key === 'FINK' && value) {
+                            FinkInkEngine.lastSeenFinkTag = value;
+                            FinkUtils.debugLog('Stored FINK tag for later loading: ' + value);
+                        }
+                    });
+                }
+
+                // Check for external FINK loading BEFORE appending content
+                const storyText = storyFragment.textContent || '';
+                FinkUtils.debugLog('Fragment text: "' + storyText + '"');
+                FinkUtils.debugLog('Has FINK tag: ' + !!FinkInkEngine.lastSeenFinkTag);
+                if (storyText.includes('Loading external story') && FinkInkEngine.lastSeenFinkTag) {
+                    FinkUtils.debugLog('At external_story knot, checking for FINK tags to load');
+                    FinkInkEngine.handleExternalFinkLoading();
+                    return; // Don't generate choices yet, we're loading external content
+                }
+
+                // Append accumulated content
+                if (storyFragment.hasChildNodes()) {
+                    FinkUI.replaceStoryContent(storyFragment);
+                }
+
+                // Handle images
+                if (lastImageTag) {
+                    const base = lastBasehrefTag || (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+                    FinkUI.updateImage(lastImageTag, base);
+                } else {
+                    FinkUI.updateImageFromINKTags(story);
+                }
+
+                // Display choices
+                if (story.currentChoices.length > 0) {
+                    FinkUtils.debugLog('Displaying ' + story.currentChoices.length + ' choices');
+                    FinkUI.displayChoices(story.currentChoices, (index) => {
+                        FinkInkEngine.continueStory(index);
+                    });
+                    FinkUI.hideStatus();
+                } else {
+                    FinkUtils.debugLog('Reached end of story');
+                    FinkUI.showEndOfStory();
+                    FinkUI.hideStatus();
+                }
+
+            } catch (e) {
+                FinkUtils.debugLog('ERROR during story continuation: ' + e.message);
+                FinkUI.showStatus('Runtime Error: ' + e.message);
+            }
+        };
+
+        // Launch minigame function
+        function launchMinigame(gameName) {
+            FinkUtils.debugLog('Launching minigame: ' + gameName);
+            activeMinigame = gameName;
+
+            minigameContainer.classList.add('active');
+            minigameTitle.textContent = 'Minigame: ' + gameName;
+            minigameControls.innerHTML = '';
+
+            if (gameName === 'simple-score') {
+                minigameInstructions.textContent = 'Simulate different score outcomes:';
+
+                addMinigameButton('Low Score (50)', () => {
+                    completeMinigame({ score: 50, attempts: 1 });
+                });
+                addMinigameButton('High Score (200)', () => {
+                    completeMinigame({ score: 200, attempts: 1 });
+                });
+                addMinigameButton('Failed (0)', () => {
+                    completeMinigame({ score: 0, attempts: 1 });
+                });
+            } else {
+                minigameInstructions.textContent = 'Minigame "' + gameName + '" not implemented yet';
+                addMinigameButton('Return to Story', () => {
+                    minigameContainer.classList.remove('active');
+                    activeMinigame = null;
+                    FinkInkEngine.continueStory();
+                });
+            }
+        }
+
+        function addMinigameButton(label, onclick) {
+            const button = document.createElement('button');
+            button.textContent = label;
+            button.onclick = onclick;
+            minigameControls.appendChild(button);
+        }
+
+        function completeMinigame(results) {
+            FinkUtils.debugLog('Minigame complete: ' + JSON.stringify(results));
+
+            // Update INK variables
+            const story = FinkInkEngine.story;
+            if (story) {
+                if (results.score !== undefined) {
+                    story.variablesState.minigame_score = results.score;
+                }
+                if (results.attempts !== undefined) {
+                    story.variablesState.minigame_attempts = results.attempts;
+                }
+                FinkUtils.debugLog('INK variables updated');
+            }
+
+            // Hide minigame, continue story
+            minigameContainer.classList.remove('active');
+            activeMinigame = null;
+            FinkInkEngine.continueStory();
+        }
+
+        // Initialize minigame variables
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const story = FinkInkEngine.story;
+                if (story) {
+                    story.variablesState.minigame_score = story.variablesState.minigame_score || 0;
+                    story.variablesState.minigame_attempts = story.variablesState.minigame_attempts || 0;
+                }
+            }, 1000);
+        });
+    })();
+    </script>
+
+    <!-- Knot Navigation Status Monitor (iOS visible) -->
+    <script>
+        // Update hash display in badge
+        function updateHashDisplay() {
+            const hashDisplay = document.getElementById('hash-display');
+            if (!hashDisplay) return;
+
+            const fragment = window.location.hash;
+            if (fragment && fragment.length > 1) {
+                hashDisplay.textContent = fragment; // Shows "#a1b2c3d4"
+            } else {
+                hashDisplay.textContent = '(no hash)';
+            }
+        }
+
+        // Update on load and on hash change
+        window.addEventListener('DOMContentLoaded', updateHashDisplay);
+        window.addEventListener('hashchange', updateHashDisplay);
+        setInterval(updateHashDisplay, 500); // Also poll every 500ms
+
+        // Update knot debug panel every second
+        setInterval(() => {
+            const debugContent = document.getElementById('knot-debug-content');
+            if (!debugContent) return;
+
+            let html = '';
+
+            // Check if FinkKnotNav exists
+            if (typeof FinkKnotNav === 'undefined') {
+                html = '<strong style="color:#f00">❌ FinkKnotNav NOT LOADED</strong>';
+            } else {
+                html += '<strong style="color:#0f0">✅ FinkKnotNav loaded</strong><br>';
+
+                // Check cache
+                const cacheSize = Object.keys(FinkKnotNav.knotIdCache || {}).length;
+                html += `Cache: ${cacheSize} knots<br>`;
+
+                // Show current URL fragment
+                const fragment = window.location.hash;
+                html += `Fragment: ${fragment || '(none)'}<br>`;
+
+                // Show some cached knots
+                if (cacheSize > 0) {
+                    html += '<br><small>';
+                    let count = 0;
+                    for (const [knot, id] of Object.entries(FinkKnotNav.knotIdCache)) {
+                        if (count++ < 3) {
+                            html += `${knot}: #${id}<br>`;
+                        }
+                    }
+                    if (cacheSize > 3) {
+                        html += `...and ${cacheSize - 3} more<br>`;
+                    }
+                    html += '</small>';
+                }
+            }
+
+            debugContent.innerHTML = html;
+        }, 1000);
+    </script>
+</body>
+</html>
