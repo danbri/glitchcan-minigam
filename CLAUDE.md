@@ -674,30 +674,41 @@ cp /tmp/eval-captures/*.png lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/
 
 ### Lucid Tools for Parliament Workflow
 
-**Capture Tool:**
+**Capture Tool (Playwright-based):**
 ```bash
-node lucid/capture-silhouette.mjs <scene.model> /tmp/eval-session
+node lucid/capture-silhouette.mjs <scene.model> <output-dir>
 ```
-- Captures canonical view to `/tmp/eval-session/1.png`
-- Scene format: `ablation.whale` loads `lucid/scenes/ablation/whale.json`
+- Captures 6 angles to `<output-dir>/1.png` through `6.png`
+- Scene format: `creatures.wolf` loads `lucid/scenes/creatures/wolf.json`
+- Uses Playwright with Chromium for headless browser capture
+
+**⚠️ Playwright Browser Version Fix:**
+If you get `Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-XXXX`:
+- The script uses `executablePath` to point to existing Chromium installation
+- Current working path: `/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome`
+- If browser version mismatch occurs, update the `executablePath` in `capture-silhouette.mjs`
 
 **Model Files:**
-- Location: `lucid/scenes/ablation/*.json`
+- Location: `lucid/scenes/creatures/*.json`, `lucid/scenes/ablation/*.json`
 - Format: Lucid SDF JSON (ellipsoids, smoothUnion, subtract, mirror, etc.)
+
+**Capture Storage:**
+- Store captures in: `lucid/automodel/captures/<model>-v<version>/`
+- Example: `lucid/automodel/captures/wolf-v1.7/1.png`
 
 **Full Cycle Commands:**
 ```bash
 # 1. Start server if needed
 python3 -m http.server 8080 &
 
-# 2. Capture canonical view
-node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-session
+# 2. Create capture directory and run capture
+mkdir -p lucid/automodel/captures/wolf-v1.7
+node lucid/capture-silhouette.mjs creatures.wolf lucid/automodel/captures/wolf-v1.7
 
 # 3. Run Agents A, B, C in parallel (via Task tool)
 # 4. Run Agent D with A, B, C reports
-# 5. Implement Clerk's Report P1 fixes
-# 6. Re-run Agent A blind test
-# 7. Commit if improved, iterate if not
+# 5. If showstoppers → implement fixes, re-capture, repeat
+# 6. If no showstoppers → commit
 ```
 
 ### Clerk's Report Format
