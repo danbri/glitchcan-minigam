@@ -1134,6 +1134,10 @@ function generateScaledNode(node, ctx) {
     // Uniform scale shorthand
     const s = scale.toFixed(6);
     scaleVec = [s, s, s];
+  } else if (typeof scale === 'object' && scale !== null) {
+    // Variable reference or expression object - uniform scale
+    const s = valueToGlsl(scale, ctx);
+    scaleVec = [s, s, s];
   } else {
     // Fallback
     scaleVec = ['1.0', '1.0', '1.0'];
