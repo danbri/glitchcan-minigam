@@ -1526,7 +1526,9 @@ function generateDisplace(node, ctx) {
   const childExpr = walkNode(node.child, ctx);
   const amount = node.amount !== undefined ? valueToGlsl(node.amount, ctx) : '0.1';
   const scale = node.scale !== undefined ? valueToGlsl(node.scale, ctx) : '3.0';
-  const octaves = node.octaves || 4;
+  // Octaves must be int in GLSL - cast if it's a variable/expression
+  const octavesRaw = node.octaves !== undefined ? valueToGlsl(node.octaves, ctx) : '4';
+  const octaves = typeof node.octaves === 'number' ? octavesRaw : `int(${octavesRaw})`;
   const noiseType = node.noiseType || 'fbm'; // 'noise', 'fbm', or 'turbulence'
 
   const funcName = `displace_${ctx.helperCounter++}`;

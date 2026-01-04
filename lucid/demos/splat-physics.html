@@ -2,280 +2,297 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Splat Object Physics Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bouncing Objects</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
     body {
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
+      color: #fff;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .app {
       display: flex;
       flex-direction: column;
+      height: 100%;
     }
+
     header {
-      padding: 1rem;
-      background: rgba(0,0,0,0.3);
-      border-bottom: 1px solid #333;
-    }
-    h1 { font-size: 1.2rem; color: #00d9ff; }
-    .subtitle { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
-
-    .container {
-      flex: 1;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.4);
       display: flex;
-      gap: 1rem;
-      padding: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
     }
 
-    canvas {
-      flex: 1;
-      background: #0a0a12;
-      border-radius: 8px;
-      border: 1px solid #333;
-    }
-
-    .controls {
-      width: 280px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 8px;
-      padding: 1rem;
-      border: 1px solid #333;
-    }
-
-    .control-group {
-      margin-bottom: 1rem;
-    }
-
-    label {
-      display: block;
-      font-size: 0.75rem;
-      color: #888;
-      margin-bottom: 0.3rem;
-      text-transform: uppercase;
-    }
-
-    input[type="range"] {
-      width: 100%;
-      accent-color: #00d9ff;
-    }
-
-    .value {
-      font-size: 0.8rem;
-      color: #00d9ff;
-      float: right;
-    }
-
-    button {
-      width: 100%;
-      padding: 0.7rem;
-      background: linear-gradient(135deg, #00d9ff 0%, #0099cc 100%);
-      border: none;
-      border-radius: 6px;
-      color: #000;
+    h1 {
+      font-size: 1.1rem;
       font-weight: 600;
-      cursor: pointer;
-      margin-bottom: 0.5rem;
-    }
-
-    button:hover { opacity: 0.9; }
-    button.secondary {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-    }
-    button.danger {
-      background: linear-gradient(135deg, #ff6b6b 0%, #cc4444 100%);
+      color: #ff6b6b;
     }
 
     .stats {
       font-size: 0.75rem;
-      color: #666;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #333;
+      color: #888;
+      display: flex;
+      gap: 12px;
     }
 
-    .instructions {
+    .stats span {
+      color: #00d9ff;
+    }
+
+    canvas {
+      flex: 1;
+      width: 100%;
+      display: block;
+      background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+    }
+
+    .controls {
+      background: rgba(0,0,0,0.5);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .control-row label {
       font-size: 0.8rem;
       color: #888;
-      margin-top: 1rem;
-      padding: 0.8rem;
-      background: rgba(0,217,255,0.1);
-      border-radius: 6px;
+      min-width: 70px;
     }
 
-    .legend {
+    .control-row input[type="range"] {
+      flex: 1;
+      height: 32px;
+      accent-color: #ff6b6b;
+    }
+
+    .control-row .value {
+      font-size: 0.85rem;
+      color: #ff6b6b;
+      min-width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-row {
       display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-top: 0.5rem;
+      gap: 10px;
     }
 
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.7rem;
+    button {
+      flex: 1;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
     }
 
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+    button:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .btn-ball {
+      background: linear-gradient(135deg, #00d9ff, #0099cc);
+      color: #000;
+    }
+
+    .btn-cube {
+      background: linear-gradient(135deg, #ff6b6b, #cc4444);
+      color: #fff;
+    }
+
+    .btn-clear {
+      background: rgba(255,255,255,0.1);
+      color: #888;
+      flex: 0.5;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #666;
+      padding: 8px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Splat Object Physics</h1>
-    <div class="subtitle">Rigid Body Simulation for Gaussian Splat Objects (LCD-047)</div>
-  </header>
+  <div class="app">
+    <header>
+      <h1>Bouncing Objects</h1>
+      <div class="stats">
+        <div>Objects: <span id="count">0</span></div>
+      </div>
+    </header>
 
-  <div class="container">
     <canvas id="canvas"></canvas>
 
     <div class="controls">
-      <div class="control-group">
-        <label>Gravity <span class="value" id="gravityVal">9.81</span></label>
-        <input type="range" id="gravity" min="0" max="30" step="0.5" value="9.81">
+      <div class="control-row">
+        <label>Bounce</label>
+        <input type="range" id="bounce" min="0" max="100" value="70">
+        <span class="value" id="bounceVal">70%</span>
       </div>
 
-      <div class="control-group">
-        <label>Restitution (Bounce) <span class="value" id="restVal">0.6</span></label>
-        <input type="range" id="restitution" min="0" max="1" step="0.05" value="0.6">
+      <div class="control-row">
+        <label>Gravity</label>
+        <input type="range" id="gravity" min="0" max="30" value="15">
+        <span class="value" id="gravityVal">15</span>
       </div>
 
-      <div class="control-group">
-        <label>Friction <span class="value" id="frictionVal">0.3</span></label>
-        <input type="range" id="friction" min="0" max="1" step="0.05" value="0.3">
-      </div>
-
-      <button id="addBallBtn">Add Ball</button>
-      <button id="addCubeBtn" class="secondary">Add Cube</button>
-      <button id="clearBtn" class="danger">Clear All</button>
-
-      <div class="instructions">
-        Click canvas to spawn objects at that position.
-        Objects fall under gravity and bounce off ground.
-
-        <div class="legend">
-          <div class="legend-item">
-            <div class="legend-color" style="background: #00d9ff;"></div>
-            <span>Ball (rigid)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: #ff6b6b;"></div>
-            <span>Cube (rigid)</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats">
-        <div>Objects: <span id="statObjects">0</span></div>
-        <div>Mode: <span id="statMode">rigid</span></div>
-        <div>FPS: <span id="statFps">-</span></div>
-        <div>Physics Time: <span id="statPhysics">-</span>ms</div>
+      <div class="btn-row">
+        <button class="btn-ball" id="addBall">+ Ball</button>
+        <button class="btn-cube" id="addCube">+ Cube</button>
+        <button class="btn-clear" id="clear">Clear</button>
       </div>
     </div>
+
+    <div class="hint">Tap anywhere to drop objects</div>
   </div>
 
   <script type="module">
-    import {
-      SplatPhysicsWorld,
-      SplatObject,
-      quat
-    } from '../core/physics/splat-physics.js';
-    import { vec3 } from '../core/physics/xpbd.js';
-
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Physics world
-    const world = new SplatPhysicsWorld({
-      gravity: [0, 9.81 * 50, 0],  // Scaled for pixels
-      groundY: 0
-    });
+    // Physics objects
+    const objects = [];
+    let nextId = 0;
 
     // Parameters
-    let restitution = 0.6;
-    let friction = 0.3;
-    let spawnType = 'ball';  // 'ball' or 'cube'
+    let bounce = 0.7;
+    let gravity = 15;
+    let spawnType = 'ball';
 
-    // Scale factor for physics (pixels per meter)
-    const SCALE = 50;
+    // Constants
+    const FIXED_DT = 1 / 60;
+    const MAX_OBJECTS = 50;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = rect.height * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-      // Update ground plane
-      world.groundY = (canvas.height / window.devicePixelRatio - 50) / SCALE;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function spawnObject(x, y, type = 'ball') {
-      const worldX = x / SCALE;
-      const worldY = y / SCALE;
-
-      const id = `${type}_${Date.now()}`;
-      const radius = type === 'ball' ? 0.5 : 0.4;
-
-      const obj = new SplatObject({
-        id,
-        mode: 'rigid',
-        position: [worldX, worldY, 0],
-        mass: type === 'ball' ? 1.0 : 2.0,
-        bounds: {
-          min: [-radius, -radius, -radius],
-          max: [radius, radius, radius]
-        }
-      });
-
-      // Store visual properties
-      obj.visualType = type;
-      obj.radius = radius * SCALE;
-      obj.color = type === 'ball' ? '#00d9ff' : '#ff6b6b';
-
-      // Apply physics properties
-      obj.body.restitution = restitution;
-      obj.body.friction = friction;
-      obj.body.boundingRadius = radius;
-
-      // Random initial velocity
-      obj.body.velocity = [
-        (Math.random() - 0.5) * 5,
-        -Math.random() * 3,
-        0
-      ];
-
-      // Random rotation for cubes
-      if (type === 'cube') {
-        obj.body.angularVelocity = [0, 0, (Math.random() - 0.5) * 5];
+    function spawnObject(x, y, type) {
+      if (objects.length >= MAX_OBJECTS) {
+        objects.shift();  // Remove oldest
       }
 
-      world.addObject(obj);
-      updateStats();
+      const size = 20 + Math.random() * 15;
+      const obj = {
+        id: nextId++,
+        type,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 100,
+        vy: -50 - Math.random() * 100,
+        size,
+        rotation: 0,
+        angularVel: type === 'cube' ? (Math.random() - 0.5) * 5 : 0,
+        hue: type === 'ball' ? 180 + Math.random() * 40 : 0 + Math.random() * 30
+      };
+      objects.push(obj);
+      updateCount();
     }
 
-    function updateStats() {
-      document.getElementById('statObjects').textContent = world.objects.size;
+    function updateCount() {
+      document.getElementById('count').textContent = objects.length;
+    }
+
+    function stepPhysics() {
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const groundY = h - 30;
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+
+        // Apply gravity
+        obj.vy += gravity * 30 * FIXED_DT;
+
+        // Move
+        obj.x += obj.vx * FIXED_DT;
+        obj.y += obj.vy * FIXED_DT;
+        obj.rotation += obj.angularVel * FIXED_DT;
+
+        // Ground collision
+        const bottom = obj.y + obj.size / 2;
+        if (bottom > groundY) {
+          obj.y = groundY - obj.size / 2;
+          obj.vy = -obj.vy * bounce;
+          obj.vx *= 0.9;  // Friction
+
+          // Stop tiny bounces
+          if (Math.abs(obj.vy) < 20) {
+            obj.vy = 0;
+          }
+        }
+
+        // Wall collisions
+        if (obj.x - obj.size / 2 < 0) {
+          obj.x = obj.size / 2;
+          obj.vx = -obj.vx * bounce;
+        }
+        if (obj.x + obj.size / 2 > w) {
+          obj.x = w - obj.size / 2;
+          obj.vx = -obj.vx * bounce;
+        }
+
+        // Remove if fallen way off screen
+        if (obj.y > h + 100) {
+          objects.splice(i, 1);
+          updateCount();
+        }
+      }
     }
 
     function render() {
-      const w = canvas.width / window.devicePixelRatio;
-      const h = canvas.height / window.devicePixelRatio;
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      const groundY = h - 30;
 
-      // Clear
-      ctx.fillStyle = '#0a0a12';
+      // Clear with gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#0d0d1a');
+      grad.addColorStop(1, '#1a1a2e');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
       // Draw ground
-      const groundY = world.groundY * SCALE;
-      ctx.fillStyle = '#2a2a3e';
+      ctx.fillStyle = '#2d2d44';
       ctx.fillRect(0, groundY, w, h - groundY);
 
+      // Ground line
       ctx.strokeStyle = '#444';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -284,180 +301,153 @@
       ctx.stroke();
 
       // Draw objects
-      for (const obj of world.objects.values()) {
-        const x = obj.body.position[0] * SCALE;
-        const y = obj.body.position[1] * SCALE;
-        const r = obj.radius;
-
+      for (const obj of objects) {
         ctx.save();
-        ctx.translate(x, y);
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.rotation);
 
-        // Apply rotation for cubes
-        if (obj.visualType === 'cube') {
-          // Extract Z rotation from quaternion (simplified 2D)
-          const q = obj.body.rotation;
-          const angle = 2 * Math.atan2(q[2], q[3]);
-          ctx.rotate(angle);
-        }
-
-        // Draw based on type
-        if (obj.visualType === 'ball') {
+        if (obj.type === 'ball') {
           // Ball with gradient
-          const gradient = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r);
-          gradient.addColorStop(0, '#66efff');
-          gradient.addColorStop(1, obj.color);
-          ctx.fillStyle = gradient;
+          const grad = ctx.createRadialGradient(
+            -obj.size * 0.2, -obj.size * 0.2, 0,
+            0, 0, obj.size / 2
+          );
+          grad.addColorStop(0, `hsl(${obj.hue}, 80%, 70%)`);
+          grad.addColorStop(1, `hsl(${obj.hue}, 70%, 50%)`);
+          ctx.fillStyle = grad;
+
           ctx.beginPath();
-          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.arc(0, 0, obj.size / 2, 0, Math.PI * 2);
           ctx.fill();
 
           // Highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
           ctx.beginPath();
-          ctx.arc(-r * 0.3, -r * 0.3, r * 0.3, 0, Math.PI * 2);
+          ctx.arc(-obj.size * 0.15, -obj.size * 0.15, obj.size * 0.15, 0, Math.PI * 2);
           ctx.fill();
         } else {
           // Cube
-          ctx.fillStyle = obj.color;
-          ctx.fillRect(-r, -r, r * 2, r * 2);
+          const half = obj.size / 2;
+          ctx.fillStyle = `hsl(${obj.hue}, 70%, 55%)`;
+          ctx.fillRect(-half, -half, obj.size, obj.size);
 
           // Edge highlight
           ctx.strokeStyle = 'rgba(255,255,255,0.3)';
           ctx.lineWidth = 2;
-          ctx.strokeRect(-r, -r, r * 2, r * 2);
+          ctx.strokeRect(-half, -half, obj.size, obj.size);
+
+          // Face lines
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(-half, 0);
+          ctx.lineTo(half, 0);
+          ctx.moveTo(0, -half);
+          ctx.lineTo(0, half);
+          ctx.stroke();
         }
 
         ctx.restore();
+      }
 
-        // Draw velocity vector (debug)
-        const vel = obj.body.velocity;
-        const speed = vec3.length(vel);
-        if (speed > 0.5) {
-          ctx.strokeStyle = 'rgba(255,255,0,0.3)';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-          ctx.lineTo(x + vel[0] * 5, y + vel[1] * 5);
-          ctx.stroke();
-        }
+      // Draw "tap zone" hint if no objects
+      if (objects.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.font = '48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👆', w / 2, h / 2 - 50);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillText('Tap to drop objects', w / 2, h / 2);
       }
     }
 
     let lastTime = 0;
-    let frameCount = 0;
-    let fpsTime = 0;
+    let accumulator = 0;
 
     function animate(time) {
       requestAnimationFrame(animate);
 
-      // FPS counter
-      frameCount++;
-      if (time - fpsTime > 1000) {
-        document.getElementById('statFps').textContent = frameCount;
-        frameCount = 0;
-        fpsTime = time;
-      }
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+      accumulator += dt;
 
-      // Physics step with timing
-      const physicsStart = performance.now();
-      const dt = Math.min((time - lastTime) / 1000, 1 / 30);
-      if (dt > 0) {
-        world.step(dt);
+      while (accumulator >= FIXED_DT) {
+        stepPhysics();
+        accumulator -= FIXED_DT;
       }
-      const physicsTime = performance.now() - physicsStart;
-      document.getElementById('statPhysics').textContent = physicsTime.toFixed(2);
-
-      // Remove objects that fell too far
-      const maxY = (canvas.height / window.devicePixelRatio + 100) / SCALE;
-      for (const [id, obj] of world.objects) {
-        if (obj.body.position[1] > maxY) {
-          world.removeObject(id);
-        }
-      }
-      updateStats();
 
       render();
-      lastTime = time;
     }
 
-    // Event listeners
-    function setupEvents() {
+    // Event handlers
+    function getEventPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function handleTap(e) {
+      e.preventDefault();
+      const pos = getEventPos(e);
+      spawnObject(pos.x, pos.y, spawnType);
+    }
+
+    // Setup
+    function init() {
+      // Canvas tap
+      canvas.addEventListener('touchstart', handleTap, { passive: false });
+      canvas.addEventListener('click', handleTap);
+
+      // Controls
+      document.getElementById('bounce').addEventListener('input', (e) => {
+        bounce = parseInt(e.target.value) / 100;
+        document.getElementById('bounceVal').textContent = e.target.value + '%';
+      });
+
       document.getElementById('gravity').addEventListener('input', (e) => {
-        const g = parseFloat(e.target.value);
-        document.getElementById('gravityVal').textContent = g.toFixed(1);
-        world.gravity = [0, g * SCALE, 0];
+        gravity = parseInt(e.target.value);
+        document.getElementById('gravityVal').textContent = gravity;
       });
 
-      document.getElementById('restitution').addEventListener('input', (e) => {
-        restitution = parseFloat(e.target.value);
-        document.getElementById('restVal').textContent = restitution.toFixed(2);
-        // Update existing objects
-        for (const obj of world.objects.values()) {
-          obj.body.restitution = restitution;
-        }
-      });
-
-      document.getElementById('friction').addEventListener('input', (e) => {
-        friction = parseFloat(e.target.value);
-        document.getElementById('frictionVal').textContent = friction.toFixed(2);
-        // Update existing objects
-        for (const obj of world.objects.values()) {
-          obj.body.friction = friction;
-        }
-      });
-
-      document.getElementById('addBallBtn').addEventListener('click', () => {
+      document.getElementById('addBall').addEventListener('click', (e) => {
+        e.stopPropagation();
         spawnType = 'ball';
-        const w = canvas.width / window.devicePixelRatio;
-        spawnObject(w / 2 + (Math.random() - 0.5) * 100, 100, 'ball');
+        const rect = canvas.getBoundingClientRect();
+        spawnObject(rect.width / 2, 80, 'ball');
       });
 
-      document.getElementById('addCubeBtn').addEventListener('click', () => {
+      document.getElementById('addCube').addEventListener('click', (e) => {
+        e.stopPropagation();
         spawnType = 'cube';
-        const w = canvas.width / window.devicePixelRatio;
-        spawnObject(w / 2 + (Math.random() - 0.5) * 100, 100, 'cube');
-      });
-
-      document.getElementById('clearBtn').addEventListener('click', () => {
-        world.objects.clear();
-        updateStats();
-      });
-
-      // Click to spawn
-      canvas.addEventListener('click', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        spawnObject(x, y, spawnType);
+        spawnObject(rect.width / 2, 80, 'cube');
       });
 
-      // Touch to spawn
-      canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const touch = e.touches[0];
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        spawnObject(x, y, spawnType);
+      document.getElementById('clear').addEventListener('click', (e) => {
+        e.stopPropagation();
+        objects.length = 0;
+        updateCount();
       });
 
+      // Resize
       window.addEventListener('resize', resize);
+      resize();
+
+      // Start
+      requestAnimationFrame(animate);
     }
 
-    // Init
-    resize();
-    setupEvents();
-
-    // Spawn initial objects
-    const w = canvas.width / window.devicePixelRatio;
-    for (let i = 0; i < 5; i++) {
-      setTimeout(() => {
-        spawnObject(w * 0.3 + Math.random() * w * 0.4, 50 + Math.random() * 100,
-          Math.random() > 0.5 ? 'ball' : 'cube');
-      }, i * 200);
-    }
-
-    requestAnimationFrame(animate);
+    init();
   </script>
 </body>
 </html>
