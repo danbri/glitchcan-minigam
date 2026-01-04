@@ -101,6 +101,7 @@
       "title": "Creatures",
       "description": "Characters & beings",
       "scenes": [
+        { "path": "creatures/wolf.json", "title": "Fearsome Wolf 🐺", "subtitle": "Huge predator" },
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
