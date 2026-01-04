@@ -1,12 +1,35 @@
 {
   "title": "Cobra Mk III",
   "subtitle": "Elite-style 80s spaceship with CSG subtraction",
-  "version": "4.9",
+  "version": "5.0",
   "notes": "Classic Elite Cobra Mk III built with CSG subtraction. Hull is sculpted by mirrored wing cutters (creating swept delta profile), angled top/bottom bevels (for cockpit slope and belly), and rear notch (engine bay). Pulsing orange torus rings on twin engines. Geometry uses half-extent convention.",
+
+  "params": {
+    "rotationSpeed": {
+      "value": 20,
+      "type": "scalar",
+      "min": 0,
+      "max": 60,
+      "description": "Ship rotation speed"
+    },
+    "hullColor": {
+      "value": [0.7, 0.75, 0.8],
+      "type": "color3",
+      "description": "Hull color"
+    },
+    "engineGlow": {
+      "value": 2.0,
+      "type": "scalar",
+      "min": 0,
+      "max": 5,
+      "description": "Engine emission intensity"
+    }
+  },
+
   "root": {
     "type": "transform",
     "transform": {
-      "rotate": [15, {"expr": "mul", "args": [20, {"var": "time"}]}, 0]
+      "rotate": [15, {"expr": "mul", "args": [{"var": "rotationSpeed"}, {"var": "time"}]}, 0]
     },
     "child": {
       "type": "union",
@@ -18,7 +41,7 @@
             {
               "type": "box",
               "notes": "Hull base - elongated flat box, sculpted by cutters below",
-              "params": {"size": [0.7, 0.2, 0.75], "color": [0.7, 0.75, 0.8]}
+              "params": {"size": [0.7, 0.2, 0.75], "color": {"var": "hullColor"}}
             },
             {
               "type": "mirror",
@@ -65,14 +88,17 @@
                 "transform": {"translate": [0.25, 0, -0.6], "rotate": [90, 0, 0]}
               },
               {
-                "type": "torus",
-                "notes": "Engine glow - pulsing exhaust ring (minor radius oscillates)",
-                "params": {
-                  "major": 0.07,
-                  "minor": {"expr": "add", "args": [0.015, {"expr": "mul", "args": [0.0075, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 5.0]}]}]}]},
-                  "color": [1.0, 0.6, 0.1]
-                },
-                "transform": {"translate": [0.25, 0, -0.7], "rotate": [90, 0, 0]}
+                "type": "material",
+                "notes": "Engine glow - pulsing exhaust ring",
+                "params": {"color": [1.0, 0.6, 0.1], "emit": {"var": "engineGlow"}},
+                "child": {
+                  "type": "torus",
+                  "params": {
+                    "major": 0.07,
+                    "minor": {"expr": "add", "args": [0.015, {"expr": "mul", "args": [0.0075, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, 5.0]}]}]}]}
+                  },
+                  "transform": {"translate": [0.25, 0, -0.7], "rotate": [90, 0, 0]}
+                }
               }
             ]
           }
