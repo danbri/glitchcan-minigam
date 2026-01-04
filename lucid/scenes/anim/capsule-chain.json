@@ -52,10 +52,10 @@
       "description": "Vertical spacing between beads"
     },
     "weightBallRadius": {
-      "value": 0.22,
+      "value": 0.32,
       "type": "scalar",
-      "min": 0.12,
-      "max": 0.35,
+      "min": 0.15,
+      "max": 0.50,
       "description": "Weight ball at end"
     },
 
