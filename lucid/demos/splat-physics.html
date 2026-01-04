@@ -274,6 +274,52 @@
           updateCount();
         }
       }
+
+      // Object-object collisions (circle-circle for simplicity)
+      for (let i = 0; i < objects.length; i++) {
+        for (let j = i + 1; j < objects.length; j++) {
+          const a = objects[i];
+          const b = objects[j];
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = (a.size + b.size) / 2;
+
+          if (dist < minDist && dist > 0) {
+            // Collision detected - separate objects
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const overlap = minDist - dist;
+
+            // Push apart equally
+            a.x -= nx * overlap / 2;
+            a.y -= ny * overlap / 2;
+            b.x += nx * overlap / 2;
+            b.y += ny * overlap / 2;
+
+            // Relative velocity
+            const dvx = a.vx - b.vx;
+            const dvy = a.vy - b.vy;
+            const dvn = dvx * nx + dvy * ny;
+
+            // Only resolve if objects are approaching
+            if (dvn > 0) {
+              // Impulse (equal mass assumption)
+              const impulse = dvn * (1 + bounce) / 2;
+
+              a.vx -= impulse * nx;
+              a.vy -= impulse * ny;
+              b.vx += impulse * nx;
+              b.vy += impulse * ny;
+
+              // Add some spin on collision for cubes
+              if (a.type === 'cube') a.angularVel += (Math.random() - 0.5) * 2;
+              if (b.type === 'cube') b.angularVel += (Math.random() - 0.5) * 2;
+            }
+          }
+        }
+      }
     }
 
     function render() {
