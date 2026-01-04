@@ -103,10 +103,10 @@
       "title": "Creatures",
       "description": "Characters & beings",
       "scenes": [
+        { "path": "creatures/wolf.json", "title": "Wolf 🐺", "subtitle": "Forest predator" },
         { "path": "creatures/hippo-v1.json", "title": "Hippo 🦛", "subtitle": "Chunky herbivore" },
         { "path": "creatures/draggo4.json", "title": "Ignis Drake 🔥", "subtitle": "Muscular wyvern" },
         { "path": "ablation/whale-parametric-v3.json", "title": "Humpback Whale 🐋", "subtitle": "24 semantic parameters" },
-        { "path": "creatures/wolf.json", "title": "Wolf 🐺", "subtitle": "Forest predator" },
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },

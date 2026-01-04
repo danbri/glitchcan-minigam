@@ -4049,6 +4049,9 @@
 
       let html = '';
       for (const [name, param] of Object.entries(params)) {
+        // Skip comment/metadata params (start with _)
+        if (name.startsWith('_')) continue;
+
         // Support both 'value' and 'default' for param values
         const value = param.value !== undefined ? param.value : param.default;
         if (value === undefined) continue; // Skip params without a value
