@@ -151,6 +151,14 @@
       ]
     },
     {
+      "id": "physics",
+      "title": "⚛️ Physics",
+      "description": "Real-time physics simulation",
+      "scenes": [
+        { "path": "physics/bouncing-balls.json", "title": "Bouncing Balls 🔴🟢🔵", "subtitle": "Spheres with gravity & collision" }
+      ]
+    },
+    {
       "id": "archive",
       "title": "📁 Archive",
       "description": "Old experiments & iterations",
