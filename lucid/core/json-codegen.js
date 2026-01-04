@@ -36,9 +36,15 @@ export function generateGlslFromJson(scene, options = {}) {
     const uniformName = `u_${name}`;
     if (paramInfo.type === 'scalar') {
       ctx.uniforms.add(uniformName);
-    } else if (paramInfo.type === 'color3' || paramInfo.type === 'position3' || paramInfo.type === 'radii3' || paramInfo.type === 'direction3') {
-      // Mark as vec3 uniform (handled specially in uniform declaration)
+    } else if (paramInfo.type === 'vec2') {
+      // Generic 2-component vector
+      ctx.uniforms.add(`${uniformName}:vec2`);
+    } else if (paramInfo.type === 'vec3' || paramInfo.type === 'color3' || paramInfo.type === 'position3' || paramInfo.type === 'radii3' || paramInfo.type === 'direction3') {
+      // Generic 3-component vector or semantic vec3 types
       ctx.uniforms.add(`${uniformName}:vec3`);
+    } else if (paramInfo.type === 'vec4') {
+      // Generic 4-component vector
+      ctx.uniforms.add(`${uniformName}:vec4`);
     }
   }
 

@@ -630,9 +630,17 @@ export class SimpleRaymarcher {
 
       if (param.type === 'scalar') {
         gl.uniform1f(loc, value);
-      } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+      } else if (param.type === 'vec2') {
+        if (Array.isArray(value) && value.length >= 2) {
+          gl.uniform2f(loc, value[0], value[1]);
+        }
+      } else if (param.type === 'vec3' || param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
         if (Array.isArray(value) && value.length >= 3) {
           gl.uniform3f(loc, value[0], value[1], value[2]);
+        }
+      } else if (param.type === 'vec4') {
+        if (Array.isArray(value) && value.length >= 4) {
+          gl.uniform4f(loc, value[0], value[1], value[2], value[3]);
         }
       }
     }

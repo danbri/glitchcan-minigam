@@ -52,7 +52,7 @@ export function loadJsonScene(json) {
 
 /**
  * Process scene-level parameters
- * Supports typed parameters: scalar, color3, position3, radii3, direction3
+ * Supports typed parameters: scalar, vec2, vec3, vec4, color3, position3, radii3, direction3
  */
 function processSceneParams(params) {
   const processed = {};
@@ -62,9 +62,15 @@ function processSceneParams(params) {
       processed[name] = { value: param, type: 'scalar' };
     } else if (Array.isArray(param)) {
       // Array shorthand - infer type from length
+      const inferredType = {
+        2: 'vec2',
+        3: 'vec3', 
+        4: 'vec4'
+      }[param.length] || 'array';
+      
       processed[name] = {
         value: param,
-        type: param.length === 3 ? 'position3' : 'array'
+        type: inferredType
       };
     } else if (typeof param === 'object' && param !== null) {
       // Full parameter definition

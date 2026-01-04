@@ -1,0 +1,63 @@
+{
+  "title": "Vec2/Vec3/Vec4 Parameter Test",
+  "subtitle": "Testing new generic vector parameter types",
+  "version": "1.0",
+  "camera": { "distance": 8, "phi": 0.2, "theta": 0.1, "target": [0, 0, 0] },
+  "notes": "Test scene to verify vec2, vec3, vec4 parameter types work correctly",
+
+  "params": {
+    "_comment": "Testing all vector parameter types",
+    
+    "uvOffset": {
+      "value": [0.5, 0.3],
+      "type": "vec2",
+      "min": [0, 0],
+      "max": [1, 1],
+      "description": "2D UV offset (vec2 test)"
+    },
+    
+    "position": {
+      "value": [0, 0, 0],
+      "type": "vec3",
+      "min": [-2, -2, -2],
+      "max": [2, 2, 2],
+      "description": "3D position (generic vec3 test)"
+    },
+    
+    "quaternion": {
+      "value": [0, 0, 0, 1],
+      "type": "vec4",
+      "min": [-1, -1, -1, -1],
+      "max": [1, 1, 1, 1],
+      "description": "Quaternion rotation (vec4 test)"
+    },
+
+    "sphereRadius": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 2.0,
+      "description": "Sphere radius"
+    }
+  },
+
+  "root": {
+    "comment": "Simple sphere using new parameter types",
+    "type": "transform",
+    "transform": {
+      "translate": { "var": "position" }
+    },
+    "child": {
+      "type": "material",
+      "params": {
+        "color": [0.6, 0.8, 1.0]
+      },
+      "child": {
+        "type": "sphere",
+        "params": {
+          "r": { "var": "sphereRadius" }
+        }
+      }
+    }
+  }
+}
