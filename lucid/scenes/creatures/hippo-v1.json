@@ -1,13 +1,39 @@
 {
   "title": "Hippo v1",
   "subtitle": "Cute but realistic hippopotamus",
-  "version": "1.0",
+  "version": "1.1",
   "camera": { "distance": 8, "phi": 0.35, "theta": 0.4, "target": [0, 0, 0] },
+
+  "params": {
+    "hippoScale": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 2.0,
+      "description": "Overall hippo size"
+    },
+    "smoothness": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.05,
+      "max": 0.5,
+      "description": "How blobby/smooth the hippo is"
+    },
+    "bodyColor": {
+      "value": [0.45, 0.38, 0.42],
+      "type": "color3",
+      "description": "Hippo skin color"
+    }
+  },
+
   "root": {
-    "type": "material",
-    "params": { "color": [0.45, 0.38, 0.42] },
+    "type": "transform",
+    "transform": { "scale": { "var": "hippoScale" } },
     "child": {
-      "type": "smoothUnion", "k": 0.25,
+    "type": "material",
+    "params": { "color": { "var": "bodyColor" } },
+    "child": {
+      "type": "smoothUnion", "k": { "var": "smoothness" },
       "children": [
         {
           "comment": "BODY - massive barrel, wider than tall",
@@ -77,5 +103,6 @@
         }
       ]
     }
+  }
   }
 }

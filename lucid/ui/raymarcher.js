@@ -619,6 +619,9 @@ export class SimpleRaymarcher {
 
     // Bind scene parameters (base params)
     for (const [name, param] of Object.entries(this.sceneParams)) {
+      // Skip non-object params (like _comment_* string entries)
+      if (typeof param !== 'object' || param === null) continue;
+
       const loc = gl.getUniformLocation(this.program, `u_${name}`);
       if (loc === null) continue;  // Uniform not used in shader
 

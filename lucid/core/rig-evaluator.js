@@ -281,8 +281,9 @@ export function evaluateRig(params, rig, time = 0) {
 export function getAllParamNames(params, rig) {
   const all = {};
 
-  // Base params
+  // Base params (skip non-object entries like _comment_* strings)
   for (const [name, param] of Object.entries(params || {})) {
+    if (typeof param !== 'object' || param === null) continue;
     all[name] = { type: param.type || 'scalar' };
   }
 
