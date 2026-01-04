@@ -7,7 +7,13 @@
   "physics": {
     "enabled": true,
     "gravity": [0, -9.8, 0],
-    "groundY": -1.5
+    "groundY": -1.5,
+    "bounds": {
+      "minX": -1.7,
+      "maxX": 1.7,
+      "minZ": -1.7,
+      "maxZ": 1.7
+    }
   },
 
   "params": {
@@ -133,6 +139,42 @@
           "color": { "var": "groundColor" }
         },
         "transform": { "translate": [0, -1.6, 0] }
+      },
+      {
+        "comment": "Table lip - left",
+        "type": "box",
+        "params": {
+          "size": [0.1, 0.15, 4],
+          "color": [0.35, 0.35, 0.4]
+        },
+        "transform": { "translate": [-1.95, -1.425, 0] }
+      },
+      {
+        "comment": "Table lip - right",
+        "type": "box",
+        "params": {
+          "size": [0.1, 0.15, 4],
+          "color": [0.35, 0.35, 0.4]
+        },
+        "transform": { "translate": [1.95, -1.425, 0] }
+      },
+      {
+        "comment": "Table lip - front",
+        "type": "box",
+        "params": {
+          "size": [3.8, 0.15, 0.1],
+          "color": [0.35, 0.35, 0.4]
+        },
+        "transform": { "translate": [0, -1.425, 1.95] }
+      },
+      {
+        "comment": "Table lip - back",
+        "type": "box",
+        "params": {
+          "size": [3.8, 0.15, 0.1],
+          "color": [0.35, 0.35, 0.4]
+        },
+        "transform": { "translate": [0, -1.425, -1.95] }
       }
     ]
   }

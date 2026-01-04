@@ -132,6 +132,9 @@ export class PhysicsScene {
     this.gravity = this.physics.gravity || [0, -9.8, 0];
     this.groundY = this.physics.groundY ?? -2;
 
+    // Boundary walls (optional)
+    this.bounds = this.physics.bounds || null;
+
     // Extract and create physics bodies
     this.bodies = [];
     if (this.enabled && sceneJson.root) {
@@ -191,6 +194,41 @@ export class PhysicsScene {
             // Stop micro-bounces
             if (Math.abs(body.velocity[1]) < 0.1) {
               body.velocity[1] = 0;
+            }
+          }
+        }
+
+        // Wall collisions (X and Z bounds)
+        if (this.bounds) {
+          const b = this.bounds;
+          const r = body.radius;
+
+          // Left wall (minX)
+          if (b.minX !== undefined && body.position[0] - r < b.minX) {
+            body.position[0] = b.minX + r;
+            if (body.velocity[0] < 0) {
+              body.velocity[0] = -body.velocity[0] * body.restitution;
+            }
+          }
+          // Right wall (maxX)
+          if (b.maxX !== undefined && body.position[0] + r > b.maxX) {
+            body.position[0] = b.maxX - r;
+            if (body.velocity[0] > 0) {
+              body.velocity[0] = -body.velocity[0] * body.restitution;
+            }
+          }
+          // Near wall (minZ)
+          if (b.minZ !== undefined && body.position[2] - r < b.minZ) {
+            body.position[2] = b.minZ + r;
+            if (body.velocity[2] < 0) {
+              body.velocity[2] = -body.velocity[2] * body.restitution;
+            }
+          }
+          // Far wall (maxZ)
+          if (b.maxZ !== undefined && body.position[2] + r > b.maxZ) {
+            body.position[2] = b.maxZ - r;
+            if (body.velocity[2] > 0) {
+              body.velocity[2] = -body.velocity[2] * body.restitution;
             }
           }
         }
