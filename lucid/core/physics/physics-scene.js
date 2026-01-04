@@ -5,41 +5,7 @@
  * LCD-048: Enables physics-enabled SDF scenes with real-time simulation
  */
 
-// ============================================================================
-// Vec3 utilities - lightweight vector operations
-// ============================================================================
-
-const vec3 = {
-  create: (x = 0, y = 0, z = 0) => [x, y, z],
-  clone: (v) => [v[0], v[1], v[2]],
-  zero: () => [0, 0, 0],
-
-  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
-  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
-  scale: (v, s) => [v[0] * s, v[1] * s, v[2] * s],
-
-  // In-place mutations for hot paths (returns same array)
-  addTo: (out, v) => { out[0] += v[0]; out[1] += v[1]; out[2] += v[2]; return out; },
-  subFrom: (out, v) => { out[0] -= v[0]; out[1] -= v[1]; out[2] -= v[2]; return out; },
-  scaleTo: (out, s) => { out[0] *= s; out[1] *= s; out[2] *= s; return out; },
-  scaleAddTo: (out, v, s) => { out[0] += v[0] * s; out[1] += v[1] * s; out[2] += v[2] * s; return out; },
-
-  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
-  lengthSq: (v) => v[0] * v[0] + v[1] * v[1] + v[2] * v[2],
-  length: (v) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]),
-
-  normalize: (v) => {
-    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 0, 0];
-  },
-
-  // Component access helpers
-  x: (v) => v[0],
-  y: (v) => v[1],
-  z: (v) => v[2],
-};
-
-export { vec3 };
+import { vec3 } from './xpbd.js';
 
 // ============================================================================
 // Scene node extraction
