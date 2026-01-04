@@ -1,0 +1,34 @@
+{
+  "title": "Box & Torus Subtract",
+  "subtitle": "CSG subtraction operation",
+  "version": "1.1",
+
+  "params": {
+    "torusRadius": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 1.5,
+      "description": "Torus major radius"
+    },
+    "boxColor": {
+      "value": [0.4, 1.0, 0.0],
+      "type": "color3",
+      "description": "Box color"
+    }
+  },
+
+  "root": {
+    "type": "subtract",
+    "children": [
+      {
+        "type": "box",
+        "params": { "size": [0.95, 1.0, 0.95], "color": {"var": "boxColor"} }
+      },
+      {
+        "type": "torus",
+        "params": { "major": {"var": "torusRadius"}, "minor": 1.0 }
+      }
+    ]
+  }
+}
