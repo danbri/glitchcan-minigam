@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instanced Gaussian Splats</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a12;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    /* Fullscreen canvas */
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Control panel overlay */
+    .panel {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      width: 300px;
+      max-height: calc(100vh - 30px);
+      background: rgba(20, 25, 45, 0.95);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .panel.minimized {
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+    }
+
+    .panel.minimized .panel-content { display: none; }
+    .panel.minimized .panel-header h1 { display: none; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: rgba(0, 217, 255, 0.1);
+      border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+      cursor: pointer;
+    }
+
+    .panel-header h1 {
+      flex: 1;
+      font-size: 1em;
+      color: #00d9ff;
+      margin-left: 8px;
+    }
+
+    .panel-toggle {
+      width: 24px;
+      height: 24px;
+      background: none;
+      border: none;
+      color: #00d9ff;
+      font-size: 1.2em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .panel-content {
+      padding: 15px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+
+    .section { margin-bottom: 18px; }
+
+    .section-title {
+      font-size: 0.75em;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(15, 52, 96, 0.8);
+      border: 1px solid rgba(26, 80, 139, 0.8);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    select:hover, button:hover {
+      border-color: #00d9ff;
+      background: rgba(26, 80, 139, 0.9);
+    }
+
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    button.primary {
+      background: linear-gradient(135deg, #00d9ff 0%, #0099cc 100%);
+      border-color: #00d9ff;
+      color: #000;
+      font-weight: 600;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-row button { flex: 1; }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      gap: 10px;
+    }
+
+    .control-row label {
+      flex: 1;
+      font-size: 0.8em;
+      color: #888;
+    }
+
+    .control-row input[type="range"] {
+      width: 70px;
+      accent-color: #00d9ff;
+    }
+
+    .control-row .value {
+      width: 40px;
+      text-align: right;
+      font-size: 0.75em;
+      color: #00d9ff;
+      font-family: monospace;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00d9ff, #00ffaa);
+      transition: width 0.3s;
+    }
+
+    .status-text {
+      font-size: 0.75em;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.75em;
+    }
+
+    .stat-item {
+      background: rgba(0,0,0,0.3);
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    .stat-label { color: #666; }
+    .stat-value { color: #00d9ff; font-weight: 600; }
+
+    /* Camera mode buttons */
+    .cam-modes {
+      display: flex;
+      gap: 6px;
+    }
+
+    .cam-modes button {
+      padding: 8px;
+      font-size: 1.1em;
+    }
+
+    .cam-modes button.active {
+      background: #00d9ff;
+      color: #000;
+    }
+
+    /* Toolbar overlay - positioned to right of panel */
+    .toolbar {
+      position: fixed;
+      bottom: 20px;
+      left: 330px;
+      display: flex;
+      gap: 8px;
+      background: rgba(20, 25, 45, 0.9);
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      z-index: 100;
+    }
+
+    .panel.minimized ~ .toolbar {
+      left: 80px;
+    }
+
+    .toolbar button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toolbar button.active {
+      background: #00d9ff;
+      color: #000;
+    }
+
+    .toolbar button.vr-btn {
+      background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+      border-color: #a855f7;
+    }
+
+    .toolbar button.vr-btn:hover {
+      background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+    }
+
+    .toolbar button.vr-btn.active {
+      background: #22c55e;
+      border-color: #22c55e;
+      animation: vr-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes vr-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    }
+
+    /* Info overlay */
+    .info-overlay {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(20, 25, 45, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 0.8em;
+      color: #888;
+      z-index: 50;
+    }
+
+    /* Log panel */
+    .log-panel {
+      position: fixed;
+      bottom: 80px;
+      left: 15px;
+      width: 300px;
+      max-height: 150px;
+      background: rgba(10, 10, 20, 0.95);
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      font-family: monospace;
+      font-size: 0.7em;
+      z-index: 90;
+      transition: opacity 0.3s;
+    }
+
+    .log-panel.hidden { opacity: 0; pointer-events: none; }
+
+    .log-content {
+      padding: 10px;
+      max-height: 130px;
+      overflow-y: auto;
+    }
+
+    .log-content div {
+      padding: 2px 0;
+      color: #666;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Fullscreen mode */
+    body.fullscreen .panel,
+    body.fullscreen .toolbar,
+    body.fullscreen .info-overlay,
+    body.fullscreen .log-panel {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.fullscreen:hover .toolbar {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <!-- Control Panel -->
+  <div class="panel" id="panel">
+    <div class="panel-header" id="panelHeader">
+      <button class="panel-toggle" id="panelToggle">&#9776;</button>
+      <h1>Gaussian Splats</h1>
+    </div>
+    <div class="panel-content">
+      <!-- Scene Selection -->
+      <div class="section">
+        <div class="section-title">Scene</div>
+        <select id="sceneSelect">
+          <option value="">Select scene...</option>
+
+          <optgroup label="1. Primitives">
+            <option value="prim/catalogue.json">Shape Catalogue 📦</option>
+            <option value="prim/capsule.json">Capsule 💊</option>
+            <option value="prim/ellipsoid.json">Ellipsoid 🥚</option>
+          </optgroup>
+
+          <optgroup label="2. CSG Operations">
+            <option value="csg/operations.json">All Operations ⚙️</option>
+            <option value="csg/smooth-union.json">Smooth Union 🫧</option>
+            <option value="csg/subtract.json">Subtraction ✂️</option>
+            <option value="csg/nested.json">Nested CSG 🪆</option>
+          </optgroup>
+
+          <optgroup label="3. Tutorials">
+            <option value="tut/transforms.json">Transforms</option>
+            <option value="tut/rotation-methods.json">Rotation Methods</option>
+            <option value="tut/material-emission.json">Materials</option>
+            <option value="tut/grouping.json">Grouping</option>
+            <option value="tut/modifiers.json">Modifiers</option>
+          </optgroup>
+
+          <optgroup label="4. Patterns">
+            <option value="patterns/mirror.json">Mirror 🪞</option>
+            <option value="patterns/radial-flower.json">Radial Flower 🌸</option>
+            <option value="patterns/table.json" selected>Grid Array 🔲 (recommended)</option>
+          </optgroup>
+
+          <optgroup label="5. Effects">
+            <option value="fx/glowing-orb.json">Glowing Orb 🔮</option>
+            <option value="fx/alien-planet.json">Alien Planet 🪐</option>
+            <option value="fx/rocky-asteroid.json">Asteroid ☄️</option>
+          </optgroup>
+
+          <optgroup label="Creatures">
+            <option value="creatures/snowman.json">Snowman ⛄</option>
+            <option value="creatures/invaders.json">Space Invaders 👾</option>
+            <option value="creatures/radial-invaders.json">Radial Invaders 🛸</option>
+            <option value="creatures/spirit-creatures.json">Spirits 👻</option>
+            <option value="creatures/draggo.json">Draggo 🐲</option>
+            <option value="creatures/draggo2.json">Dragon B2-H2 🐉</option>
+          </optgroup>
+
+          <optgroup label="Nature">
+            <option value="nature/single-sunflower.json">Single Sunflower 🔬</option>
+            <option value="nature/sunflower.json">Sunflower 🌻</option>
+            <option value="nature/celly.json">Celly 🦠</option>
+          </optgroup>
+
+          <optgroup label="Spaceships">
+            <option value="ships/cobra-mk3.json">Cobra Mk III 🚀</option>
+            <option value="ships/elite-wireframe.json">Elite Wireframe ✨</option>
+          </optgroup>
+
+          <optgroup label="Combined Scenes">
+            <option value="combined/cobra-vs-invaders.json">Cobra vs Invaders 🎮</option>
+          </optgroup>
+
+          <optgroup label="Test Objects">
+            <option value="objects/table.json">Simple Table</option>
+            <option value="objects/cylinder-array.json">Cylinder Array</option>
+            <option value="objects/box-torus-subtract.json">Box - Torus (CSG)</option>
+            <option value="objects/rotated-boxes.json">Rotated Boxes</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Conversion -->
+      <div class="section">
+        <div class="section-title">Convert</div>
+        <div class="control-row">
+          <label>Sampling Mode</label>
+          <select id="samplingMode" style="width: 110px; padding: 4px;">
+            <option value="3dgs">3DGS (Gemini)</option>
+            <option value="gpu" selected>GPU (WebGL2)</option>
+            <option value="cpu">CPU (Legacy)</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label>Resolution</label>
+          <input type="range" id="sampleRes" min="24" max="512" step="8" value="128">
+          <span class="value" id="sampleResVal">128²</span>
+        </div>
+        <div class="control-row" id="directionsRow">
+          <label>Directions</label>
+          <input type="range" id="sampleDirs" min="6" max="26" step="1" value="10">
+          <span class="value" id="sampleDirsVal">10</span>
+        </div>
+        <div class="control-row">
+          <label>Splat Count</label>
+          <input type="range" id="targetSplats" min="500" max="50000" step="500" value="10000">
+          <span class="value" id="targetSplatsVal">10k</span>
+        </div>
+        <div class="control-row">
+          <label>Splat Size</label>
+          <input type="range" id="splatScale" min="0.3" max="5.0" step="0.1" value="1.0">
+          <span class="value" id="splatScaleVal">1.0x</span>
+        </div>
+        <button id="goBtn" class="primary">Load &amp; Convert</button>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="status-text" id="statusText">Select scene above, then click Load &amp; Convert</div>
+      </div>
+
+      <!-- Camera -->
+      <div class="section">
+        <div class="section-title">Camera Mode</div>
+        <div class="cam-modes">
+          <button id="camOrbit" class="active" title="Orbit">🔍</button>
+          <button id="camHelicopter" title="Aerial View">🦅</button>
+          <button id="camTop" title="Top View">⬇</button>
+          <button id="camFront" title="Front View">➡</button>
+        </div>
+        <div class="control-row">
+          <label>Distance</label>
+          <input type="range" id="camDist" min="2" max="25" step="0.5" value="8">
+          <span class="value" id="camDistVal">8</span>
+        </div>
+        <div class="control-row">
+          <label>Height</label>
+          <input type="range" id="camHeight" min="-5" max="8" step="0.2" value="2">
+          <span class="value" id="camHeightVal">2</span>
+        </div>
+      </div>
+
+      <!-- Particle Effects -->
+      <div class="section">
+        <div class="section-title">Effects</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxSwirl"> Swirl Motion
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxOrbit"> 🪐 Orbit Origin
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxJelly"> 🍮 Jelly Physics
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxLighting" checked> Dynamic Lighting
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxColorShift"> 🌈 Color Groups
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxNoise"> Noise Field
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="fxPulse"> Pulse/Breathe
+          </label>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="section">
+        <div class="section-title">Stats</div>
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-label">Templates</div><div class="stat-value" id="statTemplates">-</div></div>
+          <div class="stat-item"><div class="stat-label">Instances</div><div class="stat-value" id="statInstances">-</div></div>
+          <div class="stat-item"><div class="stat-label">Splats</div><div class="stat-value" id="statSplats">-</div></div>
+          <div class="stat-item"><div class="stat-label">FPS</div><div class="stat-value" id="statFps">-</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Toolbar -->
+  <div class="toolbar">
+    <button id="tbFullscreen" title="Fullscreen">&#9974;</button>
+    <button id="tbReset" title="Reset Camera">&#8634;</button>
+    <button id="tbAutoRotate" title="Auto Rotate">&#10227;</button>
+    <button id="tbLog" title="Toggle Log">&#128220;</button>
+    <button id="tbDownload" title="Download" disabled>&#11015;</button>
+    <button id="tbVR" title="Enter VR" class="vr-btn" style="display:none;">🥽</button>
+  </div>
+
+  <!-- Info Overlay -->
+  <div class="info-overlay" id="infoOverlay">
+    Drag to rotate &bull; Scroll to zoom &bull; 🥽 for VR
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel hidden" id="logPanel">
+    <div class="log-content" id="logContent"></div>
+  </div>
+
+  <script type="module">
+    import {
+      LucidToSplats,
+      createSimpleSdfEvaluator,
+      InstancedSplatRenderer,
+      GPUSampler,
+      QuickTrainer,
+      GaussianCloud,
+      import3DGS,
+      exportToPLY,
+      exportToSplat,
+      downloadFile
+    } from './index.js';
+
+    // Use Lucid's existing raymarcher for GLSL generation (fallback)
+    import { SimpleRaymarcher } from '../ui/raymarcher.js';
+    import { generateGlslFromJson } from '../core/json-codegen.js';
+    import { loadJsonScene } from '../core/json-loader.js';
+
+    // Lazy-load Gemini's true 3DGS generator
+    let SDFGaussianSampler = null;
+    let SplatExporter = null;
+
+    // State
+    let currentScene = null;
+    let currentBundle = null;
+    let renderer = null;
+
+    // Hidden raymarcher for GLSL generation (reuses Lucid's existing code)
+    let glslGenerator = null;
+    let animationId = null;
+    let autoRotate = false;
+    let cameraMode = 'orbit'; // orbit, helicopter, top, front
+
+    // Camera state
+    let camTheta = 0;
+    let camPhi = 0.3;
+    let camDist = 8;
+    let camHeight = 2;
+    let targetTheta = 0;
+    let targetPhi = 0.3;
+
+    // Elements
+    const canvas = document.getElementById('canvas');
+    const panel = document.getElementById('panel');
+    const panelToggle = document.getElementById('panelToggle');
+    const panelHeader = document.getElementById('panelHeader');
+
+    // Init
+    function init() {
+      setupEventListeners();
+      resize();
+      startAnimation();
+      log('Gaussian Splat Viewer');
+
+      // Check VR support
+      checkVRSupport();
+
+      // Auto-load default scene after short delay
+      setTimeout(() => {
+        const select = document.getElementById('sceneSelect');
+        if (select.value) {
+          log('Auto-loading default scene...');
+          loadAndConvert();
+        }
+      }, 500);
+    }
+
+    function setupEventListeners() {
+      // Panel toggle
+      panelHeader.addEventListener('click', () => {
+        panel.classList.toggle('minimized');
+        panelToggle.textContent = panel.classList.contains('minimized') ? '+' : '\u2630';
+      });
+
+      // Slider value displays
+      const sliders = [
+        ['sampleRes', 'sampleResVal', v => v + (document.getElementById('samplingMode').value === 'gpu' ? '²' : '')],
+        ['sampleDirs', 'sampleDirsVal', v => v + ' dirs'],
+        ['targetSplats', 'targetSplatsVal', v => v >= 1000 ? (v/1000) + 'k' : v],
+        ['splatScale', 'splatScaleVal', v => v + 'x'],
+        ['camDist', 'camDistVal', v => Math.round(v)],
+        ['camHeight', 'camHeightVal', v => v.toFixed(1)]
+      ];
+
+      // Update resolution label and show/hide directions slider based on mode
+      document.getElementById('samplingMode').addEventListener('change', () => {
+        const res = document.getElementById('sampleRes').value;
+        const mode = document.getElementById('samplingMode').value;
+        document.getElementById('sampleResVal').textContent = res + (mode === 'gpu' ? '²' : '');
+        document.getElementById('directionsRow').style.display = mode === 'gpu' ? 'flex' : 'none';
+      });
+
+      sliders.forEach(([id, valId, fmt]) => {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(valId);
+        el.addEventListener('input', () => {
+          valEl.textContent = fmt(parseFloat(el.value));
+          if (id === 'camDist') camDist = parseFloat(el.value);
+          if (id === 'camHeight') camHeight = parseFloat(el.value);
+        });
+      });
+
+      // Load & Convert - single button workflow
+      document.getElementById('goBtn').addEventListener('click', loadAndConvert);
+
+      // Also trigger on scene change
+      document.getElementById('sceneSelect').addEventListener('change', () => {
+        updateStatus('Click "Load & Convert" to render', 0);
+      });
+
+      // Camera modes
+      const camModes = ['camOrbit', 'camHelicopter', 'camTop', 'camFront'];
+      camModes.forEach(id => {
+        document.getElementById(id).addEventListener('click', () => {
+          camModes.forEach(m => document.getElementById(m).classList.remove('active'));
+          document.getElementById(id).classList.add('active');
+          cameraMode = id.replace('cam', '').toLowerCase();
+          applyCameraPreset();
+        });
+      });
+
+      // Toolbar
+      document.getElementById('tbFullscreen').addEventListener('click', toggleFullscreen);
+      document.getElementById('tbReset').addEventListener('click', resetCamera);
+      document.getElementById('tbAutoRotate').addEventListener('click', () => {
+        autoRotate = !autoRotate;
+        document.getElementById('tbAutoRotate').classList.toggle('active', autoRotate);
+      });
+      document.getElementById('tbLog').addEventListener('click', () => {
+        document.getElementById('logPanel').classList.toggle('hidden');
+      });
+      document.getElementById('tbDownload').addEventListener('click', downloadBundle);
+      document.getElementById('tbVR').addEventListener('click', toggleVR);
+
+      // Mouse controls
+      let isDragging = false;
+      let lastX = 0, lastY = 0;
+
+      canvas.addEventListener('mousedown', e => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+
+        if (cameraMode === 'orbit' || cameraMode === 'helicopter') {
+          targetTheta += dx * 0.008;  // Horizontal rotation
+          targetPhi = Math.max(-0.1, Math.min(1.5, targetPhi + dy * 0.008));  // Vertical: drag down = look from above
+        }
+
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      canvas.addEventListener('mouseup', () => isDragging = false);
+      canvas.addEventListener('mouseleave', () => isDragging = false);
+
+      canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        camDist = Math.max(2, Math.min(25, camDist + e.deltaY * 0.02));
+        document.getElementById('camDist').value = camDist;
+        document.getElementById('camDistVal').textContent = Math.round(camDist);
+      }, { passive: false });
+
+      // Touch support
+      let lastTouch = null;
+      canvas.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+          lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      canvas.addEventListener('touchmove', e => {
+        if (e.touches.length === 1 && lastTouch) {
+          const dx = e.touches[0].clientX - lastTouch.x;
+          const dy = e.touches[0].clientY - lastTouch.y;
+          targetTheta += dx * 0.008;
+          targetPhi = Math.max(-0.1, Math.min(1.5, targetPhi + dy * 0.008));
+          lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      canvas.addEventListener('touchend', () => lastTouch = null);
+
+      window.addEventListener('resize', resize);
+    }
+
+    function applyCameraPreset() {
+      switch (cameraMode) {
+        case 'orbit':
+          targetPhi = 0.3;
+          break;
+        case 'helicopter':
+          targetPhi = 1.2;
+          break;
+        case 'top':
+          targetPhi = 1.57;
+          targetTheta = 0;
+          break;
+        case 'front':
+          targetPhi = 0;
+          targetTheta = 0;
+          break;
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.body.requestFullscreen();
+        document.body.classList.add('fullscreen');
+      } else {
+        document.exitFullscreen();
+        document.body.classList.remove('fullscreen');
+      }
+    }
+
+    function resetCamera() {
+      targetTheta = 0;
+      targetPhi = 0.3;
+      camDist = 8;
+      camHeight = 2;
+      document.getElementById('camDist').value = 8;
+      document.getElementById('camHeight').value = 2;
+      document.getElementById('camDistVal').textContent = '8';
+      document.getElementById('camHeightVal').textContent = '2.0';
+    }
+
+    // =========================================================================
+    // WebXR / VR Support
+    // =========================================================================
+
+    let xrSession = null;
+
+    async function checkVRSupport() {
+      if (!navigator.xr) {
+        log('WebXR not available in this browser');
+        return false;
+      }
+
+      try {
+        const supported = await navigator.xr.isSessionSupported('immersive-vr');
+        if (supported) {
+          document.getElementById('tbVR').style.display = 'flex';
+          log('WebXR VR supported - click 🥽 to enter VR');
+        }
+        return supported;
+      } catch (e) {
+        log('WebXR check failed: ' + e.message);
+        return false;
+      }
+    }
+
+    async function toggleVR() {
+      const vrBtn = document.getElementById('tbVR');
+
+      if (xrSession) {
+        // Exit VR
+        await renderer.endXR();
+        xrSession = null;
+        vrBtn.classList.remove('active');
+        vrBtn.title = 'Enter VR';
+        log('Exited VR mode');
+        // Resume normal animation loop
+        startAnimation();
+      } else {
+        // Enter VR
+        if (!renderer) {
+          log('Load a scene first before entering VR');
+          return;
+        }
+
+        try {
+          vrBtn.disabled = true;
+          log('Starting VR session...');
+
+          xrSession = await renderer.startXR();
+
+          vrBtn.classList.add('active');
+          vrBtn.title = 'Exit VR';
+          vrBtn.disabled = false;
+
+          // Set up XR callbacks
+          renderer.onXRSessionEnd = () => {
+            xrSession = null;
+            vrBtn.classList.remove('active');
+            vrBtn.title = 'Enter VR';
+            log('VR session ended');
+            startAnimation();
+          };
+
+          // Cancel normal animation and start XR loop
+          if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+          }
+
+          // Start XR animation loop
+          xrSession.requestAnimationFrame(xrAnimate);
+          log('Entered VR mode - look around!');
+
+        } catch (e) {
+          vrBtn.disabled = false;
+          log('VR error: ' + e.message);
+          console.error('VR error:', e);
+        }
+      }
+    }
+
+    function xrAnimate(time, frame) {
+      if (!xrSession) return;
+
+      // Request next frame first
+      xrSession.requestAnimationFrame(xrAnimate);
+
+      // Update time for effects
+      renderer.setTime(time / 1000);
+
+      // Update effects from checkboxes
+      renderer.setEffects({
+        swirl: document.getElementById('fxSwirl')?.checked || false,
+        lighting: document.getElementById('fxLighting')?.checked || false,
+        noise: document.getElementById('fxNoise')?.checked || false,
+        pulse: document.getElementById('fxPulse')?.checked || false,
+        jelly: document.getElementById('fxJelly')?.checked || false,
+        orbit: document.getElementById('fxOrbit')?.checked || false,
+        colorShift: document.getElementById('fxColorShift')?.checked || false
+      });
+
+      // Render the XR frame
+      renderer.renderXR(frame);
+
+      // Update FPS counter
+      frameCount++;
+      if (time - fpsTime > 1000) {
+        document.getElementById('statFps').textContent = frameCount;
+        frameCount = 0;
+        fpsTime = time;
+      }
+    }
+
+    async function loadAndConvert() {
+      const path = document.getElementById('sceneSelect').value;
+      if (!path) {
+        log('Please select a scene first');
+        updateStatus('Select a scene from the dropdown', 0);
+        return;
+      }
+
+      const goBtn = document.getElementById('goBtn');
+      goBtn.disabled = true;
+      goBtn.textContent = 'Loading...';
+
+      const samplingMode = document.getElementById('samplingMode').value;
+      const resolution = parseInt(document.getElementById('sampleRes').value);
+      const targetSplats = parseInt(document.getElementById('targetSplats').value);
+      const splatScale = parseFloat(document.getElementById('splatScale').value);
+
+      try {
+        // Step 1: Load scene
+        log(`Loading ${path}...`);
+        updateStatus('Loading scene...', 10);
+
+        const resp = await fetch(`../scenes/${path}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+        currentScene = await resp.json();
+        log(`Loaded: ${currentScene.title || path}`);
+
+        if (samplingMode === '3dgs') {
+          // Gemini's true 3DGS generator with curvature-based covariance
+          await loadAndConvert3DGS(resolution, targetSplats, splatScale);
+        } else if (samplingMode === 'gpu') {
+          // GPU-accelerated path using WebGL2 raymarching
+          await loadAndConvertGPU(resolution, targetSplats, splatScale);
+        } else {
+          // CPU path (original)
+          await loadAndConvertCPU(resolution, targetSplats, splatScale);
+        }
+
+        // Step 3: Setup renderer
+        updateStatus('Setting up renderer...', 95);
+        setupRenderer();
+
+        document.getElementById('tbDownload').disabled = false;
+        updateStatus('Done! Drag to rotate, scroll to zoom', 100);
+        log('Ready - drag to rotate, scroll to zoom');
+
+      } catch (err) {
+        log(`Error: ${err.message}`);
+        updateStatus(`Error: ${err.message}`, 0);
+        console.error(err);
+      } finally {
+        goBtn.disabled = false;
+        goBtn.textContent = 'Load & Convert';
+      }
+    }
+
+    async function loadAndConvertCPU(resolution, targetSplats, splatScale) {
+      log('Using CPU sampling (JavaScript)...');
+      updateStatus('Converting to splats (CPU)...', 30);
+
+      const converter = new LucidToSplats({
+        samplerResolution: resolution,
+        targetSplatsPerTemplate: targetSplats,
+        splatScaleMultiplier: splatScale,
+        onProgress: ({ stage, progress }) => updateStatus(`CPU: ${stage}`, 30 + progress * 0.6)
+      });
+
+      const sdfEvaluator = createSimpleSdfEvaluator(currentScene.defs || {});
+      currentBundle = await converter.convert(currentScene, sdfEvaluator);
+
+      log(`CPU converted: ${currentBundle.templateClouds.size} templates`);
+    }
+
+    async function loadAndConvert3DGS(resolution, targetSplats, splatScale) {
+      const numDirections = parseInt(document.getElementById('sampleDirs').value);
+      log(`Using GPU + 3DGS covariance (${resolution}² × ${numDirections} dirs)...`);
+
+      let step = 'init';
+      try {
+        // Step 1: Generate GLSL using Lucid's existing codegen
+        step = 'create raymarcher';
+        if (!glslGenerator) {
+          const hiddenCanvas = document.createElement('canvas');
+          hiddenCanvas.width = 1;
+          hiddenCanvas.height = 1;
+          glslGenerator = new SimpleRaymarcher(hiddenCanvas);
+        }
+
+        step = 'loadJsonScene';
+        updateStatus('Loading scene...', 20);
+        const processedScene = loadJsonScene(currentScene);
+
+        step = 'generateGlsl';
+        updateStatus('Generating GLSL...', 25);
+        const glslCode = generateGlslFromJson(processedScene);
+        log(`Generated ${glslCode.length} chars of GLSL`);
+
+        step = 'compile GLSL';
+        updateStatus('Compiling GLSL...', 30);
+        glslGenerator.updateScene(glslCode);
+        glslGenerator.overrideTime = 0;
+
+        step = 'computeBounds';
+        updateStatus('Computing bounds...', 35);
+        const bounds = computeSceneBounds(currentScene);
+        log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
+
+        // Step 2: GPU sample using existing GPUSampler
+        step = 'GPU sample';
+        updateStatus(`GPU sampling (${numDirections} dirs)...`, 40);
+        const gpuSampler = new GPUSampler({
+          resolution: resolution,
+          maxDistance: 30.0,
+          hitThreshold: 0.001,
+          maxSteps: 200
+        });
+
+        const startTime = performance.now();
+        const sampleResult = gpuSampler.sample(glslCode, bounds, {
+          numDirections: numDirections,
+          deduplicationRadius: 0.015
+        });
+        log(`GPU sampled ${sampleResult.count} pts in ${(performance.now() - startTime).toFixed(0)}ms`);
+
+        // Step 3: Convert to 3DGS format with curvature-based covariance
+        step = 'compute covariance';
+        updateStatus('Computing 3DGS covariance...', 70);
+
+        const baseScale = splatScale * 0.03;
+        const data = compute3DGSCovariance(sampleResult, baseScale);
+        log(`3DGS: ${data.count} Gaussians with anisotropic covariance`);
+
+        gpuSampler.dispose();
+
+        // Step 4: Build cloud
+        step = 'build cloud';
+        updateStatus('Building Gaussian cloud...', 85);
+        const cloud = new GaussianCloud(data.count);
+        for (let i = 0; i < data.count; i++) {
+          cloud.setGaussian(i, {
+            position: [data.positions[i*3], data.positions[i*3+1], data.positions[i*3+2]],
+            scale: [data.scales[i*3], data.scales[i*3+1], data.scales[i*3+2]],
+            rotation: [data.rotations[i*4], data.rotations[i*4+1], data.rotations[i*4+2], data.rotations[i*4+3]],
+            color: [data.colors[i*3], data.colors[i*3+1], data.colors[i*3+2]],
+            opacity: 0.95
+          });
+        }
+
+        currentBundle = {
+          templateClouds: new Map([['3dgs_scene', cloud]]),
+          manifest: {
+            instances: [{
+              id: '3dgs_instance',
+              template: '3dgs_scene',
+              transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+            }]
+          },
+          getInstances() { return this.manifest.instances; },
+          _rawData: data
+        };
+
+        log(`3DGS complete: ${data.count} Gaussians`);
+
+      } catch (err) {
+        log(`❌ Error at step "${step}": ${err.message}`);
+        console.error(`Error at step: ${step}`, err);
+        throw err;
+      }
+    }
+
+    // Compute 3DGS covariance from GPU sample results using principal curvatures (k1, k2)
+    // This creates truly anisotropic Gaussians aligned with surface curvature directions
+    function compute3DGSCovariance(sampleResult, baseScale) {
+      const { positions, normals, colors, curvatures, k1, k2, principalAngles, count } = sampleResult;
+      const scales = new Float32Array(count * 3);
+      const rotations = new Float32Array(count * 4);
+      const curvatureFactor = 5.0;
+
+      for (let i = 0; i < count; i++) {
+        const nx = normals[i * 3];
+        const ny = normals[i * 3 + 1];
+        const nz = normals[i * 3 + 2];
+
+        // Use principal curvatures if available, fallback to mean curvature
+        const kappa1 = k1 ? k1[i] : curvatures[i];  // Max principal curvature
+        const kappa2 = k2 ? k2[i] : curvatures[i];  // Min principal curvature
+        const angle = principalAngles ? principalAngles[i] : 0;
+
+        // Anisotropic scale: inverse of curvature
+        // High curvature = small scale (tight), low curvature = large scale (wide)
+        const clampedK1 = Math.min(Math.abs(kappa1), 50.0);
+        const clampedK2 = Math.min(Math.abs(kappa2), 50.0);
+
+        // Scale in principal curvature directions
+        const scale1 = baseScale / (1.0 + clampedK1 * curvatureFactor);  // Along k1 direction
+        const scale2 = baseScale / (1.0 + clampedK2 * curvatureFactor);  // Along k2 direction
+        const scaleN = baseScale * 0.1;  // Thin along normal (disk-like)
+
+        scales[i * 3] = scale1;
+        scales[i * 3 + 1] = scale2;
+        scales[i * 3 + 2] = scaleN;
+
+        // Step 1: Quaternion to align Z-axis to surface normal
+        let qNormal = [0, 0, 0, 1];
+        const dot = nz;
+
+        if (dot > 0.9999) {
+          qNormal = [0, 0, 0, 1];
+        } else if (dot < -0.9999) {
+          qNormal = [1, 0, 0, 0];
+        } else {
+          const ax = -ny, ay = nx;
+          const axisLen = Math.sqrt(ax * ax + ay * ay);
+          const halfAngle = Math.acos(dot) * 0.5;
+          const sinHalf = Math.sin(halfAngle);
+          const cosHalf = Math.cos(halfAngle);
+          qNormal = [
+            (ax / axisLen) * sinHalf,
+            (ay / axisLen) * sinHalf,
+            0,
+            cosHalf
+          ];
+        }
+
+        // Step 2: Rotate in tangent plane by principal direction angle
+        if (angle !== 0 && k1 && k2) {
+          const halfPrincipal = angle * 0.5;
+          const qPrincipal = [0, 0, Math.sin(halfPrincipal), Math.cos(halfPrincipal)];
+
+          // Quaternion multiplication: qNormal * qPrincipal
+          const q1 = qNormal, q2 = qPrincipal;
+          rotations[i * 4] = q1[3]*q2[0] + q1[0]*q2[3] + q1[1]*q2[2] - q1[2]*q2[1];
+          rotations[i * 4 + 1] = q1[3]*q2[1] - q1[0]*q2[2] + q1[1]*q2[3] + q1[2]*q2[0];
+          rotations[i * 4 + 2] = q1[3]*q2[2] + q1[0]*q2[1] - q1[1]*q2[0] + q1[2]*q2[3];
+          rotations[i * 4 + 3] = q1[3]*q2[3] - q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2];
+        } else {
+          rotations[i * 4] = qNormal[0];
+          rotations[i * 4 + 1] = qNormal[1];
+          rotations[i * 4 + 2] = qNormal[2];
+          rotations[i * 4 + 3] = qNormal[3];
+        }
+      }
+
+      return { positions, normals, colors, scales, rotations, count };
+    }
+
+    async function loadAndConvertGPU(resolution, targetSplats, splatScale) {
+      const numDirections = parseInt(document.getElementById('sampleDirs').value);
+      log(`Using GPU sampling (WebGL2, ${resolution}² × ${numDirections} dirs)...`);
+
+      // Step-by-step with error tracking
+      let step = 'init';
+      try {
+        step = 'create raymarcher';
+        if (!glslGenerator) {
+          const hiddenCanvas = document.createElement('canvas');
+          hiddenCanvas.width = 1;
+          hiddenCanvas.height = 1;
+          glslGenerator = new SimpleRaymarcher(hiddenCanvas);
+        }
+
+        step = 'loadJsonScene';
+        updateStatus('Loading scene...', 25);
+        const processedScene = loadJsonScene(currentScene);
+        log(`Scene processed`);
+
+        step = 'generateGlslFromJson';
+        updateStatus('Generating GLSL...', 30);
+        const glslCode = generateGlslFromJson(processedScene);
+        log(`Generated ${glslCode.length} chars of GLSL`);
+
+        step = 'compile GLSL';
+        updateStatus('Compiling GLSL...', 35);
+        glslGenerator.updateScene(glslCode);
+        glslGenerator.overrideTime = 0;
+
+        step = 'computeSceneBounds';
+        updateStatus('Computing bounds...', 40);
+        const bounds = computeSceneBounds(currentScene);
+        log(`Bounds: [${bounds.min.map(v => v.toFixed(1))}] to [${bounds.max.map(v => v.toFixed(1))}]`);
+
+        step = 'create GPUSampler';
+        updateStatus(`GPU sampling (${numDirections} dirs)...`, 45);
+        const gpuSampler = new GPUSampler({
+          resolution: resolution,
+          maxDistance: 30.0,
+          hitThreshold: 0.001,
+          maxSteps: 200
+        });
+
+        step = 'GPU sample';
+        const startTime = performance.now();
+        const sampleResult = gpuSampler.sample(glslCode, bounds, {
+          numDirections: numDirections,
+          deduplicationRadius: 0.015
+        });
+        log(`GPU sampled ${sampleResult.count} pts in ${(performance.now() - startTime).toFixed(0)}ms`);
+
+        step = 'toPointCloud';
+        updateStatus('Converting to splats...', 65);
+        const boundsSize = Math.max(
+          bounds.max[0] - bounds.min[0],
+          bounds.max[1] - bounds.min[1],
+          bounds.max[2] - bounds.min[2]
+        );
+        const baseScale = (boundsSize / resolution) * 1.5 * splatScale;
+        const pointCloud = gpuSampler.toPointCloud(sampleResult, { baseScale });
+
+        step = 'train';
+        updateStatus('Training Gaussians...', 75);
+        const trainer = new QuickTrainer({
+          targetCount: targetSplats,
+          scaleMultiplier: splatScale
+        });
+        const cloud = await trainer.train(pointCloud);
+        log(`Trained ${cloud.count} Gaussians`);
+
+        gpuSampler.dispose();
+
+        currentBundle = {
+          templateClouds: new Map([['gpu_scene', cloud]]),
+          manifest: {
+            instances: [{
+              id: 'gpu_instance',
+              template: 'gpu_scene',
+              transform: { translate: [0, 0, 0], rotate: [0, 0, 0], scale: [1, 1, 1] }
+            }]
+          },
+          getInstances() { return this.manifest.instances; }
+        };
+      } catch (err) {
+        log(`❌ Error at step "${step}": ${err.message}`);
+        console.error(`Stack overflow at step: ${step}`, err);
+        throw err;
+      }
+    }
+
+    function computeSceneBounds(scene) {
+      // Try to extract bounds from scene, or use defaults
+      const min = [-3, -3, -3];
+      const max = [3, 3, 3];
+
+      // Use iterative approach with explicit stack to avoid recursion overflow
+      const stack = [{ node: scene.root, offset: [0, 0, 0], depth: 0 }];
+      const visited = new Set();
+      const MAX_DEPTH = 50;
+
+      while (stack.length > 0) {
+        const { node, offset, depth } = stack.pop();
+
+        if (!node || depth > MAX_DEPTH) continue;
+
+        // Skip planes (infinite) and refs to avoid cycles
+        if (node.type === 'plane') continue;
+        if (node.type === 'ref') {
+          // For refs, try to resolve from defs
+          const def = scene.defs?.[node.id];
+          if (def && !visited.has(node.id)) {
+            visited.add(node.id);
+            stack.push({ node: def, offset, depth: depth + 1 });
+          }
+          continue;
+        }
+
+        // Get translation (handle both array values and expression objects)
+        const t = node.transform?.translate || [0, 0, 0];
+        const tx = typeof t[0] === 'number' ? t[0] : 0;
+        const ty = typeof t[1] === 'number' ? t[1] : 0;
+        const tz = typeof t[2] === 'number' ? t[2] : 0;
+        const pos = [offset[0] + tx, offset[1] + ty, offset[2] + tz];
+
+        // Expand bounds based on node position and estimated size
+        let size = 1;
+        if (node.params?.r) size = (typeof node.params.r === 'number' ? node.params.r : 1) * 2;
+        if (node.params?.size) {
+          const s = node.params.size;
+          size = Math.max(
+            typeof s[0] === 'number' ? s[0] : 1,
+            typeof s[1] === 'number' ? s[1] : 1,
+            typeof s[2] === 'number' ? s[2] : 1
+          ) * 2;
+        }
+        if (node.params?.major) size = (node.params.major || 1) * 2 + (node.params.minor || 0.3) * 2;
+        if (node.params?.h) size = Math.max(size, (node.params.h || 1) * 2);
+        if (node.params?.radii) {
+          const r = node.params.radii;
+          size = Math.max(r[0] || 1, r[1] || 1, r[2] || 1) * 2;
+        }
+
+        for (let i = 0; i < 3; i++) {
+          min[i] = Math.min(min[i], pos[i] - size);
+          max[i] = Math.max(max[i], pos[i] + size);
+        }
+
+        // Add children to stack
+        if (node.children) {
+          for (const child of node.children) {
+            stack.push({ node: child, offset: pos, depth: depth + 1 });
+          }
+        }
+        if (node.child) {
+          stack.push({ node: node.child, offset: pos, depth: depth + 1 });
+        }
+        // Handle mirror/radial/repeat child
+        if (node.a) stack.push({ node: node.a, offset: pos, depth: depth + 1 });
+        if (node.b) stack.push({ node: node.b, offset: pos, depth: depth + 1 });
+      }
+
+      // Clamp to reasonable bounds
+      for (let i = 0; i < 3; i++) {
+        min[i] = Math.max(min[i], -20);
+        max[i] = Math.min(max[i], 20);
+      }
+
+      // Add margin
+      const margin = 0.5;
+      return {
+        min: min.map(v => v - margin),
+        max: max.map(v => v + margin)
+      };
+    }
+
+    function setupRenderer() {
+      if (renderer) renderer.dispose();
+
+      renderer = new InstancedSplatRenderer(canvas);
+
+      for (const [id, cloud] of currentBundle.templateClouds) {
+        renderer.addTemplate(id, cloud);
+      }
+
+      for (const instance of currentBundle.getInstances()) {
+        renderer.addInstance(instance.template, instance);
+      }
+
+      let totalSplats = 0;
+      for (const [, cloud] of currentBundle.templateClouds) {
+        totalSplats += cloud.count;
+      }
+
+      document.getElementById('statTemplates').textContent = currentBundle.templateClouds.size;
+      document.getElementById('statInstances').textContent = currentBundle.manifest.instances.length;
+      document.getElementById('statSplats').textContent = totalSplats.toLocaleString();
+    }
+
+    async function downloadBundle() {
+      if (!currentBundle) return;
+
+      try {
+        // Collect all Gaussians from the bundle
+        let totalCount = 0;
+        for (const [, cloud] of currentBundle.templateClouds) {
+          totalCount += cloud.count;
+        }
+
+        // Prepare data for export
+        const positions = new Float32Array(totalCount * 3);
+        const scales = new Float32Array(totalCount * 3);
+        const rotations = new Float32Array(totalCount * 4);
+        const colors = new Float32Array(totalCount * 3);
+        const opacities = new Float32Array(totalCount);
+
+        let offset = 0;
+        for (const [, cloud] of currentBundle.templateClouds) {
+          for (let i = 0; i < cloud.count; i++) {
+            const g = cloud.gaussians[i];
+            const idx = offset + i;
+
+            positions[idx * 3] = g.position[0];
+            positions[idx * 3 + 1] = g.position[1];
+            positions[idx * 3 + 2] = g.position[2];
+
+            scales[idx * 3] = g.scale[0];
+            scales[idx * 3 + 1] = g.scale[1];
+            scales[idx * 3 + 2] = g.scale[2];
+
+            rotations[idx * 4] = g.rotation[0];
+            rotations[idx * 4 + 1] = g.rotation[1];
+            rotations[idx * 4 + 2] = g.rotation[2];
+            rotations[idx * 4 + 3] = g.rotation[3];
+
+            colors[idx * 3] = g.color[0];
+            colors[idx * 3 + 1] = g.color[1];
+            colors[idx * 3 + 2] = g.color[2];
+
+            opacities[idx] = g.opacity;
+          }
+          offset += cloud.count;
+        }
+
+        const data = { positions, scales, rotations, colors, opacities, count: totalCount };
+
+        // Export to PLY format (compatible with INRIA, Luma, Polycam, SuperSplat)
+        const plyData = exportToPLY(data, { shDegree: 0, includeNormals: true });
+        const filename = `${(currentScene.title || 'scene').replace(/[^a-z0-9]/gi, '_')}.ply`;
+        downloadFile(plyData, filename, 'application/octet-stream');
+
+        log(`Downloaded ${totalCount.toLocaleString()} Gaussians as ${filename}`);
+      } catch (err) {
+        log(`Download error: ${err.message}`);
+        console.error(err);
+      }
+    }
+
+    let lastTime = 0;
+    let frameCount = 0;
+    let fpsTime = 0;
+    let isPaused = false;  // Visibility-based pause
+
+    // Pause rendering when tab is hidden to save resources
+    document.addEventListener('visibilitychange', () => {
+      isPaused = document.hidden;
+      if (!isPaused && animationId) {
+        // Resume - request new frame
+        log(isPaused ? 'Paused (tab hidden)' : 'Resumed');
+      }
+    });
+
+    function startAnimation() {
+      function animate(time) {
+        animationId = requestAnimationFrame(animate);
+
+        // Skip rendering when tab is hidden
+        if (isPaused) return;
+
+        // FPS
+        frameCount++;
+        if (time - fpsTime > 1000) {
+          document.getElementById('statFps').textContent = frameCount;
+          frameCount = 0;
+          fpsTime = time;
+        }
+
+        // Auto rotate
+        if (autoRotate) {
+          targetTheta += 0.005;
+        }
+
+        // Smooth camera
+        camTheta += (targetTheta - camTheta) * 0.1;
+        camPhi += (targetPhi - camPhi) * 0.1;
+
+        if (renderer) {
+          renderer.setTime(time / 1000);
+
+          // Calculate camera position based on mode
+          let pos;
+          if (cameraMode === 'helicopter') {
+            pos = [
+              Math.sin(camTheta) * camDist * 0.5,
+              camDist * 0.8 + camHeight,
+              Math.cos(camTheta) * camDist * 0.5
+            ];
+          } else {
+            pos = [
+              Math.sin(camTheta) * Math.cos(camPhi) * camDist,
+              Math.sin(camPhi) * camDist + camHeight,
+              Math.cos(camTheta) * Math.cos(camPhi) * camDist
+            ];
+          }
+
+          renderer.setCamera({
+            position: pos,
+            target: [0, camHeight * 0.3, 0],
+            fov: 45
+          });
+
+          // Update effects from checkboxes
+          renderer.setEffects({
+            swirl: document.getElementById('fxSwirl')?.checked || false,
+            lighting: document.getElementById('fxLighting')?.checked || false,
+            noise: document.getElementById('fxNoise')?.checked || false,
+            pulse: document.getElementById('fxPulse')?.checked || false,
+            jelly: document.getElementById('fxJelly')?.checked || false,
+            orbit: document.getElementById('fxOrbit')?.checked || false,
+            colorShift: document.getElementById('fxColorShift')?.checked || false
+          });
+
+          renderer.render();
+        }
+
+        lastTime = time;
+      }
+
+      animate(0);
+    }
+
+    function resize() {
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
+    }
+
+    function updateStatus(text, progress) {
+      document.getElementById('statusText').textContent = text;
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+
+    function log(msg) {
+      const div = document.createElement('div');
+      div.textContent = `${new Date().toLocaleTimeString().slice(0,5)} ${msg}`;
+      const logContent = document.getElementById('logContent');
+      logContent.insertBefore(div, logContent.firstChild);
+      console.log(msg);
+    }
+
+    init();
+  </script>
+</body>
+</html>
