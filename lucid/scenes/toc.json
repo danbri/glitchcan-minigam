@@ -93,7 +93,8 @@
         { "path": "nature/celly.json", "title": "Celly 🦠", "subtitle": "Dividing microbes" },
         { "path": "nature/sunflower.json", "title": "Sunflower 🌻", "subtitle": "Single bloom" },
         { "path": "nature/single-sunflower.json", "title": "Sunflower Test 🌻", "subtitle": "Isolated SDF test" },
-        { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers" },
+        { "path": "nature/sunflower-field.json", "title": "Sunflower Field 🌻", "subtitle": "Multiple flowers (broken)" },
+        { "path": "nature/sunflower-field-fixed.json", "title": "Sunflower Field Fixed ✅", "subtitle": "Working version" },
         { "path": "nature/poppy-field.json", "title": "Poppy Field 🌺", "subtitle": "Red poppies" },
         { "path": "nature/flower-meadow.json", "title": "Flower Meadow 🌺", "subtitle": "Mixed blooms" }
       ]
