@@ -342,16 +342,37 @@ Users may load complex scenes on weak devices without warning.
 
 ## Infrastructure Issues
 
-### LCD-040: No automated testing
-**Status:** Open
-**Component:** N/A
-**Description:** No test suite for:
-- JSON loader parsing
-- GLSL codegen output
-- Renderer initialization
-- Param slider binding
+### LCD-040: No automated testing [PARTIALLY FIXED]
+**Status:** Partially Fixed (2026-01-04)
+**Component:** tests/, package.json
+**Description:** Previously had no test suite. Now implemented:
+- ✅ JSON loader parsing tests
+- ✅ GLSL codegen output tests
+- ✅ Pre-commit hook (Tier 1 tests)
+- ✅ Tiered test framework (Tier 1/2/3)
+- ⏳ Renderer initialization (not tested)
+- ⏳ Param slider binding (not tested)
 
-Manual testing only currently.
+**Fix Applied:**
+- Added `npm run test:core` for fast Vitest tests
+- Added `.git/hooks/pre-commit` for automatic testing
+- Created `lucid/TESTING.md` documentation
+
+---
+
+### LCD-043: Stale test expectations in lucid-core.test.js
+**Status:** Open
+**Component:** tests/lucid-core.test.js
+**Description:** 5 tests have stale expectations that don't match current loader behavior:
+- `should load a box with transform` - expects raw arrays, gets `{type:'array', values:[...]}`
+- `should resolve refs to defs` - ref not being resolved to underlying type
+- `should process Euler rotation` - structured object mismatch
+- `should process quaternion rotation` - structured object mismatch
+- `should process axis-angle rotation` - structured object mismatch
+
+**Root Cause:** json-loader.js changed to return structured expression objects for animatable values, but tests expect raw arrays.
+
+**Impact:** These 5 tests fail, reducing test confidence. Core codegen tests (31) still pass.
 
 ---
 
@@ -387,6 +408,7 @@ Should consolidate into coherent structure.
 | LCD-001 | smoothIntersect operator implemented | 2026-01-04 |
 | LCD-006 | invaderScale param not working | 2026-01-04 |
 | LCD-005 (partial) | Wiggler icon cluttered, not sticky | 2026-01-04 |
+| LCD-040 (partial) | Added tiered test framework & pre-commit hook | 2026-01-04 |
 
 ---
 
