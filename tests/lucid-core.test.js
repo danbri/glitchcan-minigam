@@ -40,7 +40,9 @@ describe('json-loader.js', () => {
       };
       const scene = loadJsonScene(json);
       expect(scene.root.type).toBe('box');
-      expect(scene.root.transform.translate).toEqual([1, 2, 3]);
+      // Loader wraps arrays in structured format for animation support
+      expect(scene.root.transform.translate.type).toBe('array');
+      expect(scene.root.transform.translate.values.map(v => v.value)).toEqual([1, 2, 3]);
     });
 
     it('should load union of multiple children', () => {
@@ -71,8 +73,11 @@ describe('json-loader.js', () => {
         }
       };
       const scene = loadJsonScene(json);
-      expect(scene.root.type).toBe('sphere');
-      expect(scene.root.params.r).toBe(0.5);
+      // Loader keeps refs as refs - resolution happens in codegen
+      expect(scene.root.type).toBe('ref');
+      expect(scene.root.refId).toBe('mySphere');
+      // Defs stored as Map for codegen to resolve
+      expect(scene.defs.get('mySphere').type).toBe('sphere');
     });
 
     it('should process expression values', () => {
@@ -191,7 +196,9 @@ describe('json-loader.js', () => {
         }
       };
       const scene = loadJsonScene(json);
-      expect(scene.root.transform.rotate).toEqual([45, 90, 0]);
+      // Rotation arrays wrapped in structured format
+      expect(scene.root.transform.rotate.type).toBe('array');
+      expect(scene.root.transform.rotate.values.map(v => v.value)).toEqual([45, 90, 0]);
     });
 
     it('should process quaternion rotation', () => {
@@ -204,7 +211,9 @@ describe('json-loader.js', () => {
         }
       };
       const scene = loadJsonScene(json);
-      expect(scene.root.transform.rotateQ).toEqual([0, 0.7071, 0, 0.7071]);
+      // Quaternion (4 values) wrapped as 'array' type
+      expect(scene.root.transform.rotateQ.type).toBe('array');
+      expect(scene.root.transform.rotateQ.values.map(v => v.value)).toEqual([0, 0.7071, 0, 0.7071]);
     });
 
     it('should process axis-angle rotation', () => {
@@ -217,8 +226,11 @@ describe('json-loader.js', () => {
         }
       };
       const scene = loadJsonScene(json);
-      expect(scene.root.transform.rotateAxis.axis).toEqual([1, 1, 0]);
-      expect(scene.root.transform.rotateAxis.angle).toBe(60);
+      // Axis wrapped as array, angle as const
+      expect(scene.root.transform.rotateAxis.axis.type).toBe('array');
+      expect(scene.root.transform.rotateAxis.axis.values.map(v => v.value)).toEqual([1, 1, 0]);
+      expect(scene.root.transform.rotateAxis.angle.type).toBe('const');
+      expect(scene.root.transform.rotateAxis.angle.value).toBe(60);
     });
   });
 });
