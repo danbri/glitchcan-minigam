@@ -1766,8 +1766,8 @@
     let physicsParamMap = null; // Maps physics body IDs to param names
 
     /**
-     * Apply impulse to physics bodies from a click position
-     * Converts screen coords to world direction and pushes all dynamic bodies
+     * Apply impulse to the nearest physics body from a tap/click position
+     * Pushes ball away from camera toward tap location - like poking it
      */
     function applyPhysicsImpulseFromClick(clientX, clientY) {
       if (!currentPhysicsScene || !renderer) return;
@@ -1779,40 +1779,94 @@
       const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
       const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
 
-      // Get camera direction vectors
+      // Get camera info
       const cam = renderer.camera;
+      const dist = cam.distance || 5;
       const theta = cam.theta || 0;
       const phi = cam.phi || Math.PI / 2;
+      const target = cam.target || [0, 0, 0];
 
-      // Camera forward direction (from spherical)
+      // Camera position in world space (spherical coords around target)
       const sinPhi = Math.sin(phi);
       const cosPhi = Math.cos(phi);
       const sinTheta = Math.sin(theta);
       const cosTheta = Math.cos(theta);
+      const camX = target[0] + dist * sinPhi * cosTheta;
+      const camY = target[1] + dist * cosPhi;
+      const camZ = target[2] + dist * sinPhi * sinTheta;
 
-      // Right and up vectors in world space
+      // Camera basis vectors
       const rightX = -sinTheta;
+      const rightY = 0;
       const rightZ = cosTheta;
       const upX = -cosPhi * cosTheta;
       const upY = sinPhi;
       const upZ = -cosPhi * sinTheta;
+      const fwdX = -sinPhi * cosTheta;
+      const fwdY = -cosPhi;
+      const fwdZ = -sinPhi * sinTheta;
 
-      // Impulse direction based on click position (push into screen + sideways)
-      const impulseStrength = 8;
-      const impulse = [
-        (ndcX * rightX + ndcY * upX * 0.5) * impulseStrength,
-        (ndcY * upY + 0.3) * impulseStrength, // Always push slightly up
-        (ndcX * rightZ + ndcY * upZ * 0.5) * impulseStrength
-      ];
+      // Find dynamic bodies and their screen positions
+      let nearest = null;
+      let nearestDist = Infinity;
 
-      // Apply to all dynamic bodies
       for (const body of currentPhysicsScene.bodies) {
-        if (!body.isStatic) {
-          currentPhysicsScene.applyImpulse(body.id, impulse);
+        if (body.isStatic) continue;
+
+        const pos = body.position;
+        // Vector from camera to body
+        const dx = pos[0] - camX;
+        const dy = pos[1] - camY;
+        const dz = pos[2] - camZ;
+
+        // Project to camera space
+        const depth = dx * fwdX + dy * fwdY + dz * fwdZ;
+        if (depth <= 0) continue; // Behind camera
+
+        // Screen-space position (approximate)
+        const screenX = (dx * rightX + dy * rightY + dz * rightZ) / depth;
+        const screenY = (dx * upX + dy * upY + dz * upZ) / depth;
+
+        // Distance to tap in screen space
+        const tapDist = Math.sqrt((screenX - ndcX) ** 2 + (screenY - ndcY) ** 2);
+
+        if (tapDist < nearestDist) {
+          nearestDist = tapDist;
+          nearest = body;
         }
       }
 
-      console.log(`⚛️ Impulse applied: [${impulse.map(v => v.toFixed(2)).join(', ')}]`);
+      if (!nearest) return;
+
+      // Push direction: from camera toward the ball (poke it away)
+      const pos = nearest.position;
+      let pushX = pos[0] - camX;
+      let pushY = pos[1] - camY;
+      let pushZ = pos[2] - camZ;
+      const len = Math.sqrt(pushX * pushX + pushY * pushY + pushZ * pushZ);
+      if (len > 0) {
+        pushX /= len;
+        pushY /= len;
+        pushZ /= len;
+      }
+
+      // Add slight sideways component based on tap offset from ball center
+      const sideInfluence = 3;
+      pushX += ndcX * rightX * sideInfluence;
+      pushY += 0.5; // Always lift slightly
+      pushZ += ndcX * rightZ * sideInfluence;
+
+      // Normalize and apply strength
+      const impulseStrength = 6;
+      const finalLen = Math.sqrt(pushX * pushX + pushY * pushY + pushZ * pushZ);
+      const impulse = [
+        (pushX / finalLen) * impulseStrength,
+        (pushY / finalLen) * impulseStrength,
+        (pushZ / finalLen) * impulseStrength
+      ];
+
+      currentPhysicsScene.applyImpulse(nearest.id, impulse);
+      console.log(`⚛️ Pushed ${nearest.id}: [${impulse.map(v => v.toFixed(2)).join(', ')}]`);
     }
 
     // Camera orbit state
