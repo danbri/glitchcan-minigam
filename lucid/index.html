@@ -1904,15 +1904,13 @@
           if (currentPhysicsScene && currentPhysicsScene.enabled && animState !== 'frozen') {
             currentPhysicsScene.step(Math.min(deltaTime, 1/30)); // Cap to avoid instability
 
-            // Sync physics positions to shader params
+            // Sync physics positions to shader params (vec3)
             for (const body of currentPhysicsScene.bodies) {
               if (body.isStatic) continue;
-              const prefix = body.id;
-              if (physicsParamMap && physicsParamMap[prefix]) {
-                const map = physicsParamMap[prefix];
-                if (map.x) renderer.setParam(map.x, body.position[0]);
-                if (map.y) renderer.setParam(map.y, body.position[1]);
-                if (map.z) renderer.setParam(map.z, body.position[2]);
+              const paramName = physicsParamMap?.[body.id];
+              if (paramName) {
+                // Set vec3 position as array
+                renderer.setParam(paramName, [...body.position]);
               }
             }
           }
@@ -2029,20 +2027,19 @@
       if (json.physics && json.physics.enabled) {
         currentPhysicsScene = new PhysicsScene(json);
 
-        // Build param map: maps body IDs to param names for X/Y/Z
+        // Build param map: maps body IDs to param names for position
+        // New format: physics: { body: "ball1", property: "position" }
         physicsParamMap = {};
         const params = json.params || {};
         for (const [paramName, paramDef] of Object.entries(params)) {
-          if (paramDef.physics) {
-            // Format: "ball1.x" -> bodyId="ball1", axis="x"
-            const [bodyId, axis] = paramDef.physics.split('.');
-            if (!physicsParamMap[bodyId]) {
-              physicsParamMap[bodyId] = {};
+          if (paramDef.physics && typeof paramDef.physics === 'object') {
+            const { body, property } = paramDef.physics;
+            if (body && property === 'position') {
+              physicsParamMap[body] = paramName;
             }
-            physicsParamMap[bodyId][axis] = paramName;
           }
         }
-        console.log(`⚛️ Physics enabled: ${currentPhysicsScene.bodies.length} bodies`);
+        console.log(`⚛️ Physics enabled: ${currentPhysicsScene.bodies.length} bodies, params:`, physicsParamMap);
       } else {
         currentPhysicsScene = null;
         physicsParamMap = null;

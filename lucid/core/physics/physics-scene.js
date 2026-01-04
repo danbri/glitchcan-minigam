@@ -71,6 +71,13 @@ function extractPosition(node, params = {}) {
   if (t.type === 'array') {
     return t.values.map(v => extractValue(v, params));
   }
+  // Handle single var reference to vec3: { "var": "ball1Pos" }
+  if (t.var && params[t.var]) {
+    const val = params[t.var].value ?? params[t.var];
+    if (Array.isArray(val)) {
+      return [...val];
+    }
+  }
 
   return [0, 0, 0];
 }
