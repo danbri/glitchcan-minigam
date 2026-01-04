@@ -1,8 +1,31 @@
 {
   "title": "Solaris Drake",
   "subtitle": "Structurally solid wyvern with golden solar-panels wings and connected organic joints.",
-  "version": "2.1",
+  "version": "2.2",
   "quality": "high",
+
+  "params": {
+    "bodyColor": {
+      "value": [0.05, 0.05, 0.07],
+      "type": "color3",
+      "description": "Obsidian body color"
+    },
+    "wingGlow": {
+      "value": 0.8,
+      "type": "scalar",
+      "min": 0.2,
+      "max": 2.0,
+      "description": "Solar wing glow"
+    },
+    "eyeGlow": {
+      "value": 5.0,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 10.0,
+      "description": "Eye glow intensity"
+    }
+  },
+
   "camera": {
     "distance": 7,
     "phi": 0.25,
@@ -20,11 +43,7 @@
         "notes": "MAIN BODY - Dark Obsidian Skin. Uses smoothUnion k=0.4 for very organic, melted blending between joints.",
         "type": "material",
         "params": {
-          "color": [
-            0.05,
-            0.05,
-            0.07
-          ],
+          "color": {"var": "bodyColor"},
           "roughness": 0.2,
           "emit": 0.0
         },
@@ -248,12 +267,8 @@
         "notes": "WINGS - The 'Solar Panels'. Thick geometric plates instead of thin noise-displaced meshes.",
         "type": "material",
         "params": {
-          "color": [
-            1.0,
-            0.7,
-            0.1
-          ],
-          "emit": 0.8
+          "color": [1.0, 0.7, 0.1],
+          "emit": {"var": "wingGlow"}
         },
         "child": {
           "type": "mirror",
@@ -315,12 +330,8 @@
         "notes": "EYES - Bright glowing focal points.",
         "type": "material",
         "params": {
-          "color": [
-            0.2,
-            1.0,
-            0.5
-          ],
-          "emit": 5.0
+          "color": [0.2, 1.0, 0.5],
+          "emit": {"var": "eyeGlow"}
         },
         "child": {
           "type": "mirror",

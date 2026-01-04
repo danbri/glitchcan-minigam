@@ -1,8 +1,31 @@
 {
   "title": "Material & Emission",
   "subtitle": "Color override and glow effects",
-  "version": "1.0",
+  "version": "1.1",
   "notes": "MATERIAL node wraps a child and overrides its appearance. Params: 'color':[r,g,b] overrides color, 'emit':0-1 adds glow effect (higher = brighter). Material > transform > shape is the typical pattern for reusable templates.",
+
+  "params": {
+    "sphereRadius": {
+      "value": 0.4,
+      "type": "scalar",
+      "min": 0.2,
+      "max": 0.6,
+      "description": "Sphere size"
+    },
+    "glowIntensity": {
+      "value": 0.8,
+      "type": "scalar",
+      "min": 0,
+      "max": 1.0,
+      "description": "Emission glow"
+    },
+    "glowColor": {
+      "value": [0.2, 0.5, 1],
+      "type": "color3",
+      "description": "Glowing sphere color"
+    }
+  },
+
   "root": {
     "type": "union",
     "children": [
@@ -18,8 +41,8 @@
       },
       {
         "type": "material",
-        "params": { "color": [0.2, 0.5, 1], "emit": 0.8 },
-        "child": { "type": "sphere", "params": { "r": 0.4 }, "transform": { "translate": [1.2, 0.5, 0] } }
+        "params": { "color": {"var": "glowColor"}, "emit": {"var": "glowIntensity"} },
+        "child": { "type": "sphere", "params": { "r": {"var": "sphereRadius"} }, "transform": { "translate": [1.2, 0.5, 0] } }
       },
       {
         "type": "material",
