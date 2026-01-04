@@ -99,13 +99,15 @@
         ]
       },
       {
-        "comment": "Carrot nose - tapered ellipsoid (cone not supported)",
-        "type": "ellipsoid",
+        "comment": "Carrot nose",
+        "type": "cone",
         "params": {
-          "radii": [0.04, 0.04, 0.12],
+          "h": 0.25,
+          "r1": 0.05,
+          "r2": 0.01,
           "color": { "var": "carrotColor" }
         },
-        "transform": { "translate": [0, 0.88, 0.38] }
+        "transform": { "translate": [0, 0.88, 0.28], "rotate": [-90, 0, 0] }
       },
       {
         "comment": "Coal eyes (mirrored)",
