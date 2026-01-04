@@ -20,16 +20,16 @@
 
 ## P0 - Critical Issues
 
-### LCD-001: smoothIntersect operator not implemented
-**Status:** Open
+### LCD-001: smoothIntersect operator not implemented [FIXED]
+**Status:** Fixed (2026-01-04)
 **Component:** core/json-codegen.js
-**Description:** The `smoothIntersect` CSG operator is documented in README.html as TODO but not implemented in the codegen. Scenes using this operator will fail silently or produce incorrect geometry.
+**Description:** The `smoothIntersect` CSG operator was documented in README.html as TODO but not implemented in the codegen.
 
-**Steps to Reproduce:**
-1. Create scene with `"type": "smoothIntersect"` node
-2. Observe no smooth intersection effect
-
-**Impact:** Content creators cannot use smooth intersection blending.
+**Fix Applied:**
+- Added `generateSmoothIntersect()` function using smooth maximum formula
+- Formula: `h = clamp(0.5 - 0.5*(b-a)/k, 0, 1); d = mix(b,a,h) + k*h*(1-h)`
+- Created test scene: `scenes/csg/smooth-intersect.json`
+- Updated README.html to reflect implementation
 
 ---
 
@@ -384,6 +384,7 @@ Should consolidate into coherent structure.
 
 | ID | Description | Fixed Date |
 |----|-------------|------------|
+| LCD-001 | smoothIntersect operator implemented | 2026-01-04 |
 | LCD-006 | invaderScale param not working | 2026-01-04 |
 | LCD-005 (partial) | Wiggler icon cluttered, not sticky | 2026-01-04 |
 
