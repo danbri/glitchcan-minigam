@@ -154,6 +154,9 @@ function walkNode(node, ctx) {
     case 'smoothIntersect':
       return generateSmoothIntersect(node, ctx);
 
+    case 'smoothSubtract':
+      return generateSmoothSubtract(node, ctx);
+
     case 'transform':
       return generateTransform(node, ctx);
 
@@ -836,6 +839,109 @@ function generateSmoothIntersect(node, ctx) {
     bodyLines.push(`    float d = mix(b.x, result.x, h) + ${k} * h * (1.0 - h);`);
     bodyLines.push(`    vec3 col = mix(b.yzw, result.yzw, h);`);
     bodyLines.push(`    result = vec4(d, col);`);
+    bodyLines.push(`  }`);
+  }
+
+  bodyLines.push(`  return result;`);
+
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
+${bodyPrefix}${bodyLines.join('\n')}
+}`;
+
+  ctx.helpers.push(helperFunc);
+
+  return `${funcName}(${callArgs})`;
+}
+
+/**
+ * Generate smooth subtract - creates helper function, returns call expression
+ *
+ * Uses IQ's opSmoothSubtraction formula:
+ * h = clamp(0.5 - 0.5*(d2+d1)/k, 0.0, 1.0)
+ * d = mix(d2, -d1, h) + k*h*(1.0-h)
+ * This subtracts d1 from d2 with smooth blending.
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform.
+ */
+function generateSmoothSubtract(node, ctx) {
+  let children = node.children || [];
+  const k = valueToGlsl(node.k || { type: 'const', value: 0.1 }, ctx);
+
+  if (children.length === 0) {
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply parent transform to p first, then children use only local transforms
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
+
+  if (children.length === 1) {
+    if (hasParentTransform) {
+      const funcName = `smoothSubtract_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      const childFuncName = `smoothSubtract_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
+    return walkNode(children[0], ctx);
+  }
+
+  // Generate helper function for N children
+  // First child is base, rest are subtracted from it with smooth blending
+  const funcName = `smoothSubtract_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+
+  // If we have a parent transform, apply it first
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+
+  // Generate a helper function for each child
+  const childFuncNames = [];
+  for (let i = 0; i < children.length; i++) {
+    const childFuncName = `smoothSubtract_child_${ctx.helperCounter++}`;
+    const childExpr = walkNode(children[i], ctx);
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    childFuncNames.push(childFuncName);
+  }
+
+  // Build the smooth subtract body
+  // result = base (first child)
+  // then for each cutter: result = smoothSubtract(result, cutter)
+  let bodyLines = [];
+  bodyLines.push(`  vec4 result = ${childFuncNames[0]}(${childCallArgs});`);
+
+  for (let i = 1; i < childFuncNames.length; i++) {
+    bodyLines.push(`  {`);
+    bodyLines.push(`    vec4 cutter = ${childFuncNames[i]}(${childCallArgs});`);
+    // IQ's smooth subtraction: subtract cutter from result
+    bodyLines.push(`    float h = clamp(0.5 - 0.5 * (result.x + cutter.x) / ${k}, 0.0, 1.0);`);
+    bodyLines.push(`    float d = mix(result.x, -cutter.x, h) + ${k} * h * (1.0 - h);`);
+    // For color, use base color when carving
+    bodyLines.push(`    result = vec4(d, result.yzw);`);
     bodyLines.push(`  }`);
   }
 
