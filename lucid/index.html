@@ -1765,6 +1765,56 @@
     let currentPhysicsScene = null;
     let physicsParamMap = null; // Maps physics body IDs to param names
 
+    /**
+     * Apply impulse to physics bodies from a click position
+     * Converts screen coords to world direction and pushes all dynamic bodies
+     */
+    function applyPhysicsImpulseFromClick(clientX, clientY) {
+      if (!currentPhysicsScene || !renderer) return;
+
+      const canvas = $('canvas');
+      const rect = canvas.getBoundingClientRect();
+
+      // Normalized device coords (-1 to 1)
+      const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
+
+      // Get camera direction vectors
+      const cam = renderer.camera;
+      const theta = cam.theta || 0;
+      const phi = cam.phi || Math.PI / 2;
+
+      // Camera forward direction (from spherical)
+      const sinPhi = Math.sin(phi);
+      const cosPhi = Math.cos(phi);
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+
+      // Right and up vectors in world space
+      const rightX = -sinTheta;
+      const rightZ = cosTheta;
+      const upX = -cosPhi * cosTheta;
+      const upY = sinPhi;
+      const upZ = -cosPhi * sinTheta;
+
+      // Impulse direction based on click position (push into screen + sideways)
+      const impulseStrength = 8;
+      const impulse = [
+        (ndcX * rightX + ndcY * upX * 0.5) * impulseStrength,
+        (ndcY * upY + 0.3) * impulseStrength, // Always push slightly up
+        (ndcX * rightZ + ndcY * upZ * 0.5) * impulseStrength
+      ];
+
+      // Apply to all dynamic bodies
+      for (const body of currentPhysicsScene.bodies) {
+        if (!body.isStatic) {
+          currentPhysicsScene.applyImpulse(body.id, impulse);
+        }
+      }
+
+      console.log(`⚛️ Impulse applied: [${impulse.map(v => v.toFixed(2)).join(', ')}]`);
+    }
+
     // Camera orbit state
     let isDragging = false;
     let lastMouseX = 0;
@@ -3439,11 +3489,13 @@
       const canvas = $('canvas');
 
       // Mouse controls
+      let mouseDownPos = null;
       canvas.addEventListener('mousedown', (e) => {
         if (isInEdge(e.clientX, 'left') || isInEdge(e.clientX, 'right')) return;
         isDragging = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
+        mouseDownPos = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'grabbing';
       });
 
@@ -3459,7 +3511,18 @@
         renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - dy * 0.01));
       });
 
-      document.addEventListener('mouseup', () => {
+      document.addEventListener('mouseup', (e) => {
+        // Check if it was a click (not a drag) - apply physics impulse
+        if (mouseDownPos && currentPhysicsScene && currentPhysicsScene.enabled) {
+          const dx = e.clientX - mouseDownPos.x;
+          const dy = e.clientY - mouseDownPos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 5) {
+            // Click detected - push balls away from click point
+            applyPhysicsImpulseFromClick(e.clientX, e.clientY);
+          }
+        }
+        mouseDownPos = null;
         isDragging = false;
         canvas.style.cursor = 'grab';
       });
@@ -3581,9 +3644,14 @@
           const dx = touch.clientX - swipeStartX;
           const dy = touch.clientY - swipeStartY;
           const elapsed = Date.now() - touchStartTime;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
+          // Tap detection for physics impulse: quick, little movement
+          if (dist < 15 && elapsed < 300 && currentPhysicsScene && currentPhysicsScene.enabled) {
+            applyPhysicsImpulseFromClick(touch.clientX, touch.clientY);
+          }
           // Horizontal swipe detection: fast, mostly horizontal
-          if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
+          else if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
             if (dx < 0) {
               // Swipe left = next demo (navigates through ALL demos)
               navigateToNextScene();
