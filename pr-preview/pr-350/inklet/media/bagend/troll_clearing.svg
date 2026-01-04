@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fireGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FF4500;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#FF8C00;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#8B0000;stop-opacity:0" />
+    </radialGradient>
+    <linearGradient id="dawnSky" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#191970;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#4B0082;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6347;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Dawn sky -->
+  <rect width="400" height="150" fill="url(#dawnSky)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="150" width="400" height="150" fill="#2F4F2F"/>
+  
+  <!-- Clearing circle -->
+  <ellipse cx="200" cy="200" rx="180" ry="80" fill="#4F5F3F"/>
+  
+  <!-- Central fire pit -->
+  <ellipse cx="200" cy="220" rx="25" ry="15" fill="#2F2F2F"/>
+  <ellipse cx="200" cy="215" rx="20" ry="10" fill="#1F1F1F"/>
+  
+  <!-- Fire -->
+  <path d="M 190 215 Q 185 195 195 185 Q 205 195 200 215" fill="#FF4500"/>
+  <path d="M 200 220 Q 195 200 205 190 Q 215 200 210 220" fill="#FF8C00"/>
+  <path d="M 180 218 Q 175 200 185 192 Q 195 200 190 218" fill="#FFD700"/>
+  <circle cx="200" cy="205" r="15" fill="url(#fireGlow)" opacity="0.8"/>
+  
+  <!-- Three trolls around fire -->
+  
+  <!-- Troll 1 (left) - Tom -->
+  <ellipse cx="150" cy="200" rx="20" ry="25" fill="#8FBC8F"/>
+  <circle cx="150" cy="175" r="18" fill="#9ACD32"/>
+  <circle cx="145" cy="170" r="3" fill="#FF0000"/>
+  <circle cx="155" cy="170" r="3" fill="#FF0000"/>
+  <ellipse cx="150" cy="180" rx="8" ry="4" fill="#2F4F4F"/>
+  <!-- Arms -->
+  <ellipse cx="125" cy="185" rx="8" ry="15" fill="#8FBC8F"/>
+  <ellipse cx="175" cy="185" rx="8" ry="15" fill="#8FBC8F"/>
+  <!-- Legs -->
+  <ellipse cx="140" cy="235" rx="8" ry="20" fill="#8FBC8F"/>
+  <ellipse cx="160" cy="235" rx="8" ry="20" fill="#8FBC8F"/>
+  
+  <!-- Troll 2 (right) - Bert -->
+  <ellipse cx="250" cy="195" rx="22" ry="28" fill="#8FBC8F"/>
+  <circle cx="250" cy="168" r="20" fill="#9ACD32"/>
+  <circle cx="243" cy="162" r="3" fill="#FF0000"/>
+  <circle cx="257" cy="162" r="3" fill="#FF0000"/>
+  <ellipse cx="250" cy="175" rx="10" ry="5" fill="#2F4F4F"/>
+  <!-- Arms -->
+  <ellipse cx="220" cy="180" rx="9" ry="16" fill="#8FBC8F"/>
+  <ellipse cx="280" cy="180" rx="9" ry="16" fill="#8FBC8F"/>
+  <!-- Legs -->
+  <ellipse cx="235" cy="240" rx="9" ry="22" fill="#8FBC8F"/>
+  <ellipse cx="265" cy="240" rx="9" ry="22" fill="#8FBC8F"/>
+  
+  <!-- Troll 3 (back) - Bill -->
+  <ellipse cx="200" cy="160" rx="18" ry="23" fill="#8FBC8F"/>
+  <circle cx="200" cy="140" r="16" fill="#9ACD32"/>
+  <circle cx="195" cy="135" r="3" fill="#FF0000"/>
+  <circle cx="205" cy="135" r="3" fill="#FF0000"/>
+  <ellipse cx="200" cy="145" rx="7" ry="4" fill="#2F4F4F"/>
+  <!-- Arms -->
+  <ellipse cx="180" cy="150" rx="7" ry="14" fill="#8FBC8F"/>
+  <ellipse cx="220" cy="150" rx="7" ry="14" fill="#8FBC8F"/>
+  
+  <!-- Cooking pot -->
+  <ellipse cx="200" cy="190" rx="15" ry="8" fill="#2F4F4F"/>
+  <rect x="185" y="185" width="30" height="10" fill="#2F4F4F"/>
+  
+  <!-- Steam from pot -->
+  <circle cx="195" cy="180" r="2" fill="#D3D3D3" opacity="0.6"/>
+  <circle cx="200" cy="175" r="3" fill="#D3D3D3" opacity="0.4"/>
+  <circle cx="205" cy="170" r="2" fill="#D3D3D3" opacity="0.5"/>
+  
+  <!-- Scattered bones -->
+  <rect x="120" y="240" width="15" height="3" fill="#F5F5DC" transform="rotate(25 127 241)"/>
+  <rect x="280" y="235" width="12" height="3" fill="#F5F5DC" transform="rotate(-15 286 236)"/>
+  <rect x="170" y="250" width="10" height="3" fill="#F5F5DC" transform="rotate(45 175 251)"/>
+  
+  <!-- Tree stumps for sitting -->
+  <ellipse cx="150" cy="225" rx="15" ry="8" fill="#8B4513"/>
+  <ellipse cx="250" cy="220" rx="16" ry="9" fill="#8B4513"/>
+  
+  <!-- Surrounding trees -->
+  <rect x="20" y="100" width="12" height="80" fill="#2F2F1F"/>
+  <circle cx="26" cy="95" r="20" fill="#1F3F1F"/>
+  
+  <rect x="350" y="110" width="10" height="70" fill="#2F2F1F"/>
+  <circle cx="355" cy="105" r="18" fill="#1F3F1F"/>
+  
+  <rect x="80" y="120" width="8" height="60" fill="#2F2F1F"/>
+  <circle cx="84" cy="115" r="15" fill="#1F3F1F"/>
+  
+  <rect x="320" y="130" width="8" height="50" fill="#2F2F1F"/>
+  <circle cx="324" cy="125" r="15" fill="#1F3F1F"/>
+  
+  <!-- First rays of dawn -->
+  <path d="M 380 40 L 400 30 M 385 50 L 400 45 M 375 60 L 400 60" stroke="#FFD700" stroke-width="2" opacity="0.7"/>
+  
+  <!-- Speech bubbles -->
+  <ellipse cx="130" cy="130" rx="25" ry="15" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+  <path d="M 140 140 Q 145 150 150 155" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+  <text x="130" y="125" text-anchor="middle" font-family="monospace" font-size="6" fill="#000000">"Roast him!"</text>
+  <text x="130" y="135" text-anchor="middle" font-family="monospace" font-size="6" fill="#000000">"says Tom"</text>
+  
+  <ellipse cx="270" cy="125" rx="30" ry="18" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+  <path d="M 255 135 Q 250 145 250 155" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+  <text x="270" y="120" text-anchor="middle" font-family="monospace" font-size="6" fill="#000000">"Stew him!"</text>
+  <text x="270" y="130" text-anchor="middle" font-family="monospace" font-size="6" fill="#000000">"says Bert"</text>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="monospace" font-size="14" fill="#FFD700" font-weight="bold">TROLLS AT DAWN</text>
+</svg>

@@ -1,0 +1,139 @@
+{
+  "title": "Bouncing Balls",
+  "subtitle": "Physics-enabled SDF spheres with real-time simulation",
+  "version": "1.2",
+  "notes": "Demonstrates physics integration with SDF rendering. Spheres fall under gravity, bounce off ground, and collide with each other.",
+
+  "physics": {
+    "enabled": true,
+    "gravity": [0, -9.8, 0],
+    "groundY": -1.5
+  },
+
+  "params": {
+    "gravity": {
+      "value": [0, -9.8, 0],
+      "type": "position3",
+      "description": "Gravity (m/s²)"
+    },
+    "ball1Pos": {
+      "value": [-0.5, 2.5, 0],
+      "type": "position3",
+      "description": "Red ball position",
+      "physics": { "body": "ball1", "property": "position" }
+    },
+    "ball2Pos": {
+      "value": [0, 1.8, 0.3],
+      "type": "position3",
+      "description": "Green ball position",
+      "physics": { "body": "ball2", "property": "position" }
+    },
+    "ball3Pos": {
+      "value": [0.4, 1.0, -0.2],
+      "type": "position3",
+      "description": "Blue ball position",
+      "physics": { "body": "ball3", "property": "position" }
+    },
+    "ballRadius": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.1,
+      "max": 0.5,
+      "description": "Ball radius"
+    },
+    "restitution": {
+      "value": 0.8,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 1.0,
+      "description": "Bounciness"
+    },
+    "ballColor1": {
+      "value": [1.0, 0.3, 0.3],
+      "type": "color3",
+      "description": "Red ball"
+    },
+    "ballColor2": {
+      "value": [0.3, 1.0, 0.4],
+      "type": "color3",
+      "description": "Green ball"
+    },
+    "ballColor3": {
+      "value": [0.3, 0.5, 1.0],
+      "type": "color3",
+      "description": "Blue ball"
+    },
+    "groundColor": {
+      "value": [0.4, 0.4, 0.45],
+      "type": "color3",
+      "description": "Ground"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "comment": "Red ball",
+        "type": "sphere",
+        "id": "ball1",
+        "params": {
+          "r": { "var": "ballRadius" },
+          "color": { "var": "ballColor1" }
+        },
+        "physics": {
+          "type": "dynamic",
+          "mass": 1.0,
+          "restitution": 0.8
+        },
+        "transform": {
+          "translate": { "var": "ball1Pos" }
+        }
+      },
+      {
+        "comment": "Green ball",
+        "type": "sphere",
+        "id": "ball2",
+        "params": {
+          "r": { "var": "ballRadius" },
+          "color": { "var": "ballColor2" }
+        },
+        "physics": {
+          "type": "dynamic",
+          "mass": 1.2,
+          "restitution": 0.7
+        },
+        "transform": {
+          "translate": { "var": "ball2Pos" }
+        }
+      },
+      {
+        "comment": "Blue ball",
+        "type": "sphere",
+        "id": "ball3",
+        "params": {
+          "r": { "var": "ballRadius" },
+          "color": { "var": "ballColor3" }
+        },
+        "physics": {
+          "type": "dynamic",
+          "mass": 0.8,
+          "restitution": 0.9
+        },
+        "transform": {
+          "translate": { "var": "ball3Pos" }
+        }
+      },
+      {
+        "comment": "Ground plane",
+        "type": "box",
+        "id": "ground",
+        "params": {
+          "size": [4, 0.2, 4],
+          "color": { "var": "groundColor" }
+        },
+        "transform": { "translate": [0, -1.6, 0] }
+      }
+    ]
+  }
+}
