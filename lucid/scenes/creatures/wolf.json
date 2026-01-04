@@ -1,7 +1,7 @@
 {
   "title": "Fearsome Wolf",
-  "subtitle": "v1.4 - Parametric model with semantic controls",
-  "version": "1.4",
+  "subtitle": "v1.7 - Prominent ears, bushy tail, refined hackles",
+  "version": "1.7",
   "camera": { "distance": 12, "phi": 0.3, "theta": 0.25, "target": [0, 0.5, 0] },
   "notes": "Parametric wolf with aggressive stance, open jaw, visible fangs. Each parameter has clear anatomical meaning.",
 
@@ -255,21 +255,21 @@
     "type": "smoothUnion", "k": 0.25,
     "children": [
       {
-        "comment": "MAIN BODY - powerful muscular torso with forward lean",
+        "comment": "MAIN BODY - v1.6: LEANER torso, less bulbous",
         "type": "material",
         "params": { "color": [0.22, 0.20, 0.18] },
         "child": {
           "type": "displace",
-          "amount": 0.15,
-          "scale": 4.0,
-          "octaves": 3,
+          "amount": 0.08,
+          "scale": 5.0,
+          "octaves": 2,
           "noiseType": "fbm",
           "child": {
-            "type": "smoothUnion", "k": 0.35,
+            "type": "smoothUnion", "k": 0.25,
             "children": [
-              { "comment": "Chest - forward lean 15deg", "type": "ellipsoid", "params": { "radii": [1.0, 0.95, 1.2] }, "transform": { "translate": [0, 0.65, 1.0], "rotate": [15, 0, 0] } },
-              { "comment": "Core torso", "type": "ellipsoid", "params": { "radii": [0.8, 0.75, 1.4] }, "transform": { "translate": [0, 0.62, -0.4], "rotate": [8, 0, 0] } },
-              { "comment": "Hindquarters - raised", "type": "ellipsoid", "params": { "radii": [0.75, 0.72, 1.0] }, "transform": { "translate": [0, 0.75, -1.5] } }
+              { "comment": "Chest - lean, athletic", "type": "ellipsoid", "params": { "radii": [0.55, 0.50, 0.9] }, "transform": { "translate": [0, 0.75, 1.0], "rotate": [15, 0, 0] } },
+              { "comment": "Core torso - elongated", "type": "ellipsoid", "params": { "radii": [0.48, 0.45, 1.2] }, "transform": { "translate": [0, 0.72, -0.3], "rotate": [5, 0, 0] } },
+              { "comment": "Hindquarters - athletic", "type": "ellipsoid", "params": { "radii": [0.52, 0.50, 0.85] }, "transform": { "translate": [0, 0.78, -1.4] } }
             ]
           }
         }
@@ -283,7 +283,7 @@
           "children": [
             { "comment": "Skull - larger", "type": "ellipsoid", "params": { "radii": [0.55, 0.5, 0.6] }, "transform": { "translate": [0, 0.95, 2.0] } },
             { "comment": "Upper muzzle", "type": "ellipsoid", "params": { "radii": [0.26, 0.22, 0.65] }, "transform": { "translate": [0, 0.85, 2.7] } },
-            { "comment": "Lower jaw - DROPPED OPEN 20deg", "type": "ellipsoid", "params": { "radii": [0.24, 0.18, 0.55] }, "transform": { "translate": [0, 0.52, 2.55], "rotate": [-20, 0, 0] } },
+            { "comment": "Lower jaw - DROPPED OPEN 35deg", "type": "ellipsoid", "params": { "radii": [0.24, 0.18, 0.55] }, "transform": { "translate": [0, 0.45, 2.55], "rotate": [-35, 0, 0] } },
             { "comment": "Jaw muscle L - MASSIVE", "type": "ellipsoid", "params": { "radii": [0.28, 0.24, 0.28] }, "transform": { "translate": [0.38, 0.95, 1.8] } },
             { "comment": "Jaw muscle R", "type": "ellipsoid", "params": { "radii": [0.28, 0.24, 0.28] }, "transform": { "translate": [-0.38, 0.95, 1.8] } },
             { "comment": "Nose", "type": "sphere", "params": { "r": 0.12, "color": [0.05, 0.05, 0.05] }, "transform": { "translate": [0, 0.82, 3.3] } }
@@ -291,13 +291,13 @@
         }
       },
       {
-        "comment": "MOUTH INTERIOR - deeper dark cavity",
+        "comment": "MOUTH INTERIOR - v1.5: ENLARGED dark cavity",
         "type": "material",
-        "params": { "color": [0.12, 0.03, 0.03] },
+        "params": { "color": [0.05, 0.01, 0.01] },
         "child": {
           "type": "ellipsoid",
-          "params": { "radii": [0.20, 0.18, 0.5] },
-          "transform": { "translate": [0, 0.62, 2.55] }
+          "params": { "radii": [0.28, 0.25, 0.6] },
+          "transform": { "translate": [0, 0.52, 2.65] }
         }
       },
       {
@@ -311,29 +311,32 @@
         }
       },
       {
-        "comment": "FANGS - P0 FIX: LARGE, BELOW JAW LINE",
+        "comment": "FANGS - v1.5: MASSIVELY ENLARGED, PROTRUDING",
         "type": "material",
-        "params": { "color": [0.98, 0.96, 0.92], "emit": 0.15 },
+        "params": { "color": [1.0, 1.0, 0.98], "emit": 0.25 },
         "child": {
           "type": "union",
           "children": [
-            { "comment": "Upper left canine - LARGE", "type": "ellipsoid", "params": { "radii": [0.06, 0.28, 0.06] }, "transform": { "translate": [0.14, 0.55, 2.95], "rotate": [20, 0, 8] } },
-            { "comment": "Upper right canine", "type": "ellipsoid", "params": { "radii": [0.06, 0.28, 0.06] }, "transform": { "translate": [-0.14, 0.55, 2.95], "rotate": [20, 0, -8] } },
-            { "comment": "Lower left canine", "type": "ellipsoid", "params": { "radii": [0.05, 0.20, 0.05] }, "transform": { "translate": [0.12, 0.48, 2.85], "rotate": [-15, 0, 6] } },
-            { "comment": "Lower right canine", "type": "ellipsoid", "params": { "radii": [0.05, 0.20, 0.05] }, "transform": { "translate": [-0.12, 0.48, 2.85], "rotate": [-15, 0, -6] } }
+            { "comment": "Upper left canine - HUGE", "type": "ellipsoid", "params": { "radii": [0.12, 0.42, 0.10] }, "transform": { "translate": [0.16, 0.38, 3.15], "rotate": [25, 0, 10] } },
+            { "comment": "Upper right canine - HUGE", "type": "ellipsoid", "params": { "radii": [0.12, 0.42, 0.10] }, "transform": { "translate": [-0.16, 0.38, 3.15], "rotate": [25, 0, -10] } },
+            { "comment": "Lower left canine", "type": "ellipsoid", "params": { "radii": [0.10, 0.32, 0.08] }, "transform": { "translate": [0.14, 0.25, 3.0], "rotate": [-20, 0, 8] } },
+            { "comment": "Lower right canine", "type": "ellipsoid", "params": { "radii": [0.10, 0.32, 0.08] }, "transform": { "translate": [-0.14, 0.25, 3.0], "rotate": [-20, 0, -8] } }
           ]
         }
       },
       {
-        "comment": "EARS - pinned flat for maximum aggression",
+        "comment": "EARS - v1.7: PROMINENT triangular wolf ears",
         "type": "material",
-        "params": { "color": [0.28, 0.26, 0.24] },
+        "params": { "color": [0.26, 0.24, 0.22] },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "ellipsoid",
-            "params": { "radii": [0.14, 0.32, 0.14] },
-            "transform": { "translate": [0.32, 1.25, 1.55], "rotate": [-35, 0, 25] }
+            "type": "smoothUnion", "k": 0.05,
+            "children": [
+              { "comment": "Ear base", "type": "ellipsoid", "params": { "radii": [0.12, 0.20, 0.10] }, "transform": { "translate": [0.30, 1.22, 1.65], "rotate": [-25, 15, 20] } },
+              { "comment": "Ear main - tall triangular", "type": "ellipsoid", "params": { "radii": [0.08, 0.35, 0.12] }, "transform": { "translate": [0.32, 1.45, 1.60], "rotate": [-20, 10, 25] } },
+              { "comment": "Ear tip", "type": "ellipsoid", "params": { "radii": [0.04, 0.15, 0.06] }, "transform": { "translate": [0.33, 1.68, 1.55], "rotate": [-15, 5, 30] } }
+            ]
           }
         }
       },
@@ -364,23 +367,24 @@
         }
       },
       {
-        "comment": "FRONT LEGS - crouched, ready to spring",
+        "comment": "FRONT LEGS - v1.6: PROMINENT, clearly visible",
         "type": "material",
-        "params": { "color": [0.22, 0.20, 0.18] },
+        "params": { "color": [0.20, 0.18, 0.16] },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "smoothUnion", "k": 0.12,
+            "type": "smoothUnion", "k": 0.08,
             "children": [
-              { "comment": "Shoulder - massive", "type": "ellipsoid", "params": { "radii": [0.30, 0.42, 0.32] }, "transform": { "translate": [0.62, 0.42, 1.1] } },
-              { "comment": "Upper leg", "type": "capsule", "params": { "h": 0.42, "r": 0.16 }, "transform": { "translate": [0.62, 0.12, 1.2], "rotate": [20, 0, 0] } },
-              { "comment": "Paw - large", "type": "ellipsoid", "params": { "radii": [0.18, 0.10, 0.24] }, "transform": { "translate": [0.62, 0, 1.35] } }
+              { "comment": "Shoulder - powerful", "type": "ellipsoid", "params": { "radii": [0.22, 0.35, 0.28] }, "transform": { "translate": [0.45, 0.55, 0.9] } },
+              { "comment": "Upper leg - long", "type": "capsule", "params": { "h": 0.55, "r": 0.12 }, "transform": { "translate": [0.48, 0.25, 1.0], "rotate": [12, 0, 0] } },
+              { "comment": "Lower leg", "type": "capsule", "params": { "h": 0.45, "r": 0.09 }, "transform": { "translate": [0.50, -0.15, 1.15], "rotate": [-8, 0, 0] } },
+              { "comment": "Paw", "type": "ellipsoid", "params": { "radii": [0.14, 0.08, 0.18] }, "transform": { "translate": [0.50, -0.35, 1.25] } }
             ]
           }
         }
       },
       {
-        "comment": "FRONT CLAWS - P2 POLISH: Enlarged for stylistic impact",
+        "comment": "FRONT CLAWS - v1.6: repositioned for new leg positions",
         "type": "material",
         "params": { "color": [0.06, 0.06, 0.06] },
         "child": {
@@ -388,32 +392,32 @@
           "child": {
             "type": "union",
             "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.04, 0.15, 0.03] }, "transform": { "translate": [0.50, 0.04, 1.58], "rotate": [40, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.04, 0.15, 0.03] }, "transform": { "translate": [0.58, 0.04, 1.60], "rotate": [40, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.04, 0.15, 0.03] }, "transform": { "translate": [0.66, 0.04, 1.60], "rotate": [40, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.04, 0.15, 0.03] }, "transform": { "translate": [0.74, 0.04, 1.58], "rotate": [40, 0, 0] } }
+              { "type": "ellipsoid", "params": { "radii": [0.03, 0.12, 0.025] }, "transform": { "translate": [0.42, -0.32, 1.42], "rotate": [40, 0, 0] } },
+              { "type": "ellipsoid", "params": { "radii": [0.03, 0.12, 0.025] }, "transform": { "translate": [0.50, -0.32, 1.44], "rotate": [40, 0, 0] } },
+              { "type": "ellipsoid", "params": { "radii": [0.03, 0.12, 0.025] }, "transform": { "translate": [0.58, -0.32, 1.44], "rotate": [40, 0, 0] } }
             ]
           }
         }
       },
       {
-        "comment": "REAR LEGS - powerful haunches tensed",
+        "comment": "REAR LEGS - v1.6: PROMINENT, powerful haunches",
         "type": "material",
-        "params": { "color": [0.22, 0.20, 0.18] },
+        "params": { "color": [0.20, 0.18, 0.16] },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "smoothUnion", "k": 0.15,
+            "type": "smoothUnion", "k": 0.08,
             "children": [
-              { "comment": "Haunch - powerful", "type": "ellipsoid", "params": { "radii": [0.35, 0.48, 0.42] }, "transform": { "translate": [0.52, 0.55, -1.35] } },
-              { "comment": "Lower leg", "type": "capsule", "params": { "h": 0.52, "r": 0.14 }, "transform": { "translate": [0.55, 0.10, -1.55], "rotate": [-12, 0, 0] } },
-              { "comment": "Paw", "type": "ellipsoid", "params": { "radii": [0.16, 0.09, 0.22] }, "transform": { "translate": [0.55, 0, -1.65] } }
+              { "comment": "Haunch - muscular", "type": "ellipsoid", "params": { "radii": [0.28, 0.40, 0.35] }, "transform": { "translate": [0.42, 0.58, -1.2] } },
+              { "comment": "Upper rear leg", "type": "capsule", "params": { "h": 0.50, "r": 0.11 }, "transform": { "translate": [0.45, 0.20, -1.4], "rotate": [-15, 0, 0] } },
+              { "comment": "Lower rear leg", "type": "capsule", "params": { "h": 0.45, "r": 0.08 }, "transform": { "translate": [0.48, -0.18, -1.55], "rotate": [10, 0, 0] } },
+              { "comment": "Rear paw", "type": "ellipsoid", "params": { "radii": [0.12, 0.07, 0.16] }, "transform": { "translate": [0.48, -0.38, -1.45] } }
             ]
           }
         }
       },
       {
-        "comment": "REAR CLAWS - P2 POLISH: Enlarged",
+        "comment": "REAR CLAWS - v1.6: repositioned",
         "type": "material",
         "params": { "color": [0.06, 0.06, 0.06] },
         "child": {
@@ -421,50 +425,51 @@
           "child": {
             "type": "union",
             "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.035, 0.12, 0.025] }, "transform": { "translate": [0.43, 0.04, -1.50], "rotate": [-28, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.035, 0.12, 0.025] }, "transform": { "translate": [0.51, 0.04, -1.52], "rotate": [-28, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.035, 0.12, 0.025] }, "transform": { "translate": [0.59, 0.04, -1.52], "rotate": [-28, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.035, 0.12, 0.025] }, "transform": { "translate": [0.67, 0.04, -1.50], "rotate": [-28, 0, 0] } }
+              { "type": "ellipsoid", "params": { "radii": [0.025, 0.10, 0.02] }, "transform": { "translate": [0.40, -0.35, -1.32], "rotate": [-25, 0, 0] } },
+              { "type": "ellipsoid", "params": { "radii": [0.025, 0.10, 0.02] }, "transform": { "translate": [0.48, -0.35, -1.34], "rotate": [-25, 0, 0] } },
+              { "type": "ellipsoid", "params": { "radii": [0.025, 0.10, 0.02] }, "transform": { "translate": [0.56, -0.35, -1.34], "rotate": [-25, 0, 0] } }
             ]
           }
         }
       },
       {
-        "comment": "TAIL - slight rise, wolf-appropriate",
+        "comment": "TAIL - v1.7: BUSHY prominent wolf tail",
         "type": "material",
-        "params": { "color": [0.24, 0.22, 0.20] },
+        "params": { "color": [0.26, 0.24, 0.22] },
         "child": {
           "type": "displace",
-          "amount": 0.10,
-          "scale": 5.0,
-          "octaves": 2,
+          "amount": 0.15,
+          "scale": 3.5,
+          "octaves": 3,
           "noiseType": "fbm",
           "child": {
-            "type": "smoothUnion", "k": 0.18,
+            "type": "smoothUnion", "k": 0.20,
             "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.18, 0.17, 0.40] }, "transform": { "translate": [0, 0.68, -2.1], "rotate": [-8, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.20, 0.19, 0.45] }, "transform": { "translate": [0, 0.72, -2.55], "rotate": [-12, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.18, 0.17, 0.38] }, "transform": { "translate": [0, 0.78, -2.95], "rotate": [-15, 0, 0] } },
-              { "type": "ellipsoid", "params": { "radii": [0.14, 0.13, 0.28] }, "transform": { "translate": [0, 0.82, -3.25], "rotate": [-18, 0, 0] } }
+              { "comment": "Tail base - thick", "type": "ellipsoid", "params": { "radii": [0.22, 0.22, 0.35] }, "transform": { "translate": [0, 0.72, -1.8], "rotate": [-5, 0, 0] } },
+              { "comment": "Tail mid - bushy", "type": "ellipsoid", "params": { "radii": [0.28, 0.26, 0.50] }, "transform": { "translate": [0, 0.78, -2.3], "rotate": [-10, 0, 0] } },
+              { "comment": "Tail main - full", "type": "ellipsoid", "params": { "radii": [0.30, 0.28, 0.55] }, "transform": { "translate": [0, 0.85, -2.85], "rotate": [-15, 0, 0] } },
+              { "comment": "Tail end - tapered", "type": "ellipsoid", "params": { "radii": [0.24, 0.22, 0.45] }, "transform": { "translate": [0, 0.92, -3.35], "rotate": [-18, 0, 0] } },
+              { "comment": "Tail tip", "type": "ellipsoid", "params": { "radii": [0.16, 0.15, 0.30] }, "transform": { "translate": [0, 0.98, -3.75], "rotate": [-20, 0, 0] } }
             ]
           }
         }
       },
       {
-        "comment": "HACKLES - raised threat display along spine",
+        "comment": "HACKLES - v1.7: narrow spine ridge only",
         "type": "material",
         "params": { "color": [0.32, 0.30, 0.28] },
         "child": {
           "type": "displace",
-          "amount": 0.25,
-          "scale": 2.5,
-          "octaves": 4,
+          "amount": 0.08,
+          "scale": 6.0,
+          "octaves": 2,
           "noiseType": "turbulence",
           "child": {
-            "type": "smoothUnion", "k": 0.15,
+            "type": "smoothUnion", "k": 0.08,
             "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.45, 0.35, 0.55] }, "transform": { "translate": [0, 0.88, 1.5] } },
-              { "type": "ellipsoid", "params": { "radii": [0.35, 0.28, 0.45] }, "transform": { "translate": [0, 0.95, 0.8] } }
+              { "comment": "Hackle ridge neck", "type": "ellipsoid", "params": { "radii": [0.10, 0.12, 0.35] }, "transform": { "translate": [0, 1.02, 1.2] } },
+              { "comment": "Hackle ridge shoulders", "type": "ellipsoid", "params": { "radii": [0.08, 0.10, 0.30] }, "transform": { "translate": [0, 0.98, 0.5] } },
+              { "comment": "Hackle ridge mid-back", "type": "ellipsoid", "params": { "radii": [0.06, 0.08, 0.25] }, "transform": { "translate": [0, 0.95, -0.3] } }
             ]
           }
         }
