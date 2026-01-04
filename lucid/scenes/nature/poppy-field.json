@@ -1,8 +1,29 @@
 {
   "title": "Poppy Field",
   "subtitle": "Rotated disk faces with centralized head angle (static)",
-  "version": "1.1",
+  "version": "1.2",
   "notes": "Animation disabled - was causing issues with repeat+radial combination",
+
+  "params": {
+    "poppyColor": {
+      "value": [0.9, 0.15, 0.1],
+      "type": "color3",
+      "description": "Poppy petal color"
+    },
+    "stemColor": {
+      "value": [0.2, 0.5, 0.15],
+      "type": "color3",
+      "description": "Stem color"
+    },
+    "petalSize": {
+      "value": 0.12,
+      "type": "scalar",
+      "min": 0.06,
+      "max": 0.2,
+      "description": "Petal sphere size"
+    }
+  },
+
   "defs": {
     "poppy_head": {
       "type": "union",
@@ -19,7 +40,7 @@
           "axis": "z",
           "child": {
             "type": "sphere",
-            "params": { "r": 0.12, "color": [0.9, 0.15, 0.1] },
+            "params": { "r": {"var": "petalSize"}, "color": {"var": "poppyColor"} },
             "transform": { "translate": [0.18, 0, 0], "rotate": [75, 0, 0] }
           }
         }
@@ -28,7 +49,7 @@
     },
     "stem": {
       "type": "cylinder",
-      "params": { "h": 0.8, "r": 0.03, "color": [0.2, 0.5, 0.15] }
+      "params": { "h": 0.8, "r": 0.03, "color": {"var": "stemColor"} }
     },
     "poppy": {
       "type": "union",

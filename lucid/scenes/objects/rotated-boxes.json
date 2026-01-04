@@ -1,12 +1,35 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "title": "Rotated Boxes",
   "description": "Boxes at various rotation angles",
+
+  "params": {
+    "boxLength": {
+      "value": 0.6,
+      "type": "scalar",
+      "min": 0.3,
+      "max": 1.0,
+      "description": "Box length"
+    },
+    "boxHeight": {
+      "value": 0.1,
+      "type": "scalar",
+      "min": 0.05,
+      "max": 0.2,
+      "description": "Box height"
+    },
+    "baseColor": {
+      "value": [1.0, 0.5, 0.2],
+      "type": "color3",
+      "description": "Rainbow start color"
+    }
+  },
+
   "defs": {
     "elongBox": {
       "type": "box",
       "params": {
-        "size": [0.6, 0.1, 0.15]
+        "size": [{"var": "boxLength"}, {"var": "boxHeight"}, 0.15]
       }
     }
   },
