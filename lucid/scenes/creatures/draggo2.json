@@ -1,9 +1,30 @@
 {
   "title": "Dragon B2-H2 Restore",
   "subtitle": "Restored B2 body with H2 head and glowing eyes",
-  "version": "1.0",
+  "version": "1.1",
   "quality": "medium",
   "notes": "Restored B2 body with H2 head and glowing eyes.",
+
+  "params": {
+    "bodyColor": {
+      "value": [0.1, 0.45, 0.1],
+      "type": "color3",
+      "description": "Dragon body color"
+    },
+    "eyeGlow": {
+      "value": 1.1,
+      "type": "scalar",
+      "min": 0.3,
+      "max": 2.0,
+      "description": "Eye glow intensity"
+    },
+    "wingColor": {
+      "value": [0.35, 0.05, 0.05],
+      "type": "color3",
+      "description": "Wing membrane color"
+    }
+  },
+
   "root": {
     "type": "union",
     "children": [
@@ -11,7 +32,7 @@
         "type": "ellipsoid",
         "params": {
           "radii": [1.4, 0.9, 1.0],
-          "color": [0.1, 0.45, 0.1]
+          "color": {"var": "bodyColor"}
         },
         "transform": { "translate": [0, 0.5, 0] },
         "notes": "Main torso"
@@ -60,7 +81,7 @@
       },
       {
         "type": "material",
-        "params": { "color": [1.0, 0.1, 0.1], "emit": 1.1 },
+        "params": { "color": [1.0, 0.1, 0.1], "emit": {"var": "eyeGlow"} },
         "child": {
           "type": "sphere",
           "params": { "r": 0.10 },
@@ -70,7 +91,7 @@
       },
       {
         "type": "material",
-        "params": { "color": [1.0, 0.1, 0.1], "emit": 1.1 },
+        "params": { "color": [1.0, 0.1, 0.1], "emit": {"var": "eyeGlow"} },
         "child": {
           "type": "sphere",
           "params": { "r": 0.10 },
@@ -87,7 +108,7 @@
             "type": "ellipsoid",
             "params": {
               "radii": [0.9, 0.15, 0.45],
-              "color": [0.35, 0.05, 0.05]
+              "color": {"var": "wingColor"}
             },
             "transform": { "translate": [0.0, 0.95, 0.9], "rotate": [0, 0, -15] }
           },
@@ -95,7 +116,7 @@
             "type": "ellipsoid",
             "params": {
               "radii": [0.9, 0.15, 0.45],
-              "color": [0.35, 0.05, 0.05]
+              "color": {"var": "wingColor"}
             },
             "transform": { "translate": [0.0, 0.95, -0.9], "rotate": [0, 0, 15] }
           }
