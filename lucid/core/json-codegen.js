@@ -21,7 +21,12 @@ export function generateGlslFromJson(scene, options = {}) {
     localVars: {},  // For instance IDs and other scoped variables
     instanceIdParam: null,  // When set, pass this ID through to helper functions
     sceneParams: scene.params || {},  // Scene-level parameters for parametric rigging
-    sceneRig: scene.rig || null       // Rig layer for derived params, bounds, phase
+    sceneRig: scene.rig || null,      // Rig layer for derived params, bounds, phase
+    ancestorRotation: null,  // Tracks accumulated rotation for mirror fix (LCD-003)
+    // LCD-018: Picking infrastructure
+    nodeIdCounter: 0,         // Assigns unique IDs to pickable nodes
+    nodeIdMap: new Map(),     // Maps node ID -> node info for picking
+    pickingMode: options.pickingMode || false  // When true, encode IDs instead of colors
   };
 
   // Register ALL params as uniforms (base + derived + phase from rig layer)
@@ -339,6 +344,8 @@ function chainedMax(values) {
  * Transform handling: Apply parent transform to p FIRST, then each child
  * applies only its local transform. This ensures proper transform composition
  * where root rotations affect the entire assembly uniformly.
+ *
+ * LCD-003: Track rotation in context for mirror fix
  */
 function generateUnion(node, ctx) {
   let children = node.children || [];
@@ -352,6 +359,17 @@ function generateUnion(node, ctx) {
   // correctly for rotation composition
   const transformedP = applyTransform('p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
+
+  // LCD-003: Track rotation for mirror fix
+  const savedAncestorRotation = ctx.ancestorRotation;
+  const nodeRotation = extractRotation(node.transform);
+  if (nodeRotation && isStaticRotation(nodeRotation)) {
+    ctx.ancestorRotation = savedAncestorRotation
+      ? addRotations(savedAncestorRotation, nodeRotation)
+      : nodeRotation;
+  }
+
+  let result;
 
   if (children.length === 1) {
     // For single child, if we have parent transform, wrap it
@@ -374,60 +392,65 @@ function generateUnion(node, ctx) {
   return ${childFuncName}(${childCallArgs});
 }`;
       ctx.helpers.push(helperFunc);
-      return `${funcName}(${callArgs})`;
+      result = `${funcName}(${callArgs})`;
+    } else {
+      result = walkNode(children[0], ctx);
     }
-    return walkNode(children[0], ctx);
-  }
+  } else {
+    // Generate helper function for this union
+    const funcName = `union_${ctx.helperCounter++}`;
+    const idParam = ctx.instanceIdParam;
+    const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+    const callArgs = idParam ? `p, ${idParam}` : 'p';
 
-  // Generate helper function for this union
-  const funcName = `union_${ctx.helperCounter++}`;
-  const idParam = ctx.instanceIdParam;
-  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
-  const callArgs = idParam ? `p, ${idParam}` : 'p';
+    // If we have a parent transform, apply it first and pass transformed point to children
+    let bodyPrefix = '';
+    let childP = 'p';
+    if (hasParentTransform) {
+      bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+      childP = 'tp';
+    }
 
-  // If we have a parent transform, apply it first and pass transformed point to children
-  let bodyPrefix = '';
-  let childP = 'p';
-  if (hasParentTransform) {
-    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
-    childP = 'tp';
-  }
-
-  // Generate child expressions - each child uses childP (transformed or not)
-  // We wrap each child in a helper that takes the transformed point
-  const childHelpers = children.map((child, i) => {
-    const childFuncName = `union_child_${ctx.helperCounter++}`;
-    const childExpr = walkNode(child, ctx);
-    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+    // Generate child expressions - each child uses childP (transformed or not)
+    // We wrap each child in a helper that takes the transformed point
+    const childHelpers = children.map((child, i) => {
+      const childFuncName = `union_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(child, ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
-    return childFuncName;
-  });
+      return childFuncName;
+    });
 
-  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
-  const childAssignments = childHelpers.map((funcName, i) => {
-    return `  vec4 c${i} = ${funcName}(${childCallArgs});`;
-  }).join('\n');
+    const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+    const childAssignments = childHelpers.map((funcName, i) => {
+      return `  vec4 c${i} = ${funcName}(${childCallArgs});`;
+    }).join('\n');
 
-  // Select color from closest child using sequential comparisons (O(n) code size)
-  let colorSelect;
-  if (children.length === 2) {
-    colorSelect = '\n  return c0.x < c1.x ? c0 : c1;';
-  } else {
-    colorSelect = '\n  vec4 nearest = c0;';
-    for (let i = 1; i < children.length; i++) {
-      colorSelect += `\n  nearest = nearest.x < c${i}.x ? nearest : c${i};`;
+    // Select color from closest child using sequential comparisons (O(n) code size)
+    let colorSelect;
+    if (children.length === 2) {
+      colorSelect = '\n  return c0.x < c1.x ? c0 : c1;';
+    } else {
+      colorSelect = '\n  vec4 nearest = c0;';
+      for (let i = 1; i < children.length; i++) {
+        colorSelect += `\n  nearest = nearest.x < c${i}.x ? nearest : c${i};`;
+      }
+      colorSelect += '\n  return nearest;';
     }
-    colorSelect += '\n  return nearest;';
-  }
 
-  const helperFunc = `vec4 ${funcName}(${paramList}) {
+    const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${bodyPrefix}${childAssignments}${colorSelect}
 }`;
 
-  ctx.helpers.push(helperFunc);
+    ctx.helpers.push(helperFunc);
+    result = `${funcName}(${callArgs})`;
+  }
 
-  return `${funcName}(${callArgs})`;
+  // LCD-003: Restore ancestor rotation
+  ctx.ancestorRotation = savedAncestorRotation;
+
+  return result;
 }
 
 /**
@@ -437,6 +460,7 @@ ${bodyPrefix}${childAssignments}${colorSelect}
  * applies only its local transform. This ensures proper transform composition
  * where root rotations affect the entire assembly uniformly.
  *
+ * LCD-003: Track rotation in context for mirror fix
  * CSG formula: max(base, max(-cutter1, max(-cutter2, ...)))
  */
 function generateSubtract(node, ctx) {
@@ -449,6 +473,17 @@ function generateSubtract(node, ctx) {
   // Apply parent transform to p first, then children use only local transforms
   const transformedP = applyTransform('p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
+
+  // LCD-003: Track rotation for mirror fix
+  const savedAncestorRotation = ctx.ancestorRotation;
+  const nodeRotation = extractRotation(node.transform);
+  if (nodeRotation && isStaticRotation(nodeRotation)) {
+    ctx.ancestorRotation = savedAncestorRotation
+      ? addRotations(savedAncestorRotation, nodeRotation)
+      : nodeRotation;
+  }
+
+  let result;
 
   if (children.length === 1) {
     // For single child, if we have parent transform, wrap it
@@ -470,59 +505,64 @@ function generateSubtract(node, ctx) {
   return ${childFuncName}(${childCallArgs});
 }`;
       ctx.helpers.push(helperFunc);
-      return `${funcName}(${callArgs})`;
+      result = `${funcName}(${callArgs})`;
+    } else {
+      result = walkNode(children[0], ctx);
     }
-    return walkNode(children[0], ctx);
-  }
+  } else {
+    // Generate helper function
+    const funcName = `subtract_${ctx.helperCounter++}`;
+    const idParam = ctx.instanceIdParam;
+    const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+    const callArgs = idParam ? `p, ${idParam}` : 'p';
 
-  // Generate helper function
-  const funcName = `subtract_${ctx.helperCounter++}`;
-  const idParam = ctx.instanceIdParam;
-  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
-  const callArgs = idParam ? `p, ${idParam}` : 'p';
+    // If we have a parent transform, apply it first
+    let bodyPrefix = '';
+    let childP = 'p';
+    if (hasParentTransform) {
+      bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+      childP = 'tp';
+    }
 
-  // If we have a parent transform, apply it first
-  let bodyPrefix = '';
-  let childP = 'p';
-  if (hasParentTransform) {
-    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
-    childP = 'tp';
-  }
-
-  // Wrap each child in a helper function
-  const childHelpers = children.map((child, i) => {
-    const childFuncName = `subtract_child_${ctx.helperCounter++}`;
-    const childExpr = walkNode(child, ctx);
-    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+    // Wrap each child in a helper function
+    const childHelpers = children.map((child, i) => {
+      const childFuncName = `subtract_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(child, ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
   return ${childExpr};
 }`);
-    return childFuncName;
-  });
+      return childFuncName;
+    });
 
-  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+    const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
 
-  // Build the subtract body
-  let body = bodyPrefix;
-  body += `  vec4 base = ${childHelpers[0]}(${childCallArgs});\n`;
+    // Build the subtract body
+    let body = bodyPrefix;
+    body += `  vec4 base = ${childHelpers[0]}(${childCallArgs});\n`;
 
-  for (let i = 1; i < children.length; i++) {
-    body += `  vec4 sub${i} = ${childHelpers[i]}(${childCallArgs});\n`;
-    if (ctx.showCutters) {
-      // Debug mode: show cutters as union (min) instead of subtract (max of negated)
-      body += `  if (sub${i}.x < base.x) base = sub${i};\n`;
-    } else {
-      // Normal subtract: base.x = max(base.x, -sub.x)
-      body += `  base.x = max(base.x, -sub${i}.x);\n`;
+    for (let i = 1; i < children.length; i++) {
+      body += `  vec4 sub${i} = ${childHelpers[i]}(${childCallArgs});\n`;
+      if (ctx.showCutters) {
+        // Debug mode: show cutters as union (min) instead of subtract (max of negated)
+        body += `  if (sub${i}.x < base.x) base = sub${i};\n`;
+      } else {
+        // Normal subtract: base.x = max(base.x, -sub.x)
+        body += `  base.x = max(base.x, -sub${i}.x);\n`;
+      }
     }
-  }
 
-  const helperFunc = `vec4 ${funcName}(${paramList}) {
+    const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${body}  return base;
 }`;
 
-  ctx.helpers.push(helperFunc);
+    ctx.helpers.push(helperFunc);
+    result = `${funcName}(${callArgs})`;
+  }
 
-  return `${funcName}(${callArgs})`;
+  // LCD-003: Restore ancestor rotation
+  ctx.ancestorRotation = savedAncestorRotation;
+
+  return result;
 }
 
 /**
@@ -812,14 +852,29 @@ ${bodyPrefix}${bodyLines.join('\n')}
 
 /**
  * Generate transform wrapper - propagates transform to child
+ * LCD-003: Track rotation in context for mirror fix
  */
 function generateTransform(node, ctx) {
+  // LCD-003: Track rotation for mirror fix
+  const savedAncestorRotation = ctx.ancestorRotation;
+  const nodeRotation = extractRotation(node.transform);
+  if (nodeRotation && isStaticRotation(nodeRotation)) {
+    ctx.ancestorRotation = savedAncestorRotation
+      ? addRotations(savedAncestorRotation, nodeRotation)
+      : nodeRotation;
+  }
+
   // Combine transforms and apply to child
   const childWithTransform = {
     ...node.child,
     transform: combineTransforms(node.child.transform, node.transform)
   };
-  return walkNode(childWithTransform, ctx);
+  const result = walkNode(childWithTransform, ctx);
+
+  // LCD-003: Restore ancestor rotation
+  ctx.ancestorRotation = savedAncestorRotation;
+
+  return result;
 }
 
 /**
@@ -947,8 +1002,11 @@ function generateMaterial(node, ctx) {
  * 2. Then apply mirror (abs) to the transformed point
  * 3. Child keeps only its own local transform
  *
- * This ensures the mirror symmetry operates in the rotated space,
- * so the entire mirrored assembly rotates as a unit.
+ * LCD-003 FIX: When ancestor rotation exists, we must:
+ * 1. Undo ancestor rotation to get to local space
+ * 2. Apply abs() in local space
+ * 3. Re-apply ancestor rotation to return to world space
+ * This ensures mirror symmetry operates in local coordinates.
  */
 function generateMirror(node, ctx) {
   const axis = node.axis || 'x';
@@ -957,12 +1015,10 @@ function generateMirror(node, ctx) {
   const callArgs = idParam ? `p, ${idParam}` : 'p';
   const childCallArgs = idParam ? `q, ${idParam}` : 'q';
 
-  // Apply parent transform to p FIRST, before the mirror operation
-  // This ensures root rotations are applied before mirroring
+  // Apply mirror's own transform to p (if any)
   const rp = applyTransform('p', node.transform, ctx);
 
   // Child keeps only its own local transform (NOT propagated from parent)
-  // The parent transform was already applied above
   const child = node.child;
 
   // Wrap the child in its own helper function
@@ -975,12 +1031,32 @@ function generateMirror(node, ctx) {
   // Now generate the mirror wrapper
   const funcName = `mirror_${ctx.helperCounter++}`;
 
-  // Build the mirror transform - apply abs AFTER parent transform
+  // LCD-003 FIX: Check for ancestor rotation
+  const ancestorRot = ctx.ancestorRotation;
+  const hasAncestorRotation = ancestorRot && isStaticRotation(ancestorRot) &&
+    (ancestorRot[0] !== 0 || ancestorRot[1] !== 0 || ancestorRot[2] !== 0);
+
   let mirrorCode = `  vec3 rp = ${rp};\n`;
-  mirrorCode += '  vec3 q = rp;\n';
-  if (axis.includes('x')) mirrorCode += '  q.x = abs(q.x);\n';
-  if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
-  if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
+
+  if (hasAncestorRotation) {
+    // LCD-003: Undo ancestor rotation, apply abs in local space, redo rotation
+    const localP = generateRotationGlsl('rp', ancestorRot, ctx, true);  // inverse
+    mirrorCode += `  // LCD-003: Transform to local space for correct mirroring\n`;
+    mirrorCode += `  vec3 localP = ${localP};\n`;
+    mirrorCode += `  vec3 mirroredLocal = localP;\n`;
+    if (axis.includes('x')) mirrorCode += '  mirroredLocal.x = abs(mirroredLocal.x);\n';
+    if (axis.includes('y')) mirrorCode += '  mirroredLocal.y = abs(mirroredLocal.y);\n';
+    if (axis.includes('z')) mirrorCode += '  mirroredLocal.z = abs(mirroredLocal.z);\n';
+    // Rotate back to world space
+    const worldP = generateRotationGlsl('mirroredLocal', ancestorRot, ctx, false);  // forward
+    mirrorCode += `  vec3 q = ${worldP};\n`;
+  } else {
+    // Original behavior when no ancestor rotation
+    mirrorCode += '  vec3 q = rp;\n';
+    if (axis.includes('x')) mirrorCode += '  q.x = abs(q.x);\n';
+    if (axis.includes('y')) mirrorCode += '  q.y = abs(q.y);\n';
+    if (axis.includes('z')) mirrorCode += '  q.z = abs(q.z);\n';
+  }
 
   const helperFunc = `vec4 ${funcName}(${paramList}) {
 ${mirrorCode}  return ${childFuncName}(${childCallArgs});
@@ -1879,6 +1955,80 @@ function normalizeRotationComponent(val) {
   if (val === undefined || val === null) return { type: 'const', value: 0 };
   if (typeof val === 'number') return { type: 'const', value: val };
   return val; // Already an IR object
+}
+
+/**
+ * Extract Euler rotation from a transform (LCD-003 fix)
+ * Returns [x, y, z] in degrees or null if no rotation
+ */
+function extractRotation(transform) {
+  if (!transform) return null;
+  if (transform.rotate) {
+    const rot = transform.rotate;
+    // Handle both array and IR object formats
+    if (Array.isArray(rot)) return rot;
+    if (rot.values) return rot.values;
+    if (rot.type === 'array') return rot.values;
+  }
+  // TODO: Handle rotateQ and rotateAxis if needed
+  return null;
+}
+
+/**
+ * Check if rotation contains only static (non-expression) values
+ */
+function isStaticRotation(rot) {
+  if (!rot) return true;
+  return rot.every(v => typeof v === 'number');
+}
+
+/**
+ * Generate GLSL to rotate point by Euler angles (XYZ order, degrees)
+ * @param {string} pVar - variable name for the point
+ * @param {Array} rot - [x, y, z] rotation in degrees
+ * @param {Object} ctx - codegen context
+ * @param {boolean} inverse - if true, apply inverse rotation (ZYX order, negated angles)
+ * @returns {string} - GLSL expression for rotated point
+ */
+function generateRotationGlsl(pVar, rot, ctx, inverse = false) {
+  if (!rot || rot.every(v => v === 0)) return pVar;
+
+  const [rx, ry, rz] = rot;
+  const toRad = Math.PI / 180;
+
+  let result = pVar;
+
+  if (inverse) {
+    // Inverse: apply in reverse order (ZYX) with negated angles
+    if (rz !== 0) {
+      const angle = typeof rz === 'number' ? (-rz * toRad).toFixed(6) : `(-${valueToGlsl(rz, ctx)} * 0.017453)`;
+      result = `rotZ(${result}, ${angle})`;
+    }
+    if (ry !== 0) {
+      const angle = typeof ry === 'number' ? (-ry * toRad).toFixed(6) : `(-${valueToGlsl(ry, ctx)} * 0.017453)`;
+      result = `rotY(${result}, ${angle})`;
+    }
+    if (rx !== 0) {
+      const angle = typeof rx === 'number' ? (-rx * toRad).toFixed(6) : `(-${valueToGlsl(rx, ctx)} * 0.017453)`;
+      result = `rotX(${result}, ${angle})`;
+    }
+  } else {
+    // Forward: apply in XYZ order
+    if (rx !== 0) {
+      const angle = typeof rx === 'number' ? (rx * toRad).toFixed(6) : `(${valueToGlsl(rx, ctx)} * 0.017453)`;
+      result = `rotX(${result}, ${angle})`;
+    }
+    if (ry !== 0) {
+      const angle = typeof ry === 'number' ? (ry * toRad).toFixed(6) : `(${valueToGlsl(ry, ctx)} * 0.017453)`;
+      result = `rotY(${result}, ${angle})`;
+    }
+    if (rz !== 0) {
+      const angle = typeof rz === 'number' ? (rz * toRad).toFixed(6) : `(${valueToGlsl(rz, ctx)} * 0.017453)`;
+      result = `rotZ(${result}, ${angle})`;
+    }
+  }
+
+  return result;
 }
 
 /**
