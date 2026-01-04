@@ -335,9 +335,10 @@ export function expandRef(refNode, registry, depth = 0) {
   // Clone the definition
   const expanded = JSON.parse(JSON.stringify(def));
 
-  // Apply parameter overrides (if any)
-  if (refNode.overrides) {
-    applyOverrides(expanded, refNode.overrides);
+  // Apply parameter overrides (if any) - support both 'overrides' and 'params'
+  const overrides = refNode.overrides || refNode.params;
+  if (overrides) {
+    applyOverrides(expanded, overrides);
   }
 
   return processNode(expanded, registry, depth);

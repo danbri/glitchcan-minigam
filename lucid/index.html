@@ -4049,12 +4049,21 @@
 
       let html = '';
       for (const [name, param] of Object.entries(params)) {
-        const value = param.value;
-        const min = param.min !== undefined ? param.min : (param.type === 'scalar' ? 0 : -10);
-        const max = param.max !== undefined ? param.max : (param.type === 'scalar' ? 10 : 10);
+        // Skip comment/metadata params (start with _)
+        if (name.startsWith('_')) continue;
+
+        // Support both 'value' and 'default' for param values
+        const value = param.value !== undefined ? param.value : param.default;
+        if (value === undefined) continue; // Skip params without a value
+
+        // Infer type if not specified
+        const type = param.type || (Array.isArray(value) ? (value.length === 3 ? 'position3' : 'array') : 'scalar');
+
+        const min = param.min !== undefined ? param.min : (type === 'scalar' ? 0 : -10);
+        const max = param.max !== undefined ? param.max : (type === 'scalar' ? 10 : 10);
         const step = param.step || (max - min) / 100;
 
-        if (param.type === 'scalar') {
+        if (type === 'scalar' && typeof value === 'number') {
           html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
               <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
@@ -4063,7 +4072,7 @@
             <input type="range" min="${min}" max="${max}" step="${step}" value="${value}"
                    id="param-slider-${name}" data-param="${name}" style="width: 100%;">
           </div>`;
-        } else if (param.type === 'color3' && Array.isArray(value)) {
+        } else if (type === 'color3' && Array.isArray(value)) {
           const hex = rgbToHex(value);
           html += `<div class="debug-row">
             <span class="debug-label" style="font-size: 0.75rem;">${name}</span>

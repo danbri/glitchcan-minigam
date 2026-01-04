@@ -5,6 +5,12 @@
  * LCD-048: Enables physics-enabled SDF scenes with real-time simulation
  */
 
+import { vec3 } from './xpbd.js';
+
+// ============================================================================
+// Scene node extraction
+// ============================================================================
+
 /**
  * Extract all nodes with physics properties from scene tree
  * @param {Object} node - Scene node to traverse
@@ -14,19 +20,16 @@
 export function extractPhysicsNodes(node, result = []) {
   if (!node) return result;
 
-  // Check if this node has physics
   if (node.physics) {
     result.push(node);
   }
 
-  // Recurse into children
   if (node.children) {
     for (const child of node.children) {
       extractPhysicsNodes(child, result);
     }
   }
 
-  // Single child (transform, material, etc.)
   if (node.child) {
     extractPhysicsNodes(node.child, result);
   }
@@ -36,8 +39,6 @@ export function extractPhysicsNodes(node, result = []) {
 
 /**
  * Extract numeric value from processed or raw value
- * @param {*} val - Value to extract
- * @param {Object} params - Scene params for resolving var references
  */
 function extractValue(val, params = {}) {
   if (val === undefined || val === null) return 0;
@@ -45,7 +46,6 @@ function extractValue(val, params = {}) {
   if (val.type === 'const') return val.value;
   if (val.type === 'array') return val.values.map(v => extractValue(v, params));
   if (Array.isArray(val)) return val.map(v => extractValue(v, params));
-  // Handle var reference: { "var": "ball1X" }
   if (val.var && params[val.var]) {
     return params[val.var].value ?? params[val.var];
   }
@@ -53,54 +53,43 @@ function extractValue(val, params = {}) {
 }
 
 /**
- * Extract position from node transform
- * @param {Object} node - Scene node
- * @param {Object} params - Scene params for resolving var references
+ * Extract position vector from node transform
  */
 function extractPosition(node, params = {}) {
   if (!node.transform || !node.transform.translate) {
-    return [0, 0, 0];
+    return vec3.zero();
   }
 
   const t = node.transform.translate;
 
-  // Handle different formats
   if (Array.isArray(t)) {
     return t.map(v => extractValue(v, params));
   }
   if (t.type === 'array') {
     return t.values.map(v => extractValue(v, params));
   }
-  // Handle single var reference to vec3: { "var": "ball1Pos" }
   if (t.var && params[t.var]) {
     const val = params[t.var].value ?? params[t.var];
     if (Array.isArray(val)) {
-      return [...val];
+      return vec3.clone(val);
     }
   }
 
-  return [0, 0, 0];
+  return vec3.zero();
 }
 
 /**
  * Extract radius from sphere node
- * @param {Object} node - Scene node
- * @param {Object} params - Scene params for resolving var references
  */
 function extractRadius(node, params = {}) {
-  if (node.type !== 'sphere') return 0.5; // Default
-
+  if (node.type !== 'sphere') return 0.5;
   const r = node.params?.r;
   if (!r) return 0.5;
-
   return extractValue(r, params) || 0.5;
 }
 
 /**
  * Create a physics body from a scene node
- * @param {Object} node - Scene node with physics property
- * @param {Object} params - Scene params for resolving var references
- * @returns {Object} Physics body configuration
  */
 export function createPhysicsBodyFromNode(node, params = {}) {
   const physics = node.physics || {};
@@ -109,7 +98,7 @@ export function createPhysicsBodyFromNode(node, params = {}) {
   return {
     id: node.id || `body_${Math.random().toString(36).substr(2, 9)}`,
     position: extractPosition(node, params),
-    velocity: [0, 0, 0],
+    velocity: vec3.zero(),
     mass: isStatic ? 0 : (physics.mass ?? 1.0),
     restitution: physics.restitution ?? 0.7,
     isStatic,
@@ -118,24 +107,22 @@ export function createPhysicsBodyFromNode(node, params = {}) {
   };
 }
 
+// ============================================================================
+// Physics Scene class
+// ============================================================================
+
 /**
  * Physics Scene - manages physics simulation for SDF scenes
  */
 export class PhysicsScene {
-  /**
-   * @param {Object} sceneJson - Scene JSON with physics configuration
-   */
   constructor(sceneJson) {
     this.sceneJson = sceneJson;
     this.physics = sceneJson.physics || {};
     this.enabled = this.physics.enabled ?? false;
-    this.gravity = this.physics.gravity || [0, -9.8, 0];
+    this.gravity = this.physics.gravity || vec3.create(0, -9.8, 0);
     this.groundY = this.physics.groundY ?? -2;
-
-    // Boundary walls (optional)
     this.bounds = this.physics.bounds || null;
 
-    // Extract and create physics bodies
     this.bodies = [];
     if (this.enabled && sceneJson.root) {
       const physicsNodes = extractPhysicsNodes(sceneJson.root);
@@ -143,7 +130,6 @@ export class PhysicsScene {
       this.bodies = physicsNodes.map(node => createPhysicsBodyFromNode(node, params));
     }
 
-    // Physics constants
     this.damping = 0.99;
     this.iterations = 4;
   }
@@ -161,33 +147,26 @@ export class PhysicsScene {
     for (const body of this.bodies) {
       if (body.isStatic) continue;
 
-      // Apply gravity
-      body.velocity[0] += g[0] * dt;
-      body.velocity[1] += g[1] * dt;
-      body.velocity[2] += g[2] * dt;
+      // Apply gravity: velocity += gravity * dt
+      vec3.scaleAddTo(body.velocity, g, dt);
 
-      // Update position
-      body.position[0] += body.velocity[0] * dt;
-      body.position[1] += body.velocity[1] * dt;
-      body.position[2] += body.velocity[2] * dt;
+      // Update position: position += velocity * dt
+      vec3.scaleAddTo(body.position, body.velocity, dt);
 
       // Apply damping
-      body.velocity[0] *= this.damping;
-      body.velocity[1] *= this.damping;
-      body.velocity[2] *= this.damping;
+      vec3.scaleTo(body.velocity, this.damping);
     }
 
     // Constraint solving iterations
     for (let iter = 0; iter < this.iterations; iter++) {
-      // Ground collision
       for (const body of this.bodies) {
         if (body.isStatic) continue;
 
+        // Ground collision
         const groundContact = this.groundY + body.radius;
         if (body.position[1] < groundContact) {
           body.position[1] = groundContact;
 
-          // Reflect velocity with restitution
           if (body.velocity[1] < 0) {
             body.velocity[1] = -body.velocity[1] * body.restitution;
 
@@ -198,39 +177,9 @@ export class PhysicsScene {
           }
         }
 
-        // Wall collisions (X and Z bounds)
+        // Wall collisions
         if (this.bounds) {
-          const b = this.bounds;
-          const r = body.radius;
-
-          // Left wall (minX)
-          if (b.minX !== undefined && body.position[0] - r < b.minX) {
-            body.position[0] = b.minX + r;
-            if (body.velocity[0] < 0) {
-              body.velocity[0] = -body.velocity[0] * body.restitution;
-            }
-          }
-          // Right wall (maxX)
-          if (b.maxX !== undefined && body.position[0] + r > b.maxX) {
-            body.position[0] = b.maxX - r;
-            if (body.velocity[0] > 0) {
-              body.velocity[0] = -body.velocity[0] * body.restitution;
-            }
-          }
-          // Near wall (minZ)
-          if (b.minZ !== undefined && body.position[2] - r < b.minZ) {
-            body.position[2] = b.minZ + r;
-            if (body.velocity[2] < 0) {
-              body.velocity[2] = -body.velocity[2] * body.restitution;
-            }
-          }
-          // Far wall (maxZ)
-          if (b.maxZ !== undefined && body.position[2] + r > b.maxZ) {
-            body.position[2] = b.maxZ - r;
-            if (body.velocity[2] > 0) {
-              body.velocity[2] = -body.velocity[2] * body.restitution;
-            }
-          }
+          this.constrainToBounds(body);
         }
       }
 
@@ -244,23 +193,49 @@ export class PhysicsScene {
   }
 
   /**
+   * Constrain body position to bounds with bounce response
+   */
+  constrainToBounds(body) {
+    const b = this.bounds;
+    const r = body.radius;
+    const pos = body.position;
+    const vel = body.velocity;
+    const rest = body.restitution;
+
+    // X bounds
+    if (b.minX !== undefined && pos[0] - r < b.minX) {
+      pos[0] = b.minX + r;
+      if (vel[0] < 0) vel[0] = -vel[0] * rest;
+    }
+    if (b.maxX !== undefined && pos[0] + r > b.maxX) {
+      pos[0] = b.maxX - r;
+      if (vel[0] > 0) vel[0] = -vel[0] * rest;
+    }
+
+    // Z bounds
+    if (b.minZ !== undefined && pos[2] - r < b.minZ) {
+      pos[2] = b.minZ + r;
+      if (vel[2] < 0) vel[2] = -vel[2] * rest;
+    }
+    if (b.maxZ !== undefined && pos[2] + r > b.maxZ) {
+      pos[2] = b.maxZ - r;
+      if (vel[2] > 0) vel[2] = -vel[2] * rest;
+    }
+  }
+
+  /**
    * Resolve collision between two bodies
    */
   resolveCollision(a, b) {
-    // Skip if both static
     if (a.isStatic && b.isStatic) return;
 
-    const dx = b.position[0] - a.position[0];
-    const dy = b.position[1] - a.position[1];
-    const dz = b.position[2] - a.position[2];
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const delta = vec3.sub(b.position, a.position);
+    const dist = vec3.length(delta);
     const minDist = a.radius + b.radius;
 
     if (dist < minDist && dist > 0.0001) {
       // Collision normal
-      const nx = dx / dist;
-      const ny = dy / dist;
-      const nz = dz / dist;
+      const normal = vec3.scale(delta, 1 / dist);
       const overlap = minDist - dist;
 
       // Separate bodies (inverse mass weighting)
@@ -269,37 +244,27 @@ export class PhysicsScene {
         const aRatio = a.isStatic ? 0 : (b.isStatic ? 1 : b.mass / totalMass);
         const bRatio = b.isStatic ? 0 : (a.isStatic ? 1 : a.mass / totalMass);
 
-        a.position[0] -= nx * overlap * aRatio;
-        a.position[1] -= ny * overlap * aRatio;
-        a.position[2] -= nz * overlap * aRatio;
-        b.position[0] += nx * overlap * bRatio;
-        b.position[1] += ny * overlap * bRatio;
-        b.position[2] += nz * overlap * bRatio;
+        vec3.scaleAddTo(a.position, normal, -overlap * aRatio);
+        vec3.scaleAddTo(b.position, normal, overlap * bRatio);
       }
 
       // Velocity response
-      const dvx = a.velocity[0] - b.velocity[0];
-      const dvy = a.velocity[1] - b.velocity[1];
-      const dvz = a.velocity[2] - b.velocity[2];
-      const dvn = dvx * nx + dvy * ny + dvz * nz;
+      const relVel = vec3.sub(a.velocity, b.velocity);
+      const velAlongNormal = vec3.dot(relVel, normal);
 
       // Only resolve if approaching
-      if (dvn > 0) {
+      if (velAlongNormal > 0) {
         const restitution = Math.min(a.restitution, b.restitution);
-        const impulse = dvn * (1 + restitution);
+        const impulse = velAlongNormal * (1 + restitution);
 
         if (!a.isStatic) {
           const aImpulse = impulse * (b.isStatic ? 1 : b.mass / totalMass);
-          a.velocity[0] -= aImpulse * nx;
-          a.velocity[1] -= aImpulse * ny;
-          a.velocity[2] -= aImpulse * nz;
+          vec3.scaleAddTo(a.velocity, normal, -aImpulse);
         }
 
         if (!b.isStatic) {
           const bImpulse = impulse * (a.isStatic ? 1 : a.mass / totalMass);
-          b.velocity[0] += bImpulse * nx;
-          b.velocity[1] += bImpulse * ny;
-          b.velocity[2] += bImpulse * nz;
+          vec3.scaleAddTo(b.velocity, normal, bImpulse);
         }
       }
     }
@@ -307,15 +272,14 @@ export class PhysicsScene {
 
   /**
    * Get transform updates for renderer
-   * @returns {Object} Map of body ID to transform data
    */
   getTransformUpdates() {
     const updates = {};
 
     for (const body of this.bodies) {
       updates[body.id] = {
-        translate: [...body.position],
-        velocity: [...body.velocity]
+        translate: vec3.clone(body.position),
+        velocity: vec3.clone(body.velocity)
       };
     }
 
@@ -330,22 +294,18 @@ export class PhysicsScene {
   applyImpulse(bodyId, impulse) {
     const body = this.bodies.find(b => b.id === bodyId);
     if (body && !body.isStatic) {
-      body.velocity[0] += impulse[0] / body.mass;
-      body.velocity[1] += impulse[1] / body.mass;
-      body.velocity[2] += impulse[2] / body.mass;
+      vec3.scaleAddTo(body.velocity, impulse, 1 / body.mass);
     }
   }
 
   /**
    * Add a new dynamic body at runtime
-   * @param {Object} config - Body configuration
-   * @returns {Object} Created body
    */
   addBody(config) {
     const body = {
       id: config.id || `body_${this.bodies.length}`,
-      position: config.position || [0, 0, 0],
-      velocity: config.velocity || [0, 0, 0],
+      position: config.position ? vec3.clone(config.position) : vec3.zero(),
+      velocity: config.velocity ? vec3.clone(config.velocity) : vec3.zero(),
       mass: config.mass ?? 1.0,
       restitution: config.restitution ?? 0.7,
       isStatic: config.isStatic ?? false,

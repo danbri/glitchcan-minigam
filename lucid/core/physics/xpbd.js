@@ -85,16 +85,28 @@ export function createPositionConstraint(particle, targetPos, compliance = 0) {
  * Vector math utilities
  */
 export const vec3 = {
+  create: (x = 0, y = 0, z = 0) => [x, y, z],
+  zero: () => [0, 0, 0],
+  copy: (v) => [v[0], v[1], v[2]],
+  clone: (v) => [v[0], v[1], v[2]],
+
   add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
   sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
   scale: (v, s) => [v[0] * s, v[1] * s, v[2] * s],
+
+  // In-place mutations for hot paths (modify first arg, return it)
+  addTo: (out, v) => { out[0] += v[0]; out[1] += v[1]; out[2] += v[2]; return out; },
+  subFrom: (out, v) => { out[0] -= v[0]; out[1] -= v[1]; out[2] -= v[2]; return out; },
+  scaleTo: (out, s) => { out[0] *= s; out[1] *= s; out[2] *= s; return out; },
+  scaleAddTo: (out, v, s) => { out[0] += v[0] * s; out[1] += v[1] * s; out[2] += v[2] * s; return out; },
+
   dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  lengthSq: (v) => v[0] * v[0] + v[1] * v[1] + v[2] * v[2],
   length: (v) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]),
   normalize: (v) => {
-    const len = vec3.length(v);
-    return len > 0 ? vec3.scale(v, 1 / len) : [0, 0, 0];
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 0, 0];
   },
-  copy: (v) => [...v]
 };
 
 /**
