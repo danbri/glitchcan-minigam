@@ -529,6 +529,47 @@ describe('json-codegen.js', () => {
       expect(glsl).toContain('abs');
     });
 
+    it('should handle LCD-003: mirror with ancestor rotation', () => {
+      // LCD-003: When mirror is under a rotated parent, the mirror axis
+      // should be in local (rotated) space, not world space.
+      // This test verifies that ancestor rotations are tracked and
+      // the mirror operation includes rotation undo/redo code.
+      const scene = {
+        root: {
+          type: 'transform',
+          transform: { rotate: [0, 45, 0] },  // 45 degree Y rotation
+          child: {
+            type: 'union',
+            children: [
+              {
+                type: 'subtract',
+                children: [
+                  {
+                    type: 'box',
+                    params: { size: [1, 0.2, 1], color: [0.7, 0.7, 0.7] }
+                  },
+                  {
+                    type: 'mirror',
+                    axis: 'x',
+                    child: {
+                      type: 'box',
+                      params: { size: [0.5, 0.3, 1], color: [1, 0, 0] },
+                      transform: { translate: [0.6, 0, 0] }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      // Should contain the LCD-003 fix comment indicating local space transform
+      expect(glsl).toContain('LCD-003');
+      // Should contain rotation functions for undo/redo
+      expect(glsl).toContain('rotY');
+    });
+
     it('should generate GLSL for repeat modifier', () => {
       const scene = {
         root: {
