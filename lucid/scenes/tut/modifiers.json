@@ -1,28 +1,53 @@
 {
   "title": "Modifiers: Round & Shell",
   "subtitle": "Post-process SDF shapes",
-  "version": "1.0",
+  "version": "1.1",
   "notes": "MODIFIERS alter the SDF after shape calculation. 'round' adds radius to edges (softens corners). 'shell' hollows out shapes with wall thickness. Modifiers wrap any shape or CSG result. Great for organic or manufactured looks.",
+
+  "params": {
+    "roundRadius": {
+      "value": 0.08,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 0.15,
+      "description": "Corner rounding"
+    },
+    "shellThickness": {
+      "value": 0.05,
+      "type": "scalar",
+      "min": 0.02,
+      "max": 0.12,
+      "description": "Shell wall thickness"
+    },
+    "boxSize": {
+      "value": 0.35,
+      "type": "scalar",
+      "min": 0.2,
+      "max": 0.5,
+      "description": "Box size"
+    }
+  },
+
   "root": {
     "type": "union",
     "children": [
       {
         "type": "box",
-        "params": { "size": [0.35, 0.35, 0.35], "color": [0.8, 0.4, 0.2] },
+        "params": { "size": [{"var": "boxSize"}, {"var": "boxSize"}, {"var": "boxSize"}], "color": [0.8, 0.4, 0.2] },
         "transform": { "translate": [-1.2, 0.5, 0] }
       },
       {
         "type": "round",
-        "r": 0.08,
+        "r": {"var": "roundRadius"},
         "child": {
           "type": "box",
-          "params": { "size": [0.35, 0.35, 0.35], "color": [0.4, 0.8, 0.2] }
+          "params": { "size": [{"var": "boxSize"}, {"var": "boxSize"}, {"var": "boxSize"}], "color": [0.4, 0.8, 0.2] }
         },
         "transform": { "translate": [0, 0.5, 0] }
       },
       {
         "type": "shell",
-        "thickness": 0.05,
+        "thickness": {"var": "shellThickness"},
         "child": {
           "type": "sphere",
           "params": { "r": 0.4, "color": [0.2, 0.5, 0.9] }
