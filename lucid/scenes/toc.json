@@ -103,7 +103,10 @@
       "title": "Creatures",
       "description": "Characters & beings",
       "scenes": [
-        { "path": "creatures/wolf.json", "title": "Fearsome Wolf 🐺", "subtitle": "Huge predator" },
+        { "path": "creatures/hippo-v1.json", "title": "Hippo 🦛", "subtitle": "Chunky herbivore" },
+        { "path": "creatures/draggo4.json", "title": "Ignis Drake 🔥", "subtitle": "Muscular wyvern" },
+        { "path": "ablation/whale-parametric-v3.json", "title": "Humpback Whale 🐋", "subtitle": "24 semantic parameters" },
+        { "path": "creatures/wolf.json", "title": "Wolf 🐺", "subtitle": "Forest predator" },
         { "path": "creatures/snowman.json", "title": "Snowman ⛄", "subtitle": "Winter scene" },
         { "path": "creatures/invaders.json", "title": "Space Invaders 👾", "subtitle": "Arcade aliens" },
         { "path": "creatures/radial-invaders.json", "title": "Radial Invaders 🛸", "subtitle": "Circular formation" },
@@ -128,29 +131,6 @@
       ]
     },
     {
-      "id": "ablation",
-      "title": "🧪 Ablation Models",
-      "description": "Parametric creatures & evaluation subjects",
-      "scenes": [
-        { "path": "ablation/whale.json", "title": "🐋 Humpback Whale", "subtitle": "v6.65 - PMAC evaluated" },
-        { "path": "ablation/whale-parametric.json", "title": "🐋 Parametric Whale v2", "subtitle": "Named params for rigging" },
-        { "path": "ablation/whale-parametric-v3.json", "title": "🐋 Parametric Whale v3 🎛️", "subtitle": "24 semantic parameters" }
-      ]
-    },
-    {
-      "id": "dragons",
-      "title": "🐉 Dragon Gallery",
-      "description": "Dragon model iterations",
-      "scenes": [
-        { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
-        { "path": "creatures/draggo2.json", "title": "Dragon B2-H2 🐉", "subtitle": "Green with glowing eyes" },
-        { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "Organic FBM scales" },
-        { "path": "creatures/draggo4.json", "title": "Ignis Drake 🔥", "subtitle": "Muscular wyvern" },
-        { "path": "creatures/draggo5.json", "title": "Solaris Drake ☀️", "subtitle": "Solar-panel wings" },
-        { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL mapped" }
-      ]
-    },
-    {
       "id": "physics",
       "title": "⚛️ Physics",
       "description": "Real-time physics simulation",
@@ -161,15 +141,16 @@
     {
       "id": "archive",
       "title": "📁 Archive",
-      "description": "Old experiments & iterations",
+      "description": "Experiments & iterations",
       "scenes": [
-        { "path": "test/div-test.json", "title": "Div Test 🧪", "subtitle": "Expression test" },
-        { "path": "ablation/old/test-a.json", "title": "Test A", "subtitle": "Initial form study" },
-        { "path": "ablation/old/test-b.json", "title": "Test B", "subtitle": "Dolphin attempt" },
-        { "path": "ablation/old/hippo-v1.json", "title": "Hippo v1 🦛", "subtitle": "Early test" },
-        { "path": "creatures/subag1/dragon.json", "title": "SubAgent Dragon", "subtitle": "Context-ablated" },
-        { "path": "creatures/subag1/silhouette-v5.json", "title": "Silhouette v5", "subtitle": "Dragon silhouette" },
-        { "path": "creatures/subag1/round10/r10-c.json", "title": "R10-C", "subtitle": "Final iteration" }
+        { "path": "ablation/whale.json", "title": "Whale v6.65 🐋", "subtitle": "PMAC evaluated" },
+        { "path": "ablation/whale-parametric.json", "title": "Whale v2 🐋", "subtitle": "Early parametric" },
+        { "path": "creatures/draggo.json", "title": "Draggo 🐲", "subtitle": "Sharp-edged beast" },
+        { "path": "creatures/draggo2.json", "title": "Dragon B2 🐉", "subtitle": "Glowing eyes" },
+        { "path": "creatures/draggo3.json", "title": "Scaly Draggo 🦎", "subtitle": "FBM scales" },
+        { "path": "creatures/draggo5.json", "title": "Solaris Drake ☀️", "subtitle": "Solar wings" },
+        { "path": "creatures/dragon-imported.json", "title": "Imported Dragon 🐲", "subtitle": "Graph-GLSL" },
+        { "path": "test/div-test.json", "title": "Div Test 🧪", "subtitle": "Expression test" }
       ]
     }
   ]
