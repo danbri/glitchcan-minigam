@@ -480,6 +480,161 @@
             color: var(--accent-tertiary);
         }
 
+        /* Parameter descriptions */
+        .param-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* Collapsible section */
+        .collapsible {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            width: 100%;
+            text-align: left;
+        }
+
+        .collapsible::after {
+            content: '▼';
+            font-size: 0.6rem;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible.active::after {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-content.show {
+            max-height: 500px;
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .info-text strong {
+            color: var(--accent-tertiary);
+        }
+
+        /* Color legend */
+        .color-legend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .legend-gradient {
+            width: 80px;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #6366f1, #ec4899, #f59e0b);
+        }
+
+        /* Particle inspector */
+        #particle-inspector {
+            position: fixed;
+            z-index: 200;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 200px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        #particle-inspector.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        #particle-inspector h4 {
+            font-size: 0.8rem;
+            color: var(--accent-tertiary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #particle-inspector .inspector-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
+
+        #particle-inspector .inspector-value {
+            color: var(--text-primary);
+            font-family: 'SF Mono', monospace;
+        }
+
+        #particle-inspector .inspector-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        #particle-inspector .inspector-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.1s ease;
+        }
+
+        .bar-density { background: var(--accent-primary); }
+        .bar-growth { background: #22c55e; }
+        .bar-repulsion { background: #ef4444; }
+
+        #particle-inspector .close-inspector {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
         /* Mobile adjustments */
         @media (max-width: 768px) {
             #controls {
@@ -539,45 +694,65 @@
         <div class="control-group">
             <label>Particles <span class="value" id="val-particles">400</span></label>
             <input type="range" id="particles" min="100" max="2000" value="400" step="50">
+            <div class="param-desc">Number of particles in the simulation</div>
         </div>
 
         <div class="control-group">
             <label>Time Step (dt) <span class="value" id="val-dt">0.100</span></label>
             <input type="range" id="dt" min="0.01" max="0.3" value="0.1" step="0.005">
+            <div class="param-desc">Simulation speed - higher = faster but less stable</div>
         </div>
 
         <div class="divider"></div>
 
-        <div class="control-group">
-            <label>Kernel Distance (μk) <span class="value" id="val-mu_k">2.75</span></label>
-            <input type="range" id="mu_k" min="0.5" max="5.0" value="2.75" step="0.05">
+        <button class="collapsible">Sensing Parameters</button>
+        <div class="collapsible-content">
+            <div class="info-text">
+                Each particle <strong>senses neighbors</strong> within a range and measures local density.
+            </div>
+
+            <div class="control-group">
+                <label>Kernel Distance (μk) <span class="value" id="val-mu_k">2.75</span></label>
+                <input type="range" id="mu_k" min="0.5" max="5.0" value="2.75" step="0.05">
+                <div class="param-desc">Optimal sensing distance - where neighbors are detected strongest</div>
+            </div>
+
+            <div class="control-group">
+                <label>Kernel Width (σk) <span class="value" id="val-sigma_k">1.25</span></label>
+                <input type="range" id="sigma_k" min="0.1" max="3.0" value="1.25" step="0.05">
+                <div class="param-desc">Sensing blur - sharp (low) vs gradual (high) neighbor detection</div>
+            </div>
+
+            <div class="control-group">
+                <label>Kernel Weight (wk) <span class="value" id="val-w_k">0.026</span></label>
+                <input type="range" id="w_k" min="0.005" max="0.1" value="0.02625" step="0.001">
+                <div class="param-desc">How much each neighbor contributes to local density</div>
+            </div>
         </div>
 
-        <div class="control-group">
-            <label>Kernel Width (σk) <span class="value" id="val-sigma_k">1.25</span></label>
-            <input type="range" id="sigma_k" min="0.1" max="3.0" value="1.25" step="0.05">
-        </div>
+        <button class="collapsible">Growth & Repulsion</button>
+        <div class="collapsible-content">
+            <div class="info-text">
+                Particles seek their <strong>"Goldilocks zone"</strong> - not too crowded, not too sparse. Growth pulls toward optimal density; repulsion prevents overlap.
+            </div>
 
-        <div class="control-group">
-            <label>Kernel Weight (wk) <span class="value" id="val-w_k">0.026</span></label>
-            <input type="range" id="w_k" min="0.005" max="0.1" value="0.02625" step="0.001">
-        </div>
+            <div class="control-group">
+                <label>Growth Center (μg) <span class="value" id="val-mu_g">0.70</span></label>
+                <input type="range" id="mu_g" min="0.1" max="2.0" value="0.7" step="0.02">
+                <div class="param-desc">Ideal neighborhood density - particles are "happy" here</div>
+            </div>
 
-        <div class="divider"></div>
+            <div class="control-group">
+                <label>Growth Width (σg) <span class="value" id="val-sigma_g">0.167</span></label>
+                <input type="range" id="sigma_g" min="0.05" max="0.5" value="0.1667" step="0.005">
+                <div class="param-desc">Tolerance - narrow (picky) vs wide (flexible) density preference</div>
+            </div>
 
-        <div class="control-group">
-            <label>Growth Center (μg) <span class="value" id="val-mu_g">0.70</span></label>
-            <input type="range" id="mu_g" min="0.1" max="2.0" value="0.7" step="0.02">
-        </div>
-
-        <div class="control-group">
-            <label>Growth Width (σg) <span class="value" id="val-sigma_g">0.167</span></label>
-            <input type="range" id="sigma_g" min="0.05" max="0.5" value="0.1667" step="0.005">
-        </div>
-
-        <div class="control-group">
-            <label>Repulsion (c_rep) <span class="value" id="val-c_rep">1.00</span></label>
-            <input type="range" id="c_rep" min="0.1" max="3.0" value="1.0" step="0.05">
+            <div class="control-group">
+                <label>Repulsion (c_rep) <span class="value" id="val-c_rep">1.00</span></label>
+                <input type="range" id="c_rep" min="0.1" max="3.0" value="1.0" step="0.05">
+                <div class="param-desc">How strongly overlapping particles push apart</div>
+            </div>
         </div>
 
         <div class="divider"></div>
@@ -591,17 +766,22 @@
                 <div class="color-swatch swatch-forest" data-scheme="forest" title="Forest"></div>
                 <div class="color-swatch swatch-mono" data-scheme="mono" title="Monochrome"></div>
             </div>
+            <div class="color-legend">
+                <span>Unhappy</span>
+                <div class="legend-gradient"></div>
+                <span>Happy</span>
+            </div>
         </div>
 
         <div class="control-group">
             <label>Presets</label>
             <div class="preset-grid">
-                <button class="preset-btn" data-preset="default">Default</button>
-                <button class="preset-btn" data-preset="clusters">Clusters</button>
-                <button class="preset-btn" data-preset="swarm">Swarm</button>
-                <button class="preset-btn" data-preset="crystals">Crystals</button>
-                <button class="preset-btn" data-preset="fluid">Fluid</button>
-                <button class="preset-btn" data-preset="chaos">Chaos</button>
+                <button class="preset-btn" data-preset="default" title="Balanced parameters for stable structures">Default</button>
+                <button class="preset-btn" data-preset="clusters" title="Tight groups that maintain spacing">Clusters</button>
+                <button class="preset-btn" data-preset="swarm" title="Loose flocking, fluid movement">Swarm</button>
+                <button class="preset-btn" data-preset="crystals" title="Rigid lattice-like formations">Crystals</button>
+                <button class="preset-btn" data-preset="fluid" title="Flowing, liquid-like behavior">Fluid</button>
+                <button class="preset-btn" data-preset="chaos" title="High energy, unpredictable motion">Chaos</button>
             </div>
         </div>
 
@@ -611,6 +791,30 @@
         </div>
 
         <div class="divider"></div>
+
+        <div class="toggle-row">
+            <label>Particle Inspector</label>
+            <div class="toggle-switch" id="toggle-inspector" title="Click particles to see their data"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="collapsible">How Particle Lenia Works</button>
+        <div class="collapsible-content">
+            <div class="info-text">
+                <strong>Particle Lenia</strong> is an artificial life simulation where simple rules create complex, life-like behavior.
+                <br><br>
+                <strong>1. Sensing:</strong> Each particle detects neighbors within a radius and measures local "density" (U).
+                <br><br>
+                <strong>2. Growth:</strong> Particles are attracted to their ideal density. Too sparse or too crowded = unhappy. Just right = growth (G).
+                <br><br>
+                <strong>3. Repulsion:</strong> Overlapping particles push apart (R).
+                <br><br>
+                <strong>4. Movement:</strong> Particles flow down the energy gradient: E = R − G. They move toward lower energy states.
+                <br><br>
+                The balance between growth and repulsion creates self-organizing structures that resemble living organisms.
+            </div>
+        </div>
 
         <div class="interaction-hint">
             <p><strong>Interact:</strong> Click & drag to attract particles</p>
@@ -622,10 +826,48 @@
         </div>
     </div>
 
+    <!-- Particle Inspector Panel -->
+    <div id="particle-inspector">
+        <button class="close-inspector">×</button>
+        <h4>🔬 Particle Inspector</h4>
+        <div class="inspector-row">
+            <span>Position</span>
+            <span class="inspector-value" id="insp-pos">(0.00, 0.00)</span>
+        </div>
+        <div class="inspector-row">
+            <span>Neighbors</span>
+            <span class="inspector-value" id="insp-neighbors">0</span>
+        </div>
+        <div class="inspector-row">
+            <span>Density (U)</span>
+            <span class="inspector-value" id="insp-density">0.00</span>
+        </div>
+        <div class="inspector-bar"><div class="inspector-bar-fill bar-density" id="insp-density-bar"></div></div>
+        <div class="inspector-row">
+            <span>Growth (G)</span>
+            <span class="inspector-value" id="insp-growth">0.00</span>
+        </div>
+        <div class="inspector-bar"><div class="inspector-bar-fill bar-growth" id="insp-growth-bar"></div></div>
+        <div class="inspector-row">
+            <span>Repulsion (R)</span>
+            <span class="inspector-value" id="insp-repulsion">0.00</span>
+        </div>
+        <div class="inspector-bar"><div class="inspector-bar-fill bar-repulsion" id="insp-repulsion-bar"></div></div>
+        <div class="inspector-row" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <span>Energy (R−G)</span>
+            <span class="inspector-value" id="insp-energy">0.00</span>
+        </div>
+        <div class="inspector-row">
+            <span>State</span>
+            <span class="inspector-value" id="insp-state">Balanced</span>
+        </div>
+    </div>
+
     <div id="stats">
         <div class="stat-row">
             <span>FPS: <span class="stat-value" id="fps">0</span></span>
             <span>Particles: <span class="stat-value" id="particle-count">0</span></span>
+            <span>Energy: <span class="stat-value" id="avg-energy">0.00</span></span>
         </div>
     </div>
 
@@ -1290,6 +1532,8 @@
         class UIController {
             constructor(simulation) {
                 this.sim = simulation;
+                this.inspectorEnabled = false;
+                this.selectedParticle = -1;
                 this.setupSliders();
                 this.setupButtons();
                 this.setupPresets();
@@ -1297,6 +1541,8 @@
                 this.setupToggle();
                 this.setupZoom();
                 this.setupWraparound();
+                this.setupCollapsibles();
+                this.setupInspector();
                 this.startStatsUpdate();
             }
 
@@ -1450,10 +1696,142 @@
                 });
             }
 
+            setupCollapsibles() {
+                document.querySelectorAll('.collapsible').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        btn.classList.toggle('active');
+                        const content = btn.nextElementSibling;
+                        content.classList.toggle('show');
+                    });
+                });
+            }
+
+            setupInspector() {
+                const toggle = document.getElementById('toggle-inspector');
+                const inspector = document.getElementById('particle-inspector');
+                const closeBtn = inspector.querySelector('.close-inspector');
+                const canvas = this.sim.canvas;
+
+                // Toggle inspector mode
+                toggle.addEventListener('click', () => {
+                    this.inspectorEnabled = !this.inspectorEnabled;
+                    toggle.classList.toggle('active', this.inspectorEnabled);
+                    if (!this.inspectorEnabled) {
+                        inspector.classList.remove('visible');
+                        this.selectedParticle = -1;
+                    }
+                });
+
+                // Close inspector
+                closeBtn.addEventListener('click', () => {
+                    inspector.classList.remove('visible');
+                    this.selectedParticle = -1;
+                });
+
+                // Click to select particle
+                canvas.addEventListener('click', (e) => {
+                    if (!this.inspectorEnabled) return;
+
+                    const rect = canvas.getBoundingClientRect();
+                    const clickX = (e.clientX - rect.left) / rect.width * 2 - 1;
+                    const clickY = -((e.clientY - rect.top) / rect.height * 2 - 1);
+
+                    const aspect = canvas.width / canvas.height;
+                    let simX, simY;
+                    if (aspect > 1) {
+                        simX = clickX * this.sim.bounds * aspect / this.sim.zoom;
+                        simY = clickY * this.sim.bounds / this.sim.zoom;
+                    } else {
+                        simX = clickX * this.sim.bounds / this.sim.zoom;
+                        simY = clickY * this.sim.bounds / aspect / this.sim.zoom;
+                    }
+
+                    // Find closest particle
+                    let closest = -1;
+                    let minDist = Infinity;
+                    const n = this.sim.params.numParticles;
+
+                    for (let i = 0; i < n; i++) {
+                        const dx = simX - this.sim.positions[i * 2];
+                        const dy = simY - this.sim.positions[i * 2 + 1];
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < minDist && dist < 2) {
+                            minDist = dist;
+                            closest = i;
+                        }
+                    }
+
+                    if (closest >= 0) {
+                        this.selectedParticle = closest;
+                        // Position inspector near click
+                        inspector.style.left = Math.min(e.clientX + 20, window.innerWidth - 220) + 'px';
+                        inspector.style.top = Math.min(e.clientY - 50, window.innerHeight - 300) + 'px';
+                        inspector.classList.add('visible');
+                    } else {
+                        inspector.classList.remove('visible');
+                        this.selectedParticle = -1;
+                    }
+                });
+            }
+
+            updateInspector() {
+                if (this.selectedParticle < 0) return;
+
+                const i = this.selectedParticle;
+                const sim = this.sim;
+
+                // Check if particle still exists
+                if (i >= sim.params.numParticles) {
+                    document.getElementById('particle-inspector').classList.remove('visible');
+                    this.selectedParticle = -1;
+                    return;
+                }
+
+                const x = sim.positions[i * 2];
+                const y = sim.positions[i * 2 + 1];
+                const fields = sim.calculateFields(x, y, i);
+
+                // Count actual neighbors
+                const nearby = sim.getNearbyParticles(x, y, sim.params.mu_k + 3 * sim.params.sigma_k);
+                const neighbors = nearby.filter(idx => idx !== i).length;
+
+                // Update display
+                document.getElementById('insp-pos').textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+                document.getElementById('insp-neighbors').textContent = neighbors;
+                document.getElementById('insp-density').textContent = fields.U.toFixed(3);
+                document.getElementById('insp-growth').textContent = fields.G.toFixed(3);
+                document.getElementById('insp-repulsion').textContent = fields.R.toFixed(3);
+                document.getElementById('insp-energy').textContent = fields.E.toFixed(3);
+
+                // Update bars (scaled to reasonable max)
+                document.getElementById('insp-density-bar').style.width = Math.min(100, fields.U * 50) + '%';
+                document.getElementById('insp-growth-bar').style.width = Math.min(100, fields.G * 100) + '%';
+                document.getElementById('insp-repulsion-bar').style.width = Math.min(100, fields.R * 100) + '%';
+
+                // Determine state
+                let state = 'Balanced';
+                if (fields.G > 0.8) state = '😊 Happy';
+                else if (fields.G < 0.2) state = '😟 Seeking';
+                if (fields.R > 0.3) state = '😰 Crowded';
+                document.getElementById('insp-state').textContent = state;
+            }
+
             startStatsUpdate() {
                 setInterval(() => {
                     document.getElementById('fps').textContent = this.sim.fps;
                     document.getElementById('particle-count').textContent = this.sim.params.numParticles;
+
+                    // Calculate average energy
+                    let totalEnergy = 0;
+                    const n = this.sim.params.numParticles;
+                    for (let i = 0; i < n; i++) {
+                        totalEnergy += this.sim.energies[i];
+                    }
+                    const avgEnergy = totalEnergy / n;
+                    document.getElementById('avg-energy').textContent = avgEnergy.toFixed(2);
+
+                    // Update inspector if active
+                    this.updateInspector();
                 }, 200);
             }
         }
