@@ -647,4 +647,30 @@ describe('Integration: loadJsonScene -> generateGlslFromJson', () => {
     expect(glsl).toContain('u_time');
     expect(glsl).toContain('sin');
   });
+
+  it('should apply parameter overrides in refs (LCD-002)', () => {
+    const json = {
+      version: '1.0',
+      defs: {
+        baseSphere: { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] } }
+      },
+      root: {
+        type: 'union',
+        children: [
+          // First ref: default radius 1.0
+          { type: 'ref', id: 'baseSphere' },
+          // Second ref: overridden radius 0.5
+          { type: 'ref', id: 'baseSphere', params: { r: 0.5 }, transform: { translate: [2, 0, 0] } }
+        ]
+      }
+    };
+    const scene = loadJsonScene(json);
+    const glsl = generateGlslFromJson(scene);
+
+    // Should generate two different sphere calls with different radii
+    expect(glsl).toContain('sdSphere');
+    // The overridden radius should appear in the generated code
+    expect(glsl).toContain('0.5');
+    expect(glsl).toContain('1.0');
+  });
 });

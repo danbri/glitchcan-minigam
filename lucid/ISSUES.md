@@ -33,17 +33,20 @@
 
 ---
 
-### LCD-002: Parameter overrides in refs not implemented
-**Status:** Open
-**Component:** core/json-loader.js (lines 305-307)
-**Description:** The schema supports parameter overrides when using `ref` nodes, but the actual override logic is stubbed with a TODO comment. This prevents parametric instancing.
+### LCD-002: Parameter overrides in refs not implemented [FIXED]
+**Status:** Fixed (2026-01-04)
+**Component:** core/json-codegen.js
+**Description:** Refs now support parameter overrides via `params` field. The loader stores overrides, and the codegen applies them when generating GLSL.
 
-**Code Location:**
-```javascript
-// TODO: Implement parameter override logic
+**Fix Applied:**
+- Added `applyParamOverrides()` function to json-codegen.js
+- Updated `generateRef()` to apply overrides before expanding definition
+- Demo scene: `scenes/csg/ref-overrides.json`
+
+**Usage:**
+```json
+{ "type": "ref", "id": "baseSphere", "params": { "r": 0.5, "color": [1, 0, 0] } }
 ```
-
-**Impact:** Cannot create variations of defs with different parameter values. Forces duplication of geometry instead of parametric reuse.
 
 ---
 
@@ -406,9 +409,11 @@ Should consolidate into coherent structure.
 | ID | Description | Fixed Date |
 |----|-------------|------------|
 | LCD-001 | smoothIntersect operator implemented | 2026-01-04 |
+| LCD-002 | Parameter overrides in refs | 2026-01-04 |
 | LCD-006 | invaderScale param not working | 2026-01-04 |
 | LCD-005 (partial) | Wiggler icon cluttered, not sticky | 2026-01-04 |
 | LCD-040 (partial) | Added tiered test framework & pre-commit hook | 2026-01-04 |
+| LCD-043 | Stale test expectations fixed | 2026-01-04 |
 
 ---
 

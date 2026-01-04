@@ -823,14 +823,19 @@ function generateTransform(node, ctx) {
 }
 
 /**
- * Generate ref - expand definition with any parent transform
+ * Generate ref - expand definition with parameter overrides and parent transform
  */
 function generateRef(node, ctx) {
   // Get the processed definition
-  const def = node.def;
+  let def = node.def;
   if (!def) {
     console.warn(`Ref node missing definition: ${node.refId}`);
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply parameter overrides if any (LCD-002)
+  if (node.overrides) {
+    def = applyParamOverrides(def, node.overrides);
   }
 
   // If this ref has a transform from parent, apply it to the def
@@ -843,6 +848,24 @@ function generateRef(node, ctx) {
   }
 
   return walkNode(def, ctx);
+}
+
+/**
+ * Apply parameter overrides to a definition node
+ * Returns a new node with overridden params merged in
+ */
+function applyParamOverrides(def, overrides) {
+  // Deep clone to avoid mutating the original definition
+  const cloned = JSON.parse(JSON.stringify(def));
+
+  // Merge overrides into params
+  if (cloned.params) {
+    for (const [key, value] of Object.entries(overrides)) {
+      cloned.params[key] = value;
+    }
+  }
+
+  return cloned;
 }
 
 /**
