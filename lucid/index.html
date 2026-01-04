@@ -1618,6 +1618,7 @@
     import { SimpleRaymarcher } from './ui/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
+    import { PhysicsScene } from './core/physics/physics-scene.js';
 
     // ============================================
     // VERSION INFO
@@ -1760,6 +1761,10 @@
     // Visibility state - pause rendering when tab/app not visible
     let isAppVisible = true;
 
+    // Physics simulation state
+    let currentPhysicsScene = null;
+    let physicsParamMap = null; // Maps physics body IDs to param names
+
     // Camera orbit state
     let isDragging = false;
     let lastMouseX = 0;
@@ -1895,6 +1900,23 @@
             renderer.overrideTime = null; // Use normal time
           }
 
+          // Step physics simulation and update params
+          if (currentPhysicsScene && currentPhysicsScene.enabled && animState !== 'frozen') {
+            currentPhysicsScene.step(Math.min(deltaTime, 1/30)); // Cap to avoid instability
+
+            // Sync physics positions to shader params
+            for (const body of currentPhysicsScene.bodies) {
+              if (body.isStatic) continue;
+              const prefix = body.id;
+              if (physicsParamMap && physicsParamMap[prefix]) {
+                const map = physicsParamMap[prefix];
+                if (map.x) renderer.setParam(map.x, body.position[0]);
+                if (map.y) renderer.setParam(map.y, body.position[1]);
+                if (map.z) renderer.setParam(map.z, body.position[2]);
+              }
+            }
+          }
+
           renderer.render();
           renderLoopId = requestAnimationFrame(renderLoop);
         }
@@ -2002,6 +2024,29 @@
 
     function renderJson(json) {
       const scene = loadJsonScene(json);
+
+      // Initialize physics if scene has physics config
+      if (json.physics && json.physics.enabled) {
+        currentPhysicsScene = new PhysicsScene(json);
+
+        // Build param map: maps body IDs to param names for X/Y/Z
+        physicsParamMap = {};
+        const params = json.params || {};
+        for (const [paramName, paramDef] of Object.entries(params)) {
+          if (paramDef.physics) {
+            // Format: "ball1.x" -> bodyId="ball1", axis="x"
+            const [bodyId, axis] = paramDef.physics.split('.');
+            if (!physicsParamMap[bodyId]) {
+              physicsParamMap[bodyId] = {};
+            }
+            physicsParamMap[bodyId][axis] = paramName;
+          }
+        }
+        console.log(`⚛️ Physics enabled: ${currentPhysicsScene.bodies.length} bodies`);
+      } else {
+        currentPhysicsScene = null;
+        physicsParamMap = null;
+      }
 
       // Apply scene's quality preset before generating GLSL
       // (quality affects shader compilation via setQuality -> compileShaders)
