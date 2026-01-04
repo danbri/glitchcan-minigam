@@ -23,7 +23,8 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--headless=new']
+    executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
+    args: ['--headless=new', '--no-sandbox']
   });
 
   const page = await browser.newPage();

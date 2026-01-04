@@ -1,8 +1,255 @@
 {
   "title": "Fearsome Wolf",
-  "subtitle": "v1.3 - P2 polish: tongue, larger claws, color variation",
-  "version": "1.3",
+  "subtitle": "v1.4 - Parametric model with semantic controls",
+  "version": "1.4",
   "camera": { "distance": 12, "phi": 0.3, "theta": 0.25, "target": [0, 0.5, 0] },
+  "notes": "Parametric wolf with aggressive stance, open jaw, visible fangs. Each parameter has clear anatomical meaning.",
+
+  "params": {
+    "_comment_body": "=== BODY PARAMETERS ===",
+    "bodyLength": {
+      "value": 3.5,
+      "type": "scalar",
+      "min": 2.5,
+      "max": 4.5,
+      "description": "Total body length from nose to tail base",
+      "units": "meters (relative)",
+      "affects": ["all proportions"]
+    },
+    "shoulderHeight": {
+      "value": 0.95,
+      "type": "scalar",
+      "min": 0.7,
+      "max": 1.2,
+      "description": "Height at shoulder",
+      "units": "meters (relative)",
+      "affects": ["body", "legs"]
+    },
+    "chestWidth": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.7,
+      "max": 1.3,
+      "description": "Width of chest/torso",
+      "units": "meters (relative)",
+      "affects": ["body mass"]
+    },
+    "forwardLean": {
+      "value": 15,
+      "type": "scalar",
+      "min": 0,
+      "max": 30,
+      "description": "Forward lean angle for aggressive stance",
+      "units": "degrees",
+      "affects": ["body pose"]
+    },
+
+    "_comment_head": "=== HEAD PARAMETERS ===",
+    "jawOpenAngle": {
+      "value": 20,
+      "type": "scalar",
+      "min": 0,
+      "max": 45,
+      "description": "How wide the jaw is open. 0 = closed, 45 = full snarl",
+      "units": "degrees",
+      "affects": ["jaw rotation", "fang visibility"]
+    },
+    "muzzleLength": {
+      "value": 0.65,
+      "type": "scalar",
+      "min": 0.4,
+      "max": 0.9,
+      "description": "Length of muzzle/snout",
+      "units": "meters (relative)",
+      "affects": ["head shape"]
+    },
+    "earPinAngle": {
+      "value": 35,
+      "type": "scalar",
+      "min": 0,
+      "max": 60,
+      "description": "How far ears are pinned back. 0 = upright, 60 = flat",
+      "units": "degrees",
+      "affects": ["ear pose", "aggression level"]
+    },
+
+    "_comment_fangs": "=== FANG PARAMETERS ===",
+    "fangLength": {
+      "value": 0.28,
+      "type": "scalar",
+      "min": 0.15,
+      "max": 0.40,
+      "description": "Length of upper canine fangs",
+      "units": "meters (relative)",
+      "affects": ["fang visibility"],
+      "constraint": "Must be visible below jaw line for fearsome appearance"
+    },
+    "fangWidth": {
+      "value": 0.06,
+      "type": "scalar",
+      "min": 0.03,
+      "max": 0.10,
+      "description": "Thickness of fangs",
+      "units": "meters (relative)",
+      "affects": ["fang prominence"]
+    },
+
+    "_comment_claws": "=== CLAW PARAMETERS ===",
+    "clawLength": {
+      "value": 0.15,
+      "type": "scalar",
+      "min": 0.08,
+      "max": 0.25,
+      "description": "Length of claws",
+      "units": "meters (relative)",
+      "affects": ["claw visibility"]
+    },
+    "clawCurve": {
+      "value": 40,
+      "type": "scalar",
+      "min": 20,
+      "max": 60,
+      "description": "Curvature of claws",
+      "units": "degrees",
+      "affects": ["claw shape"]
+    },
+
+    "_comment_tail": "=== TAIL PARAMETERS ===",
+    "tailLength": {
+      "value": 1.5,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 2.0,
+      "description": "Total tail length",
+      "units": "meters (relative)",
+      "affects": ["tail"]
+    },
+    "tailRaise": {
+      "value": 12,
+      "type": "scalar",
+      "min": -10,
+      "max": 45,
+      "description": "Tail elevation angle. Negative = tucked, positive = raised",
+      "units": "degrees",
+      "affects": ["tail pose"]
+    },
+
+    "_comment_hackles": "=== HACKLES PARAMETERS ===",
+    "hacklesRaised": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 0.5,
+      "description": "How raised the hackles are. 0 = flat, 0.5 = fully bristled",
+      "units": "displacement amount",
+      "affects": ["spine fur", "threat display"]
+    },
+
+    "_comment_eyes": "=== EYE PARAMETERS ===",
+    "eyeGlow": {
+      "value": 0.7,
+      "type": "scalar",
+      "min": 0.0,
+      "max": 1.5,
+      "description": "Eye emission intensity for predator gaze",
+      "units": "emission",
+      "affects": ["eye material"]
+    },
+
+    "_comment_color": "=== COLOR PARAMETERS ===",
+    "bodyColor": {
+      "value": [0.22, 0.20, 0.18],
+      "type": "color3",
+      "description": "Main body fur color (dark gray-brown)"
+    },
+    "headColor": {
+      "value": [0.25, 0.23, 0.21],
+      "type": "color3",
+      "description": "Head fur color (slightly lighter)"
+    },
+    "hacklesColor": {
+      "value": [0.32, 0.30, 0.28],
+      "type": "color3",
+      "description": "Raised hackles color (lighter tips)"
+    },
+    "eyeColor": {
+      "value": [0.95, 0.5, 0.05],
+      "type": "color3",
+      "description": "Eye color (amber/orange for wolf)"
+    },
+    "fangColor": {
+      "value": [0.98, 0.96, 0.92],
+      "type": "color3",
+      "description": "Fang/tooth color (ivory white)"
+    },
+    "tongueColor": {
+      "value": [0.75, 0.20, 0.22],
+      "type": "color3",
+      "description": "Tongue color (red-pink)"
+    },
+    "clawColor": {
+      "value": [0.06, 0.06, 0.06],
+      "type": "color3",
+      "description": "Claw color (near black)"
+    }
+  },
+
+  "rig": {
+    "_comment": "Constraints and animation for wolf model",
+
+    "constraints": {
+      "fangLength": {
+        "min": 0.20,
+        "max": 0.35,
+        "reason": "Fangs MUST be visible below jaw for fearsome appearance",
+        "severity": "CRITICAL"
+      },
+      "jawOpenAngle": {
+        "min": 15,
+        "max": 35,
+        "reason": "Jaw should be open enough to show fangs but not cartoonishly wide",
+        "severity": "HIGH"
+      },
+      "earPinAngle": {
+        "min": 25,
+        "max": 50,
+        "reason": "Ears pinned back indicates aggression in wolves",
+        "severity": "MEDIUM"
+      }
+    },
+
+    "animation": {
+      "breathCycle": {
+        "driver": {
+          "expr": "mul",
+          "args": [{ "var": "time" }, 0.8, 6.28318],
+          "description": "Breathing at 0.8 Hz"
+        },
+        "coupling": {
+          "chestExpand": {
+            "amplitude": 0.03,
+            "phase": 0.0,
+            "description": "Subtle chest expansion"
+          }
+        }
+      },
+      "snarl": {
+        "driver": {
+          "expr": "mul",
+          "args": [{ "var": "time" }, 0.3, 6.28318],
+          "description": "Slow snarl undulation"
+        },
+        "coupling": {
+          "lipCurl": {
+            "amplitude": 0.02,
+            "phase": 0.0,
+            "description": "Lip curling for snarl"
+          }
+        }
+      }
+    }
+  },
+
   "root": {
     "comment": "FEARSOME WOLF - Visible weapons, aggressive stance",
     "type": "smoothUnion", "k": 0.25,
