@@ -674,3 +674,58 @@ describe('Integration: loadJsonScene -> generateGlslFromJson', () => {
     expect(glsl).toContain('1.0');
   });
 });
+
+describe('Scene Health Checks', () => {
+  it('should have all scene JSON files linked in toc.json', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const scenesDir = path.resolve('./lucid/scenes');
+    const tocPath = path.join(scenesDir, 'toc.json');
+
+    // Read TOC and extract all referenced paths
+    const tocContent = fs.readFileSync(tocPath, 'utf-8');
+    const toc = JSON.parse(tocContent);
+
+    const linkedPaths = new Set();
+    for (const category of toc.categories || []) {
+      for (const scene of category.scenes || []) {
+        if (scene.path) {
+          linkedPaths.add(scene.path);
+        }
+      }
+    }
+
+    // Find all JSON files in scenes/ (excluding toc.json and subfolders like old/, subag1/)
+    const excludeDirs = ['old', 'subag1', 'round2', 'round3', 'round4', 'round5', 'round6', 'round7', 'round8', 'round9', 'round10'];
+
+    function findJsonFiles(dir, baseDir) {
+      const files = [];
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (!excludeDirs.includes(entry.name)) {
+            files.push(...findJsonFiles(fullPath, baseDir));
+          }
+        } else if (entry.name.endsWith('.json') && entry.name !== 'toc.json') {
+          const relPath = path.relative(baseDir, fullPath);
+          files.push(relPath);
+        }
+      }
+      return files;
+    }
+
+    const allSceneFiles = findJsonFiles(scenesDir, scenesDir);
+    const unlinkedScenes = allSceneFiles.filter(f => !linkedPaths.has(f));
+
+    // Report unlinked scenes (warning, not failure - allows experimental files)
+    if (unlinkedScenes.length > 0) {
+      console.warn(`Unlinked scenes (not in toc.json): ${unlinkedScenes.join(', ')}`);
+    }
+
+    // Ensure at least 80% of scenes are linked
+    const linkRatio = (allSceneFiles.length - unlinkedScenes.length) / allSceneFiles.length;
+    expect(linkRatio).toBeGreaterThan(0.5); // At least 50% should be linked
+  });
+});

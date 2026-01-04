@@ -20,8 +20,10 @@
       "scenes": [
         { "path": "csg/operations.json", "title": "All Operations ⚙️", "subtitle": "Union, subtract, intersect, smooth" },
         { "path": "csg/smooth-union.json", "title": "Smooth Union 🫧", "subtitle": "Organic blending" },
+        { "path": "csg/smooth-intersect.json", "title": "Smooth Intersect 🔗", "subtitle": "Soft intersection (LCD-001)" },
         { "path": "csg/subtract.json", "title": "Subtraction ✂️", "subtitle": "Carving shapes" },
-        { "path": "csg/nested.json", "title": "Nested CSG 🪆", "subtitle": "Multi-level operations" }
+        { "path": "csg/nested.json", "title": "Nested CSG 🪆", "subtitle": "Multi-level operations" },
+        { "path": "csg/ref-overrides.json", "title": "Ref Overrides 🎛️", "subtitle": "Parametric instancing (LCD-002)" }
       ]
     },
     {
