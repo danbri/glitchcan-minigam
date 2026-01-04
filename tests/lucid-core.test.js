@@ -311,6 +311,133 @@ describe('json-codegen.js', () => {
       expect(glsl).toContain('max(');
     });
 
+    it('should generate GLSL for smoothIntersect with k parameter', () => {
+      const scene = {
+        root: {
+          type: 'smoothIntersect',
+          k: 0.25,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.8, 0.8, 0.8], color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      // Should generate smooth maximum (smax) formula
+      expect(glsl).toContain('smoothIntersect');
+      expect(glsl).toContain('0.25'); // k parameter
+    });
+
+    it('should generate smooth max formula for smoothIntersect', () => {
+      const scene = {
+        root: {
+          type: 'smoothIntersect',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'sphere', params: { r: 0.5, color: [0, 1, 0] }, transform: { translate: [0.5, 0, 0] } }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      // Smooth max formula uses: 0.5 - 0.5 * (b - a) / k (note the minus sign)
+      expect(glsl).toContain('0.5 - 0.5');
+      // And adds k * h * (1.0 - h) instead of subtracting (note the plus sign)
+      expect(glsl).toContain('+ 0.3');
+    });
+
+    it('should handle smoothIntersect with 3+ children', () => {
+      const scene = {
+        root: {
+          type: 'smoothIntersect',
+          k: 0.2,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.8, 0.8, 0.8], color: [0, 1, 0] }, transform: {} },
+            { type: 'sphere', params: { r: 0.6, color: [0, 0, 1] }, transform: { translate: [0, 0.5, 0] } }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('smoothIntersect');
+      // Should chain multiple smooth max operations
+      expect(glsl).toContain('result');
+    });
+
+    it('should handle smoothIntersect with single child', () => {
+      const scene = {
+        root: {
+          type: 'smoothIntersect',
+          k: 0.2,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      // Should still produce valid GLSL
+      expect(glsl).toContain('g_df_scene');
+      expect(glsl).toContain('sdSphere');
+    });
+
+    it('should handle smoothIntersect with variable k parameter', () => {
+      const scene = {
+        params: {
+          blendK: { value: 0.3, type: 'scalar', min: 0, max: 1 }
+        },
+        root: {
+          type: 'smoothIntersect',
+          k: { type: 'var', name: 'blendK' },
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'box', params: { size: [0.8, 0.8, 0.8], color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const glsl = generateGlslFromJson(scene);
+      expect(glsl).toContain('u_blendK');
+    });
+
+    it('should generate different code for smoothUnion vs smoothIntersect', () => {
+      const unionScene = {
+        root: {
+          type: 'smoothUnion',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'sphere', params: { r: 0.5, color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const intersectScene = {
+        root: {
+          type: 'smoothIntersect',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1.0, color: [1, 0, 0] }, transform: {} },
+            { type: 'sphere', params: { r: 0.5, color: [0, 1, 0] }, transform: {} }
+          ],
+          transform: {}
+        }
+      };
+      const unionGlsl = generateGlslFromJson(unionScene);
+      const intersectGlsl = generateGlslFromJson(intersectScene);
+
+      // smoothUnion uses: 0.5 + 0.5 * ... and subtracts k*h*(1-h)
+      expect(unionGlsl).toContain('0.5 + 0.5');
+      expect(unionGlsl).toContain('- 0.3');
+
+      // smoothIntersect uses: 0.5 - 0.5 * ... and adds k*h*(1-h)
+      expect(intersectGlsl).toContain('0.5 - 0.5');
+      expect(intersectGlsl).toContain('+ 0.3');
+    });
+
     it('should generate rotation helper functions', () => {
       const scene = {
         root: {
