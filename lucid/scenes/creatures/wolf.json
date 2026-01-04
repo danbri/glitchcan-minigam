@@ -1,7 +1,7 @@
 {
   "title": "Fearsome Wolf",
-  "subtitle": "v1.7 - Prominent ears, bushy tail, refined hackles",
-  "version": "1.7",
+  "subtitle": "v1.8 - Parametric fangs with debug sliders",
+  "version": "1.8",
   "camera": { "distance": 12, "phi": 0.3, "theta": 0.25, "target": [0, 0.5, 0] },
   "notes": "Parametric wolf with aggressive stance, open jaw, visible fangs. Each parameter has clear anatomical meaning.",
 
@@ -73,25 +73,62 @@
       "affects": ["ear pose", "aggression level"]
     },
 
-    "_comment_fangs": "=== FANG PARAMETERS ===",
+    "_comment_fangs": "=== FANG PARAMETERS (DEBUG CONTROLS) ===",
     "fangLength": {
-      "value": 0.28,
+      "value": 0.18,
       "type": "scalar",
-      "min": 0.15,
-      "max": 0.40,
-      "description": "Length of upper canine fangs",
-      "units": "meters (relative)",
-      "affects": ["fang visibility"],
-      "constraint": "Must be visible below jaw line for fearsome appearance"
+      "min": 0.08,
+      "max": 0.35,
+      "description": "Length of upper canine fangs (Y axis)",
+      "units": "meters (relative)"
     },
     "fangWidth": {
-      "value": 0.06,
+      "value": 0.05,
       "type": "scalar",
-      "min": 0.03,
+      "min": 0.02,
+      "max": 0.12,
+      "description": "Width of fangs (X axis)",
+      "units": "meters (relative)"
+    },
+    "fangDepth": {
+      "value": 0.04,
+      "type": "scalar",
+      "min": 0.02,
       "max": 0.10,
-      "description": "Thickness of fangs",
-      "units": "meters (relative)",
-      "affects": ["fang prominence"]
+      "description": "Depth/thickness of fangs (Z axis)",
+      "units": "meters (relative)"
+    },
+    "fangSpread": {
+      "value": 0.14,
+      "type": "scalar",
+      "min": 0.08,
+      "max": 0.25,
+      "description": "Horizontal distance from centerline",
+      "units": "meters (relative)"
+    },
+    "fangDrop": {
+      "value": 0.55,
+      "type": "scalar",
+      "min": 0.30,
+      "max": 0.80,
+      "description": "Vertical position (lower = more visible below jaw)",
+      "units": "meters (relative)"
+    },
+    "fangForward": {
+      "value": 2.95,
+      "type": "scalar",
+      "min": 2.70,
+      "max": 3.20,
+      "description": "Forward position along muzzle",
+      "units": "meters (relative)"
+    },
+    "fangTilt": {
+      "value": 15,
+      "type": "scalar",
+      "min": 0,
+      "max": 35,
+      "description": "Forward tilt angle of fangs",
+      "units": "degrees"
     },
 
     "_comment_claws": "=== CLAW PARAMETERS ===",
@@ -311,16 +348,88 @@
         }
       },
       {
-        "comment": "FANGS - v1.5: MASSIVELY ENLARGED, PROTRUDING",
+        "comment": "FANGS - v1.8: Parametric, properly sized canines",
         "type": "material",
-        "params": { "color": [1.0, 1.0, 0.98], "emit": 0.25 },
+        "params": { "color": { "var": "fangColor" }, "emit": 0.15 },
         "child": {
           "type": "union",
           "children": [
-            { "comment": "Upper left canine - HUGE", "type": "ellipsoid", "params": { "radii": [0.12, 0.42, 0.10] }, "transform": { "translate": [0.16, 0.38, 3.15], "rotate": [25, 0, 10] } },
-            { "comment": "Upper right canine - HUGE", "type": "ellipsoid", "params": { "radii": [0.12, 0.42, 0.10] }, "transform": { "translate": [-0.16, 0.38, 3.15], "rotate": [25, 0, -10] } },
-            { "comment": "Lower left canine", "type": "ellipsoid", "params": { "radii": [0.10, 0.32, 0.08] }, "transform": { "translate": [0.14, 0.25, 3.0], "rotate": [-20, 0, 8] } },
-            { "comment": "Lower right canine", "type": "ellipsoid", "params": { "radii": [0.10, 0.32, 0.08] }, "transform": { "translate": [-0.14, 0.25, 3.0], "rotate": [-20, 0, -8] } }
+            {
+              "comment": "Upper left canine",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "var": "fangWidth" },
+                  { "var": "fangLength" },
+                  { "var": "fangDepth" }
+                ]
+              },
+              "transform": {
+                "translate": [
+                  { "var": "fangSpread" },
+                  { "var": "fangDrop" },
+                  { "var": "fangForward" }
+                ],
+                "rotate": [{ "var": "fangTilt" }, 0, 8]
+              }
+            },
+            {
+              "comment": "Upper right canine",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "var": "fangWidth" },
+                  { "var": "fangLength" },
+                  { "var": "fangDepth" }
+                ]
+              },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [{ "var": "fangSpread" }, -1] },
+                  { "var": "fangDrop" },
+                  { "var": "fangForward" }
+                ],
+                "rotate": [{ "var": "fangTilt" }, 0, -8]
+              }
+            },
+            {
+              "comment": "Lower left canine (smaller)",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "expr": "mul", "args": [{ "var": "fangWidth" }, 0.75] },
+                  { "expr": "mul", "args": [{ "var": "fangLength" }, 0.7] },
+                  { "expr": "mul", "args": [{ "var": "fangDepth" }, 0.75] }
+                ]
+              },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [{ "var": "fangSpread" }, 0.9] },
+                  { "expr": "sub", "args": [{ "var": "fangDrop" }, 0.25] },
+                  { "expr": "sub", "args": [{ "var": "fangForward" }, 0.1] }
+                ],
+                "rotate": [{ "expr": "mul", "args": [{ "var": "fangTilt" }, -1] }, 0, 6]
+              }
+            },
+            {
+              "comment": "Lower right canine (smaller)",
+              "type": "ellipsoid",
+              "params": {
+                "radii": [
+                  { "expr": "mul", "args": [{ "var": "fangWidth" }, 0.75] },
+                  { "expr": "mul", "args": [{ "var": "fangLength" }, 0.7] },
+                  { "expr": "mul", "args": [{ "var": "fangDepth" }, 0.75] }
+                ]
+              },
+              "transform": {
+                "translate": [
+                  { "expr": "mul", "args": [{ "var": "fangSpread" }, -0.9] },
+                  { "expr": "sub", "args": [{ "var": "fangDrop" }, 0.25] },
+                  { "expr": "sub", "args": [{ "var": "fangForward" }, 0.1] }
+                ],
+                "rotate": [{ "expr": "mul", "args": [{ "var": "fangTilt" }, -1] }, 0, -6]
+              }
+            }
           ]
         }
       },
