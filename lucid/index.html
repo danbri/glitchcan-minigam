@@ -1564,8 +1564,10 @@
     <div class="panel-grippy" id="params-grippy" title="Drag to tear off, or double-click to toggle dock"></div>
     <button class="panel-dock" id="btn-params-dock" title="Dock panel">⬇</button>
     <button class="panel-close" id="btn-params-close" title="Close parameters">×</button>
-    <div class="debug-header">
-      <h3>🎛️ Params</h3>
+    <div class="debug-header" style="display: flex; align-items: center; gap: 0.5rem;">
+      <h3 style="margin: 0;">🎛️ Params</h3>
+      <button id="btn-wiggler" title="Wiggle all params (explore phenotypic space)" style="background: none; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 0.8rem;">🔀</button>
+      <button id="btn-wiggler-fast" title="Fast wiggle" style="background: none; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 0.8rem; display: none;">⚡</button>
     </div>
     <div class="debug-content" id="params-content">
       <div class="debug-row" style="color: var(--text-dim); font-style: italic;">
@@ -1986,8 +1988,14 @@
       // Pass scene params and rig to renderer for uniform binding
       renderer.updateScene(glsl, scene.params || {}, scene.rig || null);
 
+      // Stop wiggler if active (before switching scenes)
+      if (wigglerState.active) stopWiggler();
+
       // Update params panel with new scene params and rig constraints
       updateParamsPanel(scene.params || {}, scene.rig);
+
+      // Initialize wiggler with current scene params
+      initWiggler(scene.params || {});
 
       // Update rig info display
       updateRigInfo(scene.rig);
@@ -4019,6 +4027,122 @@
         parseInt(result[3], 16) / 255
       ] : [1, 1, 1];
     }
+
+    // ============================================
+    // PARAM WIGGLER - Oscillate params at non-multiple rates
+    // ============================================
+    let wigglerState = {
+      active: false,
+      fast: false,
+      animationId: null,
+      startTime: 0,
+      // Prime-ish frequencies to avoid sync (non-multiple rates)
+      frequencies: [0.31, 0.47, 0.59, 0.73, 0.89, 1.07, 1.23, 1.41, 1.61, 1.87, 2.03, 2.17, 2.33, 2.51, 2.71, 2.89, 3.07, 3.19, 3.37, 3.53],
+      paramConfigs: [] // Stores {name, min, max, freq, phase} for each param
+    };
+
+    function initWiggler(params) {
+      wigglerState.paramConfigs = [];
+      let freqIndex = 0;
+      for (const [name, param] of Object.entries(params)) {
+        if (param.type === 'scalar') {
+          const min = param.min !== undefined ? param.min : 0;
+          const max = param.max !== undefined ? param.max : 10;
+          const freq = wigglerState.frequencies[freqIndex % wigglerState.frequencies.length];
+          const phase = Math.random() * Math.PI * 2; // Random phase offset
+          wigglerState.paramConfigs.push({ name, min, max, freq, phase, originalValue: param.value });
+          freqIndex++;
+        }
+      }
+    }
+
+    function startWiggler() {
+      if (wigglerState.active) return;
+      wigglerState.active = true;
+      wigglerState.startTime = performance.now();
+
+      const btnWiggler = $('btn-wiggler');
+      const btnFast = $('btn-wiggler-fast');
+      if (btnWiggler) btnWiggler.style.background = 'var(--accent)';
+      if (btnFast) btnFast.style.display = 'inline-block';
+
+      function wiggleLoop() {
+        if (!wigglerState.active) return;
+
+        const elapsed = (performance.now() - wigglerState.startTime) / 1000;
+        const speedMult = wigglerState.fast ? 3.0 : 1.0;
+
+        for (const cfg of wigglerState.paramConfigs) {
+          // Oscillate using sin wave between min and max
+          const t = elapsed * cfg.freq * speedMult + cfg.phase;
+          const normalized = (Math.sin(t) + 1) / 2; // 0 to 1
+          const value = cfg.min + normalized * (cfg.max - cfg.min);
+
+          // Update renderer
+          renderer.setParam(cfg.name, value);
+
+          // Update UI slider and value display
+          const slider = $(`param-slider-${cfg.name}`);
+          const valEl = $(`param-val-${cfg.name}`);
+          if (slider) slider.value = value;
+          if (valEl) valEl.textContent = value.toFixed(2);
+        }
+
+        wigglerState.animationId = requestAnimationFrame(wiggleLoop);
+      }
+
+      wiggleLoop();
+    }
+
+    function stopWiggler() {
+      wigglerState.active = false;
+      wigglerState.fast = false;
+      if (wigglerState.animationId) {
+        cancelAnimationFrame(wigglerState.animationId);
+        wigglerState.animationId = null;
+      }
+
+      const btnWiggler = $('btn-wiggler');
+      const btnFast = $('btn-wiggler-fast');
+      if (btnWiggler) btnWiggler.style.background = 'none';
+      if (btnFast) {
+        btnFast.style.display = 'none';
+        btnFast.style.background = 'none';
+      }
+
+      // Restore original values
+      for (const cfg of wigglerState.paramConfigs) {
+        renderer.setParam(cfg.name, cfg.originalValue);
+        const slider = $(`param-slider-${cfg.name}`);
+        const valEl = $(`param-val-${cfg.name}`);
+        if (slider) slider.value = cfg.originalValue;
+        if (valEl) valEl.textContent = cfg.originalValue.toFixed(2);
+      }
+    }
+
+    function toggleWiggler() {
+      if (wigglerState.active) {
+        stopWiggler();
+      } else {
+        startWiggler();
+      }
+    }
+
+    function toggleWigglerFast() {
+      wigglerState.fast = !wigglerState.fast;
+      const btnFast = $('btn-wiggler-fast');
+      if (btnFast) {
+        btnFast.style.background = wigglerState.fast ? 'var(--accent)' : 'none';
+      }
+    }
+
+    // Setup wiggler button listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnWiggler = $('btn-wiggler');
+      const btnFast = $('btn-wiggler-fast');
+      if (btnWiggler) btnWiggler.addEventListener('click', toggleWiggler);
+      if (btnFast) btnFast.addEventListener('click', toggleWigglerFast);
+    });
 
     // ============================================
     // RIG LAYER UI (Phase 5: Constraint-Based Relationships)
