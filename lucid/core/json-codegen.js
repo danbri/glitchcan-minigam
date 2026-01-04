@@ -945,6 +945,9 @@ ${radialCode}
  * Generate repeat - infinite tiling
  * period: [x, y, z] - spacing between repetitions (0 = no repeat on that axis)
  * exposeId: optional variable name to expose instance ID for per-instance variation
+ *
+ * Supports variable references in period array, e.g.:
+ *   period: [{ "var": "density" }, 2.0, { "var": "density" }]
  */
 function generateRepeat(node, ctx) {
   const period = node.period || [2, 0, 2];
@@ -953,23 +956,61 @@ function generateRepeat(node, ctx) {
   // Apply any transform from the repeat node itself
   const p = applyTransform('p', node.transform, ctx);
 
+  // Helper to check if a period component is statically zero
+  function isStaticZero(v) {
+    return typeof v === 'number' && v === 0;
+  }
+
+  // Helper to check if a period component is statically non-zero (can skip dynamic check)
+  function isStaticNonZero(v) {
+    return typeof v === 'number' && v > 0;
+  }
+
+  // Convert each period component to GLSL using valueToGlsl
+  const p0 = valueToGlsl(period[0], ctx);
+  const p1 = valueToGlsl(period[1], ctx);
+  const p2 = valueToGlsl(period[2], ctx);
+
   // Build period vector string
-  const periodVec = `vec3(${period[0].toFixed(4)}, ${period[1].toFixed(4)}, ${period[2].toFixed(4)})`;
+  const periodVec = `vec3(${p0}, ${p1}, ${p2})`;
 
   // Build safe period vector for cell ID calculation (avoid division by zero)
-  // Replace zero components with 1.0 - we only care about cell IDs on repeating axes
-  const safePeriodVec = `vec3(${period[0] > 0 ? period[0].toFixed(4) : '1.0'}, ${period[1] > 0 ? period[1].toFixed(4) : '1.0'}, ${period[2] > 0 ? period[2].toFixed(4) : '1.0'})`;
+  // For dynamic values, use max(value, 1.0) to ensure safe division
+  function safeComponent(v, glsl) {
+    if (isStaticZero(v)) return '1.0';
+    if (isStaticNonZero(v)) return glsl;
+    // Dynamic value - use max to ensure non-zero
+    return `max(${glsl}, 0.001)`;
+  }
+  const safePeriodVec = `vec3(${safeComponent(period[0], p0)}, ${safeComponent(period[1], p1)}, ${safeComponent(period[2], p2)})`;
 
-  // Build repeat code - only repeat on non-zero axes
+  // Build repeat code - for static zeros skip that axis, otherwise use dynamic mod
   let repeatCode = '';
-  if (period[0] > 0) {
-    repeatCode += `  q.x = mod(q.x + ${(period[0]/2).toFixed(4)}, ${period[0].toFixed(4)}) - ${(period[0]/2).toFixed(4)};\n`;
+  if (!isStaticZero(period[0])) {
+    if (isStaticNonZero(period[0])) {
+      // Static optimization: inline the half-period
+      const half = (period[0] / 2).toFixed(4);
+      repeatCode += `  q.x = mod(q.x + ${half}, ${p0}) - ${half};\n`;
+    } else {
+      // Dynamic: compute half at runtime
+      repeatCode += `  { float _hp = ${p0} * 0.5; q.x = mod(q.x + _hp, ${p0}) - _hp; }\n`;
+    }
   }
-  if (period[1] > 0) {
-    repeatCode += `  q.y = mod(q.y + ${(period[1]/2).toFixed(4)}, ${period[1].toFixed(4)}) - ${(period[1]/2).toFixed(4)};\n`;
+  if (!isStaticZero(period[1])) {
+    if (isStaticNonZero(period[1])) {
+      const half = (period[1] / 2).toFixed(4);
+      repeatCode += `  q.y = mod(q.y + ${half}, ${p1}) - ${half};\n`;
+    } else {
+      repeatCode += `  { float _hp = ${p1} * 0.5; q.y = mod(q.y + _hp, ${p1}) - _hp; }\n`;
+    }
   }
-  if (period[2] > 0) {
-    repeatCode += `  q.z = mod(q.z + ${(period[2]/2).toFixed(4)}, ${period[2].toFixed(4)}) - ${(period[2]/2).toFixed(4)};\n`;
+  if (!isStaticZero(period[2])) {
+    if (isStaticNonZero(period[2])) {
+      const half = (period[2] / 2).toFixed(4);
+      repeatCode += `  q.z = mod(q.z + ${half}, ${p2}) - ${half};\n`;
+    } else {
+      repeatCode += `  { float _hp = ${p2} * 0.5; q.z = mod(q.z + _hp, ${p2}) - _hp; }\n`;
+    }
   }
 
   // If exposing instance ID, pass it through to nested helper functions
