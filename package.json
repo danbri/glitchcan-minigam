@@ -17,7 +17,13 @@
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "server": "python -m http.server 8080",
-    "setup-chrome": "bash setup-chrome.sh"
+    "setup-chrome": "bash setup-chrome.sh",
+    "test:core": "npx vitest run tests/lucid-core.test.js --reporter=dot",
+    "test:core:watch": "npx vitest tests/lucid-core.test.js",
+    "test:tier1": "npm run test:core",
+    "test:tier2": "npm run test:lucid:unit",
+    "test:tier3": "npm run test:lucid",
+    "test:precommit": "npm run test:core 2>&1 | tail -5"
   },
   "repository": {
     "type": "git",

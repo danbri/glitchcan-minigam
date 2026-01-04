@@ -4,6 +4,19 @@
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
 
+## 🔒 GitHub CLI (gh) Safety Guidelines
+**Token Scope:** Fine-grained PAT limited to `danbri/glitchcan-minigam` only
+**Safe Permissions:** Issues (Read/Write), PRs, Pages, Workflows, Hooks
+**NOT Granted:** Administration (cannot delete repo, transfer ownership, change visibility)
+
+**Worst-case with current token:**
+- ❌ Cannot delete repository
+- ❌ Cannot transfer ownership
+- ⚠️ Could modify workflows/hooks (monitored)
+- ⚠️ Could spam issues (recoverable)
+
+**Best practice:** Use `gh` only for issue tracking. Code changes go through normal git with branch restrictions (`claude/*` prefix).
+
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
 **ONLY ALLOWED:** Real ink-full.js compiler and Story API

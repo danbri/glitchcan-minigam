@@ -146,6 +146,9 @@ function walkNode(node, ctx) {
     case 'smoothUnion':
       return generateSmoothUnion(node, ctx);
 
+    case 'smoothIntersect':
+      return generateSmoothIntersect(node, ctx);
+
     case 'transform':
       return generateTransform(node, ctx);
 
@@ -709,6 +712,105 @@ ${bodyPrefix}${bodyLines.join('\n')}
 }
 
 /**
+ * Generate smooth intersect - creates helper function, returns call expression
+ *
+ * Uses smooth maximum (smax) for blending at intersection boundaries.
+ * Formula: h = clamp(0.5 - 0.5*(b-a)/k, 0, 1); d = mix(b,a,h) + k*h*(1-h)
+ *
+ * Transform handling: Apply parent transform to p FIRST, then each child
+ * applies only its local transform.
+ */
+function generateSmoothIntersect(node, ctx) {
+  let children = node.children || [];
+  const k = valueToGlsl(node.k || { type: 'const', value: 0.1 }, ctx);
+
+  if (children.length === 0) {
+    return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply parent transform to p first, then children use only local transforms
+  const transformedP = applyTransform('p', node.transform, ctx);
+  const hasParentTransform = node.transform && transformedP !== 'p';
+
+  if (children.length === 1) {
+    if (hasParentTransform) {
+      const funcName = `smoothIntersect_${ctx.helperCounter++}`;
+      const idParam = ctx.instanceIdParam;
+      const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+      const callArgs = idParam ? `p, ${idParam}` : 'p';
+      const childCallArgs = idParam ? `tp, ${idParam}` : 'tp';
+
+      const childFuncName = `smoothIntersect_child_${ctx.helperCounter++}`;
+      const childExpr = walkNode(children[0], ctx);
+      ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+
+      const helperFunc = `vec4 ${funcName}(${paramList}) {
+  vec3 tp = ${transformedP};
+  return ${childFuncName}(${childCallArgs});
+}`;
+      ctx.helpers.push(helperFunc);
+      return `${funcName}(${callArgs})`;
+    }
+    return walkNode(children[0], ctx);
+  }
+
+  // Generate helper function for N children
+  const funcName = `smoothIntersect_${ctx.helperCounter++}`;
+  const idParam = ctx.instanceIdParam;
+  const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
+  const callArgs = idParam ? `p, ${idParam}` : 'p';
+
+  // If we have a parent transform, apply it first
+  let bodyPrefix = '';
+  let childP = 'p';
+  if (hasParentTransform) {
+    bodyPrefix = `  vec3 tp = ${transformedP};\n`;
+    childP = 'tp';
+  }
+
+  const childCallArgs = idParam ? `${childP}, ${idParam}` : childP;
+
+  // Generate a helper function for each child
+  const childFuncNames = [];
+  for (let i = 0; i < children.length; i++) {
+    const childFuncName = `smoothIntersect_child_${ctx.helperCounter++}`;
+    const childExpr = walkNode(children[i], ctx);
+    ctx.helpers.push(`vec4 ${childFuncName}(${paramList}) {
+  return ${childExpr};
+}`);
+    childFuncNames.push(childFuncName);
+  }
+
+  // Build the smooth intersect body by chaining all children
+  // Uses smooth maximum: h = clamp(0.5 - 0.5*(b-a)/k, 0, 1); d = mix(b,a,h) + k*h*(1-h)
+  let bodyLines = [];
+  bodyLines.push(`  vec4 result = ${childFuncNames[0]}(${childCallArgs});`);
+
+  for (let i = 1; i < childFuncNames.length; i++) {
+    bodyLines.push(`  {`);
+    bodyLines.push(`    vec4 b = ${childFuncNames[i]}(${childCallArgs});`);
+    // Smooth max formula (note: minus sign for h, plus sign for d)
+    bodyLines.push(`    float h = clamp(0.5 - 0.5 * (b.x - result.x) / ${k}, 0.0, 1.0);`);
+    bodyLines.push(`    float d = mix(b.x, result.x, h) + ${k} * h * (1.0 - h);`);
+    bodyLines.push(`    vec3 col = mix(b.yzw, result.yzw, h);`);
+    bodyLines.push(`    result = vec4(d, col);`);
+    bodyLines.push(`  }`);
+  }
+
+  bodyLines.push(`  return result;`);
+
+  const helperFunc = `vec4 ${funcName}(${paramList}) {
+${bodyPrefix}${bodyLines.join('\n')}
+}`;
+
+  ctx.helpers.push(helperFunc);
+
+  return `${funcName}(${callArgs})`;
+}
+
+/**
  * Generate transform wrapper - propagates transform to child
  */
 function generateTransform(node, ctx) {
@@ -721,14 +823,19 @@ function generateTransform(node, ctx) {
 }
 
 /**
- * Generate ref - expand definition with any parent transform
+ * Generate ref - expand definition with parameter overrides and parent transform
  */
 function generateRef(node, ctx) {
   // Get the processed definition
-  const def = node.def;
+  let def = node.def;
   if (!def) {
     console.warn(`Ref node missing definition: ${node.refId}`);
     return 'vec4(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply parameter overrides if any (LCD-002)
+  if (node.overrides) {
+    def = applyParamOverrides(def, node.overrides);
   }
 
   // If this ref has a transform from parent, apply it to the def
@@ -741,6 +848,24 @@ function generateRef(node, ctx) {
   }
 
   return walkNode(def, ctx);
+}
+
+/**
+ * Apply parameter overrides to a definition node
+ * Returns a new node with overridden params merged in
+ */
+function applyParamOverrides(def, overrides) {
+  // Deep clone to avoid mutating the original definition
+  const cloned = JSON.parse(JSON.stringify(def));
+
+  // Merge overrides into params
+  if (cloned.params) {
+    for (const [key, value] of Object.entries(overrides)) {
+      cloned.params[key] = value;
+    }
+  }
+
+  return cloned;
 }
 
 /**
