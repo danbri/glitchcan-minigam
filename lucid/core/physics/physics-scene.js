@@ -36,20 +36,28 @@ export function extractPhysicsNodes(node, result = []) {
 
 /**
  * Extract numeric value from processed or raw value
+ * @param {*} val - Value to extract
+ * @param {Object} params - Scene params for resolving var references
  */
-function extractValue(val) {
+function extractValue(val, params = {}) {
   if (val === undefined || val === null) return 0;
   if (typeof val === 'number') return val;
   if (val.type === 'const') return val.value;
-  if (val.type === 'array') return val.values.map(v => extractValue(v));
-  if (Array.isArray(val)) return val.map(v => extractValue(v));
+  if (val.type === 'array') return val.values.map(v => extractValue(v, params));
+  if (Array.isArray(val)) return val.map(v => extractValue(v, params));
+  // Handle var reference: { "var": "ball1X" }
+  if (val.var && params[val.var]) {
+    return params[val.var].value ?? params[val.var];
+  }
   return 0;
 }
 
 /**
  * Extract position from node transform
+ * @param {Object} node - Scene node
+ * @param {Object} params - Scene params for resolving var references
  */
-function extractPosition(node) {
+function extractPosition(node, params = {}) {
   if (!node.transform || !node.transform.translate) {
     return [0, 0, 0];
   }
@@ -58,10 +66,10 @@ function extractPosition(node) {
 
   // Handle different formats
   if (Array.isArray(t)) {
-    return t.map(v => extractValue(v));
+    return t.map(v => extractValue(v, params));
   }
   if (t.type === 'array') {
-    return t.values.map(v => extractValue(v));
+    return t.values.map(v => extractValue(v, params));
   }
 
   return [0, 0, 0];
@@ -69,33 +77,36 @@ function extractPosition(node) {
 
 /**
  * Extract radius from sphere node
+ * @param {Object} node - Scene node
+ * @param {Object} params - Scene params for resolving var references
  */
-function extractRadius(node) {
+function extractRadius(node, params = {}) {
   if (node.type !== 'sphere') return 0.5; // Default
 
   const r = node.params?.r;
   if (!r) return 0.5;
 
-  return extractValue(r) || 0.5;
+  return extractValue(r, params) || 0.5;
 }
 
 /**
  * Create a physics body from a scene node
  * @param {Object} node - Scene node with physics property
+ * @param {Object} params - Scene params for resolving var references
  * @returns {Object} Physics body configuration
  */
-export function createPhysicsBodyFromNode(node) {
+export function createPhysicsBodyFromNode(node, params = {}) {
   const physics = node.physics || {};
   const isStatic = physics.type === 'static';
 
   return {
     id: node.id || `body_${Math.random().toString(36).substr(2, 9)}`,
-    position: extractPosition(node),
+    position: extractPosition(node, params),
     velocity: [0, 0, 0],
     mass: isStatic ? 0 : (physics.mass ?? 1.0),
     restitution: physics.restitution ?? 0.7,
     isStatic,
-    radius: extractRadius(node),
+    radius: extractRadius(node, params),
     nodeType: node.type
   };
 }
@@ -118,7 +129,8 @@ export class PhysicsScene {
     this.bodies = [];
     if (this.enabled && sceneJson.root) {
       const physicsNodes = extractPhysicsNodes(sceneJson.root);
-      this.bodies = physicsNodes.map(node => createPhysicsBodyFromNode(node));
+      const params = sceneJson.params || {};
+      this.bodies = physicsNodes.map(node => createPhysicsBodyFromNode(node, params));
     }
 
     // Physics constants
