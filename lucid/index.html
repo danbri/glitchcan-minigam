@@ -1564,10 +1564,9 @@
     <div class="panel-grippy" id="params-grippy" title="Drag to tear off, or double-click to toggle dock"></div>
     <button class="panel-dock" id="btn-params-dock" title="Dock panel">⬇</button>
     <button class="panel-close" id="btn-params-close" title="Close parameters">×</button>
-    <div class="debug-header" style="display: flex; align-items: center; gap: 0.5rem;">
+    <div class="debug-header" style="display: flex; align-items: center; justify-content: space-between;">
       <h3 style="margin: 0;">🎛️ Params</h3>
-      <button id="btn-wiggler" title="Wiggle all params (explore phenotypic space)" style="background: none; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 0.8rem;">🔀</button>
-      <button id="btn-wiggler-fast" title="Fast wiggle" style="background: none; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 0.8rem; display: none;">⚡</button>
+      <button id="btn-wiggler" title="Wiggle params (sticky across scenes)">〰️</button>
     </div>
     <div class="debug-content" id="params-content">
       <div class="debug-row" style="color: var(--text-dim); font-style: italic;">
@@ -1988,14 +1987,22 @@
       // Pass scene params and rig to renderer for uniform binding
       renderer.updateScene(glsl, scene.params || {}, scene.rig || null);
 
-      // Stop wiggler if active (before switching scenes)
-      if (wigglerState.active) stopWiggler();
-
       // Update params panel with new scene params and rig constraints
       updateParamsPanel(scene.params || {}, scene.rig);
 
-      // Initialize wiggler with current scene params
+      // Reinitialize wiggler with new scene params (sticky: keeps running if active)
+      const wasActive = wigglerState.active;
+      const wasFast = wigglerState.fast;
+      if (wasActive) {
+        cancelAnimationFrame(wigglerState.animationId);
+        wigglerState.animationId = null;
+      }
       initWiggler(scene.params || {});
+      if (wasActive) {
+        wigglerState.active = false; // Reset so startWiggler works
+        wigglerState.fast = wasFast;
+        startWiggler();
+      }
 
       // Update rig info display
       updateRigInfo(scene.rig);
@@ -4056,15 +4063,29 @@
       }
     }
 
+    function updateWigglerButton() {
+      const btn = $('btn-wiggler');
+      if (!btn) return;
+      if (!wigglerState.active) {
+        btn.textContent = '〰️';
+        btn.style.background = 'none';
+        btn.title = 'Start wiggling params';
+      } else if (!wigglerState.fast) {
+        btn.textContent = '〰️';
+        btn.style.background = 'var(--accent)';
+        btn.title = 'Click for fast mode';
+      } else {
+        btn.textContent = '⚡';
+        btn.style.background = 'var(--accent)';
+        btn.title = 'Click to stop';
+      }
+    }
+
     function startWiggler() {
       if (wigglerState.active) return;
       wigglerState.active = true;
       wigglerState.startTime = performance.now();
-
-      const btnWiggler = $('btn-wiggler');
-      const btnFast = $('btn-wiggler-fast');
-      if (btnWiggler) btnWiggler.style.background = 'var(--accent)';
-      if (btnFast) btnFast.style.display = 'inline-block';
+      updateWigglerButton();
 
       function wiggleLoop() {
         if (!wigglerState.active) return;
@@ -4101,14 +4122,7 @@
         cancelAnimationFrame(wigglerState.animationId);
         wigglerState.animationId = null;
       }
-
-      const btnWiggler = $('btn-wiggler');
-      const btnFast = $('btn-wiggler-fast');
-      if (btnWiggler) btnWiggler.style.background = 'none';
-      if (btnFast) {
-        btnFast.style.display = 'none';
-        btnFast.style.background = 'none';
-      }
+      updateWigglerButton();
 
       // Restore original values
       for (const cfg of wigglerState.paramConfigs) {
@@ -4120,28 +4134,22 @@
       }
     }
 
+    // Cycle: off -> slow -> fast -> off
     function toggleWiggler() {
-      if (wigglerState.active) {
-        stopWiggler();
-      } else {
+      if (!wigglerState.active) {
         startWiggler();
+      } else if (!wigglerState.fast) {
+        wigglerState.fast = true;
+        updateWigglerButton();
+      } else {
+        stopWiggler();
       }
     }
 
-    function toggleWigglerFast() {
-      wigglerState.fast = !wigglerState.fast;
-      const btnFast = $('btn-wiggler-fast');
-      if (btnFast) {
-        btnFast.style.background = wigglerState.fast ? 'var(--accent)' : 'none';
-      }
-    }
-
-    // Setup wiggler button listeners
+    // Setup wiggler button listener
     document.addEventListener('DOMContentLoaded', () => {
       const btnWiggler = $('btn-wiggler');
-      const btnFast = $('btn-wiggler-fast');
       if (btnWiggler) btnWiggler.addEventListener('click', toggleWiggler);
-      if (btnFast) btnFast.addEventListener('click', toggleWigglerFast);
     });
 
     // ============================================
