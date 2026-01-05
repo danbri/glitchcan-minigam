@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twin Earth (Optimized)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        .controls-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 15px;
+            width: 250px;
+            transition: transform 0.3s ease;
+            transform: translateX(0);
+            z-index: 1000;
+        }
+        
+        .controls-panel.collapsed {
+            transform: translateX(calc(100% - 40px));
+        }
+        
+        .controls-toggle {
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+        }
+        
+        .controls-content {
+            margin-left: 25px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .control-label {
+            flex: 1;
+        }
+        
+        .control-value {
+            width: 40px;
+            text-align: right;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 5px;
+            background: #444;
+            outline: none;
+            margin: 5px 0;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #6ab0ff;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #6ab0ff;
+            cursor: pointer;
+        }
+        
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .checkbox-control input {
+            margin-right: 8px;
+        }
+        
+        button {
+            background: #2a5a9e;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #3a6db1;
+        }
+        
+        .info-footer {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .loading-bar-container {
+            width: 300px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2a5a9e, #6ab0ff);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-text">Optimizing Earth Textures...</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <div class="controls-panel" id="controls-panel">
+        <div class="controls-toggle" id="controls-toggle">◀</div>
+        <div class="controls-content">
+            <div class="control-group">
+                <h3>Earth Options</h3>
+                <div class="checkbox-control">
+                    <input type="checkbox" id="twin-toggle">
+                    <label for="twin-toggle">Twin Earth Mode</label>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">Rotation Speed</span>
+                    <span class="control-value" id="rotation-value">0.5</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="0.5" class="slider" id="rotation-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Bump Strength</span>
+                    <span class="control-value" id="bump-value">0.05</span>
+                </div>
+                <input type="range" min="0" max="0.2" step="0.01" value="0.05" class="slider" id="bump-slider">
+            </div>
+            
+            <div class="control-group">
+                <h3>Cloud Options</h3>
+                <div class="control-row">
+                    <span class="control-label">Cloud Opacity</span>
+                    <span class="control-value" id="cloud-opacity-value">0.5</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value="0.5" class="slider" id="cloud-opacity-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Cloud Speed</span>
+                    <span class="control-value" id="cloud-speed-value">0.7</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="0.7" class="slider" id="cloud-speed-slider">
+            </div>
+            
+            <div class="control-group">
+                <h3>Lighting</h3>
+                <div class="control-row">
+                    <span class="control-label">Light Intensity</span>
+                    <span class="control-value" id="light-value">1.0</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="1.0" class="slider" id="light-slider">
+                
+                <div class="control-row">
+                    <span class="control-label">Night Light Glow</span>
+                    <span class="control-value" id="night-value">0.7</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value="0.7" class="slider" id="night-slider">
+            </div>
+            
+            <button id="reset-button">Reset to Defaults</button>
+            
+            <div class="info-footer">
+                Twin Earth Visualization v1.1 (Optimized)
+            </div>
+        </div>
+    </div>
+
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    
+    <!-- Texture optimizer script -->
+    <script src="texture_optimizer.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TwinEarthComponent } from './twin-earth-optimized.js';
+
+        // Create loading manager to track progress
+        const loadingManager = new THREE.LoadingManager();
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingScreen = document.getElementById('loading-screen');
+
+        loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
+            const progress = (itemsLoaded / itemsTotal) * 100;
+            loadingBar.style.width = progress + '%';
+        };
+
+        loadingManager.onLoad = function() {
+            // Fade out loading screen
+            loadingScreen.style.opacity = 0;
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        };
+
+        // Register the web component
+        customElements.define('twin-earth-component', TwinEarthComponent);
+
+        // Create and add the component to the page
+        const twinEarth = document.createElement('twin-earth-component');
+        document.body.appendChild(twinEarth);
+
+        // Update progress for texture optimization
+        let progressCounter = 0;
+        const progressInterval = setInterval(() => {
+            progressCounter += 2;
+            if (progressCounter <= 100) {
+                loadingBar.style.width = progressCounter + '%';
+            } else {
+                clearInterval(progressInterval);
+                // Force hide loading screen if it takes too long
+                setTimeout(() => {
+                    loadingScreen.style.opacity = 0;
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        }, 100);
+        
+        // Safety timeout - if loading takes more than 20 seconds, hide loading screen
+        setTimeout(() => {
+            clearInterval(progressInterval);
+            loadingScreen.style.opacity = 0;
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }, 20000);
+    </script>
+</body>
+</html>
