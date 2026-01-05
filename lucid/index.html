@@ -2231,12 +2231,10 @@
 
             // Sync physics positions to shader params (vec3)
             for (const body of currentPhysicsScene.bodies) {
-              if (body.isStatic) continue;
-              const paramName = physicsParamMap?.[body.id];
-              if (paramName) {
-                // Set vec3 position as array
-                renderer.setParam(paramName, [...body.position]);
-              }
+              // Use explicit param map if available, otherwise use phys_ prefix convention
+              const paramName = physicsParamMap?.[body.id] || `phys_${body.id}`;
+              // Set vec3 position as array (update all bodies including static)
+              renderer.setParam(paramName, [...body.position]);
             }
           }
 
