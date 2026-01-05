@@ -1,0 +1,76 @@
+{
+  "title": "Rotation Methods",
+  "subtitle": "Euler, quaternion, and axis-angle rotation",
+  "version": "1.1",
+  "notes": "Demonstrates all three rotation methods: Euler angles, quaternions, and axis-angle",
+
+  "params": {
+    "rotationAngle": {
+      "value": 45,
+      "type": "scalar",
+      "min": 0,
+      "max": 90,
+      "description": "Rotation angle (degrees)"
+    },
+    "animSpeed": {
+      "value": 45,
+      "type": "scalar",
+      "min": 10,
+      "max": 120,
+      "description": "Animation speed"
+    },
+    "boxColor": {
+      "value": [1, 0.3, 0.3],
+      "type": "color3",
+      "description": "X-axis box color"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "notes": "Euler rotation: rotate [45, 0, 0] = 45 degrees around X axis",
+        "type": "box",
+        "params": { "size": [0.6, 0.2, 0.2], "color": {"var": "boxColor"} },
+        "transform": { "translate": [-1.8, 0.8, 0], "rotate": [{"var": "rotationAngle"}, 0, 0] }
+      },
+      {
+        "notes": "Euler rotation: rotate [0, 45, 0] = 45 degrees around Y axis",
+        "type": "box",
+        "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 1, 0.3] },
+        "transform": { "translate": [0, 0.8, 0], "rotate": [0, 45, 0] }
+      },
+      {
+        "notes": "Euler rotation: rotate [0, 0, 45] = 45 degrees around Z axis",
+        "type": "box",
+        "params": { "size": [0.6, 0.2, 0.2], "color": [0.3, 0.3, 1] },
+        "transform": { "translate": [1.8, 0.8, 0], "rotate": [0, 0, 45] }
+      },
+      {
+        "notes": "Quaternion: 90 degrees around Y axis = [0, 0.707, 0, 0.707]",
+        "type": "cylinder",
+        "params": { "h": 0.4, "r": 0.15, "color": [1, 0.8, 0.2] },
+        "transform": { "translate": [-1.2, -0.5, 0], "rotateQ": [0, 0.7071, 0, 0.7071] }
+      },
+      {
+        "notes": "Axis-angle: 60 degrees around diagonal axis [1,1,0]",
+        "type": "cylinder",
+        "params": { "h": 0.4, "r": 0.15, "color": [0.8, 0.2, 1] },
+        "transform": { "translate": [1.2, -0.5, 0], "rotateAxis": { "axis": [1, 1, 0], "angle": 60 } }
+      },
+      {
+        "notes": "Animated axis-angle rotation",
+        "type": "torus",
+        "params": { "major": 0.3, "minor": 0.08, "color": [0.2, 0.9, 0.9] },
+        "transform": {
+          "translate": [0, -0.5, 0],
+          "rotateAxis": {
+            "axis": [0, 1, 0],
+            "angle": { "expr": "mul", "args": [{"var": "animSpeed"}, { "var": "time" }] }
+          }
+        }
+      }
+    ]
+  }
+}
