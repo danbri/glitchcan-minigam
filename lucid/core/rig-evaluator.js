@@ -223,9 +223,9 @@ export function evaluateRig(params, rig, time = 0) {
 
       // Evaluate each follower
       for (const [follower, config] of Object.entries(cycle.followers || {})) {
-        const phase = config.phase ?? 0;
-        const amplitude = config.amplitude ?? 1;
-        const offset = config.offset ?? 0;
+        const phase = evaluateExpr(config.phase ?? 0, values, time);
+        const amplitude = evaluateExpr(config.amplitude ?? 1, values, time);
+        const offset = evaluateExpr(config.offset ?? 0, values, time);
 
         // Sinusoidal oscillation with phase offset
         const angle = driver + phase * Math.PI * 2;
