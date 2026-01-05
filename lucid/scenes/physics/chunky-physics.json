@@ -1,15 +1,14 @@
 {
   "title": "Chunky Physics",
   "subtitle": "XPBD physics-reactive quadruped with bouncy body",
-  "version": "1.0",
-  "description": "Demonstrates GPU physics: body position driven by XPBD solver, responds to gravity and ground collision",
+  "version": "1.1",
+  "description": "Demonstrates GPU physics: body falls under gravity, feet anchored to ground",
   "camera": { "distance": 6, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
 
   "params": {
-    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4 },
+    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4, "type": "scalar" },
     "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
-    "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" },
-    "bodyScale": { "value": 1.0, "min": 0.5, "max": 2.0 }
+    "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" }
   },
 
   "physics": {
@@ -20,18 +19,27 @@
     "iterations": 4,
     "dt": 0.016,
 
-    "preset": "quadruped",
-    "quadruped": {
-      "bodyPos": [0, 1.0, 0],
-      "bodyMass": 5.0,
-      "footMass": 0.5,
-      "legLength": 0.8,
-      "bodyWidth": 0.4,
-      "bodyLength": 0.5,
-      "compliance": 0.0001
-    },
+    "bodies": [
+      { "name": "body", "pos": [0, 1.0, 0], "mass": 5.0, "radius": 0.3 },
+      { "name": "footFL", "pos": [0.4, 0.2, 0.5], "mass": 0.5, "radius": 0.1 },
+      { "name": "footFR", "pos": [-0.4, 0.2, 0.5], "mass": 0.5, "radius": 0.1 },
+      { "name": "footRL", "pos": [0.4, 0.2, -0.5], "mass": 0.5, "radius": 0.1 },
+      { "name": "footRR", "pos": [-0.4, 0.2, -0.5], "mass": 0.5, "radius": 0.1 }
+    ],
 
-    "comment": "Physics bodies: body, footFL, footFR, footRL, footRR - positions available as phys_body, phys_footFL etc."
+    "distanceConstraints": [
+      { "bodyA": "body", "bodyB": "footFL", "compliance": 0.0001 },
+      { "bodyA": "body", "bodyB": "footFR", "compliance": 0.0001 },
+      { "bodyA": "body", "bodyB": "footRL", "compliance": 0.0001 },
+      { "bodyA": "body", "bodyB": "footRR", "compliance": 0.0001 }
+    ],
+
+    "positionConstraints": [
+      { "body": "footFL", "compliance": 0.001 },
+      { "body": "footFR", "compliance": 0.001 },
+      { "body": "footRL", "compliance": 0.001 },
+      { "body": "footRR", "compliance": 0.001 }
+    ]
   },
 
   "defs": {
@@ -78,38 +86,27 @@
       },
 
       {
-        "comment": "=== FRONT LEFT LEG - stretched from body to foot ===",
+        "comment": "=== FRONT LEFT LEG ===",
         "type": "transform",
-        "transform": {
-          "translate": { "var": "phys_footFL" }
-        },
+        "transform": { "translate": { "var": "phys_footFL" } },
         "child": { "type": "ref", "id": "leg" }
       },
-
       {
         "comment": "=== FRONT RIGHT LEG ===",
         "type": "transform",
-        "transform": {
-          "translate": { "var": "phys_footFR" }
-        },
+        "transform": { "translate": { "var": "phys_footFR" } },
         "child": { "type": "ref", "id": "leg" }
       },
-
       {
         "comment": "=== REAR LEFT LEG ===",
         "type": "transform",
-        "transform": {
-          "translate": { "var": "phys_footRL" }
-        },
+        "transform": { "translate": { "var": "phys_footRL" } },
         "child": { "type": "ref", "id": "leg" }
       },
-
       {
         "comment": "=== REAR RIGHT LEG ===",
         "type": "transform",
-        "transform": {
-          "translate": { "var": "phys_footRR" }
-        },
+        "transform": { "translate": { "var": "phys_footRR" } },
         "child": { "type": "ref", "id": "leg" }
       }
     ]

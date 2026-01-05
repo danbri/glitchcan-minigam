@@ -42,12 +42,13 @@ export function generateGlslFromJson(scene, options = {}) {
     }
   }
 
-  // Register physics params as vec3 uniforms (body positions, foot positions)
+  // Register physics params as vec3 uniforms (body positions from physics.bodies)
   // These are dynamically computed but need uniform declarations
-  if (scene.physics?.enabled) {
-    const physicsNames = ['phys_body', 'phys_footFL', 'phys_footFR', 'phys_footRL', 'phys_footRR'];
-    for (const name of physicsNames) {
-      ctx.uniforms.add(`u_${name}:vec3`);
+  if (scene.physics?.enabled && scene.physics.bodies) {
+    for (const body of scene.physics.bodies) {
+      if (body.name) {
+        ctx.uniforms.add(`u_phys_${body.name}:vec3`);
+      }
     }
   }
 
