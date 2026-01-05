@@ -5,7 +5,9 @@
  */
 
 import { evaluateRig } from '../core/rig-evaluator.js';
-import { PhysicsBridge, mergePhysicsParams } from '../core/physics/physics-bridge.js';
+
+// PhysicsBridge loaded dynamically to avoid blocking page load if physics fails
+let PhysicsBridge = null;
 
 export class SimpleRaymarcher {
   // Quality presets for raymarch parameters
@@ -129,11 +131,17 @@ export class SimpleRaymarcher {
 
   /**
    * Initialize physics from scene JSON (async)
-   * Creates bridge synchronously (for initial positions), then inits GPU async
+   * Dynamically imports physics module, creates bridge, then inits GPU
    */
   async initPhysics(sceneJson) {
     try {
-      // Create bridge synchronously - pre-parses initial positions
+      // Dynamic import to avoid blocking page load if physics module fails
+      if (!PhysicsBridge) {
+        const module = await import('../core/physics/physics-bridge.js');
+        PhysicsBridge = module.PhysicsBridge;
+      }
+
+      // Create bridge - pre-parses initial positions synchronously
       this.physicsBridge = new PhysicsBridge(sceneJson);
 
       // GPU init is async
