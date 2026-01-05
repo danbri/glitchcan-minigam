@@ -1053,7 +1053,11 @@ function generateGroup(node, ctx) {
  * - Future: Could pack metallic/roughness into alpha or additional output channels
  */
 function generateMaterial(node, ctx) {
-  const childExpr = walkNode(node.child, ctx);
+  // Propagate transform to child (fix: transform was being dropped)
+  const childWithTransform = node.transform
+    ? { ...node.child, transform: combineTransforms(node.child.transform, node.transform) }
+    : node.child;
+  const childExpr = walkNode(childWithTransform, ctx);
   const params = node.params || {};
 
   // If no material params specified, pass through
