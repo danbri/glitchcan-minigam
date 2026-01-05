@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toki Pona Learner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 80%;
+            width: 500px;
+        }
+        #word {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        #emojiContainer {
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        #emoji {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(10);
+            font-size: 6rem;
+            opacity: 0;
+            filter: grayscale(100%);
+        }
+        @keyframes emojiReveal {
+            0% {
+                transform: translate(-50%, -50%) scale(10);
+                opacity: 0;
+                filter: grayscale(100%);
+            }
+            30% {
+                transform: translate(-50%, -50%) scale(8);
+                opacity: 0.3;
+                filter: grayscale(70%);
+            }
+            60% {
+                transform: translate(-50%, -50%) scale(6);
+                opacity: 0.6;
+                filter: grayscale(40%);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(3);
+                opacity: 1;
+                filter: grayscale(0%);
+            }
+        }
+        .emoji-animate {
+            animation: emojiReveal 3s ease-out forwards;
+        }
+        .choice {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 1rem;
+            font-weight: bold;
+            height: 1.5em;
+        }
+        #dictionary-info {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #ccc;
+            text-align: left;
+            opacity: 0;
+            font-size: 0;
+            transition: opacity 3s ease-out, font-size 3s ease-out;
+        }
+        .pos-tag {
+            display: inline-block;
+            background-color: #f0f0f0;
+            color: #555;
+            font-size: 0.8rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            margin-right: 0.5rem;
+            margin-bottom: 0.3rem;
+            font-weight: bold;
+        }
+        .definition-item {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="word"></div>
+        <div id="emojiContainer">
+            <div id="emoji"></div>
+        </div>
+        <div id="choices"></div>
+        <div id="result"></div>
+        <div id="dictionary-info"></div>
+    </div>
+
+    <script>
+        // Legacy word list with emojis for backward compatibility
+        const legacyTokiPona = [
+            { word: "mi", meaning: "I, me, we, us", emoji: "👤" },
+            { word: "sina", meaning: "you", emoji: "👉" },
+            { word: "ona", meaning: "he, she, it, they", emoji: "👥" },
+            { word: "ilo", meaning: "tool, device, machine", emoji: "🔧" },
+            { word: "pona", meaning: "good, simple, positive", emoji: "👍" },
+            { word: "ala", meaning: "no, not, zero", emoji: "❌" },
+            { word: "ale", meaning: "all, everything, universe", emoji: "🌍" },
+            { word: "kili", meaning: "fruit, vegetable", emoji: "🍎" },
+            { word: "moku", meaning: "food, eat", emoji: "🍽️" },
+            { word: "telo", meaning: "water, liquid", emoji: "💧" }
+        ];
+        
+        // Emoji mappings for all Toki Pona words - carefully selected to match meanings
+        const emojiMappings = {
+            // Original words with improved emoji
+            "mi": "👤",        // person (I, me)
+            "sina": "👉",      // you (pointing at you)
+            "ona": "👥",       // they/them (multiple people)
+            "ilo": "🔧",       // tool
+            "pona": "👍",      // good
+            "ala": "❌",       // no, not
+            "ale": "🌍",       // everything, universe
+            "ali": "🌍",       // alternative form of ale
+            "kili": "🍎",      // fruit
+            "moku": "🍽️",      // food, eat
+            "telo": "💧",      // water
+            
+            // Additional words with carefully chosen emoji
+            "a": "😮",         // emphasis (surprised face)
+            "kin": "😮",       // emphasis (alternative form)
+            "akesi": "🦎",     // reptile
+            "alasa": "🏹",     // hunt, forage
+            "anpa": "👇",      // down, lowly
+            "ante": "🔄",      // different, changed
+            "anu": "🔀",       // or (shuffle symbol)
+            "awen": "⏱️",       // enduring, waiting
+            "e": "🎯",         // direct object marker (target)
+            "en": "➕",         // and (plus symbol)
+            "esun": "🛒",      // market, shop
+            "ijo": "🔮",       // thing, object
+            "ike": "👎",       // bad
+            "insa": "🫀",      // inside, internal organ
+            "jaki": "🤢",      // disgusting, unclean
+            "jan": "🧑",       // human, person
+            "jelo": "🟡",      // yellow
+            "jo": "✊",         // have, hold
+            "kala": "🐟",      // fish
+            "kalama": "🔊",    // sound
+            "kama": "🚶",      // coming, arriving
+            "kasi": "🌿",      // plant
+            "ken": "💪",       // can, able to
+            "kepeken": "🧰",   // use, with
+            "kiwen": "🪨",     // hard object, stone
+            "ko": "🧴",        // semi-solid, paste
+            "kon": "💨",       // air, breath, spirit
+            "kule": "🎨",      // color
+            "kulupu": "👪",    // community, group
+            "kute": "👂",      // hear, listen
+            "la": "🔍",        // context marker (magnifying glass)
+            "lape": "😴",      // sleep
+            "laso": "🔵",      // blue/green
+            "lawa": "🧠",      // head, mind
+            "len": "👕",       // clothing
+            "lete": "❄️",       // cold
+            "li": "🔗",        // linking particle (chain link)
+            "lili": "🤏",      // small
+            "linja": "🧵",     // long flexible thing, thread
+            "lipu": "📄",      // flat object, paper
+            "loje": "🔴",      // red
+            "lon": "📍",       // at, in, existing
+            "luka": "🖐️",      // hand, arm
+            "lukin": "👁️",     // see, look
+            "oko": "👁️",       // eye (alternative form)
+            "lupa": "🕳️",      // hole, door
+            "ma": "🏞️",        // land, earth
+            "mama": "👪",      // parent
+            "mani": "💰",      // money
+            "meli": "👩",      // woman
+            "mije": "👨",      // man
+            "moli": "💀",      // death
+            "monsi": "🔙",     // back, behind
+            "mu": "🐾",        // animal sound
+            "mun": "🌙",       // moon, night sky object
+            "musi": "🎯",      // fun, game
+            "mute": "🔢",      // many, multiple
+            "nanpa": "#️⃣",     // number
+            "nasa": "🥴",      // strange, unusual
+            "nasin": "🛣️",     // way, path
+            "nena": "⛰️",      // bump, hill, mountain
+            "ni": "👇",        // this, that
+            "nimi": "🏷️",      // name, word
+            "noka": "🦶",      // foot, leg
+            "o": "📣",         // hey! (vocative)
+            "olin": "💗",      // love
+            "open": "🔓",      // open, begin
+            "pakala": "💥",    // broken, damaged
+            "pali": "⚒️",       // work, do
+            "palisa": "📏",    // long hard thing, rod
+            "pan": "🍞",       // bread, cereal
+            "pana": "🎁",      // give, send
+            "pi": "🔗",        // of (possessive)
+            "pilin": "💭",     // feeling, emotion
+            "pimeja": "⚫",    // black, dark
+            "pini": "🏁",      // end, finish
+            "pipi": "🐜",      // bug, insect
+            "poka": "↔️",      // side, nearby
+            "poki": "📦",      // container, box
+            "pu": "📕",        // interacting with the official Toki Pona book
+            "sama": "🪞",      // same, similar
+            "seli": "🔥",      // fire, heat
+            "selo": "🧥",      // outer layer, skin
+            "seme": "❓",      // what? which?
+            "sewi": "☁️",      // above, divine
+            "sijelo": "🧍",    // body
+            "sike": "⭕",      // circle, round thing
+            "sin": "✨",       // new, fresh
+            "namako": "✨",    // new, fresh (alternative form)
+            "sinpin": "🧱",    // front, wall
+            "sitelen": "🖼️",   // image, picture
+            "sona": "🧠",      // knowledge, wisdom
+            "soweli": "🐱",    // animal, beast
+            "suli": "🐘",      // big, important
+            "suno": "☀️",      // sun, light
+            "supa": "🪑",      // horizontal surface
+            "suwi": "🍬",      // sweet, cute
+            "tan": "📍",       // from, because
+            "taso": "🚫",      // but, only
+            "tawa": "🚶",      // going to, movement
+            "tenpo": "⏰",      // time, moment
+            "toki": "💬",      // talk, language
+            "tomo": "🏠",      // indoor space, building
+            "tu": "✌️",        // two
+            "unpa": "💏",      // intimate relationship
+            "uta": "👄",       // mouth
+            "utala": "⚔️",     // battle, fight
+            "walo": "⚪",      // white
+            "wan": "1️⃣",       // one
+            "waso": "🐦",      // bird
+            "wawa": "💪",      // strong, powerful
+            "weka": "🚫",      // away, absent
+            "wile": "🙏"       // want, need
+        };
+
+        // Full dictionary will be loaded here
+        let fullDictionary = [];
+        
+        // Combined dictionary for app use
+        let tokiPona = [...legacyTokiPona];
+        
+        let currentWord;
+        
+        // Load the full dictionary from the JSON file
+        async function loadDictionary() {
+            try {
+                const response = await fetch('dictionary.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+                fullDictionary = await response.json();
+                console.log(`Loaded ${fullDictionary.length} words from dictionary.json`);
+                
+                // Merge with legacy dictionary to assign emojis
+                enrichDictionary();
+                
+                // Now that dictionary is loaded, display the first word
+                displayWord();
+            } catch (error) {
+                console.error('Failed to load dictionary:', error);
+                // If we can't load the full dictionary, still show a word from the legacy list
+                displayWord();
+            }
+        }
+        
+        // Enhance the dictionary with emoji and simplified meanings
+        function enrichDictionary() {
+            fullDictionary.forEach(entry => {
+                // Get the primary word
+                const word = entry.words[0];
+                
+                // Combine all definitions into one string
+                let meaning = "";
+                entry.definitions.forEach(def => {
+                    if (meaning.length > 0) meaning += "; ";
+                    meaning += def.definition;
+                });
+                
+                // Find if we already have an emoji for this word
+                let emoji = null;
+                
+                // Check legacy dictionary first
+                const legacyEntry = legacyTokiPona.find(item => item.word === word);
+                if (legacyEntry) {
+                    emoji = legacyEntry.emoji;
+                } 
+                // Then check our emoji mapping
+                else if (emojiMappings[word]) {
+                    emoji = emojiMappings[word];
+                }
+                // Fallback emoji
+                else {
+                    emoji = "❓";
+                }
+                
+                // Add to the combined dictionary
+                if (!tokiPona.some(item => item.word === word)) {
+                    tokiPona.push({
+                        word: word,
+                        meaning: meaning,
+                        emoji: emoji,
+                        fullEntry: entry // Keep reference to full entry
+                    });
+                } else {
+                    // Update existing entry with full data
+                    const existingIndex = tokiPona.findIndex(item => item.word === word);
+                    if (existingIndex >= 0) {
+                        tokiPona[existingIndex].fullEntry = entry;
+                    }
+                }
+            });
+            
+            console.log(`Dictionary enriched, now contains ${tokiPona.length} words`);
+        }
+        
+        // Load dictionary when page loads
+        loadDictionary();
+
+        function getRandomWord() {
+            // Always use the full dictionary
+            return tokiPona[Math.floor(Math.random() * tokiPona.length)];
+        }
+
+        function getChoices(correct) {
+            let choices = [correct];
+            while (choices.length < 3) {
+                let randomChoice = getRandomWord().meaning;
+                if (!choices.includes(randomChoice)) {
+                    choices.push(randomChoice);
+                }
+            }
+            return choices.sort(() => Math.random() - 0.5);
+        }
+
+        function displayWord() {
+            // Get random word from the full dictionary
+            currentWord = getRandomWord();
+            document.getElementById('word').textContent = currentWord.word;
+            const emojiElement = document.getElementById('emoji');
+            const dictionaryInfo = document.getElementById('dictionary-info');
+            
+            // Reset emoji and dictionary info state
+            emojiElement.className = '';
+            emojiElement.style.opacity = '0';
+            emojiElement.style.transform = 'translate(-50%, -50%) scale(10)';
+            emojiElement.style.filter = 'grayscale(100%)';
+            
+            dictionaryInfo.style.opacity = '0';
+            dictionaryInfo.style.fontSize = '0';
+            
+            // Set the emoji text
+            emojiElement.textContent = currentWord.emoji;
+
+            // Force a reflow
+            void emojiElement.offsetWidth;
+
+            // Start emoji animation with delay (always in "hard mode")
+            setTimeout(() => {
+                emojiElement.classList.add('emoji-animate');
+                
+                // After emoji animation starts, begin dictionary info fade-in
+                setTimeout(() => {
+                    // Update dictionary information
+                    updateDictionaryInfo();
+                    
+                    // Fade in the dictionary info
+                    dictionaryInfo.style.opacity = '1';
+                    dictionaryInfo.style.fontSize = '1rem';
+                }, 1500);
+            }, 2000);
+
+            // Set up multiple choice answers
+            const choices = getChoices(currentWord.meaning);
+            let choicesHtml = '';
+            choices.forEach(choice => {
+                choicesHtml += `<button class="choice" onclick="checkAnswer('${choice.replace(/'/g, "\\'")}')">${choice}</button>`;
+            });
+            document.getElementById('choices').innerHTML = choicesHtml;
+            document.getElementById('result').textContent = '';
+        }
+
+        function updateDictionaryInfo() {
+            const dictionaryInfo = document.getElementById('dictionary-info');
+            
+            if (currentWord.fullEntry) {
+                let infoHtml = '';
+                const entry = currentWord.fullEntry;
+                
+                // Display alternative forms if available
+                if (entry.words.length > 1) {
+                    infoHtml += `<div><strong>Alternative forms:</strong> ${entry.words.join(', ')}</div>`;
+                }
+                
+                // Display definitions grouped by part of speech
+                infoHtml += '<div class="definitions">';
+                entry.definitions.forEach(def => {
+                    infoHtml += `
+                        <div class="definition-item">
+                            <span class="pos-tag">${def.pos}</span>
+                            ${def.definition}
+                        </div>
+                    `;
+                });
+                infoHtml += '</div>';
+                
+                dictionaryInfo.innerHTML = infoHtml;
+            } else {
+                dictionaryInfo.innerHTML = '<div>No additional dictionary information available.</div>';
+            }
+        }
+
+        function checkAnswer(choice) {
+            if (choice === currentWord.meaning) {
+                document.getElementById('result').textContent = 'Correct!';
+                document.getElementById('result').style.color = 'green';
+            } else {
+                document.getElementById('result').textContent = 'Incorrect. Try again!';
+                document.getElementById('result').style.color = 'red';
+            }
+            setTimeout(displayWord, 1500);
+        }
+
+        // Don't automatically call displayWord - it's called after dictionary loads
+    </script>
+</body>
+</html>

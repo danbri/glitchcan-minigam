@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hampstead + fINK Loader</title>
+<script src="https://cdn.jsdelivr.net/npm/inkjs/dist/ink-full.min.js"></script>
+<style>
+/* --- CSS Styles (Copied from Snippet 1) --- */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+:root {
+    --zx-blue: #0050e0; --zx-red: #d80000; --zx-mag: #d000d0;
+    --zx-green: #00c000; --zx-cyan: #00c0c0; --zx-yellow: #ffff00;
+    --zx-white: #f6f6f6;
+}
+html, body {
+    height: 100vh; margin: 0; background: #000 radial-gradient(#111 2px, #000 2px);
+    background-size: 4px 4px; display: flex; flex-direction: column;
+    font: 12px/1.5 "Press Start 2P", Courier, monospace; color: var(--zx-white);
+}
+header {
+    padding: .4em .8em; background: #000; border-bottom: 4px solid var(--zx-blue);
+    display: flex; /* Use flexbox for header items */
+    gap: 1em; /* Space between buttons */
+    align-items: center; /* Align items vertically */
+}
+header button { /* Style all header buttons */
+    font-family: inherit; font-size: 14px; padding: .6em 1em;
+    border: none; cursor: pointer;
+}
+#runBtn { background: var(--zx-green); color: #000; }
+#loadBagEndBtn { background: var(--zx-cyan); color: #000; } /* Style for new button */
+#statusDisplay { /* Simple status display */
+    margin-left: auto; /* Push status to the right */
+    font-size: 12px;
+    color: var(--zx-yellow);
+    padding: 0.2em 0.5em;
+    border: 1px dashed var(--zx-yellow);
+}
+header button:hover { background: var(--zx-red); color: #fff; }
+header button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+
+#editorWrap { flex: 1; display: flex; flex-direction: column; }
+details { width: 100%; }
+summary {
+    list-style: none; padding: .5em .8em; cursor: pointer;
+    background: #111; color: var(--zx-cyan);
+}
+summary::before { content: "› "; font-weight: bold; }
+details[open] summary::before { content: "⌄ "; }
+textarea {
+    width: 100%; box-sizing: border-box; min-height: 140px; resize: vertical;
+    background: #020; color: var(--zx-cyan); border: none; padding: .75em;
+    box-shadow: inset 0 0 10px #0ff4; font-family: inherit; font-size: 12px;
+}
+#panel { flex: 1; overflow: auto; padding: 1em; background: #000; }
+#panel p { margin: .5em 0; animation: flash .1s ease-out; } /* Faster flash */
+@keyframes flash { from { outline: 1px solid var(--zx-cyan); } to { outline: none; } }
+button.choice {
+    display: block; width: 100%; margin: .5em 0; padding: .8em .6em;
+    text-align: left; background: #070; color: #0ff; border: none;
+    font-family: inherit; font-size: 16px; cursor: pointer;
+}
+button.choice:hover { background: var(--zx-red); color: #fff; }
+#errors { color: #f55; white-space: pre-wrap; margin-bottom: .5em; border: 1px dashed #f55; padding: 0.5em; background: rgba(100,0,0,0.3); }
+#errors:empty { display: none; } /* Hide error box when empty */
+.danger { color: #f55; } .success { color: #0f0; } .info { color: #0ff; }
+.emph { color: #ff0; background: #400; } .flash { animation: flash .15s ease-in-out infinite alternate; }
+.gritty { color: #ccc; } .posh { color: var(--zx-yellow); } .artsy { color: var(--zx-mag); }
+.warning { background: #400; color: #fff; }
+/* #debug-output { position: fixed; bottom: 0; left: 0; background: rgba(0,0,0,0.7); color: yellow; padding: 2px 5px; font-size: 10px; } */
+</style>
+</head>
+<body>
+
+<header>
+    <button id="runBtn">▶️ Run Story</button>
+    <button id="loadBagEndBtn">Load Bag End (fINK)</button> <div id="statusDisplay">Idle</div> </header>
+
+<div id="editorWrap">
+    <details open>
+        <summary>Ink Source</summary>
+        <textarea id="inkSrc">
+// Hampstead 2025 — Final Enhanced Edition
+// MODIFIED: Added debug variable and link to remote story
+
+// --- Variables ---
+VAR score = 0
+VAR jeans_worn = false
+VAR tie_worn = false
+VAR giro_collected = false
+VAR giro_cashed = false
+VAR tweed_taken = false
+VAR penguin_taken = false
+VAR playwright_card = false
+VAR key_2cv = false
+VAR mortgage_signed = false
+VAR debug_message = "" // <<<< NEW: Debug variable
+
+-> splash
+
+== splash ==
+#BG:#0050e0
+#CLASS:info
+ZX-Spectrum ready. 48 K RAM found.
+
++ Continue -> intro
+
+== intro ==
+#BG:#000
+You eye a cassette: Hampstead.
+
+* Boot the Speccy
+    Loading bars screech cheerfully. #CLASS:info
+    -> bedsit
+* Wander off to VR
+    #BG:#400
+    VR devours your soul. _GAME OVER_. #CLASS:danger
+    -> END
+
+== bedsit ==
+~ debug_message = "Hampstead: Entered bedsit knot" // <<<< NEW: Set debug message
+#BG:#0a0a0a
+Grotty bedsit. 3-2-1 blares on TV.
+
++ Open wardrobe -> wardrobe
++ Leave for Main Street
+    You step into the neon drizzle. #CLASS:info
+    -> street
+
+== wardrobe ==
+#CLASS:gritty
+Inside the wardrobe you see frayed jeans and a cheap tie.
+
+{ jeans_worn == false:
+    + Wear the jeans
+        You feel marginally cleaner.
+        ~ jeans_worn = true
+        -> wardrobe
+}
+
+{ tie_worn == false:
+    + Wear the tie
+        The knot pinches—but you look "professional." #CLASS:warning
+        ~ tie_worn = true
+        ~ score += 1
+        -> wardrobe
+}
+
++ Close wardrobe -> bedsit
+
+== street ==
+#BG:#001515
+Neon rain slicks binbags and chip wrappers.
+Signposts glisten:
+EAST → Job Centre WEST → Oxfam SOUTH → Duke Pub NORTH → Gallery District
+
++ East to Job Centre -> jobcentre
++ West to Oxfam -> oxfam
++ South to Duke Pub -> pub
++ North to Gallery District -> gallery_pass
++ Flag down a night-bus
+    Nobody stops for riff-raff. #CLASS:danger
+    -> street
+// + Examine strange shimmering rift nearby // <<<< REMOVED old remote link
+//    ~ debug_message = "Hampstead: Diverting to Portal_Chamber"
+//    -> Portal_Chamber // Assumes Portal_Chamber is a knot in the *remote* Ink file
+
+== jobcentre ==
+Fluorescent lights buzz; forms flutter.
+
+{ giro_collected == false:
+    + Collect your GIRO cheque
+        A grubby slip slides across. #CLASS:success
+        ~ giro_collected = true
+        -> postoffice
+}
+
++ Return to street -> street
+
+== postoffice ==
+#BG:#031
+Queues coil like serpents.
+
+{ giro_cashed == false and giro_collected:
+    + Cash the giro
+        You pocket £120 in crisp tens. #CLASS:info
+        ~ giro_cashed = true
+        ~ score += 1
+        -> street // Changed from postoffice to avoid loop without progress
+}
+
++ Leave -> street
+
+== oxfam ==
+Musk and mothballs swirl.
+
+{ tweed_taken == false:
+    + Browse jacket rail
+        Vintage tweed with elbow patches — perfect. #CLASS:success
+        ~ tweed_taken = true
+        ~ score += 1
+        -> oxfam
+}
+
+{ penguin_taken == false:
+    + Dig in bargain bin
+        A tatty first-edition Penguin (hipster bait). #CLASS:info
+        ~ penguin_taken = true
+        ~ score += 1
+        -> oxfam
+}
+
++ Return to street -> street
+
+== pub ==
+#BG:#210
+The Duke of Cumberland's ale-stench clings.
+
+{ playwright_card == false:
+    + Buy a round (£10)
+        Camaraderie blossoms; a playwright drops his card. #CLASS:info
+        ~ playwright_card = true
+        ~ score += 1
+        -> pub
+}
+
++ Nurse a half-pint
+    Locals gripe about council cuts. #CLASS:gritty
+    -> pub
++ Return to street -> street
+
+== gallery_pass ==
+#BG:#021
+The Avant-Garden Gallery casts long reflections in the rain.
+
+{ key_2cv == false:
+    + Bluff modern-art theory
+        The curator nods. #CLASS:artsy
+        ~ score += 1
+        "Sir Lionel Thrumm seeks a cultured driver."
+        -> mansion_tip
+    + Admit ignorance
+        "Come back when you've read some books." #CLASS:gritty
+        -> gallery_pass
+- else:
+    + Stare at a sculpture of a urinal
+        It winks at you metaphorically. #CLASS:artsy
+        -> gallery_pass
+}
+
++ Return to street -> street
+
+== mansion_tip ==
+#BG:#002
+You spot a wrought-iron gate up the hill.
+
++ Visit Sir Lionel's mansion -> mansion
++ Return to street -> street
+
+== mansion ==
+Stained-glass windows glow; Afghan hounds slumber.
+
+{ key_2cv == false and playwright_card:
+    + Present playwright's card
+        Sir Lionel smiles and hands you a 2CV key. #CLASS:posh
+        ~ key_2cv = true
+        ~ score += 1
+        -> car
+}
+
++ Return to street -> street
+
+== car ==
+#BG:#112233
+You steer the 2CV toward greener postcodes.
+
+{ key_2cv:
+    + Proceed to estate agent -> estate
+- else:
+    Police flag you down. #CLASS:danger
+    -> street
+}
+
+== estate ==
+Blueprints hang on walls.
+
+{ mortgage_signed == false:
+    + Sign the mortgage
+        Keys to a Hampstead mews land in your palm. #CLASS:success
+        ~ mortgage_signed = true
+        ~ score += 1
+        -> housewarming
+}
+
++ Return to street -> street
+
+== housewarming ==
+#BG:#041
+Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
+
+{ score >= 8:
+    -> victory
+- else:
+    They sense imposture. #CLASS:warning
+    -> street
+}
+
+== victory ==
+#BG:#041
+#CLASS:success
+# HAMPSTEAD ACHIEVED #
+
+Final Score: {score}/8 — you truly embody Hampstead!
+
+-> END
+        </textarea>
+    </details>
+
+    <div id="panel">
+        <div id="errors"></div>
+        <div id="story"></div>
+        </div>
+</div>
+
+<script type="module"> // Use module for potential future imports/exports
+
+    // --- DOM Elements ---
+    const srcTextarea = document.getElementById('inkSrc');
+    const storyOutput = document.getElementById('story');
+    const errorOutput = document.getElementById('errors');
+    const runButton = document.getElementById('runBtn');
+    const loadBagEndButton = document.getElementById('loadBagEndBtn'); // New button
+    const statusDisplay = document.getElementById('statusDisplay'); // Status area
+    // Optional: const debugOutputDiv = document.getElementById('debug-output');
+
+    // --- Configuration ---
+    const BAG_END_FINK_URL = "https://6813356339170a9d35315b0f--glittering-horse-8e4523.netlify.app/bagend1.fink.js";
+    const SANDBOX_TIMEOUT_MS = 15000; // 15 seconds timeout for fINK load
+
+    // --- State ---
+    let story = null; // Current InkJS story instance
+    let isLoadingFink = false; // Prevent concurrent fINK loads
+    let sandboxRunner = null; // Instance of OoooSandboxRunner
+    const runnerId = `main-${Math.random().toString(36).substring(2, 9)}`; // Unique ID for the runner
+
+    // --- Logging Utility ---
+    function log(level, component, message, data) {
+        const timestamp = new Date().toLocaleTimeString([], { hour12: false });
+        const logMessage = `${timestamp} [${level.toUpperCase()}] (${component}): ${message}`;
+        console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](logMessage, data !== null && data !== undefined ? data : '');
+        // Optional: Could update a more detailed debug log area here
+    }
+
+    // --- UI Helpers ---
+    function setStatus(message, type = 'info') {
+        statusDisplay.textContent = message;
+        statusDisplay.style.borderColor = type === 'error' ? 'var(--zx-red)' : type === 'success' ? 'var(--zx-green)' : type === 'loading' ? 'var(--zx-cyan)' : 'var(--zx-yellow)';
+        log(type === 'error' ? 'error' : 'info', 'UI', `Status: ${message}`);
+    }
+
+    function clearErrors() {
+        errorOutput.textContent = '';
+        errorOutput.style.display = 'none';
+    }
+
+    function reportError(component, message, errorData = null) {
+        const fullMessage = `[${component} Error] ${message}`;
+        log('error', component, message, errorData);
+        errorOutput.textContent += (errorOutput.textContent ? '\n\n' : '') + fullMessage;
+        if (errorData) {
+            try {
+                let details = '';
+                if (errorData instanceof Error) {
+                    details = `\n  Name: ${errorData.name}\n  Message: ${errorData.message}`;
+                    if (errorData.stack) details += `\n  Stack: ${errorData.stack.split('\n').slice(1).join('\n')}`; // Basic stack trace
+                } else if (typeof errorData === 'object') {
+                    details = `\n  Details: ${JSON.stringify(errorData, null, 2)}`;
+                } else {
+                    details = `\n  Details: ${String(errorData)}`;
+                }
+                errorOutput.textContent += details;
+            } catch (e) {
+                 errorOutput.textContent += `\n  (Could not stringify error details)`;
+            }
+        }
+        errorOutput.style.display = 'block';
+        setStatus('Error occurred!', 'error');
+    }
+
+     function setLoadingState(isLoading) {
+        isLoadingFink = isLoading; // Update global flag
+        runButton.disabled = isLoading;
+        loadBagEndButton.disabled = isLoading;
+        log('debug','UI', `Loading state set: ${isLoading}. Buttons disabled: ${isLoading}`);
+        if (isLoading) {
+            setStatus('Loading fINK...', 'loading');
+        }
+     }
+
+    // --- OoooSandboxRunner Class (Adapted from Snippet 2) ---
+    class OoooSandboxRunner {
+        constructor(componentId = 'unknown') {
+            this.componentId = componentId;
+            this.activeSandbox = null;
+            this.sandboxTimeoutId = null; // Renamed from sandboxTimeout
+            this.currentURL = null;
+            this.messageHandler = this._onMessage.bind(this);
+            this._log('debug', 'Runner instance created.');
+        }
+
+        _log(level, message, data = null) {
+            // Use the main app's log function
+            log(level, `SandboxRunner:${this.componentId}`, message, data);
+            // Dispatch event for potential external listeners (less critical now)
+            window.dispatchEvent(new CustomEvent(`runner-log-${this.componentId}`, { detail: { level, message, data } }));
+        }
+
+        _getSandboxHTML() {
+            // HTML content is identical to Snippet 2's _getSandboxHTML
+            return `<!DOCTYPE html>
+                 <html><head><title>Sandbox</title></head><body><script>
+                     function logToParent(level, message, data = null) { /* ... same as before ... */ }
+                     logToParent('debug', 'Sandbox: Initializing...');
+                     window.ooooCapturedData = [];
+                     function oooOO(data) { /* ... same as before ... */ }
+                     try { /* ... define oooOO ... */ } catch (e) { /* ... */ }
+                     window.addEventListener('message', function(event) { /* ... same as before ... */ });
+                     logToParent('info', 'Sandbox: Ready. Posting sandbox-ready message.');
+                     parent.postMessage({ type: 'sandbox-ready' }, '*');
+                     logToParent('debug', 'Sandbox: sandbox-ready message posted.');
+                 <\/script></body></html>`;
+        }
+
+        loadUrl(url) {
+            this._log('info', `loadUrl called with URL: ${url}`);
+            this.currentURL = url; // Store URL early
+
+            // Cleanup previous instance
+            this.cleanup();
+            this._log('debug', 'Previous instance cleaned up.');
+
+            try {
+                this.activeSandbox = document.createElement('iframe');
+                this.activeSandbox.setAttribute('sandbox', 'allow-scripts');
+                this.activeSandbox.style.display = 'none';
+                this.activeSandbox.id = `oooo-sandbox-${this.componentId}-${Date.now()}`;
+                this._log('debug', 'Iframe element prepared.', { id: this.activeSandbox.id });
+
+                // Add message listener BEFORE setting srcdoc/appending
+                window.addEventListener('message', this.messageHandler);
+                this._log('debug', 'Global message listener added.');
+
+                // Set srcdoc
+                try {
+                    const srcDocHtml = this._getSandboxHTML();
+                    this.activeSandbox.srcdoc = srcDocHtml;
+                    this._log('info', 'Iframe srcdoc attribute set.');
+                } catch (error) {
+                    this._log('error', `ERROR setting iframe.srcdoc: ${error.name} - ${error.message}`, error);
+                    throw new Error(`Failed during srcdoc assignment: ${error.message || 'Unknown srcdoc error'}`);
+                }
+
+                // Append iframe
+                try {
+                    document.body.appendChild(this.activeSandbox);
+                    this._log('info', 'Sandbox iframe appended to document body.');
+                } catch (error) {
+                    this._log('error', `ERROR appending iframe to body: ${error.name} - ${error.message}`, error);
+                    throw new Error(`Failed during iframe append: ${error.message || 'Unknown append error'}`);
+                }
+
+                this._log('info', 'Sandbox setup phase complete. Waiting for sandbox-ready.');
+
+            } catch (setupError) {
+                this._log('error', 'Caught error during sandbox setup:', setupError);
+                // Dispatch error event for the main app to catch
+                this._dispatchEvent('oooo-error', {
+                    error: `Setup failed: ${setupError.message || 'Failed to create/attach sandbox.'}`,
+                    url: this.currentURL
+                });
+                this.cleanup(); // Ensure cleanup on setup failure
+            }
+        }
+
+        _onMessage(event) {
+            // Basic validation: Check origin and source if needed for security
+            // if (event.origin !== 'expected-origin') return;
+            if (!event.data || !event.data.type) return;
+            if (!this.activeSandbox || event.source !== this.activeSandbox.contentWindow) {
+                 // log('debug', 'SandboxRunner', 'Ignoring message not from active sandbox', event.data);
+                 return; // Ignore messages not from the active sandbox
+            }
+
+            const message = event.data;
+            // Log sandbox messages via the main logger
+            if (message.type === 'sandbox-log') {
+                 log(message.level || 'debug', `Sandbox:${this.componentId}`, message.message, message.data);
+                 return; // Don't process sandbox logs further here
+            }
+
+            this._log('debug', `Received message from sandbox: ${message.type}`, message);
+
+            switch (message.type) {
+                case 'sandbox-ready':
+                    this._log('info', 'Sandbox reported ready.');
+                    if (this.activeSandbox && this.currentURL) {
+                        this._log('info', `Sending load-script command for: ${this.currentURL}`);
+                        this._startSandboxTimeout();
+                        this.activeSandbox.contentWindow.postMessage({ type: 'load-script', url: this.currentURL }, '*');
+                    } else {
+                        this._log('warn', 'Sandbox ready signal received, but runner state invalid. Aborting.');
+                        this._dispatchEvent('oooo-error', { error: 'Sandbox ready but runner state invalid.', url: this.currentURL });
+                        this.cleanup();
+                    }
+                    break;
+                case 'oooo-loaded':
+                    this._log('info', 'Sandbox reported script loaded successfully.');
+                    this._clearSandboxTimeout();
+                    this._dispatchEvent('oooo-success', { data: message.data, url: message.url });
+                    this.cleanup(); // Cleanup after success
+                    break;
+                case 'oooo-error':
+                    this._log('error', 'Sandbox reported an error:', { error: message.error, url: message.url });
+                    this._clearSandboxTimeout();
+                    this._dispatchEvent('oooo-error', { error: message.error, url: message.url });
+                    this.cleanup(); // Cleanup after error
+                    break;
+                default:
+                    this._log('warn', `Received unknown message type from sandbox: ${message.type}`);
+            }
+        }
+
+        _startSandboxTimeout() {
+            this._clearSandboxTimeout();
+            this._log('debug', `Starting sandbox timeout (${SANDBOX_TIMEOUT_MS}ms).`);
+            this.sandboxTimeoutId = setTimeout(() => {
+                this._log('error', `Sandbox timeout reached for URL: ${this.currentURL}`);
+                this.sandboxTimeoutId = null;
+                this._dispatchEvent('oooo-error', { error: 'Operation timed out.', url: this.currentURL });
+                this.cleanup();
+            }, SANDBOX_TIMEOUT_MS);
+        }
+
+        _clearSandboxTimeout() {
+            if (this.sandboxTimeoutId) {
+                clearTimeout(this.sandboxTimeoutId);
+                this.sandboxTimeoutId = null;
+                this._log('debug', 'Cleared sandbox timeout.');
+            }
+        }
+
+        _dispatchEvent(type, detail) {
+            this._log('debug', `Dispatching event: ${type}`, detail);
+            // Use a specific, known event name related to the runner instance
+            window.dispatchEvent(new CustomEvent(`runner-event-${this.componentId}`, {
+                detail: { type, payload: detail }
+            }));
+        }
+
+        cleanup() {
+            this._log('debug', 'Cleanup called.');
+            this._clearSandboxTimeout();
+
+            if (this.activeSandbox) {
+                if (this.activeSandbox.parentNode) {
+                    this._log('debug', `Removing sandbox iframe from DOM: ${this.activeSandbox.id}`);
+                    this.activeSandbox.remove();
+                } else {
+                    this._log('debug', `Sandbox iframe (${this.activeSandbox.id}) exists but not in DOM.`);
+                }
+                this.activeSandbox = null;
+            } else {
+                this._log('debug', 'No active sandbox iframe reference.');
+            }
+
+            // Remove the specific listener for this runner instance
+            window.removeEventListener('message', this.messageHandler);
+            this._log('debug', 'Global message listener removed.');
+            // Keep currentURL for potential final error reporting
+             this._log('debug', 'Cleanup finished.');
+        }
+    } // End OoooSandboxRunner class
+
+
+    // --- Ink Story Handling (From Snippet 1, slightly modified) ---
+
+    function escapeHtml(unsafe) {
+        if (typeof unsafe !== 'string') return "";
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function clearChoices() {
+        storyOutput.querySelectorAll('button.choice').forEach(button => button.remove());
+    }
+
+    function applyTags(tags, element) {
+        tags.forEach(tag => {
+            const parts = tag.split(':'); const key = parts[0]?.trim().toUpperCase(); const value = parts[1]?.trim();
+             log('debug', 'InkRuntime', `Applying tag: ${tag}`);
+            if (key === 'BG' && value) {
+                document.body.style.background = value;
+                document.body.style.backgroundImage = 'none'; // Remove gradient if BG color is set
+                 log('debug', 'InkRuntime', `Set body background: ${value}`);
+            } else if (key === 'CLASS' && value) {
+                element.classList.add(value);
+                 log('debug', 'InkRuntime', `Added class to paragraph: ${value}`);
+            }
+            // Add more tag handlers here if needed
+        });
+    }
+
+    function continueStory(choiceIndex = null) {
+        if (!story) {
+             reportError('InkRuntime', 'Cannot continue: Story object is null.');
+             return;
+        }
+         log('debug', 'InkRuntime', `continueStory called with choiceIndex: ${choiceIndex}`);
+        // Don't set status here, let runStoryHandler or load handler manage it initially
+
+        try {
+            if (choiceIndex !== null && typeof choiceIndex === 'number') {
+                log('info', 'InkRuntime', `Choosing choice index: ${choiceIndex}`);
+                story.ChooseChoiceIndex(choiceIndex);
+            }
+
+            clearChoices(); // Clear previous choices before adding new content/choices
+
+            let storyFragment = document.createDocumentFragment(); // Build content fragment
+
+            while (story.canContinue) {
+                const p = document.createElement('p');
+                let rawText = story.Continue(); // Continue advances the story state
+                 log('debug', 'InkRuntime', `Story.Continue() output: "${rawText}"`);
+                 let currentTags = story.currentTags || [];
+                 log('debug', 'InkRuntime', `Current tags: [${currentTags.join(', ')}]`);
+
+                 let escapedText = escapeHtml(rawText.trim());
+                let formattedText = escapedText // Basic formatting
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                    .replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+                p.innerHTML = formattedText; // Set content *before* applying tags
+                applyTags(currentTags, p); // Apply tags to the paragraph
+                storyFragment.appendChild(p); // Add paragraph to the fragment
+
+                 // Check and display debug message (variable name from original Hampstead code)
+                 try {
+                     let debugMsg = story.variablesState["debug_message"];
+                     if (debugMsg && typeof debugMsg === 'string' && debugMsg.trim() !== "") {
+                         log('info', "[INK DEBUG]", debugMsg);
+                         // Optional: Display in HTML
+                         // if(debugOutputDiv) debugOutputDiv.textContent = debugMsg;
+
+                         // Reset the message after displaying
+                         story.variablesState["debug_message"] = "";
+                         log('debug', "[INK DEBUG]", "Reset debug_message variable.");
+                     }
+                 } catch (e) { /* ignore if variable doesn't exist */ }
+
+            } // End while(story.canContinue)
+
+            storyOutput.appendChild(storyFragment); // Append all paragraphs at once
+
+            // Generate choices if they exist *after* exhausting .canContinue
+            if (story.currentChoices.length > 0) {
+                 log('info', 'InkRuntime', `Displaying ${story.currentChoices.length} choices.`);
+                story.currentChoices.forEach((choice, i) => {
+                    const button = document.createElement('button');
+                    button.className = 'choice';
+                    button.innerHTML = escapeHtml(choice.text.trim() || `Choice ${i+1}`); // Handle empty choice text
+                    button.onclick = () => {
+                         log('info', 'UI', `Choice button clicked: Index ${i}, Text: "${choice.text}"`);
+                        clearChoices(); // Immediately clear choices visually on click
+                        continueStory(i); // Make the choice and continue
+                    };
+                    storyOutput.appendChild(button); // Append choice button
+                });
+                setStatus('Waiting for input...', 'info'); // Ready for user choice
+            } else {
+                 log('info', 'InkRuntime', 'Reached end of story or knot without choices.');
+                const pEnd = document.createElement('p');
+                pEnd.style.opacity = .6;
+                pEnd.textContent = '— THE END —';
+                storyOutput.appendChild(pEnd);
+                setStatus('Story Ended.', 'success');
+                // Story finished, re-enable buttons if not loading fINK
+                if (!isLoadingFink) setLoadingState(false);
+            }
+
+            storyOutput.scrollTop = storyOutput.scrollHeight; // Scroll to bottom
+
+        } catch (e) {
+            reportError('InkRuntime', `Error during story continuation: ${e.message || e}`, e);
+            setStatus('Runtime Error!', 'error');
+            if (!isLoadingFink) setLoadingState(false); // Ensure buttons re-enabled on error
+        }
+    }
+
+    function runStoryHandler() {
+        log('info', 'Compiler', 'Run button clicked. Compiling and running source from textarea...');
+        storyOutput.innerHTML = ''; // Clear story output
+        clearChoices(); // Clear any leftover choices
+        clearErrors(); // Clear previous errors
+        setStatus('Compiling...', 'loading');
+        setLoadingState(true); // Disable buttons during compilation/initial run
+
+        let inkSource = srcTextarea.value;
+
+        if (!inkSource.trim()) {
+             reportError('Compiler', 'Ink source is empty. Cannot run.');
+             setLoadingState(false);
+             setStatus('Ready.', 'info'); // Or Idle?
+             return;
+        }
+
+        if (typeof inkjs === 'undefined') {
+            reportError('System', 'inkjs library is not loaded. Cannot compile.');
+            setLoadingState(false);
+            setStatus('Error: InkJS missing!', 'error');
+            return;
+        }
+
+        try {
+            log('debug', 'Compiler', 'Creating inkjs.Compiler instance.');
+            const compiler = new inkjs.Compiler(inkSource);
+            log('debug', 'Compiler', 'Compiler instance created.');
+
+            // Check for pre-Compile errors (though Compile() usually catches them)
+            if (compiler.errors && compiler.errors.length > 0) {
+                 reportError('Compiler', 'Compilation Errors found before Compile():\n' + compiler.errors.join('\n'), compiler.errors);
+                 setLoadingState(false); // Re-enable buttons on compile error
+                 setStatus('Compile Error!', 'error');
+                 return;
+            }
+
+             log('info', 'Compiler', 'Calling compiler.Compile()...');
+             story = compiler.Compile();
+             log('info', 'Compiler', 'compiler.Compile() finished.');
+
+             // Check for post-Compile errors (more common)
+             if (compiler.errors && compiler.errors.length > 0) {
+                 reportError('Compiler', 'Compilation Errors found after Compile():\n' + compiler.errors.join('\n'), compiler.errors);
+                 setLoadingState(false); // Re-enable buttons on compile error
+                 setStatus('Compile Error!', 'error');
+                 return;
+             }
+             if (compiler.warnings && compiler.warnings.length > 0) {
+                  log('warn', 'Compiler', 'Compilation Warnings:\n' + compiler.warnings.join('\n'), compiler.warnings);
+                  // Optionally display warnings in errorOutput or console only
+                  errorOutput.textContent += `\n\nCompilation Warnings:\n${compiler.warnings.join('\n')}`;
+                  errorOutput.style.display = 'block';
+             }
+
+            log('info', 'Compiler', 'Compilation successful. Starting story execution...');
+            // Don't set status yet, let continueStory handle it based on choices/end
+            continueStory(); // Start the story flow
+
+        } catch (e) {
+            reportError('Compiler', `Fatal compilation/runtime error: ${e.message || e}`, e);
+            setStatus('Fatal Error!', 'error');
+            story = null; // Ensure story object is cleared on fatal error
+            setLoadingState(false); // Re-enable buttons on fatal error
+        }
+        // setLoadingState(false) is called within continueStory when choices appear or story ends, or here on error.
+    }
+
+
+    // --- fINK Loading Logic ---
+
+    function handleFinkLoadSuccess(detail) {
+        log('info', 'fINK Loader', `Successfully loaded fINK from: ${detail.url}`, detail.data);
+        setStatus('fINK Loaded.', 'success');
+
+        if (detail.data && detail.data.length > 0) {
+            const finkContent = detail.data.join('\n\n// ---- fINK Chunk Separator ----\n\n');
+            log('info', 'fINK Loader', `Received ${finkContent.length} chars of fINK content. Merging...`);
+
+            const currentSource = srcTextarea.value;
+            const separator = '\n\n// --- Appended fINK Content Below ---\n\n';
+            const mergedSource = currentSource.trim() + separator + finkContent.trim();
+
+            srcTextarea.value = mergedSource;
+            log('info', 'fINK Loader', 'Merged fINK content into textarea.');
+
+            // Automatically run the merged story
+            runStoryHandler();
+        } else {
+             log('warn', 'fINK Loader', 'fINK file loaded, but no content captured via oooOO function.');
+             reportError('fINK Loader', `Script loaded successfully from ${detail.url}, but it didn't provide any Ink content via the oooOO function.`);
+             setLoadingState(false); // Re-enable buttons as the load technically finished
+             setStatus('fINK Loaded (Empty)', 'warn');
+        }
+    }
+
+    function handleFinkLoadError(detail) {
+        const errorMsg = detail.error || 'Unknown fINK loading error.';
+        const errorUrl = detail.url || sandboxRunner?.currentURL || 'unknown URL';
+        reportError('fINK Loader', `Failed to load fINK from ${errorUrl}: ${errorMsg}`, detail);
+        setStatus('fINK Load Failed!', 'error');
+        setLoadingState(false); // Re-enable buttons on failure
+    }
+
+    // --- Event Listeners ---
+
+    // Listener for the main Run button
+    runButton.addEventListener('click', runStoryHandler);
+
+    // Listener for the new Load Bag End button
+    loadBagEndButton.addEventListener('click', () => {
+        if (isLoadingFink) {
+            log('warn', 'UI', 'Load Bag End clicked, but a fINK load is already in progress.');
+            return;
+        }
+         log('info', 'UI', 'Load Bag End button clicked.');
+         clearErrors(); // Clear previous errors before starting load
+         setLoadingState(true); // Disable buttons, set loading status
+         try {
+             // Ensure runner exists
+             if (!sandboxRunner) {
+                  log('info', 'System', 'Creating OoooSandboxRunner instance.');
+                  sandboxRunner = new OoooSandboxRunner(runnerId);
+             }
+             log('info', 'fINK Loader', `Calling sandboxRunner.loadUrl with: ${BAG_END_FINK_URL}`);
+             sandboxRunner.loadUrl(BAG_END_FINK_URL);
+         } catch (error) {
+             reportError('fINK Loader', `Error initiating fINK load: ${error.message}`, error);
+             setLoadingState(false);
+         }
+    });
+
+    // Global listener for events from the sandbox runner
+    window.addEventListener(`runner-event-${runnerId}`, (event) => {
+        if (!event.detail || !event.detail.type) return;
+        const { type, payload } = event.detail;
+         log('debug', 'System', `Received runner event: ${type}`, payload);
+
+        switch (type) {
+            case 'oooo-success':
+                handleFinkLoadSuccess(payload);
+                // setLoadingState(false) is handled after runStoryHandler completes/errors in success case
+                break;
+            case 'oooo-error':
+                handleFinkLoadError(payload);
+                // setLoadingState(false) is handled within handleFinkLoadError
+                break;
+        }
+    });
+
+    // --- Initial Setup ---
+    function initialize() {
+        log('info', 'System', 'Page loaded. Initializing Hampstead + fINK Loader.');
+        clearErrors();
+        setStatus('Ready.', 'info');
+        setLoadingState(false); // Ensure buttons are enabled initially
+         log('info', 'System', 'Creating initial OoooSandboxRunner instance.');
+         sandboxRunner = new OoooSandboxRunner(runnerId); // Create runner instance on load
+         // Optional: Automatically run the initial story?
+         // runStoryHandler(); // Uncomment to run Hampstead on page load
+    }
+
+    initialize(); // Run setup
+
+</script>
+
+</body>
+</html>
