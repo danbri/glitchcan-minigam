@@ -1,0 +1,98 @@
+{
+  "version": "1.1",
+  "title": "Cylinder Array",
+  "description": "Grid of colored cylinders",
+
+  "params": {
+    "cylinderRadius": {
+      "value": 0.15,
+      "type": "scalar",
+      "min": 0.05,
+      "max": 0.3,
+      "description": "Cylinder thickness"
+    },
+    "cylinderHeight": {
+      "value": 0.8,
+      "type": "scalar",
+      "min": 0.3,
+      "max": 1.5,
+      "description": "Cylinder height"
+    },
+    "spacing": {
+      "value": 0.6,
+      "type": "scalar",
+      "min": 0.4,
+      "max": 1.2,
+      "description": "Grid spacing"
+    }
+  },
+
+  "defs": {
+    "cyl": {
+      "type": "cylinder",
+      "params": {
+        "r": {"var": "cylinderRadius"},
+        "h": {"var": "cylinderHeight"}
+      }
+    }
+  },
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, -0.6] },
+        "params": { "color": [1.0, 0.3, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, -0.6] },
+        "params": { "color": [0.3, 1.0, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, -0.6] },
+        "params": { "color": [0.3, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, 0] },
+        "params": { "color": [1.0, 1.0, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, 0] },
+        "params": { "color": [1.0, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, 0] },
+        "params": { "color": [0.3, 1.0, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [-0.6, 0, 0.6] },
+        "params": { "color": [1.0, 0.6, 0.3] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0, 0, 0.6] },
+        "params": { "color": [0.6, 0.3, 1.0] }
+      },
+      {
+        "type": "ref",
+        "id": "cyl",
+        "transform": { "translate": [0.6, 0, 0.6] },
+        "params": { "color": [0.3, 0.8, 0.5] }
+      }
+    ]
+  }
+}
