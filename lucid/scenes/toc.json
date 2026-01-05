@@ -24,7 +24,8 @@
         { "path": "csg/subtract.json", "title": "Subtraction ✂️", "subtitle": "Carving shapes" },
         { "path": "csg/nested.json", "title": "Nested CSG 🪆", "subtitle": "Multi-level operations" },
         { "path": "csg/ref-overrides.json", "title": "Ref Overrides 🎛️", "subtitle": "Parametric instancing (LCD-002)" },
-        { "path": "csg/chunky-animals.json", "title": "Chunky Animals 🦛", "subtitle": "Hippo → bear, pig variants" }
+        { "path": "csg/chunky-animals.json", "title": "Chunky Animals 🦛", "subtitle": "Hippo, bear, pig (3 defs)" },
+        { "path": "csg/chunky-parametric.json", "title": "Chunky Parametric 🎛️", "subtitle": "Single def, 3 variants" }
       ]
     },
     {
@@ -62,7 +63,8 @@
         { "path": "anim/breathing-torus.json", "title": "Breathing Torus 🫁", "subtitle": "Animated ring" },
         { "path": "anim/capsule-chain.json", "title": "Pendulum Chain ⛓️", "subtitle": "Parametric swinging chain" },
         { "path": "anim/expressions.json", "title": "Orbital System 📐", "subtitle": "Parametric orbiters" },
-        { "path": "animation/walk-test.json", "title": "Walk Cycle 🐕", "subtitle": "Quadruped leg animation" }
+        { "path": "animation/walk-test.json", "title": "Walk Test 🐕", "subtitle": "Direct expression animation" },
+        { "path": "animation/walk-rig.json", "title": "Walk Rig 🦮", "subtitle": "Phase-coupled gait via rig" }
       ]
     },
     {
