@@ -1,0 +1,117 @@
+{
+  "title": "Chunky Physics",
+  "subtitle": "XPBD physics-reactive quadruped with bouncy body",
+  "version": "1.0",
+  "description": "Demonstrates GPU physics: body position driven by XPBD solver, responds to gravity and ground collision",
+  "camera": { "distance": 6, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
+
+  "params": {
+    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4 },
+    "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
+    "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" },
+    "bodyScale": { "value": 1.0, "min": 0.5, "max": 2.0 }
+  },
+
+  "physics": {
+    "enabled": true,
+    "gravity": [0, -9.8, 0],
+    "groundY": -1.5,
+    "damping": 0.98,
+    "iterations": 4,
+    "dt": 0.016,
+
+    "preset": "quadruped",
+    "quadruped": {
+      "bodyPos": [0, 1.0, 0],
+      "bodyMass": 5.0,
+      "footMass": 0.5,
+      "legLength": 0.8,
+      "bodyWidth": 0.4,
+      "bodyLength": 0.5,
+      "compliance": 0.0001
+    },
+
+    "comment": "Physics bodies: body, footFL, footFR, footRL, footRR - positions available as phys_body, phys_footFL etc."
+  },
+
+  "defs": {
+    "leg": {
+      "comment": "Single leg capsule",
+      "type": "material",
+      "params": { "color": { "var": "legColor" } },
+      "child": {
+        "type": "capsule",
+        "params": { "h": 0.5, "r": 0.08 }
+      }
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "comment": "=== BODY - position from physics ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_body" }
+        },
+        "child": {
+          "type": "material",
+          "params": { "color": { "var": "bodyColor" } },
+          "child": {
+            "type": "smoothUnion", "k": { "var": "smoothness" },
+            "children": [
+              {
+                "comment": "Main body ellipsoid",
+                "type": "ellipsoid",
+                "params": { "radii": [0.5, 0.4, 0.8] }
+              },
+              {
+                "comment": "Head",
+                "type": "ellipsoid",
+                "params": { "radii": [0.25, 0.22, 0.25] },
+                "transform": { "translate": [0, 0.1, 0.85] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== FRONT LEFT LEG - stretched from body to foot ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footFL" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== FRONT RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footFR" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR LEFT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footRL" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footRR" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      }
+    ]
+  }
+}

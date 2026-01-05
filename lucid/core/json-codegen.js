@@ -42,6 +42,15 @@ export function generateGlslFromJson(scene, options = {}) {
     }
   }
 
+  // Register physics params as vec3 uniforms (body positions, foot positions)
+  // These are dynamically computed but need uniform declarations
+  if (scene.physics?.enabled) {
+    const physicsNames = ['phys_body', 'phys_footFL', 'phys_footFR', 'phys_footRL', 'phys_footRR'];
+    for (const name of physicsNames) {
+      ctx.uniforms.add(`u_${name}:vec3`);
+    }
+  }
+
   // Generate main scene expression
   const sceneExpr = walkNode(scene.root, ctx);
 
