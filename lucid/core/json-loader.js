@@ -333,12 +333,13 @@ export function expandRef(refNode, registry, depth = 0) {
   }
 
   // Clone the definition
-  const expanded = JSON.parse(JSON.stringify(def));
+  let expanded = JSON.parse(JSON.stringify(def));
 
   // Apply parameter overrides (if any) - support both 'overrides' and 'params'
+  // This substitutes { "var": "X" } references with override values
   const overrides = refNode.overrides || refNode.params;
   if (overrides) {
-    applyOverrides(expanded, overrides);
+    expanded = applyOverrides(expanded, overrides);
   }
 
   return processNode(expanded, registry, depth);
@@ -346,26 +347,40 @@ export function expandRef(refNode, registry, depth = 0) {
 
 /**
  * Apply parameter overrides to a cloned node tree
- * Recursively merges override values into the node's params
+ * Recursively substitutes { "var": "X" } references with override values
  */
 function applyOverrides(node, overrides) {
-  if (!node || typeof node !== 'object') return;
+  if (!node || typeof node !== 'object') return node;
+  if (!overrides || Object.keys(overrides).length === 0) return node;
 
-  // Apply overrides to this node's params
-  if (node.params && overrides) {
-    for (const [key, value] of Object.entries(overrides)) {
-      // Convert processed value back to raw format for re-processing
-      node.params[key] = valueToRaw(value);
-    }
+  return substituteVars(node, overrides);
+}
+
+/**
+ * Recursively substitute { "var": "X" } references with values from overrides
+ */
+function substituteVars(obj, overrides) {
+  if (obj === null || obj === undefined) return obj;
+
+  // Primitive values pass through
+  if (typeof obj !== 'object') return obj;
+
+  // Check if this is a var reference that should be substituted
+  if (obj.var && overrides.hasOwnProperty(obj.var)) {
+    return overrides[obj.var];
   }
 
-  // Recurse into children
-  if (node.children) {
-    node.children.forEach(child => applyOverrides(child, overrides));
+  // Arrays: substitute each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => substituteVars(item, overrides));
   }
-  if (node.child) {
-    applyOverrides(node.child, overrides);
+
+  // Objects: substitute each property value
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = substituteVars(value, overrides);
   }
+  return result;
 }
 
 /**
