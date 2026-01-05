@@ -61,7 +61,8 @@
         { "path": "anim/pulsing-sphere.json", "title": "Pulsing Sphere 💓", "subtitle": "Animated radius" },
         { "path": "anim/breathing-torus.json", "title": "Breathing Torus 🫁", "subtitle": "Animated ring" },
         { "path": "anim/capsule-chain.json", "title": "Pendulum Chain ⛓️", "subtitle": "Parametric swinging chain" },
-        { "path": "anim/expressions.json", "title": "Orbital System 📐", "subtitle": "Parametric orbiters" }
+        { "path": "anim/expressions.json", "title": "Orbital System 📐", "subtitle": "Parametric orbiters" },
+        { "path": "animation/walk-test.json", "title": "Walk Cycle 🐕", "subtitle": "Quadruped leg animation" }
       ]
     },
     {
