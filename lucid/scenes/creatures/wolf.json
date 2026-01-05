@@ -1,79 +1,12 @@
 {
   "title": "Fearsome Wolf",
-  "subtitle": "v1.8 - Parametric fangs with debug sliders",
-  "version": "1.8",
+  "subtitle": "v1.9 - Parametric fangs + colors",
+  "version": "1.9",
   "camera": { "distance": 12, "phi": 0.3, "theta": 0.25, "target": [0, 0.5, 0] },
-  "notes": "Parametric wolf with aggressive stance, open jaw, visible fangs. Each parameter has clear anatomical meaning.",
+  "notes": "Parametric wolf with working fang controls and color customization. Body geometry is fixed (not parametric).",
 
   "params": {
-    "_comment_body": "=== BODY PARAMETERS ===",
-    "bodyLength": {
-      "value": 3.5,
-      "type": "scalar",
-      "min": 2.5,
-      "max": 4.5,
-      "description": "Total body length from nose to tail base",
-      "units": "meters (relative)",
-      "affects": ["all proportions"]
-    },
-    "shoulderHeight": {
-      "value": 0.95,
-      "type": "scalar",
-      "min": 0.7,
-      "max": 1.2,
-      "description": "Height at shoulder",
-      "units": "meters (relative)",
-      "affects": ["body", "legs"]
-    },
-    "chestWidth": {
-      "value": 1.0,
-      "type": "scalar",
-      "min": 0.7,
-      "max": 1.3,
-      "description": "Width of chest/torso",
-      "units": "meters (relative)",
-      "affects": ["body mass"]
-    },
-    "forwardLean": {
-      "value": 15,
-      "type": "scalar",
-      "min": 0,
-      "max": 30,
-      "description": "Forward lean angle for aggressive stance",
-      "units": "degrees",
-      "affects": ["body pose"]
-    },
-
-    "_comment_head": "=== HEAD PARAMETERS ===",
-    "jawOpenAngle": {
-      "value": 20,
-      "type": "scalar",
-      "min": 0,
-      "max": 45,
-      "description": "How wide the jaw is open. 0 = closed, 45 = full snarl",
-      "units": "degrees",
-      "affects": ["jaw rotation", "fang visibility"]
-    },
-    "muzzleLength": {
-      "value": 0.65,
-      "type": "scalar",
-      "min": 0.4,
-      "max": 0.9,
-      "description": "Length of muzzle/snout",
-      "units": "meters (relative)",
-      "affects": ["head shape"]
-    },
-    "earPinAngle": {
-      "value": 35,
-      "type": "scalar",
-      "min": 0,
-      "max": 60,
-      "description": "How far ears are pinned back. 0 = upright, 60 = flat",
-      "units": "degrees",
-      "affects": ["ear pose", "aggression level"]
-    },
-
-    "_comment_fangs": "=== FANG PARAMETERS (DEBUG CONTROLS) ===",
+    "_comment_fangs": "=== FANG PARAMETERS ===",
     "fangLength": {
       "value": 0.18,
       "type": "scalar",
@@ -131,57 +64,6 @@
       "units": "degrees"
     },
 
-    "_comment_claws": "=== CLAW PARAMETERS ===",
-    "clawLength": {
-      "value": 0.15,
-      "type": "scalar",
-      "min": 0.08,
-      "max": 0.25,
-      "description": "Length of claws",
-      "units": "meters (relative)",
-      "affects": ["claw visibility"]
-    },
-    "clawCurve": {
-      "value": 40,
-      "type": "scalar",
-      "min": 20,
-      "max": 60,
-      "description": "Curvature of claws",
-      "units": "degrees",
-      "affects": ["claw shape"]
-    },
-
-    "_comment_tail": "=== TAIL PARAMETERS ===",
-    "tailLength": {
-      "value": 1.5,
-      "type": "scalar",
-      "min": 1.0,
-      "max": 2.0,
-      "description": "Total tail length",
-      "units": "meters (relative)",
-      "affects": ["tail"]
-    },
-    "tailRaise": {
-      "value": 12,
-      "type": "scalar",
-      "min": -10,
-      "max": 45,
-      "description": "Tail elevation angle. Negative = tucked, positive = raised",
-      "units": "degrees",
-      "affects": ["tail pose"]
-    },
-
-    "_comment_hackles": "=== HACKLES PARAMETERS ===",
-    "hacklesRaised": {
-      "value": 0.25,
-      "type": "scalar",
-      "min": 0.0,
-      "max": 0.5,
-      "description": "How raised the hackles are. 0 = flat, 0.5 = fully bristled",
-      "units": "displacement amount",
-      "affects": ["spine fur", "threat display"]
-    },
-
     "_comment_eyes": "=== EYE PARAMETERS ===",
     "eyeGlow": {
       "value": 0.7,
@@ -232,57 +114,13 @@
   },
 
   "rig": {
-    "_comment": "Constraints and animation for wolf model",
-
+    "_comment": "Constraints for wolf model",
     "constraints": {
       "fangLength": {
         "min": 0.20,
         "max": 0.35,
         "reason": "Fangs MUST be visible below jaw for fearsome appearance",
         "severity": "CRITICAL"
-      },
-      "jawOpenAngle": {
-        "min": 15,
-        "max": 35,
-        "reason": "Jaw should be open enough to show fangs but not cartoonishly wide",
-        "severity": "HIGH"
-      },
-      "earPinAngle": {
-        "min": 25,
-        "max": 50,
-        "reason": "Ears pinned back indicates aggression in wolves",
-        "severity": "MEDIUM"
-      }
-    },
-
-    "animation": {
-      "breathCycle": {
-        "driver": {
-          "expr": "mul",
-          "args": [{ "var": "time" }, 0.8, 6.28318],
-          "description": "Breathing at 0.8 Hz"
-        },
-        "coupling": {
-          "chestExpand": {
-            "amplitude": 0.03,
-            "phase": 0.0,
-            "description": "Subtle chest expansion"
-          }
-        }
-      },
-      "snarl": {
-        "driver": {
-          "expr": "mul",
-          "args": [{ "var": "time" }, 0.3, 6.28318],
-          "description": "Slow snarl undulation"
-        },
-        "coupling": {
-          "lipCurl": {
-            "amplitude": 0.02,
-            "phase": 0.0,
-            "description": "Lip curling for snarl"
-          }
-        }
       }
     }
   },
@@ -294,7 +132,7 @@
       {
         "comment": "MAIN BODY - v1.6: LEANER torso, less bulbous",
         "type": "material",
-        "params": { "color": [0.22, 0.20, 0.18] },
+        "params": { "color": { "var": "bodyColor" } },
         "child": {
           "type": "displace",
           "amount": 0.08,
@@ -314,7 +152,7 @@
       {
         "comment": "HEAD - lowered attack position with OPEN JAW",
         "type": "material",
-        "params": { "color": [0.25, 0.23, 0.21] },
+        "params": { "color": { "var": "headColor" } },
         "child": {
           "type": "smoothUnion", "k": 0.2,
           "children": [
@@ -340,7 +178,7 @@
       {
         "comment": "TONGUE - red, visible in open mouth",
         "type": "material",
-        "params": { "color": [0.75, 0.20, 0.22] },
+        "params": { "color": { "var": "tongueColor" } },
         "child": {
           "type": "ellipsoid",
           "params": { "radii": [0.12, 0.04, 0.28] },
@@ -452,7 +290,7 @@
       {
         "comment": "EYES - intense predator gaze",
         "type": "material",
-        "params": { "color": [0.95, 0.5, 0.05], "emit": 0.7 },
+        "params": { "color": { "var": "eyeColor" }, "emit": { "var": "eyeGlow" } },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
@@ -495,7 +333,7 @@
       {
         "comment": "FRONT CLAWS - v1.6: repositioned for new leg positions",
         "type": "material",
-        "params": { "color": [0.06, 0.06, 0.06] },
+        "params": { "color": { "var": "clawColor" } },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
@@ -528,7 +366,7 @@
       {
         "comment": "REAR CLAWS - v1.6: repositioned",
         "type": "material",
-        "params": { "color": [0.06, 0.06, 0.06] },
+        "params": { "color": { "var": "clawColor" } },
         "child": {
           "type": "mirror", "axis": "x",
           "child": {
@@ -566,7 +404,7 @@
       {
         "comment": "HACKLES - v1.7: narrow spine ridge only",
         "type": "material",
-        "params": { "color": [0.32, 0.30, 0.28] },
+        "params": { "color": { "var": "hacklesColor" } },
         "child": {
           "type": "displace",
           "amount": 0.08,
