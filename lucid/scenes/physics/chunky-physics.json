@@ -1,12 +1,12 @@
 {
-  "title": "Chunky Physics",
-  "subtitle": "XPBD physics-reactive quadruped with bouncy body",
-  "version": "1.1",
-  "description": "Demonstrates GPU physics: body falls under gravity, feet anchored to ground",
-  "camera": { "distance": 6, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
+  "title": "Bouncy Quadruped",
+  "subtitle": "XPBD physics - drop a creature, watch it bounce",
+  "version": "2.0",
+  "description": "Body falls under gravity, feet anchored to ground, leg constraints maintain shape",
+  "camera": { "distance": 5, "phi": 0.35, "theta": 0.2, "target": [0, 0, 0] },
 
   "params": {
-    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4, "type": "scalar" },
+    "smoothness": { "value": 0.15, "min": 0.05, "max": 0.3, "type": "scalar" },
     "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
     "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" }
   },
@@ -14,17 +14,17 @@
   "physics": {
     "enabled": true,
     "gravity": [0, -9.8, 0],
-    "groundY": -1.5,
+    "groundY": -1.2,
     "damping": 0.98,
-    "iterations": 4,
+    "iterations": 8,
     "dt": 0.016,
 
     "bodies": [
-      { "name": "body", "pos": [0, 1.0, 0], "mass": 5.0, "radius": 0.3 },
-      { "name": "footFL", "pos": [0.4, 0.2, 0.5], "mass": 0.5, "radius": 0.1 },
-      { "name": "footFR", "pos": [-0.4, 0.2, 0.5], "mass": 0.5, "radius": 0.1 },
-      { "name": "footRL", "pos": [0.4, 0.2, -0.5], "mass": 0.5, "radius": 0.1 },
-      { "name": "footRR", "pos": [-0.4, 0.2, -0.5], "mass": 0.5, "radius": 0.1 }
+      { "name": "body", "pos": [0, 1.5, 0], "mass": 5.0, "radius": 0.4 },
+      { "name": "footFL", "pos": [0.4, -0.8, 0.5], "mass": 0, "radius": 0.1 },
+      { "name": "footFR", "pos": [-0.4, -0.8, 0.5], "mass": 0, "radius": 0.1 },
+      { "name": "footRL", "pos": [0.4, -0.8, -0.5], "mass": 0, "radius": 0.1 },
+      { "name": "footRR", "pos": [-0.4, -0.8, -0.5], "mass": 0, "radius": 0.1 }
     ],
 
     "distanceConstraints": [
@@ -32,82 +32,62 @@
       { "bodyA": "body", "bodyB": "footFR", "compliance": 0.0001 },
       { "bodyA": "body", "bodyB": "footRL", "compliance": 0.0001 },
       { "bodyA": "body", "bodyB": "footRR", "compliance": 0.0001 }
-    ],
-
-    "positionConstraints": [
-      { "body": "footFL", "compliance": 0.001 },
-      { "body": "footFR", "compliance": 0.001 },
-      { "body": "footRL", "compliance": 0.001 },
-      { "body": "footRR", "compliance": 0.001 }
     ]
   },
 
   "defs": {
-    "leg": {
-      "comment": "Single leg capsule",
+    "foot": {
       "type": "material",
       "params": { "color": { "var": "legColor" } },
       "child": {
-        "type": "capsule",
-        "params": { "h": 0.5, "r": 0.08 }
+        "type": "sphere",
+        "params": { "r": 0.12 }
       }
     }
   },
 
   "root": {
-    "type": "union",
+    "type": "smoothUnion", "k": { "var": "smoothness" },
     "children": [
       {
-        "comment": "=== BODY - position from physics ===",
+        "comment": "Body - position from physics",
         "type": "transform",
-        "transform": {
-          "translate": { "var": "phys_body" }
-        },
+        "transform": { "translate": { "var": "phys_body" } },
         "child": {
           "type": "material",
           "params": { "color": { "var": "bodyColor" } },
           "child": {
-            "type": "smoothUnion", "k": { "var": "smoothness" },
+            "type": "smoothUnion", "k": 0.2,
             "children": [
+              { "type": "ellipsoid", "params": { "radii": [0.5, 0.4, 0.7] } },
               {
-                "comment": "Main body ellipsoid",
-                "type": "ellipsoid",
-                "params": { "radii": [0.5, 0.4, 0.8] }
-              },
-              {
-                "comment": "Head",
                 "type": "ellipsoid",
                 "params": { "radii": [0.25, 0.22, 0.25] },
-                "transform": { "translate": [0, 0.1, 0.85] }
+                "transform": { "translate": [0, 0.1, 0.8] }
               }
             ]
           }
         }
       },
-
       {
-        "comment": "=== FRONT LEFT LEG ===",
         "type": "transform",
         "transform": { "translate": { "var": "phys_footFL" } },
-        "child": { "type": "ref", "id": "leg" }
+        "child": { "type": "ref", "id": "foot" }
       },
       {
-        "comment": "=== FRONT RIGHT LEG ===",
         "type": "transform",
         "transform": { "translate": { "var": "phys_footFR" } },
-        "child": { "type": "ref", "id": "leg" }
+        "child": { "type": "ref", "id": "foot" }
       },
       {
-        "comment": "=== REAR LEFT LEG ===",
         "type": "transform",
         "transform": { "translate": { "var": "phys_footRL" } },
-        "child": { "type": "ref", "id": "leg" }
+        "child": { "type": "ref", "id": "foot" }
       },
       {
-        "comment": "=== REAR RIGHT LEG ===",
         "type": "transform",
         "transform": { "translate": { "var": "phys_footRR" } },
-        "child": { "type": "ref", "id": "leg" }
+        "child": { "type": "ref", "id": "foot" }
       }
     ]
   }
