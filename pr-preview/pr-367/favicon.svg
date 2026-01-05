@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Eggshell bottom -->
+  <ellipse cx="50" cy="65" rx="28" ry="20" fill="#f5f5dc" stroke="#d4d4aa" stroke-width="2"/>
+  
+  <!-- Eggshell cracks -->
+  <path d="M25 55 L30 50 L35 55 M65 55 L70 50 L75 55" stroke="#d4d4aa" stroke-width="1.5" fill="none"/>
+  
+  <!-- Chick body -->
+  <ellipse cx="50" cy="55" rx="18" ry="15" fill="#ffd700"/>
+  
+  <!-- Chick head -->
+  <circle cx="50" cy="40" r="12" fill="#ffd700"/>
+  
+  <!-- Beak -->
+  <polygon points="50,45 53,48 47,48" fill="#ff8c00"/>
+  
+  <!-- Eyes -->
+  <circle cx="46" cy="37" r="2" fill="#000"/>
+  <circle cx="54" cy="37" r="2" fill="#000"/>
+  <circle cx="46.5" cy="36.5" r="0.8" fill="#fff"/>
+  <circle cx="54.5" cy="36.5" r="0.8" fill="#fff"/>
+  
+  <!-- Wing -->
+  <ellipse cx="58" cy="50" rx="6" ry="8" fill="#ffeb3b" transform="rotate(15 58 50)"/>
+  
+  <!-- Eggshell top pieces -->
+  <path d="M35 45 Q40 35 45 45" fill="#f5f5dc" stroke="#d4d4aa" stroke-width="1.5"/>
+  <path d="M55 45 Q60 35 65 45" fill="#f5f5dc" stroke="#d4d4aa" stroke-width="1.5"/>
+  
+  <!-- Small eggshell fragments -->
+  <polygon points="30,50 33,47 36,52" fill="#f5f5dc" stroke="#d4d4aa" stroke-width="1"/>
+  <polygon points="68,52 71,49 74,53" fill="#f5f5dc" stroke="#d4d4aa" stroke-width="1"/>
+</svg>
