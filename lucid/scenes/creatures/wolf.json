@@ -1,11 +1,34 @@
 {
   "title": "Fearsome Wolf",
-  "subtitle": "v1.9 - Parametric fangs + colors",
-  "version": "1.9",
+  "subtitle": "v2.0 - Walk cycle + body sway",
+  "version": "2.0",
   "camera": { "distance": 12, "phi": 0.3, "theta": 0.25, "target": [0, 0.5, 0] },
-  "notes": "Parametric wolf with working fang controls and color customization. Body geometry is fixed (not parametric).",
+  "notes": "Parametric wolf with walk cycle animation, body sway, fang controls and color customization. Legs use diagonal pair phasing for realistic quadruped gait.",
 
   "params": {
+    "_comment_walk": "=== WALK CYCLE PARAMETERS ===",
+    "walkSpeed": {
+      "value": 2.0,
+      "type": "scalar",
+      "min": 0,
+      "max": 6,
+      "description": "Walk animation speed"
+    },
+    "walkAmplitude": {
+      "value": 15,
+      "type": "scalar",
+      "min": 0,
+      "max": 35,
+      "description": "Leg swing angle (degrees)"
+    },
+    "bodySway": {
+      "value": 3,
+      "type": "scalar",
+      "min": 0,
+      "max": 12,
+      "description": "Body left/right sway (degrees)"
+    },
+
     "_comment_fangs": "=== FANG PARAMETERS ===",
     "fangLength": {
       "value": 0.18,
@@ -142,9 +165,9 @@
           "child": {
             "type": "smoothUnion", "k": 0.25,
             "children": [
-              { "comment": "Chest - lean, athletic", "type": "ellipsoid", "params": { "radii": [0.55, 0.50, 0.9] }, "transform": { "translate": [0, 0.75, 1.0], "rotate": [15, 0, 0] } },
+              { "comment": "Chest - lean, athletic + sway", "type": "ellipsoid", "params": { "radii": [0.55, 0.50, 0.9] }, "transform": { "translate": [0, 0.75, 1.0], "rotate": [15, {"expr": "mul", "args": [{"var": "bodySway"}, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}, 0] } },
               { "comment": "Core torso - elongated", "type": "ellipsoid", "params": { "radii": [0.48, 0.45, 1.2] }, "transform": { "translate": [0, 0.72, -0.3], "rotate": [5, 0, 0] } },
-              { "comment": "Hindquarters - athletic", "type": "ellipsoid", "params": { "radii": [0.52, 0.50, 0.85] }, "transform": { "translate": [0, 0.78, -1.4] } }
+              { "comment": "Hindquarters - athletic + opposite sway", "type": "ellipsoid", "params": { "radii": [0.52, 0.50, 0.85] }, "transform": { "translate": [0, 0.78, -1.4], "rotate": [0, {"expr": "mul", "args": [{"var": "bodySway"}, {"expr": "mul", "args": [-1, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}]}, 0] } }
             ]
           }
         }
@@ -314,18 +337,43 @@
         }
       },
       {
-        "comment": "FRONT LEGS - v1.6: PROMINENT, clearly visible",
-        "type": "material",
-        "params": { "color": [0.20, 0.18, 0.16] },
+        "comment": "FRONT LEFT LEG - walk cycle animated",
+        "type": "transform",
+        "transform": {
+          "translate": [0.48, 0.25, 1.0],
+          "rotate": [{"expr": "mul", "args": [{"var": "walkAmplitude"}, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}, 0, 0]
+        },
         "child": {
-          "type": "mirror", "axis": "x",
+          "type": "material",
+          "params": { "color": [0.20, 0.18, 0.16] },
           "child": {
             "type": "smoothUnion", "k": 0.08,
             "children": [
-              { "comment": "Shoulder - powerful", "type": "ellipsoid", "params": { "radii": [0.22, 0.35, 0.28] }, "transform": { "translate": [0.45, 0.55, 0.9] } },
-              { "comment": "Upper leg - long", "type": "capsule", "params": { "h": 0.55, "r": 0.12 }, "transform": { "translate": [0.48, 0.25, 1.0], "rotate": [12, 0, 0] } },
-              { "comment": "Lower leg", "type": "capsule", "params": { "h": 0.45, "r": 0.09 }, "transform": { "translate": [0.50, -0.15, 1.15], "rotate": [-8, 0, 0] } },
-              { "comment": "Paw", "type": "ellipsoid", "params": { "radii": [0.14, 0.08, 0.18] }, "transform": { "translate": [0.50, -0.35, 1.25] } }
+              { "comment": "Shoulder", "type": "ellipsoid", "params": { "radii": [0.22, 0.35, 0.28] }, "transform": { "translate": [-0.03, 0.30, -0.1] } },
+              { "comment": "Upper leg", "type": "capsule", "params": { "h": 0.55, "r": 0.12 }, "transform": { "rotate": [12, 0, 0] } },
+              { "comment": "Lower leg", "type": "capsule", "params": { "h": 0.45, "r": 0.09 }, "transform": { "translate": [0.02, -0.40, 0.15], "rotate": [-8, 0, 0] } },
+              { "comment": "Paw", "type": "ellipsoid", "params": { "radii": [0.14, 0.08, 0.18] }, "transform": { "translate": [0.02, -0.60, 0.25] } }
+            ]
+          }
+        }
+      },
+      {
+        "comment": "FRONT RIGHT LEG - opposite phase",
+        "type": "transform",
+        "transform": {
+          "translate": [-0.48, 0.25, 1.0],
+          "rotate": [{"expr": "mul", "args": [{"var": "walkAmplitude"}, {"expr": "mul", "args": [-1, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}]}, 0, 0]
+        },
+        "child": {
+          "type": "material",
+          "params": { "color": [0.20, 0.18, 0.16] },
+          "child": {
+            "type": "smoothUnion", "k": 0.08,
+            "children": [
+              { "comment": "Shoulder", "type": "ellipsoid", "params": { "radii": [0.22, 0.35, 0.28] }, "transform": { "translate": [0.03, 0.30, -0.1] } },
+              { "comment": "Upper leg", "type": "capsule", "params": { "h": 0.55, "r": 0.12 }, "transform": { "rotate": [12, 0, 0] } },
+              { "comment": "Lower leg", "type": "capsule", "params": { "h": 0.45, "r": 0.09 }, "transform": { "translate": [-0.02, -0.40, 0.15], "rotate": [-8, 0, 0] } },
+              { "comment": "Paw", "type": "ellipsoid", "params": { "radii": [0.14, 0.08, 0.18] }, "transform": { "translate": [-0.02, -0.60, 0.25] } }
             ]
           }
         }
@@ -347,18 +395,43 @@
         }
       },
       {
-        "comment": "REAR LEGS - v1.6: PROMINENT, powerful haunches",
-        "type": "material",
-        "params": { "color": [0.20, 0.18, 0.16] },
+        "comment": "REAR LEFT LEG - opposite phase to front left (diagonal pair with front right)",
+        "type": "transform",
+        "transform": {
+          "translate": [0.45, 0.20, -1.4],
+          "rotate": [{"expr": "mul", "args": [{"var": "walkAmplitude"}, {"expr": "mul", "args": [-1, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}]}, 0, 0]
+        },
         "child": {
-          "type": "mirror", "axis": "x",
+          "type": "material",
+          "params": { "color": [0.20, 0.18, 0.16] },
           "child": {
             "type": "smoothUnion", "k": 0.08,
             "children": [
-              { "comment": "Haunch - muscular", "type": "ellipsoid", "params": { "radii": [0.28, 0.40, 0.35] }, "transform": { "translate": [0.42, 0.58, -1.2] } },
-              { "comment": "Upper rear leg", "type": "capsule", "params": { "h": 0.50, "r": 0.11 }, "transform": { "translate": [0.45, 0.20, -1.4], "rotate": [-15, 0, 0] } },
-              { "comment": "Lower rear leg", "type": "capsule", "params": { "h": 0.45, "r": 0.08 }, "transform": { "translate": [0.48, -0.18, -1.55], "rotate": [10, 0, 0] } },
-              { "comment": "Rear paw", "type": "ellipsoid", "params": { "radii": [0.12, 0.07, 0.16] }, "transform": { "translate": [0.48, -0.38, -1.45] } }
+              { "comment": "Haunch", "type": "ellipsoid", "params": { "radii": [0.28, 0.40, 0.35] }, "transform": { "translate": [-0.03, 0.38, 0.2] } },
+              { "comment": "Upper rear leg", "type": "capsule", "params": { "h": 0.50, "r": 0.11 }, "transform": { "rotate": [-15, 0, 0] } },
+              { "comment": "Lower rear leg", "type": "capsule", "params": { "h": 0.45, "r": 0.08 }, "transform": { "translate": [0.03, -0.38, -0.15], "rotate": [10, 0, 0] } },
+              { "comment": "Rear paw", "type": "ellipsoid", "params": { "radii": [0.12, 0.07, 0.16] }, "transform": { "translate": [0.03, -0.58, -0.05] } }
+            ]
+          }
+        }
+      },
+      {
+        "comment": "REAR RIGHT LEG - same phase as front left (diagonal pair)",
+        "type": "transform",
+        "transform": {
+          "translate": [-0.45, 0.20, -1.4],
+          "rotate": [{"expr": "mul", "args": [{"var": "walkAmplitude"}, {"expr": "sin", "args": [{"expr": "mul", "args": [{"var": "time"}, {"var": "walkSpeed"}]}]}]}, 0, 0]
+        },
+        "child": {
+          "type": "material",
+          "params": { "color": [0.20, 0.18, 0.16] },
+          "child": {
+            "type": "smoothUnion", "k": 0.08,
+            "children": [
+              { "comment": "Haunch", "type": "ellipsoid", "params": { "radii": [0.28, 0.40, 0.35] }, "transform": { "translate": [0.03, 0.38, 0.2] } },
+              { "comment": "Upper rear leg", "type": "capsule", "params": { "h": 0.50, "r": 0.11 }, "transform": { "rotate": [-15, 0, 0] } },
+              { "comment": "Lower rear leg", "type": "capsule", "params": { "h": 0.45, "r": 0.08 }, "transform": { "translate": [-0.03, -0.38, -0.15], "rotate": [10, 0, 0] } },
+              { "comment": "Rear paw", "type": "ellipsoid", "params": { "radii": [0.12, 0.07, 0.16] }, "transform": { "translate": [-0.03, -0.58, -0.05] } }
             ]
           }
         }
