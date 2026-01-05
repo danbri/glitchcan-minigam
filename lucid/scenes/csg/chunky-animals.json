@@ -7,7 +7,8 @@
   "camera": { "distance": 10, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
 
   "params": {
-    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4, "description": "Body smoothness" }
+    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4, "description": "Body smoothness" },
+    "spacing": { "value": 3.5, "min": 2, "max": 6, "description": "Distance between animals" }
   },
 
   "defs": {
@@ -82,9 +83,17 @@
   "root": {
     "type": "union",
     "children": [
-      { "type": "ref", "id": "hippo", "transform": { "translate": [0, 0, 0] } },
-      { "type": "ref", "id": "bear", "transform": { "translate": [3.5, 0, 0] } },
-      { "type": "ref", "id": "pig", "transform": { "translate": [-3.5, 0, 0] } }
+      { "type": "ref", "id": "hippo" },
+      {
+        "type": "transform",
+        "transform": { "translate": [{ "var": "spacing" }, 0, 0] },
+        "child": { "type": "ref", "id": "bear" }
+      },
+      {
+        "type": "transform",
+        "transform": { "translate": [{ "expr": "mul", "args": [{ "var": "spacing" }, -1] }, 0, 0] },
+        "child": { "type": "ref", "id": "pig" }
+      }
     ]
   }
 }
