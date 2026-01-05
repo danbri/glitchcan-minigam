@@ -166,8 +166,44 @@ export class PhysicsScene {
       }
     }
 
+    // Position constraints (rig-driven targets)
+    this.positionConstraints = [];
+    if (this.physics.positionConstraints) {
+      for (const c of this.physics.positionConstraints) {
+        const body = this.bodies.find(b => b.id === c.body);
+        if (body) {
+          this.positionConstraints.push({
+            body,
+            basePosition: vec3.clone(body.position),
+            target: vec3.clone(body.position),
+            compliance: c.compliance ?? 0.01,
+            rigTarget: c.rigTarget || null,
+            baseY: c.baseY ?? body.position[1]
+          });
+        }
+      }
+    }
+
     this.damping = this.physics.damping ?? 0.99;
     this.iterations = this.physics.iterations ?? 4;
+  }
+
+  /**
+   * Update position constraint targets from rig values
+   * @param {Object} rigValues - Current rig output values
+   */
+  updateFromRig(rigValues) {
+    if (!rigValues) return;
+
+    for (const c of this.positionConstraints) {
+      if (c.rigTarget && rigValues[c.rigTarget] !== undefined) {
+        // Apply rig value as Y offset from base position
+        const liftAmount = rigValues[c.rigTarget];
+        c.target[0] = c.basePosition[0];
+        c.target[1] = c.baseY + liftAmount;
+        c.target[2] = c.basePosition[2];
+      }
+    }
   }
 
   /**
@@ -221,6 +257,23 @@ export class PhysicsScene {
         if (wB > 0) {
           vec3.scaleAddTo(b.position, n, -lambda * wB);
         }
+      }
+
+      // Position constraints (pull toward target)
+      for (const c of this.positionConstraints) {
+        const body = c.body;
+        if (body.isStatic) continue;
+
+        const w = 1 / body.mass;
+        const diff = vec3.sub(c.target, body.position);
+        const dist = vec3.length(diff);
+        if (dist < 0.0001) continue;
+
+        const alpha = c.compliance / (dt * dt);
+        const lambda = dist / (w + alpha);
+
+        const n = vec3.scale(diff, 1 / dist);
+        vec3.scaleAddTo(body.position, n, lambda * w);
       }
 
       for (const body of this.bodies) {

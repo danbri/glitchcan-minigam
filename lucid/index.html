@@ -2225,8 +2225,15 @@
             renderer.overrideTime = null; // Use normal time
           }
 
-          // Step physics simulation and update params
+          renderer.render();
+
+          // Step physics simulation AFTER render (uses rig values from this frame)
           if (currentPhysicsScene && currentPhysicsScene.enabled && animState !== 'frozen') {
+            // Update position constraint targets from rig (e.g., foot lift heights)
+            if (renderer.lastRigValues) {
+              currentPhysicsScene.updateFromRig(renderer.lastRigValues);
+            }
+
             currentPhysicsScene.step(Math.min(deltaTime, 1/30)); // Cap to avoid instability
 
             // Sync physics positions to shader params (vec3)
@@ -2237,8 +2244,6 @@
               renderer.setParam(paramName, [...body.position]);
             }
           }
-
-          renderer.render();
 
           // Track FPS and frame time
           if (debugSettings.showPerf) {

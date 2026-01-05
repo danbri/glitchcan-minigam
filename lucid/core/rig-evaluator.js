@@ -226,10 +226,49 @@ export function evaluateRig(params, rig, time = 0) {
         const phase = evaluateExpr(config.phase ?? 0, values, time);
         const amplitude = evaluateExpr(config.amplitude ?? 1, values, time);
         const offset = evaluateExpr(config.offset ?? 0, values, time);
+        const waveform = config.waveform || 'sin';
 
-        // Sinusoidal oscillation with phase offset
+        // Phase angle in radians
         const angle = driver + phase * Math.PI * 2;
-        const val = Math.sin(angle) * amplitude + offset;
+
+        // Apply waveform
+        let val;
+        switch (waveform) {
+          case 'step':
+            // Foot step pattern: rises quickly, holds, falls quickly
+            // Normalized phase 0-1 within cycle
+            const t = ((angle / (Math.PI * 2)) % 1 + 1) % 1;
+            // Step up for first half, down for second half
+            // Smooth step using cubic ease
+            if (t < 0.3) {
+              // Rising phase
+              const s = t / 0.3;
+              val = s * s * (3 - 2 * s) * amplitude + offset;
+            } else if (t < 0.5) {
+              // Hold high
+              val = amplitude + offset;
+            } else if (t < 0.8) {
+              // Falling phase
+              const s = (t - 0.5) / 0.3;
+              val = (1 - s * s * (3 - 2 * s)) * amplitude + offset;
+            } else {
+              // Hold low (foot on ground)
+              val = offset;
+            }
+            break;
+          case 'cos':
+            val = Math.cos(angle) * amplitude + offset;
+            break;
+          case 'triangle':
+            // Triangle wave
+            const p = ((angle / (Math.PI * 2)) % 1 + 1) % 1;
+            val = (p < 0.5 ? 4 * p - 1 : 3 - 4 * p) * amplitude + offset;
+            break;
+          case 'sin':
+          default:
+            val = Math.sin(angle) * amplitude + offset;
+            break;
+        }
 
         // Store with composite name
         const paramName = `${cycleName}_${follower}`;
