@@ -134,23 +134,32 @@ export class SimpleRaymarcher {
    * Dynamically imports physics module, creates bridge, then inits GPU
    */
   async initPhysics(sceneJson) {
+    console.log('initPhysics called, bodies:', sceneJson?.physics?.bodies?.length || 0);
     try {
       // Dynamic import to avoid blocking page load if physics module fails
       if (!PhysicsBridge) {
+        console.log('Dynamically importing physics-bridge.js...');
         const module = await import('../core/physics/physics-bridge.js');
         PhysicsBridge = module.PhysicsBridge;
+        console.log('Physics module loaded');
       }
 
       // Create bridge - pre-parses initial positions synchronously
       this.physicsBridge = new PhysicsBridge(sceneJson);
+      console.log('PhysicsBridge created, initial positions:', this.physicsBridge.initialPositions.size);
 
       // GPU init is async
       const ok = await this.physicsBridge.init(sceneJson);
       this.physicsEnabled = ok;
       this.lastPhysicsTime = performance.now();
       console.log(`Physics initialized: ${ok ? (this.physicsBridge.isGPU() ? 'WebGPU' : 'CPU') : 'disabled'}`);
+
+      if (ok) {
+        console.log('Physics particles:', this.physicsBridge.physics.particles.length);
+        console.log('Distance constraints:', this.physicsBridge.physics.distConstraints.length);
+      }
     } catch (err) {
-      console.warn('Physics init failed:', err);
+      console.error('Physics init failed:', err);
       this.physicsEnabled = false;
       this.physicsBridge = null;
     }
@@ -721,21 +730,35 @@ export class SimpleRaymarcher {
         const dt = Math.min((now - this.lastPhysicsTime) / 1000, 0.05); // Cap at 50ms
         this.lastPhysicsTime = now;
 
-        // Non-blocking physics step
+        // Synchronous physics step (CPU fallback is sync, GPU is async)
         this.physicsBridge.step(dt);
       }
 
       // Bind physics-derived params (positions of physics bodies)
       // getParamValues returns initial positions even before full init
       const physicsParams = this.physicsBridge.getParamValues();
+
+      // Debug: log first frame physics state
+      if (!this._physicsLoggedOnce && Object.keys(physicsParams).length > 0) {
+        this._physicsLoggedOnce = true;
+        console.log('Physics params:', physicsParams);
+        console.log('Physics enabled:', this.physicsEnabled);
+      }
+
       for (const [name, param] of Object.entries(physicsParams)) {
         const loc = gl.getUniformLocation(this.program, `u_${name}`);
-        if (loc === null) continue;
+        if (loc === null) {
+          if (!this._missingUniformsLogged) {
+            console.warn(`Missing uniform: u_${name}`);
+          }
+          continue;
+        }
 
         if (param.type === 'position3' && Array.isArray(param.value)) {
           gl.uniform3f(loc, param.value[0], param.value[1], param.value[2]);
         }
       }
+      this._missingUniformsLogged = true;
     }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
