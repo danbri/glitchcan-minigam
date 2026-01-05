@@ -1,0 +1,79 @@
+{
+  "title": "Spirit Creatures",
+  "subtitle": "Rotating ghost-like beings with tentacles",
+  "version": "1.1",
+
+  "params": {
+    "repeatSpacing": {
+      "value": 2.0,
+      "type": "scalar",
+      "min": 1.5,
+      "max": 4.0,
+      "description": "Distance between spirits"
+    },
+    "floatAmplitude": {
+      "value": 0.1,
+      "type": "scalar",
+      "min": 0,
+      "max": 0.4,
+      "description": "How much spirits bob up/down"
+    },
+    "rotationSpeed": {
+      "value": 20,
+      "type": "scalar",
+      "min": 0,
+      "max": 60,
+      "description": "Spirit rotation speed"
+    },
+    "bodyColor": {
+      "value": [0.9, 0.95, 1.0],
+      "type": "color3",
+      "description": "Ghost body color"
+    }
+  },
+
+  "defs": {
+    "tentacle_chain": {
+      "type": "smoothUnion",
+      "k": 0.08,
+      "children": [
+        { "type": "sphere", "params": { "r": 0.08, "color": [1, 0.2, 0.1] } },
+        { "type": "sphere", "params": { "r": 0.06, "color": [1, 0.6, 0.1] }, "transform": { "translate": [0.15, 0, 0] } },
+        { "type": "sphere", "params": { "r": 0.03, "color": [1, 1, 0.5] }, "transform": { "translate": [0.3, 0, 0] } }
+      ]
+    },
+    "ghost_body": {
+      "type": "sphere",
+      "params": { "r": 0.22, "color": { "var": "bodyColor" } }
+    },
+    "spirit_creature": {
+      "type": "smoothUnion",
+      "k": 0.1,
+      "children": [
+        { "type": "ref", "id": "ghost_body" },
+        {
+          "type": "radial",
+          "count": 6,
+          "axis": "z",
+          "child": {
+            "type": "transform",
+            "transform": { "translate": [0.15, 0, 0.1], "rotate": [0, 45, 0] },
+            "child": { "type": "ref", "id": "tentacle_chain" }
+          }
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "repeat",
+    "period": [{ "var": "repeatSpacing" }, { "var": "repeatSpacing" }, { "var": "repeatSpacing" }],
+    "child": {
+      "type": "transform",
+      "transform": {
+        "translate": [0, { "expr": "mul", "args": [{ "var": "floatAmplitude" }, { "expr": "sin", "args": [{ "var": "time" }] }] }, 0],
+        "rotate": [0, 0, { "expr": "mul", "args": [{ "var": "rotationSpeed" }, { "var": "time" }] }]
+      },
+      "child": { "type": "ref", "id": "spirit_creature" }
+    }
+  }
+}
