@@ -1,0 +1,143 @@
+{
+  "title": "Walk Cycle + Physics",
+  "subtitle": "Phase-coupled gait with XPBD constraint satisfaction",
+  "version": "1.0",
+  "description": "Walk cycle animation drives foot position targets, XPBD physics maintains leg length constraints. Body reacts to terrain via physics.",
+  "camera": { "distance": 5, "phi": 0.3, "theta": 0.3, "target": [0, 0, 0] },
+
+  "params": {
+    "walkSpeed": { "value": 2.0, "min": 0, "max": 6, "description": "Gait cycle speed" },
+    "legSwing": { "value": 25, "min": 0, "max": 45, "description": "Leg swing amplitude (degrees)" },
+    "bodySway": { "value": 3, "min": 0, "max": 10, "description": "Body roll amplitude (degrees)" },
+    "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
+    "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" },
+    "smoothness": { "value": 0.15, "min": 0.05, "max": 0.3 }
+  },
+
+  "rig": {
+    "phase": {
+      "gait": {
+        "comment": "Quadruped diagonal gait - FL+RR together, FR+RL together",
+        "driver": { "expr": "mul", "args": ["time", "walkSpeed"] },
+        "followers": {
+          "legFL": { "phase": 0, "amplitude": "legSwing" },
+          "legRR": { "phase": 0, "amplitude": "legSwing" },
+          "legFR": { "phase": 0.5, "amplitude": "legSwing" },
+          "legRL": { "phase": 0.5, "amplitude": "legSwing" },
+          "bodyRoll": { "phase": 0.25, "amplitude": "bodySway" }
+        }
+      }
+    }
+  },
+
+  "physics": {
+    "enabled": true,
+    "gravity": [0, -9.8, 0],
+    "groundY": -1.0,
+    "damping": 0.95,
+    "iterations": 6,
+    "dt": 0.016,
+
+    "preset": "quadruped",
+    "quadruped": {
+      "bodyPos": [0, 0.5, 0],
+      "bodyMass": 8.0,
+      "footMass": 0.3,
+      "legLength": 0.7,
+      "bodyWidth": 0.35,
+      "bodyLength": 0.4,
+      "compliance": 0.00005
+    },
+
+    "rigBindings": {
+      "footFL": "gait_legFL",
+      "footFR": "gait_legFR",
+      "footRL": "gait_legRL",
+      "footRR": "gait_legRR"
+    },
+
+    "comment": "Rig bindings: foot position targets driven by walk cycle phase values. Physics solver maintains leg length while feet track animation targets."
+  },
+
+  "defs": {
+    "leg": {
+      "comment": "Single leg capsule - position from physics",
+      "type": "material",
+      "params": { "color": { "var": "legColor" } },
+      "child": {
+        "type": "capsule",
+        "params": { "h": 0.5, "r": 0.08 }
+      }
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "comment": "=== BODY with physics position + rig sway ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_body" },
+          "rotate": [0, 0, { "var": "gait_bodyRoll" }]
+        },
+        "child": {
+          "type": "material",
+          "params": { "color": { "var": "bodyColor" } },
+          "child": {
+            "type": "smoothUnion", "k": { "var": "smoothness" },
+            "children": [
+              {
+                "comment": "Main body",
+                "type": "ellipsoid",
+                "params": { "radii": [0.45, 0.35, 0.7] }
+              },
+              {
+                "comment": "Head",
+                "type": "ellipsoid",
+                "params": { "radii": [0.22, 0.2, 0.22] },
+                "transform": { "translate": [0, 0.1, 0.75] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== FRONT LEFT LEG - physics position ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footFL" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== FRONT RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footFR" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR LEFT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footRL" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": { "var": "phys_footRR" }
+        },
+        "child": { "type": "ref", "id": "leg" }
+      }
+    ]
+  }
+}

@@ -140,7 +140,9 @@
       "title": "⚛️ Physics",
       "description": "Real-time physics simulation",
       "scenes": [
-        { "path": "physics/bouncing-balls.json", "title": "Bouncing Balls 🔴🟢🔵", "subtitle": "Spheres with gravity & collision" }
+        { "path": "physics/bouncing-balls.json", "title": "Bouncing Balls 🔴🟢🔵", "subtitle": "Spheres with gravity & collision" },
+        { "path": "physics/chunky-physics.json", "title": "Chunky Physics 🦛", "subtitle": "WebGPU XPBD quadruped" },
+        { "path": "physics/walk-physics.json", "title": "Walk + Physics 🐕", "subtitle": "Gait animation with constraints" }
       ]
     },
     {

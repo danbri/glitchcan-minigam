@@ -2296,8 +2296,8 @@
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
 
-      // Pass scene params and rig to renderer for uniform binding
-      renderer.updateScene(glsl, scene.params || {}, scene.rig || null);
+      // Pass scene params, rig, and full scene JSON (for physics) to renderer
+      renderer.updateScene(glsl, scene.params || {}, scene.rig || null, scene);
 
       // Update params panel with new scene params and rig constraints
       updateParamsPanel(scene.params || {}, scene.rig);

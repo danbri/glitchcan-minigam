@@ -1,9 +1,11 @@
 /**
  * Simple WebGL raymarcher for SDF scenes
  * Supports orbit camera, ground plane, and volume rendering modes
+ * LCD-045: Now supports XPBD physics integration
  */
 
 import { evaluateRig } from '../core/rig-evaluator.js';
+import { PhysicsBridge, mergePhysicsParams } from '../core/physics/physics-bridge.js';
 
 export class SimpleRaymarcher {
   // Quality presets for raymarch parameters
@@ -80,6 +82,12 @@ export class SimpleRaymarcher {
     this.lastViolations = [];   // Most recent constraint violations
     this.onConstraintViolation = null;  // Callback: (violations) => void
 
+    // Physics simulation (WebGPU XPBD)
+    this.physicsBridge = null;  // PhysicsBridge instance
+    this.physicsEnabled = false;
+    this.sceneJson = null;      // Full scene JSON for physics init
+    this.lastPhysicsTime = 0;
+
     // Lighting settings
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
@@ -102,11 +110,47 @@ export class SimpleRaymarcher {
     }
   }
 
-  updateScene(glslCode, sceneParams = {}, rig = null) {
+  updateScene(glslCode, sceneParams = {}, rig = null, sceneJson = null) {
     this.currentGlsl = glslCode;
     this.sceneParams = sceneParams;
     this.rig = rig;
+    this.sceneJson = sceneJson;
+
+    // Initialize physics if scene has physics config
+    if (sceneJson?.physics?.enabled) {
+      this.initPhysics(sceneJson);
+    } else {
+      this.physicsEnabled = false;
+      this.physicsBridge = null;
+    }
+
     this.compileShaders();
+  }
+
+  /**
+   * Initialize physics from scene JSON (async)
+   */
+  async initPhysics(sceneJson) {
+    try {
+      this.physicsBridge = new PhysicsBridge();
+      const ok = await this.physicsBridge.init(sceneJson);
+      this.physicsEnabled = ok;
+      this.lastPhysicsTime = performance.now();
+      console.log(`Physics initialized: ${ok ? (this.physicsBridge.isGPU() ? 'WebGPU' : 'CPU') : 'disabled'}`);
+    } catch (err) {
+      console.warn('Physics init failed:', err);
+      this.physicsEnabled = false;
+      this.physicsBridge = null;
+    }
+  }
+
+  /**
+   * Apply impulse to a physics body (for interaction)
+   */
+  applyPhysicsImpulse(bodyName, impulse) {
+    if (this.physicsBridge && this.physicsEnabled) {
+      this.physicsBridge.applyImpulse(bodyName, impulse);
+    }
   }
 
   /**
@@ -652,6 +696,33 @@ export class SimpleRaymarcher {
         const loc = gl.getUniformLocation(this.program, `u_${name}`);
         if (loc !== null) {
           gl.uniform1f(loc, value);
+        }
+      }
+    }
+
+    // Physics simulation step and param binding
+    if (this.physicsEnabled && this.physicsBridge) {
+      // Update physics position targets from rig animation
+      if (this.rig) {
+        this.physicsBridge.updateFromRig(this.sceneParams, this.rig, time);
+      }
+
+      // Step physics (async but we don't wait - use last frame's results)
+      const now = performance.now();
+      const dt = Math.min((now - this.lastPhysicsTime) / 1000, 0.05); // Cap at 50ms
+      this.lastPhysicsTime = now;
+
+      // Non-blocking physics step
+      this.physicsBridge.step(dt);
+
+      // Bind physics-derived params (positions of physics bodies)
+      const physicsParams = this.physicsBridge.getParamValues();
+      for (const [name, param] of Object.entries(physicsParams)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc === null) continue;
+
+        if (param.type === 'position3' && Array.isArray(param.value)) {
+          gl.uniform3f(loc, param.value[0], param.value[1], param.value[2]);
         }
       }
     }
