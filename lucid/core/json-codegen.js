@@ -1013,20 +1013,40 @@ function generateRef(node, ctx) {
 
 /**
  * Apply parameter overrides to a definition node
- * Returns a new node with overridden params merged in
+ * Recursively substitutes { type: 'var', name: X } with override values
  */
 function applyParamOverrides(def, overrides) {
   // Deep clone to avoid mutating the original definition
   const cloned = JSON.parse(JSON.stringify(def));
 
-  // Merge overrides into params
-  if (cloned.params) {
-    for (const [key, value] of Object.entries(overrides)) {
-      cloned.params[key] = value;
-    }
+  // Recursively substitute var references
+  return substituteVarRefs(cloned, overrides);
+}
+
+/**
+ * Recursively substitute var references with override values
+ * Handles processed nodes (type: 'var', name: X) from json-loader
+ */
+function substituteVarRefs(obj, overrides) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+
+  // Check if this is a processed var reference
+  if (obj.type === 'var' && obj.name && overrides.hasOwnProperty(obj.name)) {
+    return overrides[obj.name];
   }
 
-  return cloned;
+  // Arrays: substitute each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => substituteVarRefs(item, overrides));
+  }
+
+  // Objects: substitute each property value
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = substituteVarRefs(value, overrides);
+  }
+  return result;
 }
 
 /**
