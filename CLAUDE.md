@@ -769,6 +769,108 @@ Agent D returns structured report with:
 └─────────────────────────────────────────┘
 ```
 
+## Lucid Debugging Techniques
+
+### 🚨 KEY INSIGHT: "Compiling is not enough - what is RENDERED?"
+
+GLSL can compile successfully but produce wrong/empty output. Always verify with actual browser rendering.
+
+### Comparing Against Known-Good Code (Git Worktree)
+
+When scenes stop rendering after changes, compare against a known-good commit:
+
+```bash
+# Create worktree at yesterday's commit
+git worktree add /tmp/lucid-yesterday HEAD~10  # or specific SHA
+
+# Compare generated GLSL
+node -e "
+import { generateGlslFromJson } from './lucid/core/json-codegen.js';
+import { loadJsonScene } from './lucid/core/json-loader.js';
+import { readFileSync } from 'fs';
+const json = JSON.parse(readFileSync('./lucid/scenes/creatures/wolf.json', 'utf8'));
+const scene = loadJsonScene(json);
+const glsl = generateGlslFromJson(scene, {});
+console.log(glsl.slice(-500));  // Check sceneSDF function
+"
+
+# Clean up when done
+git worktree remove /tmp/lucid-yesterday
+```
+
+### Browser Rendering Tests with Playwright
+
+Node.js GLSL generation may succeed while browser rendering fails. Test actual rendering:
+
+```javascript
+// Quick shader compilation test
+import { chromium } from 'playwright';
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
+  args: ['--headless=new', '--no-sandbox']
+});
+const page = await browser.newPage();
+page.on('console', msg => console.log('BROWSER:', msg.text()));
+await page.goto('http://localhost:8080/lucid/index.html#creatures.wolf');
+await page.waitForTimeout(4000);
+await page.screenshot({ path: '/tmp/test-render.png' });
+await browser.close();
+```
+
+**Common failure modes:**
+- Shader compiles but scene is empty → check camera settings, param values
+- "no matching overloaded function" → type mismatch (e.g., float vs int)
+- Black screen → uniforms not initialized, missing default values
+
+### Quick GLSL Compilation Check (Node.js)
+
+Fast check that scene generates valid GLSL:
+
+```bash
+node -e "
+import { generateGlslFromJson } from './lucid/core/json-codegen.js';
+import { loadJsonScene } from './lucid/core/json-loader.js';
+import { readFileSync } from 'fs';
+const json = JSON.parse(readFileSync('./lucid/scenes/creatures/wolf.json', 'utf8'));
+const scene = loadJsonScene(json);
+const glsl = generateGlslFromJson(scene, {});
+console.log('GLSL OK, length:', glsl.length);
+// Check for specific uniforms
+const uniforms = glsl.match(/uniform.*u_\w+/g) || [];
+uniforms.forEach(u => console.log(' ', u));
+"
+```
+
+### Visual Verification with capture-silhouette.mjs
+
+For full 6-angle capture of a scene:
+
+```bash
+mkdir -p /tmp/test-captures
+node lucid/capture-silhouette.mjs creatures.wolf /tmp/test-captures
+# Then use Read tool to view /tmp/test-captures/1.png
+```
+
+### Common Lucid Bugs & Fixes
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Empty scene, shader OK | Missing camera settings | Add `"camera": { "distance": 8, "phi": 0.4, ... }` |
+| Empty scene, shader OK | Params use `"default"` | Change to `"value"` (loader expects `value`) |
+| `fbm`/`turbulence` error | Float octaves | Emit raw int: `String(Math.floor(octaves))` |
+| Params don't affect model | Not connected | Replace hardcoded values with `{ "var": "paramName" }` |
+| Ref not rendering | Missing def | Check `defs` section has the referenced id |
+
+### Potential Unit Tests (TODO)
+
+These manual checks could become automated tests:
+- [ ] All scenes in `lucid/scenes/` generate valid GLSL
+- [ ] All scenes render non-empty frames in Playwright
+- [ ] Params with `"value"` are properly initialized
+- [ ] Camera settings produce non-empty viewport
+- [ ] Scene params create corresponding uniforms
+
 ## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
 
 **CRITICAL**: FINK .js files are NOT standard JavaScript modules!
