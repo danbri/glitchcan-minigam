@@ -131,6 +131,27 @@
       background: #000;
     }
 
+    /* Performance overlay */
+    .perf-overlay {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      color: #0f0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 6px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 100;
+      line-height: 1.4;
+      display: none;
+    }
+    .perf-overlay.visible { display: block; }
+    .perf-overlay .perf-warn { color: #fa0; }
+    .perf-overlay .perf-bad { color: #f44; }
+    .perf-overlay .perf-label { color: #888; }
+
     canvas {
       width: 100%;
       height: 100%;
@@ -1236,6 +1257,12 @@
     <div class="main-area">
       <div class="render-panel">
         <canvas id="canvas"></canvas>
+        <div class="perf-overlay" id="perf-overlay">
+          <div><span class="perf-label">FPS:</span> <span id="perf-fps">--</span></div>
+          <div><span class="perf-label">Frame:</span> <span id="perf-frame">--</span>ms</div>
+          <div><span class="perf-label">Nodes:</span> <span id="perf-nodes">--</span></div>
+          <div><span class="perf-label">GPU:</span> <span id="perf-gpu">--</span></div>
+        </div>
       </div>
 
       <!-- Resizer grip between 3D view and editor -->
@@ -1491,6 +1518,10 @@
       <div class="debug-row">
         <span class="debug-label">Show Axes (RGB)</span>
         <div class="toggle active" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Perf Stats</span>
+        <div class="toggle" id="toggle-perf" title="Show FPS, frame time, scene complexity"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
@@ -1883,8 +1914,87 @@
       showGround: true,
       showCutters: false,
       showAxes: true,  // Default visible
+      showPerf: false,
       cameraDistance: 4
     };
+
+    // Performance monitoring state
+    const perfState = {
+      frameCount: 0,
+      lastFpsUpdate: 0,
+      fps: 0,
+      frameTime: 0,
+      frameTimes: [],
+      nodeCount: 0,
+      gpuName: 'unknown'
+    };
+
+    // Count SDF nodes for complexity metric
+    function countSceneNodes(node) {
+      if (!node) return 0;
+      let count = 1;
+      if (node.children) {
+        for (const child of node.children) {
+          count += countSceneNodes(child);
+        }
+      }
+      if (node.child) {
+        count += countSceneNodes(node.child);
+      }
+      return count;
+    }
+
+    // Get GPU info from WebGL
+    function getGpuInfo(gl) {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      if (ext) {
+        const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        // Shorten common GPU names
+        return renderer
+          .replace(/ANGLE \(/, '')
+          .replace(/\)$/, '')
+          .replace(/Direct3D11 vs_5_0 ps_5_0/, '')
+          .replace(/Apple /, '')
+          .replace(/Intel\(R\) /, '')
+          .replace(/ Graphics$/, '')
+          .trim()
+          .slice(0, 25);
+      }
+      return gl.getParameter(gl.RENDERER).slice(0, 25);
+    }
+
+    // Update perf overlay display
+    function updatePerfDisplay() {
+      const fpsEl = $('perf-fps');
+      const frameEl = $('perf-frame');
+      const nodesEl = $('perf-nodes');
+
+      if (!fpsEl) return;
+
+      // Color code FPS
+      let fpsClass = '';
+      if (perfState.fps < 30) fpsClass = 'perf-bad';
+      else if (perfState.fps < 50) fpsClass = 'perf-warn';
+
+      fpsEl.textContent = perfState.fps.toFixed(0);
+      fpsEl.className = fpsClass;
+
+      // Color code frame time
+      let frameClass = '';
+      if (perfState.frameTime > 33) frameClass = 'perf-bad';
+      else if (perfState.frameTime > 20) frameClass = 'perf-warn';
+
+      frameEl.textContent = perfState.frameTime.toFixed(1);
+      frameEl.className = frameClass;
+
+      // Color code node count
+      let nodeClass = '';
+      if (perfState.nodeCount > 100) nodeClass = 'perf-bad';
+      else if (perfState.nodeCount > 50) nodeClass = 'perf-warn';
+
+      nodesEl.textContent = perfState.nodeCount;
+      nodesEl.className = nodeClass;
+    }
 
     // Lighting settings
     const lightingSettings = {
@@ -1961,6 +2071,10 @@
         renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
         setupRigCallbacks(); // Set up rig layer constraint violation callback
 
+        // Initialize GPU info for perf display
+        perfState.gpuName = getGpuInfo(renderer.gl);
+        $('perf-gpu').textContent = perfState.gpuName;
+
         // Build hierarchical demos submenu
         buildDemosSubmenu();
 
@@ -2020,6 +2134,24 @@
           }
 
           renderer.render();
+
+          // Track FPS and frame time
+          if (debugSettings.showPerf) {
+            const frameEnd = performance.now();
+            const frameMs = frameEnd - now;
+            perfState.frameTimes.push(frameMs);
+            if (perfState.frameTimes.length > 60) perfState.frameTimes.shift();
+            perfState.frameTime = perfState.frameTimes.reduce((a, b) => a + b) / perfState.frameTimes.length;
+
+            perfState.frameCount++;
+            if (frameEnd - perfState.lastFpsUpdate > 500) {
+              perfState.fps = perfState.frameCount * 1000 / (frameEnd - perfState.lastFpsUpdate);
+              perfState.frameCount = 0;
+              perfState.lastFpsUpdate = frameEnd;
+              updatePerfDisplay();
+            }
+          }
+
           renderLoopId = requestAnimationFrame(renderLoop);
         }
         renderLoop();
@@ -2126,6 +2258,11 @@
 
     function renderJson(json) {
       const scene = loadJsonScene(json);
+
+      // Update scene complexity for perf display
+      perfState.nodeCount = countSceneNodes(json.root);
+      const nodesEl = $('perf-nodes');
+      if (nodesEl) nodesEl.textContent = perfState.nodeCount;
 
       // Initialize physics if scene has physics config
       if (json.physics && json.physics.enabled) {
@@ -3772,6 +3909,21 @@
         this.classList.toggle('active');
         debugSettings.showAxes = this.classList.contains('active');
         renderer.showAxes = debugSettings.showAxes;
+      });
+
+      // Perf stats toggle
+      addClick('toggle-perf', function() {
+        this.classList.toggle('active');
+        debugSettings.showPerf = this.classList.contains('active');
+        const overlay = $('perf-overlay');
+        if (overlay) {
+          overlay.classList.toggle('visible', debugSettings.showPerf);
+          if (debugSettings.showPerf) {
+            perfState.lastFpsUpdate = performance.now();
+            perfState.frameCount = 0;
+            perfState.frameTimes = [];
+          }
+        }
       });
 
       // Camera distance slider
