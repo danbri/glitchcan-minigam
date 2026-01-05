@@ -1,108 +1,81 @@
 {
   "title": "Chunky Animals",
-  "subtitle": "Parametric instancing: hippo → bear, pig variants",
-  "version": "1.0",
+  "subtitle": "Parametric instancing: hippo, bear, pig variants",
+  "version": "1.1",
   "author": "LCD-002",
-  "description": "Demonstrates parametric instancing where one base creature template creates hippo, bear, and pig via parameter overrides",
-  "camera": { "distance": 12, "phi": 0.35, "theta": 0.25, "target": [0, 0, 0] },
+  "description": "Three chunky quadrupeds with shared structure, different proportions and colors",
+  "camera": { "distance": 10, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
 
   "params": {
-    "spacing": { "value": 4.0, "min": 2.0, "max": 6.0, "description": "Distance between animals" },
-    "baseScale": { "value": 1.0, "min": 0.5, "max": 1.5, "description": "Overall creature scale" },
-    "smoothness": { "value": 0.25, "min": 0.05, "max": 0.5, "description": "Body smoothness" },
-    "noiseAmount": { "value": 0.0, "min": 0.0, "max": 0.15, "description": "Fur/skin texture noise" },
-    "bodyColor": { "value": [0.5, 0.5, 0.5], "type": "color3", "description": "Animal body color (overridden per instance)" }
+    "spacing": { "value": 3.5, "min": 2.0, "max": 5.0, "description": "Distance between animals" },
+    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4, "description": "Body smoothness" }
   },
 
   "defs": {
-    "chunkyAnimal": {
-      "comment": "Base chunky quadruped template - barrel body, short legs, big head",
-      "type": "transform",
-      "transform": { "scale": { "var": "baseScale" } },
+    "hippo": {
+      "comment": "Gray-purple hippo - barrel body, wide snout",
+      "type": "material",
+      "params": { "color": [0.45, 0.38, 0.42] },
       "child": {
-        "type": "displace",
-        "amount": { "var": "noiseAmount" },
-        "scale": 4.0,
-        "octaves": 2,
-        "noiseType": "fbm",
-        "child": {
-          "type": "material",
-          "params": { "color": { "var": "bodyColor" } },
-          "child": {
-            "type": "smoothUnion", "k": { "var": "smoothness" },
-            "children": [
-              {
-                "comment": "BODY - barrel shape, parameterized proportions",
-                "type": "ellipsoid",
-                "params": { "radii": [{ "var": "bodyWidth" }, { "var": "bodyHeight" }, { "var": "bodyLength" }] }
-              },
-              {
-                "comment": "HEAD",
-                "type": "smoothUnion", "k": 0.2,
-                "children": [
-                  {
-                    "comment": "Main head",
-                    "type": "ellipsoid",
-                    "params": { "radii": [{ "var": "headWidth" }, { "var": "headHeight" }, { "var": "headLength" }] },
-                    "transform": { "translate": [0, { "var": "headY" }, { "var": "headZ" }] }
-                  },
-                  {
-                    "comment": "Snout/muzzle",
-                    "type": "ellipsoid",
-                    "params": { "radii": [{ "var": "snoutWidth" }, { "var": "snoutHeight" }, { "var": "snoutLength" }] },
-                    "transform": { "translate": [0, { "var": "snoutY" }, { "var": "snoutZ" }] }
-                  }
-                ]
-              },
-              {
-                "comment": "EARS",
-                "type": "mirror", "axis": "x",
-                "child": {
-                  "type": "ellipsoid",
-                  "params": { "radii": [{ "var": "earWidth" }, { "var": "earHeight" }, { "var": "earDepth" }] },
-                  "transform": { "translate": [{ "var": "earX" }, { "var": "earY" }, { "var": "earZ" }] }
-                }
-              },
-              {
-                "comment": "EYES",
-                "type": "material",
-                "params": { "color": [0.1, 0.1, 0.1] },
-                "child": {
-                  "type": "mirror", "axis": "x",
-                  "child": {
-                    "type": "sphere",
-                    "params": { "r": 0.08 },
-                    "transform": { "translate": [0.22, 0.35, { "var": "headZ" }] }
-                  }
-                }
-              },
-              {
-                "comment": "FRONT LEGS",
-                "type": "mirror", "axis": "x",
-                "child": {
-                  "type": "capsule",
-                  "params": { "h": { "var": "legHeight" }, "r": { "var": "legRadius" } },
-                  "transform": { "translate": [{ "var": "frontLegX" }, -0.65, 0.5] }
-                }
-              },
-              {
-                "comment": "REAR LEGS",
-                "type": "mirror", "axis": "x",
-                "child": {
-                  "type": "capsule",
-                  "params": { "h": { "var": "legHeight" }, "r": { "var": "legRadius" } },
-                  "transform": { "translate": [{ "var": "rearLegX" }, -0.65, -0.5] }
-                }
-              },
-              {
-                "comment": "TAIL",
-                "type": "capsule",
-                "params": { "h": { "var": "tailLength" }, "r": 0.06 },
-                "transform": { "translate": [0, 0.1, { "var": "tailZ" }], "rotate": [25, 0, 0] }
-              }
-            ]
-          }
-        }
+        "type": "smoothUnion", "k": { "var": "smoothness" },
+        "children": [
+          { "type": "ellipsoid", "params": { "radii": [1.1, 0.7, 1.0] } },
+          { "type": "ellipsoid", "params": { "radii": [0.45, 0.4, 0.5] }, "transform": { "translate": [0, 0.1, 1.3] } },
+          { "type": "ellipsoid", "params": { "radii": [0.38, 0.28, 0.35] }, "transform": { "translate": [0, -0.1, 1.75] } },
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "ellipsoid", "params": { "radii": [0.08, 0.12, 0.08] }, "transform": { "translate": [0.25, 0.45, 1.2] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.4, "r": 0.2 }, "transform": { "translate": [0.55, -0.65, 0.5] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.4, "r": 0.2 }, "transform": { "translate": [0.55, -0.65, -0.5] }
+          }}
+        ]
+      }
+    },
+    "bear": {
+      "comment": "Brown bear - stockier, round ears",
+      "type": "material",
+      "params": { "color": [0.35, 0.22, 0.12] },
+      "child": {
+        "type": "smoothUnion", "k": { "var": "smoothness" },
+        "children": [
+          { "type": "ellipsoid", "params": { "radii": [1.0, 0.8, 0.9] } },
+          { "type": "ellipsoid", "params": { "radii": [0.4, 0.38, 0.4] }, "transform": { "translate": [0, 0.25, 1.2] } },
+          { "type": "ellipsoid", "params": { "radii": [0.2, 0.18, 0.25] }, "transform": { "translate": [0, 0.1, 1.55] } },
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "sphere", "params": { "r": 0.12 }, "transform": { "translate": [0.28, 0.55, 1.0] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.5, "r": 0.22 }, "transform": { "translate": [0.5, -0.65, 0.5] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.5, "r": 0.22 }, "transform": { "translate": [0.5, -0.65, -0.5] }
+          }}
+        ]
+      }
+    },
+    "pig": {
+      "comment": "Pink pig - longer snout, floppy ears",
+      "type": "material",
+      "params": { "color": [0.9, 0.65, 0.6] },
+      "child": {
+        "type": "smoothUnion", "k": { "var": "smoothness" },
+        "children": [
+          { "type": "ellipsoid", "params": { "radii": [0.8, 0.6, 1.0] } },
+          { "type": "ellipsoid", "params": { "radii": [0.35, 0.32, 0.35] }, "transform": { "translate": [0, 0.05, 1.25] } },
+          { "type": "ellipsoid", "params": { "radii": [0.18, 0.14, 0.25] }, "transform": { "translate": [0, -0.05, 1.6] } },
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "ellipsoid", "params": { "radii": [0.15, 0.2, 0.08] }, "transform": { "translate": [0.2, 0.35, 1.1], "rotate": [0, 0, -20] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.35, "r": 0.12 }, "transform": { "translate": [0.4, -0.55, 0.5] }
+          }},
+          { "type": "mirror", "axis": "x", "child": {
+            "type": "capsule", "params": { "h": 0.35, "r": 0.12 }, "transform": { "translate": [0.45, -0.55, -0.5] }
+          }}
+        ]
       }
     }
   },
@@ -110,66 +83,9 @@
   "root": {
     "type": "union",
     "children": [
-      {
-        "comment": "HIPPO - original proportions, gray-purple, smooth skin",
-        "type": "ref",
-        "id": "chunkyAnimal",
-        "params": {
-          "bodyColor": [0.45, 0.38, 0.42],
-          "noiseAmount": 0.0,
-          "bodyWidth": 1.1, "bodyHeight": 0.7, "bodyLength": 1.0,
-          "headWidth": 0.45, "headHeight": 0.4, "headLength": 0.5,
-          "headY": 0.1, "headZ": 1.3,
-          "snoutWidth": 0.38, "snoutHeight": 0.28, "snoutLength": 0.35,
-          "snoutY": -0.1, "snoutZ": 1.75,
-          "earWidth": 0.08, "earHeight": 0.12, "earDepth": 0.08,
-          "earX": 0.25, "earY": 0.45, "earZ": 1.2,
-          "legHeight": 0.4, "legRadius": 0.2,
-          "frontLegX": 0.55, "rearLegX": 0.55,
-          "tailLength": 0.2, "tailZ": -1.15
-        },
-        "transform": { "translate": [0, 0, 0] }
-      },
-      {
-        "comment": "BEAR - stockier, brown, furry texture",
-        "type": "ref",
-        "id": "chunkyAnimal",
-        "params": {
-          "bodyColor": [0.35, 0.22, 0.12],
-          "noiseAmount": 0.08,
-          "bodyWidth": 1.0, "bodyHeight": 0.8, "bodyLength": 0.9,
-          "headWidth": 0.4, "headHeight": 0.38, "headLength": 0.4,
-          "headY": 0.25, "headZ": 1.2,
-          "snoutWidth": 0.2, "snoutHeight": 0.18, "snoutLength": 0.25,
-          "snoutY": 0.1, "snoutZ": 1.55,
-          "earWidth": 0.12, "earHeight": 0.12, "earDepth": 0.1,
-          "earX": 0.28, "earY": 0.55, "earZ": 1.0,
-          "legHeight": 0.5, "legRadius": 0.22,
-          "frontLegX": 0.5, "rearLegX": 0.5,
-          "tailLength": 0.1, "tailZ": -1.0
-        },
-        "transform": { "translate": [{ "var": "spacing" }, 0, 0] }
-      },
-      {
-        "comment": "PIG - pink, longer snout, big ears",
-        "type": "ref",
-        "id": "chunkyAnimal",
-        "params": {
-          "bodyColor": [0.9, 0.65, 0.6],
-          "noiseAmount": 0.02,
-          "bodyWidth": 0.8, "bodyHeight": 0.6, "bodyLength": 1.0,
-          "headWidth": 0.35, "headHeight": 0.32, "headLength": 0.35,
-          "headY": 0.05, "headZ": 1.25,
-          "snoutWidth": 0.2, "snoutHeight": 0.15, "snoutLength": 0.3,
-          "snoutY": -0.05, "snoutZ": 1.6,
-          "earWidth": 0.15, "earHeight": 0.2, "earDepth": 0.08,
-          "earX": 0.2, "earY": 0.4, "earZ": 1.1,
-          "legHeight": 0.35, "legRadius": 0.12,
-          "frontLegX": 0.4, "rearLegX": 0.45,
-          "tailLength": 0.15, "tailZ": -1.1
-        },
-        "transform": { "translate": [{ "expr": "mul", "args": [{ "var": "spacing" }, -1] }, 0, 0] }
-      }
+      { "type": "ref", "id": "hippo", "transform": { "translate": [0, 0, 0] } },
+      { "type": "ref", "id": "bear", "transform": { "translate": [{ "var": "spacing" }, 0, 0] } },
+      { "type": "ref", "id": "pig", "transform": { "translate": [{ "expr": "mul", "args": [{ "var": "spacing" }, -1] }, 0, 0] } }
     ]
   }
 }

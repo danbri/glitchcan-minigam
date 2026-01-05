@@ -10,7 +10,7 @@
       "type": "scalar",
       "min": 0,
       "max": 2,
-      "description": "Exploded view - push cutters away from hull"
+      "description": "Exploded view - push cutters away from hull (5x range)"
     },
     "rotationSpeed": {
       "value": 20,
@@ -58,26 +58,26 @@
                 "type": "box",
                 "notes": "Wing cutter - angled 25.5deg for swept delta wing profile",
                 "params": {"size": [0.4, 0.3, 1.0], "color": [1, 0, 0]},
-                "transform": {"translate": [{"expr": "add", "args": [0.55, {"expr": "mul", "args": [{"var": "explode"}, 0.5]}]}, 0, 0.1], "rotate": [0, 25.5, 0]}
+                "transform": {"translate": [{"expr": "add", "args": [0.55, {"expr": "mul", "args": [{"var": "explode"}, 2.5]}]}, 0, 0.1], "rotate": [0, 25.5, 0]}
               }
             },
             {
               "type": "box",
               "notes": "Top bevel - slopes cockpit area forward and down",
               "params": {"size": [0.8, 0.25, 1.0], "color": [0, 1, 0]},
-              "transform": {"translate": [0, {"expr": "add", "args": [-0.275, {"expr": "mul", "args": [{"var": "explode"}, 0.4]}]}, -0.075], "rotate": [-36, 0, 0]}
+              "transform": {"translate": [0, {"expr": "add", "args": [-0.275, {"expr": "mul", "args": [{"var": "explode"}, 2.0]}]}, -0.075], "rotate": [-36, 0, 0]}
             },
             {
               "type": "box",
               "notes": "Bottom bevel - creates angled belly profile",
               "params": {"size": [0.8, 0.25, 1.0], "color": [0, 0, 1]},
-              "transform": {"translate": [0, {"expr": "add", "args": [-0.175, {"expr": "mul", "args": [{"var": "explode"}, -0.4]}]}, 0.05], "rotate": [22, 0, 0]}
+              "transform": {"translate": [0, {"expr": "add", "args": [-0.175, {"expr": "mul", "args": [{"var": "explode"}, -2.0]}]}, 0.05], "rotate": [22, 0, 0]}
             },
             {
               "type": "box",
               "notes": "Rear notch - carves engine bay recess",
               "params": {"size": [0.5, 0.25, 0.25], "color": [1, 1, 0]},
-              "transform": {"translate": [0, 0, {"expr": "add", "args": [-0.8, {"expr": "mul", "args": [{"var": "explode"}, -0.4]}]}], "rotate": [-6, 0, 0]}
+              "transform": {"translate": [0, 0, {"expr": "add", "args": [-0.8, {"expr": "mul", "args": [{"var": "explode"}, -2.0]}]}], "rotate": [-6, 0, 0]}
             }
           ]
         },
