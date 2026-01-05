@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Hadley Attractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            touch-action: none;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #ladybug {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4), inset 0 2px 10px rgba(255,255,255,0.2);
+            z-index: 100;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #ladybug:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        #ladybug:active {
+            transform: scale(0.95);
+        }
+
+        #ladybug::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #000;
+            border-radius: 50%;
+            top: 12px;
+            left: 12px;
+        }
+
+        #ladybug::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #000;
+            border-radius: 50%;
+            bottom: 14px;
+            right: 10px;
+        }
+
+        .ladybug-line {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #000;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #settings-panel {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 280px;
+            max-width: 90vw;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 99;
+            transform: translateY(20px) scale(0.9);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #settings-panel.open {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .settings-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-group {
+            margin-bottom: 16px;
+        }
+
+        .settings-label {
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .settings-value {
+            color: #64b5f6;
+            font-weight: 500;
+        }
+
+        .settings-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .settings-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #64b5f6, #1976d2);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .settings-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #64b5f6, #1976d2);
+            cursor: pointer;
+            border: none;
+        }
+
+        .color-presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-preset {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .color-preset:hover {
+            transform: scale(1.1);
+        }
+
+        .color-preset.active {
+            border-color: #fff;
+        }
+
+        .settings-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .settings-button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .settings-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.on {
+            background: #4caf50;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.on::after {
+            transform: translateX(20px);
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #64b5f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            color: rgba(255,255,255,0.7);
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Initializing attractor...</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="info">
+        <div id="renderer-info"></div>
+        <div id="fps-info"></div>
+    </div>
+
+    <button id="ladybug" aria-label="Settings">
+        <div class="ladybug-line"></div>
+    </button>
+
+    <div id="settings-panel">
+        <div class="settings-title">
+            <span>Hadley Attractor</span>
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-label">
+                <span>Particle Count</span>
+                <span class="settings-value" id="particle-count-value">3000</span>
+            </div>
+            <input type="range" class="settings-slider" id="particle-count"
+                   min="500" max="10000" value="3000" step="500">
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-label">
+                <span>Trail Length</span>
+                <span class="settings-value" id="trail-length-value">40</span>
+            </div>
+            <input type="range" class="settings-slider" id="trail-length"
+                   min="5" max="100" value="40" step="5">
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-label">
+                <span>Speed</span>
+                <span class="settings-value" id="speed-value">1.0</span>
+            </div>
+            <input type="range" class="settings-slider" id="speed"
+                   min="0.1" max="3" value="1" step="0.1">
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-label">
+                <span>Point Size</span>
+                <span class="settings-value" id="point-size-value">4.0</span>
+            </div>
+            <input type="range" class="settings-slider" id="point-size"
+                   min="1" max="8" value="4" step="0.5">
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-label">Color Theme</div>
+            <div class="color-presets">
+                <div class="color-preset active" data-theme="fire"
+                     style="background: linear-gradient(135deg, #ff6b35, #f72585)"></div>
+                <div class="color-preset" data-theme="ocean"
+                     style="background: linear-gradient(135deg, #00b4d8, #0077b6)"></div>
+                <div class="color-preset" data-theme="aurora"
+                     style="background: linear-gradient(135deg, #7209b7, #3a0ca3)"></div>
+                <div class="color-preset" data-theme="nature"
+                     style="background: linear-gradient(135deg, #06d6a0, #118ab2)"></div>
+                <div class="color-preset" data-theme="sunset"
+                     style="background: linear-gradient(135deg, #f9c74f, #f94144)"></div>
+                <div class="color-preset" data-theme="mono"
+                     style="background: linear-gradient(135deg, #e0e0e0, #757575)"></div>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-toggle">
+                <span class="settings-label" style="margin: 0">Auto Rotate</span>
+                <div class="toggle-switch on" id="auto-rotate"></div>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-toggle">
+                <span class="settings-label" style="margin: 0">Show Trails</span>
+                <div class="toggle-switch on" id="show-trails"></div>
+            </div>
+        </div>
+
+        <button class="settings-button" id="reset-view">Reset View</button>
+        <button class="settings-button" id="randomize">Randomize Particles</button>
+    </div>
+
+    <script>
+    // Hadley Attractor Visualization
+    // Equations: dx/dt = -y² - z² - ax + aF
+    //            dy/dt = xy - bxz - y + G
+    //            dz/dt = bxy + xz - z
+
+    class HadleyAttractor {
+        constructor() {
+            this.canvas = document.getElementById('canvas');
+            this.ctx = null;
+            this.gl = null;
+            this.gpuDevice = null;
+            this.useGPUCompute = false;
+
+            // Hadley parameters
+            this.params = {
+                a: 0.25,
+                b: 4.0,
+                F: 8.0,
+                G: 1.0
+            };
+
+            // Visualization settings
+            this.settings = {
+                particleCount: 3000,
+                trailLength: 40,
+                speed: 0.8,
+                pointSize: 4.0,
+                colorTheme: 'fire',
+                autoRotate: true,
+                showTrails: true,
+                preferWebGL: true  // WebGL has better point rendering
+            };
+
+            // Color themes
+            this.colorThemes = {
+                fire: [[1, 0.42, 0.21], [0.97, 0.15, 0.52]],
+                ocean: [[0, 0.71, 0.85], [0, 0.47, 0.71]],
+                aurora: [[0.45, 0.04, 0.72], [0.23, 0.05, 0.64]],
+                nature: [[0.02, 0.84, 0.63], [0.07, 0.54, 0.70]],
+                sunset: [[0.98, 0.78, 0.31], [0.98, 0.25, 0.27]],
+                mono: [[0.88, 0.88, 0.88], [0.46, 0.46, 0.46]]
+            };
+
+            // Camera - zoom out to see the attractor
+            this.camera = {
+                rotationX: 0.3,
+                rotationY: 0.5,
+                distance: 200,
+                autoRotateSpeed: 0.003
+            };
+
+            // Particles with trails
+            this.particles = [];
+            this.trails = [];
+
+            // Interaction state
+            this.isDragging = false;
+            this.lastTouch = { x: 0, y: 0 };
+            this.pinchDistance = 0;
+
+            // Performance
+            this.lastTime = 0;
+            this.frameCount = 0;
+            this.fps = 0;
+            this.fpsTime = 0;
+
+            this.init();
+        }
+
+        async init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+
+            // Try WebGPU for compute (physics)
+            try {
+                if (await this.initWebGPUCompute()) {
+                    this.useGPUCompute = true;
+                    console.log('Using WebGPU for physics compute');
+                }
+            } catch (e) {
+                console.warn('WebGPU compute failed:', e);
+            }
+
+            // WebGL for rendering (always - better point support)
+            try {
+                this.initWebGL();
+                document.getElementById('renderer-info').textContent =
+                    this.useGPUCompute ? 'WebGPU+WebGL' : 'WebGL';
+                console.log('Using WebGL for rendering');
+            } catch (e) {
+                console.error('WebGL failed:', e);
+                document.getElementById('renderer-info').textContent = 'No renderer!';
+                return;
+            }
+
+            this.initParticles();
+            console.log(`Initialized ${this.particles.length} particles`);
+            this.setupControls();
+            this.setupUI();
+
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 500);
+
+            this.animate();
+        }
+
+        async initWebGPUCompute() {
+            if (!navigator.gpu) return false;
+
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) return false;
+
+            this.gpuDevice = await adapter.requestDevice();
+
+            // Compute shader for Hadley attractor physics
+            const computeShader = `
+                struct Params {
+                    a: f32,
+                    b: f32,
+                    F: f32,
+                    G: f32,
+                    dt: f32,
+                    count: u32,
+                }
+
+                @group(0) @binding(0) var<uniform> params: Params;
+                @group(0) @binding(1) var<storage, read_write> positions: array<vec4<f32>>;
+
+                @compute @workgroup_size(64)
+                fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+                    let i = id.x;
+                    if (i >= params.count) { return; }
+
+                    var p = positions[i].xyz;
+                    let speed = params.dt * 0.5;
+
+                    // Hadley attractor: RK4 integration
+                    let k1 = hadley(p);
+                    let k2 = hadley(p + k1 * speed * 0.5);
+                    let k3 = hadley(p + k2 * speed * 0.5);
+                    let k4 = hadley(p + k3 * speed);
+
+                    p = p + (k1 + 2.0*k2 + 2.0*k3 + k4) * speed / 6.0;
+
+                    // Reset if escaped
+                    if (abs(p.x) > 30.0 || abs(p.y) > 30.0 || abs(p.z) > 30.0) {
+                        p = vec3<f32>(
+                            1.0 + fract(sin(f32(i) * 12.9898) * 43758.5453) * 3.0,
+                            (fract(sin(f32(i) * 78.233) * 43758.5453) - 0.5) * 2.0,
+                            fract(sin(f32(i) * 39.425) * 43758.5453) * 3.0
+                        );
+                    }
+
+                    positions[i] = vec4<f32>(p, positions[i].w);
+                }
+
+                fn hadley(p: vec3<f32>) -> vec3<f32> {
+                    let x = p.x; let y = p.y; let z = p.z;
+                    return vec3<f32>(
+                        -y*y - z*z - params.a*x + params.a*params.F,
+                        x*y - params.b*x*z - y + params.G,
+                        params.b*x*y + x*z - z
+                    );
+                }
+            `;
+
+            this.computeModule = this.gpuDevice.createShaderModule({ code: computeShader });
+
+            this.computeParamsBuffer = this.gpuDevice.createBuffer({
+                size: 32,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            });
+
+            return true;
+        }
+
+        setupComputeBuffers() {
+            const count = this.settings.particleCount;
+
+            // Position buffer (vec4 for alignment: xyz + age)
+            const posData = new Float32Array(count * 4);
+            for (let i = 0; i < count; i++) {
+                posData[i * 4] = 1 + Math.random() * 3;
+                posData[i * 4 + 1] = (Math.random() - 0.5) * 2;
+                posData[i * 4 + 2] = Math.random() * 3;
+                posData[i * 4 + 3] = 0; // age
+            }
+
+            this.gpuPositionBuffer = this.gpuDevice.createBuffer({
+                size: posData.byteLength,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+            });
+            this.gpuDevice.queue.writeBuffer(this.gpuPositionBuffer, 0, posData);
+
+            // Readback buffer
+            this.gpuReadbackBuffer = this.gpuDevice.createBuffer({
+                size: posData.byteLength,
+                usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+            });
+
+            // Compute pipeline
+            const bindGroupLayout = this.gpuDevice.createBindGroupLayout({
+                entries: [
+                    { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+                    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
+                ]
+            });
+
+            this.computePipeline = this.gpuDevice.createComputePipeline({
+                layout: this.gpuDevice.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+                compute: { module: this.computeModule, entryPoint: 'main' }
+            });
+
+            this.computeBindGroup = this.gpuDevice.createBindGroup({
+                layout: bindGroupLayout,
+                entries: [
+                    { binding: 0, resource: { buffer: this.computeParamsBuffer } },
+                    { binding: 1, resource: { buffer: this.gpuPositionBuffer } }
+                ]
+            });
+
+            this.positionData = posData;
+        }
+
+        async updateParticlesGPU(dt) {
+            const params = new Float32Array([
+                this.params.a, this.params.b, this.params.F, this.params.G,
+                dt * this.settings.speed, this.settings.particleCount, 0, 0
+            ]);
+            this.gpuDevice.queue.writeBuffer(this.computeParamsBuffer, 0, params);
+
+            const encoder = this.gpuDevice.createCommandEncoder();
+            const pass = encoder.beginComputePass();
+            pass.setPipeline(this.computePipeline);
+            pass.setBindGroup(0, this.computeBindGroup);
+            pass.dispatchWorkgroups(Math.ceil(this.settings.particleCount / 64));
+            pass.end();
+
+            encoder.copyBufferToBuffer(
+                this.gpuPositionBuffer, 0,
+                this.gpuReadbackBuffer, 0,
+                this.positionData.byteLength
+            );
+            this.gpuDevice.queue.submit([encoder.finish()]);
+
+            // Read back positions
+            await this.gpuReadbackBuffer.mapAsync(GPUMapMode.READ);
+            const data = new Float32Array(this.gpuReadbackBuffer.getMappedRange().slice(0));
+            this.gpuReadbackBuffer.unmap();
+
+            // Update CPU particles for trail rendering
+            for (let i = 0; i < this.particles.length; i++) {
+                this.particles[i].x = data[i * 4];
+                this.particles[i].y = data[i * 4 + 1];
+                this.particles[i].z = data[i * 4 + 2];
+            }
+        }
+
+        initWebGL() {
+            const options = {
+                alpha: false,
+                antialias: true,
+                preserveDrawingBuffer: false,
+                powerPreference: 'high-performance'
+            };
+
+            this.gl = this.canvas.getContext('webgl2', options) ||
+                      this.canvas.getContext('webgl', options) ||
+                      this.canvas.getContext('experimental-webgl', options);
+
+            if (!this.gl) {
+                alert('WebGL not supported');
+                return;
+            }
+
+            console.log('WebGL version:', this.gl.getParameter(this.gl.VERSION));
+            console.log('WebGL renderer:', this.gl.getParameter(this.gl.RENDERER));
+
+            const gl = this.gl;
+
+            // Vertex shader
+            const vsSource = `
+                attribute vec3 aPosition;
+                attribute float aAge;
+
+                uniform mat4 uViewProjection;
+                uniform float uPointSize;
+                uniform vec3 uColor1;
+                uniform vec3 uColor2;
+
+                varying vec3 vColor;
+                varying float vAlpha;
+
+                void main() {
+                    gl_Position = uViewProjection * vec4(aPosition, 1.0);
+                    gl_PointSize = uPointSize * (1.0 - aAge * 0.5);
+
+                    float t = clamp(aAge, 0.0, 1.0);
+                    vColor = mix(uColor1, uColor2, t);
+                    vAlpha = 1.0 - t * 0.8;
+                }
+            `;
+
+            // Fragment shader
+            const fsSource = `
+                precision mediump float;
+
+                varying vec3 vColor;
+                varying float vAlpha;
+
+                void main() {
+                    float dist = length(gl_PointCoord - vec2(0.5));
+                    if (dist > 0.5) discard;
+
+                    float alpha = vAlpha * (1.0 - dist * 2.0);
+                    gl_FragColor = vec4(vColor * alpha, alpha);
+                }
+            `;
+
+            // Compile shaders
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vsSource);
+            gl.compileShader(vs);
+            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+                console.error('Vertex shader error:', gl.getShaderInfoLog(vs));
+            }
+
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fsSource);
+            gl.compileShader(fs);
+            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+                console.error('Fragment shader error:', gl.getShaderInfoLog(fs));
+            }
+
+            // Create program
+            this.program = gl.createProgram();
+            gl.attachShader(this.program, vs);
+            gl.attachShader(this.program, fs);
+            gl.linkProgram(this.program);
+            if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(this.program));
+            }
+            gl.useProgram(this.program);
+
+            // Get locations
+            this.aPosition = gl.getAttribLocation(this.program, 'aPosition');
+            this.aAge = gl.getAttribLocation(this.program, 'aAge');
+            this.uViewProjection = gl.getUniformLocation(this.program, 'uViewProjection');
+            this.uPointSize = gl.getUniformLocation(this.program, 'uPointSize');
+            this.uColor1 = gl.getUniformLocation(this.program, 'uColor1');
+            this.uColor2 = gl.getUniformLocation(this.program, 'uColor2');
+
+            // Create buffers
+            this.positionBuffer = gl.createBuffer();
+            this.ageBuffer = gl.createBuffer();
+
+            // Enable blending
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        }
+
+        initParticles() {
+            this.particles = [];
+            this.trails = [];
+
+            for (let i = 0; i < this.settings.particleCount; i++) {
+                // Start particles near the Hadley attractor's basin
+                // The attractor lives roughly around x≈1-3, y≈±1, z≈0-2
+                const x = 1 + Math.random() * 3;
+                const y = (Math.random() - 0.5) * 2;
+                const z = Math.random() * 3;
+
+                this.particles.push({ x, y, z });
+                this.trails.push([{ x, y, z, age: 0 }]);
+            }
+
+            // Setup GPU compute buffers if available
+            if (this.useGPUCompute) {
+                this.setupComputeBuffers();
+            }
+        }
+
+        resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const width = window.innerWidth * dpr;
+            const height = window.innerHeight * dpr;
+
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.canvas.style.width = window.innerWidth + 'px';
+            this.canvas.style.height = window.innerHeight + 'px';
+
+            if (this.gl) {
+                this.gl.viewport(0, 0, width, height);
+            }
+
+            console.log(`Canvas resized: ${width}x${height}, dpr: ${dpr}`);
+        }
+
+        setupControls() {
+            const canvas = this.canvas;
+
+            // Mouse controls
+            canvas.addEventListener('mousedown', (e) => {
+                this.isDragging = true;
+                this.lastTouch = { x: e.clientX, y: e.clientY };
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!this.isDragging) return;
+
+                const dx = e.clientX - this.lastTouch.x;
+                const dy = e.clientY - this.lastTouch.y;
+
+                this.camera.rotationY += dx * 0.005;
+                this.camera.rotationX += dy * 0.005;
+                this.camera.rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.camera.rotationX));
+
+                this.lastTouch = { x: e.clientX, y: e.clientY };
+            });
+
+            canvas.addEventListener('mouseup', () => this.isDragging = false);
+            canvas.addEventListener('mouseleave', () => this.isDragging = false);
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                this.camera.distance *= 1 + e.deltaY * 0.001;
+                this.camera.distance = Math.max(20, Math.min(500, this.camera.distance));
+            }, { passive: false });
+
+            // Touch controls
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    this.isDragging = true;
+                    this.lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                } else if (e.touches.length === 2) {
+                    this.pinchDistance = this.getTouchDistance(e.touches);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1 && this.isDragging) {
+                    const dx = e.touches[0].clientX - this.lastTouch.x;
+                    const dy = e.touches[0].clientY - this.lastTouch.y;
+
+                    this.camera.rotationY += dx * 0.005;
+                    this.camera.rotationX += dy * 0.005;
+                    this.camera.rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.camera.rotationX));
+
+                    this.lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                } else if (e.touches.length === 2) {
+                    const newDistance = this.getTouchDistance(e.touches);
+                    const scale = this.pinchDistance / newDistance;
+                    this.camera.distance *= scale;
+                    this.camera.distance = Math.max(20, Math.min(500, this.camera.distance));
+                    this.pinchDistance = newDistance;
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', () => this.isDragging = false);
+        }
+
+        getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        setupUI() {
+            const ladybug = document.getElementById('ladybug');
+            const panel = document.getElementById('settings-panel');
+
+            ladybug.addEventListener('click', () => {
+                panel.classList.toggle('open');
+            });
+
+            // Close panel when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!panel.contains(e.target) && !ladybug.contains(e.target)) {
+                    panel.classList.remove('open');
+                }
+            });
+
+            // Sliders
+            this.setupSlider('particle-count', (v) => {
+                this.settings.particleCount = parseInt(v);
+                this.initParticles();
+            });
+
+            this.setupSlider('trail-length', (v) => {
+                this.settings.trailLength = parseInt(v);
+            });
+
+            this.setupSlider('speed', (v) => {
+                this.settings.speed = parseFloat(v);
+            });
+
+            this.setupSlider('point-size', (v) => {
+                this.settings.pointSize = parseFloat(v);
+            });
+
+            // Color presets
+            document.querySelectorAll('.color-preset').forEach(preset => {
+                preset.addEventListener('click', () => {
+                    document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('active'));
+                    preset.classList.add('active');
+                    this.settings.colorTheme = preset.dataset.theme;
+                });
+            });
+
+            // Toggles
+            document.getElementById('auto-rotate').addEventListener('click', function() {
+                this.classList.toggle('on');
+                window.attractor.settings.autoRotate = this.classList.contains('on');
+            });
+
+            document.getElementById('show-trails').addEventListener('click', function() {
+                this.classList.toggle('on');
+                window.attractor.settings.showTrails = this.classList.contains('on');
+            });
+
+            // Buttons
+            document.getElementById('reset-view').addEventListener('click', () => {
+                this.camera.rotationX = 0.3;
+                this.camera.rotationY = 0;
+                this.camera.distance = 30;
+            });
+
+            document.getElementById('randomize').addEventListener('click', () => {
+                this.initParticles();
+            });
+        }
+
+        setupSlider(id, callback) {
+            const slider = document.getElementById(id);
+            const value = document.getElementById(id + '-value');
+
+            slider.addEventListener('input', () => {
+                value.textContent = slider.value;
+                callback(slider.value);
+            });
+        }
+
+        // Hadley attractor equations
+        hadleyDerivative(x, y, z) {
+            const { a, b, F, G } = this.params;
+
+            const dx = -y * y - z * z - a * x + a * F;
+            const dy = x * y - b * x * z - y + G;
+            const dz = b * x * y + x * z - z;
+
+            return { dx, dy, dz };
+        }
+
+        updateParticles(dt) {
+            const speed = this.settings.speed * dt * 0.5;
+            const trailLength = this.settings.trailLength;
+
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+
+                // RK4 integration
+                const k1 = this.hadleyDerivative(p.x, p.y, p.z);
+                const k2 = this.hadleyDerivative(
+                    p.x + k1.dx * speed * 0.5,
+                    p.y + k1.dy * speed * 0.5,
+                    p.z + k1.dz * speed * 0.5
+                );
+                const k3 = this.hadleyDerivative(
+                    p.x + k2.dx * speed * 0.5,
+                    p.y + k2.dy * speed * 0.5,
+                    p.z + k2.dz * speed * 0.5
+                );
+                const k4 = this.hadleyDerivative(
+                    p.x + k3.dx * speed,
+                    p.y + k3.dy * speed,
+                    p.z + k3.dz * speed
+                );
+
+                p.x += (k1.dx + 2*k2.dx + 2*k3.dx + k4.dx) * speed / 6;
+                p.y += (k1.dy + 2*k2.dy + 2*k3.dy + k4.dy) * speed / 6;
+                p.z += (k1.dz + 2*k2.dz + 2*k3.dz + k4.dz) * speed / 6;
+
+                // Reset if particle goes too far (escapes attractor basin)
+                if (Math.abs(p.x) > 30 || Math.abs(p.y) > 30 || Math.abs(p.z) > 30 ||
+                    isNaN(p.x) || isNaN(p.y) || isNaN(p.z)) {
+                    p.x = 1 + Math.random() * 3;
+                    p.y = (Math.random() - 0.5) * 2;
+                    p.z = Math.random() * 3;
+                    this.trails[i] = [];
+                }
+
+                // Update trail
+                if (this.settings.showTrails) {
+                    this.trails[i].unshift({ x: p.x, y: p.y, z: p.z, age: 0 });
+
+                    // Age trail points
+                    for (let j = 0; j < this.trails[i].length; j++) {
+                        this.trails[i][j].age = j / trailLength;
+                    }
+
+                    // Trim trail
+                    if (this.trails[i].length > trailLength) {
+                        this.trails[i].length = trailLength;
+                    }
+                }
+            }
+        }
+
+        // Separate trail update for when using GPU compute
+        updateTrails() {
+            if (!this.settings.showTrails) return;
+
+            const trailLength = this.settings.trailLength;
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+
+                this.trails[i].unshift({ x: p.x, y: p.y, z: p.z, age: 0 });
+
+                // Age trail points
+                for (let j = 0; j < this.trails[i].length; j++) {
+                    this.trails[i][j].age = j / trailLength;
+                }
+
+                // Trim trail
+                if (this.trails[i].length > trailLength) {
+                    this.trails[i].length = trailLength;
+                }
+            }
+        }
+
+        getViewProjectionMatrix() {
+            const aspect = this.canvas.width / this.canvas.height;
+            const fov = Math.PI / 4;
+            const near = 0.1;
+            const far = 1000;
+
+            // Perspective matrix
+            const f = 1 / Math.tan(fov / 2);
+            const perspective = [
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (far + near) / (near - far), -1,
+                0, 0, (2 * far * near) / (near - far), 0
+            ];
+
+            // View matrix (camera transform)
+            const cosX = Math.cos(this.camera.rotationX);
+            const sinX = Math.sin(this.camera.rotationX);
+            const cosY = Math.cos(this.camera.rotationY);
+            const sinY = Math.sin(this.camera.rotationY);
+
+            const d = this.camera.distance;
+            const camX = d * cosX * sinY;
+            const camY = d * sinX;
+            const camZ = d * cosX * cosY;
+
+            // Simple look-at matrix
+            const view = this.lookAt(camX, camY, camZ, 0, 0, 0, 0, 1, 0);
+
+            // Multiply perspective * view
+            return this.multiplyMatrices(perspective, view);
+        }
+
+        lookAt(eyeX, eyeY, eyeZ, targetX, targetY, targetZ, upX, upY, upZ) {
+            let zX = eyeX - targetX, zY = eyeY - targetY, zZ = eyeZ - targetZ;
+            let len = Math.sqrt(zX*zX + zY*zY + zZ*zZ);
+            zX /= len; zY /= len; zZ /= len;
+
+            let xX = upY * zZ - upZ * zY;
+            let xY = upZ * zX - upX * zZ;
+            let xZ = upX * zY - upY * zX;
+            len = Math.sqrt(xX*xX + xY*xY + xZ*xZ);
+            xX /= len; xY /= len; xZ /= len;
+
+            let yX = zY * xZ - zZ * xY;
+            let yY = zZ * xX - zX * xZ;
+            let yZ = zX * xY - zY * xX;
+
+            return [
+                xX, yX, zX, 0,
+                xY, yY, zY, 0,
+                xZ, yZ, zZ, 0,
+                -(xX*eyeX + xY*eyeY + xZ*eyeZ),
+                -(yX*eyeX + yY*eyeY + yZ*eyeZ),
+                -(zX*eyeX + zY*eyeY + zZ*eyeZ),
+                1
+            ];
+        }
+
+        multiplyMatrices(a, b) {
+            const result = new Array(16);
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    result[i * 4 + j] =
+                        a[i * 4 + 0] * b[0 * 4 + j] +
+                        a[i * 4 + 1] * b[1 * 4 + j] +
+                        a[i * 4 + 2] * b[2 * 4 + j] +
+                        a[i * 4 + 3] * b[3 * 4 + j];
+                }
+            }
+            return result;
+        }
+
+        renderWebGL() {
+            const gl = this.gl;
+            if (!gl || !this.program) return;
+
+            // Clear to dark blue (visible test)
+            gl.clearColor(0.05, 0.05, 0.15, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(this.program);
+
+            // Collect points
+            const positions = [];
+            const ages = [];
+
+            // Scale factor to bring attractor into view (attractor spans roughly -20 to 20)
+            const scale = 2.0;
+
+            if (this.settings.showTrails) {
+                for (const trail of this.trails) {
+                    for (const p of trail) {
+                        positions.push(p.x * scale, p.y * scale, p.z * scale);
+                        ages.push(p.age);
+                    }
+                }
+            } else {
+                for (const p of this.particles) {
+                    positions.push(p.x * scale, p.y * scale, p.z * scale);
+                    ages.push(0);
+                }
+            }
+
+            if (positions.length === 0) {
+                console.warn('No positions to render');
+                return;
+            }
+
+            // Upload position data
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(this.aPosition);
+            gl.vertexAttribPointer(this.aPosition, 3, gl.FLOAT, false, 0, 0);
+
+            // Upload age data
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.ageBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ages), gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(this.aAge);
+            gl.vertexAttribPointer(this.aAge, 1, gl.FLOAT, false, 0, 0);
+
+            // Set uniforms
+            const mvp = this.getViewProjectionMatrix();
+            gl.uniformMatrix4fv(this.uViewProjection, false, new Float32Array(mvp));
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            gl.uniform1f(this.uPointSize, this.settings.pointSize * dpr * 2);
+
+            const colors = this.colorThemes[this.settings.colorTheme];
+            gl.uniform3fv(this.uColor1, colors[0]);
+            gl.uniform3fv(this.uColor2, colors[1]);
+
+            // Draw
+            gl.drawArrays(gl.POINTS, 0, positions.length / 3);
+        }
+
+        async animate(currentTime = 0) {
+            requestAnimationFrame((t) => this.animate(t));
+
+            try {
+                const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+                this.lastTime = currentTime;
+
+                // FPS counter
+                this.frameCount++;
+                if (currentTime - this.fpsTime > 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.fpsTime = currentTime;
+                    document.getElementById('fps-info').textContent = `${this.fps} FPS`;
+                }
+
+                // Auto rotate
+                if (this.settings.autoRotate && !this.isDragging) {
+                    this.camera.rotationY += this.camera.autoRotateSpeed;
+                }
+
+                // Update physics (GPU compute if available, else CPU)
+                if (this.useGPUCompute && this.computePipeline) {
+                    await this.updateParticlesGPU(dt);
+                    // Update trails on CPU (GPU only does particle positions)
+                    this.updateTrails();
+                } else {
+                    // CPU physics includes trail updates
+                    this.updateParticles(dt);
+                }
+
+                // Render with WebGL
+                this.renderWebGL();
+            } catch (e) {
+                console.error('Render error:', e);
+            }
+        }
+    }
+
+    // Initialize
+    console.log('Hadley Attractor initializing...');
+    window.attractor = new HadleyAttractor();
+    </script>
+</body>
+</html>
