@@ -124,14 +124,50 @@ export class PhysicsScene {
     this.bounds = this.physics.bounds || null;
 
     this.bodies = [];
-    if (this.enabled && sceneJson.root) {
-      const physicsNodes = extractPhysicsNodes(sceneJson.root);
-      const params = sceneJson.params || {};
-      this.bodies = physicsNodes.map(node => createPhysicsBodyFromNode(node, params));
+    if (this.enabled) {
+      // New format: physics.bodies array at top level
+      if (Array.isArray(this.physics.bodies)) {
+        for (const bodyDef of this.physics.bodies) {
+          this.bodies.push({
+            id: bodyDef.name || `body_${this.bodies.length}`,
+            position: bodyDef.pos ? vec3.clone(bodyDef.pos) : vec3.zero(),
+            velocity: vec3.zero(),
+            mass: bodyDef.mass ?? 1.0,
+            restitution: bodyDef.restitution ?? 0.7,
+            isStatic: bodyDef.mass === 0,
+            radius: bodyDef.radius ?? 0.3,
+            nodeType: 'sphere'
+          });
+        }
+      }
+      // Legacy format: physics on scene nodes
+      else if (sceneJson.root) {
+        const physicsNodes = extractPhysicsNodes(sceneJson.root);
+        const params = sceneJson.params || {};
+        this.bodies = physicsNodes.map(node => createPhysicsBodyFromNode(node, params));
+      }
     }
 
-    this.damping = 0.99;
-    this.iterations = 4;
+    // Distance constraints (new format)
+    this.distanceConstraints = [];
+    if (this.physics.distanceConstraints) {
+      for (const c of this.physics.distanceConstraints) {
+        const bodyA = this.bodies.find(b => b.id === c.bodyA);
+        const bodyB = this.bodies.find(b => b.id === c.bodyB);
+        if (bodyA && bodyB) {
+          const dist = c.length ?? vec3.length(vec3.sub(bodyB.position, bodyA.position));
+          this.distanceConstraints.push({
+            bodyA,
+            bodyB,
+            restLength: dist,
+            compliance: c.compliance ?? 0
+          });
+        }
+      }
+    }
+
+    this.damping = this.physics.damping ?? 0.99;
+    this.iterations = this.physics.iterations ?? 4;
   }
 
   /**
@@ -159,6 +195,34 @@ export class PhysicsScene {
 
     // Constraint solving iterations
     for (let iter = 0; iter < this.iterations; iter++) {
+      // Distance constraints (XPBD style)
+      for (const c of this.distanceConstraints) {
+        const a = c.bodyA;
+        const b = c.bodyB;
+
+        const wA = a.isStatic ? 0 : 1 / a.mass;
+        const wB = b.isStatic ? 0 : 1 / b.mass;
+        const wSum = wA + wB;
+        if (wSum === 0) continue;
+
+        const diff = vec3.sub(b.position, a.position);
+        const dist = vec3.length(diff);
+        if (dist < 0.0001) continue;
+
+        const C = dist - c.restLength;
+        const alpha = c.compliance / (dt * dt);
+        const lambda = C / (wSum + alpha);
+
+        const n = vec3.scale(diff, 1 / dist);
+
+        if (wA > 0) {
+          vec3.scaleAddTo(a.position, n, lambda * wA);
+        }
+        if (wB > 0) {
+          vec3.scaleAddTo(b.position, n, -lambda * wB);
+        }
+      }
+
       for (const body of this.bodies) {
         if (body.isStatic) continue;
 

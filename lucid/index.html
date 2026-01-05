@@ -335,6 +335,28 @@
       font-size: 0.85rem;
     }
 
+    /* Dev console toolbar */
+    .dev-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      background: #1a1f26;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dev-toolbar .btn {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .dev-view {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
     .editor-content {
       flex: 1;
       display: flex;
@@ -1285,6 +1307,9 @@
           <button class="panel-tab" id="tab-glsl" title="Generated GLSL">
             <span class="panel-tab-icon">⟨⟩</span> GLSL
           </button>
+          <button class="panel-tab" id="tab-dev" title="Debug Console">
+            <span class="panel-tab-icon">🐛</span> Dev
+          </button>
           <button class="tab-copy-btn" id="copy-tab" title="Copy current tab content">📋</button>
         </div>
 
@@ -1370,6 +1395,18 @@
         <!-- GLSL Tab Content -->
         <div class="tab-content" id="content-glsl">
           <div class="code-display glsl-view" id="glsl-content"></div>
+        </div>
+
+        <!-- Dev Tab Content -->
+        <div class="tab-content" id="content-dev">
+          <div class="dev-toolbar">
+            <button class="btn" id="btn-dev-clear" title="Clear logs">Clear</button>
+            <button class="btn" id="btn-dev-copy" title="Copy all logs">Copy All</button>
+            <label style="color:#8b949e;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
+              <input type="checkbox" id="dev-autoscroll" checked> Auto-scroll
+            </label>
+          </div>
+          <div class="code-display dev-view" id="dev-content" style="font-size:0.7rem;"></div>
         </div>
       </div>
     </div>
@@ -1778,7 +1815,77 @@
     let menuOpen = false;
     let debugOpen = false;
     let lightingOpen = false;
-    let activeTab = 'source'; // Current tab in editor panel: 'source' | 'tree' | 'dsl' | 'glsl'
+    let activeTab = 'source'; // Current tab in editor panel: 'source' | 'tree' | 'dsl' | 'glsl' | 'dev'
+
+    // ============================================
+    // DEV CONSOLE - Capture console output for mobile debugging
+    // ============================================
+    const devLogs = [];
+    const MAX_DEV_LOGS = 500;
+    const originalConsole = {
+      log: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    };
+
+    function formatLogArg(arg) {
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+      if (typeof arg === 'object') {
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch {
+          return String(arg);
+        }
+      }
+      return String(arg);
+    }
+
+    function captureLog(level, args) {
+      const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const message = Array.from(args).map(formatLogArg).join(' ');
+      devLogs.push({ level, timestamp, message });
+      if (devLogs.length > MAX_DEV_LOGS) devLogs.shift();
+
+      // Update dev panel if visible
+      if (activeTab === 'dev') {
+        updateDevPanel();
+      }
+    }
+
+    function updateDevPanel() {
+      const devContent = $('dev-content');
+      if (!devContent) return;
+
+      const html = devLogs.map(log => {
+        const levelClass = log.level === 'error' ? 'color:#f87171' :
+                          log.level === 'warn' ? 'color:#fbbf24' :
+                          log.level === 'info' ? 'color:#60a5fa' : 'color:#9ca3af';
+        return `<div style="${levelClass}"><span style="color:#6b7280">[${log.timestamp}]</span> ${escapeHtml(log.message)}</div>`;
+      }).join('');
+
+      devContent.innerHTML = html;
+
+      // Auto-scroll if enabled
+      const autoScroll = $('dev-autoscroll');
+      if (autoScroll?.checked) {
+        devContent.scrollTop = devContent.scrollHeight;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Hook console methods
+    console.log = (...args) => { captureLog('log', args); originalConsole.log(...args); };
+    console.warn = (...args) => { captureLog('warn', args); originalConsole.warn(...args); };
+    console.error = (...args) => { captureLog('error', args); originalConsole.error(...args); };
+    console.info = (...args) => { captureLog('info', args); originalConsole.info(...args); };
+
+    // Log startup
+    console.log('🐛 Dev console initialized');
     let currentGlsl = ''; // Store generated GLSL for display
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
@@ -2124,12 +2231,10 @@
 
             // Sync physics positions to shader params (vec3)
             for (const body of currentPhysicsScene.bodies) {
-              if (body.isStatic) continue;
-              const paramName = physicsParamMap?.[body.id];
-              if (paramName) {
-                // Set vec3 position as array
-                renderer.setParam(paramName, [...body.position]);
-              }
+              // Use explicit param map if available, otherwise use phys_ prefix convention
+              const paramName = physicsParamMap?.[body.id] || `phys_${body.id}`;
+              // Set vec3 position as array (update all bodies including static)
+              renderer.setParam(paramName, [...body.position]);
             }
           }
 
@@ -2930,6 +3035,9 @@
           break;
         case 'glsl':
           $('glsl-content').textContent = currentGlsl || '// No GLSL generated yet';
+          break;
+        case 'dev':
+          updateDevPanel();
           break;
       }
     }
@@ -4966,6 +5074,18 @@
       addClick('tab-tree', () => switchTab('tree'));
       addClick('tab-dsl', () => switchTab('dsl'));
       addClick('tab-glsl', () => switchTab('glsl'));
+      addClick('tab-dev', () => switchTab('dev'));
+
+      // Dev tab controls
+      addClick('btn-dev-clear', () => {
+        devLogs.length = 0;
+        updateDevPanel();
+        console.log('🐛 Dev console cleared');
+      });
+      addClick('btn-dev-copy', () => {
+        const text = devLogs.map(log => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`).join('\n');
+        copyToClipboard(text, 'Dev logs');
+      });
 
       // Single copy button - copies current active tab content
       addClick('copy-tab', () => {
@@ -4982,6 +5102,10 @@
             break;
           case 'glsl':
             copyToClipboard(currentGlsl || '', 'GLSL');
+            break;
+          case 'dev':
+            const text = devLogs.map(log => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`).join('\n');
+            copyToClipboard(text, 'Dev logs');
             break;
         }
       });
