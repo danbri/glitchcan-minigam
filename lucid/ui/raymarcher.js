@@ -129,10 +129,14 @@ export class SimpleRaymarcher {
 
   /**
    * Initialize physics from scene JSON (async)
+   * Creates bridge synchronously (for initial positions), then inits GPU async
    */
   async initPhysics(sceneJson) {
     try {
-      this.physicsBridge = new PhysicsBridge();
+      // Create bridge synchronously - pre-parses initial positions
+      this.physicsBridge = new PhysicsBridge(sceneJson);
+
+      // GPU init is async
       const ok = await this.physicsBridge.init(sceneJson);
       this.physicsEnabled = ok;
       this.lastPhysicsTime = performance.now();
@@ -700,22 +704,21 @@ export class SimpleRaymarcher {
       }
     }
 
-    // Physics simulation step and param binding
-    if (this.physicsEnabled && this.physicsBridge) {
-      // Update physics position targets from rig animation
-      if (this.rig) {
-        this.physicsBridge.updateFromRig(this.sceneParams, this.rig, time);
+    // Physics param binding (initial positions available immediately, physics steps after init)
+    if (this.physicsBridge) {
+      // Step physics only if fully initialized
+      if (this.physicsEnabled) {
+        // Step physics (async but we don't wait - use last frame's results)
+        const now = performance.now();
+        const dt = Math.min((now - this.lastPhysicsTime) / 1000, 0.05); // Cap at 50ms
+        this.lastPhysicsTime = now;
+
+        // Non-blocking physics step
+        this.physicsBridge.step(dt);
       }
 
-      // Step physics (async but we don't wait - use last frame's results)
-      const now = performance.now();
-      const dt = Math.min((now - this.lastPhysicsTime) / 1000, 0.05); // Cap at 50ms
-      this.lastPhysicsTime = now;
-
-      // Non-blocking physics step
-      this.physicsBridge.step(dt);
-
       // Bind physics-derived params (positions of physics bodies)
+      // getParamValues returns initial positions even before full init
       const physicsParams = this.physicsBridge.getParamValues();
       for (const [name, param] of Object.entries(physicsParams)) {
         const loc = gl.getUniformLocation(this.program, `u_${name}`);

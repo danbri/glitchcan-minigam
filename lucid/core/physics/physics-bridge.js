@@ -3,38 +3,42 @@
  *
  * LCD-045: Bridges WebGPU physics simulation with SDF rendering
  *
- * This bridge:
- * - Initializes physics from scene JSON "physics" section
- * - Updates position constraint targets from rig phase animations
- * - Returns particle positions as uniform values for the shader
- *
- * Integration flow:
- * 1. Scene JSON defines physics bodies and constraints
- * 2. Rig system computes walk cycle foot positions
- * 3. Physics solver maintains constraint satisfaction
- * 4. Particle positions feed back to shader as uniforms
+ * Generic physics system - scene JSON defines bodies and constraints explicitly.
+ * No creature-specific knowledge in the core.
  */
 
-import { XPBDPhysicsGPU, createQuadrupedRig } from './xpbd-gpu.js';
-import { evaluateRig } from '../rig-evaluator.js';
+import { XPBDPhysicsGPU } from './xpbd-gpu.js';
 
 /**
  * Physics Bridge class - connects physics to rendering
  */
 export class PhysicsBridge {
-  constructor() {
+  /**
+   * Create physics bridge, optionally pre-parsing config for initial positions
+   * @param {Object} sceneJson - Optional scene JSON to pre-parse
+   */
+  constructor(sceneJson = null) {
     this.physics = null;
     this.enabled = false;
     this.initialized = false;
 
-    // Map of physics body names to their constraint indices
+    // Map of body names to their position constraint indices
     this.positionConstraintMap = new Map();
 
-    // Map of body names to rig param names they track
-    this.rigBindings = new Map();
+    // Initial positions for each body (for uniform defaults)
+    this.initialPositions = new Map();
 
     // Config from scene JSON
     this.config = null;
+
+    // Pre-parse initial positions synchronously (before async GPU init)
+    if (sceneJson?.physics?.bodies) {
+      for (const body of sceneJson.physics.bodies) {
+        if (body.name && body.pos) {
+          this.initialPositions.set(body.name, [...body.pos]);
+        }
+      }
+    }
   }
 
   /**
@@ -73,65 +77,43 @@ export class PhysicsBridge {
       this.physics.params.dt = physicsConfig.dt;
     }
 
-    // Create physics bodies from config
-    if (physicsConfig.preset === 'quadruped') {
-      // Use quadruped helper
-      const quadConfig = physicsConfig.quadruped || {};
-      const rig = createQuadrupedRig(this.physics, {
-        bodyPos: quadConfig.bodyPos || [0, 0.5, 0],
-        bodyMass: quadConfig.bodyMass || 5.0,
-        footMass: quadConfig.footMass || 0.5,
-        legLength: quadConfig.legLength || 0.8,
-        bodyWidth: quadConfig.bodyWidth || 0.4,
-        bodyLength: quadConfig.bodyLength || 0.5,
-        compliance: quadConfig.compliance || 0.0001
-      });
-
-      // Store constraint indices for position updates
-      this.positionConstraintMap.set('footFL', rig.footConstraints[0]);
-      this.positionConstraintMap.set('footFR', rig.footConstraints[1]);
-      this.positionConstraintMap.set('footRL', rig.footConstraints[2]);
-      this.positionConstraintMap.set('footRR', rig.footConstraints[3]);
-
-      // Map rig phase params to foot constraints
-      if (physicsConfig.rigBindings) {
-        for (const [foot, rigParam] of Object.entries(physicsConfig.rigBindings)) {
-          this.rigBindings.set(foot, rigParam);
-        }
-      }
-    } else if (physicsConfig.bodies) {
-      // Manual body definition
+    // Create physics bodies from explicit list
+    if (physicsConfig.bodies && Array.isArray(physicsConfig.bodies)) {
       for (const body of physicsConfig.bodies) {
+        const pos = body.pos || [0, 0, 0];
         this.physics.addParticle({
-          pos: body.pos || [0, 0, 0],
+          pos: [...pos],
           mass: body.mass ?? 1.0,
           radius: body.radius ?? 0.1,
           name: body.name
         });
-      }
 
-      // Add constraints
-      if (physicsConfig.distanceConstraints) {
-        for (const c of physicsConfig.distanceConstraints) {
-          const idxA = this.physics.paramBindings.get(c.bodyA);
-          const idxB = this.physics.paramBindings.get(c.bodyB);
-          if (idxA !== undefined && idxB !== undefined) {
-            this.physics.addDistanceConstraint(idxA, idxB, c.length, c.compliance || 0);
-          }
+        // Store initial position for defaults
+        if (body.name) {
+          this.initialPositions.set(body.name, [...pos]);
         }
       }
+    }
 
-      if (physicsConfig.positionConstraints) {
-        for (const c of physicsConfig.positionConstraints) {
-          const idx = this.physics.paramBindings.get(c.body);
-          if (idx !== undefined) {
-            this.physics.addPositionConstraint(idx, c.target || [0, 0, 0], c.compliance || 0.01);
-            this.positionConstraintMap.set(c.body, this.physics.posConstraints.length - 1);
+    // Add distance constraints
+    if (physicsConfig.distanceConstraints && Array.isArray(physicsConfig.distanceConstraints)) {
+      for (const c of physicsConfig.distanceConstraints) {
+        const idxA = this.physics.paramBindings.get(c.bodyA);
+        const idxB = this.physics.paramBindings.get(c.bodyB);
+        if (idxA !== undefined && idxB !== undefined) {
+          this.physics.addDistanceConstraint(idxA, idxB, c.length ?? null, c.compliance || 0);
+        }
+      }
+    }
 
-            if (c.rigBinding) {
-              this.rigBindings.set(c.body, c.rigBinding);
-            }
-          }
+    // Add position constraints (anchors, targets)
+    if (physicsConfig.positionConstraints && Array.isArray(physicsConfig.positionConstraints)) {
+      for (const c of physicsConfig.positionConstraints) {
+        const idx = this.physics.paramBindings.get(c.body);
+        if (idx !== undefined) {
+          const target = c.target || this.initialPositions.get(c.body) || [0, 0, 0];
+          this.physics.addPositionConstraint(idx, target, c.compliance || 0.01);
+          this.positionConstraintMap.set(c.body, this.physics.posConstraints.length - 1);
         }
       }
     }
@@ -145,82 +127,15 @@ export class PhysicsBridge {
   }
 
   /**
-   * Update position constraint targets from rig evaluation
-   * @param {Object} sceneParams - Scene parameters
-   * @param {Object} rig - Rig definition
-   * @param {number} time - Current time
+   * Update position constraint target for a body
+   * @param {string} bodyName - Body name
+   * @param {number[]} target - Target position [x, y, z]
    */
-  updateFromRig(sceneParams, rig, time) {
-    if (!this.enabled || !this.initialized) return;
-
-    // Evaluate rig to get current animation values
-    const rigResult = evaluateRig(sceneParams, rig, time);
-
-    // Update position constraint targets based on rig bindings
-    for (const [bodyName, rigParam] of this.rigBindings) {
-      const constraintIdx = this.positionConstraintMap.get(bodyName);
-      if (constraintIdx === undefined) continue;
-
-      // Get target position from rig values
-      // For walk cycle: rigParam might be a position3 or computed from phase values
-      let target;
-
-      if (rigResult.values[rigParam]) {
-        // Direct param reference (position3 type)
-        target = rigResult.values[rigParam];
-      } else {
-        // Compute from phase values - assume footFL tracks gait_legFL etc.
-        // This computes foot position from body position + leg rotation
-        const basePos = this.config.quadruped?.bodyPos || [0, 0.5, 0];
-        const legLength = this.config.quadruped?.legLength || 0.8;
-
-        // Get leg swing angle from phase (e.g., gait_legFL)
-        const phaseParam = this.getPhaseParamForFoot(bodyName);
-        const swing = rigResult.phaseValues[phaseParam] || 0;
-        const swingRad = (swing * Math.PI) / 180;
-
-        // Compute foot position based on which leg
-        const footOffset = this.getFootOffset(bodyName);
-        target = [
-          basePos[0] + footOffset[0],
-          basePos[1] - legLength * Math.cos(swingRad) + footOffset[1],
-          basePos[2] + legLength * Math.sin(swingRad) + footOffset[2]
-        ];
-      }
-
-      if (Array.isArray(target) && target.length >= 3) {
-        this.physics.updatePositionTarget(constraintIdx, target);
-      }
+  updateTarget(bodyName, target) {
+    const constraintIdx = this.positionConstraintMap.get(bodyName);
+    if (constraintIdx !== undefined && Array.isArray(target)) {
+      this.physics.updatePositionTarget(constraintIdx, target);
     }
-  }
-
-  /**
-   * Get the rig phase param name for a foot
-   */
-  getPhaseParamForFoot(footName) {
-    const map = {
-      'footFL': 'gait_legFL',
-      'footFR': 'gait_legFR',
-      'footRL': 'gait_legRL',
-      'footRR': 'gait_legRR'
-    };
-    return map[footName] || footName;
-  }
-
-  /**
-   * Get foot offset from body center
-   */
-  getFootOffset(footName) {
-    const bodyWidth = this.config?.quadruped?.bodyWidth || 0.4;
-    const bodyLength = this.config?.quadruped?.bodyLength || 0.5;
-
-    const offsets = {
-      'footFL': [bodyWidth, 0, bodyLength],
-      'footFR': [-bodyWidth, 0, bodyLength],
-      'footRL': [bodyWidth, 0, -bodyLength],
-      'footRR': [-bodyWidth, 0, -bodyLength]
-    };
-    return offsets[footName] || [0, 0, 0];
   }
 
   /**
@@ -239,21 +154,28 @@ export class PhysicsBridge {
 
   /**
    * Get physics-derived param values for shader uniforms
-   * @returns {Object} Map of paramName -> value for shader binding
+   * Returns positions with phys_ prefix
+   * @returns {Object} Map of paramName -> { value, type }
    */
   getParamValues() {
-    if (!this.enabled || !this.initialized) return {};
+    if (!this.enabled || !this.initialized) {
+      // Return initial positions as defaults
+      const result = {};
+      for (const [name, pos] of this.initialPositions) {
+        result[`phys_${name}`] = {
+          value: pos,
+          type: 'position3'
+        };
+      }
+      return result;
+    }
 
     const values = this.physics.getParamValues();
 
-    // Convert position arrays to position3 format
+    // Convert position arrays to position3 format with phys_ prefix
     const result = {};
     for (const [name, pos] of Object.entries(values)) {
-      if (name.endsWith('_vel')) {
-        // Velocity - skip or include based on scene needs
-        continue;
-      }
-      // Position param
+      if (name.endsWith('_vel')) continue; // Skip velocities
       result[`phys_${name}`] = {
         value: pos,
         type: 'position3'
@@ -261,6 +183,13 @@ export class PhysicsBridge {
     }
 
     return result;
+  }
+
+  /**
+   * Get initial position for a body (for default uniform values)
+   */
+  getInitialPosition(bodyName) {
+    return this.initialPositions.get(bodyName) || [0, 0, 0];
   }
 
   /**
@@ -291,20 +220,4 @@ export class PhysicsBridge {
   isGPU() {
     return this.physics?.isGPU ?? false;
   }
-}
-
-/**
- * Create enhanced param object that merges physics values
- * @param {Object} sceneParams - Original scene params
- * @param {Object} physicsParams - Physics-derived params
- * @returns {Object} Merged params for shader binding
- */
-export function mergePhysicsParams(sceneParams, physicsParams) {
-  const merged = { ...sceneParams };
-
-  for (const [name, param] of Object.entries(physicsParams)) {
-    merged[name] = param;
-  }
-
-  return merged;
 }
