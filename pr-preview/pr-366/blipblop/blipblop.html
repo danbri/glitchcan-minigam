@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimized Cross-Platform Synthwave Sequencer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #120458;
+            color: #ff00a0;
+            padding: 10px;
+            margin: 0;
+        }
+        h1 {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        #keyboard {
+            display: flex;
+            margin: 10px 0;
+            position: relative;
+            height: 120px;
+        }
+        .key {
+            width: 30px;
+            height: 120px;
+            background-color: #2de2e6;
+            border: 1px solid #ff00a0;
+            margin-right: -1px;
+            position: relative;
+            z-index: 1;
+            transition: background-color 0.6s ease;
+            cursor: pointer;
+        }
+        .key.black {
+            width: 20px;
+            height: 80px;
+            background-color: #120458;
+            position: absolute;
+            z-index: 2;
+        }
+        .key-label {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            text-align: center;
+            color: #120458;
+        }
+        #sequencer {
+            display: grid;
+            gap: 2px;
+            margin: 10px 0;
+            position: relative;
+        }
+        .note {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #ff00a0;
+            cursor: pointer;
+            transition: opacity 0.6s ease, box-shadow 0.6s ease;
+        }
+        .note.active {
+            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+        }
+        .vertical-highlight {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 27px; /* Adjusted to match note width + gap */
+            background-color: rgba(255, 0, 160, 0.3);
+            pointer-events: none;
+            transition: left 0.1s step-end;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: #2de2e6;
+            border: none;
+            color: #120458;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: #ff00a0;
+            color: #2de2e6;
+        }
+        .row-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 5px;
+            font-weight: bold;
+            width: 60px;
+            color: #ff00a0;
+            font-size: 0.8em;
+        }
+        #activity-stream, #console-log {
+            width: 90%;
+            max-width: 300px;
+            height: 60px;
+            overflow-y: scroll;
+            border: 1px solid #ff00a0;
+            padding: 5px;
+            margin-top: 10px;
+            background-color: rgba(18, 4, 88, 0.5);
+            font-size: 0.8em;
+        }
+        #console-log {
+            color: #2de2e6;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Synthwave Sequencer</h1>
+    <div id="keyboard"></div>
+    <div id="sequencer-container">
+        <div id="sequencer"></div>
+    </div>
+    <button id="playPause">Play</button>
+    <div id="activity-stream"></div>
+    <div id="console-log"></div>
+    <script>
+        let audioContext;
+        const notes = [
+            { name: 'C (I)', freq: 130.81, key: 'C3', color: '#FF00FF', voice: 'sawtooth' },  // Magenta
+            { name: 'G (I)', freq: 196.00, key: 'G3', color: '#00FFFF', voice: 'square' },   // Cyan
+            { name: 'G (V)', freq: 196.00, key: 'G3', color: '#FF1493', voice: 'triangle' }, // Deep Pink
+            { name: 'D (V)', freq: 293.66, key: 'D4', color: '#00FF00', voice: 'sawtooth' }, // Lime
+            { name: 'A (vi)', freq: 220.00, key: 'A3', color: '#FF4500', voice: 'sine' },    // Orange Red
+            { name: 'E (vi)', freq: 329.63, key: 'E4', color: '#1E90FF', voice: 'sine' },    // Dodger Blue
+            { name: 'F (IV)', freq: 174.61, key: 'F3', color: '#FFFF00', voice: 'sine' },    // Yellow
+            { name: 'C (IV)', freq: 261.63, key: 'C4', color: '#FF69B4', voice: 'sine' },    // Hot Pink
+        ];
+        const steps = 8;
+        let isPlaying = false;
+        let currentStep = 0;
+        let intervalId;
+
+        const sequencer = document.getElementById('sequencer');
+        sequencer.style.gridTemplateColumns = `auto repeat(${steps}, 1fr)`;
+
+        const grid = notes.map(() => Array(steps).fill(false));
+
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                consoleLog('Audio context initialized');
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => consoleLog('Audio context resumed'));
+            }
+        }
+
+        function createKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            const keys = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#'];
+            let octave = 3;
+            let blackKeyIndex = 0;
+
+            keys.forEach((key, index) => {
+                const keyElement = document.createElement('div');
+                keyElement.className = 'key';
+                keyElement.dataset.note = `${key}${octave}`;
+                const label = document.createElement('div');
+                label.className = 'key-label';
+                label.textContent = `${key}${octave}`;
+                keyElement.appendChild(label);
+                keyElement.addEventListener('mousedown', () => playNoteByKey(`${key}${octave}`));
+                keyElement.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playNoteByKey(`${key}${octave}`);
+                });
+                keyboard.appendChild(keyElement);
+
+                if (['E', 'B'].indexOf(key) === -1 && index < keys.length - 1) {
+                    const blackKey = document.createElement('div');
+                    blackKey.className = 'key black';
+                    blackKey.style.left = `${index * 30 + 22}px`;
+                    blackKey.dataset.note = `${blackKeys[blackKeyIndex]}${octave}`;
+                    const blackLabel = document.createElement('div');
+                    blackLabel.className = 'key-label';
+                    blackLabel.textContent = `${blackKeys[blackKeyIndex]}${octave}`;
+                    blackLabel.style.color = '#2de2e6';
+                    blackKey.appendChild(blackLabel);
+                    blackKey.addEventListener('mousedown', () => playNoteByKey(`${blackKeys[blackKeyIndex]}${octave}`));
+                    blackKey.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        playNoteByKey(`${blackKeys[blackKeyIndex]}${octave}`);
+                    });
+                    keyboard.appendChild(blackKey);
+                    blackKeyIndex = (blackKeyIndex + 1) % blackKeys.length;
+                }
+
+                if (key === 'B') octave++;
+            });
+        }
+
+        function createSequencer() {
+            notes.forEach((note, row) => {
+                const rowLabel = document.createElement('div');
+                rowLabel.className = 'row-label';
+                rowLabel.textContent = note.name;
+                sequencer.appendChild(rowLabel);
+
+                for (let col = 0; col < steps; col++) {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'note';
+                    noteElement.dataset.row = row;
+                    noteElement.dataset.col = col;
+                    noteElement.style.backgroundColor = note.color;
+                    noteElement.style.opacity = '0.3';
+                    noteElement.addEventListener('click', toggleNote);
+                    noteElement.addEventListener('touchstart', handleTouchStart);
+                    sequencer.appendChild(noteElement);
+                }
+            });
+
+            const verticalHighlight = document.createElement('div');
+            verticalHighlight.className = 'vertical-highlight';
+            sequencer.appendChild(verticalHighlight);
+        }
+
+        function handleTouchStart(event) {
+            event.preventDefault();
+            toggleNote(event);
+        }
+
+        function toggleNote(event) {
+            initAudioContext();
+            const { row, col } = event.target.dataset;
+            grid[row][col] = !grid[row][col];
+            event.target.style.opacity = grid[row][col] ? '1' : '0.3';
+            event.target.classList.toggle('active', grid[row][col]);
+        }
+
+        function playNoteByKey(noteKey) {
+            initAudioContext();
+            const note = notes.find(n => n.key === noteKey);
+            if (note) {
+                playNote(note);
+            }
+        }
+
+        function playNote(note) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = note.voice;
+            oscillator.frequency.setValueAtTime(note.freq, audioContext.currentTime);
+
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+
+            const keyElement = document.querySelector(`.key[data-note="${note.key}"]`);
+            if (keyElement) {
+                keyElement.style.backgroundColor = note.color;
+                setTimeout(() => {
+                    keyElement.style.backgroundColor = keyElement.classList.contains('black') ? '#120458' : '#2de2e6';
+                }, 250);
+            }
+
+            logActivity(note);
+            consoleLog(`Played note: ${note.name}`);
+        }
+
+        function logActivity(note) {
+            const activityStream = document.getElementById('activity-stream');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `Played: ${note.name} (${note.key}, ${note.freq.toFixed(2)} Hz)`;
+            activityStream.insertBefore(logEntry, activityStream.firstChild);
+            if (activityStream.childNodes.length > 50) {
+                activityStream.removeChild(activityStream.lastChild);
+            }
+        }
+
+        function consoleLog(message) {
+            const consoleElement = document.getElementById('console-log');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = message;
+            consoleElement.appendChild(logEntry);
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        }
+
+        function step() {
+            const prevStep = (currentStep - 1 + steps) % steps;
+            sequencer.querySelectorAll(`.note[data-col="${prevStep}"]`).forEach(note => note.classList.remove('playing'));
+
+            notes.forEach((note, row) => {
+                const noteElement = sequencer.querySelector(`.note[data-row="${row}"][data-col="${currentStep}"]`);
+                noteElement.classList.add('playing');
+                if (grid[row][currentStep]) {
+                    playNote(note);
+                }
+            });
+
+            const verticalHighlight = sequencer.querySelector('.vertical-highlight');
+            verticalHighlight.style.left = `${currentStep * 27 + 60}px`; // 60px offset for row labels
+
+            currentStep = (currentStep + 1) % steps;
+        }
+
+        function togglePlayPause() {
+            initAudioContext();
+            if (isPlaying) {
+                clearInterval(intervalId);
+                playPauseBtn.textContent = 'Play';
+                isPlaying = false;
+            } else {
+                setTimeout(() => {
+                    intervalId = setInterval(step, 250);
+                    playPauseBtn.textContent = 'Pause';
+                    isPlaying = true;
+                }, 100); // Small delay to ensure audio context is ready
+            }
+            consoleLog(`Sequencer ${isPlaying ? 'stopped' : 'starting'}`);
+        }
+
+        createKeyboard();
+        createSequencer();
+        const playPauseBtn = document.getElementById('playPause');
+        playPauseBtn.addEventListener('click', togglePlayPause);
+
+        // Enable audio on user interaction
+        document.body.addEventListener('touchstart', initAudioContext, { once: true });
+        document.body.addEventListener('click', initAudioContext, { once: true });
+
+        // Log initial state
+        consoleLog('Sequencer initialized');
+    </script>
+</body>
+</html>
