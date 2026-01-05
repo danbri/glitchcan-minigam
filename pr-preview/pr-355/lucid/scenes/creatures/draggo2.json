@@ -1,0 +1,177 @@
+{
+  "title": "Dragon B2-H2 Restore",
+  "subtitle": "Restored B2 body with H2 head and glowing eyes",
+  "version": "1.1",
+  "quality": "medium",
+  "notes": "Restored B2 body with H2 head and glowing eyes.",
+
+  "params": {
+    "bodyColor": {
+      "value": [0.1, 0.45, 0.1],
+      "type": "color3",
+      "description": "Dragon body color"
+    },
+    "eyeGlow": {
+      "value": 1.1,
+      "type": "scalar",
+      "min": 0.3,
+      "max": 2.0,
+      "description": "Eye glow intensity"
+    },
+    "wingColor": {
+      "value": [0.35, 0.05, 0.05],
+      "type": "color3",
+      "description": "Wing membrane color"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "ellipsoid",
+        "params": {
+          "radii": [1.4, 0.9, 1.0],
+          "color": {"var": "bodyColor"}
+        },
+        "transform": { "translate": [0, 0.5, 0] },
+        "notes": "Main torso"
+      },
+      {
+        "type": "ellipsoid",
+        "params": {
+          "radii": [0.55, 0.45, 0.55],
+          "color": [0.1, 0.45, 0.1]
+        },
+        "transform": { "translate": [1.05, 0.55, 0] },
+        "notes": "Neck"
+      },
+      {
+        "type": "union",
+        "notes": "H2 head group",
+        "children": [
+          {
+            "type": "ellipsoid",
+            "params": {
+              "radii": [0.55, 0.45, 0.45],
+              "color": [0.1, 0.45, 0.1]
+            },
+            "transform": { "translate": [1.55, 0.55, 0] },
+            "notes": "Snout"
+          },
+          {
+            "type": "ellipsoid",
+            "params": {
+              "radii": [0.75, 0.55, 0.55],
+              "color": [0.1, 0.45, 0.1]
+            },
+            "transform": { "translate": [1.95, 0.60, 0] },
+            "notes": "Skull"
+          },
+          {
+            "type": "ellipsoid",
+            "params": {
+              "radii": [0.15, 0.12, 0.12],
+              "color": [0.12, 0.25, 0.12]
+            },
+            "transform": { "translate": [1.75, 0.48, 0] },
+            "notes": "Nose bump"
+          }
+        ]
+      },
+      {
+        "type": "material",
+        "params": { "color": [1.0, 0.1, 0.1], "emit": {"var": "eyeGlow"} },
+        "child": {
+          "type": "sphere",
+          "params": { "r": 0.10 },
+          "transform": { "translate": [1.95, 0.62, 0.28] }
+        },
+        "notes": "Right eye"
+      },
+      {
+        "type": "material",
+        "params": { "color": [1.0, 0.1, 0.1], "emit": {"var": "eyeGlow"} },
+        "child": {
+          "type": "sphere",
+          "params": { "r": 0.10 },
+          "transform": { "translate": [1.95, 0.62, -0.28] }
+        },
+        "notes": "Left eye"
+      },
+      {
+        "type": "smoothUnion",
+        "k": 0.25,
+        "notes": "Curved wings",
+        "children": [
+          {
+            "type": "ellipsoid",
+            "params": {
+              "radii": [0.9, 0.15, 0.45],
+              "color": {"var": "wingColor"}
+            },
+            "transform": { "translate": [0.0, 0.95, 0.9], "rotate": [0, 0, -15] }
+          },
+          {
+            "type": "ellipsoid",
+            "params": {
+              "radii": [0.9, 0.15, 0.45],
+              "color": {"var": "wingColor"}
+            },
+            "transform": { "translate": [0.0, 0.95, -0.9], "rotate": [0, 0, 15] }
+          }
+        ]
+      },
+      {
+        "type": "ellipsoid",
+        "params": { "radii": [0.3, 0.6, 0.3], "color": [0.1, 0.45, 0.1] },
+        "transform": { "translate": [-0.4, 0.1, 0.75] },
+        "notes": "Front right leg"
+      },
+      {
+        "type": "ellipsoid",
+        "params": { "radii": [0.3, 0.6, 0.3], "color": [0.1, 0.45, 0.1] },
+        "transform": { "translate": [-0.4, 0.1, -0.75] },
+        "notes": "Front left leg"
+      },
+      {
+        "type": "ellipsoid",
+        "params": { "radii": [0.3, 0.55, 0.3], "color": [0.1, 0.45, 0.1] },
+        "transform": { "translate": [0.7, 0.1, 0.75] },
+        "notes": "Rear right leg"
+      },
+      {
+        "type": "ellipsoid",
+        "params": { "radii": [0.3, 0.55, 0.3], "color": [0.1, 0.45, 0.1] },
+        "transform": { "translate": [0.7, 0.1, -0.75] },
+        "notes": "Rear left leg"
+      },
+      {
+        "type": "union",
+        "notes": "Segmented tail",
+        "children": [
+          {
+            "type": "ellipsoid",
+            "params": { "radii": [0.55, 0.45, 0.45], "color": [0.1, 0.45, 0.1] },
+            "transform": { "translate": [-1.0, 0.5, 0] }
+          },
+          {
+            "type": "ellipsoid",
+            "params": { "radii": [0.45, 0.35, 0.35], "color": [0.1, 0.45, 0.1] },
+            "transform": { "translate": [-1.5, 0.48, 0] }
+          },
+          {
+            "type": "ellipsoid",
+            "params": { "radii": [0.35, 0.28, 0.28], "color": [0.1, 0.45, 0.1] },
+            "transform": { "translate": [-1.9, 0.46, 0] }
+          },
+          {
+            "type": "ellipsoid",
+            "params": { "radii": [0.25, 0.20, 0.20], "color": [0.1, 0.45, 0.1] },
+            "transform": { "translate": [-2.2, 0.44, 0] }
+          }
+        ]
+      }
+    ]
+  }
+}
