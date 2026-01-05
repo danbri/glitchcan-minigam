@@ -1,0 +1,12 @@
+{
+  "name": "gcui",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Glitchcanary UI package (skeleton) separated from core",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "license": "MIT"
+}
+
