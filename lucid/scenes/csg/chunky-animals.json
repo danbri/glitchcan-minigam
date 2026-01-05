@@ -82,9 +82,17 @@
   "root": {
     "type": "union",
     "children": [
-      { "type": "ref", "id": "hippo", "transform": { "translate": [0, 0, 0] } },
-      { "type": "ref", "id": "bear", "transform": { "translate": [3.5, 0, 0] } },
-      { "type": "ref", "id": "pig", "transform": { "translate": [-3.5, 0, 0] } }
+      { "type": "ref", "id": "hippo" },
+      {
+        "type": "transform",
+        "transform": { "translate": [3.5, 0, 0] },
+        "child": { "type": "ref", "id": "bear" }
+      },
+      {
+        "type": "transform",
+        "transform": { "translate": [-3.5, 0, 0] },
+        "child": { "type": "ref", "id": "pig" }
+      }
     ]
   }
 }
