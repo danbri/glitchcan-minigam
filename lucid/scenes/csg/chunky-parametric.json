@@ -1,69 +1,131 @@
 {
   "title": "Chunky Parametric",
-  "subtitle": "Single quadruped template, 3 variants via param overrides",
-  "version": "1.0",
+  "subtitle": "One quadruped template, 6 distinct animals via param inheritance",
+  "version": "2.0",
   "author": "LCD-002",
-  "description": "Demonstrates parameterized instancing - one def, three animals",
-  "camera": { "distance": 10, "phi": 0.3, "theta": 0.2, "target": [0, 0, 0] },
+  "description": "OOP-style parameterized instancing - global params affect all, instance params per-animal",
+  "camera": { "distance": 14, "phi": 0.35, "theta": 0.15, "target": [0, 0, 0] },
 
   "params": {
-    "smoothness": { "value": 0.2, "min": 0.05, "max": 0.4 },
-    "spacing": { "value": 3.5, "min": 2, "max": 6 }
+    "smoothness": { "value": 0.15, "min": 0.05, "max": 0.5, "label": "Blobiness" },
+    "globalScale": { "value": 1.0, "min": 0.3, "max": 2.0, "label": "Size" },
+    "fatness": { "value": 1.0, "min": 0.5, "max": 1.8, "label": "Fatness" },
+    "legLength": { "value": 1.0, "min": 0.4, "max": 1.6, "label": "Leg Length" },
+    "earSize": { "value": 1.0, "min": 0.3, "max": 2.0, "label": "Ear Size" },
+    "tailWag": { "value": 0.0, "min": -1.0, "max": 1.0, "label": "Tail Angle" }
   },
 
   "defs": {
     "quadruped": {
-      "comment": "Generic chunky quadruped - all proportions parameterized",
-      "type": "material",
-      "params": { "color": { "var": "color" } },
+      "comment": "Generic quadruped - instance params override, global params multiply",
+      "type": "transform",
+      "transform": { "scale": { "var": "globalScale" } },
       "child": {
-        "type": "smoothUnion", "k": { "var": "smoothness" },
-        "children": [
-          {
-            "comment": "Body",
-            "type": "ellipsoid",
-            "params": { "radii": { "var": "bodyRadii" } }
-          },
-          {
-            "comment": "Head",
-            "type": "ellipsoid",
-            "params": { "radii": { "var": "headRadii" } },
-            "transform": { "translate": { "var": "headPos" } }
-          },
-          {
-            "comment": "Snout/nose",
-            "type": "ellipsoid",
-            "params": { "radii": { "var": "snoutRadii" } },
-            "transform": { "translate": { "var": "snoutPos" } }
-          },
-          {
-            "comment": "Ears (mirrored)",
-            "type": "mirror", "axis": "x",
-            "child": {
+        "type": "material",
+        "params": { "color": { "var": "color" } },
+        "child": {
+          "type": "smoothUnion", "k": { "var": "smoothness" },
+          "children": [
+            {
+              "comment": "Main body - fatness scales girth",
+              "type": "transform",
+              "transform": { "scale": [1, { "var": "fatness" }, 1] },
+              "child": {
+                "type": "ellipsoid",
+                "params": { "radii": { "var": "bodyRadii" } }
+              }
+            },
+            {
+              "comment": "Rump/hindquarters - fatness scales girth",
+              "type": "transform",
+              "transform": { "scale": [1, { "var": "fatness" }, 1] },
+              "child": {
+                "type": "ellipsoid",
+                "params": { "radii": { "var": "rumpRadii" } },
+                "transform": { "translate": { "var": "rumpPos" } }
+              }
+            },
+            {
+              "comment": "Head",
               "type": "ellipsoid",
-              "params": { "radii": { "var": "earRadii" } },
-              "transform": { "translate": { "var": "earPos" } }
+              "params": { "radii": { "var": "headRadii" } },
+              "transform": { "translate": { "var": "headPos" } }
+            },
+            {
+              "comment": "Snout/muzzle",
+              "type": "ellipsoid",
+              "params": { "radii": { "var": "snoutRadii" } },
+              "transform": { "translate": { "var": "snoutPos" } }
+            },
+            {
+              "comment": "Nose tip",
+              "type": "sphere",
+              "params": { "r": { "var": "noseSize" } },
+              "transform": { "translate": { "var": "nosePos" } }
+            },
+            {
+              "comment": "Ears (mirrored) - earSize scales uniformly",
+              "type": "mirror", "axis": "x",
+              "child": {
+                "type": "transform",
+                "transform": { "scale": { "var": "earSize" } },
+                "child": {
+                  "type": "ellipsoid",
+                  "params": { "radii": { "var": "earRadii" } },
+                  "transform": {
+                    "translate": { "var": "earPos" },
+                    "rotate": { "var": "earRotate" }
+                  }
+                }
+              }
+            },
+            {
+              "comment": "Front legs (mirrored) - legLength multiplies height",
+              "type": "mirror", "axis": "x",
+              "child": {
+                "type": "roundCone",
+                "params": {
+                  "r1": { "expr": "mul", "args": [{ "var": "legThighRadius" }, { "var": "fatness" }] },
+                  "r2": { "expr": "mul", "args": [{ "var": "legAnkleRadius" }, { "var": "fatness" }] },
+                  "h": { "expr": "mul", "args": [{ "var": "frontLegHeight" }, { "var": "legLength" }] }
+                },
+                "transform": {
+                  "translate": { "var": "frontLegPos" },
+                  "rotate": { "var": "frontLegRotate" }
+                }
+              }
+            },
+            {
+              "comment": "Back legs (mirrored) - legLength multiplies height",
+              "type": "mirror", "axis": "x",
+              "child": {
+                "type": "roundCone",
+                "params": {
+                  "r1": { "expr": "mul", "args": [{ "var": "legThighRadius" }, { "var": "fatness" }] },
+                  "r2": { "expr": "mul", "args": [{ "var": "legAnkleRadius" }, { "var": "fatness" }] },
+                  "h": { "expr": "mul", "args": [{ "var": "backLegHeight" }, { "var": "legLength" }] }
+                },
+                "transform": {
+                  "translate": { "var": "backLegPos" },
+                  "rotate": { "var": "backLegRotate" }
+                }
+              }
+            },
+            {
+              "comment": "Tail - tailWag adds extra rotation",
+              "type": "transform",
+              "transform": { "rotate": [{ "var": "tailWag" }, 0, 0] },
+              "child": {
+                "type": "capsule",
+                "params": { "h": { "var": "tailLength" }, "r": { "var": "tailRadius" } },
+                "transform": {
+                  "translate": { "var": "tailPos" },
+                  "rotate": { "var": "tailRotate" }
+                }
+              }
             }
-          },
-          {
-            "comment": "Front legs (mirrored)",
-            "type": "mirror", "axis": "x",
-            "child": {
-              "type": "capsule",
-              "params": { "h": { "var": "legHeight" }, "r": { "var": "legRadius" } },
-              "transform": { "translate": { "var": "frontLegPos" } }
-            }
-          },
-          {
-            "comment": "Back legs (mirrored)",
-            "type": "mirror", "axis": "x",
-            "child": {
-              "type": "capsule",
-              "params": { "h": { "var": "legHeight" }, "r": { "var": "legRadius" } },
-              "transform": { "translate": { "var": "backLegPos" } }
-            }
-          }
-        ]
+          ]
+        }
       }
     }
   },
@@ -72,64 +134,212 @@
     "type": "union",
     "children": [
       {
-        "comment": "Hippo - gray-purple, barrel body, wide snout",
-        "type": "ref", "id": "quadruped",
-        "params": {
-          "color": [0.45, 0.38, 0.42],
-          "bodyRadii": [1.1, 0.7, 1.0],
-          "headRadii": [0.45, 0.4, 0.5],
-          "headPos": [0, 0.1, 1.3],
-          "snoutRadii": [0.38, 0.28, 0.35],
-          "snoutPos": [0, -0.1, 1.75],
-          "earRadii": [0.08, 0.12, 0.08],
-          "earPos": [0.25, 0.45, 1.2],
-          "legHeight": 0.4,
-          "legRadius": 0.2,
-          "frontLegPos": [0.55, -0.65, 0.5],
-          "backLegPos": [0.55, -0.65, -0.5]
-        }
-      },
-      {
-        "comment": "Bear - brown, stockier, round ears",
+        "comment": "ELEPHANT - massive, trunk, huge ears, column legs",
         "type": "transform",
-        "transform": { "translate": [{ "var": "spacing" }, 0, 0] },
+        "transform": { "translate": [-5, 0, 3] },
         "child": {
           "type": "ref", "id": "quadruped",
           "params": {
-            "color": [0.35, 0.22, 0.12],
-            "bodyRadii": [1.0, 0.8, 0.9],
-            "headRadii": [0.4, 0.38, 0.4],
-            "headPos": [0, 0.25, 1.2],
-            "snoutRadii": [0.2, 0.18, 0.25],
-            "snoutPos": [0, 0.1, 1.55],
-            "earRadii": [0.12, 0.12, 0.12],
-            "earPos": [0.28, 0.55, 1.0],
-            "legHeight": 0.5,
-            "legRadius": 0.22,
-            "frontLegPos": [0.5, -0.65, 0.5],
-            "backLegPos": [0.5, -0.65, -0.5]
+            "color": [0.55, 0.52, 0.50],
+            "bodyRadii": [1.4, 1.1, 1.6],
+            "rumpRadii": [1.2, 1.0, 1.0],
+            "rumpPos": [0, -0.1, -1.3],
+            "headRadii": [0.6, 0.55, 0.55],
+            "headPos": [0, 0.5, 1.8],
+            "snoutRadii": [0.15, 0.12, 0.8],
+            "snoutPos": [0, -0.1, 2.6],
+            "noseSize": 0.12,
+            "nosePos": [0, -0.4, 3.3],
+            "earRadii": [0.6, 0.7, 0.12],
+            "earPos": [0.65, 0.5, 1.4],
+            "earRotate": [0, 0, 0.3],
+            "legThighRadius": 0.28,
+            "legAnkleRadius": 0.22,
+            "frontLegHeight": 0.9,
+            "frontLegPos": [0.6, -1.0, 0.8],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.85,
+            "backLegPos": [0.6, -0.95, -0.8],
+            "backLegRotate": [0, 0, 0],
+            "tailLength": 0.5,
+            "tailRadius": 0.06,
+            "tailPos": [0, 0, -2.2],
+            "tailRotate": [-0.8, 0, 0]
           }
         }
       },
       {
-        "comment": "Pig - pink, longer snout, floppy ears",
+        "comment": "HIPPO - barrel body, stubby legs, wide flat snout, tiny ears",
         "type": "transform",
-        "transform": { "translate": [{ "expr": "mul", "args": [{ "var": "spacing" }, -1] }, 0, 0] },
+        "transform": { "translate": [0, 0, 3] },
         "child": {
           "type": "ref", "id": "quadruped",
           "params": {
-            "color": [0.9, 0.65, 0.6],
-            "bodyRadii": [0.8, 0.6, 1.0],
-            "headRadii": [0.35, 0.32, 0.35],
-            "headPos": [0, 0.05, 1.25],
-            "snoutRadii": [0.18, 0.14, 0.25],
-            "snoutPos": [0, -0.05, 1.6],
-            "earRadii": [0.15, 0.2, 0.08],
-            "earPos": [0.2, 0.35, 1.1],
-            "legHeight": 0.35,
-            "legRadius": 0.12,
-            "frontLegPos": [0.4, -0.55, 0.5],
-            "backLegPos": [0.45, -0.55, -0.5]
+            "color": [0.48, 0.40, 0.45],
+            "bodyRadii": [1.2, 0.85, 1.4],
+            "rumpRadii": [1.0, 0.75, 0.8],
+            "rumpPos": [0, -0.05, -1.1],
+            "headRadii": [0.5, 0.45, 0.55],
+            "headPos": [0, 0.15, 1.5],
+            "snoutRadii": [0.42, 0.32, 0.38],
+            "snoutPos": [0, -0.15, 2.0],
+            "noseSize": 0.08,
+            "nosePos": [0, 0.05, 2.35],
+            "earRadii": [0.08, 0.12, 0.06],
+            "earPos": [0.28, 0.52, 1.35],
+            "earRotate": [0, 0, 0],
+            "legThighRadius": 0.25,
+            "legAnkleRadius": 0.2,
+            "frontLegHeight": 0.35,
+            "frontLegPos": [0.55, -0.6, 0.6],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.35,
+            "backLegPos": [0.55, -0.6, -0.6],
+            "backLegRotate": [0, 0, 0],
+            "tailLength": 0.25,
+            "tailRadius": 0.05,
+            "tailPos": [0, 0.2, -1.8],
+            "tailRotate": [-0.5, 0, 0]
+          }
+        }
+      },
+      {
+        "comment": "DOG/WOLF - lean athletic build, long legs, pointed snout, upright ears",
+        "type": "transform",
+        "transform": { "translate": [5, 0, 3] },
+        "child": {
+          "type": "ref", "id": "quadruped",
+          "params": {
+            "color": [0.65, 0.55, 0.40],
+            "bodyRadii": [0.5, 0.45, 0.9],
+            "rumpRadii": [0.45, 0.4, 0.5],
+            "rumpPos": [0, 0.05, -0.9],
+            "headRadii": [0.28, 0.26, 0.32],
+            "headPos": [0, 0.35, 1.1],
+            "snoutRadii": [0.12, 0.1, 0.28],
+            "snoutPos": [0, 0.22, 1.45],
+            "noseSize": 0.06,
+            "nosePos": [0, 0.22, 1.72],
+            "earRadii": [0.08, 0.18, 0.06],
+            "earPos": [0.18, 0.58, 0.95],
+            "earRotate": [0.3, 0, 0.2],
+            "legThighRadius": 0.12,
+            "legAnkleRadius": 0.06,
+            "frontLegHeight": 0.55,
+            "frontLegPos": [0.22, -0.55, 0.4],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.6,
+            "backLegPos": [0.22, -0.55, -0.5],
+            "backLegRotate": [0.15, 0, 0],
+            "tailLength": 0.5,
+            "tailRadius": 0.06,
+            "tailPos": [0, 0.15, -1.35],
+            "tailRotate": [-0.3, 0, 0]
+          }
+        }
+      },
+      {
+        "comment": "BEAR - stocky powerful build, thick limbs, round head, small round ears",
+        "type": "transform",
+        "transform": { "translate": [-5, 0, -3] },
+        "child": {
+          "type": "ref", "id": "quadruped",
+          "params": {
+            "color": [0.32, 0.22, 0.15],
+            "bodyRadii": [1.0, 0.9, 1.1],
+            "rumpRadii": [0.9, 0.8, 0.7],
+            "rumpPos": [0, 0, -0.9],
+            "headRadii": [0.42, 0.4, 0.4],
+            "headPos": [0, 0.35, 1.25],
+            "snoutRadii": [0.2, 0.18, 0.25],
+            "snoutPos": [0, 0.15, 1.6],
+            "noseSize": 0.07,
+            "nosePos": [0, 0.18, 1.85],
+            "earRadii": [0.1, 0.1, 0.08],
+            "earPos": [0.3, 0.65, 1.05],
+            "earRotate": [0, 0, 0],
+            "legThighRadius": 0.22,
+            "legAnkleRadius": 0.15,
+            "frontLegHeight": 0.55,
+            "frontLegPos": [0.45, -0.7, 0.5],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.5,
+            "backLegPos": [0.45, -0.65, -0.5],
+            "backLegRotate": [0, 0, 0],
+            "tailLength": 0.1,
+            "tailRadius": 0.08,
+            "tailPos": [0, 0.3, -1.5],
+            "tailRotate": [-0.3, 0, 0]
+          }
+        }
+      },
+      {
+        "comment": "PIG - rotund barrel, short legs, flat disc snout, floppy ears",
+        "type": "transform",
+        "transform": { "translate": [0, 0, -3] },
+        "child": {
+          "type": "ref", "id": "quadruped",
+          "params": {
+            "color": [0.95, 0.70, 0.65],
+            "bodyRadii": [0.7, 0.6, 1.0],
+            "rumpRadii": [0.65, 0.55, 0.5],
+            "rumpPos": [0, -0.05, -0.85],
+            "headRadii": [0.32, 0.3, 0.32],
+            "headPos": [0, 0.1, 1.15],
+            "snoutRadii": [0.18, 0.14, 0.12],
+            "snoutPos": [0, -0.02, 1.45],
+            "noseSize": 0.1,
+            "nosePos": [0, 0, 1.55],
+            "earRadii": [0.12, 0.18, 0.05],
+            "earPos": [0.2, 0.35, 1.0],
+            "earRotate": [0.5, 0, 0.4],
+            "legThighRadius": 0.12,
+            "legAnkleRadius": 0.08,
+            "frontLegHeight": 0.3,
+            "frontLegPos": [0.32, -0.45, 0.45],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.3,
+            "backLegPos": [0.35, -0.45, -0.45],
+            "backLegRotate": [0, 0, 0],
+            "tailLength": 0.15,
+            "tailRadius": 0.03,
+            "tailPos": [0, 0.15, -1.25],
+            "tailRotate": [-1.2, 0, 0]
+          }
+        }
+      },
+      {
+        "comment": "CAT - sleek small body, dainty legs, triangular head, tall pointed ears",
+        "type": "transform",
+        "transform": { "translate": [5, 0, -3] },
+        "child": {
+          "type": "ref", "id": "quadruped",
+          "params": {
+            "color": [0.25, 0.25, 0.28],
+            "bodyRadii": [0.35, 0.3, 0.6],
+            "rumpRadii": [0.32, 0.28, 0.35],
+            "rumpPos": [0, 0, -0.55],
+            "headRadii": [0.22, 0.2, 0.22],
+            "headPos": [0, 0.25, 0.75],
+            "snoutRadii": [0.1, 0.08, 0.12],
+            "snoutPos": [0, 0.15, 0.95],
+            "noseSize": 0.035,
+            "nosePos": [0, 0.16, 1.05],
+            "earRadii": [0.06, 0.14, 0.04],
+            "earPos": [0.14, 0.42, 0.68],
+            "earRotate": [0.2, 0, 0.3],
+            "legThighRadius": 0.07,
+            "legAnkleRadius": 0.04,
+            "frontLegHeight": 0.35,
+            "frontLegPos": [0.15, -0.35, 0.25],
+            "frontLegRotate": [0, 0, 0],
+            "backLegHeight": 0.4,
+            "backLegPos": [0.15, -0.35, -0.35],
+            "backLegRotate": [0.2, 0, 0],
+            "tailLength": 0.55,
+            "tailRadius": 0.04,
+            "tailPos": [0, 0.08, -0.9],
+            "tailRotate": [-0.6, 0, 0]
           }
         }
       }

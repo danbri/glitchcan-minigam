@@ -264,6 +264,11 @@ export function evaluateRig(params, rig, time = 0) {
             const p = ((angle / (Math.PI * 2)) % 1 + 1) % 1;
             val = (p < 0.5 ? 4 * p - 1 : 3 - 4 * p) * amplitude + offset;
             break;
+          case 'linear':
+            // Linear - continuous forward motion, no cycling
+            // Returns driver value scaled by amplitude (for locomotion)
+            val = driver * amplitude + offset;
+            break;
           case 'sin':
           default:
             val = Math.sin(angle) * amplitude + offset;

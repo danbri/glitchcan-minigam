@@ -178,7 +178,9 @@ export class PhysicsScene {
             target: vec3.clone(body.position),
             compliance: c.compliance ?? 0.01,
             rigTarget: c.rigTarget || null,
-            baseY: c.baseY ?? body.position[1]
+            baseY: c.baseY ?? body.position[1],
+            baseZ: c.baseZ ?? body.position[2],
+            axis: c.axis || 'y'  // 'y' for lift, 'z' for forward locomotion
           });
         }
       }
@@ -197,11 +199,24 @@ export class PhysicsScene {
 
     for (const c of this.positionConstraints) {
       if (c.rigTarget && rigValues[c.rigTarget] !== undefined) {
-        // Apply rig value as Y offset from base position
-        const liftAmount = rigValues[c.rigTarget];
-        c.target[0] = c.basePosition[0];
-        c.target[1] = c.baseY + liftAmount;
-        c.target[2] = c.basePosition[2];
+        const rigValue = rigValues[c.rigTarget];
+
+        // Only set the target for the specified axis
+        // (constraint solving only uses this axis, so no need to set others)
+        switch (c.axis) {
+          case 'x':
+            c.target[0] = c.basePosition[0] + rigValue;
+            break;
+          case 'z':
+            // Forward locomotion - add rig value to Z
+            c.target[2] = c.baseZ + rigValue;
+            break;
+          case 'y':
+          default:
+            // Vertical lift (default for feet)
+            c.target[1] = c.baseY + rigValue;
+            break;
+        }
       }
     }
   }
@@ -259,21 +274,23 @@ export class PhysicsScene {
         }
       }
 
-      // Position constraints (pull toward target)
+      // Position constraints (pull toward target along specified axis only)
       for (const c of this.positionConstraints) {
         const body = c.body;
         if (body.isStatic) continue;
 
         const w = 1 / body.mass;
-        const diff = vec3.sub(c.target, body.position);
-        const dist = vec3.length(diff);
-        if (dist < 0.0001) continue;
-
         const alpha = c.compliance / (dt * dt);
-        const lambda = dist / (w + alpha);
 
-        const n = vec3.scale(diff, 1 / dist);
-        vec3.scaleAddTo(body.position, n, lambda * w);
+        // Only constrain the specified axis to avoid fighting distance constraints
+        const axisIdx = c.axis === 'x' ? 0 : (c.axis === 'z' ? 2 : 1);
+        const diff = c.target[axisIdx] - body.position[axisIdx];
+        const absDiff = Math.abs(diff);
+        if (absDiff < 0.0001) continue;
+
+        const lambda = absDiff / (w + alpha);
+        const sign = diff > 0 ? 1 : -1;
+        body.position[axisIdx] += sign * lambda * w;
       }
 
       for (const body of this.bodies) {
