@@ -44,6 +44,8 @@ export function loadJsonScene(json) {
     // Rig layer for constraint-based relationships (Phase 5)
     // Defines: derived params, bounds, phase coupling, chains
     rig: json.rig || null,
+    // Physics configuration (bodies, constraints)
+    physics: json.physics || null,
     // Pass through rendering hints
     quality: json.quality || 'medium',  // 'low', 'medium', 'high'
     camera: json.camera || null          // Optional camera settings

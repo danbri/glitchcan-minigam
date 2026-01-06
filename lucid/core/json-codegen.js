@@ -1791,8 +1791,13 @@ function valueToGlsl(value, ctx) {
         return `u_${value.name}`;
       }
       // Fall back to dynamic uniform (e.g., time)
-      ctx.uniforms.add(`u_${value.name}`);
-      return `u_${value.name}`;
+      // Only add if not already typed (e.g., phys_ uniforms are pre-declared as vec3)
+      const varUniformName = `u_${value.name}`;
+      const varHasTyped = [...ctx.uniforms].some(u => u.startsWith(varUniformName + ':'));
+      if (!varHasTyped) {
+        ctx.uniforms.add(varUniformName);
+      }
+      return varUniformName;
 
     case 'array':
       const components = value.values.map(v => valueToGlsl(v, ctx));
@@ -1813,8 +1818,13 @@ function valueToGlsl(value, ctx) {
     if (ctx.sceneParams && ctx.sceneParams[value.var]) {
       return `u_${value.var}`;
     }
-    ctx.uniforms.add(`u_${value.var}`);
-    return `u_${value.var}`;
+    // Only add uniform if not already typed (e.g., phys_ uniforms are pre-declared as vec3)
+    const uniformName = `u_${value.var}`;
+    const hasTypedVersion = [...ctx.uniforms].some(u => u.startsWith(uniformName + ':'));
+    if (!hasTypedVersion) {
+      ctx.uniforms.add(uniformName);
+    }
+    return uniformName;
   }
 
   // Inline { expr: "op", args: [...] } without explicit type field
