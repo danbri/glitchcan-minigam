@@ -144,6 +144,7 @@ function walkNode(node, ctx) {
       return generateEllipsoid(node, ctx);
 
     case 'cone':
+    case 'roundCone':  // Alias - uses same generator, sdRoundCone when r1/r2 specified
       return generateCone(node, ctx);
 
     case 'plane':
