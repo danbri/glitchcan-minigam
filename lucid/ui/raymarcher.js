@@ -83,6 +83,7 @@ export class SimpleRaymarcher {
     this.rig = null;            // { derived, bounds, phase, chains }
     this.lastViolations = [];   // Most recent constraint violations
     this.onConstraintViolation = null;  // Callback: (violations) => void
+    this.lastRigValues = null;  // Most recent rig evaluation result values
 
     // Physics simulation (WebGPU XPBD)
     this.physicsBridge = null;  // PhysicsBridge instance
@@ -176,10 +177,15 @@ export class SimpleRaymarcher {
 
   /**
    * Update a single scene parameter value (for live tweaking)
+   * Creates the param if it doesn't exist (for physics-derived params)
    */
   setParam(name, value) {
     if (this.sceneParams[name]) {
       this.sceneParams[name].value = value;
+    } else {
+      // Create param on demand (for physics bodies etc)
+      const type = Array.isArray(value) ? 'position3' : 'scalar';
+      this.sceneParams[name] = { value, type };
     }
   }
 
@@ -668,6 +674,9 @@ export class SimpleRaymarcher {
     let rigResult = null;
     if (this.rig) {
       rigResult = evaluateRig(this.sceneParams, this.rig, time);
+
+      // Store for external access (physics integration)
+      this.lastRigValues = rigResult.values;
 
       // Report constraint violations if callback is set
       if (rigResult.violations.length > 0 || this.lastViolations.length > 0) {
