@@ -112,6 +112,7 @@ function processNode(node, registry, depth = 0) {
     case 'capsule':
     case 'ellipsoid':
     case 'cone':
+    case 'roundCone':
     case 'plane':
       processed.params = processParams(node.params || {});
       break;
