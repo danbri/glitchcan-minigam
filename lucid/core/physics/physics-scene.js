@@ -178,7 +178,9 @@ export class PhysicsScene {
             target: vec3.clone(body.position),
             compliance: c.compliance ?? 0.01,
             rigTarget: c.rigTarget || null,
-            baseY: c.baseY ?? body.position[1]
+            baseY: c.baseY ?? body.position[1],
+            baseZ: c.baseZ ?? body.position[2],
+            axis: c.axis || 'y'  // 'y' for lift, 'z' for forward locomotion
           });
         }
       }
@@ -197,11 +199,29 @@ export class PhysicsScene {
 
     for (const c of this.positionConstraints) {
       if (c.rigTarget && rigValues[c.rigTarget] !== undefined) {
-        // Apply rig value as Y offset from base position
-        const liftAmount = rigValues[c.rigTarget];
-        c.target[0] = c.basePosition[0];
-        c.target[1] = c.baseY + liftAmount;
-        c.target[2] = c.basePosition[2];
+        const rigValue = rigValues[c.rigTarget];
+
+        // Apply rig value to the specified axis
+        switch (c.axis) {
+          case 'x':
+            c.target[0] = c.basePosition[0] + rigValue;
+            c.target[1] = c.basePosition[1];
+            c.target[2] = c.basePosition[2];
+            break;
+          case 'z':
+            // Forward locomotion - add rig value to Z
+            c.target[0] = c.basePosition[0];
+            c.target[1] = c.basePosition[1];
+            c.target[2] = c.baseZ + rigValue;
+            break;
+          case 'y':
+          default:
+            // Vertical lift (default for feet)
+            c.target[0] = c.basePosition[0];
+            c.target[1] = c.baseY + rigValue;
+            c.target[2] = c.basePosition[2];
+            break;
+        }
       }
     }
   }

@@ -142,7 +142,8 @@
       "scenes": [
         { "path": "physics/bouncing-balls.json", "title": "Bouncing Balls 🔴🟢🔵", "subtitle": "Spheres with gravity & collision" },
         { "path": "physics/chunky-physics.json", "title": "Bouncy Quadruped 🦛", "subtitle": "Body drops, feet anchored, constraints maintain shape" },
-        { "path": "physics/chunky-walk.json", "title": "Chunky Walk 🚶", "subtitle": "Rig-driven feet + physics body" }
+        { "path": "physics/chunky-walk.json", "title": "Chunky Walk 🚶", "subtitle": "Rig-driven feet + physics body" },
+        { "path": "physics/chunky-obstacle-walk.json", "title": "Obstacle Walk 🏃", "subtitle": "Walker navigating rolling balls" }
       ]
     },
     {
