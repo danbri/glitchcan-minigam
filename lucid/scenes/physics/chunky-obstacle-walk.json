@@ -89,40 +89,47 @@
   },
 
   "root": {
-    "type": "smoothUnion", "k": 0.12,
+    "type": "union",
+    "comment": "No smoothUnion at root - keeps walker and balls separate",
     "children": [
       {
-        "comment": "Walker body",
-        "type": "transform",
-        "transform": { "translate": { "var": "phys_body" } },
-        "child": {
-          "type": "material",
-          "params": { "color": { "var": "bodyColor" } },
-          "child": {
-            "type": "smoothUnion", "k": 0.15,
-            "children": [
-              { "type": "ellipsoid", "params": { "radii": [0.45, 0.35, 0.6] } },
-              {
-                "type": "ellipsoid",
-                "params": { "radii": [0.22, 0.2, 0.22] },
-                "transform": { "translate": [0, 0.1, 0.7] }
+        "comment": "Walker (body + feet blended together)",
+        "type": "smoothUnion", "k": 0.12,
+        "children": [
+          {
+            "comment": "Walker body",
+            "type": "transform",
+            "transform": { "translate": { "var": "phys_body" } },
+            "child": {
+              "type": "material",
+              "params": { "color": { "var": "bodyColor" } },
+              "child": {
+                "type": "smoothUnion", "k": 0.15,
+                "children": [
+                  { "type": "ellipsoid", "params": { "radii": [0.45, 0.35, 0.6] } },
+                  {
+                    "type": "ellipsoid",
+                    "params": { "radii": [0.22, 0.2, 0.22] },
+                    "transform": { "translate": [0, 0.1, 0.7] }
+                  }
+                ]
               }
+            }
+          },
+          {
+            "comment": "Feet",
+            "type": "union",
+            "children": [
+              { "type": "transform", "transform": { "translate": { "var": "phys_footFL" } }, "child": { "type": "ref", "id": "foot" } },
+              { "type": "transform", "transform": { "translate": { "var": "phys_footFR" } }, "child": { "type": "ref", "id": "foot" } },
+              { "type": "transform", "transform": { "translate": { "var": "phys_footRL" } }, "child": { "type": "ref", "id": "foot" } },
+              { "type": "transform", "transform": { "translate": { "var": "phys_footRR" } }, "child": { "type": "ref", "id": "foot" } }
             ]
           }
-        }
-      },
-      {
-        "comment": "Feet",
-        "type": "union",
-        "children": [
-          { "type": "transform", "transform": { "translate": { "var": "phys_footFL" } }, "child": { "type": "ref", "id": "foot" } },
-          { "type": "transform", "transform": { "translate": { "var": "phys_footFR" } }, "child": { "type": "ref", "id": "foot" } },
-          { "type": "transform", "transform": { "translate": { "var": "phys_footRL" } }, "child": { "type": "ref", "id": "foot" } },
-          { "type": "transform", "transform": { "translate": { "var": "phys_footRR" } }, "child": { "type": "ref", "id": "foot" } }
         ]
       },
       {
-        "comment": "Obstacle balls",
+        "comment": "Obstacle balls (separate from walker)",
         "type": "union",
         "children": [
           { "type": "transform", "transform": { "translate": { "var": "phys_ball1" } }, "child": { "type": "ref", "id": "obstacle", "params": { "obstacleR": 0.35 } } },
