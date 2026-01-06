@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Bristol BigTrak Explorer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { background: #000; color: #00ff00; font-family: 'Orbitron', monospace; overflow: hidden; }
+        #container { position: relative; width: 100vw; height: 100vh; }
+
+```
+    #hud { position: absolute; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.8); border: 2px solid #00ff00; padding: 10px; font-size: 11px; backdrop-filter: blur(10px); }
+    
+    #view-controls { position: absolute; top: 10px; right: 10px; z-index: 100; display: flex; gap: 5px; }
+    .view-btn { width: 50px; height: 50px; border: 2px solid #00ff00; background: rgba(0,0,0,0.8); color: #00ff00; font-size: 10px; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.3s; }
+    .view-btn.active { background: rgba(0,255,0,0.3); box-shadow: 0 0 20px #00ff00; }
+    
+    #zoom-control { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; background: rgba(0,0,0,0.8); border: 2px solid #00ff00; padding: 10px; backdrop-filter: blur(10px); }
+    #zoom-slider { width: 200px; }
+    
+    #tank-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 10px; }
+    .control-btn { width: 60px; height: 60px; border: 2px solid #00ff00; background: rgba(0,0,0,0.8); color: #00ff00; font-size: 24px; cursor: pointer; backdrop-filter: blur(10px); }
+    .control-btn:active { background: rgba(0,255,0,0.3); }
+    
+    #minimap { position: absolute; bottom: 20px; right: 20px; width: 200px; height: 200px; border: 2px solid #00ff00; background: rgba(0,0,0,0.8); z-index: 100; }
+    
+    #landmarks { position: absolute; top: 80px; left: 10px; z-index: 100; background: rgba(0,0,0,0.8); border: 2px solid #00ff00; padding: 10px; font-size: 10px; max-width: 200px; }
+    
+    #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 16px; }
+    
+    canvas { display: block; }
+</style>
+```
+
+</head>
+<body>
+    <div id="container">
+        <div id="loading">🚚 LOADING BRISTOL...</div>
+
+```
+    <div id="hud">
+        <div><strong>BIGTRAK EXPLORER</strong></div>
+        <div>Speed: <span id="speed">0</span> m/s</div>
+        <div>Heading: <span id="heading">N</span></div>
+        <div>Location: <span id="location">0, 0</span></div>
+        <div>Elevation: <span id="elevation">0</span> m</div>
+    </div>
+    
+    <div id="zoom-control">
+        <label>Zoom: <input type="range" id="zoom-slider" min="50" max="2000" value="300"></label>
+    </div>
+    
+    <div id="view-controls">
+        <button class="view-btn active" data-view="follow">FOLLOW</button>
+        <button class="view-btn" data-view="fpv">FPV</button>
+        <button class="view-btn" data-view="map">MAP</button>
+    </div>
+    
+    <div id="landmarks">
+        <strong>LANDMARKS</strong>
+        <div id="landmark-list"></div>
+    </div>
+    
+    <canvas id="minimap"></canvas>
+    
+    <div id="tank-controls">
+        <button class="control-btn" id="left">◀</button>
+        <button class="control-btn" id="forward">▲</button>
+        <button class="control-btn" id="backward">▼</button>
+        <button class="control-btn" id="right">▶</button>
+    </div>
+</div>
+```
+
+<script>
+// Scene setup
+let scene, camera, renderer, minimapRenderer;
+let tank, tankBody, tankTurret;
+let terrain, water, contourLines = [];
+let currentView = 'follow';
+let cameraDistance = 300;
+let targetCameraPos = new THREE.Vector3();
+let targetCameraLookAt = new THREE.Vector3();
+let cameraTransition = 0;
+
+// Tank state
+const tankState = {
+    position: new THREE.Vector3(0, 0, 0),
+    rotation: 0,
+    velocity: 0,
+    angularVelocity: 0,
+    maxSpeed: 50,
+    acceleration: 100,
+    turnSpeed: 2
+};
+
+// Bristol topology
+const TERRAIN_SIZE = 2000;
+const TERRAIN_SEGMENTS = 100;
+
+// Enhanced landmarks with Bristol's actual features
+const landmarks = [
+    { name: "Clifton Suspension Bridge", x: -300, z: -200, type: "bridge" },
+    { name: "Brandon Hill", x: -150, z: -100, type: "hill", height: 60 },
+    { name: "Clifton Downs", x: -400, z: -250, type: "park" },
+    { name: "Floating Harbour", x: -50, z: 100, type: "water" },
+    { name: "Castle Park", x: 100, z: 50, type: "park" },
+    { name: "Temple Meads", x: 200, z: 150, type: "station" },
+    { name: "University", x: -100, z: -150, type: "building" },
+    { name: "Cabot Tower", x: -150, z: -80, type: "tower" },
+    { name: "Ashton Court", x: -500, z: 0, type: "park" },
+    { name: "St Pauls", x: 50, z: -100, type: "area" },
+    { name: "Redcliffe", x: 150, z: 100, type: "area" }
+];
+
+// Controls
+const keys = {};
+let touches = {};
+
+function init() {
+    setupScene();
+    createTerrain();
+    createWater();
+    createContourLines();
+    createTank();
+    createEnvironment();
+    setupControls();
+    setupMinimap();
+    animate();
+    
+    document.getElementById('loading').style.display = 'none';
+    updateLandmarks();
+}
+
+function setupScene() {
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000000, 200, 2500);
+    
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+    
+    renderer = new THREE.WebGLRenderer({ antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    document.getElementById('container').appendChild(renderer.domElement);
+    
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x404040));
+    const dirLight = new THREE.DirectionalLight(0x00ff00, 0.5);
+    dirLight.position.set(100, 200, 50);
+    scene.add(dirLight);
+}
+
+function getTerrainHeight(x, z) {
+    // Bristol-like topology with hills and valleys
+    const cliftonHeight = Math.max(0, 60 - Math.sqrt(Math.pow(x + 300, 2) + Math.pow(z + 200, 2)) / 10);
+    const brandonHill = Math.max(0, 50 - Math.sqrt(Math.pow(x + 150, 2) + Math.pow(z + 100, 2)) / 8);
+    const valleyDepth = Math.sin(x * 0.002) * 10 + Math.cos(z * 0.003) * 8;
+    const riverValley = Math.max(0, 20 - Math.abs(z - 100) / 5) * (Math.abs(x) < 200 ? 1 : 0);
+    
+    return cliftonHeight + brandonHill + valleyDepth - riverValley;
+}
+
+function createTerrain() {
+    const geometry = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEGMENTS, TERRAIN_SEGMENTS);
+    geometry.rotateX(-Math.PI / 2);
+    
+    const vertices = geometry.attributes.position.array;
+    for (let i = 0; i < vertices.length; i += 3) {
+        const x = vertices[i];
+        const z = vertices[i + 2];
+        vertices[i + 1] = getTerrainHeight(x, z);
+    }
+    
+    geometry.computeVertexNormals();
+    
+    // Create wireframe terrain
+    const edges = new THREE.EdgesGeometry(geometry);
+    terrain = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x003300 }));
+    scene.add(terrain);
+}
+
+function createWater() {
+    // Floating Harbour
+    const harborGeometry = new THREE.PlaneGeometry(300, 100);
+    harborGeometry.rotateX(-Math.PI / 2);
+    const harborEdges = new THREE.EdgesGeometry(harborGeometry);
+    const harbor = new THREE.LineSegments(harborEdges, new THREE.LineBasicMaterial({ color: 0x0066ff }));
+    harbor.position.set(-50, 0.1, 100);
+    scene.add(harbor);
+    
+    // River Avon
+    const riverPoints = [];
+    for (let i = -500; i <= 500; i += 50) {
+        const x = i;
+        const z = 100 + Math.sin(i * 0.01) * 50;
+        riverPoints.push(new THREE.Vector3(x, 0.1, z));
+    }
+    const riverGeometry = new THREE.BufferGeometry().setFromPoints(riverPoints);
+    const river = new THREE.Line(riverGeometry, new THREE.LineBasicMaterial({ color: 0x0066ff, linewidth: 2 }));
+    scene.add(river);
+}
+
+function createContourLines() {
+    // Create contour lines at different elevations
+    const contourHeights = [10, 20, 30, 40, 50, 60];
+    
+    contourHeights.forEach(height => {
+        const points = [];
+        
+        // Sample terrain in a grid pattern
+        for (let x = -TERRAIN_SIZE/2; x <= TERRAIN_SIZE/2; x += 20) {
+            for (let z = -TERRAIN_SIZE/2; z <= TERRAIN_SIZE/2; z += 20) {
+                const h = getTerrainHeight(x, z);
+                if (Math.abs(h - height) < 2) {
+                    points.push(new THREE.Vector3(x, height, z));
+                }
+            }
+        }
+        
+        if (points.length > 2) {
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Points(geometry, new THREE.PointsMaterial({ 
+                color: 0x004400, 
+                size: 2 
+            }));
+            contourLines.push(line);
+            scene.add(line);
+        }
+    });
+}
+
+function createTank() {
+    tank = new THREE.Group();
+    
+    // Tank body (BigTrak style)
+    const bodyGeometry = new THREE.BoxGeometry(15, 5, 20);
+    const bodyEdges = new THREE.EdgesGeometry(bodyGeometry);
+    tankBody = new THREE.LineSegments(bodyEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+    tank.add(tankBody);
+    
+    // Tank turret
+    const turretGeometry = new THREE.BoxGeometry(8, 3, 8);
+    const turretEdges = new THREE.EdgesGeometry(turretGeometry);
+    tankTurret = new THREE.LineSegments(turretEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+    tankTurret.position.y = 4;
+    tank.add(tankTurret);
+    
+    // Cannon
+    const cannonGeometry = new THREE.BoxGeometry(2, 2, 10);
+    const cannonEdges = new THREE.EdgesGeometry(cannonGeometry);
+    const cannon = new THREE.LineSegments(cannonEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+    cannon.position.set(0, 4, 10);
+    tank.add(cannon);
+    
+    // Tracks
+    [-8, 8].forEach(x => {
+        const trackGeometry = new THREE.BoxGeometry(3, 2, 20);
+        const trackEdges = new THREE.EdgesGeometry(trackGeometry);
+        const track = new THREE.LineSegments(trackEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+        track.position.set(x, -2, 0);
+        tank.add(track);
+    });
+    
+    scene.add(tank);
+}
+
+function createEnvironment() {
+    // Clifton Suspension Bridge
+    const bridgeGroup = new THREE.Group();
+    
+    // Towers
+    [-40, 40].forEach(x => {
+        const towerGeometry = new THREE.BoxGeometry(10, 50, 10);
+        const towerEdges = new THREE.EdgesGeometry(towerGeometry);
+        const tower = new THREE.LineSegments(towerEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+        tower.position.set(x, 25, 0);
+        bridgeGroup.add(tower);
+    });
+    
+    // Suspension cables
+    const cablePoints = [];
+    for (let x = -40; x <= 40; x += 2) {
+        const y = 40 - Math.pow(x/40, 2) * 15;
+        cablePoints.push(new THREE.Vector3(x, y, 0));
+    }
+    const cableGeometry = new THREE.BufferGeometry().setFromPoints(cablePoints);
+    const cable = new THREE.Line(cableGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+    bridgeGroup.add(cable);
+    
+    // Deck
+    const deckGeometry = new THREE.BoxGeometry(80, 2, 15);
+    const deckEdges = new THREE.EdgesGeometry(deckGeometry);
+    const deck = new THREE.LineSegments(deckEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+    deck.position.y = 25;
+    bridgeGroup.add(deck);
+    
+    bridgeGroup.position.set(-300, getTerrainHeight(-300, -200), -200);
+    scene.add(bridgeGroup);
+    
+    // Cabot Tower
+    const towerGeometry = new THREE.CylinderGeometry(8, 10, 40, 6);
+    const towerEdges = new THREE.EdgesGeometry(towerGeometry);
+    const cabotTower = new THREE.LineSegments(towerEdges, new THREE.LineBasicMaterial({ color: 0xffff00 }));
+    cabotTower.position.set(-150, getTerrainHeight(-150, -80) + 20, -80);
+    scene.add(cabotTower);
+    
+    // Trees for parks (80s vector style)
+    const parkAreas = [
+        { x: -400, z: -250, radius: 100, density: 15 }, // Clifton Downs
+        { x: 100, z: 50, radius: 50, density: 8 }, // Castle Park
+        { x: -500, z: 0, radius: 150, density: 20 } // Ashton Court
+    ];
+    
+    parkAreas.forEach(park => {
+        for (let i = 0; i < park.density; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.random() * park.radius;
+            const x = park.x + Math.cos(angle) * r;
+            const z = park.z + Math.sin(angle) * r;
+            
+            const treeGroup = new THREE.Group();
+            
+            // Trunk
+            const trunkGeometry = new THREE.BoxGeometry(2, 10, 2);
+            const trunkEdges = new THREE.EdgesGeometry(trunkGeometry);
+            const trunk = new THREE.LineSegments(trunkEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+            trunk.position.y = 5;
+            treeGroup.add(trunk);
+            
+            // Crown
+            const crownGeometry = new THREE.ConeGeometry(8, 15, 4);
+            const crownEdges = new THREE.EdgesGeometry(crownGeometry);
+            const crown = new THREE.LineSegments(crownEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+            crown.position.y = 15;
+            crown.rotation.y = Math.PI / 4;
+            treeGroup.add(crown);
+            
+            const elevation = getTerrainHeight(x, z);
+            treeGroup.position.set(x, elevation, z);
+            scene.add(treeGroup);
+        }
+    });
+    
+    // Buildings
+    const buildingData = [
+        { x: 0, z: 0, w: 30, d: 30, h: 40, name: "Cathedral" },
+        { x: 200, z: 150, w: 60, d: 40, h: 25, name: "Temple Meads" },
+        { x: -100, z: -150, w: 50, d: 50, h: 30, name: "University" }
+    ];
+    
+    buildingData.forEach(b => {
+        const geometry = new THREE.BoxGeometry(b.w, b.h, b.d);
+        const edges = new THREE.EdgesGeometry(geometry);
+        const building = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+        const elevation = getTerrainHeight(b.x, b.z);
+        building.position.set(b.x, elevation + b.h/2, b.z);
+        building.userData.name = b.name;
+        scene.add(building);
+    });
+    
+    // Roads with elevation
+    const roads = [
+        { points: [[-500, -300], [-300, -200], [0, 0], [200, 150]], name: "A4" },
+        { points: [[-400, -250], [-150, -100], [0, 0]], name: "Park Street" },
+        { points: [[0, -200], [0, 0], [0, 200]], name: "M32" }
+    ];
+    
+    roads.forEach(road => {
+        const points = road.points.map(p => {
+            const elevation = getTerrainHeight(p[0], p[1]);
+            return new THREE.Vector3(p[0], elevation + 0.5, p[1]);
+        });
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x006600 }));
+        line.userData.name = road.name;
+        scene.add(line);
+    });
+}
+
+function setupControls() {
+    // Keyboard
+    document.addEventListener('keydown', e => keys[e.key] = true);
+    document.addEventListener('keyup', e => keys[e.key] = false);
+    
+    // Touch/Click controls
+    ['forward', 'backward', 'left', 'right'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.addEventListener('mousedown', () => touches[id] = true);
+        btn.addEventListener('mouseup', () => touches[id] = false);
+        btn.addEventListener('touchstart', e => { e.preventDefault(); touches[id] = true; });
+        btn.addEventListener('touchend', e => { e.preventDefault(); touches[id] = false; });
+    });
+    
+    // View controls
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentView = btn.dataset.view;
+            cameraTransition = 0;
+        });
+    });
+    
+    // Zoom slider
+    const zoomSlider = document.getElementById('zoom-slider');
+    zoomSlider.addEventListener('input', (e) => {
+        cameraDistance = parseFloat(e.target.value);
+    });
+    
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+}
+
+function setupMinimap() {
+    const canvas = document.getElementById('minimap');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 200;
+    canvas.height = 200;
+    
+    minimapRenderer = { canvas, ctx };
+}
+
+function updateTank(deltaTime) {
+    // Input handling
+    const forward = keys['ArrowUp'] || keys['w'] || touches.forward;
+    const backward = keys['ArrowDown'] || keys['s'] || touches.backward;
+    const left = keys['ArrowLeft'] || keys['a'] || touches.left;
+    const right = keys['ArrowRight'] || keys['d'] || touches.right;
+    
+    // Tank movement
+    if (forward) tankState.velocity = Math.min(tankState.velocity + tankState.acceleration * deltaTime, tankState.maxSpeed);
+    else if (backward) tankState.velocity = Math.max(tankState.velocity - tankState.acceleration * deltaTime, -tankState.maxSpeed/2);
+    else tankState.velocity *= 0.9;
+    
+    if (left) tankState.angularVelocity = tankState.turnSpeed;
+    else if (right) tankState.angularVelocity = -tankState.turnSpeed;
+    else tankState.angularVelocity *= 0.8;
+    
+    // Update position
+    tankState.rotation += tankState.angularVelocity * deltaTime;
+    tankState.position.x += Math.sin(tankState.rotation) * tankState.velocity * deltaTime;
+    tankState.position.z += Math.cos(tankState.rotation) * tankState.velocity * deltaTime;
+    
+    // Get terrain height at tank position
+    const elevation = getTerrainHeight(tankState.position.x, tankState.position.z);
+    tankState.position.y = elevation;
+    
+    // Apply to tank mesh
+    tank.position.x = tankState.position.x;
+    tank.position.y = tankState.position.y + 3;
+    tank.position.z = tankState.position.z;
+    tank.rotation.y = tankState.rotation;
+    
+    // Update HUD
+    document.getElementById('speed').textContent = Math.abs(tankState.velocity).toFixed(1);
+    document.getElementById('heading').textContent = getHeading(tankState.rotation);
+    document.getElementById('location').textContent = `${tankState.position.x.toFixed(0)}, ${tankState.position.z.toFixed(0)}`;
+    document.getElementById('elevation').textContent = elevation.toFixed(1);
+}
+
+function getHeading(rotation) {
+    const degrees = (rotation * 180 / Math.PI + 360) % 360;
+    if (degrees < 22.5 || degrees >= 337.5) return 'N';
+    if (degrees < 67.5) return 'NE';
+    if (degrees < 112.5) return 'E';
+    if (degrees < 157.5) return 'SE';
+    if (degrees < 202.5) return 'S';
+    if (degrees < 247.5) return 'SW';
+    if (degrees < 292.5) return 'W';
+    return 'NW';
+}
+
+function updateCamera(deltaTime) {
+    cameraTransition = Math.min(cameraTransition + deltaTime * 2, 1);
+    
+    let newCameraPos, newLookAt;
+    
+    switch (currentView) {
+        case 'follow':
+            newCameraPos = new THREE.Vector3(
+                tank.position.x - Math.sin(tankState.rotation) * cameraDistance * 0.3,
+                tank.position.y + cameraDistance * 0.2,
+                tank.position.z - Math.cos(tankState.rotation) * cameraDistance * 0.3
+            );
+            newLookAt = tank.position.clone();
+            break;
+            
+        case 'fpv':
+            newCameraPos = new THREE.Vector3(
+                tank.position.x + Math.sin(tankState.rotation) * 5,
+                tank.position.y + 8,
+                tank.position.z + Math.cos(tankState.rotation) * 5
+            );
+            newLookAt = new THREE.Vector3(
+                tank.position.x + Math.sin(tankState.rotation) * 100,
+                tank.position.y,
+                tank.position.z + Math.cos(tankState.rotation) * 100
+            );
+            break;
+            
+        case 'map':
+            newCameraPos = new THREE.Vector3(
+                tank.position.x, 
+                Math.max(100, cameraDistance), 
+                tank.position.z + cameraDistance * 0.2
+            );
+            newLookAt = tank.position.clone();
+            break;
+    }
+    
+    // Smooth transition
+    camera.position.lerp(newCameraPos, cameraTransition);
+    targetCameraLookAt.lerp(newLookAt, cameraTransition);
+    camera.lookAt(targetCameraLookAt);
+}
+
+function updateMinimap() {
+    const { canvas, ctx } = minimapRenderer;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Contour lines on minimap
+    ctx.strokeStyle = '#002200';
+    ctx.lineWidth = 1;
+    for (let h = 10; h <= 60; h += 10) {
+        ctx.beginPath();
+        for (let x = 0; x < 200; x += 5) {
+            for (let z = 0; z < 200; z += 5) {
+                const wx = (x - 100) * 10;
+                const wz = (z - 100) * 10;
+                const elevation = getTerrainHeight(wx, wz);
+                if (Math.abs(elevation - h) < 3) {
+                    ctx.rect(x, z, 1, 1);
+                }
+            }
+        }
+        ctx.stroke();
+    }
+    
+    // Water
+    ctx.fillStyle = '#0066ff';
+    ctx.fillRect(90, 90, 30, 10); // Harbor
+    
+    // Tank position
+    const tankX = 100 + tankState.position.x / 10;
+    const tankZ = 100 + tankState.position.z / 10;
+    
+    ctx.save();
+    ctx.translate(tankX, tankZ);
+    ctx.rotate(-tankState.rotation);
+    
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-5, -8, 10, 16);
+    
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, -15);
+    ctx.stroke();
+    
+    ctx.restore();
+    
+    // Landmarks
+    ctx.fillStyle = '#ffff00';
+    landmarks.forEach(l => {
+        const lx = 100 + l.x / 10;
+        const lz = 100 + l.z / 10;
+        ctx.fillRect(lx - 2, lz - 2, 4, 4);
+    });
+}
+
+function updateLandmarks() {
+    const list = document.getElementById('landmark-list');
+    const sorted = landmarks.map(l => ({
+        ...l,
+        distance: Math.sqrt(
+            Math.pow(l.x - tankState.position.x, 2) + 
+            Math.pow(l.z - tankState.position.z, 2)
+        )
+    })).sort((a, b) => a.distance - b.distance);
+    
+    list.innerHTML = sorted.slice(0, 5).map(l => 
+        `<div style="margin: 5px 0; font-size: 9px;">
+            ${l.name}: ${l.distance.toFixed(0)}m
+        </div>`
+    ).join('');
+}
+
+let lastTime = 0;
+function animate(currentTime = 0) {
+    requestAnimationFrame(animate);
+    
+    const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+    lastTime = currentTime;
+    
+    updateTank(deltaTime);
+    updateCamera(deltaTime);
+    updateMinimap();
+    
+    if (currentTime % 1000 < 16) updateLandmarks();
+    
+    renderer.render(scene, camera);
+}
+
+init();
+</script>
+
+</body>
+</html>
