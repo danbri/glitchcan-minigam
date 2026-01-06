@@ -246,7 +246,28 @@ export class PhysicsScene {
 
     // Constraint solving iterations
     for (let iter = 0; iter < this.iterations; iter++) {
-      // Distance constraints (XPBD style)
+      // Position constraints FIRST (rig-driven targets for feet lift, body movement)
+      // This establishes the desired positions before distance constraints adjust
+      for (const c of this.positionConstraints) {
+        const body = c.body;
+        if (body.isStatic) continue;
+
+        const w = 1 / body.mass;
+        const alpha = c.compliance / (dt * dt);
+
+        // Only constrain the specified axis to avoid fighting distance constraints
+        const axisIdx = c.axis === 'x' ? 0 : (c.axis === 'z' ? 2 : 1);
+        const diff = c.target[axisIdx] - body.position[axisIdx];
+        const absDiff = Math.abs(diff);
+        if (absDiff < 0.0001) continue;
+
+        const lambda = absDiff / (w + alpha);
+        const sign = diff > 0 ? 1 : -1;
+        body.position[axisIdx] += sign * lambda * w;
+      }
+
+      // Distance constraints SECOND (maintain body-foot structural connections)
+      // These adjust positions to maintain rest lengths after position targets are set
       for (const c of this.distanceConstraints) {
         const a = c.bodyA;
         const b = c.bodyB;
@@ -272,25 +293,6 @@ export class PhysicsScene {
         if (wB > 0) {
           vec3.scaleAddTo(b.position, n, -lambda * wB);
         }
-      }
-
-      // Position constraints (pull toward target along specified axis only)
-      for (const c of this.positionConstraints) {
-        const body = c.body;
-        if (body.isStatic) continue;
-
-        const w = 1 / body.mass;
-        const alpha = c.compliance / (dt * dt);
-
-        // Only constrain the specified axis to avoid fighting distance constraints
-        const axisIdx = c.axis === 'x' ? 0 : (c.axis === 'z' ? 2 : 1);
-        const diff = c.target[axisIdx] - body.position[axisIdx];
-        const absDiff = Math.abs(diff);
-        if (absDiff < 0.0001) continue;
-
-        const lambda = absDiff / (w + alpha);
-        const sign = diff > 0 ? 1 : -1;
-        body.position[axisIdx] += sign * lambda * w;
       }
 
       for (const body of this.bodies) {
