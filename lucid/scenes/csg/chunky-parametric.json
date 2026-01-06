@@ -27,15 +27,23 @@
           "type": "smoothUnion", "k": { "var": "smoothness" },
           "children": [
             {
-              "comment": "Main body",
-              "type": "ellipsoid",
-              "params": { "radii": { "var": "bodyRadii" } }
+              "comment": "Main body - fatness scales girth",
+              "type": "transform",
+              "transform": { "scale": [1, { "var": "fatness" }, 1] },
+              "child": {
+                "type": "ellipsoid",
+                "params": { "radii": { "var": "bodyRadii" } }
+              }
             },
             {
-              "comment": "Rump/hindquarters",
-              "type": "ellipsoid",
-              "params": { "radii": { "var": "rumpRadii" } },
-              "transform": { "translate": { "var": "rumpPos" } }
+              "comment": "Rump/hindquarters - fatness scales girth",
+              "type": "transform",
+              "transform": { "scale": [1, { "var": "fatness" }, 1] },
+              "child": {
+                "type": "ellipsoid",
+                "params": { "radii": { "var": "rumpRadii" } },
+                "transform": { "translate": { "var": "rumpPos" } }
+              }
             },
             {
               "comment": "Head",
@@ -56,26 +64,30 @@
               "transform": { "translate": { "var": "nosePos" } }
             },
             {
-              "comment": "Ears (mirrored)",
+              "comment": "Ears (mirrored) - earSize scales uniformly",
               "type": "mirror", "axis": "x",
               "child": {
-                "type": "ellipsoid",
-                "params": { "radii": { "var": "earRadii" } },
-                "transform": {
-                  "translate": { "var": "earPos" },
-                  "rotate": { "var": "earRotate" }
+                "type": "transform",
+                "transform": { "scale": { "var": "earSize" } },
+                "child": {
+                  "type": "ellipsoid",
+                  "params": { "radii": { "var": "earRadii" } },
+                  "transform": {
+                    "translate": { "var": "earPos" },
+                    "rotate": { "var": "earRotate" }
+                  }
                 }
               }
             },
             {
-              "comment": "Front legs (mirrored)",
+              "comment": "Front legs (mirrored) - legLength multiplies height",
               "type": "mirror", "axis": "x",
               "child": {
                 "type": "roundCone",
                 "params": {
-                  "r1": { "var": "legThighRadius" },
-                  "r2": { "var": "legAnkleRadius" },
-                  "h": { "var": "frontLegHeight" }
+                  "r1": { "expr": "mul", "args": [{ "var": "legThighRadius" }, { "var": "fatness" }] },
+                  "r2": { "expr": "mul", "args": [{ "var": "legAnkleRadius" }, { "var": "fatness" }] },
+                  "h": { "expr": "mul", "args": [{ "var": "frontLegHeight" }, { "var": "legLength" }] }
                 },
                 "transform": {
                   "translate": { "var": "frontLegPos" },
@@ -84,14 +96,14 @@
               }
             },
             {
-              "comment": "Back legs (mirrored)",
+              "comment": "Back legs (mirrored) - legLength multiplies height",
               "type": "mirror", "axis": "x",
               "child": {
                 "type": "roundCone",
                 "params": {
-                  "r1": { "var": "legThighRadius" },
-                  "r2": { "var": "legAnkleRadius" },
-                  "h": { "var": "backLegHeight" }
+                  "r1": { "expr": "mul", "args": [{ "var": "legThighRadius" }, { "var": "fatness" }] },
+                  "r2": { "expr": "mul", "args": [{ "var": "legAnkleRadius" }, { "var": "fatness" }] },
+                  "h": { "expr": "mul", "args": [{ "var": "backLegHeight" }, { "var": "legLength" }] }
                 },
                 "transform": {
                   "translate": { "var": "backLegPos" },
@@ -100,12 +112,16 @@
               }
             },
             {
-              "comment": "Tail",
-              "type": "capsule",
-              "params": { "h": { "var": "tailLength" }, "r": { "var": "tailRadius" } },
-              "transform": {
-                "translate": { "var": "tailPos" },
-                "rotate": { "var": "tailRotate" }
+              "comment": "Tail - tailWag adds extra rotation",
+              "type": "transform",
+              "transform": { "rotate": [{ "var": "tailWag" }, 0, 0] },
+              "child": {
+                "type": "capsule",
+                "params": { "h": { "var": "tailLength" }, "r": { "var": "tailRadius" } },
+                "transform": {
+                  "translate": { "var": "tailPos" },
+                  "rotate": { "var": "tailRotate" }
+                }
               }
             }
           ]
