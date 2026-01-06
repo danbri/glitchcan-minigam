@@ -769,6 +769,45 @@ Agent D returns structured report with:
 └─────────────────────────────────────────┘
 ```
 
+## Lucid TOC & Recent Changes System
+
+### toc.json Structure
+The `lucid/scenes/toc.json` file is the table of contents for the Lucid SDF demo webapp. **Scenes can appear in multiple categories** - this is intentional and useful (e.g., a physics scene can be in both "Physics" and "Recent Changes").
+
+### 🆕 Recent Changes Category
+A special "Recent Changes" category at the top of toc.json shows recently modified scenes with commit notes. This helps users find what's new.
+
+**Auto-update mechanism:**
+1. **Pre-commit hook** automatically updates Recent Changes when scene files are committed
+2. **Manual update**: `node lucid/scripts/update-recent-changes.mjs --days=14 --max=8`
+
+### CLAUDE INSTRUCTIONS for toc.json
+
+**When creating a new scene:**
+1. Add to appropriate category (e.g., "physics", "csg", "creatures")
+2. Run `node lucid/scripts/update-recent-changes.mjs` to update Recent Changes
+3. OR let the pre-commit hook handle it automatically
+
+**When modifying existing scenes:**
+- Pre-commit hook will auto-update Recent Changes with commit message
+- Commit messages become the "[change note]" in the subtitle
+
+**Manual update command:**
+```bash
+node lucid/scripts/update-recent-changes.mjs --days=14 --max=8
+```
+
+**Script location:** `lucid/scripts/update-recent-changes.mjs`
+
+### TOC Category IDs
+- `recent` - 🆕 Recent Changes (auto-generated)
+- `prim` - Primitives
+- `csg` - CSG Operations
+- `transform` - Transforms
+- `creatures` - Creatures & Characters
+- `physics` - ⚛️ Physics
+- `archive` - 📁 Archive
+
 ## Lucid Debugging Techniques
 
 ### 🚨 KEY INSIGHT: "Compiling is not enough - what is RENDERED?"
