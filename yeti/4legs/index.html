@@ -198,7 +198,8 @@
         "legThighR": 0.07, "legAnkleR": 0.04,
         "frontLegH": 0.35, "frontLegPos": [0.15, -0.35, 0.25], "frontLegRot": [0, 0, 0],
         "backLegH": 0.4, "backLegPos": [0.15, -0.35, -0.35], "backLegRot": [0.2, 0, 0],
-        "tailLen": 0.55, "tailR": 0.04, "tailPos": [0, 0.08, -0.9], "tailRot": [-0.6, 0, 0]
+        "tailLen": 0.55, "tailR": 0.04, "tailPos": [0, 0.08, -0.9], "tailRot": [-0.6, 0, 0],
+        "pattern": { "type": 4, "color1": [0.35, 0.3, 0.25], "color2": [0.15, 0.12, 0.1], "freq": 10 }
       }
     },
     {
@@ -214,7 +215,8 @@
         "legThighR": 0.11, "legAnkleR": 0.055,
         "frontLegH": 0.65, "frontLegPos": [0.2, -0.6, 0.45], "frontLegRot": [0, 0, 0],
         "backLegH": 0.7, "backLegPos": [0.2, -0.6, -0.55], "backLegRot": [0.15, 0, 0],
-        "tailLen": 0.55, "tailR": 0.07, "tailPos": [0, 0.15, -1.45], "tailRot": [-0.4, 0, 0]
+        "tailLen": 0.55, "tailR": 0.07, "tailPos": [0, 0.15, -1.45], "tailRot": [-0.4, 0, 0],
+        "pattern": { "type": 1, "color1": [0.7, 0.65, 0.55], "color2": [0.25, 0.22, 0.2] }
       }
     },
     {
@@ -262,7 +264,8 @@
         "legThighR": 0.13, "legAnkleR": 0.075,
         "frontLegH": 0.55, "frontLegPos": [0.26, -0.55, 0.55], "frontLegRot": [0, 0, 0],
         "backLegH": 0.6, "backLegPos": [0.26, -0.55, -0.6], "backLegRot": [0.12, 0, 0],
-        "tailLen": 0.75, "tailR": 0.055, "tailPos": [0, 0.12, -1.6], "tailRot": [-0.35, 0, 0]
+        "tailLen": 0.75, "tailR": 0.055, "tailPos": [0, 0.12, -1.6], "tailRot": [-0.35, 0, 0],
+        "pattern": { "type": 4, "color1": [0.95, 0.65, 0.25], "color2": [0.1, 0.05, 0.0], "freq": 7 }
       }
     },
     {
@@ -278,7 +281,8 @@
         "legThighR": 0.1, "legAnkleR": 0.055,
         "frontLegH": 0.5, "frontLegPos": [0.2, -0.5, 0.45], "frontLegRot": [0, 0, 0],
         "backLegH": 0.55, "backLegPos": [0.2, -0.5, -0.55], "backLegRot": [0.15, 0, 0],
-        "tailLen": 0.7, "tailR": 0.05, "tailPos": [0, 0.1, -1.4], "tailRot": [-0.4, 0, 0]
+        "tailLen": 0.7, "tailR": 0.05, "tailPos": [0, 0.1, -1.4], "tailRot": [-0.4, 0, 0],
+        "pattern": { "type": 5, "color1": [0.9, 0.75, 0.45], "color2": [0.15, 0.08, 0.0], "scale": 4, "threshold": 0.52 }
       }
     },
     {
@@ -294,7 +298,8 @@
         "legThighR": 0.14, "legAnkleR": 0.09,
         "frontLegH": 0.7, "frontLegPos": [0.35, -0.7, 0.6], "frontLegRot": [0, 0, 0],
         "backLegH": 0.7, "backLegPos": [0.35, -0.7, -0.65], "backLegRot": [0, 0, 0],
-        "tailLen": 0.6, "tailR": 0.04, "tailPos": [0, 0.2, -1.8], "tailRot": [-0.6, 0, 0]
+        "tailLen": 0.6, "tailR": 0.04, "tailPos": [0, 0.2, -1.8], "tailRot": [-0.6, 0, 0],
+        "pattern": { "type": 3, "color1": [0.95, 0.95, 0.92], "color2": [0.1, 0.08, 0.05], "scale": 2.5, "threshold": 0.48 }
       }
     },
     {
@@ -548,7 +553,53 @@ uniform float u_backLegH;\n\
 uniform vec3 u_backLegP, u_backLegRot;\n\
 uniform float u_tailLen, u_tailR;\n\
 uniform vec3 u_tailP, u_tailRot;\n\
+uniform float u_patternType;\n\
+uniform vec3 u_patternColor1, u_patternColor2;\n\
+uniform float u_patternFreq, u_patternScale, u_patternThreshold;\n\
 vec3 hsv2rgb(vec3 c){vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);}\n\
+float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}\n\
+float noise3d(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}\n\
+float fbm(vec3 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*noise3d(p);p*=2.0;a*=0.5;}return v;}\n\
+vec3 getLocalCoords(vec3 p){\n\
+  vec3 q=rotX(u_pitch)*rotY(-u_yaw)*(p/u_scale);\n\
+  float bodyLen=u_bodyR.z+abs(u_rumpP.z)+u_rumpR.z;\n\
+  float headEnd=u_headP.z+u_headR.z+u_snoutR.z;\n\
+  float totalLen=bodyLen+headEnd;\n\
+  float w=(q.z+bodyLen*0.5)/totalLen;\n\
+  float maxH=max(u_bodyR.y,max(u_rumpR.y,u_headR.y));\n\
+  float v=q.y/(maxH*u_fat);\n\
+  float maxW=max(u_bodyR.x,u_rumpR.x);\n\
+  float u=q.x/maxW;\n\
+  return vec3(clamp(u,-1.0,1.0),clamp(v,-1.0,1.0),clamp(w*2.0-1.0,-1.0,1.0));\n\
+}\n\
+vec3 appearance(vec3 p,vec3 n,vec3 rd){\n\
+  vec3 local=getLocalCoords(p);\n\
+  vec3 col=u_color;\n\
+  int pt=int(u_patternType+0.5);\n\
+  if(pt==1){\n\
+    float t=local.y*0.5+0.5;\n\
+    col=mix(u_patternColor1,u_patternColor2,t);\n\
+  }else if(pt==2){\n\
+    float stripe=sin(local.z*3.14159*u_patternFreq);\n\
+    col=mix(u_patternColor1,u_patternColor2,step(0.0,stripe));\n\
+  }else if(pt==3){\n\
+    float spots=fbm(p*u_patternScale);\n\
+    col=mix(u_patternColor1,u_patternColor2,step(u_patternThreshold,spots));\n\
+  }else if(pt==4){\n\
+    float t=local.y*0.5+0.5;\n\
+    col=mix(u_patternColor1,u_patternColor2,t);\n\
+    float stripe=sin(local.z*3.14159*u_patternFreq);\n\
+    col=mix(col,u_patternColor2*0.3,step(0.3,stripe)*0.8);\n\
+  }else if(pt==5){\n\
+    float t=local.y*0.5+0.5;\n\
+    col=mix(u_patternColor1,u_patternColor2,t);\n\
+    float spots=fbm(p*u_patternScale);\n\
+    col=mix(col,u_patternColor2*0.2,step(u_patternThreshold,spots));\n\
+  }\n\
+  float fres=pow(1.0-max(0.0,dot(n,-rd)),3.0);\n\
+  col+=vec3(1.0)*fres*0.08;\n\
+  return col;\n\
+}\n\
 mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,-s,0,s,c);}\n\
 mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,s,0,1,0,-s,0,c);}\n\
 mat3 rotZ(float a){float c=cos(a),s=sin(a);return mat3(c,-s,0,s,c,0,0,0,1);}\n\
@@ -644,7 +695,7 @@ void main(){\n\
   float tFloor=(floorY-ro.y)/rd.y;\n\
   if(tFloor>0.0){vec3 floorP=ro+rd*tFloor;vec2 grid=abs(fract(floorP.xz)-0.5);float line=smoothstep(0.02,0.03,min(grid.x,grid.y));col=mix(vec3(0.15),vec3(0.08,0.09,0.11),line);col*=1.0-smoothstep(5.0,15.0,length(floorP.xz));}\n\
   float t=0.1;\n\
-  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);vec3 baseCol=u_devMode<0.5?u_color:getPartColor(p,u_devMode);col=baseCol*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
+  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);vec3 baseCol=u_devMode<0.5?appearance(p,n,rd):getPartColor(p,u_devMode);col=baseCol*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
   vec2 vig=v_uv*(1.0-v_uv);col*=0.3+0.7*pow(vig.x*vig.y*15.0,0.25);\n\
   gl_FragColor=vec4(pow(col,vec3(0.4545)),1.0);\n\
 }';
@@ -1019,6 +1070,14 @@ function render(time) {
   gl.uniform3fv(uniforms.u_tailP, p.tailPos);
   gl.uniform3fv(uniforms.u_tailRot, p.tailRot);
 
+  var pat = p.pattern || { type: 0 };
+  gl.uniform1f(uniforms.u_patternType, pat.type || 0);
+  gl.uniform3fv(uniforms.u_patternColor1, pat.color1 || p.color);
+  gl.uniform3fv(uniforms.u_patternColor2, pat.color2 || [0, 0, 0]);
+  gl.uniform1f(uniforms.u_patternFreq, pat.freq || 6);
+  gl.uniform1f(uniforms.u_patternScale, pat.scale || 3);
+  gl.uniform1f(uniforms.u_patternThreshold, pat.threshold || 0.5);
+
   gl.drawArrays(gl.TRIANGLES, 0, 6);
   requestAnimationFrame(render);
 }
@@ -1060,7 +1119,7 @@ function initGL() {
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   gl.useProgram(program);
 
-  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_devMode','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot'];
+  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_devMode','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot','u_patternType','u_patternColor1','u_patternColor2','u_patternFreq','u_patternScale','u_patternThreshold'];
   for (var i = 0; i < uNames.length; i++) uniforms[uNames[i]] = gl.getUniformLocation(program, uNames[i]);
   gl.uniform2f(uniforms.u_res, w, h);
 }
