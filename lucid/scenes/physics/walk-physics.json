@@ -54,10 +54,10 @@
     ],
 
     "positionConstraints": [
-      { "body": "footFL", "compliance": 0.008, "rigTarget": "gait_footFL_lift", "baseY": -0.7 },
-      { "body": "footFR", "compliance": 0.008, "rigTarget": "gait_footFR_lift", "baseY": -0.7 },
-      { "body": "footRL", "compliance": 0.008, "rigTarget": "gait_footRL_lift", "baseY": -0.7 },
-      { "body": "footRR", "compliance": 0.008, "rigTarget": "gait_footRR_lift", "baseY": -0.7 }
+      { "body": "footFL", "compliance": 0.02, "rigTarget": "gait_footFL_lift", "baseY": -0.7 },
+      { "body": "footFR", "compliance": 0.02, "rigTarget": "gait_footFR_lift", "baseY": -0.7 },
+      { "body": "footRL", "compliance": 0.02, "rigTarget": "gait_footRL_lift", "baseY": -0.7 },
+      { "body": "footRR", "compliance": 0.02, "rigTarget": "gait_footRR_lift", "baseY": -0.7 }
     ]
   },
 
