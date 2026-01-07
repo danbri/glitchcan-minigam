@@ -7,7 +7,7 @@
 
   "params": {
     "walkSpeed": { "value": 2.0, "min": 0, "max": 6, "type": "scalar" },
-    "legSwing": { "value": 25, "min": 0, "max": 45, "type": "scalar" },
+    "stepHeight": { "value": 0.25, "min": 0, "max": 0.5, "type": "scalar" },
     "bodySway": { "value": 3, "min": 0, "max": 10, "type": "scalar" },
     "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
     "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" },
@@ -20,10 +20,10 @@
         "comment": "Quadruped diagonal gait - FL+RR together, FR+RL together",
         "driver": { "expr": "mul", "args": ["time", "walkSpeed"] },
         "followers": {
-          "legFL": { "phase": 0, "amplitude": "legSwing" },
-          "legRR": { "phase": 0, "amplitude": "legSwing" },
-          "legFR": { "phase": 0.5, "amplitude": "legSwing" },
-          "legRL": { "phase": 0.5, "amplitude": "legSwing" },
+          "footFL_lift": { "phase": 0, "amplitude": "stepHeight", "waveform": "step" },
+          "footRR_lift": { "phase": 0, "amplitude": "stepHeight", "waveform": "step" },
+          "footFR_lift": { "phase": 0.5, "amplitude": "stepHeight", "waveform": "step" },
+          "footRL_lift": { "phase": 0.5, "amplitude": "stepHeight", "waveform": "step" },
           "bodyRoll": { "phase": 0.25, "amplitude": "bodySway" }
         }
       }
@@ -39,25 +39,25 @@
     "dt": 0.016,
 
     "bodies": [
-      { "name": "body", "pos": [0, 0.5, 0], "mass": 8.0, "radius": 0.3 },
-      { "name": "footFL", "pos": [0.35, -0.2, 0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footFR", "pos": [-0.35, -0.2, 0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footRL", "pos": [0.35, -0.2, -0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footRR", "pos": [-0.35, -0.2, -0.4], "mass": 0.3, "radius": 0.1 }
+      { "name": "body", "pos": [0, 0.5, 0], "mass": 4.0, "radius": 0.3 },
+      { "name": "footFL", "pos": [0.35, -0.7, 0.4], "mass": 0.3, "radius": 0.1 },
+      { "name": "footFR", "pos": [-0.35, -0.7, 0.4], "mass": 0.3, "radius": 0.1 },
+      { "name": "footRL", "pos": [0.35, -0.7, -0.4], "mass": 0.3, "radius": 0.1 },
+      { "name": "footRR", "pos": [-0.35, -0.7, -0.4], "mass": 0.3, "radius": 0.1 }
     ],
 
     "distanceConstraints": [
-      { "bodyA": "body", "bodyB": "footFL", "length": 0.7, "compliance": 0.00005 },
-      { "bodyA": "body", "bodyB": "footFR", "length": 0.7, "compliance": 0.00005 },
-      { "bodyA": "body", "bodyB": "footRL", "length": 0.7, "compliance": 0.00005 },
-      { "bodyA": "body", "bodyB": "footRR", "length": 0.7, "compliance": 0.00005 }
+      { "bodyA": "body", "bodyB": "footFL", "compliance": 0.0005 },
+      { "bodyA": "body", "bodyB": "footFR", "compliance": 0.0005 },
+      { "bodyA": "body", "bodyB": "footRL", "compliance": 0.0005 },
+      { "bodyA": "body", "bodyB": "footRR", "compliance": 0.0005 }
     ],
 
     "positionConstraints": [
-      { "body": "footFL", "compliance": 0.01 },
-      { "body": "footFR", "compliance": 0.01 },
-      { "body": "footRL", "compliance": 0.01 },
-      { "body": "footRR", "compliance": 0.01 }
+      { "body": "footFL", "compliance": 0.008, "rigTarget": "gait_footFL_lift", "baseY": -0.7 },
+      { "body": "footFR", "compliance": 0.008, "rigTarget": "gait_footFR_lift", "baseY": -0.7 },
+      { "body": "footRL", "compliance": 0.008, "rigTarget": "gait_footRL_lift", "baseY": -0.7 },
+      { "body": "footRR", "compliance": 0.008, "rigTarget": "gait_footRR_lift", "baseY": -0.7 }
     ]
   },
 
@@ -66,8 +66,8 @@
       "type": "material",
       "params": { "color": { "var": "legColor" } },
       "child": {
-        "type": "capsule",
-        "params": { "h": 0.5, "r": 0.08 }
+        "type": "sphere",
+        "params": { "r": 0.15 }
       }
     }
   },
