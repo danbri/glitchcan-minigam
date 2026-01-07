@@ -584,16 +584,21 @@ vec3 appearance(vec3 p,vec3 n,vec3 rd){\n\
     float t=local.y*0.5+0.5;\n\
     col=mix(u_patternColor1,u_patternColor2,t);\n\
   }else if(pt==2){\n\
-    float stripe=sin(local.z*3.14159*u_patternFreq);\n\
-    col=mix(u_patternColor1,u_patternColor2,step(0.0,stripe));\n\
+    float warp=fbm(p*1.5)*0.4;\n\
+    float stripe=sin((local.z+warp+local.y*0.3)*3.14159*u_patternFreq);\n\
+    float edge=fbm(p*3.0)*0.3;\n\
+    col=mix(u_patternColor1,u_patternColor2,smoothstep(-0.1-edge,0.1+edge,stripe));\n\
   }else if(pt==3){\n\
     float spots=fbm(p*u_patternScale);\n\
-    col=mix(u_patternColor1,u_patternColor2,step(u_patternThreshold,spots));\n\
+    col=mix(u_patternColor1,u_patternColor2,smoothstep(u_patternThreshold-0.05,u_patternThreshold+0.05,spots));\n\
   }else if(pt==4){\n\
     float t=local.y*0.5+0.5;\n\
     col=mix(u_patternColor1,u_patternColor2,t);\n\
-    float stripe=sin(local.z*3.14159*u_patternFreq);\n\
-    col=mix(col,u_patternColor2*0.3,step(0.3,stripe)*0.8);\n\
+    float warp=fbm(p*1.5)*0.5;\n\
+    float stripe=sin((local.z+warp+local.y*0.2)*3.14159*u_patternFreq);\n\
+    float edge=fbm(p*4.0)*0.25;\n\
+    float stripeAmt=smoothstep(-0.05-edge,0.15+edge,stripe);\n\
+    col=mix(col,u_patternColor2*0.15,stripeAmt*0.9);\n\
   }else if(pt==5){\n\
     float t=local.y*0.5+0.5;\n\
     col=mix(u_patternColor1,u_patternColor2,t);\n\
