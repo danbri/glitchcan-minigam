@@ -71,6 +71,10 @@
       { "body": "footFR", "compliance": 0.008, "rigTarget": "gait_footFR_lift", "baseY": -0.9 },
       { "body": "footRL", "compliance": 0.008, "rigTarget": "gait_footRL_lift", "baseY": -0.9 },
       { "body": "footRR", "compliance": 0.008, "rigTarget": "gait_footRR_lift", "baseY": -0.9 },
+      { "body": "footFL", "compliance": 0.008, "rigTarget": "locomotion_bodyForward", "axis": "z", "baseZ": -1.5 },
+      { "body": "footFR", "compliance": 0.008, "rigTarget": "locomotion_bodyForward", "axis": "z", "baseZ": -1.5 },
+      { "body": "footRL", "compliance": 0.008, "rigTarget": "locomotion_bodyForward", "axis": "z", "baseZ": -2.5 },
+      { "body": "footRR", "compliance": 0.008, "rigTarget": "locomotion_bodyForward", "axis": "z", "baseZ": -2.5 },
       { "body": "body", "compliance": 0.02, "rigTarget": "locomotion_bodyForward", "axis": "z" }
     ]
   },
