@@ -594,7 +594,7 @@ float sdf(vec3 p){\n\
   d=smin(d,sdCapsule(tailQ,u_tailLen,u_tailR),k*0.5);\n\
   return d*u_scale;\n\
 }\n\
-vec3 getPartColor(vec3 p){\n\
+vec3 getPartColor(vec3 p, float mode){\n\
   vec3 q=rotX(u_pitch)*rotY(-u_yaw)*(p/u_scale);\n\
   float fat=u_fat;\n\
   float dBody=sdEllipsoid(q/vec3(1.0,fat,1.0),u_bodyR);\n\
@@ -616,10 +616,21 @@ vec3 getPartColor(vec3 p){\n\
   float dBLeg=min(sdRoundCone(blMat*(q-blPAdj),thighR,ankleR,blH),sdRoundCone(blMat*(q-vec3(-blPAdj.x,blPAdj.y,blPAdj.z)),thighR,ankleR,blH));\n\
   mat3 tailMat=rotXYZ(u_tailRot+vec3(u_tailWag,0.0,0.0));\n\
   float dTail=sdCapsule(tailMat*(q-u_tailP),u_tailLen,u_tailR);\n\
-  float minD=min(min(min(dBody,dRump),min(dHead,dSnout)),min(min(dNose,dEar),min(min(dFLeg,dBLeg),dTail)));\n\
-  float hue=0.0;\n\
-  if(minD==dBody)hue=0.0;else if(minD==dRump)hue=0.08;else if(minD==dHead)hue=0.16;else if(minD==dSnout)hue=0.25;else if(minD==dNose)hue=0.33;else if(minD==dEar)hue=0.5;else if(minD==dFLeg)hue=0.66;else if(minD==dBLeg)hue=0.75;else hue=0.9;\n\
-  return hsv2rgb(vec3(hue,0.7,0.85));\n\
+  float k=1.0/max(u_smooth,0.01);\n\
+  if(mode<1.5){\n\
+    float minD=min(min(min(dBody,dRump),min(dHead,dSnout)),min(min(dNose,dEar),min(min(dFLeg,dBLeg),dTail)));\n\
+    float hue=0.0;\n\
+    if(minD==dBody)hue=0.0;else if(minD==dRump)hue=0.08;else if(minD==dHead)hue=0.16;else if(minD==dSnout)hue=0.25;else if(minD==dNose)hue=0.33;else if(minD==dEar)hue=0.5;else if(minD==dFLeg)hue=0.66;else if(minD==dBLeg)hue=0.75;else hue=0.9;\n\
+    return hsv2rgb(vec3(hue,0.7,0.85));\n\
+  }else{\n\
+    float wBody=exp(-k*dBody),wRump=exp(-k*dRump),wHead=exp(-k*dHead),wSnout=exp(-k*dSnout);\n\
+    float wNose=exp(-k*dNose),wEar=exp(-k*dEar),wFLeg=exp(-k*dFLeg),wBLeg=exp(-k*dBLeg),wTail=exp(-k*dTail);\n\
+    float wSum=wBody+wRump+wHead+wSnout+wNose+wEar+wFLeg+wBLeg+wTail;\n\
+    vec3 cBody=hsv2rgb(vec3(0.0,0.7,0.85)),cRump=hsv2rgb(vec3(0.08,0.7,0.85)),cHead=hsv2rgb(vec3(0.16,0.7,0.85));\n\
+    vec3 cSnout=hsv2rgb(vec3(0.25,0.7,0.85)),cNose=hsv2rgb(vec3(0.33,0.7,0.85)),cEar=hsv2rgb(vec3(0.5,0.7,0.7));\n\
+    vec3 cFLeg=hsv2rgb(vec3(0.66,0.7,0.85)),cBLeg=hsv2rgb(vec3(0.75,0.7,0.85)),cTail=hsv2rgb(vec3(0.9,0.7,0.85));\n\
+    return (wBody*cBody+wRump*cRump+wHead*cHead+wSnout*cSnout+wNose*cNose+wEar*cEar+wFLeg*cFLeg+wBLeg*cBLeg+wTail*cTail)/wSum;\n\
+  }\n\
 }\n\
 vec3 calcNormal(vec3 p){vec2 e=vec2(0.001,0);return normalize(vec3(sdf(p+e.xyy)-sdf(p-e.xyy),sdf(p+e.yxy)-sdf(p-e.yxy),sdf(p+e.yyx)-sdf(p-e.yyx)));}\n\
 void main(){\n\
@@ -633,7 +644,7 @@ void main(){\n\
   float tFloor=(floorY-ro.y)/rd.y;\n\
   if(tFloor>0.0){vec3 floorP=ro+rd*tFloor;vec2 grid=abs(fract(floorP.xz)-0.5);float line=smoothstep(0.02,0.03,min(grid.x,grid.y));col=mix(vec3(0.15),vec3(0.08,0.09,0.11),line);col*=1.0-smoothstep(5.0,15.0,length(floorP.xz));}\n\
   float t=0.1;\n\
-  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);vec3 baseCol=u_devMode>0.5?getPartColor(p):u_color;col=baseCol*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
+  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);vec3 baseCol=u_devMode<0.5?u_color:getPartColor(p,u_devMode);col=baseCol*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
   vec2 vig=v_uv*(1.0-v_uv);col*=0.3+0.7*pow(vig.x*vig.y*15.0,0.25);\n\
   gl_FragColor=vec4(pow(col,vec3(0.4545)),1.0);\n\
 }';
@@ -652,7 +663,7 @@ var state = {
   panelOpen: true,
   menuOpen: false,
   activeSlider: null,
-  devMode: false
+  devMode: 0
 };
 
 var wheel = { scroll: 0, velocity: 0, dragging: false, lx: 0, itemW: 80 };
@@ -980,7 +991,7 @@ function render(time) {
   gl.uniform1f(uniforms.u_legLen, g.legLength);
   gl.uniform1f(uniforms.u_earSize, g.earSize);
   gl.uniform1f(uniforms.u_tailWag, g.tailWag);
-  gl.uniform1f(uniforms.u_devMode, state.devMode ? 1.0 : 0.0);
+  gl.uniform1f(uniforms.u_devMode, state.devMode);
 
   gl.uniform3fv(uniforms.u_color, p.color);
   gl.uniform3fv(uniforms.u_bodyR, p.bodyRadii);
@@ -1085,8 +1096,11 @@ function toggleWiggle() {
 }
 
 function toggleDevMode() {
-  state.devMode = !state.devMode;
-  document.getElementById('btn-dev').classList.toggle('active', state.devMode);
+  state.devMode = (state.devMode + 1) % 3;
+  var btn = document.getElementById('btn-dev');
+  var modes = ['Off', 'Hard', 'Smooth'];
+  btn.classList.toggle('active', state.devMode > 0);
+  btn.querySelector('.tooltip').textContent = 'Parts: ' + modes[state.devMode];
 }
 
 function resetParams() {
