@@ -2412,6 +2412,9 @@
       // Update params panel with new scene params and rig constraints
       updateParamsPanel(scene.params || {}, scene.rig);
 
+      // Add instance-level params (hardcoded values in scene tree)
+      updateInstanceParamsPanel(json);
+
       // Reinitialize wiggler with new scene params (sticky: keeps running if active)
       const wasActive = wigglerState.active;
       const wasFast = wigglerState.fast;
@@ -4500,6 +4503,190 @@
           }
         }
       }
+    }
+
+    /**
+     * Collect instance-level params from scene JSON tree
+     * Returns array of { path, name, value, nodeType, min, max }
+     */
+    function collectInstanceParams(json) {
+      const instanceParams = [];
+
+      function walkNode(node, path) {
+        if (!node || typeof node !== 'object') return;
+
+        const nodeType = node.type;
+
+        // Collect params from primitives
+        if (node.params && typeof node.params === 'object') {
+          for (const [paramName, paramValue] of Object.entries(node.params)) {
+            if (typeof paramValue === 'number') {
+              // Infer reasonable min/max based on param name and value
+              let min = 0, max = Math.max(paramValue * 3, 1);
+              if (paramName === 'r' || paramName === 'radius') {
+                min = 0.01; max = Math.max(paramValue * 5, 2);
+              } else if (paramName === 'h' || paramName === 'height') {
+                min = 0.01; max = Math.max(paramValue * 5, 3);
+              } else if (paramName === 'k') {
+                min = 0; max = 1;
+              }
+              instanceParams.push({
+                path: `${path}.params.${paramName}`,
+                name: `${nodeType}.${paramName}`,
+                value: paramValue,
+                nodeType,
+                min, max
+              });
+            } else if (Array.isArray(paramValue) && paramValue.every(v => typeof v === 'number')) {
+              // Array param like radii
+              instanceParams.push({
+                path: `${path}.params.${paramName}`,
+                name: `${nodeType}.${paramName}`,
+                value: paramValue,
+                nodeType,
+                isArray: true,
+                min: 0.01,
+                max: Math.max(...paramValue) * 3
+              });
+            }
+          }
+        }
+
+        // Collect k from smooth operations
+        if (node.k !== undefined && typeof node.k === 'number') {
+          instanceParams.push({
+            path: `${path}.k`,
+            name: `${nodeType}.k`,
+            value: node.k,
+            nodeType,
+            min: 0, max: 1
+          });
+        }
+
+        // Recurse into children
+        if (node.children && Array.isArray(node.children)) {
+          node.children.forEach((child, i) => walkNode(child, `${path}.children[${i}]`));
+        }
+        if (node.child) {
+          walkNode(node.child, `${path}.child`);
+        }
+      }
+
+      // Walk root
+      if (json.root) walkNode(json.root, 'root');
+
+      // Walk defs
+      if (json.defs) {
+        for (const [defId, defNode] of Object.entries(json.defs)) {
+          walkNode(defNode, `defs.${defId}`);
+        }
+      }
+
+      return instanceParams;
+    }
+
+    /**
+     * Set a value at a JSON path
+     */
+    function setJsonPath(obj, path, value) {
+      const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+      let current = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+    }
+
+    /**
+     * Get a value at a JSON path
+     */
+    function getJsonPath(obj, path) {
+      const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+      let current = obj;
+      for (const part of parts) {
+        current = current[part];
+        if (current === undefined) return undefined;
+      }
+      return current;
+    }
+
+    /**
+     * Update params panel with instance params section
+     */
+    function updateInstanceParamsPanel(json) {
+      const content = $('params-content');
+      if (!content) return;
+
+      const instanceParams = collectInstanceParams(json);
+      if (instanceParams.length === 0) return;
+
+      // Add instance params section
+      let html = `<div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+        <div style="color: var(--text-dim); font-size: 0.7rem; margin-bottom: 0.5rem;">Instance Params (${instanceParams.length})</div>`;
+
+      instanceParams.forEach((param, index) => {
+        if (param.isArray) {
+          // Array param - show XYZ inputs
+          const arr = param.value;
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+            <span class="debug-label" style="font-size: 0.7rem; color: #60a5fa;">${param.name}</span>
+            <div style="display: flex; gap: 0.25rem; width: 100%;">`;
+          for (let i = 0; i < arr.length; i++) {
+            html += `<input type="number" value="${arr[i].toFixed(3)}" step="0.01"
+                     data-instance-path="${param.path}" data-index="${i}"
+                     style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.65rem;">`;
+          }
+          html += `</div></div>`;
+        } else {
+          // Scalar param - show slider
+          const step = (param.max - param.min) / 100;
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.15rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span class="debug-label" style="font-size: 0.7rem; color: #60a5fa;">${param.name}</span>
+              <span id="inst-val-${index}" style="font-size: 0.65rem; min-width: 3rem; text-align: right; font-family: monospace;">${param.value.toFixed(3)}</span>
+            </div>
+            <input type="range" min="${param.min}" max="${param.max}" step="${step}" value="${param.value}"
+                   id="inst-slider-${index}" data-instance-path="${param.path}" data-instance-index="${index}" style="width: 100%;">
+          </div>`;
+        }
+      });
+
+      html += '</div>';
+      content.innerHTML += html;
+
+      // Attach event listeners
+      instanceParams.forEach((param, index) => {
+        if (param.isArray) {
+          // Array inputs
+          const inputs = content.querySelectorAll(`input[data-instance-path="${param.path}"]`);
+          inputs.forEach(input => {
+            input.addEventListener('input', function() {
+              const json = demos[currentDemo]?.json;
+              if (!json) return;
+              const arrIndex = parseInt(this.dataset.index);
+              const arr = getJsonPath(json, param.path);
+              if (arr) {
+                arr[arrIndex] = parseFloat(this.value);
+                renderJson(json);
+              }
+            });
+          });
+        } else {
+          // Scalar slider
+          const slider = $(`inst-slider-${index}`);
+          if (slider) {
+            slider.addEventListener('input', function() {
+              const json = demos[currentDemo]?.json;
+              if (!json) return;
+              const val = parseFloat(this.value);
+              setJsonPath(json, param.path, val);
+              const valEl = $(`inst-val-${index}`);
+              if (valEl) valEl.textContent = val.toFixed(3);
+              renderJson(json);
+            });
+          }
+        }
+      });
     }
 
     // Helper: RGB array [0-1] to hex color
