@@ -3275,7 +3275,13 @@
           if (node.params.thickness !== undefined) {
             params.push(`t=${makeClickableValue(node.params.thickness, path + '.params.thickness', 'thickness', nodeNotes)}`);
           }
-          if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+          if (node.params.color) {
+            if (Array.isArray(node.params.color)) {
+              params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+            } else if (node.params.color.var) {
+              params.push(`<span style="color:#8b949e">color=${node.params.color.var}</span>`);
+            }
+          }
           if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
         }
         if (node.k !== undefined) {
@@ -3455,10 +3461,22 @@
       function formatTransform(t, level) {
         if (!t) return '';
         const parts = [];
-        if (t.translate) parts.push(`(translate ${t.translate.map(exprToDsl).join(' ')})`);
-        if (t.rotate) parts.push(`(rotate ${t.rotate.map(exprToDsl).join(' ')})`);
-        if (t.rotateAxis) parts.push(`(rotate-axis [${t.rotateAxis.axis.join(' ')}] ${t.rotateAxis.angle})`);
-        if (t.rotateQ) parts.push(`(rotate-q ${t.rotateQ.map(exprToDsl).join(' ')})`);
+        if (t.translate) {
+          const tr = Array.isArray(t.translate) ? t.translate.map(exprToDsl).join(' ') : exprToDsl(t.translate);
+          parts.push(`(translate ${tr})`);
+        }
+        if (t.rotate) {
+          const rot = Array.isArray(t.rotate) ? t.rotate.map(exprToDsl).join(' ') : exprToDsl(t.rotate);
+          parts.push(`(rotate ${rot})`);
+        }
+        if (t.rotateAxis) {
+          const axis = Array.isArray(t.rotateAxis.axis) ? t.rotateAxis.axis.join(' ') : exprToDsl(t.rotateAxis.axis);
+          parts.push(`(rotate-axis [${axis}] ${t.rotateAxis.angle})`);
+        }
+        if (t.rotateQ) {
+          const q = Array.isArray(t.rotateQ) ? t.rotateQ.map(exprToDsl).join(' ') : exprToDsl(t.rotateQ);
+          parts.push(`(rotate-q ${q})`);
+        }
         if (t.scale) {
           const s = Array.isArray(t.scale) ? t.scale.map(exprToDsl).join(' ') : exprToDsl(t.scale);
           parts.push(`(scale ${s})`);

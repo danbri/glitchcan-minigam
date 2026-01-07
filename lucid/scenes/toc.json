@@ -6,12 +6,12 @@
     {
       "id": "recent",
       "title": "🆕 Recent Changes",
-      "description": "Recently modified scenes (updated 2026-01-06)",
+      "description": "Recently modified scenes (updated 2026-01-07)",
       "scenes": [
         {
           "path": "physics/chunky-obstacle-walk.json",
           "title": "Obstacle Walk",
-          "subtitle": "Physics walker navigating rolling obstacles [Add rig-driven physics walk cycle]"
+          "subtitle": "Physics walker navigating rolling obstacles [Fix color blending in obstacle walk scene]"
         },
         {
           "path": "csg/chunky-parametric.json",
