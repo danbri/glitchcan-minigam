@@ -40,10 +40,10 @@
 
     "bodies": [
       { "name": "body", "pos": [0, 0.5, 0], "mass": 4.0, "radius": 0.3 },
-      { "name": "footFL", "pos": [0.35, -0.7, 0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footFR", "pos": [-0.35, -0.7, 0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footRL", "pos": [0.35, -0.7, -0.4], "mass": 0.3, "radius": 0.1 },
-      { "name": "footRR", "pos": [-0.35, -0.7, -0.4], "mass": 0.3, "radius": 0.1 }
+      { "name": "footFL", "pos": [0.35, -0.7, 0.4], "mass": 0.5, "radius": 0.2 },
+      { "name": "footFR", "pos": [-0.35, -0.7, 0.4], "mass": 0.5, "radius": 0.2 },
+      { "name": "footRL", "pos": [0.35, -0.7, -0.4], "mass": 0.5, "radius": 0.2 },
+      { "name": "footRR", "pos": [-0.35, -0.7, -0.4], "mass": 0.5, "radius": 0.2 }
     ],
 
     "distanceConstraints": [
@@ -67,7 +67,7 @@
       "params": { "color": { "var": "legColor" } },
       "child": {
         "type": "sphere",
-        "params": { "r": 0.15 }
+        "params": { "r": 0.22 }
       }
     }
   },

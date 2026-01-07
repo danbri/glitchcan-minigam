@@ -9,6 +9,16 @@
       "description": "Recently modified scenes (updated 2026-01-07)",
       "scenes": [
         {
+          "path": "physics/chunky-walk.json",
+          "title": "Chunky Walk",
+          "subtitle": "WebGPU XPBD physics with rig-driven foot targets [Make legs visible in walk physics scenes]"
+        },
+        {
+          "path": "physics/walk-physics.json",
+          "title": "Walk Cycle + Physics",
+          "subtitle": "Phase-coupled gait with XPBD constraint satisfaction [Make legs visible in walk physics scenes]"
+        },
+        {
           "path": "physics/chunky-obstacle-walk.json",
           "title": "Obstacle Walk",
           "subtitle": "Physics walker navigating rolling obstacles [Add Z position constraints for feet locomotion]"
@@ -19,19 +29,9 @@
           "subtitle": "One quadruped template, 6 distinct animals via param inheritance [Wire scene params to affect all animals via expressions]"
         },
         {
-          "path": "physics/chunky-walk.json",
-          "title": "Chunky Walk",
-          "subtitle": "WebGPU XPBD physics with rig-driven foot targets [Add rig-driven physics walk cycle]"
-        },
-        {
           "path": "physics/chunky-physics.json",
           "title": "Bouncy Quadruped",
           "subtitle": "XPBD physics - drop a creature, watch it bounce [Simplify physics demo, remove broken hybrid scene]"
-        },
-        {
-          "path": "physics/walk-physics.json",
-          "title": "Walk Cycle + Physics",
-          "subtitle": "Phase-coupled gait with XPBD constraint satisfaction [Refactor physics to be generic, fix initialization]"
         },
         {
           "path": "animation/walk-rig.json",
