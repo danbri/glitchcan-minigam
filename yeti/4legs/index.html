@@ -758,8 +758,28 @@ var paramDefs = {
   'backLegRot.x': { min: -0.5, max: 0.5, idx: 0, arr: 'backLegRot' },
   'tailLen': { min: 0.05, max: 0.8, scalar: true },
   'tailR': { min: 0.02, max: 0.15, scalar: true },
-  'tailRot.x': { min: -2, max: 0, idx: 0, arr: 'tailRot' }
+  'tailRot.x': { min: -2, max: 0, idx: 0, arr: 'tailRot' },
+  // Appearance params
+  'app.markR': { min: 0, max: 1, idx: 0, arr: 'appearance.markColor' },
+  'app.markG': { min: 0, max: 1, idx: 1, arr: 'appearance.markColor' },
+  'app.markB': { min: 0, max: 1, idx: 2, arr: 'appearance.markColor' },
+  'app.countershade': { min: 0, max: 1, app: 'countershade' },
+  'app.stripeAmt': { min: 0, max: 1, app: 'stripeAmt' },
+  'app.spotAmt': { min: 0, max: 1, app: 'spotAmt' },
+  'app.rosetteAmt': { min: 0, max: 1, app: 'rosetteAmt' },
+  'app.freq': { min: 1, max: 20, app: 'freq' },
+  'app.warp': { min: 0, max: 1, app: 'warp' },
+  'app.broken': { min: 0, max: 1, app: 'broken' }
 };
+
+function ensureAppearanceDefaults(params) {
+  var defaults = { markColor: [0, 0, 0], countershade: 0, stripeAmt: 0, spotAmt: 0, rosetteAmt: 0, freq: 6, warp: 0.3, broken: 0.3 };
+  if (!params.appearance) params.appearance = {};
+  for (var key in defaults) {
+    if (params.appearance[key] === undefined) params.appearance[key] = Array.isArray(defaults[key]) ? defaults[key].slice() : defaults[key];
+  }
+  return params;
+}
 
 function init() {
   data = JSON.parse(document.getElementById('registry-json').textContent);
@@ -768,8 +788,8 @@ function init() {
     state.globals[key] = data.globals[key].value;
   }
 
-  state.params = JSON.parse(JSON.stringify(data.animals[0].params));
-  state.baseParams = JSON.parse(JSON.stringify(data.animals[0].params));
+  state.params = ensureAppearanceDefaults(JSON.parse(JSON.stringify(data.animals[0].params)));
+  state.baseParams = JSON.parse(JSON.stringify(state.params));
 
   // Build carousel
   var track = document.getElementById('wheel-track');
@@ -813,6 +833,7 @@ function buildSliders() {
   // Instance params sections
   var sections = {
     'Color': ['color.r', 'color.g', 'color.b'],
+    'Appearance': ['app.markR', 'app.markG', 'app.markB', 'app.countershade', 'app.stripeAmt', 'app.spotAmt', 'app.rosetteAmt', 'app.freq', 'app.warp', 'app.broken'],
     'Body': ['body.x', 'body.y', 'body.z'],
     'Rump': ['rump.x', 'rump.y', 'rump.z', 'rumpPos.y', 'rumpPos.z'],
     'Head': ['head.x', 'head.y', 'head.z', 'headPos.y', 'headPos.z'],
@@ -840,13 +861,17 @@ function buildSliders() {
 
 function getParamValue(key) {
   var def = paramDefs[key];
+  if (def.app) return state.params.appearance[def.app];
+  if (def.arr === 'appearance.markColor') return state.params.appearance.markColor[def.idx];
   if (def.scalar) return state.params[key];
   return state.params[def.arr][def.idx];
 }
 
 function setParamValue(key, val) {
   var def = paramDefs[key];
-  if (def.scalar) state.params[key] = val;
+  if (def.app) state.params.appearance[def.app] = val;
+  else if (def.arr === 'appearance.markColor') state.params.appearance.markColor[def.idx] = val;
+  else if (def.scalar) state.params[key] = val;
   else state.params[def.arr][def.idx] = val;
 }
 
@@ -1010,8 +1035,8 @@ function render(time) {
   // Switch animal
   if (idx !== state.speciesIdx) {
     state.speciesIdx = idx;
-    state.params = JSON.parse(JSON.stringify(data.animals[idx].params));
-    state.baseParams = JSON.parse(JSON.stringify(data.animals[idx].params));
+    state.params = ensureAppearanceDefaults(JSON.parse(JSON.stringify(data.animals[idx].params)));
+    state.baseParams = JSON.parse(JSON.stringify(state.params));
     updateSliders();
   }
 
