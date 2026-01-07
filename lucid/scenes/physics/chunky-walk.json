@@ -64,13 +64,13 @@
       "params": { "color": { "var": "legColor" } },
       "child": {
         "type": "sphere",
-        "params": { "r": 0.12 }
+        "params": { "r": 0.18 }
       }
     }
   },
 
   "root": {
-    "type": "smoothUnion", "k": 0.15,
+    "type": "union",
     "children": [
       {
         "comment": "Body - position from physics",

@@ -11,7 +11,7 @@
         {
           "path": "physics/chunky-obstacle-walk.json",
           "title": "Obstacle Walk",
-          "subtitle": "Physics walker navigating rolling obstacles [Fix color blending in obstacle walk scene]"
+          "subtitle": "Physics walker navigating rolling obstacles [Add Z position constraints for feet locomotion]"
         },
         {
           "path": "csg/chunky-parametric.json",
