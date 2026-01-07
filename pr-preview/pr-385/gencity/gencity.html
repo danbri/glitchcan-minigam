@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Building Generator</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
+        building-generator {
+            width: 90vw;
+            height: 90vh;
+            border: 1px solid #555;
+            display: block; /* Important for sizing */
+        }
+        /* Style the host element if needed */
+         /* You can add styles here that affect the component from the outside */
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <building-generator></building-generator>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        class BuildingGenerator extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' }); // Use Shadow DOM
+
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.buildingGroup = new THREE.Group(); // Group to hold buildings
+
+                // Configurable parameters
+                this.config = {
+                    gridSize: 5,
+                    blockSize: 2,
+                    roadWidth: 0.5,
+                    maxHeight: 5,
+                    minHeight: 1,
+                    wireframeColor: 0x00ff00, // Green
+                    backgroundColor: 0x000000  // Black
+                };
+
+                this.render = this.render.bind(this); // Bind render method for requestAnimationFrame
+                this.onWindowResize = this.onWindowResize.bind(this);
+            }
+
+            connectedCallback() {
+                // Called when the element is added to the DOM
+                this.setupDOM();
+                this.setupThreeJS();
+                this.addEventListeners();
+                this.generateBuildings(); // Initial generation
+                this.render(); // Start the render loop
+                window.addEventListener('resize', this.onWindowResize);
+            }
+
+            disconnectedCallback() {
+                // Called when the element is removed from the DOM
+                window.removeEventListener('resize', this.onWindowResize);
+                // Clean up Three.js resources if necessary (renderer, geometries, materials)
+                if (this.renderer) {
+                    this.renderer.dispose();
+                }
+                // Cancel animation frame? (Though usually handled by browser garbage collection)
+            }
+
+            setupDOM() {
+                // Create the internal structure within the Shadow DOM
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        :host { /* Style the host element from within */
+                            display: block;
+                            position: relative; /* Needed for absolute positioning of controls */
+                            width: 100%;
+                            height: 100%;
+                        }
+                        canvas {
+                            display: block;
+                            width: 100%;
+                            height: 100%;
+                        }
+                        .controls {
+                            position: absolute;
+                            top: 10px;
+                            left: 10px;
+                            background: rgba(50, 50, 50, 0.7);
+                            padding: 10px;
+                            border-radius: 5px;
+                            color: white;
+                            font-size: 14px;
+                        }
+                        .controls label, .controls input, .controls button {
+                            margin-right: 8px;
+                        }
+                         .controls button {
+                            padding: 5px 10px;
+                            cursor: pointer;
+                        }
+                    </style>
+                    <div class="controls">
+                        <label for="grid-size">Grid Size:</label>
+                        <input type="number" id="grid-size" value="${this.config.gridSize}" min="1" max="20">
+                        <button id="generate-button">Generate</button>
+                    </div>
+                    <canvas id="render-canvas"></canvas>
+                `;
+
+                this.canvas = this.shadowRoot.getElementById('render-canvas');
+                this.gridSizeInput = this.shadowRoot.getElementById('grid-size');
+                this.generateButton = this.shadowRoot.getElementById('generate-button');
+            }
+
+            setupThreeJS() {
+                const width = this.clientWidth;
+                const height = this.clientHeight;
+
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(this.config.backgroundColor);
+                this.scene.add(this.buildingGroup); // Add the group initially
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+                this.camera.position.set(10, 15, 10); // Initial camera position
+                this.camera.lookAt(0, 0, 0);
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+                this.renderer.setSize(width, height);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
+                this.scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 10, 7.5);
+                this.scene.add(directionalLight);
+
+                // Controls
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+                this.controls.dampingFactor = 0.05;
+                this.controls.screenSpacePanning = false;
+                this.controls.minDistance = 5;
+                this.controls.maxDistance = 100;
+                // this.controls.maxPolarAngle = Math.PI / 2; // Prevent looking below ground level if desired
+            }
+
+            generateBuildings() {
+                // Clear previous buildings
+                while (this.buildingGroup.children.length > 0) {
+                    const object = this.buildingGroup.children[0];
+                    if (object.geometry) object.geometry.dispose();
+                    if (object.material) object.material.dispose();
+                    this.buildingGroup.remove(object);
+                }
+
+                // Get grid size from input
+                this.config.gridSize = parseInt(this.gridSizeInput.value, 10) || 5;
+                const gridSize = this.config.gridSize;
+                const blockSize = this.config.blockSize;
+                const roadWidth = this.config.roadWidth;
+                const totalCellSize = blockSize + roadWidth;
+                const gridOffset = (gridSize - 1) * totalCellSize / 2; // To center the grid
+
+                const wireframeMaterial = new THREE.LineBasicMaterial({
+                    color: this.config.wireframeColor,
+                    linewidth: 1 // Note: linewidth > 1 is not guaranteed in WebGL/all platforms
+                 });
+
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        // Generate random height
+                        const height = Math.random() * (this.config.maxHeight - this.config.minHeight) + this.config.minHeight;
+
+                        // Create geometry (Box first, then derive wireframe)
+                        const boxGeometry = new THREE.BoxGeometry(blockSize, height, blockSize, 2, Math.ceil(height/blockSize * 2), 2); // Add subdivisions
+                        const wireframeGeometry = new THREE.WireframeGeometry(boxGeometry);
+
+                        // Create mesh (LineSegments for wireframe)
+                        const buildingWireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+
+                        // Calculate position
+                        const xPos = i * totalCellSize - gridOffset;
+                        const zPos = j * totalCellSize - gridOffset;
+                        const yPos = height / 2; // Position base at y=0
+
+                        buildingWireframe.position.set(xPos, yPos, zPos);
+
+                        // Add to group
+                        this.buildingGroup.add(buildingWireframe);
+                    }
+                }
+            }
+
+            addEventListeners() {
+                this.generateButton.addEventListener('click', () => {
+                    this.generateBuildings();
+                });
+            }
+
+            onWindowResize() {
+                if (!this.camera || !this.renderer) return;
+
+                const width = this.clientWidth;
+                const height = this.clientHeight;
+
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(width, height);
+            }
+
+            render() {
+                requestAnimationFrame(this.render);
+                this.controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Define the custom element
+        customElements.define('building-generator', BuildingGenerator);
+
+    </script>
+
+</body>
+</html>
+
