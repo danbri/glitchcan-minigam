@@ -86,6 +86,7 @@
     <div class="radial-item" style="transform: translate(0px, -120px)" onclick="toggleWiggle()" id="btn-wiggle">🌀<span class="tooltip">Param Wiggle</span></div>
     <div class="radial-item" style="transform: translate(60px, -100px)" onclick="exportJSON()">💾<span class="tooltip">Export JSON</span></div>
     <div class="radial-item" style="transform: translate(90px, -50px)" onclick="resetParams()">🔄<span class="tooltip">Reset Params</span></div>
+    <div class="radial-item" style="transform: translate(-90px, -50px)" onclick="toggleDevMode()" id="btn-dev">🔬<span class="tooltip">Part Colors</span></div>
   </div>
 
   <div class="carousel-container">
@@ -532,6 +533,7 @@ uniform vec2 u_res;\n\
 uniform float u_camDist, u_camPhi, u_camTheta;\n\
 uniform float u_yaw, u_pitch;\n\
 uniform float u_smooth, u_scale, u_fat, u_legLen, u_earSize, u_tailWag;\n\
+uniform float u_devMode;\n\
 uniform vec3 u_color;\n\
 uniform vec3 u_bodyR, u_rumpR, u_rumpP;\n\
 uniform vec3 u_headR, u_headP;\n\
@@ -546,6 +548,7 @@ uniform float u_backLegH;\n\
 uniform vec3 u_backLegP, u_backLegRot;\n\
 uniform float u_tailLen, u_tailR;\n\
 uniform vec3 u_tailP, u_tailRot;\n\
+vec3 hsv2rgb(vec3 c){vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);}\n\
 mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,-s,0,s,c);}\n\
 mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,s,0,1,0,-s,0,c);}\n\
 mat3 rotZ(float a){float c=cos(a),s=sin(a);return mat3(c,-s,0,s,c,0,0,0,1);}\n\
@@ -591,6 +594,33 @@ float sdf(vec3 p){\n\
   d=smin(d,sdCapsule(tailQ,u_tailLen,u_tailR),k*0.5);\n\
   return d*u_scale;\n\
 }\n\
+vec3 getPartColor(vec3 p){\n\
+  vec3 q=rotX(u_pitch)*rotY(-u_yaw)*(p/u_scale);\n\
+  float fat=u_fat;\n\
+  float dBody=sdEllipsoid(q/vec3(1.0,fat,1.0),u_bodyR);\n\
+  float dRump=sdEllipsoid((q-u_rumpP)/vec3(1.0,fat,1.0),u_rumpR);\n\
+  float dHead=sdEllipsoid(q-u_headP,u_headR);\n\
+  float dSnout=sdEllipsoid(q-u_snoutP,u_snoutR);\n\
+  float dNose=sdSphere(q-u_noseP,u_noseSize);\n\
+  mat3 earMat=rotXYZ(u_earRot);\n\
+  float dEar=min(sdEllipsoid(earMat*((q-u_earP)/u_earSize),u_earR),sdEllipsoid(earMat*((q-vec3(-u_earP.x,u_earP.y,u_earP.z))/u_earSize),u_earR));\n\
+  float legDrop=(u_legLen-1.0);\n\
+  float thighR=u_legThighR*fat,ankleR=u_legAnkleR*fat;\n\
+  float flH=u_frontLegH*u_legLen;\n\
+  mat3 flMat=rotXYZ(u_frontLegRot);\n\
+  vec3 flPAdj=u_frontLegP-vec3(0,legDrop*u_frontLegH,0);\n\
+  float dFLeg=min(sdRoundCone(flMat*(q-flPAdj),thighR,ankleR,flH),sdRoundCone(flMat*(q-vec3(-flPAdj.x,flPAdj.y,flPAdj.z)),thighR,ankleR,flH));\n\
+  float blH=u_backLegH*u_legLen;\n\
+  mat3 blMat=rotXYZ(u_backLegRot);\n\
+  vec3 blPAdj=u_backLegP-vec3(0,legDrop*u_backLegH,0);\n\
+  float dBLeg=min(sdRoundCone(blMat*(q-blPAdj),thighR,ankleR,blH),sdRoundCone(blMat*(q-vec3(-blPAdj.x,blPAdj.y,blPAdj.z)),thighR,ankleR,blH));\n\
+  mat3 tailMat=rotXYZ(u_tailRot+vec3(u_tailWag,0.0,0.0));\n\
+  float dTail=sdCapsule(tailMat*(q-u_tailP),u_tailLen,u_tailR);\n\
+  float minD=min(min(min(dBody,dRump),min(dHead,dSnout)),min(min(dNose,dEar),min(min(dFLeg,dBLeg),dTail)));\n\
+  float hue=0.0;\n\
+  if(minD==dBody)hue=0.0;else if(minD==dRump)hue=0.08;else if(minD==dHead)hue=0.16;else if(minD==dSnout)hue=0.25;else if(minD==dNose)hue=0.33;else if(minD==dEar)hue=0.5;else if(minD==dFLeg)hue=0.66;else if(minD==dBLeg)hue=0.75;else hue=0.9;\n\
+  return hsv2rgb(vec3(hue,0.7,0.85));\n\
+}\n\
 vec3 calcNormal(vec3 p){vec2 e=vec2(0.001,0);return normalize(vec3(sdf(p+e.xyy)-sdf(p-e.xyy),sdf(p+e.yxy)-sdf(p-e.yxy),sdf(p+e.yyx)-sdf(p-e.yyx)));}\n\
 void main(){\n\
   vec2 uv=(v_uv*2.0-1.0)*vec2(u_res.x/u_res.y,1.0);\n\
@@ -603,7 +633,7 @@ void main(){\n\
   float tFloor=(floorY-ro.y)/rd.y;\n\
   if(tFloor>0.0){vec3 floorP=ro+rd*tFloor;vec2 grid=abs(fract(floorP.xz)-0.5);float line=smoothstep(0.02,0.03,min(grid.x,grid.y));col=mix(vec3(0.15),vec3(0.08,0.09,0.11),line);col*=1.0-smoothstep(5.0,15.0,length(floorP.xz));}\n\
   float t=0.1;\n\
-  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);col=u_color*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
+  for(int i=0;i<80;i++){vec3 p=ro+rd*t;float d=sdf(p);if(d<0.001){vec3 n=calcNormal(p);vec3 lightDir=normalize(vec3(0.5,0.8,0.3));float diff=max(0.0,dot(n,lightDir));float amb=0.3+0.2*n.y;float rim=pow(1.0-max(0.0,dot(n,-rd)),3.0);float shadow=1.0;vec3 sro=p+n*0.01;float st=0.02;for(int j=0;j<16;j++){float h=sdf(sro+lightDir*st);shadow=min(shadow,8.0*h/st);st+=clamp(h,0.02,0.2);if(shadow<0.01||st>5.0)break;}shadow=clamp(shadow,0.3,1.0);vec3 baseCol=u_devMode>0.5?getPartColor(p):u_color;col=baseCol*(amb+diff*shadow*0.7)+rim*0.15;if(p.y<floorY+0.5){float gs=smoothstep(floorY,floorY+0.5,p.y);col*=0.7+0.3*gs;}break;}t+=d*0.9;if(t>20.0)break;}\n\
   vec2 vig=v_uv*(1.0-v_uv);col*=0.3+0.7*pow(vig.x*vig.y*15.0,0.25);\n\
   gl_FragColor=vec4(pow(col,vec3(0.4545)),1.0);\n\
 }';
@@ -621,7 +651,8 @@ var state = {
   wiggle: false,
   panelOpen: true,
   menuOpen: false,
-  activeSlider: null
+  activeSlider: null,
+  devMode: false
 };
 
 var wheel = { scroll: 0, velocity: 0, dragging: false, lx: 0, itemW: 80 };
@@ -949,6 +980,7 @@ function render(time) {
   gl.uniform1f(uniforms.u_legLen, g.legLength);
   gl.uniform1f(uniforms.u_earSize, g.earSize);
   gl.uniform1f(uniforms.u_tailWag, g.tailWag);
+  gl.uniform1f(uniforms.u_devMode, state.devMode ? 1.0 : 0.0);
 
   gl.uniform3fv(uniforms.u_color, p.color);
   gl.uniform3fv(uniforms.u_bodyR, p.bodyRadii);
@@ -1017,7 +1049,7 @@ function initGL() {
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   gl.useProgram(program);
 
-  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot'];
+  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_devMode','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot'];
   for (var i = 0; i < uNames.length; i++) uniforms[uNames[i]] = gl.getUniformLocation(program, uNames[i]);
   gl.uniform2f(uniforms.u_res, w, h);
 }
@@ -1050,6 +1082,11 @@ function toggleWiggle() {
     }
     updateSliders();
   }
+}
+
+function toggleDevMode() {
+  state.devMode = !state.devMode;
+  document.getElementById('btn-dev').classList.toggle('active', state.devMode);
 }
 
 function resetParams() {
