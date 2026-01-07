@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safari Digital Credentials – Minimal Age Demo (v3)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+    button { font-size: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f6f6f6; padding: 1rem; border-radius: 0.5rem; }
+    .note { color: #555; }
+    code { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Safari (iOS 26 beta) – Minimal “Over-18” Test (v3)</h1>
+  <p class="note">
+    This version adds <code>deviceRequest</code> to the ISO mDoc request, which some iOS 26 seeds require.
+    It tries values <code>'remote'</code> → <code>'online'</code> → <code>'any'</code> if earlier ones fail.
+  </p>
+
+  <button id="btn">Prove you’re over 18</button>
+  <p id="status" class="note"></p>
+  <pre id="out"></pre>
+
+  <script>
+  const statusEl = document.getElementById('status');
+  const outEl = document.getElementById('out');
+  const btn = document.getElementById('btn');
+
+  const hasCreds = 'credentials' in navigator && typeof navigator.credentials.get === 'function';
+  if (!hasCreds) { statusEl.textContent = 'Digital Credentials API not detected.'; }
+
+  function show(obj) {
+    outEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+  }
+
+  function makeMdocReq(deviceRequestValue) {
+    return {
+      protocol: 'org-iso-mdoc',
+      data: {
+        deviceRequest: deviceRequestValue,  // required by some Safari betas
+        docType: 'org.iso.18013.5.1.mDL',
+        nameSpaces: [{ name: 'org.iso.18013.5.1', dataElements: ['age_over_18'] }]
+      }
+    };
+  }
+
+  function makeOid4vpReq() {
+    return {
+      protocol: 'openid4vp',
+      data: {
+        presentation_definition: {
+          input_descriptors: [{
+            id: 'ageOver18',
+            constraints: { fields: [{ path: ['ageOver18'], filter: { const: true } }] }
+          }]
+        }
+      }
+    };
+  }
+
+  async function tryOnce(mdocDeviceRequest, topLevelKey) {
+    const reqs = [makeMdocReq(mdocDeviceRequest), makeOid4vpReq()];
+    const payload = { mediation: 'required' };
+    payload[topLevelKey] = topLevelKey === 'identity'
+      ? { reason: 'Prove you are over 18', requests: reqs }
+      : { requests: reqs };
+    return await navigator.credentials.get(payload);
+  }
+
+  btn.addEventListener('click', async () => {
+    if (!hasCreds) return;
+
+    const deviceRequestValues = ['remote', 'online', 'any'];
+    const topLevelKeys = ['identity', 'digital'];
+
+    for (const drv of deviceRequestValues) {
+      for (const key of topLevelKeys) {
+        try {
+          statusEl.textContent = `Requesting via ${key}.requests with deviceRequest="${drv}"…`;
+          const vp = await tryOnce(drv, key);
+          statusEl.textContent = `Success via ${key}.requests (deviceRequest="${drv}")`;
+          show(vp);
+          return;
+        } catch (e) {
+          // If user cancels, stop immediately
+          if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) {
+            statusEl.textContent = e.name + (e.message ? (': ' + e.message) : '');
+            show(e);
+            return;
+          }
+          // Keep trying other variants unless it's NotFoundError (no providers)
+          if (e && e.name === 'NotFoundError') {
+            statusEl.textContent = 'No provider available (' + e.name + ').';
+            show(e);
+            return;
+          }
+          // Otherwise loop and try the next shape/value
+          console.log('Variant failed', drv, key, e);
+        }
+      }
+    }
+    statusEl.textContent = 'All variants failed. See details below.';
+  });
+  </script>
+</body>
+</html>
+

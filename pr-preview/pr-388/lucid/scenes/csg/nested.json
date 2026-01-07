@@ -1,0 +1,47 @@
+{
+  "title": "Nested CSG",
+  "subtitle": "Union of intersections",
+  "version": "1.1",
+
+  "params": {
+    "sphereRadius": {
+      "value": 1.2,
+      "type": "scalar",
+      "min": 0.8,
+      "max": 2.0,
+      "description": "Sphere size for intersection"
+    },
+    "leftColor": {
+      "value": [1.0, 0.4, 0.3],
+      "type": "color3",
+      "description": "Left object color"
+    },
+    "rightColor": {
+      "value": [0.3, 0.8, 0.5],
+      "type": "color3",
+      "description": "Right object color"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "intersect",
+        "children": [
+          { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": {"var": "leftColor"} } },
+          { "type": "sphere", "params": { "r": {"var": "sphereRadius"}, "color": {"var": "leftColor"} } }
+        ],
+        "transform": { "translate": [-1.2, 0.0, 0.0] }
+      },
+      {
+        "type": "intersect",
+        "children": [
+          { "type": "box", "params": { "size": [1.0, 1.0, 1.0], "color": {"var": "rightColor"} } },
+          { "type": "sphere", "params": { "r": {"var": "sphereRadius"}, "color": {"var": "rightColor"} } }
+        ],
+        "transform": { "translate": [1.2, 0.0, 0.0] }
+      }
+    ]
+  }
+}
