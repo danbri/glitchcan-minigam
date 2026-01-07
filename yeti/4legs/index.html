@@ -199,7 +199,7 @@
         "frontLegH": 0.35, "frontLegPos": [0.15, -0.35, 0.25], "frontLegRot": [0, 0, 0],
         "backLegH": 0.4, "backLegPos": [0.15, -0.35, -0.35], "backLegRot": [0.2, 0, 0],
         "tailLen": 0.55, "tailR": 0.04, "tailPos": [0, 0.08, -0.9], "tailRot": [-0.6, 0, 0],
-        "pattern": { "type": 4, "color1": [0.35, 0.3, 0.25], "color2": [0.15, 0.12, 0.1], "freq": 10 }
+        "pattern": { "type": 6, "color1": [0.4, 0.35, 0.28], "color2": [0.18, 0.14, 0.1], "freq": 12 }
       }
     },
     {
@@ -593,17 +593,31 @@ vec3 appearance(vec3 p,vec3 n,vec3 rd){\n\
     col=mix(u_patternColor1,u_patternColor2,smoothstep(u_patternThreshold-0.05,u_patternThreshold+0.05,spots));\n\
   }else if(pt==4){\n\
     float t=local.y*0.5+0.5;\n\
-    col=mix(u_patternColor1,u_patternColor2,t);\n\
-    float warp=fbm(p*1.5)*0.5;\n\
-    float stripe=sin((local.z+warp+local.y*0.2)*3.14159*u_patternFreq);\n\
-    float edge=fbm(p*4.0)*0.25;\n\
-    float stripeAmt=smoothstep(-0.05-edge,0.15+edge,stripe);\n\
-    col=mix(col,u_patternColor2*0.15,stripeAmt*0.9);\n\
+    vec3 base=mix(u_patternColor1,u_patternColor2*1.2,t);\n\
+    float warp=fbm(p*2.0)*0.35+noise3d(p*0.8)*0.15;\n\
+    float stripePos=(local.z+warp)*u_patternFreq;\n\
+    float stripe=sin(stripePos*3.14159);\n\
+    float widthVar=0.15+fbm(p*1.5)*0.2;\n\
+    float broken=step(0.7,noise3d(p*4.0+vec3(stripePos,0,0)));\n\
+    float stripeAmt=smoothstep(-widthVar,widthVar,stripe)*(1.0-broken*0.6);\n\
+    col=mix(base,u_patternColor2*0.1,stripeAmt*0.95);\n\
   }else if(pt==5){\n\
     float t=local.y*0.5+0.5;\n\
-    col=mix(u_patternColor1,u_patternColor2,t);\n\
-    float spots=fbm(p*u_patternScale);\n\
-    col=mix(col,u_patternColor2*0.2,step(u_patternThreshold,spots));\n\
+    col=mix(u_patternColor1,u_patternColor2*0.9,t);\n\
+    float n1=noise3d(p*u_patternScale);\n\
+    float n2=noise3d(p*u_patternScale*1.3+vec3(5.2,1.3,2.8));\n\
+    float rosette=smoothstep(0.45,0.55,n1)*smoothstep(0.3,0.5,n2);\n\
+    float ring=abs(n1-0.5)<0.12?1.0:0.0;\n\
+    ring*=smoothstep(0.35,0.5,n2);\n\
+    col=mix(col,u_patternColor2*0.15,rosette*0.9);\n\
+    col=mix(col,u_patternColor2*0.08,ring*0.7);\n\
+  }else if(pt==6){\n\
+    float t=local.y*0.5+0.5;\n\
+    vec3 base=mix(u_patternColor1*0.9,u_patternColor2*0.7,t);\n\
+    float stripe=sin(local.z*3.14159*u_patternFreq*1.5);\n\
+    float broken=step(0.55,noise3d(p*6.0));\n\
+    float mackerel=smoothstep(-0.1,0.1,stripe)*(1.0-broken*0.8);\n\
+    col=mix(base,u_patternColor2*0.2,mackerel*0.85);\n\
   }\n\
   float fres=pow(1.0-max(0.0,dot(n,-rd)),3.0);\n\
   col+=vec3(1.0)*fres*0.08;\n\
