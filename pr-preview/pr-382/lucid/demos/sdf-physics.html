@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>SDF Physics Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      background: #0d0d1a;
+      color: #fff;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #container {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #ui {
+      position: absolute;
+      top: env(safe-area-inset-top, 10px);
+      left: env(safe-area-inset-left, 10px);
+      right: env(safe-area-inset-right, 10px);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      padding: 10px;
+    }
+
+    #ui > * { pointer-events: auto; }
+
+    #info {
+      background: rgba(0,0,0,0.7);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    #info h1 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    #stats {
+      opacity: 0.7;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    #controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(60, 60, 80, 0.8);
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    button:active {
+      background: rgba(80, 80, 100, 0.9);
+      transform: scale(0.95);
+    }
+
+    #hint {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="canvas-container">
+      <canvas id="canvas"></canvas>
+      <div id="ui">
+        <div id="info">
+          <h1>SDF Physics</h1>
+          <div>Balls: <span id="ball-count">3</span></div>
+          <div id="stats">FPS: <span id="fps">60</span></div>
+        </div>
+        <div id="controls">
+          <button id="btn-add" title="Add ball">+</button>
+          <button id="btn-reset" title="Reset">↺</button>
+        </div>
+      </div>
+      <div id="hint">Tap canvas to add balls</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { PhysicsScene } from '../core/physics/physics-scene.js';
+
+    const canvas = document.getElementById('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+
+    if (!gl) {
+      document.body.innerHTML = '<p style="padding:20px">WebGL not supported</p>';
+      throw new Error('WebGL not supported');
+    }
+
+    // Physics state
+    let physicsScene = null;
+    let sceneData = null;
+    let running = true;
+
+    // Timing
+    const FIXED_DT = 1 / 60;
+    let accumulator = 0;
+    let lastTime = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Camera
+    const camera = {
+      eye: [0, 1, 4],
+      target: [0, 0, 0],
+      fov: 60
+    };
+
+    // Load scene
+    async function loadScene() {
+      const resp = await fetch('../scenes/physics/bouncing-balls.json');
+      sceneData = await resp.json();
+      physicsScene = new PhysicsScene(sceneData);
+      updateBallCount();
+    }
+
+    function updateBallCount() {
+      const count = physicsScene.bodies.filter(b => !b.isStatic).length;
+      document.getElementById('ball-count').textContent = count;
+    }
+
+    // Shader sources
+    const vertexShaderSource = `#version 300 es
+      in vec2 a_position;
+      out vec2 v_uv;
+      void main() {
+        v_uv = a_position * 0.5 + 0.5;
+        gl_Position = vec4(a_position, 0, 1);
+      }
+    `;
+
+    // Generate fragment shader with current bodies
+    function generateFragmentShader() {
+      const bodies = physicsScene?.bodies || [];
+      const dynamicBodies = bodies.filter(b => !b.isStatic);
+
+      // Generate uniforms for each body position
+      let uniformDecls = '';
+      let sdfCalls = '';
+
+      for (let i = 0; i < dynamicBodies.length; i++) {
+        uniformDecls += `uniform vec3 u_ball${i}_pos;\n`;
+        uniformDecls += `uniform vec3 u_ball${i}_color;\n`;
+      }
+
+      // Build SDF scene
+      sdfCalls = `
+        vec4 scene(vec3 p) {
+          // Ground plane
+          vec4 ground = vec4(p.y + 1.5, 0.4, 0.4, 0.45);
+          vec4 result = ground;
+      `;
+
+      for (let i = 0; i < dynamicBodies.length; i++) {
+        sdfCalls += `
+          {
+            float d = length(p - u_ball${i}_pos) - 0.25;
+            if (d < result.x) {
+              result = vec4(d, u_ball${i}_color);
+            }
+          }
+        `;
+      }
+
+      sdfCalls += `
+          return result;
+        }
+      `;
+
+      return `#version 300 es
+        precision highp float;
+
+        in vec2 v_uv;
+        out vec4 fragColor;
+
+        uniform vec2 u_resolution;
+        uniform vec3 u_camera_pos;
+        uniform vec3 u_camera_target;
+        uniform float u_fov;
+
+        ${uniformDecls}
+
+        ${sdfCalls}
+
+        vec3 calcNormal(vec3 p) {
+          const float h = 0.001;
+          vec2 k = vec2(1, -1);
+          return normalize(
+            k.xyy * scene(p + k.xyy * h).x +
+            k.yyx * scene(p + k.yyx * h).x +
+            k.yxy * scene(p + k.yxy * h).x +
+            k.xxx * scene(p + k.xxx * h).x
+          );
+        }
+
+        void main() {
+          vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+          // Camera setup
+          vec3 ro = u_camera_pos;
+          vec3 ta = u_camera_target;
+          vec3 ww = normalize(ta - ro);
+          vec3 uu = normalize(cross(ww, vec3(0, 1, 0)));
+          vec3 vv = cross(uu, ww);
+
+          float fovRad = u_fov * 3.14159 / 180.0;
+          vec3 rd = normalize(uv.x * uu + uv.y * vv + (1.0 / tan(fovRad * 0.5)) * ww);
+
+          // Raymarching
+          float t = 0.0;
+          vec4 hit = vec4(1000.0, 0.0, 0.0, 0.0);
+
+          for (int i = 0; i < 80; i++) {
+            vec3 p = ro + rd * t;
+            vec4 d = scene(p);
+            if (d.x < 0.001) {
+              hit = vec4(t, d.yzw);
+              break;
+            }
+            if (t > 20.0) break;
+            t += d.x;
+          }
+
+          // Shading
+          vec3 col = vec3(0.05, 0.05, 0.1); // Background
+
+          if (hit.x < 20.0) {
+            vec3 p = ro + rd * hit.x;
+            vec3 n = calcNormal(p);
+            vec3 baseColor = hit.yzw;
+
+            // Simple lighting
+            vec3 lightDir = normalize(vec3(1, 2, 1));
+            float diff = max(dot(n, lightDir), 0.0);
+            float amb = 0.3;
+
+            col = baseColor * (amb + diff * 0.7);
+
+            // Simple specular
+            vec3 h = normalize(lightDir - rd);
+            float spec = pow(max(dot(n, h), 0.0), 32.0);
+            col += vec3(0.3) * spec;
+          }
+
+          // Gamma correction
+          col = pow(col, vec3(1.0 / 2.2));
+
+          fragColor = vec4(col, 1.0);
+        }
+      `;
+    }
+
+    // Shader compilation
+    function compileShader(source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('Shader error:', gl.getShaderInfoLog(shader));
+        return null;
+      }
+      return shader;
+    }
+
+    let program = null;
+    let uniforms = {};
+
+    function rebuildShader() {
+      if (program) gl.deleteProgram(program);
+
+      const vs = compileShader(vertexShaderSource, gl.VERTEX_SHADER);
+      const fs = compileShader(generateFragmentShader(), gl.FRAGMENT_SHADER);
+
+      if (!vs || !fs) return false;
+
+      program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program error:', gl.getProgramInfoLog(program));
+        return false;
+      }
+
+      gl.useProgram(program);
+
+      // Get uniform locations
+      uniforms = {
+        resolution: gl.getUniformLocation(program, 'u_resolution'),
+        cameraPos: gl.getUniformLocation(program, 'u_camera_pos'),
+        cameraTarget: gl.getUniformLocation(program, 'u_camera_target'),
+        fov: gl.getUniformLocation(program, 'u_fov')
+      };
+
+      const dynamicBodies = physicsScene?.bodies.filter(b => !b.isStatic) || [];
+      for (let i = 0; i < dynamicBodies.length; i++) {
+        uniforms[`ball${i}_pos`] = gl.getUniformLocation(program, `u_ball${i}_pos`);
+        uniforms[`ball${i}_color`] = gl.getUniformLocation(program, `u_ball${i}_color`);
+      }
+
+      return true;
+    }
+
+    // Fullscreen quad
+    function setupGeometry() {
+      const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      const posLoc = gl.getAttribLocation(program, 'a_position');
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    function render() {
+      if (!program || !physicsScene) return;
+
+      gl.useProgram(program);
+
+      // Set uniforms
+      gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
+      gl.uniform3fv(uniforms.cameraPos, camera.eye);
+      gl.uniform3fv(uniforms.cameraTarget, camera.target);
+      gl.uniform1f(uniforms.fov, camera.fov);
+
+      // Update ball positions from physics
+      const dynamicBodies = physicsScene.bodies.filter(b => !b.isStatic);
+      const colors = [
+        [1.0, 0.3, 0.3],
+        [0.3, 1.0, 0.4],
+        [0.3, 0.5, 1.0],
+        [1.0, 0.8, 0.2],
+        [0.8, 0.3, 1.0],
+        [0.3, 1.0, 1.0]
+      ];
+
+      for (let i = 0; i < dynamicBodies.length; i++) {
+        const body = dynamicBodies[i];
+        if (uniforms[`ball${i}_pos`]) {
+          gl.uniform3fv(uniforms[`ball${i}_pos`], body.position);
+          gl.uniform3fv(uniforms[`ball${i}_color`], colors[i % colors.length]);
+        }
+      }
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function gameLoop(time) {
+      if (!running) return;
+
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+
+      // Fixed timestep physics
+      accumulator += dt;
+      while (accumulator >= FIXED_DT) {
+        physicsScene?.step(FIXED_DT);
+        accumulator -= FIXED_DT;
+      }
+
+      render();
+
+      // FPS counter
+      frameCount++;
+      if (time - lastFpsUpdate > 1000) {
+        document.getElementById('fps').textContent = frameCount;
+        frameCount = 0;
+        lastFpsUpdate = time;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Add ball at click position
+    function addBall(x, y) {
+      if (!physicsScene) return;
+
+      // Convert screen coords to world coords (approximate)
+      const rect = canvas.getBoundingClientRect();
+      const nx = (x - rect.left) / rect.width * 2 - 1;
+      const ny = -((y - rect.top) / rect.height * 2 - 1);
+
+      const worldX = nx * 2;
+      const worldY = ny * 2 + 1;
+
+      physicsScene.addBody({
+        position: [worldX, worldY + 2, (Math.random() - 0.5) * 0.5],
+        velocity: [0, 0, 0],
+        mass: 0.8 + Math.random() * 0.4,
+        restitution: 0.6 + Math.random() * 0.3,
+        radius: 0.25
+      });
+
+      // Rebuild shader to include new ball
+      rebuildShader();
+      setupGeometry();
+      updateBallCount();
+
+      // Hide hint after first interaction
+      document.getElementById('hint').classList.add('hidden');
+    }
+
+    function reset() {
+      loadScene().then(() => {
+        rebuildShader();
+        setupGeometry();
+      });
+    }
+
+    // Event listeners
+    canvas.addEventListener('click', (e) => addBall(e.clientX, e.clientY));
+    canvas.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        addBall(touch.clientX, touch.clientY);
+      }
+    });
+
+    document.getElementById('btn-add').addEventListener('click', () => {
+      addBall(window.innerWidth / 2, window.innerHeight / 3);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', reset);
+
+    window.addEventListener('resize', resize);
+
+    // Initialize
+    async function init() {
+      resize();
+      await loadScene();
+
+      if (!rebuildShader()) {
+        document.body.innerHTML = '<p style="padding:20px">Shader compilation failed</p>';
+        return;
+      }
+
+      setupGeometry();
+      requestAnimationFrame(gameLoop);
+    }
+
+    init();
+  </script>
+</body>
+</html>
