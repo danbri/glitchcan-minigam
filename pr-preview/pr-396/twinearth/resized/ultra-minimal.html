@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Minimal Earth</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #status { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            color: white; 
+            font-family: monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading...</div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        const status = document.getElementById('status');
+        status.textContent = "Setting up scene...";
+        
+        // Simple Earth with just one texture
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // Light
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 3, 5);
+        scene.add(light);
+        
+        // Ambient light
+        const ambient = new THREE.AmbientLight(0x333333);
+        scene.add(ambient);
+        
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        camera.position.z = 3;
+        
+        // Log for debugging
+        console.log("Scene, camera, and lights set up");
+        
+        // For now, create a blue sphere to see if rendering works
+        const geometry = new THREE.SphereGeometry(1, 32, 32);
+        const material = new THREE.MeshPhongMaterial({ color: 0x2233ff });
+        const earth = new THREE.Mesh(geometry, material);
+        scene.add(earth);
+        
+        // Animation function (we'll start this immediately)
+        function animate() {
+            requestAnimationFrame(animate);
+            earth.rotation.y += 0.005;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // Start animation with the blue sphere
+        status.textContent = "Rendering blue sphere while loading texture...";
+        animate();
+        
+        // Now try to load the texture
+        status.textContent = "Loading texture...";
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            'color_map.jpg', // Using the texture we just copied to this directory
+            function(texture) {
+                status.textContent = "Texture loaded! Updating Earth...";
+                console.log("Texture loaded successfully");
+                
+                // Update the material with the loaded texture
+                earth.material.map = texture;
+                earth.material.needsUpdate = true;
+                
+                status.textContent = "Earth created successfully!";
+            },
+            function(xhr) {
+                if (xhr.lengthComputable) {
+                    const percentComplete = Math.floor((xhr.loaded / xhr.total) * 100);
+                    status.textContent = `Loading texture: ${percentComplete}%`;
+                    console.log(`Texture loading progress: ${percentComplete}%`);
+                }
+            },
+            function(error) {
+                status.textContent = "Error loading texture: " + error.message;
+                console.error("Error loading texture:", error);
+            }
+        );
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

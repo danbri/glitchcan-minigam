@@ -1,0 +1,60 @@
+{
+  "title": "Sunflower",
+  "subtitle": "Radial petals with layered center",
+  "version": "1.1",
+
+  "params": {
+    "petalCount": {
+      "value": 16,
+      "type": "scalar",
+      "min": 6,
+      "max": 24,
+      "description": "Number of petals"
+    },
+    "petalColor": {
+      "value": [1.0, 0.85, 0.1],
+      "type": "color3",
+      "description": "Petal color"
+    },
+    "centerColor": {
+      "value": [0.4, 0.25, 0.1],
+      "type": "color3",
+      "description": "Flower center color"
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "type": "smoothUnion",
+        "k": 0.15,
+        "children": [
+          { "type": "sphere", "params": { "r": 0.35, "color": {"var": "centerColor"} } },
+          { "type": "sphere", "params": { "r": 0.25, "color": [0.6, 0.4, 0.15] }, "transform": { "translate": [0, 0.15, 0] } }
+        ]
+      },
+      {
+        "type": "radial",
+        "count": {"var": "petalCount"},
+        "axis": "z",
+        "child": {
+          "type": "smoothUnion",
+          "k": 0.1,
+          "children": [
+            {
+              "type": "sphere",
+              "params": { "r": 0.18, "color": {"var": "petalColor"} },
+              "transform": { "translate": [0.5, 0, 0] }
+            },
+            {
+              "type": "sphere",
+              "params": { "r": 0.12, "color": [1.0, 0.75, 0.0] },
+              "transform": { "translate": [0.7, 0, 0] }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
