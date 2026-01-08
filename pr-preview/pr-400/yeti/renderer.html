@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yeti Renderer (Lucid-based)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; font-size: 12px; }
+    #status.error { background: rgba(200,0,0,0.7); }
+    #animal-select { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px; }
+    #animal-select select { font-size: 16px; padding: 8px 16px; border-radius: 4px; background: #21262d; color: #e6edf3; border: 1px solid #30363d; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="status">Loading...</div>
+  <div id="animal-select">
+    <select id="animals">
+      <option value="test-simple">🧪 Test Simple</option>
+      <option value="dog">🐕 Dog</option>
+    </select>
+  </div>
+
+<script type="module">
+import { loadJsonScene } from '../lucid/core/json-loader.js';
+import { generateGlslFromJson } from '../lucid/core/json-codegen.js';
+import { SimpleRaymarcher } from '../lucid/ui/raymarcher.js';
+
+const status = document.getElementById('status');
+const canvas = document.getElementById('canvas');
+const select = document.getElementById('animals');
+
+let raymarcher = null;
+let quadrupedDef = null;
+
+async function init() {
+  try {
+    status.textContent = 'Loading quadruped def...';
+
+    // Load the shared quadruped definition
+    const defResponse = await fetch('./defs/quadruped.json');
+    if (!defResponse.ok) throw new Error('Failed to load quadruped.json');
+    quadrupedDef = await defResponse.json();
+
+    // Initialize raymarcher
+    raymarcher = new SimpleRaymarcher(canvas);
+    raymarcher.resize();
+    window.addEventListener('resize', () => raymarcher.resize());
+
+    // Setup orbit controls
+    setupControls();
+
+    // Load initial animal
+    await loadAnimal('test-simple');
+
+    // Start render loop
+    requestAnimationFrame(render);
+
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+    status.classList.add('error');
+    console.error(err);
+  }
+}
+
+async function loadAnimal(name) {
+  try {
+    status.textContent = `Loading ${name}...`;
+
+    // Load animal JSON
+    const animalResponse = await fetch(`./animals/${name}.json`);
+    if (!animalResponse.ok) throw new Error(`Failed to load ${name}.json`);
+    const animalJson = await animalResponse.json();
+
+    // Use animal's own defs, or merge quadruped def if animal refs it
+    const sceneJson = {
+      version: "1.0",
+      defs: animalJson.defs || {},
+      root: animalJson.root,
+      camera: animalJson.camera || { distance: 6, phi: 0.3, theta: 0.25, target: [0, 0, 0] }
+    };
+
+    // If animal references quadruped and doesn't define it, add from shared def
+    if (animalJson.root?.id === 'quadruped' && !sceneJson.defs.quadruped && quadrupedDef) {
+      sceneJson.defs.quadruped = quadrupedDef.quadruped;
+    }
+
+    console.log('Scene JSON:', sceneJson);
+
+    // Process through Lucid's loader
+    const scene = loadJsonScene(sceneJson);
+    console.log('Loaded scene:', scene);
+
+    // Generate GLSL
+    const glsl = generateGlslFromJson(scene);
+    console.log('Generated GLSL length:', glsl.length);
+    console.log('GLSL preview:', glsl.slice(0, 500));
+
+    // Update raymarcher
+    raymarcher.updateScene(glsl, {}, null, sceneJson);
+
+    // Apply camera settings
+    if (animalJson.camera) {
+      raymarcher.camera.distance = animalJson.camera.distance || 6;
+      raymarcher.camera.phi = animalJson.camera.phi || 0.3;
+      raymarcher.camera.theta = animalJson.camera.theta || 0.25;
+      if (animalJson.camera.target) {
+        raymarcher.camera.target = animalJson.camera.target;
+      }
+    }
+
+    status.textContent = `${animalJson.emoji || '🐾'} ${animalJson.name || name}`;
+
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+    status.classList.add('error');
+    console.error(err);
+  }
+}
+
+function setupControls() {
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = (e.clientX - lastX) * 0.01;
+    const dy = (e.clientY - lastY) * 0.01;
+    raymarcher.camera.theta += dx;
+    raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, raymarcher.camera.phi - dy));
+    lastX = e.clientX;
+    lastY = e.clientY;
+  });
+
+  canvas.addEventListener('pointerup', () => { dragging = false; });
+  canvas.addEventListener('pointercancel', () => { dragging = false; });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    raymarcher.camera.distance = Math.max(2, Math.min(20, raymarcher.camera.distance + e.deltaY * 0.01));
+  }, { passive: false });
+
+  select.addEventListener('change', () => {
+    loadAnimal(select.value);
+  });
+}
+
+function render() {
+  raymarcher.render();
+  requestAnimationFrame(render);
+}
+
+init();
+</script>
+</body>
+</html>
