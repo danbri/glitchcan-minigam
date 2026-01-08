@@ -452,11 +452,14 @@ class YetiCreature extends HTMLElement {
   async init() {
     const canvas = this.shadowRoot.querySelector('canvas');
     const label = this.shadowRoot.querySelector('.label');
+    console.log('[yeti-creature] init', this.tagName, 'canvas:', !!canvas);
 
     try {
       const scene = this.closest('yeti-scene');
+      console.log('[yeti-creature] scene:', !!scene, 'isShared:', scene?.isShared);
       if (scene) {
         this.quadrupedDef = await scene.ready();
+        console.log('[yeti-creature] got def:', !!this.quadrupedDef);
       } else {
         const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
         const response = await fetch(defUrl);
@@ -475,8 +478,8 @@ class YetiCreature extends HTMLElement {
       this.startRenderLoop();
 
     } catch (err) {
-      label.textContent = err.message;
-      console.error('[yeti-creature]', err);
+      console.error('[yeti-creature]', err, err?.message, err?.stack);
+      if (label) label.textContent = err?.message || 'Error';
     }
   }
 
