@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yeti Creature Web Component Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 300;
+    }
+    h1 span { font-size: 1.5em; }
+    .intro {
+      max-width: 600px;
+      margin: 0 auto 40px;
+      text-align: center;
+      color: #8b949e;
+      line-height: 1.6;
+    }
+    code {
+      background: #161b22;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.9em;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .creature-card {
+      text-align: center;
+    }
+    .creature-card h3 {
+      margin-top: 10px;
+      font-weight: 400;
+    }
+    .code-example {
+      max-width: 700px;
+      margin: 40px auto;
+      background: #161b22;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .code-example h2 {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+    pre {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #c9d1d9;
+    }
+    .tag { color: #7ee787; }
+    .attr { color: #79c0ff; }
+    .string { color: #a5d6ff; }
+    .comment { color: #8b949e; }
+  </style>
+</head>
+<body>
+
+<h1><span>🦊</span> Yeti Creatures</h1>
+
+<p class="intro">
+  Embed 3D creatures anywhere with a simple web component.<br>
+  Drag to rotate, scroll to zoom.
+</p>
+
+<div class="gallery">
+  <div class="creature-card">
+    <yeti-creature src="animals/dog.json" width="350" height="280"></yeti-creature>
+    <h3>Dog</h3>
+  </div>
+
+  <div class="creature-card">
+    <yeti-creature src="animals/dog.json" width="350" height="280" spin="0.3"></yeti-creature>
+    <h3>Dog (auto-spin)</h3>
+  </div>
+</div>
+
+<div class="code-example">
+  <h2>Usage</h2>
+  <pre><span class="comment">&lt;!-- Import the component --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="string">"module"</span> <span class="attr">src</span>=<span class="string">"yeti-creature.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
+
+<span class="comment">&lt;!-- Use it anywhere --&gt;</span>
+<span class="tag">&lt;yeti-creature</span> <span class="attr">src</span>=<span class="string">"animals/dog.json"</span><span class="tag">&gt;&lt;/yeti-creature&gt;</span>
+
+<span class="comment">&lt;!-- With options --&gt;</span>
+<span class="tag">&lt;yeti-creature</span>
+  <span class="attr">src</span>=<span class="string">"animals/dog.json"</span>
+  <span class="attr">width</span>=<span class="string">"500"</span>
+  <span class="attr">height</span>=<span class="string">"400"</span>
+  <span class="attr">spin</span>=<span class="string">"0.5"</span>
+<span class="tag">&gt;&lt;/yeti-creature&gt;</span></pre>
+</div>
+
+<div class="code-example">
+  <h2>Attributes</h2>
+  <pre><span class="attr">src</span>     Path to animal JSON file
+<span class="attr">width</span>   Canvas width in pixels (default: 400)
+<span class="attr">height</span>  Canvas height in pixels (default: 300)
+<span class="attr">spin</span>    Auto-rotate speed (default: 0)</pre>
+</div>
+
+<script type="module" src="yeti-creature.js"></script>
+</body>
+</html>
