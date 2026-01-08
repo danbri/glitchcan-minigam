@@ -1,13 +1,14 @@
 /**
  * Yeti Creature Web Components
  *
- * Base component + species-specific components with defaults
+ * Usage with scene wrapper (recommended - loads def once):
+ *   <yeti-scene>
+ *     <yeti-dog></yeti-dog>
+ *     <yeti-elephant color="pink"></yeti-elephant>
+ *   </yeti-scene>
  *
- * Usage:
- *   <yeti-creature body-radii="0.5,0.4,0.8" color="#8B4513"></yeti-creature>
+ * Standalone (each loads def separately):
  *   <yeti-dog></yeti-dog>
- *   <yeti-dog color="white" tail-len="0.3"></yeti-dog>
- *   <yeti-elephant color="pink"></yeti-elephant>
  */
 
 import { loadJsonScene } from '../lucid/core/json-loader.js';
@@ -93,11 +94,11 @@ const SPECIES_DEFAULTS = {
     rumpPos: [0, 0, -1.1],
     headRadii: [0.5, 0.48, 0.45],
     headPos: [0, 0.3, 1.4],
-    snoutRadii: [0.12, 0.1, 0.5],  // trunk base
+    snoutRadii: [0.12, 0.1, 0.5],
     snoutPos: [0, -0.1, 1.9],
     noseSize: 0.08,
     nosePos: [0, -0.3, 2.3],
-    earRadii: [0.5, 0.6, 0.08],   // big flat ears
+    earRadii: [0.5, 0.6, 0.08],
     earPos: [0.55, 0.35, 1.2],
     earPosR: [-0.55, 0.35, 1.2],
     earRotate: [0, 0.3, 0],
@@ -153,43 +154,26 @@ const SPECIES_DEFAULTS = {
 };
 
 // ============================================================
-// Param parsing utilities
+// Utilities
 // ============================================================
 
 function parseColor(value) {
   if (!value) return null;
-
-  // Handle hex colors
   if (value.startsWith('#')) {
     const hex = value.slice(1);
-    const r = parseInt(hex.slice(0, 2), 16) / 255;
-    const g = parseInt(hex.slice(2, 4), 16) / 255;
-    const b = parseInt(hex.slice(4, 6), 16) / 255;
-    return [r, g, b];
+    return [
+      parseInt(hex.slice(0, 2), 16) / 255,
+      parseInt(hex.slice(2, 4), 16) / 255,
+      parseInt(hex.slice(4, 6), 16) / 255
+    ];
   }
-
-  // Handle named colors
   const named = {
-    pink: [1.0, 0.75, 0.8],
-    white: [0.95, 0.95, 0.95],
-    black: [0.1, 0.1, 0.1],
-    brown: [0.55, 0.35, 0.2],
-    grey: [0.5, 0.5, 0.5],
-    gray: [0.5, 0.5, 0.5],
-    golden: [0.85, 0.65, 0.3],
-    cream: [0.95, 0.9, 0.8],
-    orange: [0.9, 0.5, 0.2],
-    spotted: [0.9, 0.85, 0.8]  // base for spotted pattern
+    pink: [1.0, 0.75, 0.8], white: [0.95, 0.95, 0.95], black: [0.1, 0.1, 0.1],
+    brown: [0.55, 0.35, 0.2], grey: [0.5, 0.5, 0.5], gray: [0.5, 0.5, 0.5],
+    golden: [0.85, 0.65, 0.3], cream: [0.95, 0.9, 0.8], orange: [0.9, 0.5, 0.2]
   };
-  if (named[value.toLowerCase()]) {
-    return named[value.toLowerCase()];
-  }
-
-  // Handle "r,g,b" format (0-1 range)
-  if (value.includes(',')) {
-    return value.split(',').map(v => parseFloat(v.trim()));
-  }
-
+  if (named[value.toLowerCase()]) return named[value.toLowerCase()];
+  if (value.includes(',')) return value.split(',').map(v => parseFloat(v.trim()));
   return null;
 }
 
@@ -199,29 +183,64 @@ function parseVec3(value) {
 }
 
 function parseNumber(value) {
-  if (!value) return null;
-  return parseFloat(value);
+  return value ? parseFloat(value) : null;
 }
 
-// Convert kebab-case attribute to camelCase param name
 function kebabToCamel(str) {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
+// Get base path for loading defs
+function getBasePath() {
+  return import.meta.url.substring(0, import.meta.url.lastIndexOf('/') + 1);
+}
+
 // ============================================================
-// Base YetiCreature class
+// YetiScene - Container that loads def once
+// ============================================================
+
+class YetiScene extends HTMLElement {
+  constructor() {
+    super();
+    this.quadrupedDef = null;
+    this._ready = null;
+  }
+
+  connectedCallback() {
+    this._ready = this.loadDef();
+  }
+
+  async loadDef() {
+    try {
+      const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
+      const response = await fetch(defUrl);
+      if (!response.ok) throw new Error('Failed to load quadruped.json');
+      this.quadrupedDef = await response.json();
+
+      // Notify children that def is ready
+      this.dispatchEvent(new CustomEvent('yeti-def-ready', { bubbles: false }));
+    } catch (err) {
+      console.error('[yeti-scene]', err);
+    }
+  }
+
+  // Wait for def to be loaded
+  async ready() {
+    await this._ready;
+    return this.quadrupedDef;
+  }
+}
+
+// ============================================================
+// YetiCreature - Base creature component
 // ============================================================
 
 class YetiCreature extends HTMLElement {
   static get observedAttributes() {
     return [
-      'width', 'height', 'spin',
-      // Quadruped params (kebab-case)
-      'color', 'smooth',
-      'body-radii', 'rump-radii', 'rump-pos',
-      'head-radii', 'head-pos',
-      'snout-radii', 'snout-pos',
-      'nose-size', 'nose-pos',
+      'width', 'height', 'spin', 'color', 'smooth',
+      'body-radii', 'rump-radii', 'rump-pos', 'head-radii', 'head-pos',
+      'snout-radii', 'snout-pos', 'nose-size', 'nose-pos',
       'ear-radii', 'ear-pos', 'ear-pos-r', 'ear-rotate',
       'leg-thigh-r', 'leg-ankle-r',
       'front-leg-h', 'front-leg-pos', 'front-leg-pos-r', 'front-leg-rot',
@@ -236,13 +255,9 @@ class YetiCreature extends HTMLElement {
     this.raymarcher = null;
     this.quadrupedDef = null;
     this.animationId = null;
-    this._species = null;  // Set by subclasses
   }
 
-  // Override in subclasses to set species
-  get species() {
-    return this._species || 'dog';
-  }
+  get species() { return 'dog'; }
 
   connectedCallback() {
     this.render();
@@ -250,40 +265,21 @@ class YetiCreature extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-    }
+    if (this.animationId) cancelAnimationFrame(this.animationId);
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
-    if (oldVal !== newVal && this.raymarcher) {
-      this.updateCreature();
-    }
+    if (oldVal !== newVal && this.raymarcher) this.updateCreature();
   }
 
   render() {
     const width = this.getAttribute('width') || 400;
     const height = this.getAttribute('height') || 300;
-
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: inline-block; position: relative; }
-        canvas {
-          display: block;
-          border-radius: 8px;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        }
-        .label {
-          position: absolute;
-          bottom: 8px;
-          left: 8px;
-          font-family: system-ui, sans-serif;
-          font-size: 11px;
-          color: rgba(255,255,255,0.7);
-          background: rgba(0,0,0,0.5);
-          padding: 2px 6px;
-          border-radius: 4px;
-        }
+        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
       </style>
       <canvas width="${width}" height="${height}"></canvas>
       <div class="label"></div>
@@ -295,26 +291,30 @@ class YetiCreature extends HTMLElement {
     const label = this.shadowRoot.querySelector('.label');
 
     try {
-      // Load quadruped definition
-      const basePath = import.meta.url.substring(0, import.meta.url.lastIndexOf('/') + 1);
-      const defUrl = new URL('defs/quadruped.json', basePath).href;
-      const response = await fetch(defUrl);
-      if (!response.ok) throw new Error('Failed to load quadruped.json');
-      this.quadrupedDef = await response.json();
+      // Check for parent yeti-scene
+      const scene = this.closest('yeti-scene');
+      if (scene) {
+        // Wait for scene to load def
+        this.quadrupedDef = await scene.ready();
+      } else {
+        // Load def ourselves (standalone mode)
+        const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
+        const response = await fetch(defUrl);
+        if (!response.ok) throw new Error('Failed to load quadruped.json');
+        this.quadrupedDef = await response.json();
+      }
 
       // Initialize raymarcher
       this.raymarcher = new SimpleRaymarcher(canvas);
       this.raymarcher.resize();
       this.setupControls(canvas);
 
-      // Build and render creature
+      // Build and render
       await this.updateCreature();
 
-      // Update label
       const defaults = SPECIES_DEFAULTS[this.species] || SPECIES_DEFAULTS.dog;
       label.textContent = `${defaults.emoji} ${defaults.name}`;
 
-      // Start render loop
       this.startRenderLoop();
 
     } catch (err) {
@@ -323,44 +323,28 @@ class YetiCreature extends HTMLElement {
     }
   }
 
-  // Build params from species defaults + attribute overrides
   buildParams() {
     const defaults = SPECIES_DEFAULTS[this.species] || SPECIES_DEFAULTS.dog;
     const params = { ...defaults };
 
-    // Override with attributes
     for (const attr of this.getAttributeNames()) {
       const value = this.getAttribute(attr);
       if (!value) continue;
-
       const paramName = kebabToCamel(attr);
 
-      // Special handling for color
       if (attr === 'color') {
         const parsed = parseColor(value);
         if (parsed) params.color = parsed;
-        continue;
-      }
-
-      // Vec3 params
-      if (paramName.endsWith('Radii') || paramName.endsWith('Pos') ||
-          paramName.endsWith('PosR') || paramName.endsWith('Rot') ||
-          paramName === 'earRotate' || paramName === 'frontLegRot' ||
-          paramName === 'backLegRot' || paramName === 'tailRot') {
+      } else if (paramName.endsWith('Radii') || paramName.endsWith('Pos') ||
+                 paramName.endsWith('PosR') || paramName.endsWith('Rot') ||
+                 paramName === 'earRotate') {
         const parsed = parseVec3(value);
         if (parsed) params[paramName] = parsed;
-        continue;
-      }
-
-      // Number params
-      const numParams = ['smooth', 'noseSize', 'legThighR', 'legAnkleR',
-                         'frontLegH', 'backLegH', 'tailLen', 'tailR'];
-      if (numParams.includes(paramName)) {
+      } else if (['smooth', 'noseSize', 'legThighR', 'legAnkleR', 'frontLegH', 'backLegH', 'tailLen', 'tailR'].includes(paramName)) {
         const parsed = parseNumber(value);
         if (parsed !== null) params[paramName] = parsed;
       }
     }
-
     return params;
   }
 
@@ -368,7 +352,6 @@ class YetiCreature extends HTMLElement {
     if (!this.raymarcher || !this.quadrupedDef) return;
 
     const params = this.buildParams();
-
     const sceneJson = {
       version: "1.0",
       defs: { quadruped: this.quadrupedDef.quadruped },
@@ -376,55 +359,38 @@ class YetiCreature extends HTMLElement {
       camera: { distance: 6, phi: 0.3, theta: 0.25, target: [0, 0, 0] }
     };
 
-    // Adjust camera for larger animals
-    if (this.species === 'elephant') {
-      sceneJson.camera.distance = 10;
-    } else if (this.species === 'horse') {
-      sceneJson.camera.distance = 8;
-    }
+    if (this.species === 'elephant') sceneJson.camera.distance = 10;
+    else if (this.species === 'horse') sceneJson.camera.distance = 8;
 
     const scene = loadJsonScene(sceneJson);
     const glsl = generateGlslFromJson(scene);
     this.raymarcher.updateScene(glsl, {}, null, sceneJson);
-
     Object.assign(this.raymarcher.camera, sceneJson.camera);
   }
 
   setupControls(canvas) {
-    let dragging = false;
-    let lastX = 0, lastY = 0;
+    let dragging = false, lastX = 0, lastY = 0;
 
     canvas.addEventListener('pointerdown', (e) => {
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
       canvas.setPointerCapture(e.pointerId);
     });
-
     canvas.addEventListener('pointermove', (e) => {
       if (!dragging || !this.raymarcher) return;
-      const dx = (e.clientX - lastX) * 0.01;
-      const dy = (e.clientY - lastY) * 0.01;
-      this.raymarcher.camera.theta += dx;
-      this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, this.raymarcher.camera.phi - dy));
-      lastX = e.clientX;
-      lastY = e.clientY;
+      this.raymarcher.camera.theta += (e.clientX - lastX) * 0.01;
+      this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, this.raymarcher.camera.phi - (e.clientY - lastY) * 0.01));
+      lastX = e.clientX; lastY = e.clientY;
     });
-
     canvas.addEventListener('pointerup', () => { dragging = false; });
     canvas.addEventListener('pointercancel', () => { dragging = false; });
-
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (!this.raymarcher) return;
-      this.raymarcher.camera.distance = Math.max(2, Math.min(20,
-        this.raymarcher.camera.distance + e.deltaY * 0.01));
+      if (this.raymarcher) this.raymarcher.camera.distance = Math.max(2, Math.min(20, this.raymarcher.camera.distance + e.deltaY * 0.01));
     }, { passive: false });
   }
 
   startRenderLoop() {
     const spin = parseFloat(this.getAttribute('spin')) || 0;
-
     const render = () => {
       if (this.raymarcher) {
         if (spin) this.raymarcher.camera.theta += spin * 0.01;
@@ -440,30 +406,20 @@ class YetiCreature extends HTMLElement {
 // Species-specific components
 // ============================================================
 
-class YetiDog extends YetiCreature {
-  get species() { return 'dog'; }
-}
-
-class YetiCat extends YetiCreature {
-  get species() { return 'cat'; }
-}
-
-class YetiElephant extends YetiCreature {
-  get species() { return 'elephant'; }
-}
-
-class YetiHorse extends YetiCreature {
-  get species() { return 'horse'; }
-}
+class YetiDog extends YetiCreature { get species() { return 'dog'; } }
+class YetiCat extends YetiCreature { get species() { return 'cat'; } }
+class YetiElephant extends YetiCreature { get species() { return 'elephant'; } }
+class YetiHorse extends YetiCreature { get species() { return 'horse'; } }
 
 // ============================================================
-// Register all components
+// Register components
 // ============================================================
 
+customElements.define('yeti-scene', YetiScene);
 customElements.define('yeti-creature', YetiCreature);
 customElements.define('yeti-dog', YetiDog);
 customElements.define('yeti-cat', YetiCat);
 customElements.define('yeti-elephant', YetiElephant);
 customElements.define('yeti-horse', YetiHorse);
 
-export { YetiCreature, YetiDog, YetiCat, YetiElephant, YetiHorse, SPECIES_DEFAULTS };
+export { YetiScene, YetiCreature, YetiDog, YetiCat, YetiElephant, YetiHorse, SPECIES_DEFAULTS };

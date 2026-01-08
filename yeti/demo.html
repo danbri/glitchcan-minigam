@@ -86,6 +86,7 @@
 </p>
 
 <!-- Default species -->
+<yeti-scene>
 <div class="gallery">
   <div class="creature-card">
     <yeti-dog width="280" height="220"></yeti-dog>
@@ -124,6 +125,7 @@
     <h3><code>color="orange" spin="0.3"</code></h3>
   </div>
 </div>
+</yeti-scene>
 
 <div class="section">
   <h2>Usage</h2>
@@ -131,16 +133,15 @@
 <pre><span class="comment">&lt;!-- Import the component --&gt;</span>
 <span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="string">"module"</span> <span class="attr">src</span>=<span class="string">"yeti-creature.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
 
-<span class="comment">&lt;!-- Species with defaults --&gt;</span>
-<span class="tag">&lt;yeti-dog&gt;&lt;/yeti-dog&gt;</span>
-<span class="tag">&lt;yeti-cat&gt;&lt;/yeti-cat&gt;</span>
-<span class="tag">&lt;yeti-horse&gt;&lt;/yeti-horse&gt;</span>
-<span class="tag">&lt;yeti-elephant&gt;&lt;/yeti-elephant&gt;</span>
+<span class="comment">&lt;!-- Wrap in yeti-scene (loads def once) --&gt;</span>
+<span class="tag">&lt;yeti-scene&gt;</span>
+  <span class="tag">&lt;yeti-dog&gt;&lt;/yeti-dog&gt;</span>
+  <span class="tag">&lt;yeti-cat&gt;&lt;/yeti-cat&gt;</span>
+  <span class="tag">&lt;yeti-elephant</span> <span class="attr">color</span>=<span class="string">"pink"</span><span class="tag">&gt;&lt;/yeti-elephant&gt;</span>
+<span class="tag">&lt;/yeti-scene&gt;</span>
 
-<span class="comment">&lt;!-- Override with attributes --&gt;</span>
-<span class="tag">&lt;yeti-dog</span> <span class="attr">color</span>=<span class="string">"white"</span><span class="tag">&gt;&lt;/yeti-dog&gt;</span>
-<span class="tag">&lt;yeti-elephant</span> <span class="attr">color</span>=<span class="string">"pink"</span><span class="tag">&gt;&lt;/yeti-elephant&gt;</span>
-<span class="tag">&lt;yeti-cat</span> <span class="attr">color</span>=<span class="string">"#FF6600"</span> <span class="attr">spin</span>=<span class="string">"0.5"</span><span class="tag">&gt;&lt;/yeti-cat&gt;</span></pre>
+<span class="comment">&lt;!-- Or standalone (each loads def) --&gt;</span>
+<span class="tag">&lt;yeti-dog</span> <span class="attr">color</span>=<span class="string">"white"</span><span class="tag">&gt;&lt;/yeti-dog&gt;</span></pre>
   </div>
 </div>
 
