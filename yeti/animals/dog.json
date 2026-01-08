@@ -30,13 +30,13 @@
       "frontLegPosR": [-0.22, -0.55, 0.4],
       "frontLegRot": [0, 0, 0],
       "backLegH": 0.6,
-      "backLegPos": [0.22, -0.55, -0.5],
-      "backLegPosR": [-0.22, -0.55, -0.5],
+      "backLegPos": [0.22, -0.55, -0.8],
+      "backLegPosR": [-0.22, -0.55, -0.8],
       "backLegRot": [0.15, 0, 0],
-      "tailLen": 0.5,
-      "tailR": 0.06,
-      "tailPos": [0, 0.15, -1.35],
-      "tailRot": [-0.3, 0, 0]
+      "tailLen": 0.4,
+      "tailR": 0.05,
+      "tailPos": [0, 0.3, -1.25],
+      "tailRot": [-0.6, 0, 0]
     }
   },
 
