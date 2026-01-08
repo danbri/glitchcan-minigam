@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INK Knot Reachability Tester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        #results {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr.unreachable {
+            background-color: #ffecec;
+        }
+        tr.reachable {
+            background-color: #e7f9e7;
+        }
+        .highlight {
+            background-color: #fffde7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        #ink-file-input {
+            margin-bottom: 20px;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .summary {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        #visualization {
+            margin-top: 30px;
+        }
+        svg {
+            border: 1px solid #ddd;
+            background-color: white;
+        }
+        .node {
+            fill: #fff;
+            stroke: #3498db;
+            stroke-width: 2px;
+        }
+        .node-unreachable {
+            fill: #ffecec;
+            stroke: #e74c3c;
+        }
+        .node-start {
+            fill: #e7f9e7;
+            stroke: #27ae60;
+        }
+        .link {
+            stroke: #95a5a6;
+            stroke-width: 1.5px;
+            fill: none;
+        }
+        .legend {
+            margin-top: 10px;
+            display: flex;
+            gap: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>INK Knot Reachability Tester</h1>
+    
+    <p>This tool analyzes INK story files to identify unreachable "knots" (story sections) by 
+        simulating all possible paths through the story.</p>
+    
+    <div>
+        <h2>Enter INK File URL:</h2>
+        <input type="text" id="ink-file-input" placeholder="Enter URL to .ink file" value="riverbend.ink">
+        <button id="analyze-btn">Analyze Reachability</button>
+    </div>
+    
+    <div id="results">
+        <p>Click "Analyze Reachability" to find unreachable knots in your INK story.</p>
+    </div>
+
+    <div id="visualization">
+        <h2>Story Graph Visualization</h2>
+        <div>
+            <svg width="900" height="600" id="graph-svg"></svg>
+        </div>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e7f9e7;"></div>
+                <span>Starting Knot</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #fff;"></div>
+                <span>Reachable Knot</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ffecec;"></div>
+                <span>Unreachable Knot</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analyze-btn').addEventListener('click', analyzeINKFile);
+
+        async function analyzeINKFile() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Analyzing INK file...</p>';
+            
+            const inkFileUrl = document.getElementById('ink-file-input').value.trim();
+            if (!inkFileUrl) {
+                resultsDiv.innerHTML = '<p class="error">Please enter a URL to an INK file</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(inkFileUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load story: ${response.statusText}`);
+                }
+                
+                const inkContent = await response.text();
+                const analysis = analyzeReachability(inkContent);
+                displayResults(analysis);
+                visualizeStoryGraph(analysis);
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function analyzeReachability(inkContent) {
+            // Parse the ink content
+            const storyKnots = parseInkStory(inkContent);
+            
+            // Define the root knot
+            let rootKnot = findRootKnot(inkContent, storyKnots);
+            
+            // Track visited knots during traversal
+            const reachableKnots = new Set();
+            
+            // Perform depth-first traversal from root knot
+            traverseKnots(rootKnot, storyKnots, reachableKnots);
+            
+            // Find all knots that are unreachable
+            const unreachableKnots = [];
+            const allKnots = Object.keys(storyKnots);
+            
+            for (const knotName of allKnots) {
+                if (!reachableKnots.has(knotName)) {
+                    unreachableKnots.push(knotName);
+                }
+            }
+            
+            // Build the graph structure
+            const graph = {
+                nodes: [],
+                links: []
+            };
+            
+            // Add all knots as nodes
+            for (const knotName of allKnots) {
+                graph.nodes.push({
+                    id: knotName,
+                    reachable: reachableKnots.has(knotName),
+                    isRoot: knotName === rootKnot
+                });
+            }
+            
+            // Add connections between knots
+            for (const [knotName, knotData] of Object.entries(storyKnots)) {
+                for (const choice of knotData.choices) {
+                    // Only add links for valid targets
+                    if (storyKnots[choice.target]) {
+                        graph.links.push({
+                            source: knotName,
+                            target: choice.target,
+                            text: choice.text
+                        });
+                    }
+                }
+            }
+            
+            return {
+                rootKnot,
+                reachableKnots: Array.from(reachableKnots),
+                unreachableKnots,
+                totalKnots: allKnots.length,
+                storyKnots,
+                graph
+            };
+        }
+        
+        function traverseKnots(knotName, storyKnots, visitedKnots) {
+            // Mark current knot as visited
+            visitedKnots.add(knotName);
+            
+            // Get the knot data
+            const knot = storyKnots[knotName];
+            if (!knot) {
+                return; // Knot doesn't exist
+            }
+            
+            // Process each choice and follow its target
+            for (const choice of knot.choices) {
+                const targetKnot = choice.target;
+                
+                // Skip if this is 'END' or we've already visited this knot
+                if (targetKnot === 'END' || visitedKnots.has(targetKnot)) {
+                    continue;
+                }
+                
+                // Recursively traverse the target knot
+                traverseKnots(targetKnot, storyKnots, visitedKnots);
+            }
+        }
+        
+        function findRootKnot(content, storyKnots) {
+            // First check for an explicit starting point directive (-> knotname)
+            const lines = content.split(/\r?\n/);
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('->') && !trimmedLine.includes('[[')) {
+                    const startKnot = trimmedLine.replace('->', '').trim();
+                    if (storyKnots[startKnot]) {
+                        return startKnot;
+                    }
+                }
+            }
+            
+            // If no explicit start, check for 'intro' knot
+            if (storyKnots['intro']) {
+                return 'intro';
+            }
+            
+            // Use the first knot as a fallback
+            return Object.keys(storyKnots)[0];
+        }
+        
+        function parseInkStory(content) {
+            const storyKnots = {};
+            
+            // Split the content by lines
+            const lines = content.split(/\r?\n/);
+            let currentKnotName = '';
+            let currentKnotContent = [];
+            
+            for (const line of lines) {
+                // If this is a knot definition
+                if (line.trim().startsWith('===')) {
+                    // If we were already parsing a knot, save it
+                    if (currentKnotName) {
+                        if (!storyKnots[currentKnotName]) {
+                            storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                        }
+                        currentKnotContent = [];
+                    }
+                    
+                    // Extract the new knot name
+                    let knotNameRaw = line.trim();
+                    knotNameRaw = knotNameRaw.replace(/^===\s*/, '').replace(/\s*===$/, '').trim();
+                    
+                    // If there's still === in the string, it's likely a format like "knot_name ==="
+                    if (knotNameRaw.includes("===")) {
+                        knotNameRaw = knotNameRaw.split("===")[0].trim();
+                    }
+                    
+                    currentKnotName = knotNameRaw;
+                } 
+                // Otherwise, add to the current knot's content
+                else if (currentKnotName) {
+                    currentKnotContent.push(line);
+                }
+            }
+            
+            // Save the last knot
+            if (currentKnotName && currentKnotContent.length > 0) {
+                if (!storyKnots[currentKnotName]) {
+                    storyKnots[currentKnotName] = parseKnotContent(currentKnotContent);
+                }
+            }
+            
+            return storyKnots;
+        }
+        
+        function parseKnotContent(lines) {
+            const knot = {
+                text: [],
+                choices: [],
+                image: null
+            };
+            
+            // Process each line
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                // Skip empty lines and comments
+                if (!trimmedLine) continue;
+                
+                // Check for image tags
+                if (trimmedLine.includes("[[Image:")) {
+                    const imageMatch = trimmedLine.match(/\[\[Image:\s*(.*?)\s*\]\]/);
+                    if (imageMatch) {
+                        knot.image = imageMatch[1];
+                    }
+                }
+                // Check for choice tags
+                else if (trimmedLine.includes("[[") && trimmedLine.includes("]]") && trimmedLine.includes("->")) {
+                    const choiceMatch = trimmedLine.match(/\[\[(.*?)\]\]\s*->\s*(.*)/);
+                    if (choiceMatch) {
+                        const choiceText = choiceMatch[1];
+                        const target = choiceMatch[2].trim();
+                        knot.choices.push({ text: choiceText, target: target });
+                    }
+                }
+                // Check for direct divert (-> knot)
+                else if (trimmedLine.startsWith('->') && !trimmedLine.includes('[[')) {
+                    const target = trimmedLine.replace('->', '').trim();
+                    // Add as an invisible/automatic choice
+                    if (target && target !== 'END') {
+                        knot.choices.push({ text: '[Automatic divert]', target: target });
+                    }
+                }
+                // Regular text (excluding image tags and choices)
+                else if (!trimmedLine.startsWith('===')) {
+                    knot.text.push(trimmedLine);
+                }
+            }
+            
+            return knot;
+        }
+        
+        function displayResults(analysis) {
+            const { rootKnot, reachableKnots, unreachableKnots, totalKnots, storyKnots } = analysis;
+            
+            let html = `
+                <h2>Analysis Results</h2>
+                <p><strong>Starting Knot:</strong> ${rootKnot}</p>
+                <p class="summary">
+                    <span class="${unreachableKnots.length > 0 ? 'error' : 'success'}">
+                        Found ${unreachableKnots.length} unreachable knots out of ${totalKnots} total knots.
+                    </span>
+                </p>
+            `;
+            
+            // Display knot table
+            html += `
+                <h3>Knots Reachability</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Knot Name</th>
+                            <th>Reachable</th>
+                            <th>Choices</th>
+                            <th>Text Length</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Sort knots: First the rootKnot, then reachable, then unreachable
+            const allKnots = Object.keys(storyKnots).sort((a, b) => {
+                if (a === rootKnot) return -1;
+                if (b === rootKnot) return 1;
+                
+                const aReachable = reachableKnots.includes(a);
+                const bReachable = reachableKnots.includes(b);
+                
+                if (aReachable && !bReachable) return -1;
+                if (!aReachable && bReachable) return 1;
+                return a.localeCompare(b);
+            });
+            
+            for (const knotName of allKnots) {
+                const knot = storyKnots[knotName];
+                const isReachable = reachableKnots.includes(knotName);
+                const rowClass = isReachable ? 'reachable' : 'unreachable';
+                const status = isReachable ? '✅ Reachable' : '❌ Unreachable';
+                
+                html += `
+                    <tr class="${rowClass}">
+                        <td>${knotName === rootKnot ? '🏁 ' : ''}${knotName}</td>
+                        <td>${status}</td>
+                        <td>${knot.choices.length}</td>
+                        <td>${knot.text.length}</td>
+                    </tr>
+                `;
+            }
+            
+            html += `</tbody></table>`;
+            
+            // If there are unreachable knots, show details
+            if (unreachableKnots.length > 0) {
+                html += `
+                    <h3>Unreachable Knots Details</h3>
+                    <p>The following knots cannot be reached from the starting knot (${rootKnot}):</p>
+                    <ul>
+                `;
+                
+                for (const knotName of unreachableKnots) {
+                    html += `<li><span class="highlight">${knotName}</span></li>`;
+                }
+                
+                html += `</ul>`;
+                
+                // Add troubleshooting info
+                html += `
+                    <h3>Troubleshooting</h3>
+                    <p>Common reasons for unreachable knots:</p>
+                    <ul>
+                        <li>No choice or divert leads to the knot</li>
+                        <li>Typos in divert targets (-> <span class="highlight">knot_name</span>)</li>
+                        <li>Conditional branches that can never be satisfied</li>
+                        <li>Duplicate knot names (later definitions may override earlier ones)</li>
+                        <li>Intended as alternate entry points via game code</li>
+                    </ul>
+                `;
+            }
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function visualizeStoryGraph(analysis) {
+            const { graph } = analysis;
+            
+            // Simple force-directed graph layout
+            const svg = document.getElementById('graph-svg');
+            svg.innerHTML = '';
+            
+            const width = svg.width.baseVal.value;
+            const height = svg.height.baseVal.value;
+            
+            // Simulate forces to position nodes
+            const nodes = JSON.parse(JSON.stringify(graph.nodes));
+            const links = JSON.parse(JSON.stringify(graph.links));
+            
+            // Initialize random positions
+            nodes.forEach(node => {
+                node.x = Math.random() * width;
+                node.y = Math.random() * height;
+                node.vx = 0;
+                node.vy = 0;
+            });
+            
+            // Simple force-directed layout simulation
+            const iterations = 200;
+            const repulsiveForce = 2000;
+            const attractiveForce = 0.01;
+            const centeringForce = 0.01;
+            
+            for (let i = 0; i < iterations; i++) {
+                // Apply repulsive forces between all nodes
+                for (let a = 0; a < nodes.length; a++) {
+                    for (let b = a + 1; b < nodes.length; b++) {
+                        const dx = nodes[b].x - nodes[a].x;
+                        const dy = nodes[b].y - nodes[a].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const force = repulsiveForce / (distance * distance);
+                        
+                        const fx = (dx / distance) * force;
+                        const fy = (dy / distance) * force;
+                        
+                        nodes[a].vx -= fx;
+                        nodes[a].vy -= fy;
+                        nodes[b].vx += fx;
+                        nodes[b].vy += fy;
+                    }
+                }
+                
+                // Apply attractive forces along links
+                for (const link of links) {
+                    const source = nodes.find(n => n.id === link.source);
+                    const target = nodes.find(n => n.id === link.target);
+                    
+                    if (source && target) {
+                        const dx = target.x - source.x;
+                        const dy = target.y - source.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                        
+                        const fx = dx * attractiveForce;
+                        const fy = dy * attractiveForce;
+                        
+                        source.vx += fx;
+                        source.vy += fy;
+                        target.vx -= fx;
+                        target.vy -= fy;
+                    }
+                }
+                
+                // Apply centering force
+                for (const node of nodes) {
+                    const fx = (width/2 - node.x) * centeringForce;
+                    const fy = (height/2 - node.y) * centeringForce;
+                    
+                    node.vx += fx;
+                    node.vy += fy;
+                }
+                
+                // Update positions
+                for (const node of nodes) {
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    
+                    // Dampen velocities
+                    node.vx *= 0.9;
+                    node.vy *= 0.9;
+                    
+                    // Constrain to bounds
+                    node.x = Math.max(50, Math.min(width - 50, node.x));
+                    node.y = Math.max(50, Math.min(height - 50, node.y));
+                }
+            }
+            
+            // Render links
+            for (const link of links) {
+                const source = nodes.find(n => n.id === link.source);
+                const target = nodes.find(n => n.id === link.target);
+                
+                if (source && target) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    
+                    // Create a slightly curved path
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+                    
+                    path.setAttribute('d', `M${source.x},${source.y} A${dr},${dr} 0 0,1 ${target.x},${target.y}`);
+                    path.classList.add('link');
+                    
+                    svg.appendChild(path);
+                }
+            }
+            
+            // Render nodes
+            for (const node of nodes) {
+                // Create node group
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('transform', `translate(${node.x},${node.y})`);
+                
+                // Create node circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('r', '12');
+                
+                if (node.isRoot) {
+                    circle.classList.add('node-start');
+                } else if (node.reachable) {
+                    circle.classList.add('node');
+                } else {
+                    circle.classList.add('node-unreachable');
+                }
+                
+                g.appendChild(circle);
+                
+                // Create node label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = node.id;
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dy', '30');
+                text.setAttribute('font-size', '12px');
+                
+                g.appendChild(text);
+                svg.appendChild(g);
+                
+                // Add tooltip title
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = `${node.id} (${node.reachable ? 'Reachable' : 'Unreachable'})`;
+                g.appendChild(title);
+            }
+        }
+        
+        // Automatically run the analysis on load if URL is provided
+        window.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('ink-file-input').value.trim()) {
+                analyzeINKFile();
+            }
+        });
+    </script>
+</body>
+</html>

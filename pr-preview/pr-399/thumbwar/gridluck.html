@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset=utf-8><title>GridLuck v1.2.0</title>
+<style>body{margin:0;overflow:hidden;background:#000;color:#0f0;font:16px monospace}
+#teleportBtn, #zoomBtn {
+    padding: 8px 12px; background: #222; color: #0f0; border: 1px solid #050;
+    cursor: pointer; font-family: monospace; font-size: 14px; margin: 5px;
+}
+#teleportBtn:hover, #zoomBtn:hover { background: #333; border-color: #080; }
+#controlsDiv { position:fixed; bottom:10px; left:10px; display: flex; z-index: 50; }
+
+</style>
+</head>
+<body>
+<canvas id=game></canvas>
+<div id=ui style="position:fixed;top:0;left:0;padding:4px; z-index:50;"></div>
+<div id="controlsDiv">
+    <button id="teleportBtn">Teleport (T)</button>
+    <button id="zoomBtn">Hold Zoom (Z)</button>
+</div>
+
+<div id="gameOverScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); color:#ff0; font-family:monospace; font-size:28px; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; z-index:1000;">
+    <p id="gameOverMessageText" style="margin-bottom:20px;">GAME OVER</p>
+    <button id="playAgainBtn" style="padding:12px 25px; font-size:22px; background: #ff0; color:#000; border:2px solid #ff0; border-radius: 5px; cursor:pointer; font-family:monospace;">Play Again</button>
+</div>
+
+<script type="module">
+import { Game } from './gridluck-game.js';
+
+// Initialize the game when DOM is ready
+addEventListener('DOMContentLoaded', () => new Game());
+</script>
+</body></html>
