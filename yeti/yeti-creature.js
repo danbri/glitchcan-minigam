@@ -1,14 +1,18 @@
 /**
  * Yeti Creature Web Components
  *
- * Usage with scene wrapper (recommended - loads def once):
+ * Separate canvases (default):
  *   <yeti-scene>
  *     <yeti-dog></yeti-dog>
- *     <yeti-elephant color="pink"></yeti-elephant>
+ *     <yeti-cat></yeti-cat>
  *   </yeti-scene>
  *
- * Standalone (each loads def separately):
- *   <yeti-dog></yeti-dog>
+ * Shared 3D scene:
+ *   <yeti-scene mode="shared" width="800" height="400">
+ *     <yeti-dog pos="-3,0,0"></yeti-dog>
+ *     <yeti-cat pos="0,0,0"></yeti-cat>
+ *     <yeti-elephant pos="4,0,0" color="pink"></yeti-elephant>
+ *   </yeti-scene>
  */
 
 import { loadJsonScene } from '../lucid/core/json-loader.js';
@@ -16,7 +20,7 @@ import { generateGlslFromJson } from '../lucid/core/json-codegen.js';
 import { SimpleRaymarcher } from '../lucid/ui/raymarcher.js';
 
 // ============================================================
-// Species defaults - override quadruped params per species
+// Species defaults
 // ============================================================
 
 const SPECIES_DEFAULTS = {
@@ -190,24 +194,40 @@ function kebabToCamel(str) {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
-// Get base path for loading defs
 function getBasePath() {
   return import.meta.url.substring(0, import.meta.url.lastIndexOf('/') + 1);
 }
 
 // ============================================================
-// YetiScene - Container that loads def once
+// YetiScene - Container (shared or separate mode)
 // ============================================================
 
 class YetiScene extends HTMLElement {
+  static get observedAttributes() {
+    return ['mode', 'width', 'height', 'spin'];
+  }
+
   constructor() {
     super();
     this.quadrupedDef = null;
     this._ready = null;
+    this.raymarcher = null;
+    this.animationId = null;
+  }
+
+  get isShared() {
+    return this.getAttribute('mode') === 'shared';
   }
 
   connectedCallback() {
     this._ready = this.loadDef();
+    if (this.isShared) {
+      this.initSharedMode();
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.animationId) cancelAnimationFrame(this.animationId);
   }
 
   async loadDef() {
@@ -216,18 +236,140 @@ class YetiScene extends HTMLElement {
       const response = await fetch(defUrl);
       if (!response.ok) throw new Error('Failed to load quadruped.json');
       this.quadrupedDef = await response.json();
-
-      // Notify children that def is ready
       this.dispatchEvent(new CustomEvent('yeti-def-ready', { bubbles: false }));
+
+      // If shared mode, build combined scene after def loads
+      if (this.isShared && this.raymarcher) {
+        this.updateSharedScene();
+      }
     } catch (err) {
       console.error('[yeti-scene]', err);
     }
   }
 
-  // Wait for def to be loaded
   async ready() {
     await this._ready;
     return this.quadrupedDef;
+  }
+
+  initSharedMode() {
+    const width = this.getAttribute('width') || 800;
+    const height = this.getAttribute('height') || 400;
+
+    // Create shadow DOM with canvas
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; position: relative; }
+        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
+        ::slotted(*) { display: none; }
+      </style>
+      <canvas width="${width}" height="${height}"></canvas>
+      <div class="label"></div>
+      <slot></slot>
+    `;
+
+    const canvas = this.shadowRoot.querySelector('canvas');
+    this.raymarcher = new SimpleRaymarcher(canvas);
+    this.raymarcher.resize();
+    this.setupControls(canvas);
+
+    // Wait for children to be parsed, then build scene
+    requestAnimationFrame(() => {
+      if (this.quadrupedDef) this.updateSharedScene();
+    });
+
+    this.startRenderLoop();
+  }
+
+  // Collect all yeti-* children and build combined scene
+  updateSharedScene() {
+    if (!this.quadrupedDef || !this.raymarcher) return;
+
+    const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+    if (creatures.length === 0) return;
+
+    // Build children array with transforms
+    const children = [];
+    const labels = [];
+
+    creatures.forEach((el, i) => {
+      const species = el.species || 'dog';
+      const params = el.buildParams ? el.buildParams() : { ...SPECIES_DEFAULTS[species] };
+      const pos = parseVec3(el.getAttribute('pos')) || [0, 0, 0];
+
+      const defaults = SPECIES_DEFAULTS[species];
+      labels.push(defaults.emoji);
+
+      // Wrap quadruped ref in transform for positioning
+      children.push({
+        type: "ref",
+        id: "quadruped",
+        params,
+        transform: { translate: pos }
+      });
+    });
+
+    // Build combined scene with union of all creatures
+    const sceneJson = {
+      version: "1.0",
+      defs: { quadruped: this.quadrupedDef.quadruped },
+      root: children.length === 1
+        ? children[0]
+        : { type: "union", children },
+      camera: { distance: 12, phi: 0.35, theta: 0.3, target: [0, 0, 0] }
+    };
+
+    // Adjust camera based on creature count
+    const spread = creatures.length * 2;
+    sceneJson.camera.distance = Math.max(8, spread + 4);
+
+    try {
+      const scene = loadJsonScene(sceneJson);
+      const glsl = generateGlslFromJson(scene);
+      this.raymarcher.updateScene(glsl, {}, null, sceneJson);
+      Object.assign(this.raymarcher.camera, sceneJson.camera);
+
+      // Update label
+      const label = this.shadowRoot.querySelector('.label');
+      label.textContent = labels.join(' ');
+    } catch (err) {
+      console.error('[yeti-scene shared]', err);
+    }
+  }
+
+  setupControls(canvas) {
+    let dragging = false, lastX = 0, lastY = 0;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!dragging || !this.raymarcher) return;
+      this.raymarcher.camera.theta += (e.clientX - lastX) * 0.01;
+      this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, this.raymarcher.camera.phi - (e.clientY - lastY) * 0.01));
+      lastX = e.clientX; lastY = e.clientY;
+    });
+    canvas.addEventListener('pointerup', () => { dragging = false; });
+    canvas.addEventListener('pointercancel', () => { dragging = false; });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (this.raymarcher) this.raymarcher.camera.distance = Math.max(2, Math.min(30, this.raymarcher.camera.distance + e.deltaY * 0.01));
+    }, { passive: false });
+  }
+
+  startRenderLoop() {
+    const spin = parseFloat(this.getAttribute('spin')) || 0;
+    const render = () => {
+      if (this.raymarcher) {
+        if (spin) this.raymarcher.camera.theta += spin * 0.01;
+        this.raymarcher.render();
+      }
+      this.animationId = requestAnimationFrame(render);
+    };
+    render();
   }
 }
 
@@ -238,7 +380,7 @@ class YetiScene extends HTMLElement {
 class YetiCreature extends HTMLElement {
   static get observedAttributes() {
     return [
-      'width', 'height', 'spin', 'color', 'smooth',
+      'width', 'height', 'spin', 'color', 'smooth', 'pos',
       'body-radii', 'rump-radii', 'rump-pos', 'head-radii', 'head-pos',
       'snout-radii', 'snout-pos', 'nose-size', 'nose-pos',
       'ear-radii', 'ear-pos', 'ear-pos-r', 'ear-rotate',
@@ -260,6 +402,14 @@ class YetiCreature extends HTMLElement {
   get species() { return 'dog'; }
 
   connectedCallback() {
+    // Check if in shared scene - if so, don't render own canvas
+    const scene = this.closest('yeti-scene');
+    if (scene && scene.isShared) {
+      // Hide self, scene will render us
+      this.shadowRoot.innerHTML = '';
+      return;
+    }
+
     this.render();
     this.init();
   }
@@ -269,7 +419,15 @@ class YetiCreature extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
-    if (oldVal !== newVal && this.raymarcher) this.updateCreature();
+    if (oldVal !== newVal) {
+      // If in shared scene, tell scene to update
+      const scene = this.closest('yeti-scene');
+      if (scene && scene.isShared) {
+        scene.updateSharedScene();
+      } else if (this.raymarcher) {
+        this.updateCreature();
+      }
+    }
   }
 
   render() {
@@ -291,25 +449,19 @@ class YetiCreature extends HTMLElement {
     const label = this.shadowRoot.querySelector('.label');
 
     try {
-      // Check for parent yeti-scene
       const scene = this.closest('yeti-scene');
       if (scene) {
-        // Wait for scene to load def
         this.quadrupedDef = await scene.ready();
       } else {
-        // Load def ourselves (standalone mode)
         const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
         const response = await fetch(defUrl);
         if (!response.ok) throw new Error('Failed to load quadruped.json');
         this.quadrupedDef = await response.json();
       }
 
-      // Initialize raymarcher
       this.raymarcher = new SimpleRaymarcher(canvas);
       this.raymarcher.resize();
       this.setupControls(canvas);
-
-      // Build and render
       await this.updateCreature();
 
       const defaults = SPECIES_DEFAULTS[this.species] || SPECIES_DEFAULTS.dog;
@@ -329,7 +481,7 @@ class YetiCreature extends HTMLElement {
 
     for (const attr of this.getAttributeNames()) {
       const value = this.getAttribute(attr);
-      if (!value) continue;
+      if (!value || attr === 'pos') continue;
       const paramName = kebabToCamel(attr);
 
       if (attr === 'color') {
