@@ -89,6 +89,8 @@ async function loadAnimal(name) {
     }
 
     console.log('Scene JSON:', sceneJson);
+    console.log('Defs:', JSON.stringify(sceneJson.defs, null, 2));
+    console.log('Root:', JSON.stringify(sceneJson.root, null, 2));
 
     // Process through Lucid's loader
     const scene = loadJsonScene(sceneJson);
