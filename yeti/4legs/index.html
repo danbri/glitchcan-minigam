@@ -84,7 +84,8 @@
   <div class="radial-menu" id="radial-menu">
     <div class="radial-item" style="transform: translate(-60px, -100px)" onclick="toggleHelicopter()" id="btn-heli">🚁<span class="tooltip">Helicopter Orbit</span></div>
     <div class="radial-item" style="transform: translate(0px, -120px)" onclick="toggleWiggle()" id="btn-wiggle">🌀<span class="tooltip">Param Wiggle</span></div>
-    <div class="radial-item" style="transform: translate(60px, -100px)" onclick="exportJSON()">💾<span class="tooltip">Export JSON</span></div>
+    <div class="radial-item" style="transform: translate(60px, -100px)" onclick="exportJSON()">💾<span class="tooltip">Export Current</span></div>
+    <div class="radial-item" style="transform: translate(100px, -10px)" onclick="exportFullBestiary()">📦<span class="tooltip">Download All</span></div>
     <div class="radial-item" style="transform: translate(90px, -50px)" onclick="resetParams()">🔄<span class="tooltip">Reset Params</span></div>
     <div class="radial-item" style="transform: translate(-90px, -50px)" onclick="toggleDevMode()" id="btn-dev">🔬<span class="tooltip">Part Colors</span></div>
   </div>
@@ -1281,6 +1282,32 @@ function exportJSON() {
   var a = document.createElement('a');
   a.href = url;
   a.download = exportData.name.toLowerCase() + '-params.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toggleRadialMenu();
+}
+
+function exportFullBestiary() {
+  var fullExport = {
+    version: '1.0',
+    exported: new Date().toISOString(),
+    globals: JSON.parse(JSON.stringify(data.globals)),
+    animals: data.animals.map(function(animal) {
+      return {
+        name: animal.name,
+        emoji: animal.emoji,
+        params: ensureAppearanceDefaults(JSON.parse(JSON.stringify(animal.params)))
+      };
+    })
+  };
+
+  var blob = new Blob([JSON.stringify(fullExport, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'yeti-bestiary-' + new Date().toISOString().slice(0,10) + '.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
