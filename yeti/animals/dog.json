@@ -4,10 +4,6 @@
   "version": "1.0",
   "camera": { "distance": 6, "phi": 0.3, "theta": 0.25, "target": [0, 0, 0] },
 
-  "defs": {
-    "quadruped": { "$ref": "../defs/quadruped.json#/quadruped" }
-  },
-
   "root": {
     "type": "ref",
     "id": "quadruped",
