@@ -288,6 +288,7 @@ class YetiScene extends HTMLElement {
     if (!this.quadrupedDef || !this.raymarcher) return;
 
     const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+    console.log('[yeti-scene shared] Found creatures:', creatures.length);
     if (creatures.length === 0) return;
 
     // Build children array with transforms
@@ -325,9 +326,13 @@ class YetiScene extends HTMLElement {
     const spread = creatures.length * 2;
     sceneJson.camera.distance = Math.max(8, spread + 4);
 
+    console.log('[yeti-scene shared] Scene JSON:', JSON.stringify(sceneJson, null, 2));
+
     try {
       const scene = loadJsonScene(sceneJson);
+      console.log('[yeti-scene shared] Loaded scene:', scene);
       const glsl = generateGlslFromJson(scene);
+      console.log('[yeti-scene shared] GLSL length:', glsl.length);
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
       Object.assign(this.raymarcher.camera, sceneJson.camera);
 
