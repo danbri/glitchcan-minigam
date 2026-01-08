@@ -150,7 +150,8 @@
         "legThighR": 0.12, "legAnkleR": 0.06,
         "frontLegH": 0.55, "frontLegPos": [0.22, -0.55, 0.4], "frontLegRot": [0, 0, 0],
         "backLegH": 0.6, "backLegPos": [0.22, -0.55, -0.5], "backLegRot": [0.15, 0, 0],
-        "tailLen": 0.5, "tailR": 0.06, "tailPos": [0, 0.15, -1.35], "tailRot": [-0.3, 0, 0]
+        "tailLen": 0.5, "tailR": 0.06, "tailPos": [0, 0.15, -1.35], "tailRot": [-0.3, 0, 0],
+        "appearance": { "markColor": [0.2, 0.15, 0.1], "patternScale": 1.0, "organic": 0.8, "brindleAmt": 0.6 }
       }
     },
     {
@@ -199,7 +200,7 @@
         "frontLegH": 0.35, "frontLegPos": [0.15, -0.35, 0.25], "frontLegRot": [0, 0, 0],
         "backLegH": 0.4, "backLegPos": [0.15, -0.35, -0.35], "backLegRot": [0.2, 0, 0],
         "tailLen": 0.55, "tailR": 0.04, "tailPos": [0, 0.08, -0.9], "tailRot": [-0.6, 0, 0],
-        "appearance": { "markColor": [0.12, 0.1, 0.08], "countershade": 0.4, "stripeAmt": 0.7, "freq": 14, "warp": 0.2, "broken": 0.6 }
+        "appearance": { "markColor": [0.12, 0.1, 0.08], "patternScale": 2.3, "organic": 0.5, "countershade": 0.4, "stripeAmt": 0.7 }
       }
     },
     {
@@ -265,7 +266,7 @@
         "frontLegH": 0.55, "frontLegPos": [0.26, -0.55, 0.55], "frontLegRot": [0, 0, 0],
         "backLegH": 0.6, "backLegPos": [0.26, -0.55, -0.6], "backLegRot": [0.12, 0, 0],
         "tailLen": 0.75, "tailR": 0.055, "tailPos": [0, 0.12, -1.6], "tailRot": [-0.35, 0, 0],
-        "appearance": { "markColor": [0.05, 0.02, 0.0], "countershade": 0.5, "stripeAmt": 0.95, "freq": 7, "warp": 0.4, "broken": 0.35 }
+        "appearance": { "markColor": [0.05, 0.02, 0.0], "patternScale": 1.2, "organic": 0.8, "countershade": 0.5, "stripeAmt": 0.95 }
       }
     },
     {
@@ -282,7 +283,7 @@
         "frontLegH": 0.5, "frontLegPos": [0.2, -0.5, 0.45], "frontLegRot": [0, 0, 0],
         "backLegH": 0.55, "backLegPos": [0.2, -0.5, -0.55], "backLegRot": [0.15, 0, 0],
         "tailLen": 0.7, "tailR": 0.05, "tailPos": [0, 0.1, -1.4], "tailRot": [-0.4, 0, 0],
-        "appearance": { "markColor": [0.08, 0.04, 0.0], "countershade": 0.45, "rosetteAmt": 0.9 }
+        "appearance": { "markColor": [0.08, 0.04, 0.0], "patternScale": 1.0, "organic": 0.7, "countershade": 0.45, "rosetteAmt": 0.9 }
       }
     },
     {
@@ -299,7 +300,7 @@
         "frontLegH": 0.7, "frontLegPos": [0.35, -0.7, 0.6], "frontLegRot": [0, 0, 0],
         "backLegH": 0.7, "backLegPos": [0.35, -0.7, -0.65], "backLegRot": [0, 0, 0],
         "tailLen": 0.6, "tailR": 0.04, "tailPos": [0, 0.2, -1.8], "tailRot": [-0.6, 0, 0],
-        "appearance": { "markColor": [0.05, 0.04, 0.02], "spotAmt": 0.95 }
+        "appearance": { "markColor": [0.05, 0.04, 0.02], "patternScale": 0.6, "organic": 0.9, "spotAmt": 0.95 }
       }
     },
     {
@@ -427,7 +428,8 @@
         "legThighR": 0.09, "legAnkleR": 0.045,
         "frontLegH": 0.75, "frontLegPos": [0.18, -0.7, 0.45], "frontLegRot": [0, 0, 0],
         "backLegH": 0.8, "backLegPos": [0.18, -0.7, -0.55], "backLegRot": [0.12, 0, 0],
-        "tailLen": 0.15, "tailR": 0.04, "tailPos": [0, 0.25, -1.4], "tailRot": [-0.3, 0, 0]
+        "tailLen": 0.15, "tailR": 0.04, "tailPos": [0, 0.25, -1.4], "tailRot": [-0.3, 0, 0],
+        "appearance": { "markColor": [0.3, 0.2, 0.1], "patternScale": 0.8, "organic": 0.6, "countershade": 0.3, "dappledAmt": 0.7 }
       }
     },
     {
@@ -555,7 +557,8 @@ uniform float u_tailLen, u_tailR;\n\
 uniform vec3 u_tailP, u_tailRot;\n\
 uniform vec3 u_markColor;\n\
 uniform float u_countershade, u_stripeAmt, u_spotAmt, u_rosetteAmt;\n\
-uniform float u_freq, u_warp, u_broken;\n\
+uniform float u_scaleAmt, u_brindleAmt, u_dappledAmt;\n\
+uniform float u_patternScale, u_organic;\n\
 vec3 hsv2rgb(vec3 c){vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);}\n\
 mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,-s,0,s,c);}\n\
 mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,s,0,1,0,-s,0,c);}\n\
@@ -563,7 +566,7 @@ mat3 rotZ(float a){float c=cos(a),s=sin(a);return mat3(c,-s,0,s,c,0,0,0,1);}\n\
 mat3 rotXYZ(vec3 r){return rotZ(r.z)*rotY(r.y)*rotX(r.x);}\n\
 float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}\n\
 float noise3d(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}\n\
-float fbm(vec3 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*noise3d(p);p*=2.0;a*=0.5;}return v;}\n\
+float fbm(vec3 p){float v=0.0,a=0.5;for(int i=0;i<3;i++){v+=a*noise3d(p);p*=2.0;a*=0.5;}return v;}\n\
 vec3 getLocalCoords(vec3 p){\n\
   vec3 q=rotX(u_pitch)*rotY(-u_yaw)*(p/u_scale);\n\
   float bodyLen=u_bodyR.z+abs(u_rumpP.z)+u_rumpR.z;\n\
@@ -580,22 +583,37 @@ vec3 appearance(vec3 p,vec3 n,vec3 rd){\n\
   vec3 local=getLocalCoords(p);\n\
   float shade=local.y*0.5+0.5;\n\
   vec3 col=mix(u_color,u_markColor*1.2,shade*u_countershade);\n\
-  float warpAmt=fbm(p*2.0)*u_warp+noise3d(p*0.8)*u_warp*0.4;\n\
-  float stripePos=(local.z+warpAmt)*u_freq;\n\
+  float freq=u_patternScale*6.0;\n\
+  float warp=u_organic*0.5;\n\
+  float warpAmt=fbm(p*2.0)*warp+noise3d(p*0.8)*warp*0.4;\n\
+  float stripePos=(local.z+warpAmt)*freq;\n\
   float stripeRaw=sin(stripePos*3.14159);\n\
-  float widthVar=0.15+fbm(p*1.5)*0.15;\n\
-  float breakup=step(0.7-u_broken*0.3,noise3d(p*4.0+vec3(stripePos,0,0)));\n\
-  float stripe=smoothstep(-widthVar,widthVar,stripeRaw)*(1.0-breakup*u_broken);\n\
+  float widthVar=0.1+fbm(p*1.5)*0.1*u_organic;\n\
+  float breakup=step(0.7-u_organic*0.25,noise3d(p*4.0+vec3(stripePos,0,0)));\n\
+  float stripe=smoothstep(-widthVar,widthVar,stripeRaw)*(1.0-breakup*u_organic*0.7);\n\
   col=mix(col,u_markColor*0.1,stripe*u_stripeAmt);\n\
-  float spotNoise=fbm(p*3.0);\n\
-  float spot=smoothstep(0.45,0.55,spotNoise);\n\
+  float spotNoise=fbm(p*freq*0.5);\n\
+  float spot=smoothstep(0.42,0.58,spotNoise);\n\
   col=mix(col,u_markColor*0.15,spot*u_spotAmt);\n\
-  float n1=noise3d(p*3.5);\n\
-  float n2=noise3d(p*4.5+vec3(5.2,1.3,2.8));\n\
+  float n1=noise3d(p*freq*0.6);\n\
+  float n2=noise3d(p*freq*0.8+vec3(5.2,1.3,2.8));\n\
   float rosetteFill=smoothstep(0.45,0.55,n1)*smoothstep(0.3,0.5,n2);\n\
   float rosetteRing=abs(n1-0.5)<0.12?smoothstep(0.35,0.5,n2):0.0;\n\
   float rosette=max(rosetteFill*0.9,rosetteRing*0.7);\n\
   col=mix(col,u_markColor*0.1,rosette*u_rosetteAmt);\n\
+  vec3 sp=p*freq*0.7+warpAmt*u_organic;\n\
+  vec2 hex=vec2(sp.x+sp.z*0.5,sp.z*0.866);\n\
+  vec2 hf=fract(hex)-0.5;\n\
+  float hexDist=max(abs(hf.x),abs(hf.y)*1.15);\n\
+  float scales=smoothstep(0.35,0.45,hexDist);\n\
+  col=mix(col,u_markColor*0.2,scales*u_scaleAmt);\n\
+  float brindlePos=local.z*freq*1.2+noise3d(p*2.0)*u_organic*2.0;\n\
+  float brindle=smoothstep(0.3,0.7,sin(brindlePos*2.5+noise3d(p*5.0)*3.0)*0.5+0.5);\n\
+  brindle*=smoothstep(0.4,0.6,noise3d(p*3.0+vec3(0,local.y*2.0,0)));\n\
+  col=mix(col,u_markColor*0.15,brindle*u_brindleAmt);\n\
+  float dappleNoise=noise3d(p*freq*0.4+vec3(10.0,0,0));\n\
+  float dapple=smoothstep(0.55,0.65,dappleNoise)*smoothstep(0.3,0.5,local.y+0.3);\n\
+  col=mix(col,col*1.3+vec3(0.1),dapple*u_dappledAmt);\n\
   float fres=pow(1.0-max(0.0,dot(n,-rd)),3.0);\n\
   col+=vec3(1.0)*fres*0.08;\n\
   return col;\n\
@@ -759,21 +777,23 @@ var paramDefs = {
   'tailLen': { min: 0.05, max: 0.8, scalar: true },
   'tailR': { min: 0.02, max: 0.15, scalar: true },
   'tailRot.x': { min: -2, max: 0, idx: 0, arr: 'tailRot' },
-  // Appearance params
+  // Appearance params - high level controls
   'app.markR': { min: 0, max: 1, idx: 0, arr: 'appearance.markColor' },
   'app.markG': { min: 0, max: 1, idx: 1, arr: 'appearance.markColor' },
   'app.markB': { min: 0, max: 1, idx: 2, arr: 'appearance.markColor' },
+  'app.patternScale': { min: 0.3, max: 3, app: 'patternScale' },
+  'app.organic': { min: 0, max: 1, app: 'organic' },
   'app.countershade': { min: 0, max: 1, app: 'countershade' },
-  'app.stripeAmt': { min: 0, max: 1, app: 'stripeAmt' },
-  'app.spotAmt': { min: 0, max: 1, app: 'spotAmt' },
-  'app.rosetteAmt': { min: 0, max: 1, app: 'rosetteAmt' },
-  'app.freq': { min: 1, max: 20, app: 'freq' },
-  'app.warp': { min: 0, max: 1, app: 'warp' },
-  'app.broken': { min: 0, max: 1, app: 'broken' }
+  'app.stripes': { min: 0, max: 1, app: 'stripeAmt' },
+  'app.spots': { min: 0, max: 1, app: 'spotAmt' },
+  'app.rosettes': { min: 0, max: 1, app: 'rosetteAmt' },
+  'app.scales': { min: 0, max: 1, app: 'scaleAmt' },
+  'app.brindle': { min: 0, max: 1, app: 'brindleAmt' },
+  'app.dappled': { min: 0, max: 1, app: 'dappledAmt' }
 };
 
 function ensureAppearanceDefaults(params) {
-  var defaults = { markColor: [0, 0, 0], countershade: 0, stripeAmt: 0, spotAmt: 0, rosetteAmt: 0, freq: 6, warp: 0.3, broken: 0.3 };
+  var defaults = { markColor: [0, 0, 0], patternScale: 1, organic: 0.5, countershade: 0, stripeAmt: 0, spotAmt: 0, rosetteAmt: 0, scaleAmt: 0, brindleAmt: 0, dappledAmt: 0 };
   if (!params.appearance) params.appearance = {};
   for (var key in defaults) {
     if (params.appearance[key] === undefined) params.appearance[key] = Array.isArray(defaults[key]) ? defaults[key].slice() : defaults[key];
@@ -833,7 +853,7 @@ function buildSliders() {
   // Instance params sections
   var sections = {
     'Color': ['color.r', 'color.g', 'color.b'],
-    'Appearance': ['app.markR', 'app.markG', 'app.markB', 'app.countershade', 'app.stripeAmt', 'app.spotAmt', 'app.rosetteAmt', 'app.freq', 'app.warp', 'app.broken'],
+    'Appearance': ['app.patternScale', 'app.organic', 'app.countershade', 'app.stripes', 'app.spots', 'app.rosettes', 'app.scales', 'app.brindle', 'app.dappled', 'app.markR', 'app.markG', 'app.markB'],
     'Body': ['body.x', 'body.y', 'body.z'],
     'Rump': ['rump.x', 'rump.y', 'rump.z', 'rumpPos.y', 'rumpPos.z'],
     'Head': ['head.x', 'head.y', 'head.z', 'headPos.y', 'headPos.z'],
@@ -1093,13 +1113,15 @@ function render(time) {
 
   var app = p.appearance || {};
   gl.uniform3fv(uniforms.u_markColor, app.markColor || [0, 0, 0]);
+  gl.uniform1f(uniforms.u_patternScale, app.patternScale || 1);
+  gl.uniform1f(uniforms.u_organic, app.organic || 0.5);
   gl.uniform1f(uniforms.u_countershade, app.countershade || 0);
   gl.uniform1f(uniforms.u_stripeAmt, app.stripeAmt || 0);
   gl.uniform1f(uniforms.u_spotAmt, app.spotAmt || 0);
   gl.uniform1f(uniforms.u_rosetteAmt, app.rosetteAmt || 0);
-  gl.uniform1f(uniforms.u_freq, app.freq || 6);
-  gl.uniform1f(uniforms.u_warp, app.warp || 0.3);
-  gl.uniform1f(uniforms.u_broken, app.broken || 0.3);
+  gl.uniform1f(uniforms.u_scaleAmt, app.scaleAmt || 0);
+  gl.uniform1f(uniforms.u_brindleAmt, app.brindleAmt || 0);
+  gl.uniform1f(uniforms.u_dappledAmt, app.dappledAmt || 0);
 
   gl.drawArrays(gl.TRIANGLES, 0, 6);
   requestAnimationFrame(render);
@@ -1142,7 +1164,7 @@ function initGL() {
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   gl.useProgram(program);
 
-  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_devMode','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot','u_markColor','u_countershade','u_stripeAmt','u_spotAmt','u_rosetteAmt','u_freq','u_warp','u_broken'];
+  var uNames = ['u_res','u_camDist','u_camPhi','u_camTheta','u_yaw','u_pitch','u_smooth','u_scale','u_fat','u_legLen','u_earSize','u_tailWag','u_devMode','u_color','u_bodyR','u_rumpR','u_rumpP','u_headR','u_headP','u_snoutR','u_snoutP','u_noseSize','u_noseP','u_earR','u_earP','u_earRot','u_legThighR','u_legAnkleR','u_frontLegH','u_frontLegP','u_frontLegRot','u_backLegH','u_backLegP','u_backLegRot','u_tailLen','u_tailR','u_tailP','u_tailRot','u_markColor','u_patternScale','u_organic','u_countershade','u_stripeAmt','u_spotAmt','u_rosetteAmt','u_scaleAmt','u_brindleAmt','u_dappledAmt'];
   for (var i = 0; i < uNames.length; i++) uniforms[uNames[i]] = gl.getUniformLocation(program, uNames[i]);
   gl.uniform2f(uniforms.u_res, w, h);
 }
