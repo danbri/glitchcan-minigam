@@ -19,6 +19,7 @@
   <div id="status">Loading...</div>
   <div id="animal-select">
     <select id="animals">
+      <option value="test-simple">🧪 Test Simple</option>
       <option value="dog">🐕 Dog</option>
     </select>
   </div>
@@ -53,7 +54,7 @@ async function init() {
     setupControls();
 
     // Load initial animal
-    await loadAnimal('dog');
+    await loadAnimal('test-simple');
 
     // Start render loop
     requestAnimationFrame(render);
@@ -74,15 +75,18 @@ async function loadAnimal(name) {
     if (!animalResponse.ok) throw new Error(`Failed to load ${name}.json`);
     const animalJson = await animalResponse.json();
 
-    // Merge quadruped def into animal's defs
+    // Use animal's own defs, or merge quadruped def if animal refs it
     const sceneJson = {
       version: "1.0",
-      defs: {
-        quadruped: quadrupedDef.quadruped
-      },
+      defs: animalJson.defs || {},
       root: animalJson.root,
       camera: animalJson.camera || { distance: 6, phi: 0.3, theta: 0.25, target: [0, 0, 0] }
     };
+
+    // If animal references quadruped and doesn't define it, add from shared def
+    if (animalJson.root?.id === 'quadruped' && !sceneJson.defs.quadruped && quadrupedDef) {
+      sceneJson.defs.quadruped = quadrupedDef.quadruped;
+    }
 
     console.log('Scene JSON:', sceneJson);
 
