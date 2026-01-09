@@ -412,9 +412,16 @@ class YetiScene extends HTMLElement {
     const wallHeight = 1.5;
     const groundY = -1.5;
 
-    // Candy ball colors
+    // Candy ball colors - filter out any nulls from unrecognized color names
     const ballColorStr = this.getAttribute('ball-colors') || 'pink,lime,cyan,yellow,orange';
-    this.ballColors = ballColorStr.split(',').map(c => parseColor(c.trim()));
+    this.ballColors = ballColorStr.split(',')
+      .map(c => parseColor(c.trim()))
+      .filter(c => c !== null);
+
+    // Fallback if all colors failed
+    if (this.ballColors.length === 0) {
+      this.ballColors = [[1, 0.75, 0.8], [0.5, 1, 0.3], [0.3, 0.9, 1]];
+    }
 
     // Physics bodies: creatures + initial balls
     const bodies = [];
@@ -424,8 +431,10 @@ class YetiScene extends HTMLElement {
     // Add creatures as physics bodies
     creatures.forEach((el, i) => {
       const species = el.species || 'dog';
-      const defaults = SPECIES_DEFAULTS[species];
-      const params = el.buildParams ? el.buildParams() : { ...defaults };
+      const defaults = SPECIES_DEFAULTS[species] || SPECIES_DEFAULTS.dog;
+      // Filter name/emoji from defaults if buildParams isn't available
+      const { name, emoji, ...sdfDefaults } = defaults;
+      const params = el.buildParams ? el.buildParams() : { ...sdfDefaults };
       const pos = parseVec3(el.getAttribute('pos')) || [i * 3 - (creatures.length - 1) * 1.5, 0, 0];
       const mass = species === 'elephant' ? 5 : (species === 'horse' ? 3 : 1.5);
 
@@ -506,6 +515,7 @@ class YetiScene extends HTMLElement {
     this.arenaSize = arenaSize;
 
     try {
+      console.log('[yeti-scene physics] Scene JSON:', JSON.stringify(sceneJson, null, 2));
       const scene = loadJsonScene(sceneJson);
       const glsl = generateGlslFromJson(scene);
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
@@ -514,7 +524,8 @@ class YetiScene extends HTMLElement {
       const label = this.shadowRoot.querySelector('.label');
       label.textContent = `${labels.join(' ')} 🎾×${this.balls.length}`;
     } catch (err) {
-      console.error('[yeti-scene physics]', err?.message || err);
+      console.error('[yeti-scene physics] Error:', err?.message || err);
+      console.error('[yeti-scene physics] Stack:', err?.stack);
     }
   }
 
