@@ -688,6 +688,11 @@ function generateSmoothUnion(node, ctx) {
   const transformedP = applyTransform('p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
+  // Debug: log when smoothUnion has a physics-related transform
+  if (node.transform?.translate?.type === 'var' && node.transform.translate.name?.startsWith('phys_')) {
+    console.log(`[generateSmoothUnion] Physics transform: ${node.transform.translate.name}, transformedP=${transformedP}, hasParentTransform=${hasParentTransform}`);
+  }
+
   if (children.length === 1) {
     if (hasParentTransform) {
       const funcName = `smoothUnion_${ctx.helperCounter++}`;
@@ -1012,9 +1017,11 @@ function generateRef(node, ctx) {
 
   // If this ref has a transform from parent, apply it to the def
   if (node.transform) {
+    const combined = combineTransforms(def.transform, node.transform);
+    console.log(`[generateRef] refId=${node.refId}, def.transform=${JSON.stringify(def.transform)}, node.transform=${JSON.stringify(node.transform)}, combined=${JSON.stringify(combined)}`);
     const defWithTransform = {
       ...def,
-      transform: combineTransforms(def.transform, node.transform)
+      transform: combined
     };
     return walkNode(defWithTransform, ctx);
   }
