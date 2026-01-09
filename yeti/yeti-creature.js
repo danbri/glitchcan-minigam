@@ -515,6 +515,7 @@ class YetiScene extends HTMLElement {
     this.arenaSize = arenaSize;
 
     try {
+      console.log('[yeti-scene physics] Scene JSON:', JSON.stringify(sceneJson, null, 2));
       const scene = loadJsonScene(sceneJson);
       const glsl = generateGlslFromJson(scene);
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
@@ -523,7 +524,8 @@ class YetiScene extends HTMLElement {
       const label = this.shadowRoot.querySelector('.label');
       label.textContent = `${labels.join(' ')} 🎾×${this.balls.length}`;
     } catch (err) {
-      console.error('[yeti-scene physics]', err?.message || err);
+      console.error('[yeti-scene physics] Error:', err?.message || err);
+      console.error('[yeti-scene physics] Stack:', err?.stack);
     }
   }
 
