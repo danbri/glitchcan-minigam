@@ -174,7 +174,11 @@ function parseColor(value) {
   const named = {
     pink: [1.0, 0.75, 0.8], white: [0.95, 0.95, 0.95], black: [0.1, 0.1, 0.1],
     brown: [0.55, 0.35, 0.2], grey: [0.5, 0.5, 0.5], gray: [0.5, 0.5, 0.5],
-    golden: [0.85, 0.65, 0.3], cream: [0.95, 0.9, 0.8], orange: [0.9, 0.5, 0.2]
+    golden: [0.85, 0.65, 0.3], cream: [0.95, 0.9, 0.8], orange: [0.9, 0.5, 0.2],
+    // Candy colors
+    lime: [0.5, 1.0, 0.3], cyan: [0.3, 0.9, 1.0], yellow: [1.0, 0.95, 0.3],
+    magenta: [1.0, 0.3, 0.8], red: [1.0, 0.3, 0.3], green: [0.3, 0.8, 0.4],
+    blue: [0.3, 0.5, 1.0], purple: [0.7, 0.3, 0.9], teal: [0.3, 0.8, 0.8]
   };
   if (named[value.toLowerCase()]) return named[value.toLowerCase()];
   if (value.includes(',')) return value.split(',').map(v => parseFloat(v.trim()));
