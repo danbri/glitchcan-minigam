@@ -438,6 +438,8 @@ class YetiScene extends HTMLElement {
       const pos = parseVec3(el.getAttribute('pos')) || [i * 3 - (creatures.length - 1) * 1.5, 0, 0];
       const mass = species === 'elephant' ? 5 : (species === 'horse' ? 3 : 1.5);
 
+      console.log(`[creature ${i}] species=${species}, pos=${JSON.stringify(pos)}, physPos=[${pos[0]}, ${pos[1] + 0.5}, ${pos[2]}]`);
+
       labels.push(defaults.emoji);
 
       // Physics body for this creature
@@ -450,11 +452,13 @@ class YetiScene extends HTMLElement {
       });
 
       // SDF node with physics-driven position
+      const varName = `phys_creature${i}`;
+      console.log(`[creature ${i}] SDF var name: ${varName}`);
       children.push({
         type: "ref",
         id: "quadruped",
         params,
-        transform: { translate: { "var": `phys_creature${i}` } }
+        transform: { translate: { "var": varName } }
       });
     });
 
@@ -500,7 +504,7 @@ class YetiScene extends HTMLElement {
       version: "1.0",
       defs: { quadruped: this.quadrupedDef.quadruped },
       root: { type: "union", children },
-      camera: { distance: 14, phi: 0.5, theta: 0.3, target: [0, 0, 0] },
+      camera: { distance: 10, phi: 0.4, theta: 0.3, target: [0, -0.5, 0] },
       physics: {
         enabled: true,
         gravity: [0, -12, 0],
@@ -518,6 +522,9 @@ class YetiScene extends HTMLElement {
       console.log('[yeti-scene physics] Scene JSON:', JSON.stringify(sceneJson, null, 2));
       const scene = loadJsonScene(sceneJson);
       const glsl = generateGlslFromJson(scene);
+      // Debug: log lines with physics creature transforms
+      const physCreatureLines = glsl.split('\n').filter(line => line.includes('u_phys_creature'));
+      console.log('[yeti-scene physics] Lines with u_phys_creature:', physCreatureLines);
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
       Object.assign(this.raymarcher.camera, sceneJson.camera);
 
@@ -563,10 +570,10 @@ class YetiScene extends HTMLElement {
         // Debug: log physics state every 60 frames
         if (frameCount % 60 === 0 && this.raymarcher.physicsBridge) {
           const params = this.raymarcher.physicsBridge.getParamValues();
-          const creature0 = params.phys_creature0?.value;
-          const ball0 = params.phys_ball0?.value;
-          if (creature0 || ball0) {
-            console.log(`[frame ${frameCount}] creature0: ${creature0?.map(v=>v.toFixed(2))}, ball0: ${ball0?.map(v=>v.toFixed(2))}`);
+          const keys = Object.keys(params);
+          if (keys.length > 0) {
+            const positions = keys.map(k => `${k}: [${params[k]?.value?.map(v=>v.toFixed(1)).join(',')}]`).join(' | ');
+            console.log(`[frame ${frameCount}] ${positions}`);
           }
         }
         frameCount++;
