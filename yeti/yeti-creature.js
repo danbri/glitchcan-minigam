@@ -18,6 +18,7 @@
 import { loadJsonScene } from '../lucid/core/json-loader.js';
 import { generateGlslFromJson } from '../lucid/core/json-codegen.js';
 import { SimpleRaymarcher } from '../lucid/ui/raymarcher.js';
+import { PhysicsScene } from '../lucid/core/physics/physics-scene.js';
 
 // ============================================================
 // Species defaults
@@ -219,6 +220,7 @@ class YetiScene extends HTMLElement {
     this.animationId = null;
     this.balls = []; // For physics mode
     this.lastPhysicsTime = 0;
+    this.physicsScene = null; // PhysicsScene for physics mode (not PhysicsBridge)
   }
 
   get isShared() {
@@ -438,8 +440,6 @@ class YetiScene extends HTMLElement {
       const pos = parseVec3(el.getAttribute('pos')) || [i * 3 - (creatures.length - 1) * 1.5, 0, 0];
       const mass = species === 'elephant' ? 5 : (species === 'horse' ? 3 : 1.5);
 
-      console.log(`[creature ${i}] species=${species}, pos=${JSON.stringify(pos)}, physPos=[${pos[0]}, ${pos[1] + 0.5}, ${pos[2]}]`);
-
       labels.push(defaults.emoji);
 
       // Physics body for this creature
@@ -453,14 +453,11 @@ class YetiScene extends HTMLElement {
 
       // SDF node with physics-driven position
       const varName = `phys_creature${i}`;
-      const useStaticPos = false;  // Set to true to test static positioning (bypasses uniforms)
-      const staticPos = [pos[0], pos[1] + 0.5, pos[2]];
-      console.log(`[creature ${i}] SDF var name: ${varName}, staticPos: [${staticPos.join(',')}], useStatic: ${useStaticPos}`);
       children.push({
         type: "ref",
         id: "quadruped",
         params,
-        transform: { translate: useStaticPos ? staticPos : { "var": varName } }
+        transform: { translate: { "var": varName } }
       });
     });
 
@@ -502,6 +499,7 @@ class YetiScene extends HTMLElement {
     children.push({ type: "box", params: { size: [arenaSize, wallHeight, 0.2], color: wallColor }, transform: { translate: [0, groundY + wallHeight/2, half + 0.1] } });
 
     // Build complete scene JSON with physics
+    // Using PhysicsScene (same as Lucid's main app and bouncing-balls demo)
     const sceneJson = {
       version: "1.0",
       defs: { quadruped: this.quadrupedDef.quadruped },
@@ -509,7 +507,6 @@ class YetiScene extends HTMLElement {
       camera: { distance: 10, phi: 0.4, theta: 0.3, target: [0, -0.5, 0] },
       physics: {
         enabled: true,
-        forceCPU: true,  // Force CPU physics to debug convergence issue (GPU may have struct alignment bug)
         gravity: [0, -12, 0],
         groundY,
         damping: 0.98,
@@ -522,14 +519,19 @@ class YetiScene extends HTMLElement {
     this.arenaSize = arenaSize;
 
     try {
-      console.log('[yeti-scene physics] Scene JSON:', JSON.stringify(sceneJson, null, 2));
       const scene = loadJsonScene(sceneJson);
       const glsl = generateGlslFromJson(scene);
-      // Debug: log lines with physics creature transforms
-      const physCreatureLines = glsl.split('\n').filter(line => line.includes('u_phys_creature'));
-      console.log('[yeti-scene physics] Lines with u_phys_creature:', physCreatureLines);
-      this.raymarcher.updateScene(glsl, {}, null, sceneJson);
+
+      // Update scene WITHOUT physics enabled in raymarcher (we handle physics ourselves)
+      // Pass sceneJson with physics.enabled = false to prevent raymarcher from using PhysicsBridge
+      const sceneJsonNoPhysics = { ...sceneJson, physics: { enabled: false } };
+      this.raymarcher.updateScene(glsl, {}, null, sceneJsonNoPhysics);
       Object.assign(this.raymarcher.camera, sceneJson.camera);
+
+      // Create PhysicsScene for proper bounds/collision handling
+      // (same approach as Lucid's main app and bouncing-balls demo)
+      this.physicsScene = new PhysicsScene(sceneJson);
+      console.log(`[yeti-scene] PhysicsScene: ${this.physicsScene.bodies.length} bodies, bounds: ${JSON.stringify(this.physicsScene.bounds)}`);
 
       const label = this.shadowRoot.querySelector('.label');
       label.textContent = `${labels.join(' ')} 🎾×${this.balls.length}`;
@@ -541,7 +543,7 @@ class YetiScene extends HTMLElement {
 
   // Shoot a new ball from above
   shootBall() {
-    if (!this.raymarcher?.physicsBridge) {
+    if (!this.physicsScene) {
       console.log('[yeti-scene] Physics not ready yet');
       return;
     }
@@ -553,38 +555,65 @@ class YetiScene extends HTMLElement {
     // Random position above arena
     const pos = [(Math.random() - 0.5) * half, 5, (Math.random() - 0.5) * half];
 
-    // Add to physics (this requires extending physics-bridge to support dynamic bodies)
-    // For now, log that we'd shoot
-    console.log(`[yeti-scene] Would shoot ${ballId} at`, pos, 'color:', color);
+    // Add physics body using PhysicsScene.addBody
+    this.physicsScene.addBody({
+      id: ballId,
+      position: pos,
+      mass: 0.3,
+      radius: 0.3,
+      restitution: 0.9
+    });
 
-    // TODO: Need to extend physics bridge to add bodies dynamically
-    // this.raymarcher.physicsBridge.addBody({ name: ballId, pos, mass: 0.3, radius: 0.3, restitution: 0.9 });
-    // Then rebuild scene SDF with new ball
+    // Store ball info for tracking
+    this.balls.push({ id: ballId, color });
+
+    console.log(`[yeti-scene] Shot ${ballId} at [${pos.map(v => v.toFixed(2)).join(',')}]`);
+
+    // Note: The ball won't render visually since it's not in the SDF scene
+    // To add dynamic balls to rendering, we'd need to rebuild the SDF scene
+    // For now, physics works but visual is TODO
   }
 
   // Render loop with physics stepping
+  // Uses PhysicsScene (same approach as Lucid's main app)
   startPhysicsRenderLoop() {
     let frameCount = 0;
+    let lastTime = performance.now();
+
     const render = (now) => {
       if (this.raymarcher) {
-        // Physics stepping happens inside raymarcher.render() if physics is enabled
+        // Step physics simulation (if enabled)
+        if (this.physicsScene && this.physicsScene.enabled) {
+          const deltaTime = (now - lastTime) / 1000;
+          lastTime = now;
+
+          // Step physics (capped to avoid instability)
+          this.physicsScene.step(Math.min(deltaTime, 1/30));
+
+          // Sync physics body positions to shader uniforms via setParam
+          // This is the key pattern from Lucid's main app (lucid/index.html)
+          for (const body of this.physicsScene.bodies) {
+            const paramName = `phys_${body.id}`;
+            this.raymarcher.setParam(paramName, [...body.position]);
+          }
+        }
+
         this.raymarcher.render();
 
-        // Debug: log physics state every 60 frames
-        if (frameCount % 60 === 0 && this.raymarcher.physicsBridge) {
-          const params = this.raymarcher.physicsBridge.getParamValues();
-          const keys = Object.keys(params);
-          if (keys.length > 0) {
-            const positions = keys.map(k => `${k}: [${params[k]?.value?.map(v=>v.toFixed(1)).join(',')}]`).join(' | ');
-            console.log(`[frame ${frameCount}] ${positions}`);
-          }
+        // Debug: log physics state every 120 frames
+        if (frameCount % 120 === 0 && this.physicsScene) {
+          const positions = this.physicsScene.bodies.map(b =>
+            `${b.id}: [${b.position.map(v => v.toFixed(1)).join(',')}]`
+          ).join(' | ');
+          console.log(`[frame ${frameCount}] ${positions}`);
         }
         frameCount++;
       }
       this.animationId = requestAnimationFrame(render);
     };
-    this.lastPhysicsTime = performance.now();
-    render(this.lastPhysicsTime);
+
+    lastTime = performance.now();
+    render(lastTime);
   }
 
   // Collect all yeti-* children and build combined scene
