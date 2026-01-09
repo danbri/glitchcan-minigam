@@ -509,6 +509,7 @@ class YetiScene extends HTMLElement {
       camera: { distance: 10, phi: 0.4, theta: 0.3, target: [0, -0.5, 0] },
       physics: {
         enabled: true,
+        forceCPU: true,  // Force CPU physics to debug convergence issue (GPU may have struct alignment bug)
         gravity: [0, -12, 0],
         groundY,
         damping: 0.98,
