@@ -76,6 +76,10 @@ export class PhysicsBridge {
     if (physicsConfig.dt !== undefined) {
       this.physics.params.dt = physicsConfig.dt;
     }
+    // Store bounds for wall collisions
+    if (physicsConfig.bounds) {
+      this.physics.params.bounds = { ...physicsConfig.bounds };
+    }
 
     // Create physics bodies from explicit list
     if (physicsConfig.bodies && Array.isArray(physicsConfig.bodies)) {
