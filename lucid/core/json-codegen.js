@@ -1001,6 +1001,7 @@ function generateTransform(node, ctx) {
 
 /**
  * Generate ref - expand definition with parameter overrides and parent transform
+ * LCD-049: Optional boundingRadius for early-out optimization
  */
 function generateRef(node, ctx) {
   // Get the processed definition
@@ -1016,17 +1017,36 @@ function generateRef(node, ctx) {
   }
 
   // If this ref has a transform from parent, apply it to the def
+  let innerSdf;
   if (node.transform) {
     const combined = combineTransforms(def.transform, node.transform);
-    console.log(`[generateRef] refId=${node.refId}, def.transform=${JSON.stringify(def.transform)}, node.transform=${JSON.stringify(node.transform)}, combined=${JSON.stringify(combined)}`);
     const defWithTransform = {
       ...def,
       transform: combined
     };
-    return walkNode(defWithTransform, ctx);
+    innerSdf = walkNode(defWithTransform, ctx);
+  } else {
+    innerSdf = walkNode(def, ctx);
   }
 
-  return walkNode(def, ctx);
+  // LCD-049: Bounding sphere optimization - skip expensive SDF when ray is far
+  if (node.boundingRadius && node.transform?.translate) {
+    const t = node.transform.translate;
+    let centerExpr;
+    if (t.type === 'var') {
+      centerExpr = `u_${t.name}`;
+    } else if (Array.isArray(t)) {
+      centerExpr = `vec3(${t.join(', ')})`;
+    } else {
+      // No simple center, skip bounding optimization
+      return innerSdf;
+    }
+    const radius = node.boundingRadius;
+    // Ternary: if outside bounding sphere, return cheap bound distance
+    return `(length(p - ${centerExpr}) - ${radius.toFixed(2)} > 0.1 ? vec4(length(p - ${centerExpr}) - ${radius.toFixed(2)}, 0.5, 0.5, 0.5) : ${innerSdf})`;
+  }
+
+  return innerSdf;
 }
 
 /**

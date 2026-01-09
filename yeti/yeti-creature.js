@@ -498,12 +498,14 @@ class YetiScene extends HTMLElement {
         restitution: 0.5
       });
 
-      // SDF node with physics-driven position
+      // SDF node with physics-driven position + bounding sphere for perf
       const varName = `phys_creature${i}`;
+      const boundingRadius = species === 'elephant' ? 3.0 : 2.0;
       children.push({
         type: "ref",
         id: "quadruped",
         params,
+        boundingRadius,  // LCD-049: skip expensive 12-primitive SDF when ray is far
         transform: { translate: { "var": varName } }
       });
     });
