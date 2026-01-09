@@ -337,6 +337,16 @@
           "subtitle": "Forest predator"
         },
         {
+          "path": "creatures/puppy.json",
+          "title": "Puppy 🐕",
+          "subtitle": "Parametric quadruped"
+        },
+        {
+          "path": "creatures/pink-elephant.json",
+          "title": "Pink Elephant 🐘",
+          "subtitle": "Parametric quadruped"
+        },
+        {
           "path": "creatures/hippo-v1.json",
           "title": "Hippo 🦛",
           "subtitle": "Chunky herbivore"
