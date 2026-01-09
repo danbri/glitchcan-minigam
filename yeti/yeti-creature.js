@@ -317,8 +317,8 @@ class YetiScene extends HTMLElement {
     });
     this._resizeObserver.observe(this);
 
-    // Wait for children to be parsed, then build scene
-    requestAnimationFrame(() => {
+    // Wait for def to load, then build scene
+    this._ready.then(() => {
       if (this.quadrupedDef) this.updateSharedScene();
     });
 
@@ -396,7 +396,7 @@ class YetiScene extends HTMLElement {
     this._resizeObserver.observe(this);
 
     // Build physics scene after def loads
-    requestAnimationFrame(() => {
+    this._ready.then(() => {
       if (this.quadrupedDef) this.buildPhysicsScene();
     });
 
