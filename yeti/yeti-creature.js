@@ -452,11 +452,13 @@ class YetiScene extends HTMLElement {
       });
 
       // SDF node with physics-driven position
+      const varName = `phys_creature${i}`;
+      console.log(`[creature ${i}] SDF var name: ${varName}`);
       children.push({
         type: "ref",
         id: "quadruped",
         params,
-        transform: { translate: { "var": `phys_creature${i}` } }
+        transform: { translate: { "var": varName } }
       });
     });
 
