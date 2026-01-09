@@ -375,6 +375,8 @@ class YetiScene extends HTMLElement {
 
     try {
       this.raymarcher = new SimpleRaymarcher(canvas);
+      // Use low quality for physics mode - complex quadruped SDFs are heavy
+      this.raymarcher.setQuality('low');
     } catch (err) {
       console.error('[yeti-scene physics] Raymarcher creation failed:', err?.message);
       return;
@@ -599,14 +601,6 @@ class YetiScene extends HTMLElement {
         }
 
         this.raymarcher.render();
-
-        // Debug: log physics state every 120 frames
-        if (frameCount % 120 === 0 && this.physicsScene) {
-          const positions = this.physicsScene.bodies.map(b =>
-            `${b.id}: [${b.position.map(v => v.toFixed(1)).join(',')}]`
-          ).join(' | ');
-          console.log(`[frame ${frameCount}] ${positions}`);
-        }
         frameCount++;
       }
       this.animationId = requestAnimationFrame(render);
