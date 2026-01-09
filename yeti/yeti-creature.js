@@ -453,12 +453,14 @@ class YetiScene extends HTMLElement {
 
       // SDF node with physics-driven position
       const varName = `phys_creature${i}`;
-      console.log(`[creature ${i}] SDF var name: ${varName}`);
+      const useStaticPos = false;  // Set to true to test static positioning (bypasses uniforms)
+      const staticPos = [pos[0], pos[1] + 0.5, pos[2]];
+      console.log(`[creature ${i}] SDF var name: ${varName}, staticPos: [${staticPos.join(',')}], useStatic: ${useStaticPos}`);
       children.push({
         type: "ref",
         id: "quadruped",
         params,
-        transform: { translate: { "var": varName } }
+        transform: { translate: useStaticPos ? staticPos : { "var": varName } }
       });
     });
 
