@@ -554,10 +554,22 @@ class YetiScene extends HTMLElement {
 
   // Render loop with physics stepping
   startPhysicsRenderLoop() {
+    let frameCount = 0;
     const render = (now) => {
       if (this.raymarcher) {
         // Physics stepping happens inside raymarcher.render() if physics is enabled
         this.raymarcher.render();
+
+        // Debug: log physics state every 60 frames
+        if (frameCount % 60 === 0 && this.raymarcher.physicsBridge) {
+          const params = this.raymarcher.physicsBridge.getParamValues();
+          const creature0 = params.phys_creature0?.value;
+          const ball0 = params.phys_ball0?.value;
+          if (creature0 || ball0) {
+            console.log(`[frame ${frameCount}] creature0: ${creature0?.map(v=>v.toFixed(2))}, ball0: ${ball0?.map(v=>v.toFixed(2))}`);
+          }
+        }
+        frameCount++;
       }
       this.animationId = requestAnimationFrame(render);
     };
