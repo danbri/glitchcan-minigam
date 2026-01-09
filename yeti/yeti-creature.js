@@ -499,7 +499,9 @@ class YetiCreature extends HTMLElement {
 
   buildParams() {
     const defaults = SPECIES_DEFAULTS[this.species] || SPECIES_DEFAULTS.dog;
-    const params = { ...defaults };
+    // Filter out non-SDF params (name, emoji are for display only)
+    const { name, emoji, ...sdfParams } = defaults;
+    const params = { ...sdfParams };
 
     for (const attr of this.getAttributeNames()) {
       const value = this.getAttribute(attr);
