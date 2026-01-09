@@ -261,7 +261,7 @@ class YetiScene extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; position: relative; }
-        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); touch-action: none; }
         .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
         ::slotted(*) { display: none; }
       </style>
@@ -271,12 +271,10 @@ class YetiScene extends HTMLElement {
     `;
 
     const canvas = this.shadowRoot.querySelector('canvas');
-    console.log('[yeti-scene shared] Creating raymarcher, canvas:', canvas?.width, canvas?.height);
     try {
       this.raymarcher = new SimpleRaymarcher(canvas);
-      console.log('[yeti-scene shared] Raymarcher created:', !!this.raymarcher);
     } catch (err) {
-      console.error('[yeti-scene shared] Raymarcher creation failed:', err, err?.message);
+      console.error('[yeti-scene] Raymarcher creation failed:', err?.message);
       return;
     }
     this.raymarcher.resize();
@@ -295,7 +293,6 @@ class YetiScene extends HTMLElement {
     if (!this.quadrupedDef || !this.raymarcher) return;
 
     const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
-    console.log('[yeti-scene shared] Found creatures:', creatures.length);
     if (creatures.length === 0) return;
 
     // Build children array with transforms
@@ -333,28 +330,16 @@ class YetiScene extends HTMLElement {
     const spread = creatures.length * 2;
     sceneJson.camera.distance = Math.max(8, spread + 4);
 
-    console.log('[yeti-scene shared] Scene JSON:', JSON.stringify(sceneJson, null, 2));
-
     try {
-      console.log('[yeti-scene shared] Calling loadJsonScene...');
       const scene = loadJsonScene(sceneJson);
-      console.log('[yeti-scene shared] Loaded scene:', scene);
-
-      console.log('[yeti-scene shared] Calling generateGlslFromJson...');
       const glsl = generateGlslFromJson(scene);
-      console.log('[yeti-scene shared] GLSL length:', glsl.length);
-
-      console.log('[yeti-scene shared] Calling raymarcher.updateScene...');
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
-      console.log('[yeti-scene shared] updateScene done');
-
       Object.assign(this.raymarcher.camera, sceneJson.camera);
 
-      // Update label
       const label = this.shadowRoot.querySelector('.label');
       label.textContent = labels.join(' ');
     } catch (err) {
-      console.error('[yeti-scene shared] Error:', err, 'message:', err?.message, 'stack:', err?.stack);
+      console.error('[yeti-scene]', err?.message || err);
     }
   }
 
@@ -455,7 +440,7 @@ class YetiCreature extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: inline-block; position: relative; }
-        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); touch-action: none; }
         .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
       </style>
       <canvas width="${width}" height="${height}"></canvas>
@@ -466,14 +451,11 @@ class YetiCreature extends HTMLElement {
   async init() {
     const canvas = this.shadowRoot.querySelector('canvas');
     const label = this.shadowRoot.querySelector('.label');
-    console.log('[yeti-creature] init', this.tagName, 'canvas:', !!canvas);
 
     try {
       const scene = this.closest('yeti-scene');
-      console.log('[yeti-creature] scene:', !!scene, 'isShared:', scene?.isShared);
       if (scene) {
         this.quadrupedDef = await scene.ready();
-        console.log('[yeti-creature] got def:', !!this.quadrupedDef);
       } else {
         const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
         const response = await fetch(defUrl);
@@ -492,7 +474,7 @@ class YetiCreature extends HTMLElement {
       this.startRenderLoop();
 
     } catch (err) {
-      console.error('[yeti-creature]', err, err?.message, err?.stack);
+      console.error('[yeti-creature]', err?.message || err);
       if (label) label.textContent = err?.message || 'Error';
     }
   }
