@@ -56,9 +56,10 @@ export class PhysicsBridge {
     this.config = physicsConfig;
     this.physics = new XPBDPhysicsGPU();
 
-    // Try GPU, fall back to CPU
-    const gpuOk = await this.physics.initGPU();
-    console.log(`Physics: ${gpuOk ? 'WebGPU' : 'CPU fallback'}`);
+    // Try GPU, fall back to CPU (set forceCPU: true in physics config to skip GPU)
+    const forceCPU = physicsConfig.forceCPU || false;
+    const gpuOk = forceCPU ? false : await this.physics.initGPU();
+    console.log(`Physics: ${gpuOk ? 'WebGPU' : 'CPU fallback'}${forceCPU ? ' (forced CPU)' : ''}`);
 
     // Configure simulation params
     if (physicsConfig.gravity) {
@@ -75,6 +76,10 @@ export class PhysicsBridge {
     }
     if (physicsConfig.dt !== undefined) {
       this.physics.params.dt = physicsConfig.dt;
+    }
+    // Store bounds for wall collisions
+    if (physicsConfig.bounds) {
+      this.physics.params.bounds = { ...physicsConfig.bounds };
     }
 
     // Create physics bodies from explicit list

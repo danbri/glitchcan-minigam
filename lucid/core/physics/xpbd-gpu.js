@@ -653,6 +653,69 @@ export class XPBDPhysicsGPU {
           p.pos[1] = groundContact;
         }
       }
+
+      // Bounds/wall collision (X and Z bounds)
+      const bounds = this.params.bounds;
+      if (bounds) {
+        for (const p of this.particles) {
+          if (p.invMass === 0) continue;
+          const r = p.radius;
+
+          // X bounds
+          if (bounds.minX !== undefined && p.pos[0] - r < bounds.minX) {
+            p.pos[0] = bounds.minX + r;
+          }
+          if (bounds.maxX !== undefined && p.pos[0] + r > bounds.maxX) {
+            p.pos[0] = bounds.maxX - r;
+          }
+
+          // Z bounds
+          if (bounds.minZ !== undefined && p.pos[2] - r < bounds.minZ) {
+            p.pos[2] = bounds.minZ + r;
+          }
+          if (bounds.maxZ !== undefined && p.pos[2] + r > bounds.maxZ) {
+            p.pos[2] = bounds.maxZ - r;
+          }
+        }
+      }
+    }
+
+    // Particle-particle collision (simple separation, no interpenetration)
+    for (let i = 0; i < this.particles.length; i++) {
+      const pA = this.particles[i];
+      if (pA.invMass === 0) continue;
+
+      for (let j = i + 1; j < this.particles.length; j++) {
+        const pB = this.particles[j];
+        if (pB.invMass === 0) continue;
+
+        const dx = pB.pos[0] - pA.pos[0];
+        const dy = pB.pos[1] - pA.pos[1];
+        const dz = pB.pos[2] - pA.pos[2];
+        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        const minDist = pA.radius + pB.radius;
+
+        if (dist < minDist && dist > 0.0001) {
+          // Separate particles
+          const overlap = minDist - dist;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const nz = dz / dist;
+
+          // Distribute separation based on inverse mass
+          const wSum = pA.invMass + pB.invMass;
+          const ratioA = pA.invMass / wSum;
+          const ratioB = pB.invMass / wSum;
+
+          pA.pos[0] -= nx * overlap * ratioA;
+          pA.pos[1] -= ny * overlap * ratioA;
+          pA.pos[2] -= nz * overlap * ratioA;
+
+          pB.pos[0] += nx * overlap * ratioB;
+          pB.pos[1] += ny * overlap * ratioB;
+          pB.pos[2] += nz * overlap * ratioB;
+        }
+      }
     }
 
     // Update velocities
