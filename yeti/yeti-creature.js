@@ -344,23 +344,82 @@ class YetiScene extends HTMLElement {
   }
 
   setupControls(canvas) {
-    let dragging = false, lastX = 0, lastY = 0;
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+    let lastPinchDist = 0;
+    const pointers = new Map();
+
+    // Get distance between two touch points
+    const getPinchDist = () => {
+      const pts = Array.from(pointers.values());
+      if (pts.length < 2) return 0;
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
 
     canvas.addEventListener('pointerdown', (e) => {
-      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      e.preventDefault();
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       canvas.setPointerCapture(e.pointerId);
+
+      if (pointers.size === 1) {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      } else if (pointers.size === 2) {
+        dragging = false;
+        lastPinchDist = getPinchDist();
+      }
     });
+
     canvas.addEventListener('pointermove', (e) => {
-      if (!dragging || !this.raymarcher) return;
-      this.raymarcher.camera.theta += (e.clientX - lastX) * 0.01;
-      this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, this.raymarcher.camera.phi - (e.clientY - lastY) * 0.01));
-      lastX = e.clientX; lastY = e.clientY;
+      if (!this.raymarcher) return;
+
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size === 2) {
+        // Pinch to zoom
+        const dist = getPinchDist();
+        if (lastPinchDist > 0) {
+          const delta = (lastPinchDist - dist) * 0.05;
+          this.raymarcher.camera.distance = Math.max(3, Math.min(50, this.raymarcher.camera.distance + delta));
+        }
+        lastPinchDist = dist;
+      } else if (dragging && pointers.size === 1) {
+        // Single finger drag = rotate
+        const dx = (e.clientX - lastX) * 0.008;
+        const dy = (e.clientY - lastY) * 0.008;
+        this.raymarcher.camera.theta += dx;
+        this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, this.raymarcher.camera.phi - dy));
+        lastX = e.clientX;
+        lastY = e.clientY;
+      }
     });
-    canvas.addEventListener('pointerup', () => { dragging = false; });
-    canvas.addEventListener('pointercancel', () => { dragging = false; });
+
+    const endPointer = (e) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size === 0) {
+        dragging = false;
+      } else if (pointers.size === 1) {
+        // Switch back to drag mode with remaining pointer
+        const remaining = Array.from(pointers.values())[0];
+        dragging = true;
+        lastX = remaining.x;
+        lastY = remaining.y;
+      }
+      lastPinchDist = 0;
+    };
+
+    canvas.addEventListener('pointerup', endPointer);
+    canvas.addEventListener('pointercancel', endPointer);
+
+    // Mouse wheel zoom
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (this.raymarcher) this.raymarcher.camera.distance = Math.max(2, Math.min(30, this.raymarcher.camera.distance + e.deltaY * 0.01));
+      if (this.raymarcher) {
+        this.raymarcher.camera.distance = Math.max(3, Math.min(50, this.raymarcher.camera.distance + e.deltaY * 0.02));
+      }
     }, { passive: false });
   }
 
