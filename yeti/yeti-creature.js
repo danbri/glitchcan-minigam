@@ -271,7 +271,14 @@ class YetiScene extends HTMLElement {
     `;
 
     const canvas = this.shadowRoot.querySelector('canvas');
-    this.raymarcher = new SimpleRaymarcher(canvas);
+    console.log('[yeti-scene shared] Creating raymarcher, canvas:', canvas?.width, canvas?.height);
+    try {
+      this.raymarcher = new SimpleRaymarcher(canvas);
+      console.log('[yeti-scene shared] Raymarcher created:', !!this.raymarcher);
+    } catch (err) {
+      console.error('[yeti-scene shared] Raymarcher creation failed:', err, err?.message);
+      return;
+    }
     this.raymarcher.resize();
     this.setupControls(canvas);
 
@@ -329,18 +336,25 @@ class YetiScene extends HTMLElement {
     console.log('[yeti-scene shared] Scene JSON:', JSON.stringify(sceneJson, null, 2));
 
     try {
+      console.log('[yeti-scene shared] Calling loadJsonScene...');
       const scene = loadJsonScene(sceneJson);
       console.log('[yeti-scene shared] Loaded scene:', scene);
+
+      console.log('[yeti-scene shared] Calling generateGlslFromJson...');
       const glsl = generateGlslFromJson(scene);
       console.log('[yeti-scene shared] GLSL length:', glsl.length);
+
+      console.log('[yeti-scene shared] Calling raymarcher.updateScene...');
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
+      console.log('[yeti-scene shared] updateScene done');
+
       Object.assign(this.raymarcher.camera, sceneJson.camera);
 
       // Update label
       const label = this.shadowRoot.querySelector('.label');
       label.textContent = labels.join(' ');
     } catch (err) {
-      console.error('[yeti-scene shared]', err);
+      console.error('[yeti-scene shared] Error:', err, 'message:', err?.message, 'stack:', err?.stack);
     }
   }
 
