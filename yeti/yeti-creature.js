@@ -344,7 +344,7 @@ class YetiScene extends HTMLElement {
           background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
           touch-action: none;
         }
-        .controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 8px; }
+        .controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 8px; align-items: center; }
         .controls button {
           background: rgba(255,255,255,0.2);
           border: none;
@@ -356,11 +356,41 @@ class YetiScene extends HTMLElement {
           touch-action: manipulation;
         }
         .controls button:active { background: rgba(255,255,255,0.4); }
+        .throw-panel {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          background: rgba(0,0,0,0.5);
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 16px;
+        }
+        .throw-panel select {
+          font-size: 16px;
+          background: rgba(255,255,255,0.2);
+          border: none;
+          border-radius: 4px;
+          padding: 4px;
+          color: white;
+          cursor: pointer;
+        }
+        .throw-panel button {
+          width: auto;
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 14px;
+        }
         .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
         ::slotted(*) { display: none; }
       </style>
       <canvas></canvas>
       <div class="controls">
+        <div class="throw-panel">
+          <select class="from-select" title="Thrower"></select>
+          <span>➡️</span>
+          <select class="to-select" title="Target"></select>
+          <button class="throw-btn" title="Throw!">🚀</button>
+        </div>
         <button class="shoot-btn" title="Shoot ball">🎾</button>
       </div>
       <div class="label"></div>
@@ -388,6 +418,18 @@ class YetiScene extends HTMLElement {
     const shootBtn = this.shadowRoot.querySelector('.shoot-btn');
     shootBtn.addEventListener('click', () => this.shootBall());
 
+    // Throw button
+    const throwBtn = this.shadowRoot.querySelector('.throw-btn');
+    throwBtn.addEventListener('click', () => {
+      const fromSelect = this.shadowRoot.querySelector('.from-select');
+      const toSelect = this.shadowRoot.querySelector('.to-select');
+      const fromIdx = parseInt(fromSelect.value);
+      const toIdx = parseInt(toSelect.value);
+      if (fromIdx !== toIdx) {
+        this.throwCreatureAt(fromIdx, toIdx);
+      }
+    });
+
     // ResizeObserver for orientation changes
     this._resizeObserver = new ResizeObserver(() => {
       const newWidth = this.clientWidth;
@@ -401,7 +443,10 @@ class YetiScene extends HTMLElement {
 
     // Build physics scene after def loads
     this._ready.then(() => {
-      if (this.quadrupedDef) this.buildPhysicsScene();
+      if (this.quadrupedDef) {
+        this.buildPhysicsScene();
+        this.populateThrowSelects();
+      }
     });
 
     this.startPhysicsRenderLoop();
@@ -543,37 +588,95 @@ class YetiScene extends HTMLElement {
     }
   }
 
-  // Shoot a new ball from above
+  // Shoot a ball - recycles existing balls by repositioning them
   shootBall() {
     if (!this.physicsScene) {
       console.log('[yeti-scene] Physics not ready yet');
       return;
     }
 
-    const ballId = `ball${this.balls.length}`;
-    const color = this.ballColors[this.balls.length % this.ballColors.length];
     const half = this.arenaSize / 2;
-
     // Random position above arena
     const pos = [(Math.random() - 0.5) * half, 5, (Math.random() - 0.5) * half];
+    // Random downward velocity with some horizontal component
+    const vel = [(Math.random() - 0.5) * 3, -2, (Math.random() - 0.5) * 3];
 
-    // Add physics body using PhysicsScene.addBody
-    this.physicsScene.addBody({
-      id: ballId,
-      position: pos,
-      mass: 0.3,
-      radius: 0.3,
-      restitution: 0.9
+    // Recycle: pick a ball to reposition (round-robin)
+    this.nextBallIndex = (this.nextBallIndex || 0) % 3;
+    const ballId = `ball${this.nextBallIndex}`;
+    this.nextBallIndex++;
+
+    // Find the ball body and reset its position/velocity
+    const body = this.physicsScene.bodies.find(b => b.id === ballId);
+    if (body) {
+      body.position[0] = pos[0];
+      body.position[1] = pos[1];
+      body.position[2] = pos[2];
+      body.velocity[0] = vel[0];
+      body.velocity[1] = vel[1];
+      body.velocity[2] = vel[2];
+      console.log(`[yeti-scene] Recycled ${ballId} to [${pos.map(v => v.toFixed(1)).join(',')}]`);
+    }
+  }
+
+  // Throw one creature at another - applies impulse toward target
+  throwCreatureAt(fromIndex, toIndex) {
+    if (!this.physicsScene) return;
+
+    const fromBody = this.physicsScene.bodies.find(b => b.id === `creature${fromIndex}`);
+    const toBody = this.physicsScene.bodies.find(b => b.id === `creature${toIndex}`);
+
+    if (!fromBody || !toBody) {
+      console.log('[yeti-scene] Invalid creature indices');
+      return;
+    }
+
+    // Direction from thrower to target
+    const dx = toBody.position[0] - fromBody.position[0];
+    const dz = toBody.position[2] - fromBody.position[2];
+    const dist = Math.sqrt(dx * dx + dz * dz) || 1;
+
+    // Impulse strength based on mass (heavier = slower throw)
+    const strength = 15 / fromBody.mass;
+    const impulse = [
+      (dx / dist) * strength,
+      3, // Some upward lift
+      (dz / dist) * strength
+    ];
+
+    this.physicsScene.applyImpulse(fromBody.id, impulse);
+    console.log(`[yeti-scene] Threw creature${fromIndex} at creature${toIndex}, impulse: [${impulse.map(v => v.toFixed(1)).join(',')}]`);
+  }
+
+  // Populate the throw selects with creature emojis
+  populateThrowSelects() {
+    const fromSelect = this.shadowRoot.querySelector('.from-select');
+    const toSelect = this.shadowRoot.querySelector('.to-select');
+    if (!fromSelect || !toSelect) return;
+
+    const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+
+    creatures.forEach((el, i) => {
+      const species = el.species || 'dog';
+      const defaults = SPECIES_DEFAULTS[species] || SPECIES_DEFAULTS.dog;
+      const emoji = defaults.emoji;
+
+      const opt1 = document.createElement('option');
+      opt1.value = i;
+      opt1.textContent = emoji;
+      fromSelect.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = i;
+      opt2.textContent = emoji;
+      toSelect.appendChild(opt2);
     });
 
-    // Store ball info for tracking
-    this.balls.push({ id: ballId, color });
-
-    console.log(`[yeti-scene] Shot ${ballId} at [${pos.map(v => v.toFixed(2)).join(',')}]`);
-
-    // Note: The ball won't render visually since it's not in the SDF scene
-    // To add dynamic balls to rendering, we'd need to rebuild the SDF scene
-    // For now, physics works but visual is TODO
+    // Default: first creature throws at second
+    if (creatures.length >= 2) {
+      fromSelect.value = '0';
+      toSelect.value = '1';
+    }
   }
 
   // Render loop with physics stepping
