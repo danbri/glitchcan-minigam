@@ -228,6 +228,7 @@ class YetiScene extends HTMLElement {
 
   disconnectedCallback() {
     if (this.animationId) cancelAnimationFrame(this.animationId);
+    if (this._resizeObserver) this._resizeObserver.disconnect();
   }
 
   async loadDef() {
@@ -253,24 +254,37 @@ class YetiScene extends HTMLElement {
   }
 
   initSharedMode() {
-    const width = this.getAttribute('width') || 800;
-    const height = this.getAttribute('height') || 400;
+    const attrWidth = this.getAttribute('width');
+    const attrHeight = this.getAttribute('height');
 
     // Create shadow DOM with canvas
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; position: relative; }
-        canvas { display: block; border-radius: 8px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); touch-action: none; }
+        :host { display: block; position: relative; width: 100%; }
+        canvas {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          touch-action: none;
+        }
         .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
         ::slotted(*) { display: none; }
       </style>
-      <canvas width="${width}" height="${height}"></canvas>
+      <canvas></canvas>
       <div class="label"></div>
       <slot></slot>
     `;
 
+    // Size canvas to container, maintaining aspect ratio
     const canvas = this.shadowRoot.querySelector('canvas');
+    const containerWidth = this.clientWidth || parseInt(attrWidth) || 800;
+    const aspectRatio = (parseInt(attrHeight) || 400) / (parseInt(attrWidth) || 800);
+    canvas.width = containerWidth;
+    canvas.height = Math.round(containerWidth * aspectRatio);
+
     try {
       this.raymarcher = new SimpleRaymarcher(canvas);
     } catch (err) {
@@ -279,6 +293,17 @@ class YetiScene extends HTMLElement {
     }
     this.raymarcher.resize();
     this.setupControls(canvas);
+
+    // Handle resize (orientation change, window resize)
+    this._resizeObserver = new ResizeObserver(() => {
+      const newWidth = this.clientWidth;
+      if (newWidth > 0 && newWidth !== canvas.width) {
+        canvas.width = newWidth;
+        canvas.height = Math.round(newWidth * aspectRatio);
+        this.raymarcher.resize();
+      }
+    });
+    this._resizeObserver.observe(this);
 
     // Wait for children to be parsed, then build scene
     requestAnimationFrame(() => {
