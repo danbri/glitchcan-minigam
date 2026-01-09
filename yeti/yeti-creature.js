@@ -204,7 +204,7 @@ function getBasePath() {
 
 class YetiScene extends HTMLElement {
   static get observedAttributes() {
-    return ['mode', 'width', 'height', 'spin'];
+    return ['mode', 'width', 'height', 'spin', 'arena-size', 'ball-colors'];
   }
 
   constructor() {
@@ -213,15 +213,23 @@ class YetiScene extends HTMLElement {
     this._ready = null;
     this.raymarcher = null;
     this.animationId = null;
+    this.balls = []; // For physics mode
+    this.lastPhysicsTime = 0;
   }
 
   get isShared() {
     return this.getAttribute('mode') === 'shared';
   }
 
+  get isPhysics() {
+    return this.getAttribute('mode') === 'physics';
+  }
+
   connectedCallback() {
     this._ready = this.loadDef();
-    if (this.isShared) {
+    if (this.isPhysics) {
+      this.initPhysicsMode();
+    } else if (this.isShared) {
       this.initSharedMode();
     }
   }
@@ -311,6 +319,235 @@ class YetiScene extends HTMLElement {
     });
 
     this.startRenderLoop();
+  }
+
+  // Physics mode - creatures slide around in an arena with bouncing balls
+  initPhysicsMode() {
+    const attrWidth = this.getAttribute('width');
+    const attrHeight = this.getAttribute('height');
+
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; position: relative; width: 100%; }
+        canvas {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          touch-action: none;
+        }
+        .controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 8px; }
+        .controls button {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          border-radius: 50%;
+          width: 44px;
+          height: 44px;
+          font-size: 20px;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .controls button:active { background: rgba(255,255,255,0.4); }
+        .label { position: absolute; bottom: 8px; left: 8px; font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
+        ::slotted(*) { display: none; }
+      </style>
+      <canvas></canvas>
+      <div class="controls">
+        <button class="shoot-btn" title="Shoot ball">🎾</button>
+      </div>
+      <div class="label"></div>
+      <slot></slot>
+    `;
+
+    const canvas = this.shadowRoot.querySelector('canvas');
+    const containerWidth = this.clientWidth || parseInt(attrWidth) || 800;
+    const aspectRatio = (parseInt(attrHeight) || 500) / (parseInt(attrWidth) || 800);
+    canvas.width = containerWidth;
+    canvas.height = Math.round(containerWidth * aspectRatio);
+
+    try {
+      this.raymarcher = new SimpleRaymarcher(canvas);
+    } catch (err) {
+      console.error('[yeti-scene physics] Raymarcher creation failed:', err?.message);
+      return;
+    }
+    this.raymarcher.resize();
+    this.setupControls(canvas);
+
+    // Ball shooting button
+    const shootBtn = this.shadowRoot.querySelector('.shoot-btn');
+    shootBtn.addEventListener('click', () => this.shootBall());
+
+    // ResizeObserver for orientation changes
+    this._resizeObserver = new ResizeObserver(() => {
+      const newWidth = this.clientWidth;
+      if (newWidth > 0 && newWidth !== canvas.width) {
+        canvas.width = newWidth;
+        canvas.height = Math.round(newWidth * aspectRatio);
+        this.raymarcher.resize();
+      }
+    });
+    this._resizeObserver.observe(this);
+
+    // Build physics scene after def loads
+    requestAnimationFrame(() => {
+      if (this.quadrupedDef) this.buildPhysicsScene();
+    });
+
+    this.startPhysicsRenderLoop();
+  }
+
+  // Build scene with physics bodies for creatures and balls
+  buildPhysicsScene() {
+    if (!this.quadrupedDef || !this.raymarcher) return;
+
+    const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+    const arenaSize = parseNumber(this.getAttribute('arena-size')) || 8;
+    const wallHeight = 1.5;
+    const groundY = -1.5;
+
+    // Candy ball colors
+    const ballColorStr = this.getAttribute('ball-colors') || 'pink,lime,cyan,yellow,orange';
+    this.ballColors = ballColorStr.split(',').map(c => parseColor(c.trim()));
+
+    // Physics bodies: creatures + initial balls
+    const bodies = [];
+    const children = [];
+    const labels = [];
+
+    // Add creatures as physics bodies
+    creatures.forEach((el, i) => {
+      const species = el.species || 'dog';
+      const defaults = SPECIES_DEFAULTS[species];
+      const params = el.buildParams ? el.buildParams() : { ...defaults };
+      const pos = parseVec3(el.getAttribute('pos')) || [i * 3 - (creatures.length - 1) * 1.5, 0, 0];
+      const mass = species === 'elephant' ? 5 : (species === 'horse' ? 3 : 1.5);
+
+      labels.push(defaults.emoji);
+
+      // Physics body for this creature
+      bodies.push({
+        name: `creature${i}`,
+        pos: [pos[0], pos[1] + 0.5, pos[2]],
+        mass,
+        radius: species === 'elephant' ? 1.2 : 0.8,
+        restitution: 0.5
+      });
+
+      // SDF node with physics-driven position
+      children.push({
+        type: "ref",
+        id: "quadruped",
+        params,
+        transform: { translate: { "var": `phys_creature${i}` } }
+      });
+    });
+
+    // Add some initial balls
+    for (let i = 0; i < 3; i++) {
+      const ballId = `ball${i}`;
+      const color = this.ballColors[i % this.ballColors.length];
+      bodies.push({
+        name: ballId,
+        pos: [(Math.random() - 0.5) * 4, 3 + i, (Math.random() - 0.5) * 4],
+        mass: 0.3,
+        radius: 0.3,
+        restitution: 0.9
+      });
+      children.push({
+        type: "sphere",
+        params: { r: 0.3, color },
+        transform: { translate: { "var": `phys_${ballId}` } }
+      });
+      this.balls.push({ id: ballId, color });
+    }
+
+    // Arena walls (static geometry - not physics bodies)
+    const wallColor = [0.3, 0.3, 0.35];
+    const groundColor = [0.25, 0.35, 0.25];
+    const half = arenaSize / 2;
+
+    // Ground
+    children.push({
+      type: "box",
+      params: { size: [arenaSize, 0.3, arenaSize], color: groundColor },
+      transform: { translate: [0, groundY - 0.15, 0] }
+    });
+
+    // Walls
+    children.push({ type: "box", params: { size: [0.2, wallHeight, arenaSize], color: wallColor }, transform: { translate: [-half - 0.1, groundY + wallHeight/2, 0] } });
+    children.push({ type: "box", params: { size: [0.2, wallHeight, arenaSize], color: wallColor }, transform: { translate: [half + 0.1, groundY + wallHeight/2, 0] } });
+    children.push({ type: "box", params: { size: [arenaSize, wallHeight, 0.2], color: wallColor }, transform: { translate: [0, groundY + wallHeight/2, -half - 0.1] } });
+    children.push({ type: "box", params: { size: [arenaSize, wallHeight, 0.2], color: wallColor }, transform: { translate: [0, groundY + wallHeight/2, half + 0.1] } });
+
+    // Build complete scene JSON with physics
+    const sceneJson = {
+      version: "1.0",
+      defs: { quadruped: this.quadrupedDef.quadruped },
+      root: { type: "union", children },
+      camera: { distance: 14, phi: 0.5, theta: 0.3, target: [0, 0, 0] },
+      physics: {
+        enabled: true,
+        gravity: [0, -12, 0],
+        groundY,
+        damping: 0.98,
+        bounds: { minX: -half, maxX: half, minZ: -half, maxZ: half },
+        bodies
+      }
+    };
+
+    this.sceneJson = sceneJson;
+    this.arenaSize = arenaSize;
+
+    try {
+      const scene = loadJsonScene(sceneJson);
+      const glsl = generateGlslFromJson(scene);
+      this.raymarcher.updateScene(glsl, {}, null, sceneJson);
+      Object.assign(this.raymarcher.camera, sceneJson.camera);
+
+      const label = this.shadowRoot.querySelector('.label');
+      label.textContent = `${labels.join(' ')} 🎾×${this.balls.length}`;
+    } catch (err) {
+      console.error('[yeti-scene physics]', err?.message || err);
+    }
+  }
+
+  // Shoot a new ball from above
+  shootBall() {
+    if (!this.raymarcher?.physicsBridge) {
+      console.log('[yeti-scene] Physics not ready yet');
+      return;
+    }
+
+    const ballId = `ball${this.balls.length}`;
+    const color = this.ballColors[this.balls.length % this.ballColors.length];
+    const half = this.arenaSize / 2;
+
+    // Random position above arena
+    const pos = [(Math.random() - 0.5) * half, 5, (Math.random() - 0.5) * half];
+
+    // Add to physics (this requires extending physics-bridge to support dynamic bodies)
+    // For now, log that we'd shoot
+    console.log(`[yeti-scene] Would shoot ${ballId} at`, pos, 'color:', color);
+
+    // TODO: Need to extend physics bridge to add bodies dynamically
+    // this.raymarcher.physicsBridge.addBody({ name: ballId, pos, mass: 0.3, radius: 0.3, restitution: 0.9 });
+    // Then rebuild scene SDF with new ball
+  }
+
+  // Render loop with physics stepping
+  startPhysicsRenderLoop() {
+    const render = (now) => {
+      if (this.raymarcher) {
+        // Physics stepping happens inside raymarcher.render() if physics is enabled
+        this.raymarcher.render();
+      }
+      this.animationId = requestAnimationFrame(render);
+    };
+    this.lastPhysicsTime = performance.now();
+    render(this.lastPhysicsTime);
   }
 
   // Collect all yeti-* children and build combined scene
