@@ -24,6 +24,16 @@ import { PhysicsScene } from '../lucid/core/physics/physics-scene.js';
 // Species defaults
 // ============================================================
 
+// Chess piece defaults (simpler than quadrupeds - just color and physics)
+const CHESS_PIECE_DEFAULTS = {
+  pawn:   { name: 'Pawn',   emoji: '♟️', height: 1.0, mass: 0.5, radius: 0.35 },
+  rook:   { name: 'Rook',   emoji: '♜',  height: 1.2, mass: 1.2, radius: 0.4 },
+  knight: { name: 'Knight', emoji: '♞',  height: 1.1, mass: 1.0, radius: 0.4 },
+  bishop: { name: 'Bishop', emoji: '♝',  height: 1.4, mass: 0.9, radius: 0.38 },
+  queen:  { name: 'Queen',  emoji: '♛',  height: 1.5, mass: 1.5, radius: 0.42 },
+  king:   { name: 'King',   emoji: '♚',  height: 1.8, mass: 2.0, radius: 0.45 }
+};
+
 const SPECIES_DEFAULTS = {
   dog: {
     name: 'Dog', emoji: '🐕',
@@ -209,12 +219,13 @@ function getBasePath() {
 
 class YetiScene extends HTMLElement {
   static get observedAttributes() {
-    return ['mode', 'width', 'height', 'spin', 'arena-size', 'ball-colors'];
+    return ['mode', 'width', 'height', 'spin', 'arena-size', 'ball-colors', 'checkered'];
   }
 
   constructor() {
     super();
     this.quadrupedDef = null;
+    this.chessDef = null;  // Chess pieces definitions
     this._ready = null;
     this.raymarcher = null;
     this.animationId = null;
@@ -247,10 +258,19 @@ class YetiScene extends HTMLElement {
 
   async loadDef() {
     try {
-      const defUrl = new URL('defs/quadruped.json', getBasePath()).href;
-      const response = await fetch(defUrl);
-      if (!response.ok) throw new Error('Failed to load quadruped.json');
-      this.quadrupedDef = await response.json();
+      // Load both quadruped and chess piece definitions in parallel
+      const [quadResponse, chessResponse] = await Promise.all([
+        fetch(new URL('defs/quadruped.json', getBasePath()).href),
+        fetch(new URL('defs/chess-pieces.json', getBasePath()).href)
+      ]);
+
+      if (!quadResponse.ok) throw new Error('Failed to load quadruped.json');
+      this.quadrupedDef = await quadResponse.json();
+
+      if (chessResponse.ok) {
+        this.chessDef = await chessResponse.json();
+      }
+
       this.dispatchEvent(new CustomEvent('yeti-def-ready', { bubbles: false }));
 
       // If shared mode, build combined scene after def loads
@@ -423,10 +443,10 @@ class YetiScene extends HTMLElement {
     throwBtn.addEventListener('click', () => {
       const fromSelect = this.shadowRoot.querySelector('.from-select');
       const toSelect = this.shadowRoot.querySelector('.to-select');
-      const fromIdx = parseInt(fromSelect.value);
-      const toIdx = parseInt(toSelect.value);
-      if (fromIdx !== toIdx) {
-        this.throwCreatureAt(fromIdx, toIdx);
+      const fromId = fromSelect.value;
+      const toId = toSelect.value;
+      if (fromId !== toId) {
+        this.throwBodyAt(fromId, toId);
       }
     });
 
@@ -452,14 +472,16 @@ class YetiScene extends HTMLElement {
     this.startPhysicsRenderLoop();
   }
 
-  // Build scene with physics bodies for creatures and balls
+  // Build scene with physics bodies for creatures/chess pieces and balls
   buildPhysicsScene() {
-    if (!this.quadrupedDef || !this.raymarcher) return;
+    if (!this.raymarcher) return;
 
     const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+    const chessPieces = this.querySelectorAll('yeti-pawn, yeti-rook, yeti-knight, yeti-bishop, yeti-queen, yeti-king');
     const arenaSize = parseNumber(this.getAttribute('arena-size')) || 8;
     const wallHeight = 1.5;
     const groundY = -1.5;
+    const isCheckered = this.hasAttribute('checkered');
 
     // Candy ball colors - filter out any nulls from unrecognized color names
     const ballColorStr = this.getAttribute('ball-colors') || 'pink,lime,cyan,yellow,orange';
@@ -477,7 +499,7 @@ class YetiScene extends HTMLElement {
     const children = [];
     const labels = [];
 
-    // Add creatures as physics bodies
+    // Add creatures as physics bodies (quadrupeds)
     creatures.forEach((el, i) => {
       const species = el.species || 'dog';
       const defaults = SPECIES_DEFAULTS[species] || SPECIES_DEFAULTS.dog;
@@ -510,6 +532,35 @@ class YetiScene extends HTMLElement {
       });
     });
 
+    // Add chess pieces as physics bodies
+    chessPieces.forEach((el, i) => {
+      const pieceType = el.pieceType || 'pawn';
+      const defaults = CHESS_PIECE_DEFAULTS[pieceType] || CHESS_PIECE_DEFAULTS.pawn;
+      const color = parseColor(el.getAttribute('color')) || (el.hasAttribute('black') ? [0.15, 0.12, 0.12] : [0.95, 0.92, 0.85]);
+      const pos = parseVec3(el.getAttribute('pos')) || [i * 1.5 - (chessPieces.length - 1) * 0.75, 0, 0];
+
+      labels.push(defaults.emoji);
+
+      // Physics body for this piece
+      bodies.push({
+        name: `piece${i}`,
+        pos: [pos[0], pos[1] + defaults.height * 0.5, pos[2]],
+        mass: defaults.mass,
+        radius: defaults.radius,
+        restitution: 0.3  // Chess pieces don't bounce much
+      });
+
+      // SDF node with physics-driven position
+      const varName = `phys_piece${i}`;
+      children.push({
+        type: "ref",
+        id: pieceType,
+        params: { color },
+        boundingRadius: defaults.height,
+        transform: { translate: { "var": varName } }
+      });
+    });
+
     // Add some initial balls
     for (let i = 0; i < 3; i++) {
       const ballId = `ball${i}`;
@@ -531,15 +582,35 @@ class YetiScene extends HTMLElement {
 
     // Arena walls (static geometry - not physics bodies)
     const wallColor = [0.3, 0.3, 0.35];
-    const groundColor = [0.25, 0.35, 0.25];
     const half = arenaSize / 2;
 
-    // Ground
-    children.push({
-      type: "box",
-      params: { size: [arenaSize, 0.3, arenaSize], color: groundColor },
-      transform: { translate: [0, groundY - 0.15, 0] }
-    });
+    // Ground - checkered pattern for chess, solid for regular
+    if (isCheckered) {
+      // Checkered floor using repeated boxes
+      const squareSize = arenaSize / 8;  // 8x8 grid like a chess board
+      const lightSquare = [0.9, 0.85, 0.75];
+      const darkSquare = [0.35, 0.25, 0.2];
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const isLight = (row + col) % 2 === 0;
+          const x = (col - 3.5) * squareSize;
+          const z = (row - 3.5) * squareSize;
+          children.push({
+            type: "box",
+            params: { size: [squareSize * 0.98, 0.3, squareSize * 0.98], color: isLight ? lightSquare : darkSquare },
+            transform: { translate: [x, groundY - 0.15, z] }
+          });
+        }
+      }
+    } else {
+      // Solid ground
+      const groundColor = [0.25, 0.35, 0.25];
+      children.push({
+        type: "box",
+        params: { size: [arenaSize, 0.3, arenaSize], color: groundColor },
+        transform: { translate: [0, groundY - 0.15, 0] }
+      });
+    }
 
     // Walls
     children.push({ type: "box", params: { size: [0.2, wallHeight, arenaSize], color: wallColor }, transform: { translate: [-half - 0.1, groundY + wallHeight/2, 0] } });
@@ -547,11 +618,26 @@ class YetiScene extends HTMLElement {
     children.push({ type: "box", params: { size: [arenaSize, wallHeight, 0.2], color: wallColor }, transform: { translate: [0, groundY + wallHeight/2, -half - 0.1] } });
     children.push({ type: "box", params: { size: [arenaSize, wallHeight, 0.2], color: wallColor }, transform: { translate: [0, groundY + wallHeight/2, half + 0.1] } });
 
+    // Build defs object - include quadruped if creatures present, chess pieces if present
+    const defs = {};
+    if (creatures.length > 0 && this.quadrupedDef) {
+      defs.quadruped = this.quadrupedDef.quadruped;
+    }
+    if (chessPieces.length > 0 && this.chessDef) {
+      // Add each chess piece type that's used
+      for (const el of chessPieces) {
+        const pieceType = el.pieceType || 'pawn';
+        if (this.chessDef[pieceType]) {
+          defs[pieceType] = this.chessDef[pieceType];
+        }
+      }
+    }
+
     // Build complete scene JSON with physics
     // Using PhysicsScene (same as Lucid's main app and bouncing-balls demo)
     const sceneJson = {
       version: "1.0",
-      defs: { quadruped: this.quadrupedDef.quadruped },
+      defs,
       root: { type: "union", children },
       camera: { distance: 10, phi: 0.4, theta: 0.3, target: [0, -0.5, 0] },
       physics: {
@@ -621,15 +707,15 @@ class YetiScene extends HTMLElement {
     }
   }
 
-  // Throw one creature at another - applies impulse toward target
-  throwCreatureAt(fromIndex, toIndex) {
+  // Throw one body at another - applies impulse toward target
+  throwBodyAt(fromId, toId) {
     if (!this.physicsScene) return;
 
-    const fromBody = this.physicsScene.bodies.find(b => b.id === `creature${fromIndex}`);
-    const toBody = this.physicsScene.bodies.find(b => b.id === `creature${toIndex}`);
+    const fromBody = this.physicsScene.bodies.find(b => b.id === fromId);
+    const toBody = this.physicsScene.bodies.find(b => b.id === toId);
 
     if (!fromBody || !toBody) {
-      console.log('[yeti-scene] Invalid creature indices');
+      console.log('[yeti-scene] Invalid body IDs:', fromId, toId);
       return;
     }
 
@@ -647,37 +733,67 @@ class YetiScene extends HTMLElement {
     ];
 
     this.physicsScene.applyImpulse(fromBody.id, impulse);
-    console.log(`[yeti-scene] Threw creature${fromIndex} at creature${toIndex}, impulse: [${impulse.map(v => v.toFixed(1)).join(',')}]`);
+    console.log(`[yeti-scene] Threw ${fromId} at ${toId}, impulse: [${impulse.map(v => v.toFixed(1)).join(',')}]`);
   }
 
-  // Populate the throw selects with creature emojis
+  // Legacy method for backwards compatibility
+  throwCreatureAt(fromIndex, toIndex) {
+    this.throwBodyAt(`creature${fromIndex}`, `creature${toIndex}`);
+  }
+
+  // Populate the throw selects with creature/piece emojis
   populateThrowSelects() {
     const fromSelect = this.shadowRoot.querySelector('.from-select');
     const toSelect = this.shadowRoot.querySelector('.to-select');
     if (!fromSelect || !toSelect) return;
 
     const creatures = this.querySelectorAll('yeti-dog, yeti-cat, yeti-horse, yeti-elephant, yeti-creature');
+    const chessPieces = this.querySelectorAll('yeti-pawn, yeti-rook, yeti-knight, yeti-bishop, yeti-queen, yeti-king');
 
-    creatures.forEach((el, i) => {
+    let idx = 0;
+
+    // Add creatures
+    creatures.forEach((el) => {
       const species = el.species || 'dog';
       const defaults = SPECIES_DEFAULTS[species] || SPECIES_DEFAULTS.dog;
       const emoji = defaults.emoji;
 
       const opt1 = document.createElement('option');
-      opt1.value = i;
+      opt1.value = `creature${idx}`;
       opt1.textContent = emoji;
       fromSelect.appendChild(opt1);
 
       const opt2 = document.createElement('option');
-      opt2.value = i;
+      opt2.value = `creature${idx}`;
       opt2.textContent = emoji;
       toSelect.appendChild(opt2);
+      idx++;
     });
 
-    // Default: first creature throws at second
-    if (creatures.length >= 2) {
-      fromSelect.value = '0';
-      toSelect.value = '1';
+    // Add chess pieces
+    let pieceIdx = 0;
+    chessPieces.forEach((el) => {
+      const pieceType = el.pieceType || 'pawn';
+      const defaults = CHESS_PIECE_DEFAULTS[pieceType] || CHESS_PIECE_DEFAULTS.pawn;
+      const emoji = defaults.emoji;
+
+      const opt1 = document.createElement('option');
+      opt1.value = `piece${pieceIdx}`;
+      opt1.textContent = emoji;
+      fromSelect.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = `piece${pieceIdx}`;
+      opt2.textContent = emoji;
+      toSelect.appendChild(opt2);
+      pieceIdx++;
+    });
+
+    // Default: first item throws at second
+    const totalItems = creatures.length + chessPieces.length;
+    if (totalItems >= 2) {
+      fromSelect.selectedIndex = 0;
+      toSelect.selectedIndex = 1;
     }
   }
 
@@ -1047,13 +1163,37 @@ class YetiCreature extends HTMLElement {
 }
 
 // ============================================================
-// Species-specific components
+// Species-specific components (quadrupeds)
 // ============================================================
 
 class YetiDog extends YetiCreature { get species() { return 'dog'; } }
 class YetiCat extends YetiCreature { get species() { return 'cat'; } }
 class YetiElephant extends YetiCreature { get species() { return 'elephant'; } }
 class YetiHorse extends YetiCreature { get species() { return 'horse'; } }
+
+// ============================================================
+// Chess piece components
+// ============================================================
+
+class YetiChessPiece extends HTMLElement {
+  static get observedAttributes() {
+    return ['color', 'black', 'pos'];
+  }
+
+  get pieceType() { return 'pawn'; }
+
+  connectedCallback() {
+    // Chess pieces only render in physics mode via yeti-scene
+    // They don't have standalone rendering (too simple to need it)
+  }
+}
+
+class YetiPawn extends YetiChessPiece { get pieceType() { return 'pawn'; } }
+class YetiRook extends YetiChessPiece { get pieceType() { return 'rook'; } }
+class YetiKnight extends YetiChessPiece { get pieceType() { return 'knight'; } }
+class YetiBishop extends YetiChessPiece { get pieceType() { return 'bishop'; } }
+class YetiQueen extends YetiChessPiece { get pieceType() { return 'queen'; } }
+class YetiKing extends YetiChessPiece { get pieceType() { return 'king'; } }
 
 // ============================================================
 // Register components
@@ -1066,4 +1206,16 @@ customElements.define('yeti-cat', YetiCat);
 customElements.define('yeti-elephant', YetiElephant);
 customElements.define('yeti-horse', YetiHorse);
 
-export { YetiScene, YetiCreature, YetiDog, YetiCat, YetiElephant, YetiHorse, SPECIES_DEFAULTS };
+// Chess pieces
+customElements.define('yeti-pawn', YetiPawn);
+customElements.define('yeti-rook', YetiRook);
+customElements.define('yeti-knight', YetiKnight);
+customElements.define('yeti-bishop', YetiBishop);
+customElements.define('yeti-queen', YetiQueen);
+customElements.define('yeti-king', YetiKing);
+
+export {
+  YetiScene, YetiCreature, YetiDog, YetiCat, YetiElephant, YetiHorse,
+  YetiChessPiece, YetiPawn, YetiRook, YetiKnight, YetiBishop, YetiQueen, YetiKing,
+  SPECIES_DEFAULTS, CHESS_PIECE_DEFAULTS
+};
