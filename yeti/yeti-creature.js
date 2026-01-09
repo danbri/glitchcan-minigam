@@ -520,6 +520,9 @@ class YetiScene extends HTMLElement {
       console.log('[yeti-scene physics] Scene JSON:', JSON.stringify(sceneJson, null, 2));
       const scene = loadJsonScene(sceneJson);
       const glsl = generateGlslFromJson(scene);
+      // Debug: log lines with physics creature transforms
+      const physCreatureLines = glsl.split('\n').filter(line => line.includes('u_phys_creature'));
+      console.log('[yeti-scene physics] Lines with u_phys_creature:', physCreatureLines);
       this.raymarcher.updateScene(glsl, {}, null, sceneJson);
       Object.assign(this.raymarcher.camera, sceneJson.camera);
 
