@@ -217,6 +217,10 @@ function processNode(node, registry, depth = 0) {
       if (node.params) {
         processed.overrides = processParams(node.params);
       }
+      // LCD-049: Preserve bounding radius for optimization
+      if (node.boundingRadius !== undefined) {
+        processed.boundingRadius = node.boundingRadius;
+      }
       break;
 
     default:
