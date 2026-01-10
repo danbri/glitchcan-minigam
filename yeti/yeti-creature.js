@@ -19,6 +19,7 @@ import { loadJsonScene } from '../lucid/core/json-loader.js';
 import { generateGlslFromJson } from '../lucid/core/json-codegen.js';
 import { SimpleRaymarcher } from '../lucid/ui/raymarcher.js';
 import { PhysicsScene } from '../lucid/core/physics/physics-scene.js';
+import { buildDynamicBVH } from '../lucid/core/bvh-builder.js';
 
 // ============================================================
 // Species defaults
@@ -532,16 +533,14 @@ class YetiScene extends HTMLElement {
       });
     });
 
-    // Add chess pieces as physics bodies - grouped by side for BVH optimization
-    const whitePieces = [];
-    const blackPieces = [];
+    // Add chess pieces as physics bodies - with automatic BVH spatial partitioning
+    const pieceNodesWithPos = [];
 
     chessPieces.forEach((el, i) => {
       const pieceType = el.pieceType || 'pawn';
       const defaults = CHESS_PIECE_DEFAULTS[pieceType] || CHESS_PIECE_DEFAULTS.pawn;
       const color = parseColor(el.getAttribute('color')) || (el.hasAttribute('black') ? [0.15, 0.12, 0.12] : [0.95, 0.92, 0.85]);
       const pos = parseVec3(el.getAttribute('pos')) || [i * 1.5 - (chessPieces.length - 1) * 0.75, 0, 0];
-      const isBlack = el.hasAttribute('black');
 
       labels.push(defaults.emoji);
 
@@ -564,34 +563,20 @@ class YetiScene extends HTMLElement {
         transform: { translate: { "var": varName } }
       };
 
-      // Group by side for BVH
-      if (isBlack) {
-        blackPieces.push(pieceNode);
-      } else {
-        whitePieces.push(pieceNode);
-      }
+      // Collect for BVH building
+      pieceNodesWithPos.push({
+        node: pieceNode,
+        initialPos: [pos[0], pos[1] + defaults.height * 0.5, pos[2]]
+      });
     });
 
-    // Add grouped pieces with bounding boxes for BVH optimization
-    if (whitePieces.length > 0) {
-      children.push({
-        type: "union",
-        boundingBox: {
-          center: [0, 0.5, -3],  // White side center
-          halfSize: [5, 2, 2]     // Cover white side of board
-        },
-        children: whitePieces
+    // Build BVH tree for chess pieces (automatic spatial partitioning)
+    if (pieceNodesWithPos.length > 0) {
+      const chessBVH = buildDynamicBVH(pieceNodesWithPos, {
+        leafSize: 2,      // 2 pieces per leaf node
+        padding: 3.0      // Extra padding for physics movement
       });
-    }
-    if (blackPieces.length > 0) {
-      children.push({
-        type: "union",
-        boundingBox: {
-          center: [0, 0.5, 3],   // Black side center
-          halfSize: [5, 2, 2]    // Cover black side of board
-        },
-        children: blackPieces
-      });
+      children.push(chessBVH);
     }
 
     // Add some initial balls
