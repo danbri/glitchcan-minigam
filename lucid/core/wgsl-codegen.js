@@ -23,6 +23,7 @@ export function generateWgslFromJson(scene, options = {}) {
     helpers: [],
     helperCounter: 0,
     showCutters: options.showCutters || false,
+    inlineDefaults: options.inlineDefaults || false, // Inline param defaults instead of uniforms
     localVars: {},
     instanceIdParam: null,
     sceneParams: scene.params || {},
@@ -33,14 +34,16 @@ export function generateWgslFromJson(scene, options = {}) {
     pickingMode: options.pickingMode || false
   };
 
-  // Register ALL params as uniforms
-  const allParams = getAllParamNames(scene.params || {}, scene.rig);
-  for (const [name, paramInfo] of Object.entries(allParams)) {
-    const uniformName = `u_${name}`;
-    if (paramInfo.type === 'scalar') {
-      ctx.uniforms.add(uniformName);
-    } else if (paramInfo.type === 'color3' || paramInfo.type === 'position3' || paramInfo.type === 'radii3' || paramInfo.type === 'direction3') {
-      ctx.uniforms.add(`${uniformName}:vec3f`);
+  // Register ALL params as uniforms (unless inlining defaults)
+  if (!ctx.inlineDefaults) {
+    const allParams = getAllParamNames(scene.params || {}, scene.rig);
+    for (const [name, paramInfo] of Object.entries(allParams)) {
+      const uniformName = `u_${name}`;
+      if (paramInfo.type === 'scalar') {
+        ctx.uniforms.add(uniformName);
+      } else if (paramInfo.type === 'color3' || paramInfo.type === 'position3' || paramInfo.type === 'radii3' || paramInfo.type === 'direction3') {
+        ctx.uniforms.add(`${uniformName}:vec3f`);
+      }
     }
   }
 
@@ -926,6 +929,16 @@ function valueToWgsl(value, ctx) {
     return formatFloat(value.value);
 
   case 'var':
+    // If inlineDefaults is set, use the default value from sceneParams instead of uniform
+    if (ctx.inlineDefaults && ctx.sceneParams[value.name]) {
+      const param = ctx.sceneParams[value.name];
+      const defaultVal = param.value !== undefined ? param.value : 0;
+      if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+        const arr = Array.isArray(defaultVal) ? defaultVal : [0, 0, 0];
+        return `vec3f(${arr.map(v => formatFloat(v)).join(', ')})`;
+      }
+      return formatFloat(defaultVal);
+    }
     ctx.uniforms.add(`u_${value.name}`);
     return `scene.u_${value.name}`;
 

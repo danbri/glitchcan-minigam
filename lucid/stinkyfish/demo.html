@@ -57,10 +57,10 @@
   <header>
     <h1>Stinkyfish WebGPU</h1>
     <select id="sceneSelect">
-      <option value="sphere">Simple Sphere</option>
+      <option value="sphere" selected>Simple Sphere</option>
       <option value="csg">CSG Demo</option>
-      <option value="wolf" selected>Wolf</option>
-      <option value="elephant">Elephant</option>
+      <option value="smoothblob">Smooth Blob</option>
+      <option value="wolf">Wolf</option>
     </select>
     <button id="recompile">Recompile</button>
     <div id="status">Loading...</div>
@@ -86,66 +86,32 @@
 
     let renderer = null;
 
-    // Built-in simple scenes for testing
+    // Built-in simple scenes for testing (raw JSON format)
     const builtinScenes = {
       sphere: {
         root: {
           type: 'sphere',
-          params: {
-            r: { type: 'const', value: 1.0 },
-            color: { type: 'array', values: [
-              { type: 'const', value: 0.8 },
-              { type: 'const', value: 0.2 },
-              { type: 'const', value: 0.2 }
-            ]}
-          }
+          params: { r: 1.0, color: [0.8, 0.2, 0.2] }
         }
       },
       csg: {
         root: {
           type: 'subtract',
           children: [
-            {
-              type: 'sphere',
-              params: {
-                r: { type: 'const', value: 1.0 },
-                color: { type: 'array', values: [
-                  { type: 'const', value: 0.2 },
-                  { type: 'const', value: 0.6 },
-                  { type: 'const', value: 0.9 }
-                ]}
-              }
-            },
-            {
-              type: 'box',
-              params: {
-                size: { type: 'array', values: [
-                  { type: 'const', value: 0.6 },
-                  { type: 'const', value: 1.5 },
-                  { type: 'const', value: 0.6 }
-                ]},
-                color: { type: 'array', values: [
-                  { type: 'const', value: 1 },
-                  { type: 'const', value: 0 },
-                  { type: 'const', value: 0 }
-                ]}
-              }
-            },
-            {
-              type: 'box',
-              params: {
-                size: { type: 'array', values: [
-                  { type: 'const', value: 1.5 },
-                  { type: 'const', value: 0.6 },
-                  { type: 'const', value: 0.6 }
-                ]},
-                color: { type: 'array', values: [
-                  { type: 'const', value: 0 },
-                  { type: 'const', value: 1 },
-                  { type: 'const', value: 0 }
-                ]}
-              }
-            }
+            { type: 'sphere', params: { r: 1.0, color: [0.2, 0.6, 0.9] } },
+            { type: 'box', params: { size: [0.6, 1.5, 0.6], color: [1, 0, 0] } },
+            { type: 'box', params: { size: [1.5, 0.6, 0.6], color: [0, 1, 0] } }
+          ]
+        }
+      },
+      smoothblob: {
+        root: {
+          type: 'smoothUnion',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 0.8, color: [0.9, 0.3, 0.1] } },
+            { type: 'sphere', params: { r: 0.6, color: [0.1, 0.8, 0.3] }, transform: { translate: [1, 0.3, 0] } },
+            { type: 'sphere', params: { r: 0.5, color: [0.2, 0.4, 0.9] }, transform: { translate: [-0.8, 0.5, 0.5] } }
           ]
         }
       }
@@ -168,8 +134,8 @@
           scene = loadJsonScene(json);
         }
 
-        // Generate WGSL
-        const wgsl = generateWgslFromJson(scene, {});
+        // Generate WGSL (inlineDefaults to avoid needing scene uniform buffer)
+        const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
         console.log(`Generated ${wgsl.length} chars of WGSL for ${name}`);
 
         // Compile
