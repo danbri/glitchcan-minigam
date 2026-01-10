@@ -61,6 +61,7 @@
       <option value="csg">CSG Demo</option>
       <option value="smoothblob">Smooth Blob</option>
       <option value="wolf">Wolf</option>
+      <option value="wolf-simple">Wolf (Simple Test)</option>
     </select>
     <button id="recompile">Recompile</button>
     <div id="status">Loading...</div>
@@ -112,6 +113,32 @@
             { type: 'sphere', params: { r: 0.8, color: [0.9, 0.3, 0.1] } },
             { type: 'sphere', params: { r: 0.6, color: [0.1, 0.8, 0.3] }, transform: { translate: [1, 0.3, 0] } },
             { type: 'sphere', params: { r: 0.5, color: [0.2, 0.4, 0.9] }, transform: { translate: [-0.8, 0.5, 0.5] } }
+          ]
+        }
+      },
+      // Simplified wolf-like quadruped for testing (no displacement)
+      'wolf-simple': {
+        camera: { distance: 8, target: [0, 0.5, 0] },
+        root: {
+          type: 'smoothUnion',
+          k: 0.25,
+          children: [
+            // Body
+            { type: 'ellipsoid', params: { r: [1.5, 0.6, 0.7], color: [0.5, 0.4, 0.35] } },
+            // Neck
+            { type: 'ellipsoid', params: { r: [0.35, 0.45, 0.35], color: [0.5, 0.4, 0.35] }, transform: { translate: [1.2, 0.3, 0] } },
+            // Head
+            { type: 'ellipsoid', params: { r: [0.4, 0.35, 0.35], color: [0.55, 0.45, 0.4] }, transform: { translate: [1.8, 0.4, 0] } },
+            // Snout
+            { type: 'ellipsoid', params: { r: [0.35, 0.18, 0.18], color: [0.55, 0.45, 0.4] }, transform: { translate: [2.3, 0.25, 0] } },
+            // Front legs
+            { type: 'ellipsoid', params: { r: [0.12, 0.5, 0.1], color: [0.5, 0.4, 0.35] }, transform: { translate: [0.8, -0.3, 0.35] } },
+            { type: 'ellipsoid', params: { r: [0.12, 0.5, 0.1], color: [0.5, 0.4, 0.35] }, transform: { translate: [0.8, -0.3, -0.35] } },
+            // Back legs
+            { type: 'ellipsoid', params: { r: [0.15, 0.5, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-1.0, -0.3, 0.35] } },
+            { type: 'ellipsoid', params: { r: [0.15, 0.5, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-1.0, -0.3, -0.35] } },
+            // Tail
+            { type: 'ellipsoid', params: { r: [0.6, 0.12, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-2.0, 0.2, 0], rotateZ: -0.3 } }
           ]
         }
       }
