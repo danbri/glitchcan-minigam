@@ -134,6 +134,16 @@
           scene = loadJsonScene(json);
         }
 
+        // Set camera based on scene
+        const cameraPresets = {
+          sphere: { distance: 5, target: [0, 0, 0] },
+          csg: { distance: 5, target: [0, 0, 0] },
+          smoothblob: { distance: 6, target: [0, 0.2, 0] },
+          wolf: { distance: 12, target: [0, 0.5, 0] },
+        };
+        const cam = cameraPresets[name] || { distance: 8, target: [0, 0.5, 0] };
+        renderer.setCamera(cam.distance, cam.target);
+
         // Generate WGSL (inlineDefaults to avoid needing scene uniform buffer)
         const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
         console.log(`Generated ${wgsl.length} chars of WGSL for ${name}`);
