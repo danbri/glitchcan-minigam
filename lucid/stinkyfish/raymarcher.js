@@ -11,6 +11,83 @@ export class StinkyfishRenderer {
     this.pipeline = null;
     this.uniformBuffer = null;
     this.bindGroup = null;
+
+    // Camera state
+    this.cameraDistance = 8;
+    this.cameraTheta = 0.3;  // horizontal angle
+    this.cameraPhi = 0.4;    // vertical angle
+    this.cameraTarget = [0, 0.5, 0];
+
+    // Mouse state
+    this.isDragging = false;
+    this.lastMouse = { x: 0, y: 0 };
+
+    this.setupMouseHandlers();
+  }
+
+  setupMouseHandlers() {
+    this.canvas.addEventListener('mousedown', (e) => {
+      this.isDragging = true;
+      this.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.isDragging = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!this.isDragging) return;
+      const dx = e.clientX - this.lastMouse.x;
+      const dy = e.clientY - this.lastMouse.y;
+      this.cameraTheta += dx * 0.01;
+      this.cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, this.cameraPhi + dy * 0.01));
+      this.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    this.canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      this.cameraDistance *= 1 + e.deltaY * 0.001;
+      this.cameraDistance = Math.max(2, Math.min(50, this.cameraDistance));
+    });
+
+    // Touch support
+    this.canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        this.isDragging = true;
+        this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      if (!this.isDragging || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - this.lastMouse.x;
+      const dy = e.touches[0].clientY - this.lastMouse.y;
+      this.cameraTheta += dx * 0.01;
+      this.cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, this.cameraPhi + dy * 0.01));
+      this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    this.canvas.addEventListener('touchend', () => {
+      this.isDragging = false;
+    });
+  }
+
+  getCameraPos() {
+    const x = this.cameraDistance * Math.sin(this.cameraPhi) * Math.sin(this.cameraTheta);
+    const y = this.cameraDistance * Math.cos(this.cameraPhi);
+    const z = this.cameraDistance * Math.sin(this.cameraPhi) * Math.cos(this.cameraTheta);
+    return [
+      x + this.cameraTarget[0],
+      y + this.cameraTarget[1],
+      z + this.cameraTarget[2]
+    ];
+  }
+
+  setCamera(distance, target = [0, 0.5, 0], theta = 0.3, phi = 0.4) {
+    this.cameraDistance = distance;
+    this.cameraTarget = target;
+    this.cameraTheta = theta;
+    this.cameraPhi = phi;
   }
 
   async init() {
@@ -177,11 +254,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   uv.x *= aspect;
   uv.y = -uv.y;
 
-  let camPos = vec3f(0.0, 2.0, 8.0);
-  let camTarget = vec3f(0.0, 0.5, 0.0);
-
-  let rd = rayDirection(uv, camPos, camTarget);
-  let result = raymarch(camPos, rd);
+  let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);
+  let result = raymarch(u.cameraPos, rd);
 
   return vec4f(result.xyz, 1.0);
 }
@@ -192,11 +266,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     const width = this.canvas.width;
     const height = this.canvas.height;
 
+    const camPos = this.getCameraPos();
+
     // Update uniforms
     const uniformData = new Float32Array([
       width, height, time, 0,
-      0, 2, 8, 0,  // cameraPos
-      0, 0.5, 0, 0, // cameraTarget
+      camPos[0], camPos[1], camPos[2], 0,  // cameraPos
+      this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
