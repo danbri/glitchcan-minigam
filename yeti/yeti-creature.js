@@ -532,12 +532,16 @@ class YetiScene extends HTMLElement {
       });
     });
 
-    // Add chess pieces as physics bodies
+    // Add chess pieces as physics bodies - grouped by side for BVH optimization
+    const whitePieces = [];
+    const blackPieces = [];
+
     chessPieces.forEach((el, i) => {
       const pieceType = el.pieceType || 'pawn';
       const defaults = CHESS_PIECE_DEFAULTS[pieceType] || CHESS_PIECE_DEFAULTS.pawn;
       const color = parseColor(el.getAttribute('color')) || (el.hasAttribute('black') ? [0.15, 0.12, 0.12] : [0.95, 0.92, 0.85]);
       const pos = parseVec3(el.getAttribute('pos')) || [i * 1.5 - (chessPieces.length - 1) * 0.75, 0, 0];
+      const isBlack = el.hasAttribute('black');
 
       labels.push(defaults.emoji);
 
@@ -552,14 +556,43 @@ class YetiScene extends HTMLElement {
 
       // SDF node with physics-driven position
       const varName = `phys_piece${i}`;
-      children.push({
+      const pieceNode = {
         type: "ref",
         id: pieceType,
         params: { color },
         boundingRadius: defaults.height,
         transform: { translate: { "var": varName } }
-      });
+      };
+
+      // Group by side for BVH
+      if (isBlack) {
+        blackPieces.push(pieceNode);
+      } else {
+        whitePieces.push(pieceNode);
+      }
     });
+
+    // Add grouped pieces with bounding boxes for BVH optimization
+    if (whitePieces.length > 0) {
+      children.push({
+        type: "union",
+        boundingBox: {
+          center: [0, 0.5, -3],  // White side center
+          halfSize: [5, 2, 2]     // Cover white side of board
+        },
+        children: whitePieces
+      });
+    }
+    if (blackPieces.length > 0) {
+      children.push({
+        type: "union",
+        boundingBox: {
+          center: [0, 0.5, 3],   // Black side center
+          halfSize: [5, 2, 2]    // Cover black side of board
+        },
+        children: blackPieces
+      });
+    }
 
     // Add some initial balls
     for (let i = 0; i < 3; i++) {

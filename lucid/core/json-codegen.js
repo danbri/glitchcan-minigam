@@ -385,6 +385,23 @@ function generateUnion(node, ctx) {
 
   let result;
 
+  // BVH: Check for bounding box early-out optimization
+  const bbox = node.boundingBox;
+  let bboxCheck = null;
+  if (bbox && bbox.center && bbox.halfSize) {
+    // Generate AABB distance check
+    const cx = Array.isArray(bbox.center) ? bbox.center[0] : 0;
+    const cy = Array.isArray(bbox.center) ? bbox.center[1] : 0;
+    const cz = Array.isArray(bbox.center) ? bbox.center[2] : 0;
+    const hx = Array.isArray(bbox.halfSize) ? bbox.halfSize[0] : 1;
+    const hy = Array.isArray(bbox.halfSize) ? bbox.halfSize[1] : 1;
+    const hz = Array.isArray(bbox.halfSize) ? bbox.halfSize[2] : 1;
+    bboxCheck = {
+      center: `vec3(${cx.toFixed(3)}, ${cy.toFixed(3)}, ${cz.toFixed(3)})`,
+      halfSize: `vec3(${hx.toFixed(3)}, ${hy.toFixed(3)}, ${hz.toFixed(3)})`
+    };
+  }
+
   if (children.length === 1) {
     // For single child, if we have parent transform, wrap it
     if (hasParentTransform) {
@@ -453,8 +470,18 @@ function generateUnion(node, ctx) {
       colorSelect += '\n  return nearest;';
     }
 
+    // BVH: Add AABB early-out check if bounding box specified
+    let bboxEarlyOut = '';
+    if (bboxCheck) {
+      // AABB signed distance: if positive, point is outside box
+      bboxEarlyOut = `  vec3 bboxD = abs(${hasParentTransform ? 'tp' : 'p'} - ${bboxCheck.center}) - ${bboxCheck.halfSize};
+  float bboxDist = length(max(bboxD, vec3(0.0))) + min(max(bboxD.x, max(bboxD.y, bboxD.z)), 0.0);
+  if (bboxDist > 0.1) return vec4(bboxDist, 0.5, 0.5, 0.5);
+`;
+    }
+
     const helperFunc = `vec4 ${funcName}(${paramList}) {
-${bodyPrefix}${childAssignments}${colorSelect}
+${bodyPrefix}${bboxEarlyOut}${childAssignments}${colorSelect}
 }`;
 
     ctx.helpers.push(helperFunc);

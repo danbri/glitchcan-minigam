@@ -130,6 +130,13 @@ function processNode(node, registry, depth = 0) {
       if (node.k !== undefined) {
         processed.k = processValue(node.k);
       }
+      // BVH: Preserve bounding box for spatial optimization
+      if (node.boundingBox) {
+        processed.boundingBox = {
+          center: node.boundingBox.center,
+          halfSize: node.boundingBox.halfSize
+        };
+      }
       break;
 
     // Transform wrapper
