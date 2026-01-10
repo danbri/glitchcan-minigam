@@ -123,26 +123,33 @@
 
       try {
         let scene;
+        let json = null;
 
         if (builtinScenes[name]) {
-          scene = loadJsonScene(builtinScenes[name]);
+          json = builtinScenes[name];
+          scene = loadJsonScene(json);
         } else {
           // Load from file
           const response = await fetch(`../scenes/creatures/${name}.json`);
           if (!response.ok) throw new Error(`Failed to load ${name}.json`);
-          const json = await response.json();
+          json = await response.json();
           scene = loadJsonScene(json);
         }
 
-        // Set camera based on scene
-        const cameraPresets = {
-          sphere: { distance: 5, target: [0, 0, 0] },
-          csg: { distance: 5, target: [0, 0, 0] },
-          smoothblob: { distance: 6, target: [0, 0.2, 0] },
-          wolf: { distance: 12, target: [0, 0.5, 0] },
-        };
-        const cam = cameraPresets[name] || { distance: 8, target: [0, 0.5, 0] };
-        renderer.setCamera(cam.distance, cam.target);
+        // Set camera based on scene or use scene's camera settings
+        let cam;
+        if (json.camera) {
+          cam = json.camera;
+        } else {
+          const cameraPresets = {
+            sphere: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
+            csg: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
+            smoothblob: { distance: 6, target: [0, 0.2, 0], theta: 0.3, phi: 0.4 },
+            wolf: { distance: 12, target: [0, 0.65, 0], theta: 0.25, phi: 0.3 },
+          };
+          cam = cameraPresets[name] || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 0.4 };
+        }
+        renderer.setCamera(cam.distance, cam.target, cam.theta || 0.3, cam.phi || 0.4);
 
         // Generate WGSL (inlineDefaults to avoid needing scene uniform buffer)
         const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
