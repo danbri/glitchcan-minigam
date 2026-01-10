@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stinkyfish WebGPU Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1rem;
+      background: #222;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    h1 { font-size: 1.2rem; }
+    select, button {
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+    select:hover, button:hover { background: #444; }
+    #status {
+      margin-left: auto;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      background: #333;
+    }
+    #status.error { background: #633; }
+    #status.ok { background: #363; }
+    main { flex: 1; display: flex; }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #fallback {
+      display: none;
+      padding: 2rem;
+      text-align: center;
+    }
+    #fallback.show { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Stinkyfish WebGPU</h1>
+    <select id="sceneSelect">
+      <option value="sphere">Simple Sphere</option>
+      <option value="csg">CSG Demo</option>
+      <option value="wolf" selected>Wolf</option>
+      <option value="elephant">Elephant</option>
+    </select>
+    <button id="recompile">Recompile</button>
+    <div id="status">Loading...</div>
+  </header>
+  <main>
+    <canvas id="canvas"></canvas>
+    <div id="fallback">
+      <h2>WebGPU Not Available</h2>
+      <p>Your browser doesn't support WebGPU. Try Chrome 113+ or Edge 113+.</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { StinkyfishRenderer } from './raymarcher.js';
+    import { loadJsonScene } from '../core/json-loader.js';
+    import { generateWgslFromJson } from '../core/wgsl-codegen.js';
+
+    const canvas = document.getElementById('canvas');
+    const status = document.getElementById('status');
+    const sceneSelect = document.getElementById('sceneSelect');
+    const recompileBtn = document.getElementById('recompile');
+    const fallback = document.getElementById('fallback');
+
+    let renderer = null;
+
+    // Built-in simple scenes for testing
+    const builtinScenes = {
+      sphere: {
+        root: {
+          type: 'sphere',
+          params: {
+            r: { type: 'const', value: 1.0 },
+            color: { type: 'array', values: [
+              { type: 'const', value: 0.8 },
+              { type: 'const', value: 0.2 },
+              { type: 'const', value: 0.2 }
+            ]}
+          }
+        }
+      },
+      csg: {
+        root: {
+          type: 'subtract',
+          children: [
+            {
+              type: 'sphere',
+              params: {
+                r: { type: 'const', value: 1.0 },
+                color: { type: 'array', values: [
+                  { type: 'const', value: 0.2 },
+                  { type: 'const', value: 0.6 },
+                  { type: 'const', value: 0.9 }
+                ]}
+              }
+            },
+            {
+              type: 'box',
+              params: {
+                size: { type: 'array', values: [
+                  { type: 'const', value: 0.6 },
+                  { type: 'const', value: 1.5 },
+                  { type: 'const', value: 0.6 }
+                ]},
+                color: { type: 'array', values: [
+                  { type: 'const', value: 1 },
+                  { type: 'const', value: 0 },
+                  { type: 'const', value: 0 }
+                ]}
+              }
+            },
+            {
+              type: 'box',
+              params: {
+                size: { type: 'array', values: [
+                  { type: 'const', value: 1.5 },
+                  { type: 'const', value: 0.6 },
+                  { type: 'const', value: 0.6 }
+                ]},
+                color: { type: 'array', values: [
+                  { type: 'const', value: 0 },
+                  { type: 'const', value: 1 },
+                  { type: 'const', value: 0 }
+                ]}
+              }
+            }
+          ]
+        }
+      }
+    };
+
+    async function loadScene(name) {
+      status.textContent = `Loading ${name}...`;
+      status.className = '';
+
+      try {
+        let scene;
+
+        if (builtinScenes[name]) {
+          scene = loadJsonScene(builtinScenes[name]);
+        } else {
+          // Load from file
+          const response = await fetch(`../scenes/creatures/${name}.json`);
+          if (!response.ok) throw new Error(`Failed to load ${name}.json`);
+          const json = await response.json();
+          scene = loadJsonScene(json);
+        }
+
+        // Generate WGSL
+        const wgsl = generateWgslFromJson(scene, {});
+        console.log(`Generated ${wgsl.length} chars of WGSL for ${name}`);
+
+        // Compile
+        await renderer.compileScene(wgsl);
+        renderer.render();
+
+        status.textContent = `${name} loaded`;
+        status.className = 'ok';
+      } catch (err) {
+        console.error(err);
+        status.textContent = `Error: ${err.message}`;
+        status.className = 'error';
+      }
+    }
+
+    async function init() {
+      if (!navigator.gpu) {
+        fallback.classList.add('show');
+        status.textContent = 'WebGPU not supported';
+        status.className = 'error';
+        return;
+      }
+
+      // Size canvas
+      const resize = () => {
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+        if (renderer?.pipeline) renderer.render();
+      };
+      window.addEventListener('resize', resize);
+      resize();
+
+      try {
+        renderer = new StinkyfishRenderer(canvas);
+        await renderer.init();
+
+        // Load default scene
+        await loadScene(sceneSelect.value);
+        renderer.startRenderLoop();
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = `Init error: ${err.message}`;
+        status.className = 'error';
+      }
+    }
+
+    sceneSelect.addEventListener('change', () => loadScene(sceneSelect.value));
+    recompileBtn.addEventListener('click', () => loadScene(sceneSelect.value));
+
+    init();
+  </script>
+</body>
+</html>
