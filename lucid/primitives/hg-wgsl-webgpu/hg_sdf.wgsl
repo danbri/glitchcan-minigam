@@ -9,7 +9,7 @@
 //
 //     Check http://mercury.sexy/hg_sdf for updates
 //
-//     Original released as Creative Commons Attribution-NonCommercial (CC BY-NC)
+//     Original released as MIT OR CC-BY-NC-4.0 (dual license, 2021-07-28)
 //
 ////////////////////////////////////////////////////////////////
 

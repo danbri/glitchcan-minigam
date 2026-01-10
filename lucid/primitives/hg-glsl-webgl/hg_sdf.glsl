@@ -13,7 +13,7 @@
 //
 //
 //
-// Released as Creative Commons Attribution-NonCommercial (CC BY-NC)
+// Released as MIT OR CC-BY-NC-4.0 (dual license, 2021-07-28)
 //
 ////////////////////////////////////////////////////////////////
 //
