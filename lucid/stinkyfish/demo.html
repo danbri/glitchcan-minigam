@@ -117,6 +117,15 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    #renderControlsOverlay {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 1rem;
+      z-index: 200;
+    }
+    #renderControlsOverlay.show { display: block; }
   </style>
 </head>
 <body>
@@ -124,6 +133,7 @@
     <header>
       <h1>Stinkyfish</h1>
       <button id="browseBtn">📦 Browse</button>
+      <button id="settingsBtn">⚙️</button>
       <span id="sceneTitle">Sphere</span>
       <div id="status">Loading...</div>
     </header>
@@ -131,6 +141,9 @@
       <canvas id="canvas"></canvas>
       <div id="pickerOverlay">
         <lucid-scene-picker base-url="../scenes/"></lucid-scene-picker>
+      </div>
+      <div id="renderControlsOverlay">
+        <lucid-render-controls></lucid-render-controls>
       </div>
       <div id="fallback">
         <h2>WebGPU Not Available</h2>
@@ -141,6 +154,7 @@
 
   <script type="module">
     import '../components/scene-picker.js';
+    import '../components/render-controls.js';
     import { StinkyfishRenderer } from './raymarcher.js';
     import { loadJsonScene } from '../core/json-loader.js';
     import { generateWgslFromJson } from '../core/wgsl-codegen.js';
@@ -150,8 +164,11 @@
     const status = document.getElementById('status');
     const sceneTitle = document.getElementById('sceneTitle');
     const browseBtn = document.getElementById('browseBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
     const pickerOverlay = document.getElementById('pickerOverlay');
+    const renderControlsOverlay = document.getElementById('renderControlsOverlay');
     const picker = document.querySelector('lucid-scene-picker');
+    const renderControls = document.querySelector('lucid-render-controls');
     const fallback = document.getElementById('fallback');
 
     // Resolution scaling - lower on mobile for performance
@@ -164,6 +181,20 @@
     // Toggle picker
     browseBtn.addEventListener('click', () => {
       pickerOverlay.classList.toggle('show');
+      renderControlsOverlay.classList.remove('show');
+    });
+
+    // Toggle render settings
+    settingsBtn.addEventListener('click', () => {
+      renderControlsOverlay.classList.toggle('show');
+      pickerOverlay.classList.remove('show');
+    });
+
+    // Handle render settings change
+    renderControls.addEventListener('settings-change', (e) => {
+      if (renderer) {
+        renderer.setRenderSettings(e.detail);
+      }
     });
 
     // Handle scene selection from picker
@@ -172,9 +203,10 @@
       await loadSceneFromPath(e.detail.path, e.detail.title);
     });
 
-    // Close picker when clicking outside
+    // Close overlays when clicking canvas
     canvas.addEventListener('click', () => {
       pickerOverlay.classList.remove('show');
+      renderControlsOverlay.classList.remove('show');
     });
 
     async function loadSceneFromPath(path, title) {
