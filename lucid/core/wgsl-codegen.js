@@ -62,12 +62,18 @@ export function generateWgslFromJson(scene, options = {}) {
   // Build final shader
   let wgsl = '';
 
-  // Uniform struct
+  // Uniform struct - dedupe by base name, prefer typed versions (e.g. u_color:vec3f over u_color)
   const builtinUniforms = new Set(['u_time', 'u_resolution', 'u_cameraPos', 'u_cameraTarget', 'u_showGroundPlane', 'u_volumeRender']);
-  const customUniforms = [...ctx.uniforms].filter(u => {
+  const uniformMap = new Map();  // baseName -> full entry (with type if available)
+  for (const u of ctx.uniforms) {
     const baseName = u.split(':')[0];
-    return !builtinUniforms.has(baseName);
-  });
+    if (builtinUniforms.has(baseName)) continue;
+    // Prefer typed version over untyped
+    if (!uniformMap.has(baseName) || u.includes(':')) {
+      uniformMap.set(baseName, u);
+    }
+  }
+  const customUniforms = [...uniformMap.values()];
 
   if (customUniforms.length > 0) {
     wgsl += '// Custom uniforms (scene params)\n';
@@ -1046,13 +1052,8 @@ function valueToWgsl(value, ctx) {
       }
       return formatFloat(defaultVal);
     }
-    // Only add if not already pre-registered with a type annotation
-    const uniformName = `u_${value.name}`;
-    const alreadyRegistered = [...ctx.uniforms].some(u => u.split(':')[0] === uniformName);
-    if (!alreadyRegistered) {
-      ctx.uniforms.add(uniformName);
-    }
-    return `scene.${uniformName}`;
+    ctx.uniforms.add(`u_${value.name}`);
+    return `scene.u_${value.name}`;
 
   case 'array':
     if (value.values) {
