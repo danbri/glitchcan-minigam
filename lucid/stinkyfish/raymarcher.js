@@ -18,11 +18,28 @@ export class StinkyfishRenderer {
     this.cameraPhi = 0.4;    // vertical angle
     this.cameraTarget = [0, 0.5, 0];
 
+    // Render settings (adjustable at runtime via uniforms)
+    this.renderSettings = {
+      maxSteps: 100,
+      hitThreshold: 0.001,
+      maxDistance: 50.0,
+      normalEpsilon: 0.002,
+      keyIntensity: 0.7,
+      fillIntensity: 0.3,
+      rimIntensity: 0.15,
+      ambient: 0.15,
+      bgColor: [0.1, 0.1, 0.15]
+    };
+
     // Mouse state
     this.isDragging = false;
     this.lastMouse = { x: 0, y: 0 };
 
     this.setupMouseHandlers();
+  }
+
+  setRenderSettings(settings) {
+    Object.assign(this.renderSettings, settings);
   }
 
   setupMouseHandlers() {
@@ -176,9 +193,13 @@ export class StinkyfishRenderer {
       },
     });
 
-    // Create uniform buffer for camera/time
+    // Create uniform buffer for camera/time/render settings
+    // Layout: resolution(2) + time(1) + pad(1) + cameraPos(3) + pad(1) + cameraTarget(3) + pad(1)
+    //         + maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1)
+    //         + keyIntensity(1) + fillIntensity(1) + rimIntensity(1) + ambient(1)
+    //         + bgColor(3) + pad(1)
     this.uniformBuffer = this.device.createBuffer({
-      size: 64, // 4 floats for resolution + time + padding
+      size: 128, // Extended for render settings
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -202,6 +223,17 @@ struct Uniforms {
   _pad2: f32,
   cameraTarget: vec3f,
   _pad3: f32,
+  // Render settings
+  maxSteps: f32,
+  hitThreshold: f32,
+  maxDistance: f32,
+  normalEpsilon: f32,
+  keyIntensity: f32,
+  fillIntensity: f32,
+  rimIntensity: f32,
+  ambient: f32,
+  bgColor: vec3f,
+  _pad4: f32,
 }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -241,16 +273,18 @@ fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
 fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
   var t = 0.0;
   var color = vec3f(0.5, 0.5, 0.5);
+  let steps = i32(u.maxSteps);
 
-  for (var i = 0; i < 100; i++) {
+  for (var i = 0; i < 200; i++) {
+    if (i >= steps) { break; }
     let p = ro + rd * t;
     let hit = sceneSDF(p);
 
-    if (hit.x < 0.001) {
+    if (hit.x < u.hitThreshold) {
       color = hit.yzw;
 
       // Normal calculation
-      let e = 0.002;
+      let e = u.normalEpsilon;
       let n = normalize(vec3f(
         sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
         sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
@@ -260,23 +294,21 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
       // Simple 3-point lighting
       let keyDir = normalize(vec3f(1.0, 2.0, 1.5));
       let fillDir = normalize(vec3f(-1.0, 0.5, 0.0));
-      let rimDir = normalize(vec3f(0.0, 0.0, -1.0));
 
-      let keyLight = max(dot(n, keyDir), 0.0) * 0.7;
-      let fillLight = max(dot(n, fillDir), 0.0) * 0.3;
-      let rimLight = pow(max(1.0 - dot(n, -rd), 0.0), 3.0) * 0.15;
-      let ambient = 0.15;
+      let keyLight = max(dot(n, keyDir), 0.0) * u.keyIntensity;
+      let fillLight = max(dot(n, fillDir), 0.0) * u.fillIntensity;
+      let rimLight = pow(max(1.0 - dot(n, -rd), 0.0), 3.0) * u.rimIntensity;
 
-      color = color * (ambient + keyLight + fillLight) + vec3f(rimLight);
+      color = color * (u.ambient + keyLight + fillLight) + vec3f(rimLight);
 
       return vec4f(color, t);
     }
 
     t += hit.x;
-    if (t > 50.0) { break; }
+    if (t > u.maxDistance) { break; }
   }
 
-  return vec4f(0.1, 0.1, 0.15, -1.0);
+  return vec4f(u.bgColor, -1.0);
 }
 
 @fragment
@@ -299,12 +331,17 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     const height = this.canvas.height;
 
     const camPos = this.getCameraPos();
+    const rs = this.renderSettings;
 
-    // Update uniforms
+    // Update uniforms (must match shader struct layout)
     const uniformData = new Float32Array([
       width, height, time, 0,
       camPos[0], camPos[1], camPos[2], 0,  // cameraPos
       this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
+      // Render settings
+      rs.maxSteps, rs.hitThreshold, rs.maxDistance, rs.normalEpsilon,
+      rs.keyIntensity, rs.fillIntensity, rs.rimIntensity, rs.ambient,
+      rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], 0, // bgColor + pad
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 

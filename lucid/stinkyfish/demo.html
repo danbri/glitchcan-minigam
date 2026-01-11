@@ -117,6 +117,25 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    #renderControlsOverlay {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 1rem;
+      z-index: 200;
+    }
+    #renderControlsOverlay.show { display: block; }
+
+    #sceneParamsOverlay {
+      display: none;
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+    }
+    #sceneParamsOverlay.show { display: block; }
   </style>
 </head>
 <body>
@@ -124,6 +143,8 @@
     <header>
       <h1>Stinkyfish</h1>
       <button id="browseBtn">📦 Browse</button>
+      <button id="animBtn">🎬</button>
+      <button id="settingsBtn">⚙️</button>
       <span id="sceneTitle">Sphere</span>
       <div id="status">Loading...</div>
     </header>
@@ -131,6 +152,12 @@
       <canvas id="canvas"></canvas>
       <div id="pickerOverlay">
         <lucid-scene-picker base-url="../scenes/"></lucid-scene-picker>
+      </div>
+      <div id="renderControlsOverlay">
+        <lucid-render-controls></lucid-render-controls>
+      </div>
+      <div id="sceneParamsOverlay">
+        <lucid-scene-params></lucid-scene-params>
       </div>
       <div id="fallback">
         <h2>WebGPU Not Available</h2>
@@ -141,6 +168,8 @@
 
   <script type="module">
     import '../components/scene-picker.js';
+    import '../components/render-controls.js';
+    import '../components/scene-params.js';
     import { StinkyfishRenderer } from './raymarcher.js';
     import { loadJsonScene } from '../core/json-loader.js';
     import { generateWgslFromJson } from '../core/wgsl-codegen.js';
@@ -150,9 +179,21 @@
     const status = document.getElementById('status');
     const sceneTitle = document.getElementById('sceneTitle');
     const browseBtn = document.getElementById('browseBtn');
+    const animBtn = document.getElementById('animBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
     const pickerOverlay = document.getElementById('pickerOverlay');
+    const renderControlsOverlay = document.getElementById('renderControlsOverlay');
+    const sceneParamsOverlay = document.getElementById('sceneParamsOverlay');
     const picker = document.querySelector('lucid-scene-picker');
+    const renderControls = document.querySelector('lucid-render-controls');
+    const sceneParams = document.querySelector('lucid-scene-params');
     const fallback = document.getElementById('fallback');
+
+    // Animation time state
+    let animationTime = 0;
+    let lastFrameTime = 0;
+    let timeScale = 1.0;
+    let isPaused = false;
 
     // Resolution scaling - lower on mobile for performance
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
@@ -161,20 +202,62 @@
 
     let renderer = null;
 
+    function closeAllOverlays() {
+      pickerOverlay.classList.remove('show');
+      renderControlsOverlay.classList.remove('show');
+      sceneParamsOverlay.classList.remove('show');
+    }
+
     // Toggle picker
     browseBtn.addEventListener('click', () => {
+      closeAllOverlays();
       pickerOverlay.classList.toggle('show');
+    });
+
+    // Toggle animation controls
+    animBtn.addEventListener('click', () => {
+      closeAllOverlays();
+      sceneParamsOverlay.classList.toggle('show');
+    });
+
+    // Toggle render settings
+    settingsBtn.addEventListener('click', () => {
+      closeAllOverlays();
+      renderControlsOverlay.classList.toggle('show');
+    });
+
+    // Handle render settings change
+    renderControls.addEventListener('settings-change', (e) => {
+      if (renderer) {
+        renderer.setRenderSettings(e.detail);
+      }
+    });
+
+    // Handle time control changes
+    sceneParams.addEventListener('time-control', (e) => {
+      isPaused = e.detail.paused;
+      timeScale = e.detail.scale;
+      if (e.detail.reset) {
+        animationTime = 0;
+        lastFrameTime = performance.now();
+      }
+    });
+
+    // Handle scene param changes (for future use with scene uniforms)
+    sceneParams.addEventListener('param-change', (e) => {
+      console.log('Param changed:', e.detail.name, '=', e.detail.value);
+      // TODO: Update scene uniforms when we have proper uniform binding
     });
 
     // Handle scene selection from picker
     picker.addEventListener('scene-select', async (e) => {
-      pickerOverlay.classList.remove('show');
+      closeAllOverlays();
       await loadSceneFromPath(e.detail.path, e.detail.title);
     });
 
-    // Close picker when clicking outside
+    // Close overlays when clicking canvas
     canvas.addEventListener('click', () => {
-      pickerOverlay.classList.remove('show');
+      closeAllOverlays();
     });
 
     async function loadSceneFromPath(path, title) {
@@ -191,6 +274,13 @@
         // Use scene's camera settings or defaults
         const cam = json.camera || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 1.0 };
         renderer.setCamera(cam.distance, cam.target, cam.theta || 0.3, cam.phi || 1.0);
+
+        // Update scene params component
+        sceneParams.setSceneParams(json.params || {});
+
+        // Reset animation time for new scene
+        animationTime = 0;
+        lastFrameTime = performance.now();
 
         // Generate WGSL
         const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
@@ -233,13 +323,63 @@
 
         // Load a simple default scene
         await loadSceneFromPath('prim/catalogue.json', 'Shape Catalogue');
-        renderer.startRenderLoop();
+
+        // Custom render loop with time control
+        lastFrameTime = performance.now();
+        startCustomRenderLoop();
 
       } catch (err) {
         console.error(err);
         status.textContent = `Init error: ${err.message}`;
         status.className = 'error';
       }
+    }
+
+    function startCustomRenderLoop() {
+      let isVisible = true;
+      let animationId = null;
+
+      // Pause when tab is hidden
+      document.addEventListener('visibilitychange', () => {
+        isVisible = document.visibilityState === 'visible';
+        if (isVisible && !animationId) {
+          lastFrameTime = performance.now();
+          animationId = requestAnimationFrame(loop);
+        }
+      });
+
+      // Pause when scrolled off-screen
+      const observer = new IntersectionObserver((entries) => {
+        isVisible = entries[0].isIntersecting;
+        if (isVisible && !animationId) {
+          lastFrameTime = performance.now();
+          animationId = requestAnimationFrame(loop);
+        }
+      }, { threshold: 0.1 });
+      observer.observe(canvas);
+
+      function loop(frameTime) {
+        if (!isVisible) {
+          animationId = null;
+          return;
+        }
+
+        // Update animation time based on pause state and time scale
+        if (!isPaused) {
+          const deltaTime = (frameTime - lastFrameTime) / 1000;
+          animationTime += deltaTime * timeScale;
+        }
+        lastFrameTime = frameTime;
+
+        // Render with controlled time
+        if (renderer?.pipeline) {
+          renderer.render(animationTime);
+        }
+
+        animationId = requestAnimationFrame(loop);
+      }
+
+      animationId = requestAnimationFrame(loop);
     }
 
     init();
