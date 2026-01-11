@@ -11,6 +11,9 @@ export class StinkyfishRenderer {
     this.pipeline = null;
     this.uniformBuffer = null;
     this.bindGroup = null;
+    this.sceneUniformBuffer = null;
+    this.sceneBindGroup = null;
+    this.sceneUniformLayout = null; // Track layout for scene params
 
     // Camera state
     this.cameraDistance = 8;
@@ -31,6 +34,10 @@ export class StinkyfishRenderer {
       bgColor: [0.1, 0.1, 0.15]
     };
 
+    // Scene parameters (from loaded scene JSON)
+    this.sceneParams = {};
+    this.sceneParamValues = {};
+
     // Mouse state
     this.isDragging = false;
     this.lastMouse = { x: 0, y: 0 };
@@ -40,6 +47,35 @@ export class StinkyfishRenderer {
 
   setRenderSettings(settings) {
     Object.assign(this.renderSettings, settings);
+  }
+
+  /**
+   * Initialize scene parameters from loaded scene JSON
+   * @param {Object} params - Scene params object from JSON
+   */
+  setSceneParams(params) {
+    this.sceneParams = params || {};
+    this.sceneParamValues = {};
+
+    // Initialize values from defaults
+    for (const [name, param] of Object.entries(this.sceneParams)) {
+      if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+        this.sceneParamValues[name] = param.value || [0, 0, 0];
+      } else {
+        this.sceneParamValues[name] = param.value !== undefined ? param.value : 0;
+      }
+    }
+  }
+
+  /**
+   * Update a single scene parameter value
+   * @param {string} name - Parameter name
+   * @param {number|Array} value - New value (scalar or vec3)
+   */
+  setSceneParam(name, value) {
+    if (this.sceneParams[name]) {
+      this.sceneParamValues[name] = value;
+    }
   }
 
   setupMouseHandlers() {
@@ -149,8 +185,9 @@ export class StinkyfishRenderer {
   /**
    * Compile a scene with generated WGSL
    * @param {string} sceneWgsl - Generated scene WGSL from wgsl-codegen
+   * @param {Object} sceneUniformLayout - Layout info for scene params (name -> type)
    */
-  async compileScene(sceneWgsl) {
+  async compileScene(sceneWgsl, sceneUniformLayout = null) {
     const shaderCode = this.buildFullShader(sceneWgsl);
     console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
 
@@ -210,6 +247,40 @@ export class StinkyfishRenderer {
         resource: { buffer: this.uniformBuffer },
       }],
     });
+
+    // Create scene uniforms buffer if layout provided (group 1)
+    this.sceneUniformLayout = sceneUniformLayout;
+    if (sceneUniformLayout && Object.keys(sceneUniformLayout).length > 0) {
+      // Calculate buffer size: each entry is either f32 (4 bytes) or vec3f (12 bytes), with padding
+      let bufferSize = 0;
+      for (const [name, type] of Object.entries(sceneUniformLayout)) {
+        if (type === 'vec3f') {
+          bufferSize += 16; // vec3f needs 16-byte alignment (12 data + 4 pad)
+        } else {
+          bufferSize += 4; // f32
+        }
+      }
+      // Round up to 16-byte alignment
+      bufferSize = Math.ceil(bufferSize / 16) * 16;
+
+      this.sceneUniformBuffer = this.device.createBuffer({
+        size: Math.max(16, bufferSize),
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+
+      this.sceneBindGroup = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(1),
+        entries: [{
+          binding: 0,
+          resource: { buffer: this.sceneUniformBuffer },
+        }],
+      });
+
+      console.log(`Created scene uniform buffer: ${bufferSize} bytes for ${Object.keys(sceneUniformLayout).length} params`);
+    } else {
+      this.sceneUniformBuffer = null;
+      this.sceneBindGroup = null;
+    }
   }
 
   buildFullShader(sceneWgsl) {
@@ -326,14 +397,40 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 `;
   }
 
-  render(time = 0) {
+  /**
+   * Update scene uniform values (physics params, custom params, etc.)
+   * @param {Object} sceneParamValues - Map of param name -> value (number or [x,y,z])
+   */
+  updateSceneUniforms(sceneParamValues) {
+    if (!this.sceneUniformBuffer || !this.sceneUniformLayout) return;
+
+    // Build buffer data matching the layout order
+    const data = [];
+    for (const [name, type] of Object.entries(this.sceneUniformLayout)) {
+      const value = sceneParamValues[name];
+      if (type === 'vec3f') {
+        if (Array.isArray(value) && value.length >= 3) {
+          data.push(value[0], value[1], value[2], 0); // vec3 + padding
+        } else {
+          data.push(0, 0, 0, 0); // default
+        }
+      } else {
+        data.push(typeof value === 'number' ? value : 0);
+      }
+    }
+
+    const uniformData = new Float32Array(data);
+    this.device.queue.writeBuffer(this.sceneUniformBuffer, 0, uniformData);
+  }
+
+  render(time = 0, physicsParams = null) {
     const width = this.canvas.width;
     const height = this.canvas.height;
 
     const camPos = this.getCameraPos();
     const rs = this.renderSettings;
 
-    // Update uniforms (must match shader struct layout)
+    // Update main uniforms (must match shader struct layout)
     const uniformData = new Float32Array([
       width, height, time, 0,
       camPos[0], camPos[1], camPos[2], 0,  // cameraPos
@@ -344,6 +441,20 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], 0, // bgColor + pad
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
+
+    // Merge scene params and physics params
+    if (this.sceneUniformBuffer && this.sceneUniformLayout) {
+      const allParams = { ...this.sceneParamValues };
+
+      // Physics params override (phys_ball, etc.)
+      if (physicsParams) {
+        Object.assign(allParams, physicsParams);
+      }
+
+      if (Object.keys(allParams).length > 0) {
+        this.updateSceneUniforms(allParams);
+      }
+    }
 
     const commandEncoder = this.device.createCommandEncoder();
     const textureView = this.context.getCurrentTexture().createView();
@@ -359,6 +470,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
     renderPass.setPipeline(this.pipeline);
     renderPass.setBindGroup(0, this.bindGroup);
+    if (this.sceneBindGroup) {
+      renderPass.setBindGroup(1, this.sceneBindGroup);
+    }
     renderPass.draw(3); // Fullscreen triangle
     renderPass.end();
 
