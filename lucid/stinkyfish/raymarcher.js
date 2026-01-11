@@ -4,6 +4,28 @@
  */
 
 export class StinkyfishRenderer {
+  // Quality presets matching Mayfly exactly
+  static QUALITY_PRESETS = {
+    low: {
+      maxSteps: 100,
+      hitThreshold: 0.005,
+      maxDistance: 50.0,
+      normalEpsilon: 0.004
+    },
+    medium: {
+      maxSteps: 150,
+      hitThreshold: 0.003,
+      maxDistance: 50.0,
+      normalEpsilon: 0.002
+    },
+    high: {
+      maxSteps: 200,
+      hitThreshold: 0.002,
+      maxDistance: 50.0,
+      normalEpsilon: 0.001
+    }
+  };
+
   constructor(canvas) {
     this.canvas = canvas;
     this.device = null;
@@ -15,18 +37,16 @@ export class StinkyfishRenderer {
     this.sceneBindGroup = null;
     this.sceneUniformLayout = null; // Track layout for scene params
 
-    // Camera state
-    this.cameraDistance = 8;
-    this.cameraTheta = 0.3;  // horizontal angle
-    this.cameraPhi = 0.4;    // vertical angle
-    this.cameraTarget = [0, 0.5, 0];
+    // Camera state (Mayfly parity)
+    this.cameraDistance = 4.0;
+    this.cameraTheta = 0.0;
+    this.cameraPhi = Math.PI / 4;  // 45 degrees
+    this.cameraTarget = [0, 0, 0];
 
-    // Render settings (adjustable at runtime via uniforms)
+    // Render settings (Mayfly 'medium' quality)
+    this.quality = 'medium';
     this.renderSettings = {
-      maxSteps: 100,
-      hitThreshold: 0.001,
-      maxDistance: 50.0,
-      normalEpsilon: 0.002,
+      ...StinkyfishRenderer.QUALITY_PRESETS.medium,
       keyIntensity: 0.7,
       fillIntensity: 0.3,
       rimIntensity: 0.15,
@@ -47,6 +67,17 @@ export class StinkyfishRenderer {
 
   setRenderSettings(settings) {
     Object.assign(this.renderSettings, settings);
+  }
+
+  /**
+   * Set quality preset (Mayfly API parity)
+   * @param {string} quality - 'low', 'medium', or 'high'
+   */
+  setQuality(quality) {
+    if (StinkyfishRenderer.QUALITY_PRESETS[quality]) {
+      this.quality = quality;
+      Object.assign(this.renderSettings, StinkyfishRenderer.QUALITY_PRESETS[quality]);
+    }
   }
 
   /**
