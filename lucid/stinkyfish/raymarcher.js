@@ -336,8 +336,8 @@ ${sceneWgsl}
 // Raymarching
 fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   let forward = normalize(camTarget - camPos);
-  let right = normalize(cross(forward, vec3f(0.0, 1.0, 0.0)));
-  let up = cross(right, forward);
+  let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
+  let up = cross(forward, right);
   return normalize(uv.x * right + uv.y * up + 1.5 * forward);
 }
 
@@ -387,7 +387,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let aspect = u.resolution.x / u.resolution.y;
   var uv = input.uv * 2.0 - 1.0;
   uv.x *= aspect;
-  uv.y = -uv.y;
+  uv.y = -uv.y;  // WebGPU framebuffer Y is top-down, unlike WebGL
 
   let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);
   let result = raymarch(u.cameraPos, rd);
