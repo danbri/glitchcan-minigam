@@ -332,12 +332,23 @@ export class LucidRenderer extends HTMLElement {
     const basePath = this._getBasePath();
     const { loadJsonScene } = await import(`${basePath}/core/json-loader.js`);
     const { generateWgslFromJson } = await import(`${basePath}/core/wgsl-codegen.js`);
+    const { getAllParamNames } = await import(`${basePath}/core/rig-evaluator.js`);
 
     const scene = loadJsonScene(json);
     const wgsl = generateWgslFromJson(scene, {});
 
+    // Build uniform layout from all params (including rig-derived)
+    // This maps param names to WGSL types for the SceneUniforms struct
+    const allParams = getAllParamNames(scene.params || {}, scene.rig);
+    const uniformLayout = this._buildUniformLayout(allParams);
+
     // Stinkyfish uses compileScene(wgsl, uniformLayout)
-    await this._renderer.compileScene(wgsl, scene.sceneUniformLayout || null);
+    await this._renderer.compileScene(wgsl, uniformLayout);
+
+    // Initialize scene parameters (must be called after compileScene)
+    if (scene.params) {
+      this._renderer.setSceneParams(scene.params);
+    }
 
     // Apply camera settings
     if (json.camera) {
@@ -349,6 +360,23 @@ export class LucidRenderer extends HTMLElement {
         this._renderer.cameraTarget = cam.target;
       }
     }
+  }
+
+  _buildUniformLayout(allParams) {
+    if (!allParams || Object.keys(allParams).length === 0) return null;
+
+    const layout = {};
+    for (const [name, paramInfo] of Object.entries(allParams)) {
+      const uniformName = `u_${name}`;
+      // Map param types to WGSL types
+      const type = paramInfo.type || 'scalar';
+      if (type === 'color3' || type === 'position3' || type === 'radii3' || type === 'direction3' || type === 'vec3') {
+        layout[uniformName] = 'vec3f';
+      } else {
+        layout[uniformName] = 'f32';
+      }
+    }
+    return layout;
   }
 
   _applyQuality(quality) {
@@ -370,18 +398,20 @@ export class LucidRenderer extends HTMLElement {
   _startRenderLoop() {
     if (this._isRendering) return;
     this._isRendering = true;
+    this._startTime = performance.now();
 
-    const render = () => {
+    const render = (timestamp) => {
       if (!this._isRendering) return;
 
       if (this._renderer?.render) {
-        this._renderer.render();
+        const time = (timestamp - this._startTime) * 0.001; // Convert to seconds
+        this._renderer.render(time);
       }
 
       this._animationFrame = requestAnimationFrame(render);
     };
 
-    render();
+    this._animationFrame = requestAnimationFrame(render);
   }
 
   _stopRenderLoop() {
