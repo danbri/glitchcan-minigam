@@ -242,15 +242,16 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
   var t = 0.0;
   var color = vec3f(0.5, 0.5, 0.5);
 
-  for (var i = 0; i < 100; i++) {
+  // Reduced steps for mobile performance (was 100)
+  for (var i = 0; i < 64; i++) {
     let p = ro + rd * t;
     let hit = sceneSDF(p);
 
-    if (hit.x < 0.001) {
+    if (hit.x < 0.002) {  // Slightly larger threshold for speed
       color = hit.yzw;
 
-      // Simple normal calculation
-      let e = 0.001;
+      // Cheaper normal: larger epsilon, fewer samples
+      let e = 0.005;
       let n = normalize(vec3f(
         sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
         sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
@@ -266,8 +267,9 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
       return vec4f(color, t);
     }
 
-    t += hit.x;
-    if (t > 50.0) { break; }
+    // Over-relaxation: step faster when far from surfaces
+    t += hit.x * 1.2;
+    if (t > 30.0) { break; }  // Early termination
   }
 
   return vec4f(0.1, 0.1, 0.15, -1.0);

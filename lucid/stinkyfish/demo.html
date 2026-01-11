@@ -151,8 +151,10 @@
     const recompileBtn = document.getElementById('recompile');
     const fallback = document.getElementById('fallback');
 
-    // High-DPI canvas sizing
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
+    // Resolution scaling - lower on mobile for performance
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                     (window.innerWidth < 768);
+    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 
     let renderer = null;
 
