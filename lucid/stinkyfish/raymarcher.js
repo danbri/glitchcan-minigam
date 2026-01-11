@@ -323,10 +323,34 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   }
 
   startRenderLoop() {
+    this.isVisible = true;
+    this.animationId = null;
+
+    // Pause when tab is hidden
+    document.addEventListener('visibilitychange', () => {
+      this.isVisible = document.visibilityState === 'visible';
+      if (this.isVisible && !this.animationId) {
+        this.animationId = requestAnimationFrame(loop);
+      }
+    });
+
+    // Pause when scrolled off-screen
+    const observer = new IntersectionObserver((entries) => {
+      this.isVisible = entries[0].isIntersecting;
+      if (this.isVisible && !this.animationId) {
+        this.animationId = requestAnimationFrame(loop);
+      }
+    }, { threshold: 0.1 });
+    observer.observe(this.canvas);
+
     const loop = (time) => {
+      if (!this.isVisible) {
+        this.animationId = null;
+        return;
+      }
       this.render(time * 0.001);
-      requestAnimationFrame(loop);
+      this.animationId = requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    this.animationId = requestAnimationFrame(loop);
   }
 }
