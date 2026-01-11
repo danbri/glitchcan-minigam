@@ -321,7 +321,7 @@ function generateUnion(node, ctx) {
   return ${childFuncName}(tp);
 }`;
       ctx.helpers.push(helperFunc);
-      result = `${funcName}(p)`;
+      result = `${funcName}(${ctx.currentP || 'p'})`;
     } else {
       result = walkNode(children[0], ctx);
     }
@@ -373,7 +373,7 @@ ${bodyPrefix}${bboxEarlyOut}${childAssignments}${colorSelect}
 }`;
 
     ctx.helpers.push(helperFunc);
-    result = `${funcName}(p)`;
+    result = `${funcName}(${ctx.currentP || 'p'})`;
   }
 
   ctx.ancestorRotation = savedAncestorRotation;
@@ -401,7 +401,7 @@ function generateSubtract(node, ctx) {
   let tp = ${transformedP};
   return ${childFuncName}(tp);
 }`);
-      return `${funcName}(p)`;
+      return `${funcName}(${ctx.currentP || 'p'})`;
     }
     return walkNode(children[0], ctx);
   }
@@ -439,7 +439,7 @@ function generateSubtract(node, ctx) {
 ${body}  return base;
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateIntersect(node, ctx) {
@@ -463,7 +463,7 @@ function generateIntersect(node, ctx) {
   let tp = ${transformedP};
   return ${childFuncName}(tp);
 }`);
-      return `${funcName}(p)`;
+      return `${funcName}(${ctx.currentP || 'p'})`;
     }
     return walkNode(children[0], ctx);
   }
@@ -504,7 +504,7 @@ function generateIntersect(node, ctx) {
 ${bodyPrefix}${childAssignments}${colorSelect}
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateSmoothUnion(node, ctx) {
@@ -530,7 +530,7 @@ function generateSmoothUnion(node, ctx) {
   let tp = ${transformedP};
   return ${childFuncName}(tp);
 }`);
-      return `${funcName}(p)`;
+      return `${funcName}(${ctx.currentP || 'p'})`;
     }
     return walkNode(children[0], ctx);
   }
@@ -572,7 +572,7 @@ function generateSmoothUnion(node, ctx) {
 ${bodyPrefix}${bodyLines.join('\n')}
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateSmoothIntersect(node, ctx) {
@@ -617,7 +617,7 @@ function generateSmoothIntersect(node, ctx) {
 ${bodyLines.join('\n')}
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateSmoothSubtract(node, ctx) {
@@ -656,7 +656,7 @@ function generateSmoothSubtract(node, ctx) {
 ${bodyLines.join('\n')}
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 // ============================================
@@ -692,7 +692,7 @@ function generateMaterial(node, ctx) {
   let c = ${childExpr};
   return vec4f(c.x, ${color});
 }`);
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateRef(node, ctx) {
@@ -800,7 +800,7 @@ function generateMirror(node, ctx) {
   return ${childFuncName}(mp);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateRadial(node, ctx) {
@@ -827,7 +827,7 @@ function generateRadial(node, ctx) {
   return ${childFuncName}(rp);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateRepeat(node, ctx) {
@@ -850,7 +850,7 @@ function generateRepeat(node, ctx) {
   return ${childFuncName}(rp);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateSelect(node, ctx) {
@@ -877,7 +877,7 @@ function generateRound(node, ctx) {
   return vec4f(c.x - ${r}, c.yzw);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateShell(node, ctx) {
@@ -899,7 +899,7 @@ function generateShell(node, ctx) {
   return vec4f(abs(c.x) - ${thickness}, c.yzw);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateDisplace(node, ctx) {
@@ -925,7 +925,7 @@ function generateDisplace(node, ctx) {
   return vec4f(c.x + disp, c.yzw);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateCustomExpr(node, ctx) {
@@ -956,7 +956,7 @@ function generateScaledNode(node, ctx) {
   return vec4f(c.x * min(s.x, min(s.y, s.z)), c.yzw);
 }`);
 
-  return `${funcName}(p)`;
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 // ============================================
@@ -1019,7 +1019,7 @@ function valueToWgsl(value, ctx) {
     return '0.0';
 
   case 'expr':
-    return value.expr || '0.0';
+    return exprToWgsl(value, ctx);
 
   default:
     if (typeof value.value === 'number') {
@@ -1033,6 +1033,148 @@ function formatFloat(v) {
   if (typeof v !== 'number') return '0.0';
   const s = v.toString();
   return s.includes('.') ? s : s + '.0';
+}
+
+// Expression evaluation - convert expression trees to WGSL
+function exprToWgsl(expr, ctx) {
+  if (!expr) return '0.0';
+
+  // Handle simple values
+  if (typeof expr === 'number') {
+    return formatFloat(expr);
+  }
+  if (typeof expr === 'string') {
+    return expr;
+  }
+  if (expr.type === 'const') {
+    return formatFloat(expr.value);
+  }
+  if (expr.type === 'var') {
+    return valueToWgsl(expr, ctx);
+  }
+
+  // Get operation and args
+  const op = expr.expr || expr.op;
+  const args = expr.args || [];
+
+  if (!op) {
+    if (expr.value !== undefined) {
+      return formatFloat(expr.value);
+    }
+    return '0.0';
+  }
+
+  // Convert args
+  const a = args.map(arg => exprToWgsl(arg, ctx));
+
+  switch (op) {
+    // Arithmetic
+    case 'add':
+      return `(${a.join(' + ')})`;
+    case 'sub':
+      return `(${a[0]} - ${a[1]})`;
+    case 'mul':
+      return `(${a.join(' * ')})`;
+    case 'div':
+      return `(${a[0]} / ${a[1]})`;
+    case 'mod':
+      return `(${a[0]} % ${a[1]})`;
+    case 'neg':
+      return `(-${a[0]})`;
+
+    // Rounding/Abs
+    case 'abs':
+      return `abs(${a[0]})`;
+    case 'floor':
+      return `floor(${a[0]})`;
+    case 'ceil':
+      return `ceil(${a[0]})`;
+    case 'fract':
+      return `fract(${a[0]})`;
+    case 'round':
+      return `round(${a[0]})`;
+
+    // Trigonometric
+    case 'sin':
+      return `sin(${a[0]})`;
+    case 'cos':
+      return `cos(${a[0]})`;
+    case 'tan':
+      return `tan(${a[0]})`;
+    case 'asin':
+      return `asin(${a[0]})`;
+    case 'acos':
+      return `acos(${a[0]})`;
+    case 'atan':
+      return a.length > 1 ? `atan2(${a[0]}, ${a[1]})` : `atan(${a[0]})`;
+
+    // Powers/Exp
+    case 'pow':
+      return `pow(${a[0]}, ${a[1]})`;
+    case 'sqrt':
+      return `sqrt(${a[0]})`;
+    case 'exp':
+      return `exp(${a[0]})`;
+    case 'log':
+      return `log(${a[0]})`;
+
+    // Comparison/Blend
+    case 'min':
+      return a.length > 2
+        ? a.reduce((acc, v) => `min(${acc}, ${v})`)
+        : `min(${a[0]}, ${a[1]})`;
+    case 'max':
+      return a.length > 2
+        ? a.reduce((acc, v) => `max(${acc}, ${v})`)
+        : `max(${a[0]}, ${a[1]})`;
+    case 'clamp':
+      return `clamp(${a[0]}, ${a[1]}, ${a[2]})`;
+    case 'step':
+      return `step(${a[0]}, ${a[1]})`;
+    case 'smoothstep':
+      return `smoothstep(${a[0]}, ${a[1]}, ${a[2]})`;
+    case 'mix':
+    case 'lerp':
+      return `mix(${a[0]}, ${a[1]}, ${a[2]})`;
+
+    // Noise functions
+    case 'noise':
+      ctx.needsNoise = true;
+      return `noise3(vec3f(${a.join(', ')}))`;
+    case 'fbm':
+      ctx.needsNoise = true;
+      const octaves = a[3] || '4';
+      return `fbm(vec3f(${a[0]}, ${a[1]}, ${a[2]}), ${octaves})`;
+    case 'turbulence':
+      ctx.needsNoise = true;
+      const turbOctaves = a[3] || '4';
+      return `turbulence(vec3f(${a[0]}, ${a[1]}, ${a[2]}), ${turbOctaves})`;
+    case 'hash':
+      ctx.needsNoise = true;
+      return `hash(${a[0]})`;
+
+    // Vector construction
+    case 'vec2':
+      return `vec2f(${a[0]}, ${a[1]})`;
+    case 'vec3':
+      return `vec3f(${a[0]}, ${a[1]}, ${a[2]})`;
+    case 'vec4':
+      return `vec4f(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]})`;
+
+    // Vector ops
+    case 'length':
+      return `length(${a[0]})`;
+    case 'normalize':
+      return `normalize(${a[0]})`;
+    case 'dot':
+      return `dot(${a[0]}, ${a[1]})`;
+    case 'cross':
+      return `cross(${a[0]}, ${a[1]})`;
+
+    default:
+      console.warn(`Unknown expression op: ${op}`);
+      return '0.0';
+  }
 }
 
 // ============================================
