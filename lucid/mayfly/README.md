@@ -18,8 +18,12 @@ Scene JSON → json-loader.js → json-codegen.js → GLSL → WebGL
 ## Renderer
 
 - `mayfly/raymarcher.js` - SimpleRaymarcher class
-- `ui/scene-panel.js` - Parameter sliders
-- `ui/tree-view.js` - Scene graph inspector
+
+## UI Components (in components/)
+
+- `components/scene-params.js` - Parameter sliders
+- `components/lucid-renderer.js` - Backend-neutral renderer wrapper
+- `components/lucid-comparison.js` - Side-by-side backend comparison
 
 ## Limitations
 
@@ -80,10 +84,10 @@ lucid/
 │   ├── compute-physics.js   # GPU-side physics prediction
 │   └── README.md
 │
-├── ui/                      # SHARED UI (renderer-agnostic)
-│   ├── scene-panel.js       # Parameter sliders
-│   ├── tree-view.js         # Scene inspector
-│   └── renderer-picker.js   # (new) Switch backends
+├── components/              # SHARED UI (renderer-agnostic)
+│   ├── scene-params.js      # Parameter sliders
+│   ├── lucid-renderer.js    # Backend-neutral wrapper
+│   └── lucid-comparison.js  # Side-by-side comparison
 │
 └── scenes/                  # CONTENT (completely renderer-agnostic)
     ├── creatures/
