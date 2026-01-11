@@ -250,7 +250,7 @@ export class TemplateExtractor {
         case 'add': return args.reduce((a, b) => a + b, 0);
         case 'sub': return args[0] - (args[1] || 0);
         case 'mul': return args.reduce((a, b) => a * b, 1);
-        case 'div': return args[0] / (args[1] || 1);
+        case 'div': return args[1] !== 0 ? args[0] / args[1] : 0;
         case 'sin': return Math.sin(args[0] || 0);
         case 'cos': return Math.cos(args[0] || 0);
         case 'mix': return args[0];  // Return first value at t=0

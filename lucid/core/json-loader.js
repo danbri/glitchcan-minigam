@@ -39,10 +39,47 @@ export function loadJsonScene(json) {
     version: json.version || '1.0',
     root: nodeRegistry.root,
     defs: nodeRegistry.defs,
+    // Scene-level parameters for parametric rigging
+    params: processSceneParams(json.params || {}),
+    // Rig layer for constraint-based relationships (Phase 5)
+    // Defines: derived params, bounds, phase coupling, chains
+    rig: json.rig || null,
+    // Physics configuration (bodies, constraints)
+    physics: json.physics || null,
     // Pass through rendering hints
     quality: json.quality || 'medium',  // 'low', 'medium', 'high'
     camera: json.camera || null          // Optional camera settings
   };
+}
+
+/**
+ * Process scene-level parameters
+ * Supports typed parameters: scalar, color3, position3, radii3, direction3
+ */
+function processSceneParams(params) {
+  const processed = {};
+  for (const [name, param] of Object.entries(params)) {
+    if (typeof param === 'number') {
+      // Simple number shorthand
+      processed[name] = { value: param, type: 'scalar' };
+    } else if (Array.isArray(param)) {
+      // Array shorthand - infer type from length
+      processed[name] = {
+        value: param,
+        type: param.length === 3 ? 'position3' : 'array'
+      };
+    } else if (typeof param === 'object' && param !== null) {
+      // Full parameter definition
+      processed[name] = {
+        value: param.value,
+        type: param.type || 'scalar',
+        min: param.min,
+        max: param.max,
+        step: param.step
+      };
+    }
+  }
+  return processed;
 }
 
 const MAX_RECURSION_DEPTH = 100;
@@ -75,6 +112,7 @@ function processNode(node, registry, depth = 0) {
     case 'capsule':
     case 'ellipsoid':
     case 'cone':
+    case 'roundCone':
     case 'plane':
       processed.params = processParams(node.params || {});
       break;
@@ -91,6 +129,13 @@ function processNode(node, registry, depth = 0) {
       );
       if (node.k !== undefined) {
         processed.k = processValue(node.k);
+      }
+      // BVH: Preserve bounding box for spatial optimization
+      if (node.boundingBox) {
+        processed.boundingBox = {
+          center: node.boundingBox.center,
+          halfSize: node.boundingBox.halfSize
+        };
       }
       break;
 
@@ -178,6 +223,10 @@ function processNode(node, registry, depth = 0) {
       processed.def = def; // Store reference for later expansion
       if (node.params) {
         processed.overrides = processParams(node.params);
+      }
+      // LCD-049: Preserve bounding radius for optimization
+      if (node.boundingRadius !== undefined) {
+        processed.boundingRadius = node.boundingRadius;
       }
       break;
 
@@ -298,13 +347,75 @@ export function expandRef(refNode, registry, depth = 0) {
   }
 
   // Clone the definition
-  const expanded = JSON.parse(JSON.stringify(def));
+  let expanded = JSON.parse(JSON.stringify(def));
 
-  // Apply overrides (if any)
-  if (refNode.overrides) {
-    // TODO: Implement parameter override logic
-    // For now, just wrap in a material/transform node if needed
+  // Apply parameter overrides (if any) - support both 'overrides' and 'params'
+  // This substitutes { "var": "X" } references with override values
+  const overrides = refNode.overrides || refNode.params;
+  if (overrides) {
+    expanded = applyOverrides(expanded, overrides);
   }
 
   return processNode(expanded, registry, depth);
+}
+
+/**
+ * Apply parameter overrides to a cloned node tree
+ * Recursively substitutes { "var": "X" } references with override values
+ */
+function applyOverrides(node, overrides) {
+  if (!node || typeof node !== 'object') return node;
+  if (!overrides || Object.keys(overrides).length === 0) return node;
+
+  return substituteVars(node, overrides);
+}
+
+/**
+ * Recursively substitute { "var": "X" } references with values from overrides
+ */
+function substituteVars(obj, overrides) {
+  if (obj === null || obj === undefined) return obj;
+
+  // Primitive values pass through
+  if (typeof obj !== 'object') return obj;
+
+  // Check if this is a var reference that should be substituted
+  if (obj.var && overrides.hasOwnProperty(obj.var)) {
+    return overrides[obj.var];
+  }
+
+  // Arrays: substitute each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => substituteVars(item, overrides));
+  }
+
+  // Objects: substitute each property value
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = substituteVars(value, overrides);
+  }
+  return result;
+}
+
+/**
+ * Convert processed value back to raw JSON format
+ */
+function valueToRaw(processed) {
+  if (!processed || typeof processed !== 'object') return processed;
+
+  switch (processed.type) {
+    case 'const':
+      return processed.value;
+    case 'array':
+      return processed.values.map(v => valueToRaw(v));
+    case 'var':
+      return { var: processed.name };
+    case 'expr':
+      return {
+        expr: processed.op,
+        args: processed.args.map(a => valueToRaw(a))
+      };
+    default:
+      return processed;
+  }
 }

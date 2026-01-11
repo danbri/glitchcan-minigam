@@ -64,6 +64,11 @@
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
       touch-action: pan-x pan-y;
+      /* LCD-046: iOS PWA safe area support */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
     /* iOS-specific: Suppress select all, resize handles, etc. */
@@ -92,6 +97,22 @@
       display: flex;
       flex-direction: column;
       height: 100%;
+      /* LCD-046: Fill the safe-area-adjusted body */
+      min-height: 0;
+    }
+
+    /* LCD-046: Extend background into safe areas on iOS PWA */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: env(safe-area-inset-top);
+        background: var(--panel-bg);
+        z-index: 9999;
+      }
     }
 
     .main-area {
@@ -109,6 +130,27 @@
       justify-content: center;
       background: #000;
     }
+
+    /* Performance overlay */
+    .perf-overlay {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      color: #0f0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 6px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 100;
+      line-height: 1.4;
+      display: none;
+    }
+    .perf-overlay.visible { display: block; }
+    .perf-overlay .perf-warn { color: #fa0; }
+    .perf-overlay .perf-bad { color: #f44; }
+    .perf-overlay .perf-label { color: #888; }
 
     canvas {
       width: 100%;
@@ -291,6 +333,28 @@
     .tree-toolbar .btn {
       padding: 0.3rem 0.5rem;
       font-size: 0.85rem;
+    }
+
+    /* Dev console toolbar */
+    .dev-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      background: #1a1f26;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dev-toolbar .btn {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .dev-view {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
     }
 
     .editor-content {
@@ -527,7 +591,7 @@
       margin-left: 1rem;
       border-left: 2px solid var(--border);
       padding-left: 0.5rem;
-      max-height: 300px;
+      max-height: 70vh;
       overflow-y: auto;
     }
 
@@ -752,16 +816,18 @@
       display: none;
     }
 
-    /* Debug Panel - slides up from bottom */
+    /* Debug Panel - slides up from bottom, translucent */
     .debug-panel {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--panel-bg);
-      border-top: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       transform: translateY(100%);
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, width 0.2s ease, height 0.2s ease;
       z-index: 150;
       max-height: 40vh;
       overflow-y: auto;
@@ -771,26 +837,100 @@
       transform: translateY(0);
     }
 
+    /* Tear-off (floating) state */
+    .debug-panel.floating {
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      width: 280px;
+      max-height: 60vh;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transform: none !important;
+    }
+
+    /* Grippy handle for tear-off */
+    .panel-grippy {
+      height: 20px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .panel-grippy:active {
+      cursor: grabbing;
+    }
+
+    .panel-grippy::before {
+      content: '⋯⋯⋯';
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+    }
+
+    .panel-grippy:hover::before {
+      color: var(--accent);
+    }
+
+    /* Dock button (visible when floating) */
+    .panel-dock {
+      display: none;
+      position: absolute;
+      top: 0.25rem;
+      left: 0.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: none;
+      background: rgba(34, 211, 238, 0.2);
+      color: var(--accent);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+
+    .debug-panel.floating .panel-dock {
+      display: flex;
+    }
+
+    .panel-dock:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
     .debug-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--border);
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       position: sticky;
       top: 0;
-      background: var(--panel-bg);
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .debug-header h3 {
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       color: var(--accent);
+      margin: 0;
     }
 
     /* Close button (X) for panels */
     .panel-close {
       position: absolute;
-      top: 0.5rem;
+      top: 0.25rem;
       right: 0.5rem;
       width: 1.75rem;
       height: 1.75rem;
@@ -798,13 +938,14 @@
       background: rgba(248, 81, 73, 0.2);
       color: var(--error);
       border-radius: 4px;
-      font-size: 1.1rem;
+      font-size: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.15s ease;
-      z-index: 10;
+      z-index: 100;
+      pointer-events: auto;
     }
     .panel-close:hover {
       background: var(--error);
@@ -853,15 +994,15 @@
     }
 
     .debug-content {
-      padding: 1rem;
+      padding: 0.5rem 0.75rem;
     }
 
     .debug-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .debug-row:last-child {
@@ -869,7 +1010,7 @@
     }
 
     .debug-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-dim);
     }
 
@@ -901,6 +1042,143 @@
 
     .toggle.active::after {
       transform: translateX(20px);
+    }
+
+    /* Mobile-friendly slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      touch-action: none; /* Prevent scroll while dragging */
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover,
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Larger touch target on mobile */
+    @media (pointer: coarse) {
+      input[type="range"] {
+        height: 12px;
+        padding: 8px 0;
+        margin: 4px 0;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 32px;
+        height: 32px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 32px;
+        height: 32px;
+      }
+
+      /* Ensure slider rows have enough padding for touch */
+      .debug-row {
+        padding: 0.5rem 0;
+        min-height: 44px;
+      }
+    }
+
+    /* Tree slider panel - enhanced for better visibility and touch */
+    .tree-slider-panel,
+    .tree-vec3-panel {
+      display: none;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
+      border-bottom: 2px solid #fbbf24;
+    }
+
+    .tree-slider-panel.visible,
+    .tree-vec3-panel.visible {
+      display: block;
+    }
+
+    .tree-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tree-slider-label {
+      font-size: 0.8rem;
+      color: #fbbf24;
+      font-weight: 600;
+      min-width: 5rem;
+    }
+
+    .tree-slider-input {
+      flex: 1;
+      min-width: 120px;
+      accent-color: #fbbf24;
+    }
+
+    .tree-slider-number {
+      width: 5rem;
+      padding: 0.4rem 0.5rem;
+      background: var(--bg);
+      color: #fbbf24;
+      border: 1px solid #fbbf24;
+      border-radius: 4px;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.85rem;
+      text-align: right;
+    }
+
+    .tree-slider-number:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+    }
+
+    /* Vec3 picker styling */
+    .tree-vec3-sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tree-vec3-axis {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tree-vec3-axis-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      width: 1.5rem;
+      text-align: center;
     }
 
     /* Debug toggle button - now in header, keep for mobile fallback */
@@ -979,6 +1257,7 @@
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
+          <button class="icon-btn" id="btn-params" title="Scene Params (P)">🎛️</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
           <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🚁</button>
           <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
@@ -1000,6 +1279,12 @@
     <div class="main-area">
       <div class="render-panel">
         <canvas id="canvas"></canvas>
+        <div class="perf-overlay" id="perf-overlay">
+          <div><span class="perf-label">FPS:</span> <span id="perf-fps">--</span></div>
+          <div><span class="perf-label">Frame:</span> <span id="perf-frame">--</span>ms</div>
+          <div><span class="perf-label">Nodes:</span> <span id="perf-nodes">--</span></div>
+          <div><span class="perf-label">GPU:</span> <span id="perf-gpu">--</span></div>
+        </div>
       </div>
 
       <!-- Resizer grip between 3D view and editor -->
@@ -1021,6 +1306,9 @@
           </button>
           <button class="panel-tab" id="tab-glsl" title="Generated GLSL">
             <span class="panel-tab-icon">⟨⟩</span> GLSL
+          </button>
+          <button class="panel-tab" id="tab-dev" title="Debug Console">
+            <span class="panel-tab-icon">🐛</span> Dev
           </button>
           <button class="tab-copy-btn" id="copy-tab" title="Copy current tab content">📋</button>
         </div>
@@ -1061,10 +1349,37 @@
             <span id="tree-nav-indicator" style="font-size:0.8rem;color:#8b949e;min-width:3rem;text-align:center;">0/0</span>
             <button class="btn" id="btn-tree-next" title="Next value">▶</button>
             <span style="flex:1"></span>
-            <!-- Slider for numeric values -->
-            <span id="tree-slider-label" style="font-size:0.7rem;color:#fbbf24;display:none;"></span>
-            <input type="range" id="tree-slider" style="width:100px;accent-color:#fbbf24;display:none;">
-            <span id="tree-slider-value" style="font-size:0.75rem;color:#fbbf24;font-family:monospace;display:none;"></span>
+          </div>
+          <!-- Tree slider widget for numeric values -->
+          <div id="tree-slider-panel" class="tree-slider-panel">
+            <div class="tree-slider-row">
+              <span id="tree-slider-label" class="tree-slider-label"></span>
+              <input type="range" id="tree-slider" class="tree-slider-input">
+              <input type="number" id="tree-slider-number" class="tree-slider-number">
+            </div>
+          </div>
+          <!-- Vec3 picker for position/color/scale arrays -->
+          <div id="tree-vec3-panel" class="tree-vec3-panel">
+            <div class="tree-slider-row">
+              <span id="tree-vec3-label" class="tree-slider-label"></span>
+            </div>
+            <div class="tree-vec3-sliders">
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#f87171">X</span>
+                <input type="range" id="tree-vec3-x" class="tree-slider-input" style="accent-color:#f87171">
+                <input type="number" id="tree-vec3-x-num" class="tree-slider-number">
+              </div>
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#4ade80">Y</span>
+                <input type="range" id="tree-vec3-y" class="tree-slider-input" style="accent-color:#4ade80">
+                <input type="number" id="tree-vec3-y-num" class="tree-slider-number">
+              </div>
+              <div class="tree-vec3-axis">
+                <span class="tree-vec3-axis-label" style="color:#60a5fa">Z</span>
+                <input type="range" id="tree-vec3-z" class="tree-slider-input" style="accent-color:#60a5fa">
+                <input type="number" id="tree-vec3-z-num" class="tree-slider-number">
+              </div>
+            </div>
           </div>
           <!-- GLSL/Expression popup display -->
           <div id="glsl-display" style="display:none;padding:0.5rem;background:#1a1f26;border-bottom:1px solid #333;font-family:'SF Mono',monospace;font-size:0.75rem;color:#ff69b4;max-height:4rem;overflow-y:auto;word-break:break-all;"></div>
@@ -1080,6 +1395,18 @@
         <!-- GLSL Tab Content -->
         <div class="tab-content" id="content-glsl">
           <div class="code-display glsl-view" id="glsl-content"></div>
+        </div>
+
+        <!-- Dev Tab Content -->
+        <div class="tab-content" id="content-dev">
+          <div class="dev-toolbar">
+            <button class="btn" id="btn-dev-clear" title="Clear logs">Clear</button>
+            <button class="btn" id="btn-dev-copy" title="Copy all logs">Copy All</button>
+            <label style="color:#8b949e;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
+              <input type="checkbox" id="dev-autoscroll" checked> Auto-scroll
+            </label>
+          </div>
+          <div class="code-display dev-view" id="dev-content" style="font-size:0.7rem;"></div>
         </div>
       </div>
     </div>
@@ -1132,6 +1459,14 @@
     <div class="menu-divider"></div>
     <div class="menu-item" id="menu-splats">
       <span>🔮 Gaussian Splats</span>
+    </div>
+    <div class="menu-item has-submenu" id="menu-physics">
+      <span>⚛️ Physics Demos</span>
+      <div class="submenu" id="physics-submenu" style="min-width: 200px;">
+        <a href="demos/sdf-physics.html" class="submenu-item" style="display: block; color: inherit; text-decoration: none;">🔴 SDF Physics (3D)</a>
+        <a href="demos/chain-physics.html" class="submenu-item" style="display: block; color: inherit; text-decoration: none;">🔗 Chain Physics (XPBD)</a>
+        <a href="demos/splat-physics.html" class="submenu-item" style="display: block; color: inherit; text-decoration: none;">⚽ Splat Object Physics</a>
+      </div>
     </div>
     <div class="menu-item" id="menu-about">
       <span>ℹ️ About</span>
@@ -1220,6 +1555,10 @@
       <div class="debug-row">
         <span class="debug-label">Show Axes (RGB)</span>
         <div class="toggle active" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Show Perf Stats</span>
+        <div class="toggle" id="toggle-perf" title="Show FPS, frame time, scene complexity"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
@@ -1317,10 +1656,37 @@
     </div>
   </div>
 
+  <!-- Scene Parameters Panel -->
+  <div class="debug-panel" id="params-panel" style="left: auto; right: 50px;">
+    <div class="panel-grippy" id="params-grippy" title="Drag to tear off, or double-click to toggle dock"></div>
+    <button class="panel-dock" id="btn-params-dock" title="Dock panel">⬇</button>
+    <button class="panel-close" id="btn-params-close" title="Close parameters">×</button>
+    <div class="debug-header" style="display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0;">🎛️ Params</h3>
+      <button id="btn-wiggler" title="Wiggle params (sticky across scenes)">〰️</button>
+    </div>
+    <div class="debug-content" id="params-content">
+      <div class="debug-row" style="color: var(--text-dim); font-style: italic;">
+        No params in this scene
+      </div>
+    </div>
+    <!-- Rig Info Section (derived params, constraints) -->
+    <div id="rig-info" style="display: none; border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 8px;">
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">📐 Derived Values</div>
+      <div id="rig-derived" style="font-size: 0.7rem; padding-left: 8px;"></div>
+    </div>
+    <!-- Constraint Violations -->
+    <div id="rig-violations" style="display: none; border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 8px;">
+      <div style="font-size: 0.75rem; color: #f59e0b; margin-bottom: 4px;">⚠️ Constraint Violations</div>
+      <div id="violations-list" style="font-size: 0.7rem; padding-left: 8px;"></div>
+    </div>
+  </div>
+
   <script type="module">
     import { SimpleRaymarcher } from './ui/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
+    import { PhysicsScene } from './core/physics/physics-scene.js';
 
     // ============================================
     // VERSION INFO
@@ -1449,7 +1815,77 @@
     let menuOpen = false;
     let debugOpen = false;
     let lightingOpen = false;
-    let activeTab = 'source'; // Current tab in editor panel: 'source' | 'tree' | 'dsl' | 'glsl'
+    let activeTab = 'source'; // Current tab in editor panel: 'source' | 'tree' | 'dsl' | 'glsl' | 'dev'
+
+    // ============================================
+    // DEV CONSOLE - Capture console output for mobile debugging
+    // ============================================
+    const devLogs = [];
+    const MAX_DEV_LOGS = 500;
+    const originalConsole = {
+      log: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    };
+
+    function formatLogArg(arg) {
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+      if (typeof arg === 'object') {
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch {
+          return String(arg);
+        }
+      }
+      return String(arg);
+    }
+
+    function captureLog(level, args) {
+      const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const message = Array.from(args).map(formatLogArg).join(' ');
+      devLogs.push({ level, timestamp, message });
+      if (devLogs.length > MAX_DEV_LOGS) devLogs.shift();
+
+      // Update dev panel if visible
+      if (activeTab === 'dev') {
+        updateDevPanel();
+      }
+    }
+
+    function updateDevPanel() {
+      const devContent = $('dev-content');
+      if (!devContent) return;
+
+      const html = devLogs.map(log => {
+        const levelClass = log.level === 'error' ? 'color:#f87171' :
+                          log.level === 'warn' ? 'color:#fbbf24' :
+                          log.level === 'info' ? 'color:#60a5fa' : 'color:#9ca3af';
+        return `<div style="${levelClass}"><span style="color:#6b7280">[${log.timestamp}]</span> ${escapeHtml(log.message)}</div>`;
+      }).join('');
+
+      devContent.innerHTML = html;
+
+      // Auto-scroll if enabled
+      const autoScroll = $('dev-autoscroll');
+      if (autoScroll?.checked) {
+        devContent.scrollTop = devContent.scrollHeight;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Hook console methods
+    console.log = (...args) => { captureLog('log', args); originalConsole.log(...args); };
+    console.warn = (...args) => { captureLog('warn', args); originalConsole.warn(...args); };
+    console.error = (...args) => { captureLog('error', args); originalConsole.error(...args); };
+    console.info = (...args) => { captureLog('info', args); originalConsole.info(...args); };
+
+    // Log startup
+    console.log('🐛 Dev console initialized');
     let currentGlsl = ''; // Store generated GLSL for display
     let autoRotate = false;
     let autoRotateSpeed = 0.5; // radians per second
@@ -1462,6 +1898,114 @@
 
     // Visibility state - pause rendering when tab/app not visible
     let isAppVisible = true;
+
+    // Physics simulation state
+    let currentPhysicsScene = null;
+    let physicsParamMap = null; // Maps physics body IDs to param names
+
+    /**
+     * Apply impulse to the nearest physics body from a tap/click position
+     * Pushes ball away from camera toward tap location - like poking it
+     */
+    function applyPhysicsImpulseFromClick(clientX, clientY) {
+      if (!currentPhysicsScene || !renderer) return;
+
+      const canvas = $('canvas');
+      const rect = canvas.getBoundingClientRect();
+
+      // Normalized device coords (-1 to 1)
+      const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
+
+      // Get camera info
+      const cam = renderer.camera;
+      const dist = cam.distance || 5;
+      const theta = cam.theta || 0;
+      const phi = cam.phi || Math.PI / 2;
+      const target = cam.target || [0, 0, 0];
+
+      // Camera position in world space (spherical coords around target)
+      const sinPhi = Math.sin(phi);
+      const cosPhi = Math.cos(phi);
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+      const camX = target[0] + dist * sinPhi * cosTheta;
+      const camY = target[1] + dist * cosPhi;
+      const camZ = target[2] + dist * sinPhi * sinTheta;
+
+      // Camera basis vectors
+      const rightX = -sinTheta;
+      const rightY = 0;
+      const rightZ = cosTheta;
+      const upX = -cosPhi * cosTheta;
+      const upY = sinPhi;
+      const upZ = -cosPhi * sinTheta;
+      const fwdX = -sinPhi * cosTheta;
+      const fwdY = -cosPhi;
+      const fwdZ = -sinPhi * sinTheta;
+
+      // Find dynamic bodies and their screen positions
+      let nearest = null;
+      let nearestDist = Infinity;
+
+      for (const body of currentPhysicsScene.bodies) {
+        if (body.isStatic) continue;
+
+        const pos = body.position;
+        // Vector from camera to body
+        const dx = pos[0] - camX;
+        const dy = pos[1] - camY;
+        const dz = pos[2] - camZ;
+
+        // Project to camera space
+        const depth = dx * fwdX + dy * fwdY + dz * fwdZ;
+        if (depth <= 0) continue; // Behind camera
+
+        // Screen-space position (approximate)
+        const screenX = (dx * rightX + dy * rightY + dz * rightZ) / depth;
+        const screenY = (dx * upX + dy * upY + dz * upZ) / depth;
+
+        // Distance to tap in screen space
+        const tapDist = Math.sqrt((screenX - ndcX) ** 2 + (screenY - ndcY) ** 2);
+
+        if (tapDist < nearestDist) {
+          nearestDist = tapDist;
+          nearest = body;
+        }
+      }
+
+      if (!nearest) return;
+
+      // Push direction: from camera toward the ball (poke it away)
+      const pos = nearest.position;
+      let pushX = pos[0] - camX;
+      let pushY = pos[1] - camY;
+      let pushZ = pos[2] - camZ;
+      const len = Math.sqrt(pushX * pushX + pushY * pushY + pushZ * pushZ);
+      if (len > 0) {
+        pushX /= len;
+        pushY /= len;
+        pushZ /= len;
+      }
+
+      // Add slight sideways component based on tap offset from ball center
+      const sideInfluence = 3;
+      pushX += ndcX * rightX * sideInfluence;
+      pushY += 0.5; // Always lift slightly
+      pushZ += ndcX * rightZ * sideInfluence;
+
+      // Normalize and apply strength
+      const impulseStrength = 6;
+      const finalLen = Math.sqrt(pushX * pushX + pushY * pushY + pushZ * pushZ);
+      const impulse = [
+        (pushX / finalLen) * impulseStrength,
+        (pushY / finalLen) * impulseStrength,
+        (pushZ / finalLen) * impulseStrength
+      ];
+
+      currentPhysicsScene.applyImpulse(nearest.id, impulse);
+      console.log(`⚛️ Pushed ${nearest.id}: [${impulse.map(v => v.toFixed(2)).join(', ')}]`);
+    }
 
     // Camera orbit state
     let isDragging = false;
@@ -1477,8 +2021,87 @@
       showGround: true,
       showCutters: false,
       showAxes: true,  // Default visible
+      showPerf: false,
       cameraDistance: 4
     };
+
+    // Performance monitoring state
+    const perfState = {
+      frameCount: 0,
+      lastFpsUpdate: 0,
+      fps: 0,
+      frameTime: 0,
+      frameTimes: [],
+      nodeCount: 0,
+      gpuName: 'unknown'
+    };
+
+    // Count SDF nodes for complexity metric
+    function countSceneNodes(node) {
+      if (!node) return 0;
+      let count = 1;
+      if (node.children) {
+        for (const child of node.children) {
+          count += countSceneNodes(child);
+        }
+      }
+      if (node.child) {
+        count += countSceneNodes(node.child);
+      }
+      return count;
+    }
+
+    // Get GPU info from WebGL
+    function getGpuInfo(gl) {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      if (ext) {
+        const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        // Shorten common GPU names
+        return renderer
+          .replace(/ANGLE \(/, '')
+          .replace(/\)$/, '')
+          .replace(/Direct3D11 vs_5_0 ps_5_0/, '')
+          .replace(/Apple /, '')
+          .replace(/Intel\(R\) /, '')
+          .replace(/ Graphics$/, '')
+          .trim()
+          .slice(0, 25);
+      }
+      return gl.getParameter(gl.RENDERER).slice(0, 25);
+    }
+
+    // Update perf overlay display
+    function updatePerfDisplay() {
+      const fpsEl = $('perf-fps');
+      const frameEl = $('perf-frame');
+      const nodesEl = $('perf-nodes');
+
+      if (!fpsEl) return;
+
+      // Color code FPS
+      let fpsClass = '';
+      if (perfState.fps < 30) fpsClass = 'perf-bad';
+      else if (perfState.fps < 50) fpsClass = 'perf-warn';
+
+      fpsEl.textContent = perfState.fps.toFixed(0);
+      fpsEl.className = fpsClass;
+
+      // Color code frame time
+      let frameClass = '';
+      if (perfState.frameTime > 33) frameClass = 'perf-bad';
+      else if (perfState.frameTime > 20) frameClass = 'perf-warn';
+
+      frameEl.textContent = perfState.frameTime.toFixed(1);
+      frameEl.className = frameClass;
+
+      // Color code node count
+      let nodeClass = '';
+      if (perfState.nodeCount > 100) nodeClass = 'perf-bad';
+      else if (perfState.nodeCount > 50) nodeClass = 'perf-warn';
+
+      nodesEl.textContent = perfState.nodeCount;
+      nodesEl.className = nodeClass;
+    }
 
     // Lighting settings
     const lightingSettings = {
@@ -1551,7 +2174,13 @@
 
         const canvas = $('canvas');
         renderer = new SimpleRaymarcher(canvas);
+        window.renderer = renderer; // Expose for automation/capture scripts
         renderer.showAxes = debugSettings.showAxes; // Apply default axes setting
+        setupRigCallbacks(); // Set up rig layer constraint violation callback
+
+        // Initialize GPU info for perf display
+        perfState.gpuName = getGpuInfo(renderer.gl);
+        $('perf-gpu').textContent = perfState.gpuName;
 
         // Build hierarchical demos submenu
         buildDemosSubmenu();
@@ -1597,6 +2226,42 @@
           }
 
           renderer.render();
+
+          // Step physics simulation AFTER render (uses rig values from this frame)
+          if (currentPhysicsScene && currentPhysicsScene.enabled && animState !== 'frozen') {
+            // Update position constraint targets from rig (e.g., foot lift heights)
+            if (renderer.lastRigValues) {
+              currentPhysicsScene.updateFromRig(renderer.lastRigValues);
+            }
+
+            currentPhysicsScene.step(Math.min(deltaTime, 1/30)); // Cap to avoid instability
+
+            // Sync physics positions to shader params (vec3)
+            for (const body of currentPhysicsScene.bodies) {
+              // Use explicit param map if available, otherwise use phys_ prefix convention
+              const paramName = physicsParamMap?.[body.id] || `phys_${body.id}`;
+              // Set vec3 position as array (update all bodies including static)
+              renderer.setParam(paramName, [...body.position]);
+            }
+          }
+
+          // Track FPS and frame time
+          if (debugSettings.showPerf) {
+            const frameEnd = performance.now();
+            const frameMs = frameEnd - now;
+            perfState.frameTimes.push(frameMs);
+            if (perfState.frameTimes.length > 60) perfState.frameTimes.shift();
+            perfState.frameTime = perfState.frameTimes.reduce((a, b) => a + b) / perfState.frameTimes.length;
+
+            perfState.frameCount++;
+            if (frameEnd - perfState.lastFpsUpdate > 500) {
+              perfState.fps = perfState.frameCount * 1000 / (frameEnd - perfState.lastFpsUpdate);
+              perfState.frameCount = 0;
+              perfState.lastFpsUpdate = frameEnd;
+              updatePerfDisplay();
+            }
+          }
+
           renderLoopId = requestAnimationFrame(renderLoop);
         }
         renderLoop();
@@ -1704,6 +2369,33 @@
     function renderJson(json) {
       const scene = loadJsonScene(json);
 
+      // Update scene complexity for perf display
+      perfState.nodeCount = countSceneNodes(json.root);
+      const nodesEl = $('perf-nodes');
+      if (nodesEl) nodesEl.textContent = perfState.nodeCount;
+
+      // Initialize physics if scene has physics config
+      if (json.physics && json.physics.enabled) {
+        currentPhysicsScene = new PhysicsScene(json);
+
+        // Build param map: maps body IDs to param names for position
+        // New format: physics: { body: "ball1", property: "position" }
+        physicsParamMap = {};
+        const params = json.params || {};
+        for (const [paramName, paramDef] of Object.entries(params)) {
+          if (paramDef.physics && typeof paramDef.physics === 'object') {
+            const { body, property } = paramDef.physics;
+            if (body && property === 'position') {
+              physicsParamMap[body] = paramName;
+            }
+          }
+        }
+        console.log(`⚛️ Physics enabled: ${currentPhysicsScene.bodies.length} bodies, params:`, physicsParamMap);
+      } else {
+        currentPhysicsScene = null;
+        physicsParamMap = null;
+      }
+
       // Apply scene's quality preset before generating GLSL
       // (quality affects shader compilation via setQuality -> compileShaders)
       if (scene.quality && renderer.setQuality) {
@@ -1713,7 +2405,29 @@
 
       const glsl = generateGlslFromJson(scene, { showCutters: debugSettings.showCutters });
       currentGlsl = glsl; // Store for GLSL tab display
-      renderer.updateScene(glsl);
+
+      // Pass scene params, rig, and full scene JSON (for physics) to renderer
+      renderer.updateScene(glsl, scene.params || {}, scene.rig || null, scene);
+
+      // Update params panel with new scene params and rig constraints
+      updateParamsPanel(scene.params || {}, scene.rig);
+
+      // Reinitialize wiggler with new scene params (sticky: keeps running if active)
+      const wasActive = wigglerState.active;
+      const wasFast = wigglerState.fast;
+      if (wasActive) {
+        cancelAnimationFrame(wigglerState.animationId);
+        wigglerState.animationId = null;
+      }
+      initWiggler(scene.params || {});
+      if (wasActive) {
+        wigglerState.active = false; // Reset so startWiggler works
+        wigglerState.fast = wasFast;
+        startWiggler();
+      }
+
+      // Update rig info display
+      updateRigInfo(scene.rig);
 
       // Update GLSL tab if visible
       if (activeTab === 'glsl') {
@@ -2327,6 +3041,9 @@
         case 'glsl':
           $('glsl-content').textContent = currentGlsl || '// No GLSL generated yet';
           break;
+        case 'dev':
+          updateDevPanel();
+          break;
       }
     }
 
@@ -2558,7 +3275,13 @@
           if (node.params.thickness !== undefined) {
             params.push(`t=${makeClickableValue(node.params.thickness, path + '.params.thickness', 'thickness', nodeNotes)}`);
           }
-          if (node.params.color) params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+          if (node.params.color) {
+            if (Array.isArray(node.params.color)) {
+              params.push(`<span style="color:rgb(${node.params.color.map(c=>Math.round(c*255)).join(',')})">■</span>`);
+            } else if (node.params.color.var) {
+              params.push(`<span style="color:#8b949e">color=${node.params.color.var}</span>`);
+            }
+          }
           if (params.length > 0) label += ` <span style="color:#8b949e">${params.join(' ')}</span>`;
         }
         if (node.k !== undefined) {
@@ -2738,10 +3461,22 @@
       function formatTransform(t, level) {
         if (!t) return '';
         const parts = [];
-        if (t.translate) parts.push(`(translate ${t.translate.map(exprToDsl).join(' ')})`);
-        if (t.rotate) parts.push(`(rotate ${t.rotate.map(exprToDsl).join(' ')})`);
-        if (t.rotateAxis) parts.push(`(rotate-axis [${t.rotateAxis.axis.join(' ')}] ${t.rotateAxis.angle})`);
-        if (t.rotateQ) parts.push(`(rotate-q ${t.rotateQ.map(exprToDsl).join(' ')})`);
+        if (t.translate) {
+          const tr = Array.isArray(t.translate) ? t.translate.map(exprToDsl).join(' ') : exprToDsl(t.translate);
+          parts.push(`(translate ${tr})`);
+        }
+        if (t.rotate) {
+          const rot = Array.isArray(t.rotate) ? t.rotate.map(exprToDsl).join(' ') : exprToDsl(t.rotate);
+          parts.push(`(rotate ${rot})`);
+        }
+        if (t.rotateAxis) {
+          const axis = Array.isArray(t.rotateAxis.axis) ? t.rotateAxis.axis.join(' ') : exprToDsl(t.rotateAxis.axis);
+          parts.push(`(rotate-axis [${axis}] ${t.rotateAxis.angle})`);
+        }
+        if (t.rotateQ) {
+          const q = Array.isArray(t.rotateQ) ? t.rotateQ.map(exprToDsl).join(' ') : exprToDsl(t.rotateQ);
+          parts.push(`(rotate-q ${q})`);
+        }
         if (t.scale) {
           const s = Array.isArray(t.scale) ? t.scale.map(exprToDsl).join(' ') : exprToDsl(t.scale);
           parts.push(`(scale ${s})`);
@@ -2974,7 +3709,8 @@
       const treeSliderPanel = $('tree-slider-panel');
       const treeSlider = $('tree-slider');
       const treeSliderLabel = $('tree-slider-label');
-      const treeSliderValue = $('tree-slider-value');
+      const treeSliderNumber = $('tree-slider-number');
+      const treeVec3Panel = $('tree-vec3-panel');
 
       if (treeSliderPanel && treeSlider) {
         treeSlider.min = min;
@@ -2982,12 +3718,21 @@
         treeSlider.step = step;
         treeSlider.value = value;
 
-        // Show param name and notes in label
-        const labelText = nodeNotes ? `${paramName}` : paramName;
-        treeSliderLabel.textContent = labelText.substring(0, 20);
-        treeSliderValue.textContent = formatNumber(value);
+        // Setup number input
+        if (treeSliderNumber) {
+          treeSliderNumber.min = min;
+          treeSliderNumber.max = max;
+          treeSliderNumber.step = step;
+          treeSliderNumber.value = formatNumber(value);
+        }
 
-        treeSliderPanel.style.display = 'block';
+        // Show param name in label
+        const labelText = paramName || 'value';
+        treeSliderLabel.textContent = labelText.substring(0, 20);
+
+        // Show slider panel, hide vec3 panel
+        treeSliderPanel.classList.add('visible');
+        if (treeVec3Panel) treeVec3Panel.classList.remove('visible');
 
         // Hide GLSL display when showing slider
         hideGlslDisplay();
@@ -2998,8 +3743,8 @@
       if (!treeEditState.path) return;
 
       const formatted = formatNumber(newValue);
-      const treeSliderValue = $('tree-slider-value');
-      if (treeSliderValue) treeSliderValue.textContent = formatted;
+      const treeSliderNumber = $('tree-slider-number');
+      if (treeSliderNumber) treeSliderNumber.value = formatted;
 
       // Update JSON using path
       const json = demos[currentDemo].json;
@@ -3020,7 +3765,9 @@
     // Hide tree slider panel
     function hideTreeSlider() {
       const treeSliderPanel = $('tree-slider-panel');
-      if (treeSliderPanel) treeSliderPanel.style.display = 'none';
+      const treeVec3Panel = $('tree-vec3-panel');
+      if (treeSliderPanel) treeSliderPanel.classList.remove('visible');
+      if (treeVec3Panel) treeVec3Panel.classList.remove('visible');
     }
 
     function setValueByPath(obj, path, value) {
@@ -3064,11 +3811,13 @@
       const canvas = $('canvas');
 
       // Mouse controls
+      let mouseDownPos = null;
       canvas.addEventListener('mousedown', (e) => {
         if (isInEdge(e.clientX, 'left') || isInEdge(e.clientX, 'right')) return;
         isDragging = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
+        mouseDownPos = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'grabbing';
       });
 
@@ -3084,7 +3833,18 @@
         renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - dy * 0.01));
       });
 
-      document.addEventListener('mouseup', () => {
+      document.addEventListener('mouseup', (e) => {
+        // Check if it was a click (not a drag) - apply physics impulse
+        if (mouseDownPos && currentPhysicsScene && currentPhysicsScene.enabled) {
+          const dx = e.clientX - mouseDownPos.x;
+          const dy = e.clientY - mouseDownPos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 5) {
+            // Click detected - push balls away from click point
+            applyPhysicsImpulseFromClick(e.clientX, e.clientY);
+          }
+        }
+        mouseDownPos = null;
         isDragging = false;
         canvas.style.cursor = 'grab';
       });
@@ -3206,9 +3966,14 @@
           const dx = touch.clientX - swipeStartX;
           const dy = touch.clientY - swipeStartY;
           const elapsed = Date.now() - touchStartTime;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
+          // Tap detection for physics impulse: quick, little movement
+          if (dist < 15 && elapsed < 300 && currentPhysicsScene && currentPhysicsScene.enabled) {
+            applyPhysicsImpulseFromClick(touch.clientX, touch.clientY);
+          }
           // Horizontal swipe detection: fast, mostly horizontal
-          if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
+          else if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 400) {
             if (dx < 0) {
               // Swipe left = next demo (navigates through ALL demos)
               navigateToNextScene();
@@ -3275,6 +4040,21 @@
         this.classList.toggle('active');
         debugSettings.showAxes = this.classList.contains('active');
         renderer.showAxes = debugSettings.showAxes;
+      });
+
+      // Perf stats toggle
+      addClick('toggle-perf', function() {
+        this.classList.toggle('active');
+        debugSettings.showPerf = this.classList.contains('active');
+        const overlay = $('perf-overlay');
+        if (overlay) {
+          overlay.classList.toggle('visible', debugSettings.showPerf);
+          if (debugSettings.showPerf) {
+            perfState.lastFpsUpdate = performance.now();
+            perfState.frameCount = 0;
+            perfState.frameTimes = [];
+          }
+        }
       });
 
       // Camera distance slider
@@ -3403,6 +4183,526 @@
     function updateLighting() {
       if (renderer) {
         renderer.setLighting(lightingSettings);
+      }
+    }
+
+    // ============================================
+    // PARAMS PANEL - Live parameter tweaking
+    // ============================================
+    let paramsOpen = false;
+    let paramsFloating = false;
+    const paramsPanel = $('params-panel');
+
+    function setupParamsPanel() {
+      try {
+        // Close button
+        addClick('btn-params-close', () => {
+          paramsOpen = false;
+          paramsPanel?.classList.remove('open');
+          $('btn-params')?.classList.remove('active');
+        });
+
+        // Params button toggle
+        addClick('btn-params', () => {
+          paramsOpen = !paramsOpen;
+          if (paramsOpen) {
+            paramsPanel?.classList.add('open');
+            $('btn-params')?.classList.add('active');
+          } else {
+            paramsPanel?.classList.remove('open');
+            $('btn-params')?.classList.remove('active');
+          }
+        });
+
+        // Dock button - return to docked position
+        addClick('btn-params-dock', () => {
+          dockParamsPanel();
+        });
+
+        // Setup grippy drag for tear-off
+        setupParamsPanelDrag();
+      } catch (e) { console.error('setupParamsPanel error:', e); }
+    }
+
+    function dockParamsPanel() {
+      if (!paramsPanel) return;
+      paramsFloating = false;
+      paramsPanel.classList.remove('floating');
+      paramsPanel.style.top = '';
+      paramsPanel.style.left = '';
+      paramsPanel.style.right = '50px';
+    }
+
+    function setupParamsPanelDrag() {
+      const grippy = $('params-grippy');
+      if (!grippy || !paramsPanel) return;
+
+      let isDragging = false;
+      let dragStartX = 0, dragStartY = 0;
+      let panelStartX = 0, panelStartY = 0;
+
+      // Double-click to toggle dock
+      grippy.addEventListener('dblclick', () => {
+        if (paramsFloating) {
+          dockParamsPanel();
+        } else {
+          // Float at current position
+          const rect = paramsPanel.getBoundingClientRect();
+          paramsFloating = true;
+          paramsPanel.classList.add('floating');
+          paramsPanel.style.top = rect.top + 'px';
+          paramsPanel.style.left = rect.left + 'px';
+        }
+      });
+
+      grippy.addEventListener('mousedown', startDrag);
+      grippy.addEventListener('touchstart', startDrag, { passive: false });
+
+      function startDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        grippy.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+
+        const touch = e.touches ? e.touches[0] : e;
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+
+        const rect = paramsPanel.getBoundingClientRect();
+        panelStartX = rect.left;
+        panelStartY = rect.top;
+
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+      }
+
+      function doDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const touch = e.touches ? e.touches[0] : e;
+        const deltaX = touch.clientX - dragStartX;
+        const deltaY = touch.clientY - dragStartY;
+
+        // If dragged more than 20px, switch to floating mode
+        if (!paramsFloating && (Math.abs(deltaX) > 20 || Math.abs(deltaY) > 20)) {
+          paramsFloating = true;
+          paramsPanel.classList.add('floating');
+        }
+
+        if (paramsFloating) {
+          const newX = Math.max(0, Math.min(panelStartX + deltaX, window.innerWidth - 280));
+          const newY = Math.max(0, Math.min(panelStartY + deltaY, window.innerHeight - 100));
+          paramsPanel.style.left = newX + 'px';
+          paramsPanel.style.top = newY + 'px';
+        }
+      }
+
+      function stopDrag() {
+        isDragging = false;
+        grippy.style.cursor = 'grab';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', doDrag);
+        document.removeEventListener('touchmove', doDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchend', stopDrag);
+      }
+    }
+
+    /**
+     * Update params panel with sliders for current scene
+     * @param {Object} params - Scene parameters
+     * @param {Object} rig - Optional rig with constraints
+     */
+    function updateParamsPanel(params, rig) {
+      const content = $('params-content');
+      if (!content) return;
+
+      // Store rig for constraint enforcement
+      const constraints = rig?.constraints || {};
+
+      if (!params || Object.keys(params).length === 0) {
+        content.innerHTML = `<div class="debug-row" style="color: var(--text-dim); font-style: italic;">
+          No params in this scene
+        </div>`;
+        return;
+      }
+
+      let html = '';
+      for (const [name, param] of Object.entries(params)) {
+        // Skip comment/metadata params (start with _)
+        if (name.startsWith('_')) continue;
+
+        // Support both 'value' and 'default' for param values
+        const value = param.value !== undefined ? param.value : param.default;
+        if (value === undefined) continue; // Skip params without a value
+
+        // Infer type if not specified
+        const type = param.type || (Array.isArray(value) ? (value.length === 3 ? 'position3' : 'array') : 'scalar');
+
+        const min = param.min !== undefined ? param.min : (type === 'scalar' ? 0 : -10);
+        const max = param.max !== undefined ? param.max : (type === 'scalar' ? 10 : 10);
+        const step = param.step || (max - min) / 100;
+
+        if (type === 'scalar' && typeof value === 'number') {
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+              <span id="param-val-${name}" style="font-size: 0.7rem; min-width: 3rem; text-align: right; font-family: monospace;">${value.toFixed(2)}</span>
+            </div>
+            <input type="range" min="${min}" max="${max}" step="${step}" value="${value}"
+                   id="param-slider-${name}" data-param="${name}" style="width: 100%;">
+          </div>`;
+        } else if (type === 'color3' && Array.isArray(value)) {
+          const hex = rgbToHex(value);
+          html += `<div class="debug-row">
+            <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+            <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
+          </div>`;
+        } else if (Array.isArray(value) && value.length === 3) {
+          // position3, radii3, direction3 - show as 3 sliders
+          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+            <span class="debug-label" style="font-size: 0.75rem;">${name} [x,y,z]</span>
+            <div style="display: flex; gap: 0.25rem; width: 100%;">
+              <input type="number" value="${value[0].toFixed(2)}" step="0.1" id="param-vec-${name}-0" data-param="${name}" data-index="0" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+              <input type="number" value="${value[1].toFixed(2)}" step="0.1" id="param-vec-${name}-1" data-param="${name}" data-index="1" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+              <input type="number" value="${value[2].toFixed(2)}" step="0.1" id="param-vec-${name}-2" data-param="${name}" data-index="2" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
+            </div>
+          </div>`;
+        }
+      }
+
+      content.innerHTML = html;
+
+      /**
+       * Enforce coupled constraints when a driver param changes.
+       * Looks for constraints where this param is the driver,
+       * calculates new bounds for followers, and clamps if needed.
+       */
+      function enforceConstraints(driverName, driverValue) {
+        for (const [constraintName, constraint] of Object.entries(constraints)) {
+          if (constraint.type !== 'coupled') continue;
+          if (constraint.driver !== driverName) continue;
+
+          const followerName = constraint.follower;
+          const followerParam = params[followerName];
+          if (!followerParam) continue;
+
+          // Parse and evaluate constraint rule
+          // Format: "when shoulderAngle > 120, elbowAngle.max = 135 - (shoulderAngle - 120) * 1.5"
+          const rule = constraint.rule;
+          const whenMatch = rule.match(/when\s+(\w+)\s*>\s*([\d.]+)/);
+          const maxMatch = rule.match(/\.max\s*=\s*(.+)$/);
+
+          if (whenMatch && maxMatch) {
+            const threshold = parseFloat(whenMatch[2]);
+            if (driverValue > threshold) {
+              // Evaluate the expression (simple parser for common patterns)
+              let expr = maxMatch[1].trim();
+              // Replace variable references with values
+              expr = expr.replace(new RegExp(`\\b${driverName}\\b`, 'g'), driverValue.toString());
+              try {
+                // Safely evaluate arithmetic expression
+                const newMax = Function('"use strict"; return (' + expr + ')')();
+                const originalMin = followerParam.min !== undefined ? followerParam.min : 0;
+
+                // If follower value exceeds new max, clamp it
+                if (followerParam.value > newMax) {
+                  const clampedValue = Math.max(originalMin, newMax);
+                  followerParam.value = clampedValue;
+
+                  // Update follower's slider and display
+                  const followerSlider = $(`param-slider-${followerName}`);
+                  const followerValEl = $(`param-val-${followerName}`);
+                  if (followerSlider) {
+                    followerSlider.value = clampedValue;
+                    // Also update the max attribute for visual feedback
+                    followerSlider.max = newMax;
+                  }
+                  if (followerValEl) {
+                    followerValEl.textContent = clampedValue.toFixed(2);
+                  }
+
+                  // Update renderer with clamped value
+                  renderer.setParam(followerName, clampedValue);
+
+                  console.log(`⚙️ Constraint: ${followerName} clamped to ${clampedValue.toFixed(2)} (max=${newMax.toFixed(2)}) due to ${driverName}=${driverValue}`);
+                }
+              } catch (e) {
+                console.warn(`Failed to evaluate constraint rule: ${expr}`, e);
+              }
+            } else {
+              // Driver below threshold - restore original max
+              const followerSlider = $(`param-slider-${followerName}`);
+              if (followerSlider && followerParam.max !== undefined) {
+                followerSlider.max = followerParam.max;
+              }
+            }
+          }
+        }
+      }
+
+      // Attach event listeners for sliders
+      for (const [name, param] of Object.entries(params)) {
+        if (param.type === 'scalar') {
+          const slider = $(`param-slider-${name}`);
+          if (slider) {
+            // Value change handler with constraint enforcement
+            slider.addEventListener('input', function() {
+              const val = parseFloat(this.value);
+              param.value = val;
+              const valEl = $(`param-val-${name}`);
+              if (valEl) valEl.textContent = val.toFixed(2);
+              renderer.setParam(name, val);
+
+              // Check and enforce any coupled constraints
+              enforceConstraints(name, val);
+            });
+
+            // Touch handling for better mobile experience
+            slider.addEventListener('touchstart', function(e) {
+              // Mark that we're interacting with a slider
+              this.dataset.touching = 'true';
+              e.stopPropagation(); // Prevent scroll
+            }, { passive: false });
+
+            slider.addEventListener('touchmove', function(e) {
+              if (this.dataset.touching === 'true') {
+                e.stopPropagation(); // Prevent scroll while dragging
+              }
+            }, { passive: false });
+
+            slider.addEventListener('touchend', function() {
+              this.dataset.touching = 'false';
+            });
+          }
+        } else if (param.type === 'color3') {
+          const picker = $(`param-color-${name}`);
+          if (picker) {
+            picker.addEventListener('input', function() {
+              const rgb = hexToRgb(this.value);
+              param.value = rgb;
+              renderer.setParam(name, rgb);
+            });
+          }
+        } else if (Array.isArray(param.value) && param.value.length === 3) {
+          for (let i = 0; i < 3; i++) {
+            const input = $(`param-vec-${name}-${i}`);
+            if (input) {
+              input.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                param.value[parseInt(this.dataset.index)] = val;
+                renderer.setParam(name, param.value);
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Helper: RGB array [0-1] to hex color
+    function rgbToHex(rgb) {
+      const r = Math.round(rgb[0] * 255).toString(16).padStart(2, '0');
+      const g = Math.round(rgb[1] * 255).toString(16).padStart(2, '0');
+      const b = Math.round(rgb[2] * 255).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`;
+    }
+
+    // Helper: Hex color to RGB array [0-1]
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? [
+        parseInt(result[1], 16) / 255,
+        parseInt(result[2], 16) / 255,
+        parseInt(result[3], 16) / 255
+      ] : [1, 1, 1];
+    }
+
+    // ============================================
+    // PARAM WIGGLER - Oscillate params at non-multiple rates
+    // ============================================
+    let wigglerState = {
+      active: false,
+      fast: false,
+      animationId: null,
+      startTime: 0,
+      // Prime-ish frequencies to avoid sync (non-multiple rates)
+      frequencies: [0.31, 0.47, 0.59, 0.73, 0.89, 1.07, 1.23, 1.41, 1.61, 1.87, 2.03, 2.17, 2.33, 2.51, 2.71, 2.89, 3.07, 3.19, 3.37, 3.53],
+      paramConfigs: [] // Stores {name, min, max, freq, phase} for each param
+    };
+
+    function initWiggler(params) {
+      wigglerState.paramConfigs = [];
+      let freqIndex = 0;
+      for (const [name, param] of Object.entries(params)) {
+        if (param.type === 'scalar') {
+          const min = param.min !== undefined ? param.min : 0;
+          const max = param.max !== undefined ? param.max : 10;
+          const freq = wigglerState.frequencies[freqIndex % wigglerState.frequencies.length];
+          const phase = Math.random() * Math.PI * 2; // Random phase offset
+          wigglerState.paramConfigs.push({ name, min, max, freq, phase, originalValue: param.value });
+          freqIndex++;
+        }
+      }
+    }
+
+    function updateWigglerButton() {
+      const btn = $('btn-wiggler');
+      if (!btn) return;
+      if (!wigglerState.active) {
+        btn.textContent = '〰️';
+        btn.style.background = 'none';
+        btn.title = 'Start wiggling params';
+      } else if (!wigglerState.fast) {
+        btn.textContent = '〰️';
+        btn.style.background = 'var(--accent)';
+        btn.title = 'Click for fast mode';
+      } else {
+        btn.textContent = '⚡';
+        btn.style.background = 'var(--accent)';
+        btn.title = 'Click to stop';
+      }
+    }
+
+    function startWiggler() {
+      if (wigglerState.active) return;
+      wigglerState.active = true;
+      wigglerState.startTime = performance.now();
+      updateWigglerButton();
+
+      function wiggleLoop() {
+        if (!wigglerState.active) return;
+
+        const elapsed = (performance.now() - wigglerState.startTime) / 1000;
+        const speedMult = wigglerState.fast ? 3.0 : 1.0;
+
+        for (const cfg of wigglerState.paramConfigs) {
+          // Oscillate using sin wave between min and max
+          const t = elapsed * cfg.freq * speedMult + cfg.phase;
+          const normalized = (Math.sin(t) + 1) / 2; // 0 to 1
+          const value = cfg.min + normalized * (cfg.max - cfg.min);
+
+          // Update renderer
+          renderer.setParam(cfg.name, value);
+
+          // Update UI slider and value display
+          const slider = $(`param-slider-${cfg.name}`);
+          const valEl = $(`param-val-${cfg.name}`);
+          if (slider) slider.value = value;
+          if (valEl) valEl.textContent = value.toFixed(2);
+        }
+
+        wigglerState.animationId = requestAnimationFrame(wiggleLoop);
+      }
+
+      wiggleLoop();
+    }
+
+    function stopWiggler() {
+      wigglerState.active = false;
+      wigglerState.fast = false;
+      if (wigglerState.animationId) {
+        cancelAnimationFrame(wigglerState.animationId);
+        wigglerState.animationId = null;
+      }
+      updateWigglerButton();
+
+      // Restore original values
+      for (const cfg of wigglerState.paramConfigs) {
+        renderer.setParam(cfg.name, cfg.originalValue);
+        const slider = $(`param-slider-${cfg.name}`);
+        const valEl = $(`param-val-${cfg.name}`);
+        if (slider) slider.value = cfg.originalValue;
+        if (valEl) valEl.textContent = cfg.originalValue.toFixed(2);
+      }
+    }
+
+    // Cycle: off -> slow -> fast -> off
+    function toggleWiggler() {
+      if (!wigglerState.active) {
+        startWiggler();
+      } else if (!wigglerState.fast) {
+        wigglerState.fast = true;
+        updateWigglerButton();
+      } else {
+        stopWiggler();
+      }
+    }
+
+    // Setup wiggler button listener
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnWiggler = $('btn-wiggler');
+      if (btnWiggler) btnWiggler.addEventListener('click', toggleWiggler);
+    });
+
+    // ============================================
+    // RIG LAYER UI (Phase 5: Constraint-Based Relationships)
+    // ============================================
+
+    /**
+     * Update rig info display with derived values
+     */
+    function updateRigInfo(rig) {
+      const rigInfo = $('rig-info');
+      const rigDerived = $('rig-derived');
+
+      if (!rigInfo || !rigDerived) return;
+
+      if (!rig || !rig.derived || Object.keys(rig.derived).length === 0) {
+        rigInfo.style.display = 'none';
+        return;
+      }
+
+      // Show derived param names (values will be updated by rig evaluator during render)
+      let html = '';
+      for (const name of Object.keys(rig.derived)) {
+        html += `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
+          <span style="color: var(--text-dim);">${name}:</span>
+          <span id="derived-${name}" style="font-family: monospace;">--</span>
+        </div>`;
+      }
+      rigDerived.innerHTML = html;
+      rigInfo.style.display = 'block';
+    }
+
+    /**
+     * Update constraint violations display
+     */
+    function updateViolationsDisplay(violations) {
+      const panel = $('rig-violations');
+      const list = $('violations-list');
+
+      if (!panel || !list) return;
+
+      if (!violations || violations.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      for (const v of violations) {
+        const color = v.severity === 'error' ? '#ef4444' : '#f59e0b';
+        html += `<div style="padding: 4px 0; border-bottom: 1px solid var(--border-dim);">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: ${color}; font-weight: 500;">${v.param}</span>
+            <span style="font-family: monospace;">${v.value.toFixed(3)}</span>
+          </div>
+          <div style="color: var(--text-dim); font-size: 0.65rem;">
+            Expected: ${v.min.toFixed(2)} – ${v.max.toFixed(2)}
+          </div>
+          ${v.reason ? `<div style="color: ${color}; font-size: 0.6rem; margin-top: 2px;">${v.reason}</div>` : ''}
+        </div>`;
+      }
+      list.innerHTML = html;
+      panel.style.display = 'block';
+    }
+
+    // Set up constraint violation callback on renderer
+    function setupRigCallbacks() {
+      if (renderer) {
+        renderer.onConstraintViolation = updateViolationsDisplay;
       }
     }
 
@@ -3650,6 +4950,11 @@
         } else if (e.key === 'a' || e.key === 'A') {
           e.preventDefault();
           $('btn-anim').click(); // Cycle animation state
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          paramsOpen = !paramsOpen;
+          paramsPanel?.classList.toggle('open', paramsOpen);
+          $('btn-params')?.classList.toggle('active', paramsOpen);
         } else if (e.key === 'Escape') {
           urlModal.classList.remove('open');
           menuOpen = false;
@@ -3658,6 +4963,9 @@
           debugPanel.classList.remove('open');
           lightingOpen = false;
           lightingPanel.classList.remove('open');
+          paramsOpen = false;
+          paramsPanel?.classList.remove('open');
+          $('btn-params')?.classList.remove('active');
           editorOpen = false;
           editorPanel.classList.remove('open');
           $('btn-editor')?.classList.remove('active');
@@ -3669,6 +4977,7 @@
       setupTouchControls();
       setupDebugPanel();
       setupLightingPanel();
+      setupParamsPanel();
       setupResizer();
 
       // Editor toggle
@@ -3788,6 +5097,18 @@
       addClick('tab-tree', () => switchTab('tree'));
       addClick('tab-dsl', () => switchTab('dsl'));
       addClick('tab-glsl', () => switchTab('glsl'));
+      addClick('tab-dev', () => switchTab('dev'));
+
+      // Dev tab controls
+      addClick('btn-dev-clear', () => {
+        devLogs.length = 0;
+        updateDevPanel();
+        console.log('🐛 Dev console cleared');
+      });
+      addClick('btn-dev-copy', () => {
+        const text = devLogs.map(log => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`).join('\n');
+        copyToClipboard(text, 'Dev logs');
+      });
 
       // Single copy button - copies current active tab content
       addClick('copy-tab', () => {
@@ -3805,6 +5126,10 @@
           case 'glsl':
             copyToClipboard(currentGlsl || '', 'GLSL');
             break;
+          case 'dev':
+            const text = devLogs.map(log => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`).join('\n');
+            copyToClipboard(text, 'Dev logs');
+            break;
         }
       });
 
@@ -3814,12 +5139,31 @@
 
       // Tree slider for numeric value editing
       const treeSlider = $('tree-slider');
+      const treeSliderNumber = $('tree-slider-number');
+
       if (treeSlider) {
         treeSlider.addEventListener('input', (e) => {
           const newValue = parseFloat(e.target.value);
           updateTreeSliderValue(newValue);
+          // Sync number input
+          if (treeSliderNumber) treeSliderNumber.value = formatNumber(newValue);
         });
         treeSlider.addEventListener('change', () => {
+          updateTreeView();
+        });
+      }
+
+      // Number input for precise value entry
+      if (treeSliderNumber) {
+        treeSliderNumber.addEventListener('input', (e) => {
+          const newValue = parseFloat(e.target.value);
+          if (!isNaN(newValue)) {
+            updateTreeSliderValue(newValue);
+            // Sync slider
+            if (treeSlider) treeSlider.value = newValue;
+          }
+        });
+        treeSliderNumber.addEventListener('change', () => {
           updateTreeView();
         });
       }
@@ -3957,6 +5301,12 @@
         window.open('splats/demo.html', '_blank');
       });
 
+      // Physics demos submenu toggle
+      addClick('menu-physics', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('submenu-open');
+      });
+
       // About modal
       const aboutModal = $('about-modal');
       addClick('menu-about', () => {
@@ -4089,6 +5439,26 @@
           clearMenuFocus();
         }
       });
+
+      // Global slider touch handling - prevents scroll interference on all sliders
+      document.addEventListener('touchstart', (e) => {
+        if (e.target.matches('input[type="range"]')) {
+          e.target.dataset.touching = 'true';
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (e.target.matches('input[type="range"]') && e.target.dataset.touching === 'true') {
+          e.stopPropagation();
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchend', (e) => {
+        if (e.target.matches('input[type="range"]')) {
+          e.target.dataset.touching = 'false';
+        }
+      }, { passive: true });
+
       } catch (e) { console.error('setupEventListeners error:', e); }
     }
 

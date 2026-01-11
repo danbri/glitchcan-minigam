@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Chain Physics</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    header {
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #00d9ff;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      background: rgba(0,217,255,0.2);
+      color: #00d9ff;
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+
+    canvas {
+      flex: 1;
+      width: 100%;
+      display: block;
+      background: #0d0d1a;
+    }
+
+    .controls {
+      background: rgba(0,0,0,0.5);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .control-row label {
+      font-size: 0.8rem;
+      color: #888;
+      min-width: 70px;
+    }
+
+    .control-row input[type="range"] {
+      flex: 1;
+      height: 32px;
+      accent-color: #00d9ff;
+    }
+
+    .control-row .value {
+      font-size: 0.85rem;
+      color: #00d9ff;
+      min-width: 36px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00d9ff, #0099cc);
+      color: #000;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .btn-secondary.active {
+      background: rgba(0,217,255,0.3);
+      color: #00d9ff;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #666;
+      padding: 8px;
+    }
+
+    /* Anchor indicator */
+    .anchor-hint {
+      position: absolute;
+      pointer-events: none;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 4px 8px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 4px;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Chain Physics</h1>
+      <span class="badge">XPBD</span>
+    </header>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="controls">
+      <div class="control-row">
+        <label>Links</label>
+        <input type="range" id="chainLength" min="4" max="16" value="8">
+        <span class="value" id="lengthVal">8</span>
+      </div>
+
+      <div class="control-row">
+        <label>Gravity</label>
+        <input type="range" id="gravity" min="0" max="20" step="1" value="10">
+        <span class="value" id="gravityVal">10</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="resetBtn">Reset</button>
+        <button class="btn-secondary" id="windBtn">Wind</button>
+      </div>
+    </div>
+
+    <div class="hint">Drag the red anchor to swing the chain</div>
+  </div>
+
+  <script type="module">
+    import {
+      createChain,
+      simulationStep,
+      vec3
+    } from '../core/physics/xpbd.js';
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // State
+    let particles = [];
+    let constraints = [];
+    let anchorX = 0;
+    let anchorY = 0;
+    let isDragging = false;
+    let windEnabled = false;
+
+    // Physics parameters (stable values)
+    let chainLength = 8;
+    let gravity = 10;
+    const SEGMENT_PX = 30;  // Pixels per segment
+    const FIXED_DT = 1 / 60;
+    const ITERATIONS = 8;
+    const DAMPING = 0.98;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Reset anchor to center-top
+      anchorX = rect.width / 2;
+      anchorY = 60;
+      createNewChain();
+    }
+
+    function createNewChain() {
+      particles = [];
+      constraints = [];
+
+      // Create chain hanging down from anchor
+      const result = createChain(
+        [anchorX, anchorY, 0],
+        [0, 1, 0],  // Down
+        SEGMENT_PX,
+        chainLength
+      );
+      particles = result.particles;
+      constraints = result.constraints;
+    }
+
+    function render() {
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+
+      // Clear
+      ctx.fillStyle = '#0d0d1a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw grid (subtle)
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      if (particles.length === 0) return;
+
+      // Draw chain links
+      ctx.strokeStyle = '#00d9ff';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(particles[0].pos[0], particles[0].pos[1]);
+      for (let i = 1; i < particles.length; i++) {
+        ctx.lineTo(particles[i].pos[0], particles[i].pos[1]);
+      }
+      ctx.stroke();
+
+      // Draw particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const x = p.pos[0];
+        const y = p.pos[1];
+
+        if (i === 0) {
+          // Anchor - large red circle
+          ctx.fillStyle = '#ff4444';
+          ctx.beginPath();
+          ctx.arc(x, y, 18, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White cross
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(x - 8, y);
+          ctx.lineTo(x + 8, y);
+          ctx.moveTo(x, y - 8);
+          ctx.lineTo(x, y + 8);
+          ctx.stroke();
+        } else {
+          // Chain link node
+          ctx.fillStyle = '#00a8cc';
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Draw wind indicator
+      if (windEnabled) {
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('💨', w - 50, h / 2);
+      }
+    }
+
+    let lastTime = 0;
+    let accumulator = 0;
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+
+      // Fixed timestep accumulator
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+      accumulator += dt;
+
+      // Step physics at fixed rate
+      while (accumulator >= FIXED_DT) {
+        stepPhysics();
+        accumulator -= FIXED_DT;
+      }
+
+      render();
+    }
+
+    function stepPhysics() {
+      if (particles.length === 0) return;
+
+      // Update anchor position
+      particles[0].pos = [anchorX, anchorY, 0];
+      particles[0].prevPos = [anchorX, anchorY, 0];
+
+      // Apply wind
+      if (windEnabled) {
+        const windForce = Math.sin(performance.now() / 300) * 0.8;
+        for (let i = 1; i < particles.length; i++) {
+          particles[i].pos[0] += windForce;
+        }
+      }
+
+      // Physics step
+      simulationStep(particles, constraints, FIXED_DT, {
+        iterations: ITERATIONS,
+        gravity: [0, gravity * 50, 0]  // Scale for pixels
+      });
+
+      // Apply damping to prevent energy buildup
+      for (let i = 1; i < particles.length; i++) {
+        const p = particles[i];
+        const vx = (p.pos[0] - p.prevPos[0]) * DAMPING;
+        const vy = (p.pos[1] - p.prevPos[1]) * DAMPING;
+        p.prevPos[0] = p.pos[0] - vx;
+        p.prevPos[1] = p.pos[1] - vy;
+      }
+    }
+
+    // Event handlers
+    function getEventPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function handleStart(e) {
+      e.preventDefault();
+      const pos = getEventPos(e);
+      const dx = pos.x - anchorX;
+      const dy = pos.y - anchorY;
+      if (Math.sqrt(dx * dx + dy * dy) < 40) {
+        isDragging = true;
+      }
+    }
+
+    function handleMove(e) {
+      e.preventDefault();
+      if (!isDragging) return;
+      const pos = getEventPos(e);
+      anchorX = pos.x;
+      anchorY = pos.y;
+    }
+
+    function handleEnd(e) {
+      e.preventDefault();
+      isDragging = false;
+    }
+
+    // Setup
+    function init() {
+      // Touch events
+      canvas.addEventListener('touchstart', handleStart, { passive: false });
+      canvas.addEventListener('touchmove', handleMove, { passive: false });
+      canvas.addEventListener('touchend', handleEnd, { passive: false });
+
+      // Mouse events
+      canvas.addEventListener('mousedown', handleStart);
+      canvas.addEventListener('mousemove', handleMove);
+      canvas.addEventListener('mouseup', handleEnd);
+      canvas.addEventListener('mouseleave', handleEnd);
+
+      // Controls
+      document.getElementById('chainLength').addEventListener('input', (e) => {
+        chainLength = parseInt(e.target.value);
+        document.getElementById('lengthVal').textContent = chainLength;
+        createNewChain();
+      });
+
+      document.getElementById('gravity').addEventListener('input', (e) => {
+        gravity = parseInt(e.target.value);
+        document.getElementById('gravityVal').textContent = gravity;
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        const rect = canvas.getBoundingClientRect();
+        anchorX = rect.width / 2;
+        anchorY = 60;
+        createNewChain();
+      });
+
+      document.getElementById('windBtn').addEventListener('click', (e) => {
+        windEnabled = !windEnabled;
+        e.target.classList.toggle('active', windEnabled);
+        e.target.textContent = windEnabled ? 'Wind On' : 'Wind';
+      });
+
+      // Resize
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Start animation
+      requestAnimationFrame(animate);
+    }
+
+    init();
+  </script>
+</body>
+</html>

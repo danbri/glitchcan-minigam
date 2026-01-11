@@ -61,12 +61,40 @@ export class InstancedSplatRenderer {
     this.xrRefSpace = null;
     this.xrSupported = false;
 
+    // Context loss state
+    this.contextLost = false;
+    this._boundHandleContextLost = this._handleContextLost.bind(this);
+    this._boundHandleContextRestored = this._handleContextRestored.bind(this);
+
     this.init();
     this.checkXRSupport();
   }
 
+  _handleContextLost(event) {
+    event.preventDefault();
+    this.contextLost = true;
+    console.warn('WebGL context lost');
+    if (this.onContextLost) this.onContextLost();
+  }
+
+  _handleContextRestored() {
+    console.log('WebGL context restored, reinitializing...');
+    this.contextLost = false;
+    try {
+      this.init();
+      // Re-add templates from cached data if available
+      if (this.onContextRestored) this.onContextRestored();
+    } catch (e) {
+      console.error('Failed to restore WebGL context:', e);
+    }
+  }
+
   init() {
     const gl = this.gl;
+
+    // Register context loss handlers
+    this.canvas.addEventListener('webglcontextlost', this._boundHandleContextLost);
+    this.canvas.addEventListener('webglcontextrestored', this._boundHandleContextRestored);
 
     // Compile shaders
     this.program = this.createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
@@ -287,6 +315,9 @@ export class InstancedSplatRenderer {
   setEffects(effects) { Object.assign(this.effects, effects); }
 
   render() {
+    // Skip rendering if context is lost
+    if (this.contextLost) return;
+
     const gl = this.gl;
 
     const width = this.canvas.clientWidth;
@@ -418,7 +449,7 @@ export class InstancedSplatRenderer {
       case 'add': return args.reduce((a, b) => a + b, 0);
       case 'sub': return args[0] - args[1];
       case 'mul': return args.reduce((a, b) => a * b, 1);
-      case 'div': return args[0] / args[1];
+      case 'div': return args[1] !== 0 ? args[0] / args[1] : 0;
       case 'sin': return Math.sin(args[0]);
       case 'cos': return Math.cos(args[0]);
       case 'mix': return args[0] * (1 - args[2]) + args[1] * args[2];
@@ -493,17 +524,44 @@ export class InstancedSplatRenderer {
   }
 
   dispose() {
+    // Remove context loss event listeners
+    this.canvas.removeEventListener('webglcontextlost', this._boundHandleContextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this._boundHandleContextRestored);
+
     const gl = this.gl;
+
+    // Clean up template resources
     for (const [, template] of this.templates) {
-      gl.deleteBuffer(template.splatBuffer);
-      gl.deleteBuffer(template.instanceBuffer);
-      gl.deleteBuffer(template.indexBuffer);
-      gl.deleteBuffer(template.quadVbo);
-      gl.deleteVertexArray(template.vao);
+      if (template.splatBuffer) gl.deleteBuffer(template.splatBuffer);
+      if (template.instanceBuffer) gl.deleteBuffer(template.instanceBuffer);
+      if (template.indexBuffer) gl.deleteBuffer(template.indexBuffer);
+      if (template.quadVbo) gl.deleteBuffer(template.quadVbo);
+      if (template.vao) gl.deleteVertexArray(template.vao);
     }
-    gl.deleteProgram(this.program);
+    this.templates.clear();
+
+    // Clean up quad buffer
+    if (this.quadBuffer) {
+      if (this.quadBuffer.vbo) gl.deleteBuffer(this.quadBuffer.vbo);
+      if (this.quadBuffer.ebo) gl.deleteBuffer(this.quadBuffer.ebo);
+      if (this.quadBuffer.vao) gl.deleteVertexArray(this.quadBuffer.vao);
+      this.quadBuffer = null;
+    }
+
+    // Clean up program
+    if (this.program) {
+      gl.deleteProgram(this.program);
+      this.program = null;
+    }
+
+    // Clear instances
+    this.instances.length = 0;
+
+    // End XR session if active
     if (this.xrSession) {
       this.xrSession.end();
+      this.xrSession = null;
+      this.xrRefSpace = null;
     }
   }
 

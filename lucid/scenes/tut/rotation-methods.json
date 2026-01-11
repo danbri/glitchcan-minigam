@@ -1,16 +1,39 @@
 {
   "title": "Rotation Methods",
   "subtitle": "Euler, quaternion, and axis-angle rotation",
-  "version": "1.0",
+  "version": "1.1",
   "notes": "Demonstrates all three rotation methods: Euler angles, quaternions, and axis-angle",
+
+  "params": {
+    "rotationAngle": {
+      "value": 45,
+      "type": "scalar",
+      "min": 0,
+      "max": 90,
+      "description": "Rotation angle (degrees)"
+    },
+    "animSpeed": {
+      "value": 45,
+      "type": "scalar",
+      "min": 10,
+      "max": 120,
+      "description": "Animation speed"
+    },
+    "boxColor": {
+      "value": [1, 0.3, 0.3],
+      "type": "color3",
+      "description": "X-axis box color"
+    }
+  },
+
   "root": {
     "type": "union",
     "children": [
       {
         "notes": "Euler rotation: rotate [45, 0, 0] = 45 degrees around X axis",
         "type": "box",
-        "params": { "size": [0.6, 0.2, 0.2], "color": [1, 0.3, 0.3] },
-        "transform": { "translate": [-1.8, 0.8, 0], "rotate": [45, 0, 0] }
+        "params": { "size": [0.6, 0.2, 0.2], "color": {"var": "boxColor"} },
+        "transform": { "translate": [-1.8, 0.8, 0], "rotate": [{"var": "rotationAngle"}, 0, 0] }
       },
       {
         "notes": "Euler rotation: rotate [0, 45, 0] = 45 degrees around Y axis",
@@ -44,7 +67,7 @@
           "translate": [0, -0.5, 0],
           "rotateAxis": {
             "axis": [0, 1, 0],
-            "angle": { "expr": "mul", "args": [45, { "var": "time" }] }
+            "angle": { "expr": "mul", "args": [{"var": "animSpeed"}, { "var": "time" }] }
           }
         }
       }

@@ -1,7 +1,30 @@
 {
   "title": "Radial Flower",
   "subtitle": "12 petals from one sphere (O(1) cost!)",
-  "version": "1.0",
+  "version": "1.1",
+
+  "params": {
+    "petalCount": {
+      "value": 12,
+      "type": "scalar",
+      "min": 4,
+      "max": 24,
+      "description": "Number of petals"
+    },
+    "petalRadius": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.1,
+      "max": 0.5,
+      "description": "Petal size"
+    },
+    "petalColor": {
+      "value": [1.0, 0.4, 0.6],
+      "type": "color3",
+      "description": "Petal color"
+    }
+  },
+
   "root": {
     "type": "union",
     "children": [
@@ -11,11 +34,11 @@
       },
       {
         "type": "radial",
-        "count": 12,
+        "count": {"var": "petalCount"},
         "axis": "y",
         "child": {
           "type": "sphere",
-          "params": { "r": 0.25, "color": [1.0, 0.4, 0.6] },
+          "params": { "r": {"var": "petalRadius"}, "color": {"var": "petalColor"} },
           "transform": { "translate": [0.7, 0, 0] }
         }
       }

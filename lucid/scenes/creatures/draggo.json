@@ -2,13 +2,44 @@
   "title": "Draggo",
   "subtitle": "Sharp-edged terror with cones and boxes",
   "camera": { "distance": 6, "phi": 0.25, "theta": 0.3, "target": [0, 0, 0] },
-  "version": "1.0",
+  "version": "1.1",
   "quality": "medium",
   "notes": "Draggo - Sharp dragon using cones for horns/spikes, boxes for angular skull, hard unions for crisp edges",
+
+  "params": {
+    "rotationSpeed": {
+      "value": 15,
+      "type": "scalar",
+      "min": 0,
+      "max": 60,
+      "description": "How fast the dragon rotates"
+    },
+    "eyeGlow": {
+      "value": 2.0,
+      "type": "scalar",
+      "min": 0,
+      "max": 8,
+      "description": "Eye emission intensity"
+    },
+    "bodyScale": {
+      "value": 1.0,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 2.0,
+      "description": "Overall dragon size"
+    },
+    "eyeColor": {
+      "value": [1.0, 0.15, 0.0],
+      "type": "color3",
+      "description": "Glowing eye color"
+    }
+  },
+
   "root": {
     "type": "transform",
     "transform": {
-      "rotate": [0, { "expr": "mul", "args": [15, { "var": "time" }] }, 0]
+      "rotate": [0, { "expr": "mul", "args": [{ "var": "rotationSpeed" }, { "var": "time" }] }, 0],
+      "scale": { "var": "bodyScale" }
     },
     "child": {
       "type": "union",
@@ -46,7 +77,7 @@
           "notes": "Glowing eyes (mirrored)",
           "type": "mirror", "axis": "x",
           "child": {
-            "type": "material", "params": { "color": [1.0, 0.15, 0.0], "emit": 2.0 },
+            "type": "material", "params": { "color": { "var": "eyeColor" }, "emit": { "var": "eyeGlow" } },
             "child": { "type": "sphere", "params": { "r": 0.06 }, "transform": { "translate": [0.12, 0.45, 1.4] } }
           }
         },

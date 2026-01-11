@@ -1,7 +1,14 @@
 /**
  * Simple WebGL raymarcher for SDF scenes
  * Supports orbit camera, ground plane, and volume rendering modes
+ * LCD-045: Now supports XPBD physics integration
  */
+
+import { evaluateRig } from '../core/rig-evaluator.js';
+
+// PhysicsBridge loaded dynamically to avoid blocking page load if physics fails
+let PhysicsBridge = null;
+
 export class SimpleRaymarcher {
   // Quality presets for raymarch parameters
   static QUALITY_PRESETS = {
@@ -69,11 +76,26 @@ export class SimpleRaymarcher {
     this.volumeComposite = 0.0; // 0-1: blend with surface render
     this.volumeColorMode = 0;   // 0=material, 1=rainbow, 2=depth
 
+    // Scene parameters for parametric rigging
+    this.sceneParams = {};      // { name: { value, type } }
+
+    // Rig layer for constraint-based relationships
+    this.rig = null;            // { derived, bounds, phase, chains }
+    this.lastViolations = [];   // Most recent constraint violations
+    this.onConstraintViolation = null;  // Callback: (violations) => void
+    this.lastRigValues = null;  // Most recent rig evaluation result values
+
+    // Physics simulation (WebGPU XPBD)
+    this.physicsBridge = null;  // PhysicsBridge instance
+    this.physicsEnabled = false;
+    this.sceneJson = null;      // Full scene JSON for physics init
+    this.lastPhysicsTime = 0;
+
     // Lighting settings
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
-      ambient: 0.3,
-      diffuse: 0.7,
+      ambient: 0.8,
+      diffuse: 0.8,
       specular: 0.3,
       shininess: 32
     };
@@ -91,9 +113,80 @@ export class SimpleRaymarcher {
     }
   }
 
-  updateScene(glslCode) {
+  updateScene(glslCode, sceneParams = {}, rig = null, sceneJson = null) {
     this.currentGlsl = glslCode;
+    this.sceneParams = sceneParams;
+    this.rig = rig;
+    this.sceneJson = sceneJson;
+
+    // Initialize physics if scene has physics config
+    if (sceneJson?.physics?.enabled) {
+      this.initPhysics(sceneJson);
+    } else {
+      this.physicsEnabled = false;
+      this.physicsBridge = null;
+    }
+
     this.compileShaders();
+  }
+
+  /**
+   * Initialize physics from scene JSON (async)
+   * Dynamically imports physics module, creates bridge, then inits GPU
+   */
+  async initPhysics(sceneJson) {
+    console.log('initPhysics called, bodies:', sceneJson?.physics?.bodies?.length || 0);
+    try {
+      // Dynamic import to avoid blocking page load if physics module fails
+      if (!PhysicsBridge) {
+        console.log('Dynamically importing physics-bridge.js...');
+        const module = await import('../core/physics/physics-bridge.js');
+        PhysicsBridge = module.PhysicsBridge;
+        console.log('Physics module loaded');
+      }
+
+      // Create bridge - pre-parses initial positions synchronously
+      this.physicsBridge = new PhysicsBridge(sceneJson);
+      console.log('PhysicsBridge created, initial positions:', this.physicsBridge.initialPositions.size);
+
+      // GPU init is async
+      const ok = await this.physicsBridge.init(sceneJson);
+      this.physicsEnabled = ok;
+      this.lastPhysicsTime = performance.now();
+      console.log(`Physics initialized: ${ok ? (this.physicsBridge.isGPU() ? 'WebGPU' : 'CPU') : 'disabled'}`);
+
+      if (ok) {
+        console.log('Physics particles:', this.physicsBridge.physics.particles.length);
+        console.log('Distance constraints:', this.physicsBridge.physics.distConstraints.length);
+      }
+    } catch (err) {
+      console.error('Physics init failed:', err);
+      this.physicsEnabled = false;
+      this.physicsBridge = null;
+    }
+  }
+
+  /**
+   * Apply impulse to a physics body (for interaction)
+   */
+  applyPhysicsImpulse(bodyName, impulse) {
+    if (this.physicsBridge && this.physicsEnabled) {
+      this.physicsBridge.applyImpulse(bodyName, impulse);
+    }
+  }
+
+  /**
+   * Update a single scene parameter value (for live tweaking)
+   * Creates the param if it doesn't exist (for physics-derived params)
+   */
+  setParam(name, value) {
+    if (this.sceneParams[name]) {
+      this.sceneParams[name].value = value;
+    } else {
+      // Create param on demand (for physics bodies etc)
+      const type = Array.isArray(value) ? 'position3' : 'scalar';
+      this.sceneParams[name] = { value, type };
+    }
   }
 
   /**
@@ -576,6 +669,106 @@ export class SimpleRaymarcher {
 
     const shininessLocation = gl.getUniformLocation(this.program, 'u_shininess');
     gl.uniform1f(shininessLocation, this.lighting.shininess);
+
+    // Evaluate rig layer if present (computes derived params, checks constraints, evaluates phase)
+    let rigResult = null;
+    if (this.rig) {
+      rigResult = evaluateRig(this.sceneParams, this.rig, time);
+
+      // Store for external access (physics integration)
+      this.lastRigValues = rigResult.values;
+
+      // Report constraint violations if callback is set
+      if (rigResult.violations.length > 0 || this.lastViolations.length > 0) {
+        // Only call if violations changed
+        const violationsChanged = JSON.stringify(rigResult.violations) !== JSON.stringify(this.lastViolations);
+        if (violationsChanged) {
+          this.lastViolations = rigResult.violations;
+          if (this.onConstraintViolation) {
+            this.onConstraintViolation(rigResult.violations);
+          }
+        }
+      }
+    }
+
+    // Bind scene parameters (base params)
+    for (const [name, param] of Object.entries(this.sceneParams)) {
+      // Skip non-object params (like _comment_* string entries)
+      if (typeof param !== 'object' || param === null) continue;
+
+      const loc = gl.getUniformLocation(this.program, `u_${name}`);
+      if (loc === null) continue;  // Uniform not used in shader
+
+      // Use rig-evaluated value if available, otherwise raw param value
+      const value = rigResult ? (rigResult.values[name] ?? param.value) : param.value;
+
+      if (param.type === 'scalar') {
+        gl.uniform1f(loc, value);
+      } else if (param.type === 'color3' || param.type === 'position3' || param.type === 'radii3' || param.type === 'direction3') {
+        if (Array.isArray(value) && value.length >= 3) {
+          gl.uniform3f(loc, value[0], value[1], value[2]);
+        }
+      }
+    }
+
+    // Bind derived and phase-generated params from rig
+    if (rigResult) {
+      // Bind derived params
+      for (const [name, value] of Object.entries(rigResult.derived)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc !== null) {
+          gl.uniform1f(loc, value);
+        }
+      }
+
+      // Bind phase-coupled animation params
+      for (const [name, value] of Object.entries(rigResult.phaseValues)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc !== null) {
+          gl.uniform1f(loc, value);
+        }
+      }
+    }
+
+    // Physics param binding (initial positions available immediately, physics steps after init)
+    if (this.physicsBridge) {
+      // Step physics only if fully initialized
+      if (this.physicsEnabled) {
+        // Step physics (async but we don't wait - use last frame's results)
+        const now = performance.now();
+        const dt = Math.min((now - this.lastPhysicsTime) / 1000, 0.05); // Cap at 50ms
+        this.lastPhysicsTime = now;
+
+        // Synchronous physics step (CPU fallback is sync, GPU is async)
+        this.physicsBridge.step(dt);
+      }
+
+      // Bind physics-derived params (positions of physics bodies)
+      // getParamValues returns initial positions even before full init
+      const physicsParams = this.physicsBridge.getParamValues();
+
+      // Debug: log first frame physics state
+      if (!this._physicsLoggedOnce && Object.keys(physicsParams).length > 0) {
+        this._physicsLoggedOnce = true;
+        console.log('Physics params:', physicsParams);
+        console.log('Physics enabled:', this.physicsEnabled);
+      }
+
+      for (const [name, param] of Object.entries(physicsParams)) {
+        const loc = gl.getUniformLocation(this.program, `u_${name}`);
+        if (loc === null) {
+          if (!this._missingUniformsLogged) {
+            console.warn(`Missing uniform: u_${name}`);
+          }
+          continue;
+        }
+
+        if (param.type === 'position3' && Array.isArray(param.value)) {
+          gl.uniform3f(loc, param.value[0], param.value[1], param.value[2]);
+        }
+      }
+      this._missingUniformsLogged = true;
+    }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

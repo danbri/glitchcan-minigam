@@ -1,8 +1,29 @@
 {
   "title": "Celly",
   "subtitle": "Dividing microbes with waving tails",
-  "version": "1.0",
+  "version": "1.1",
   "quality": "medium",
+
+  "params": {
+    "cellColor": {
+      "value": [0.1, 0.7, 0.6],
+      "type": "color3",
+      "description": "Cell membrane color"
+    },
+    "nucleusColor": {
+      "value": [0.5, 0.3, 0.6],
+      "type": "color3",
+      "description": "Nucleus glow color"
+    },
+    "tailSpeed": {
+      "value": 5.0,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 12.0,
+      "description": "Tail wave speed"
+    }
+  },
+
   "camera": {
     "distance": 5,
     "phi": 0.3,
@@ -13,7 +34,7 @@
     "nucleus": {
       "type": "material",
       "params": {
-        "color": [0.5, 0.3, 0.6],
+        "color": {"var": "nucleusColor"},
         "emit": 0.3
       },
       "child": {
@@ -24,7 +45,7 @@
     "cell_membrane": {
       "type": "material",
       "params": {
-        "color": [0.1, 0.7, 0.6],
+        "color": {"var": "cellColor"},
         "roughness": 0.8
       },
       "child": {
@@ -87,7 +108,7 @@
         "rotate": [
           0,
           0,
-          { "expr": "mul", "args": [30, { "expr": "sin", "args": [{ "expr": "mul", "args": [5, { "var": "time" }] }] }] }
+          { "expr": "mul", "args": [30, { "expr": "sin", "args": [{ "expr": "mul", "args": [{"var": "tailSpeed"}, { "var": "time" }] }] }] }
         ]
       },
       "child": {
