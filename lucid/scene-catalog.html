@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucid SDF Scene Catalog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.4;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .controls button {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .controls button:hover {
+      background: #e8e8e8;
+    }
+
+    .controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #progress {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .category {
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+
+    .category-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #333;
+    }
+
+    .scene {
+      margin-bottom: 25px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      page-break-inside: avoid;
+    }
+
+    .scene-header {
+      margin-bottom: 10px;
+    }
+
+    .scene-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .scene-path {
+      font-size: 11px;
+      color: #888;
+      font-family: monospace;
+    }
+
+    .scene-description {
+      font-size: 13px;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    .views {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .view {
+      aspect-ratio: 1;
+      background: #1a1a2e;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .view canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .view-label {
+      position: absolute;
+      bottom: 2px;
+      left: 2px;
+      font-size: 9px;
+      color: rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.5);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+
+    .view img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 11px;
+    }
+
+    @media print {
+      .controls { display: none; }
+      body { padding: 10px; }
+      .scene { border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Lucid SDF Scene Catalog</h1>
+  <p class="subtitle">4-view captures for AI evaluation and documentation</p>
+
+  <div class="controls">
+    <button id="captureBtn" onclick="captureAllScenes()">Capture All Scenes</button>
+    <button id="printBtn" onclick="window.print()">Print / Save PDF</button>
+    <div id="progress"></div>
+  </div>
+
+  <div id="catalog"></div>
+
+  <!-- Hidden renderer for capturing -->
+  <canvas id="captureCanvas" width="400" height="400" style="display:none;"></canvas>
+
+  <script type="module">
+    import { LucidRaymarcher } from './ui/raymarcher.js';
+    import { loadJsonScene } from './core/json-loader.js';
+    import { generateGlslFromJson } from './core/json-codegen.js';
+
+    const CAMERA_ANGLES = [
+      { name: 'Front', theta: 0, phi: 0.4 },
+      { name: 'Side', theta: Math.PI/2, phi: 0.4 },
+      { name: '3/4', theta: 0.6, phi: 0.5 },
+      { name: 'Top', theta: 0, phi: 0.1 }
+    ];
+
+    let toc = null;
+    let renderer = null;
+
+    // Load TOC and build page structure
+    async function init() {
+      const resp = await fetch('./scenes/toc.json');
+      toc = await resp.json();
+      buildCatalogStructure();
+    }
+
+    function buildCatalogStructure() {
+      const container = document.getElementById('catalog');
+      container.innerHTML = '';
+
+      for (const category of toc.categories) {
+        // Skip recent changes (duplicates)
+        if (category.id === 'recent') continue;
+
+        const catDiv = document.createElement('div');
+        catDiv.className = 'category';
+        catDiv.innerHTML = `<div class="category-title">${category.title}</div>`;
+
+        for (const scene of category.scenes) {
+          const sceneDiv = document.createElement('div');
+          sceneDiv.className = 'scene';
+          sceneDiv.dataset.path = scene.path;
+
+          sceneDiv.innerHTML = `
+            <div class="scene-header">
+              <div class="scene-title">${scene.title}</div>
+              <div class="scene-path">${scene.path}</div>
+              <div class="scene-description">${scene.subtitle || ''}</div>
+            </div>
+            <div class="views">
+              ${CAMERA_ANGLES.map((angle, i) => `
+                <div class="view" data-angle="${i}">
+                  <div class="placeholder">Click capture</div>
+                  <span class="view-label">${angle.name}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+          catDiv.appendChild(sceneDiv);
+        }
+
+        container.appendChild(catDiv);
+      }
+    }
+
+    async function initRenderer() {
+      if (renderer) return;
+
+      const canvas = document.getElementById('captureCanvas');
+      renderer = new LucidRaymarcher(canvas);
+      renderer.setQuality('high');
+    }
+
+    async function captureScene(scenePath) {
+      await initRenderer();
+
+      const resp = await fetch(`./scenes/${scenePath}`);
+      const json = await resp.json();
+
+      const scene = loadJsonScene(json);
+      const glsl = generateGlslFromJson(scene, {});
+      renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
+
+      // Get camera distance from scene or use default
+      const camDist = json.camera?.distance || 6;
+      const camTarget = json.camera?.target || [0, 0.5, 0];
+
+      const images = [];
+
+      for (const angle of CAMERA_ANGLES) {
+        renderer.cameraDistance = camDist;
+        renderer.cameraTarget = camTarget;
+        renderer.cameraTheta = angle.theta;
+        renderer.cameraPhi = angle.phi;
+
+        // Render a frame
+        renderer.render();
+
+        // Capture as data URL
+        const dataUrl = renderer.canvas.toDataURL('image/png');
+        images.push(dataUrl);
+      }
+
+      return images;
+    }
+
+    window.captureAllScenes = async function() {
+      const btn = document.getElementById('captureBtn');
+      const progress = document.getElementById('progress');
+      btn.disabled = true;
+
+      const scenes = document.querySelectorAll('.scene');
+      let completed = 0;
+
+      for (const sceneDiv of scenes) {
+        const path = sceneDiv.dataset.path;
+        progress.textContent = `Capturing ${completed + 1}/${scenes.length}: ${path}`;
+
+        try {
+          const images = await captureScene(path);
+          const views = sceneDiv.querySelectorAll('.view');
+
+          images.forEach((dataUrl, i) => {
+            views[i].innerHTML = `
+              <img src="${dataUrl}" alt="${CAMERA_ANGLES[i].name} view">
+              <span class="view-label">${CAMERA_ANGLES[i].name}</span>
+            `;
+          });
+        } catch (e) {
+          console.error(`Failed to capture ${path}:`, e);
+          const views = sceneDiv.querySelectorAll('.view');
+          views.forEach(v => {
+            v.innerHTML = `<div class="placeholder" style="color:#f44">Error</div>`;
+          });
+        }
+
+        completed++;
+      }
+
+      progress.textContent = `Done! Captured ${completed} scenes. Click "Print / Save PDF" to export.`;
+      btn.disabled = false;
+    };
+
+    init();
+  </script>
+</body>
+</html>
