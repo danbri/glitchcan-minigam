@@ -298,9 +298,9 @@ export class LucidRenderer extends HTMLElement {
 
   async _initStinkyfish() {
     const basePath = this._getBasePath();
-    const { StinkyfishRaymarcher } = await import(`${basePath}/stinkyfish/raymarcher.js`);
+    const { StinkyfishRenderer } = await import(`${basePath}/stinkyfish/raymarcher.js`);
 
-    this._renderer = new StinkyfishRaymarcher(this._canvas);
+    this._renderer = new StinkyfishRenderer(this._canvas);
     await this._renderer.init();
     this._setStatus('Stinkyfish ready', 'ok');
   }
@@ -313,11 +313,18 @@ export class LucidRenderer extends HTMLElement {
     const scene = loadJsonScene(json);
     const glsl = generateGlslFromJson(scene, {});
 
-    this._renderer.setSceneGlsl(glsl);
+    // Mayfly uses updateScene(glsl, params, rig, json)
+    this._renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
 
     // Apply camera settings
     if (json.camera) {
-      this.setCamera(json.camera);
+      const cam = json.camera;
+      this._renderer.cameraDistance = cam.distance || 8;
+      this._renderer.cameraTheta = cam.theta || 0.3;
+      this._renderer.cameraPhi = cam.phi || 0.4;
+      if (cam.target) {
+        this._renderer.cameraTarget = cam.target;
+      }
     }
   }
 
@@ -329,7 +336,8 @@ export class LucidRenderer extends HTMLElement {
     const scene = loadJsonScene(json);
     const wgsl = generateWgslFromJson(scene, {});
 
-    await this._renderer.setSceneWgsl(wgsl, scene);
+    // Stinkyfish uses compileScene(wgsl, uniformLayout)
+    await this._renderer.compileScene(wgsl, scene.sceneUniformLayout || null);
 
     // Apply camera settings
     if (json.camera) {
