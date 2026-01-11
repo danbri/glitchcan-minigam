@@ -438,7 +438,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     // Build buffer data matching the layout order
     const data = [];
     for (const [name, type] of Object.entries(this.sceneUniformLayout)) {
-      const value = sceneParamValues[name];
+      // Layout has u_ prefix, sceneParamValues might not
+      const baseName = name.startsWith('u_') ? name.slice(2) : name;
+      const value = sceneParamValues[name] ?? sceneParamValues[baseName];
       if (type === 'vec3f') {
         if (Array.isArray(value) && value.length >= 3) {
           data.push(value[0], value[1], value[2], 0); // vec3 + padding
