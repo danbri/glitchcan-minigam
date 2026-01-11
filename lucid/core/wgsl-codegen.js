@@ -692,7 +692,9 @@ function generateMaterial(node, ctx) {
   }
   // Material wraps child with color override
   const childExpr = walkNode(node.child, ctx);
-  const color = valueToWgsl(node.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
+  // Check both node.color and node.params.color for the color value
+  const colorValue = node.color || node.params?.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) };
+  const color = valueToWgsl(colorValue, ctx);
   const funcName = `material_${ctx.helperCounter++}`;
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
   let c = ${childExpr};
@@ -762,12 +764,22 @@ function applyParamOverrides(def, overrides) {
   }
 
   // Apply overrides recursively to entire node tree
-  function applyToNode(node) {
+  function applyToNode(node, isRoot = false) {
     if (!node) return;
 
     // Substitute vars in params
     if (node.params) {
       node.params = substituteVars(node.params);
+    }
+
+    // For root node, merge override params (replace existing and add new)
+    // This allows overriding r, color, etc. on refs
+    if (isRoot) {
+      if (!node.params) node.params = {};
+      for (const [key, value] of Object.entries(overrides)) {
+        // Always replace with override value (handles both new params and replacing vars)
+        node.params[key] = value;
+      }
     }
 
     // Substitute vars in transform
@@ -781,11 +793,11 @@ function applyParamOverrides(def, overrides) {
     if (node.offset !== undefined) node.offset = substituteVars(node.offset);
 
     // Recurse into children
-    if (node.child) applyToNode(node.child);
-    if (node.children) node.children.forEach(applyToNode);
+    if (node.child) applyToNode(node.child, false);
+    if (node.children) node.children.forEach(c => applyToNode(c, false));
   }
 
-  applyToNode(cloned);
+  applyToNode(cloned, true);
   return cloned;
 }
 
@@ -1275,21 +1287,43 @@ function applyTransform(pVar, transform, ctx) {
     result = `(${result} - ${t})`;
   }
 
-  // Apply rotation - support both object {x, y, z} and array [x, y, z] formats
+  // Apply rotation - support multiple formats
   if (transform.rotate) {
     const rot = transform.rotate;
+    const toRad = (deg) => `(${valueToWgsl(deg, ctx)} * 0.01745329)`;
 
-    // Handle array format [x, y, z] (degrees)
+    // Helper to check if a value is effectively non-zero
+    const isNonZero = (val) => {
+      if (val === undefined || val === null) return false;
+      if (typeof val === 'number') return val !== 0;
+      if (val.type === 'const') return val.value !== 0;
+      // For vars/expressions, assume non-zero (let shader handle it)
+      return true;
+    };
+
+    // Handle raw array format [x, y, z] (degrees)
     if (Array.isArray(rot)) {
-      const toRad = (deg) => `(${valueToWgsl(deg, ctx)} * 0.01745329)`;
-      if (rot[0] !== 0 && rot[0] !== undefined) {
+      if (isNonZero(rot[0])) {
         result = `rotX(${result}, ${toRad(rot[0])})`;
       }
-      if (rot[1] !== 0 && rot[1] !== undefined) {
+      if (isNonZero(rot[1])) {
         result = `rotY(${result}, ${toRad(rot[1])})`;
       }
-      if (rot[2] !== 0 && rot[2] !== undefined) {
+      if (isNonZero(rot[2])) {
         result = `rotZ(${result}, ${toRad(rot[2])})`;
+      }
+    }
+    // Handle normalized array format { type: 'array', values: [...] } (degrees)
+    else if (rot.type === 'array' && rot.values) {
+      const vals = rot.values;
+      if (isNonZero(vals[0])) {
+        result = `rotX(${result}, ${toRad(vals[0])})`;
+      }
+      if (isNonZero(vals[1])) {
+        result = `rotY(${result}, ${toRad(vals[1])})`;
+      }
+      if (isNonZero(vals[2])) {
+        result = `rotZ(${result}, ${toRad(vals[2])})`;
       }
     }
     // Handle object format {x, y, z} (radians)
