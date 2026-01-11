@@ -189,6 +189,37 @@ export class StinkyfishRenderer {
     this.cameraPhi = phi;
   }
 
+  /**
+   * Handle canvas resize - reconfigure WebGPU context if needed
+   * @param {number} width - New canvas width
+   * @param {number} height - New canvas height
+   */
+  resize(width, height) {
+    if (!this.context || !this.device) return;
+
+    // WebGPU handles canvas resize automatically via getCurrentTexture()
+    // but we should ensure the canvas dimensions are set
+    if (this.canvas.width !== width) {
+      this.canvas.width = width;
+    }
+    if (this.canvas.height !== height) {
+      this.canvas.height = height;
+    }
+
+    // Reconfigure context if it was lost or needs refresh
+    if (this.format) {
+      try {
+        this.context.configure({
+          device: this.device,
+          format: this.format,
+          alphaMode: 'premultiplied',
+        });
+      } catch (e) {
+        // Context may already be configured, ignore
+      }
+    }
+  }
+
   async init() {
     if (!navigator.gpu) {
       throw new Error('WebGPU not supported');
@@ -457,8 +488,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   }
 
   render(time = 0, physicsParams = null) {
+    // Guard: need pipeline and valid canvas size
+    if (!this.pipeline || !this.device || !this.context) return;
+
     const width = this.canvas.width;
     const height = this.canvas.height;
+
+    // Skip render if canvas has no size
+    if (width === 0 || height === 0) return;
 
     const camPos = this.getCameraPos();
     const rs = this.renderSettings;
