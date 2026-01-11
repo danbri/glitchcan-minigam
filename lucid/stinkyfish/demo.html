@@ -151,8 +151,10 @@
     const recompileBtn = document.getElementById('recompile');
     const fallback = document.getElementById('fallback');
 
-    // High-DPI canvas sizing
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
+    // Resolution scaling - lower on mobile for performance
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                     (window.innerWidth < 768);
+    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 
     let renderer = null;
 
@@ -241,7 +243,7 @@
             sphere: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
             csg: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
             smoothblob: { distance: 6, target: [0, 0.2, 0], theta: 0.3, phi: 0.4 },
-            wolf: { distance: 12, target: [0, 0.65, 0], theta: 0.25, phi: 0.3 },
+            wolf: { distance: 10, target: [0, 0.5, 0], theta: 0.5, phi: 1.2 },
           };
           cam = cameraPresets[name] || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 0.4 };
         }
