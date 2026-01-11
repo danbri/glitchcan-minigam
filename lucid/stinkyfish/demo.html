@@ -44,7 +44,7 @@
       font-weight: 500;
       color: #888;
     }
-    select, button {
+    button {
       padding: 0.4rem 0.8rem;
       border-radius: 4px;
       border: 1px solid #333;
@@ -53,7 +53,7 @@
       cursor: pointer;
       font-size: 0.9rem;
     }
-    select:hover, button:hover {
+    button:hover {
       background: rgba(50,50,60,0.9);
       border-color: #555;
     }
@@ -82,6 +82,18 @@
       display: block;
       touch-action: none;
     }
+
+    #pickerOverlay {
+      display: none;
+      position: absolute;
+      top: 60px;
+      left: 1rem;
+      right: 1rem;
+      max-width: 400px;
+      z-index: 200;
+    }
+    #pickerOverlay.show { display: block; }
+
     #fallback {
       display: none;
       position: absolute;
@@ -96,24 +108,30 @@
     }
     #fallback.show { display: block; }
     #fallback h2 { margin-bottom: 1rem; color: #f55; }
+
+    #sceneTitle {
+      font-size: 0.85rem;
+      color: #aaa;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <header>
       <h1>Stinkyfish</h1>
-      <select id="sceneSelect">
-        <option value="sphere" selected>Sphere</option>
-        <option value="csg">CSG</option>
-        <option value="smoothblob">Smooth Blob</option>
-        <option value="wolf">Wolf</option>
-        <option value="wolf-simple">Wolf (Simple)</option>
-      </select>
-      <button id="recompile">↻</button>
+      <button id="browseBtn">📦 Browse</button>
+      <span id="sceneTitle">Sphere</span>
       <div id="status">Loading...</div>
     </header>
     <div id="canvasContainer">
       <canvas id="canvas"></canvas>
+      <div id="pickerOverlay">
+        <lucid-scene-picker base-url="../scenes/"></lucid-scene-picker>
+      </div>
       <div id="fallback">
         <h2>WebGPU Not Available</h2>
         <p>Your browser doesn't support WebGPU.<br>Try Chrome 113+, Edge 113+, or Safari 18+.</p>
@@ -122,24 +140,7 @@
   </div>
 
   <script type="module">
-    // Global error handler
-    window.onerror = (msg, src, line, col, err) => {
-      console.error('Global error:', msg, src, line, col, err);
-      const status = document.getElementById('status');
-      if (status) {
-        status.textContent = `Error: ${msg}`;
-        status.className = 'error';
-      }
-    };
-    window.addEventListener('unhandledrejection', (e) => {
-      console.error('Unhandled rejection:', e.reason);
-      const status = document.getElementById('status');
-      if (status) {
-        status.textContent = `Error: ${e.reason?.message || e.reason}`;
-        status.className = 'error';
-      }
-    });
-
+    import '../components/scene-picker.js';
     import { StinkyfishRenderer } from './raymarcher.js';
     import { loadJsonScene } from '../core/json-loader.js';
     import { generateWgslFromJson } from '../core/wgsl-codegen.js';
@@ -147,8 +148,10 @@
     const canvas = document.getElementById('canvas');
     const container = document.getElementById('canvasContainer');
     const status = document.getElementById('status');
-    const sceneSelect = document.getElementById('sceneSelect');
-    const recompileBtn = document.getElementById('recompile');
+    const sceneTitle = document.getElementById('sceneTitle');
+    const browseBtn = document.getElementById('browseBtn');
+    const pickerOverlay = document.getElementById('pickerOverlay');
+    const picker = document.querySelector('lucid-scene-picker');
     const fallback = document.getElementById('fallback');
 
     // Resolution scaling - lower on mobile for performance
@@ -158,109 +161,46 @@
 
     let renderer = null;
 
-    // Built-in simple scenes for testing (raw JSON format)
-    const builtinScenes = {
-      sphere: {
-        root: {
-          type: 'sphere',
-          params: { r: 1.0, color: [0.8, 0.2, 0.2] }
-        }
-      },
-      csg: {
-        root: {
-          type: 'subtract',
-          children: [
-            { type: 'sphere', params: { r: 1.0, color: [0.2, 0.6, 0.9] } },
-            { type: 'box', params: { size: [0.6, 1.5, 0.6], color: [1, 0, 0] } },
-            { type: 'box', params: { size: [1.5, 0.6, 0.6], color: [0, 1, 0] } }
-          ]
-        }
-      },
-      smoothblob: {
-        root: {
-          type: 'smoothUnion',
-          k: 0.3,
-          children: [
-            { type: 'sphere', params: { r: 0.8, color: [0.9, 0.3, 0.1] } },
-            { type: 'sphere', params: { r: 0.6, color: [0.1, 0.8, 0.3] }, transform: { translate: [1, 0.3, 0] } },
-            { type: 'sphere', params: { r: 0.5, color: [0.2, 0.4, 0.9] }, transform: { translate: [-0.8, 0.5, 0.5] } }
-          ]
-        }
-      },
-      // Simplified wolf-like quadruped for testing (no displacement)
-      'wolf-simple': {
-        camera: { distance: 8, target: [0, 0.5, 0] },
-        root: {
-          type: 'smoothUnion',
-          k: 0.25,
-          children: [
-            // Body
-            { type: 'ellipsoid', params: { r: [1.5, 0.6, 0.7], color: [0.5, 0.4, 0.35] } },
-            // Neck
-            { type: 'ellipsoid', params: { r: [0.35, 0.45, 0.35], color: [0.5, 0.4, 0.35] }, transform: { translate: [1.2, 0.3, 0] } },
-            // Head
-            { type: 'ellipsoid', params: { r: [0.4, 0.35, 0.35], color: [0.55, 0.45, 0.4] }, transform: { translate: [1.8, 0.4, 0] } },
-            // Snout
-            { type: 'ellipsoid', params: { r: [0.35, 0.18, 0.18], color: [0.55, 0.45, 0.4] }, transform: { translate: [2.3, 0.25, 0] } },
-            // Front legs
-            { type: 'ellipsoid', params: { r: [0.12, 0.5, 0.1], color: [0.5, 0.4, 0.35] }, transform: { translate: [0.8, -0.3, 0.35] } },
-            { type: 'ellipsoid', params: { r: [0.12, 0.5, 0.1], color: [0.5, 0.4, 0.35] }, transform: { translate: [0.8, -0.3, -0.35] } },
-            // Back legs
-            { type: 'ellipsoid', params: { r: [0.15, 0.5, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-1.0, -0.3, 0.35] } },
-            { type: 'ellipsoid', params: { r: [0.15, 0.5, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-1.0, -0.3, -0.35] } },
-            // Tail
-            { type: 'ellipsoid', params: { r: [0.6, 0.12, 0.12], color: [0.5, 0.4, 0.35] }, transform: { translate: [-2.0, 0.2, 0], rotateZ: -0.3 } }
-          ]
-        }
-      }
-    };
+    // Toggle picker
+    browseBtn.addEventListener('click', () => {
+      pickerOverlay.classList.toggle('show');
+    });
 
-    async function loadScene(name) {
-      status.textContent = `Loading ${name}...`;
+    // Handle scene selection from picker
+    picker.addEventListener('scene-select', async (e) => {
+      pickerOverlay.classList.remove('show');
+      await loadSceneFromPath(e.detail.path, e.detail.title);
+    });
+
+    // Close picker when clicking outside
+    canvas.addEventListener('click', () => {
+      pickerOverlay.classList.remove('show');
+    });
+
+    async function loadSceneFromPath(path, title) {
+      status.textContent = `Loading...`;
       status.className = '';
+      sceneTitle.textContent = title || path;
 
       try {
-        let scene;
-        let json = null;
+        const response = await fetch(`../scenes/${path}`);
+        if (!response.ok) throw new Error(`Failed to load ${path}`);
+        const json = await response.json();
+        const scene = loadJsonScene(json);
 
-        if (builtinScenes[name]) {
-          json = builtinScenes[name];
-          scene = loadJsonScene(json);
-        } else {
-          // Load from file
-          const response = await fetch(`../scenes/creatures/${name}.json`);
-          if (!response.ok) throw new Error(`Failed to load ${name}.json`);
-          json = await response.json();
-          scene = loadJsonScene(json);
-        }
+        // Use scene's camera settings or defaults
+        const cam = json.camera || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 1.0 };
+        renderer.setCamera(cam.distance, cam.target, cam.theta || 0.3, cam.phi || 1.0);
 
-        // Set camera based on scene or use scene's camera settings
-        let cam;
-        if (json.camera) {
-          cam = json.camera;
-        } else {
-          const cameraPresets = {
-            sphere: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
-            csg: { distance: 5, target: [0, 0, 0], theta: 0.3, phi: 0.4 },
-            smoothblob: { distance: 6, target: [0, 0.2, 0], theta: 0.3, phi: 0.4 },
-            wolf: { distance: 10, target: [0, 0.5, 0], theta: 0.5, phi: 1.2 },
-          };
-          cam = cameraPresets[name] || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 0.4 };
-        }
-        renderer.setCamera(cam.distance, cam.target, cam.theta || 0.3, cam.phi || 0.4);
-
-        // Generate WGSL (inlineDefaults to avoid needing scene uniform buffer)
+        // Generate WGSL
         const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
-        console.log(`Generated ${wgsl.length} chars of WGSL for ${name}`);
+        console.log(`Generated ${wgsl.length} chars of WGSL for ${path}`);
 
         // Compile
-        console.log('Compiling shader...');
         await renderer.compileScene(wgsl);
-        console.log('Shader compiled, rendering...');
         renderer.render();
-        console.log('Render complete');
 
-        status.textContent = `${name} loaded`;
+        status.textContent = title || path.split('/').pop();
         status.className = 'ok';
       } catch (err) {
         console.error(err);
@@ -277,25 +217,22 @@
         return;
       }
 
-      // Size canvas to fill container at proper resolution
+      // Size canvas
       const resize = () => {
         const rect = container.getBoundingClientRect();
         canvas.width = Math.floor(rect.width * dpr);
         canvas.height = Math.floor(rect.height * dpr);
-        if (renderer?.pipeline) {
-          renderer.render();
-        }
+        if (renderer?.pipeline) renderer.render();
       };
       window.addEventListener('resize', resize);
-      // Initial sizing with slight delay for layout
       requestAnimationFrame(resize);
 
       try {
         renderer = new StinkyfishRenderer(canvas);
         await renderer.init();
 
-        // Load default scene
-        await loadScene(sceneSelect.value);
+        // Load a simple default scene
+        await loadSceneFromPath('prim/catalogue.json', 'Shape Catalogue');
         renderer.startRenderLoop();
 
       } catch (err) {
@@ -304,9 +241,6 @@
         status.className = 'error';
       }
     }
-
-    sceneSelect.addEventListener('change', () => loadScene(sceneSelect.value));
-    recompileBtn.addEventListener('click', () => loadScene(sceneSelect.value));
 
     init();
   </script>
