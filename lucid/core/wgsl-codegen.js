@@ -1046,8 +1046,13 @@ function valueToWgsl(value, ctx) {
       }
       return formatFloat(defaultVal);
     }
-    ctx.uniforms.add(`u_${value.name}`);
-    return `scene.u_${value.name}`;
+    // Only add if not already pre-registered with a type annotation
+    const uniformName = `u_${value.name}`;
+    const alreadyRegistered = [...ctx.uniforms].some(u => u.split(':')[0] === uniformName);
+    if (!alreadyRegistered) {
+      ctx.uniforms.add(uniformName);
+    }
+    return `scene.${uniformName}`;
 
   case 'array':
     if (value.values) {
