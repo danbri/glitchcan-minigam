@@ -196,9 +196,11 @@
       const container = document.getElementById('catalog');
       container.innerHTML = '';
 
+      // Categories to skip (complex/slow scenes)
+      const SKIP_CATEGORIES = ['recent', 'physics', 'anim', 'creatures', 'archive', 'nature'];
+
       for (const category of toc.categories) {
-        // Skip recent changes (duplicates)
-        if (category.id === 'recent') continue;
+        if (SKIP_CATEGORIES.includes(category.id)) continue;
 
         const catDiv = document.createElement('div');
         catDiv.className = 'category';
@@ -286,7 +288,11 @@
         progress.textContent = `Capturing ${completed + 1}/${scenes.length}: ${path}`;
 
         try {
-          const images = await captureScene(path);
+          // Timeout after 5 seconds per scene
+          const images = await Promise.race([
+            captureScene(path),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+          ]);
           const views = sceneDiv.querySelectorAll('.view');
 
           images.forEach((dataUrl, i) => {
@@ -299,7 +305,7 @@
           console.error(`Failed to capture ${path}:`, e);
           const views = sceneDiv.querySelectorAll('.view');
           views.forEach(v => {
-            v.innerHTML = `<div class="placeholder" style="color:#f44">Error</div>`;
+            v.innerHTML = `<div class="placeholder" style="color:#f44">${e.message}</div>`;
           });
         }
 
