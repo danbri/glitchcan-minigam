@@ -173,6 +173,7 @@
     import { StinkyfishRenderer } from './raymarcher.js';
     import { loadJsonScene } from '../core/json-loader.js';
     import { generateWgslFromJson } from '../core/wgsl-codegen.js';
+    import { PhysicsBridge } from '../core/physics/physics-bridge.js';
 
     const canvas = document.getElementById('canvas');
     const container = document.getElementById('canvasContainer');
@@ -201,6 +202,7 @@
     const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 
     let renderer = null;
+    let physicsBridge = null;
 
     function closeAllOverlays() {
       pickerOverlay.classList.remove('show');
@@ -243,10 +245,12 @@
       }
     });
 
-    // Handle scene param changes (for future use with scene uniforms)
+    // Handle scene param changes - update renderer uniforms
     sceneParams.addEventListener('param-change', (e) => {
       console.log('Param changed:', e.detail.name, '=', e.detail.value);
-      // TODO: Update scene uniforms when we have proper uniform binding
+      if (renderer) {
+        renderer.setSceneParam(e.detail.name, e.detail.value);
+      }
     });
 
     // Handle scene selection from picker
@@ -275,20 +279,35 @@
         const cam = json.camera || { distance: 8, target: [0, 0.5, 0], theta: 0.3, phi: 1.0 };
         renderer.setCamera(cam.distance, cam.target, cam.theta || 0.3, cam.phi || 1.0);
 
-        // Update scene params component
+        // Update scene params component and renderer
         sceneParams.setSceneParams(json.params || {});
+        renderer.setSceneParams(json.params || {});
 
         // Reset animation time for new scene
         animationTime = 0;
         lastFrameTime = performance.now();
 
-        // Generate WGSL
-        const wgsl = generateWgslFromJson(scene, { inlineDefaults: true });
+        // Initialize physics if enabled
+        physicsBridge = new PhysicsBridge(json); // Pre-parse initial positions
+        if (json.physics?.enabled) {
+          await physicsBridge.init(json);
+          console.log(`Physics initialized: ${physicsBridge.isGPU() ? 'WebGPU' : 'CPU'} mode`);
+        }
+
+        // Generate WGSL and extract uniform layout
+        const wgsl = generateWgslFromJson(scene, { inlineDefaults: false });
         console.log(`Generated ${wgsl.length} chars of WGSL for ${path}`);
 
-        // Compile
-        await renderer.compileScene(wgsl);
-        renderer.render();
+        // Extract scene uniform layout from WGSL
+        const uniformLayout = extractUniformLayout(wgsl);
+        console.log('Scene uniform layout:', uniformLayout);
+
+        // Compile with uniform layout
+        await renderer.compileScene(wgsl, uniformLayout);
+
+        // Initial render with physics defaults
+        const sceneParamValues = physicsBridge?.getParamValues() || {};
+        renderer.render(0, sceneParamValues);
 
         status.textContent = title || path.split('/').pop();
         status.className = 'ok';
@@ -297,6 +316,26 @@
         status.textContent = `Error: ${err.message}`;
         status.className = 'error';
       }
+    }
+
+    /**
+     * Extract uniform layout from generated WGSL
+     * Returns { u_phys_ball: 'vec3f', u_customParam: 'f32', ... }
+     */
+    function extractUniformLayout(wgsl) {
+      const layout = {};
+      const structMatch = wgsl.match(/struct SceneUniforms \{([^}]+)\}/);
+      if (!structMatch) return layout;
+
+      const structBody = structMatch[1];
+      const lines = structBody.split('\n');
+      for (const line of lines) {
+        const match = line.match(/^\s*(\w+):\s*(\w+),?\s*$/);
+        if (match) {
+          layout[match[1]] = match[2]; // e.g. u_phys_ball: vec3f
+        }
+      }
+      return layout;
     }
 
     async function init() {
@@ -358,22 +397,31 @@
       }, { threshold: 0.1 });
       observer.observe(canvas);
 
-      function loop(frameTime) {
+      async function loop(frameTime) {
         if (!isVisible) {
           animationId = null;
           return;
         }
 
         // Update animation time based on pause state and time scale
+        let deltaTime = 0;
         if (!isPaused) {
-          const deltaTime = (frameTime - lastFrameTime) / 1000;
+          deltaTime = (frameTime - lastFrameTime) / 1000;
           animationTime += deltaTime * timeScale;
         }
         lastFrameTime = frameTime;
 
-        // Render with controlled time
+        // Step physics if enabled
+        if (physicsBridge?.enabled && !isPaused && deltaTime > 0) {
+          await physicsBridge.step(Math.min(deltaTime, 1/30)); // Cap dt to avoid instability
+        }
+
+        // Get physics param values
+        const sceneParamValues = physicsBridge?.getParamValues() || {};
+
+        // Render with controlled time and physics params
         if (renderer?.pipeline) {
-          renderer.render(animationTime);
+          renderer.render(animationTime, sceneParamValues);
         }
 
         animationId = requestAnimationFrame(loop);
