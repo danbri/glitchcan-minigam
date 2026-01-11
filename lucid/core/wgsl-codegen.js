@@ -735,17 +735,50 @@ function applyParamOverrides(def, overrides) {
   // Deep clone the def
   const cloned = JSON.parse(JSON.stringify(def));
 
-  // Apply overrides to params
+  // Recursively substitute vars in any value
+  function substituteVars(value) {
+    if (value === null || value === undefined) return value;
+
+    // Check if this is a var reference
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const varName = value.var || value.name;
+      if (varName && value.type !== 'expr' && overrides[varName] !== undefined) {
+        return overrides[varName];
+      }
+      // Recurse into object properties
+      const result = {};
+      for (const [k, v] of Object.entries(value)) {
+        result[k] = substituteVars(v);
+      }
+      return result;
+    }
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.map(v => substituteVars(v));
+    }
+
+    return value;
+  }
+
+  // Apply overrides recursively to entire node tree
   function applyToNode(node) {
     if (!node) return;
 
+    // Substitute vars in params
     if (node.params) {
-      for (const [key, value] of Object.entries(node.params)) {
-        if (typeof value === 'object' && value.var && overrides[value.var] !== undefined) {
-          node.params[key] = overrides[value.var];
-        }
-      }
+      node.params = substituteVars(node.params);
     }
+
+    // Substitute vars in transform
+    if (node.transform) {
+      node.transform = substituteVars(node.transform);
+    }
+
+    // Substitute vars in other properties that might have vars
+    if (node.k !== undefined) node.k = substituteVars(node.k);
+    if (node.color !== undefined) node.color = substituteVars(node.color);
+    if (node.offset !== undefined) node.offset = substituteVars(node.offset);
 
     // Recurse into children
     if (node.child) applyToNode(node.child);
