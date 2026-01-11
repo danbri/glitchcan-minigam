@@ -15,16 +15,16 @@ export class StinkyfishRenderer {
     this.sceneBindGroup = null;
     this.sceneUniformLayout = null; // Track layout for scene params
 
-    // Camera state
-    this.cameraDistance = 8;
-    this.cameraTheta = 0.3;  // horizontal angle
-    this.cameraPhi = 0.4;    // vertical angle
-    this.cameraTarget = [0, 0.5, 0];
+    // Camera state (match Mayfly defaults)
+    this.cameraDistance = 4;
+    this.cameraTheta = 0.0;  // horizontal angle (match Mayfly)
+    this.cameraPhi = 0.785;  // vertical angle ~45° (match Mayfly: π/4)
+    this.cameraTarget = [0, 0, 0];
 
-    // Render settings (adjustable at runtime via uniforms)
+    // Render settings - match Mayfly 'medium' quality defaults
     this.renderSettings = {
-      maxSteps: 100,
-      hitThreshold: 0.001,
+      maxSteps: 150,          // was 100, Mayfly medium = 150
+      hitThreshold: 0.003,    // was 0.001, Mayfly medium = 0.003
       maxDistance: 50.0,
       normalEpsilon: 0.002,
       keyIntensity: 0.7,
