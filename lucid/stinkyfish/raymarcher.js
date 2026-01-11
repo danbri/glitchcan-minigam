@@ -4,6 +4,28 @@
  */
 
 export class StinkyfishRenderer {
+  // Quality presets matching Mayfly exactly
+  static QUALITY_PRESETS = {
+    low: {
+      maxSteps: 100,
+      hitThreshold: 0.005,
+      maxDistance: 50.0,
+      normalEpsilon: 0.004
+    },
+    medium: {
+      maxSteps: 150,
+      hitThreshold: 0.003,
+      maxDistance: 50.0,
+      normalEpsilon: 0.002
+    },
+    high: {
+      maxSteps: 200,
+      hitThreshold: 0.002,
+      maxDistance: 50.0,
+      normalEpsilon: 0.001
+    }
+  };
+
   constructor(canvas) {
     this.canvas = canvas;
     this.device = null;
@@ -15,18 +37,16 @@ export class StinkyfishRenderer {
     this.sceneBindGroup = null;
     this.sceneUniformLayout = null; // Track layout for scene params
 
-    // Camera state (match Mayfly defaults)
-    this.cameraDistance = 4;
-    this.cameraTheta = 0.0;  // horizontal angle (match Mayfly)
-    this.cameraPhi = 0.785;  // vertical angle ~45° (match Mayfly: π/4)
+    // Camera state (Mayfly parity)
+    this.cameraDistance = 4.0;
+    this.cameraTheta = 0.0;
+    this.cameraPhi = Math.PI / 4;  // 45 degrees
     this.cameraTarget = [0, 0, 0];
 
-    // Render settings - match Mayfly 'medium' quality defaults
+    // Render settings (Mayfly 'medium' quality)
+    this.quality = 'medium';
     this.renderSettings = {
-      maxSteps: 150,          // was 100, Mayfly medium = 150
-      hitThreshold: 0.003,    // was 0.001, Mayfly medium = 0.003
-      maxDistance: 50.0,
-      normalEpsilon: 0.002,
+      ...StinkyfishRenderer.QUALITY_PRESETS.medium,
       keyIntensity: 0.7,
       fillIntensity: 0.3,
       rimIntensity: 0.15,
@@ -47,6 +67,17 @@ export class StinkyfishRenderer {
 
   setRenderSettings(settings) {
     Object.assign(this.renderSettings, settings);
+  }
+
+  /**
+   * Set quality preset (Mayfly API parity)
+   * @param {string} quality - 'low', 'medium', or 'high'
+   */
+  setQuality(quality) {
+    if (StinkyfishRenderer.QUALITY_PRESETS[quality]) {
+      this.quality = quality;
+      Object.assign(this.renderSettings, StinkyfishRenderer.QUALITY_PRESETS[quality]);
+    }
   }
 
   /**
