@@ -21,7 +21,7 @@ claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT
 - **Main Demo**: [demos_json.html](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html)
 - **JSON Loader**: [core/json-loader.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js)
 - **Code Generator**: [core/json-codegen.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js)
-- **Raymarcher**: [ui/raymarcher.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/ui/raymarcher.js)
+- **Raymarcher**: [mayfly/raymarcher.js](https://github.com/danbri/glitchcan-minigam/blob/main/lucid/mayfly/raymarcher.js)
 - **Current PR/Branch**: [Compare changes](https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT)
 
 ---
@@ -105,7 +105,7 @@ This creates O(n) SDF evaluations per ray step × ~100 steps × HD resolution = 
 ### Core
 - `core/json-loader.js` - Parses JSON scene, resolves defs/refs, builds IR
 - `core/json-codegen.js` - Generates GLSL from IR nodes
-- `ui/raymarcher.js` - WebGL raymarcher with orbit camera
+- `mayfly/raymarcher.js` - WebGL raymarcher with orbit camera
 
 ### Demos
 - `demos_json.html` - Main demo app with 8 built-in templates (v0.2.0)

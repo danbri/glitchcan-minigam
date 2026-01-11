@@ -649,7 +649,7 @@ The rig layer is **declarative and portable** - it doesn't know about SDFs, it j
 | `lucid/core/json-loader.js` | Add params passthrough, complete ref overrides TODO, pass rig block |
 | `lucid/core/json-codegen.js` | Add sceneParams to context, modify valueToGlsl, register derived params |
 | `lucid/core/rig-evaluator.js` | NEW: Rig layer evaluation (derived, bounds, phase, chains) |
-| `lucid/ui/raymarcher.js` | Add sceneParams field, bind param uniforms, integrate rig evaluator |
+| `lucid/mayfly/raymarcher.js` | Add sceneParams field, bind param uniforms, integrate rig evaluator |
 | `lucid/index.html` | Add params panel, typed widgets, constraint violations display |
 | `lucid/core/metrics.js` | NEW: AABB computation, constraint validation |
 | `lucid/automodel/sdf-skill.md` | Document params, rig layer, metrics, constraints |

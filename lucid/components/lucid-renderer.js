@@ -290,7 +290,7 @@ export class LucidRenderer extends HTMLElement {
 
   async _initMayfly() {
     const basePath = this._getBasePath();
-    const { SimpleRaymarcher } = await import(`${basePath}/ui/raymarcher.js`);
+    const { SimpleRaymarcher } = await import(`${basePath}/mayfly/raymarcher.js`);
 
     this._renderer = new SimpleRaymarcher(this._canvas);
     this._setStatus('Mayfly ready', 'ok');
