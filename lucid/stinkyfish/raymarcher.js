@@ -233,8 +233,8 @@ ${sceneWgsl}
 // Raymarching
 fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   let forward = normalize(camTarget - camPos);
-  let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
-  let up = cross(forward, right);
+  let right = normalize(cross(forward, vec3f(0.0, 1.0, 0.0)));
+  let up = cross(right, forward);
   return normalize(uv.x * right + uv.y * up + 1.5 * forward);
 }
 
@@ -242,34 +242,38 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
   var t = 0.0;
   var color = vec3f(0.5, 0.5, 0.5);
 
-  // Reduced steps for mobile performance (was 100)
-  for (var i = 0; i < 64; i++) {
+  for (var i = 0; i < 100; i++) {
     let p = ro + rd * t;
     let hit = sceneSDF(p);
 
-    if (hit.x < 0.002) {  // Slightly larger threshold for speed
+    if (hit.x < 0.001) {
       color = hit.yzw;
 
-      // Cheaper normal: larger epsilon, fewer samples
-      let e = 0.005;
+      // Normal calculation
+      let e = 0.002;
       let n = normalize(vec3f(
         sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
         sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
         sceneSDF(p + vec3f(0.0, 0.0, e)).x - sceneSDF(p - vec3f(0.0, 0.0, e)).x
       ));
 
-      // Simple lighting
-      let lightDir = normalize(vec3f(1.0, 2.0, 1.0));
-      let diff = max(dot(n, lightDir), 0.0);
-      let ambient = 0.2;
-      color = color * (ambient + diff * 0.8);
+      // Simple 3-point lighting
+      let keyDir = normalize(vec3f(1.0, 2.0, 1.5));
+      let fillDir = normalize(vec3f(-1.0, 0.5, 0.0));
+      let rimDir = normalize(vec3f(0.0, 0.0, -1.0));
+
+      let keyLight = max(dot(n, keyDir), 0.0) * 0.7;
+      let fillLight = max(dot(n, fillDir), 0.0) * 0.3;
+      let rimLight = pow(max(1.0 - dot(n, -rd), 0.0), 3.0) * 0.15;
+      let ambient = 0.15;
+
+      color = color * (ambient + keyLight + fillLight) + vec3f(rimLight);
 
       return vec4f(color, t);
     }
 
-    // Over-relaxation: step faster when far from surfaces
-    t += hit.x * 1.2;
-    if (t > 30.0) { break; }  // Early termination
+    t += hit.x;
+    if (t > 50.0) { break; }
   }
 
   return vec4f(0.1, 0.1, 0.15, -1.0);
