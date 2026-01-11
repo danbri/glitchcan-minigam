@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<!--
+  Lucid SDF Backend Comparison View
+
+  Side-by-side comparison of Mayfly (WebGL) and Stinkyfish (WebGPU) backends.
+  Use this to catch visual regressions and verify backend parity.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Lucid Backend Comparison</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a0f;
+      color: #c9d1d9;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .app {
+      display: flex;
+      height: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .sidebar-header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-header p {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    lucid-scene-picker {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar can be collapsed */
+    .sidebar.collapsed {
+      width: 40px;
+    }
+
+    .sidebar.collapsed lucid-scene-picker,
+    .sidebar.collapsed .sidebar-header h1,
+    .sidebar.collapsed .sidebar-header p {
+      display: none;
+    }
+
+    .toggle-sidebar {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 100;
+      padding: 6px 10px;
+      background: rgba(30,30,40,0.9);
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .toggle-sidebar:hover {
+      background: rgba(50,50,60,0.9);
+    }
+
+    /* Main area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .toolbar {
+      padding: 8px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scene-title {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .scene-path {
+      font-size: 11px;
+      color: #8b949e;
+      font-family: monospace;
+    }
+
+    .toolbar-spacer { flex: 1; }
+
+    .toolbar button {
+      padding: 6px 12px;
+      background: rgba(30,30,40,0.9);
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .toolbar button:hover {
+      background: rgba(50,50,60,0.9);
+    }
+
+    .toolbar button.primary {
+      background: rgba(34, 211, 238, 0.2);
+      border-color: #22d3ee;
+    }
+
+    lucid-comparison {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Keyboard shortcuts hint */
+    .shortcuts {
+      position: fixed;
+      bottom: 8px;
+      right: 8px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 4px;
+      font-size: 11px;
+      color: #888;
+      font-family: monospace;
+    }
+
+    .shortcuts kbd {
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>Backend Comparison</h1>
+        <p>Mayfly (WebGL) vs Stinkyfish (WebGPU)</p>
+      </div>
+      <lucid-scene-picker id="picker"></lucid-scene-picker>
+    </aside>
+
+    <main class="main">
+      <div class="toolbar">
+        <button class="toggle-sidebar" id="toggle-sidebar">☰</button>
+        <div>
+          <div class="scene-title" id="scene-title">Select a scene</div>
+          <div class="scene-path" id="scene-path">-</div>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <button id="prev-scene">← Prev</button>
+        <button id="next-scene">Next →</button>
+      </div>
+
+      <lucid-comparison id="comparison" sync-camera></lucid-comparison>
+    </main>
+  </div>
+
+  <div class="shortcuts">
+    <kbd>←</kbd><kbd>→</kbd> Navigate scenes
+    <kbd>H</kbd><kbd>V</kbd><kbd>O</kbd> Layout
+  </div>
+
+  <script type="module">
+    import './components/lucid-comparison.js';
+    import './components/lucid-scene-picker.js';
+
+    const picker = document.getElementById('picker');
+    const comparison = document.getElementById('comparison');
+    const sceneTitle = document.getElementById('scene-title');
+    const scenePath = document.getElementById('scene-path');
+    const sidebar = document.getElementById('sidebar');
+
+    // Handle scene selection
+    picker.addEventListener('scene-selected', (e) => {
+      const { path, title, subtitle } = e.detail;
+      comparison.scene = path;
+      sceneTitle.textContent = title || path;
+      scenePath.textContent = path;
+
+      // Update URL hash
+      history.replaceState(null, '', `#${path}`);
+    });
+
+    // Navigation buttons
+    document.getElementById('prev-scene').addEventListener('click', () => {
+      const scene = picker.prevScene();
+      if (scene) {
+        comparison.scene = scene.path;
+        sceneTitle.textContent = scene.title || scene.path;
+        scenePath.textContent = scene.path;
+        history.replaceState(null, '', `#${scene.path}`);
+      }
+    });
+
+    document.getElementById('next-scene').addEventListener('click', () => {
+      const scene = picker.nextScene();
+      if (scene) {
+        comparison.scene = scene.path;
+        sceneTitle.textContent = scene.title || scene.path;
+        scenePath.textContent = scene.path;
+        history.replaceState(null, '', `#${scene.path}`);
+      }
+    });
+
+    // Toggle sidebar
+    document.getElementById('toggle-sidebar').addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          document.getElementById('prev-scene').click();
+          break;
+        case 'ArrowRight':
+          document.getElementById('next-scene').click();
+          break;
+        case 'h':
+        case 'H':
+          comparison.layout = 'horizontal';
+          break;
+        case 'v':
+        case 'V':
+          comparison.layout = 'vertical';
+          break;
+        case 'o':
+        case 'O':
+          comparison.layout = 'overlay';
+          break;
+      }
+    });
+
+    // Load initial scene from hash
+    const hash = location.hash.slice(1);
+    if (hash) {
+      picker.currentScene = hash;
+      comparison.scene = hash;
+      sceneTitle.textContent = hash.split('/').pop().replace('.json', '');
+      scenePath.textContent = hash;
+    }
+
+    // Handle comparison events
+    comparison.addEventListener('comparison-ready', () => {
+      console.log('Both renderers ready');
+    });
+
+    comparison.addEventListener('comparison-error', (e) => {
+      console.error('Comparison error:', e.detail.error);
+    });
+  </script>
+</body>
+</html>
