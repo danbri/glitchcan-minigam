@@ -809,6 +809,7 @@ function generateRadial(node, ctx) {
   }
 
   const count = node.count || 6;
+  const axis = node.axis || 'y'; // Default to Y-axis (XZ plane rotation)
   const funcName = `radial_${ctx.helperCounter++}`;
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
   const childExpr = walkNode(node.child, ctx);
@@ -817,13 +818,43 @@ function generateRadial(node, ctx) {
   return ${childExpr};
 }`);
 
-  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  // Generate different rotation based on axis
+  let rotationCode;
+  switch (axis) {
+  case 'x':
+    // Rotate around X-axis (YZ plane)
+    rotationCode = `
+  let angle = atan2(p.z, p.y);
+  let sector = 6.283185 / f32(${count});
+  let a = (floor(angle / sector + 0.5)) * sector;
+  let c = cos(a);
+  let s = sin(a);
+  let rp = vec3f(p.x, c * p.y + s * p.z, -s * p.y + c * p.z);`;
+    break;
+  case 'z':
+    // Rotate around Z-axis (XY plane)
+    rotationCode = `
+  let angle = atan2(p.y, p.x);
+  let sector = 6.283185 / f32(${count});
+  let a = (floor(angle / sector + 0.5)) * sector;
+  let c = cos(a);
+  let s = sin(a);
+  let rp = vec3f(c * p.x + s * p.y, -s * p.x + c * p.y, p.z);`;
+    break;
+  case 'y':
+  default:
+    // Rotate around Y-axis (XZ plane) - default
+    rotationCode = `
   let angle = atan2(p.z, p.x);
   let sector = 6.283185 / f32(${count});
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
-  let rp = vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+  let rp = vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);`;
+    break;
+  }
+
+  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {${rotationCode}
   return ${childFuncName}(rp);
 }`);
 
@@ -835,7 +866,9 @@ function generateRepeat(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const spacing = valueToWgsl(node.spacing || { type: 'array', values: [2, 2, 2].map(v => ({ type: 'const', value: v })) }, ctx);
+  // Support both 'spacing' and 'period' properties
+  const spacingValue = node.spacing || node.period || { type: 'array', values: [2, 2, 2].map(v => ({ type: 'const', value: v })) };
+  const spacing = valueToWgsl(spacingValue, ctx);
   const funcName = `repeat_${ctx.helperCounter++}`;
   const childFuncName = `repeat_child_${ctx.helperCounter++}`;
   const childExpr = walkNode(node.child, ctx);
@@ -992,6 +1025,17 @@ function valueToWgsl(value, ctx) {
     return formatFloat(value.value);
 
   case 'var':
+    // Handle built-in variables that come from main uniforms
+    if (value.name === 'time') {
+      return 'u.time';
+    }
+    if (value.name === 'resolution') {
+      return 'u.resolution';
+    }
+    if (value.name === 'cameraPos') {
+      return 'u.cameraPos';
+    }
+
     // If inlineDefaults is set, use the default value from sceneParams instead of uniform
     if (ctx.inlineDefaults && ctx.sceneParams[value.name]) {
       const param = ctx.sceneParams[value.name];
@@ -1192,25 +1236,42 @@ function applyTransform(pVar, transform, ctx) {
     result = `(${result} - ${t})`;
   }
 
-  // Apply rotation
+  // Apply rotation - support both object {x, y, z} and array [x, y, z] formats
   if (transform.rotate) {
     const rot = transform.rotate;
-    if (rot.x !== undefined) {
-      const angle = valueToWgsl(rot.x, ctx);
-      result = `rotX(${result}, ${angle})`;
+
+    // Handle array format [x, y, z] (degrees)
+    if (Array.isArray(rot)) {
+      const toRad = (deg) => `(${valueToWgsl(deg, ctx)} * 0.01745329)`;
+      if (rot[0] !== 0 && rot[0] !== undefined) {
+        result = `rotX(${result}, ${toRad(rot[0])})`;
+      }
+      if (rot[1] !== 0 && rot[1] !== undefined) {
+        result = `rotY(${result}, ${toRad(rot[1])})`;
+      }
+      if (rot[2] !== 0 && rot[2] !== undefined) {
+        result = `rotZ(${result}, ${toRad(rot[2])})`;
+      }
     }
-    if (rot.y !== undefined) {
-      const angle = valueToWgsl(rot.y, ctx);
-      result = `rotY(${result}, ${angle})`;
-    }
-    if (rot.z !== undefined) {
-      const angle = valueToWgsl(rot.z, ctx);
-      result = `rotZ(${result}, ${angle})`;
-    }
-    if (rot.axis && rot.angle !== undefined) {
-      const axis = valueToWgsl(rot.axis, ctx);
-      const angle = valueToWgsl(rot.angle, ctx);
-      result = `rotAxisAngle(${result}, ${axis}, ${angle})`;
+    // Handle object format {x, y, z} (radians)
+    else {
+      if (rot.x !== undefined) {
+        const angle = valueToWgsl(rot.x, ctx);
+        result = `rotX(${result}, ${angle})`;
+      }
+      if (rot.y !== undefined) {
+        const angle = valueToWgsl(rot.y, ctx);
+        result = `rotY(${result}, ${angle})`;
+      }
+      if (rot.z !== undefined) {
+        const angle = valueToWgsl(rot.z, ctx);
+        result = `rotZ(${result}, ${angle})`;
+      }
+      if (rot.axis && rot.angle !== undefined) {
+        const axis = valueToWgsl(rot.axis, ctx);
+        const angle = valueToWgsl(rot.angle, ctx);
+        result = `rotAxisAngle(${result}, ${axis}, ${angle})`;
+      }
     }
   }
 
