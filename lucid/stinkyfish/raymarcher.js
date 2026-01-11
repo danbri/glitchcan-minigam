@@ -26,17 +26,25 @@ export class StinkyfishRenderer {
   }
 
   setupMouseHandlers() {
+    // Prevent context menu on canvas
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
     this.canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       this.isDragging = true;
       this.lastMouse = { x: e.clientX, y: e.clientY };
+      this.canvas.style.cursor = 'grabbing';
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
       this.isDragging = false;
+      this.canvas.style.cursor = 'grab';
     });
 
     window.addEventListener('mousemove', (e) => {
       if (!this.isDragging) return;
+      e.preventDefault();
       const dx = e.clientX - this.lastMouse.x;
       const dy = e.clientY - this.lastMouse.y;
       this.cameraTheta += dx * 0.01;
@@ -46,30 +54,37 @@ export class StinkyfishRenderer {
 
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       this.cameraDistance *= 1 + e.deltaY * 0.001;
-      this.cameraDistance = Math.max(2, Math.min(50, this.cameraDistance));
-    });
+      this.cameraDistance = Math.max(1, Math.min(100, this.cameraDistance));
+    }, { passive: false });
 
     // Touch support
     this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       if (e.touches.length === 1) {
         this.isDragging = true;
         this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }
-    });
+    }, { passive: false });
 
     this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
       if (!this.isDragging || e.touches.length !== 1) return;
       const dx = e.touches[0].clientX - this.lastMouse.x;
       const dy = e.touches[0].clientY - this.lastMouse.y;
       this.cameraTheta += dx * 0.01;
       this.cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, this.cameraPhi + dy * 0.01));
       this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    });
+    }, { passive: false });
 
-    this.canvas.addEventListener('touchend', () => {
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
       this.isDragging = false;
     });
+
+    // Set initial cursor
+    this.canvas.style.cursor = 'grab';
   }
 
   getCameraPos() {
