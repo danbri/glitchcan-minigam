@@ -696,9 +696,72 @@ function generateMaterial(node, ctx) {
 }
 
 function generateRef(node, ctx) {
-  // Reference to a def - should be resolved by loader
-  console.warn('Unresolved ref:', node.id);
-  return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
+  // Get the processed definition from the loader
+  let def = node.def;
+  if (!def) {
+    console.warn(`Unresolved ref: ${node.id || node.refId}`);
+    return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
+  }
+
+  // Apply parameter overrides if any
+  if (node.overrides) {
+    def = applyParamOverrides(def, node.overrides);
+  }
+
+  // If this ref has a transform from parent, apply it
+  if (node.transform) {
+    const defWithTransform = {
+      ...def,
+      transform: combineTransforms(def.transform, node.transform)
+    };
+    return walkNode(defWithTransform, ctx);
+  } else {
+    return walkNode(def, ctx);
+  }
+}
+
+// Apply parameter overrides to a def
+function applyParamOverrides(def, overrides) {
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return def;
+  }
+
+  // Deep clone the def
+  const cloned = JSON.parse(JSON.stringify(def));
+
+  // Apply overrides to params
+  function applyToNode(node) {
+    if (!node) return;
+
+    if (node.params) {
+      for (const [key, value] of Object.entries(node.params)) {
+        if (typeof value === 'object' && value.var && overrides[value.var] !== undefined) {
+          node.params[key] = overrides[value.var];
+        }
+      }
+    }
+
+    // Recurse into children
+    if (node.child) applyToNode(node.child);
+    if (node.children) node.children.forEach(applyToNode);
+  }
+
+  applyToNode(cloned);
+  return cloned;
+}
+
+// Combine transforms
+function combineTransforms(t1, t2) {
+  if (!t1) return t2;
+  if (!t2) return t1;
+
+  return {
+    translate: t1.translate || t2.translate,
+    rotateX: t1.rotateX || t2.rotateX,
+    rotateY: t1.rotateY || t2.rotateY,
+    rotateZ: t1.rotateZ || t2.rotateZ,
+    scale: t1.scale || t2.scale,
+  };
 }
 
 function generateMirror(node, ctx) {
