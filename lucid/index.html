@@ -10,7 +10,7 @@
   Key files:
   - core/json-loader.js  - JSON scene parser
   - core/json-codegen.js - GLSL code generator
-  - ui/raymarcher.js     - WebGL renderer
+  - mayfly/raymarcher.js     - WebGL renderer
 
   Other files:
   - initial_test.html    - Full raymarcher app (DSL-based, experimental)
@@ -1489,7 +1489,7 @@
           <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html" target="_blank" style="color: var(--text); text-decoration: none;">📄 demos_json.html</a>
           <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-loader.js</a>
           <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-codegen.js</a>
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/ui/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 raymarcher.js</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/mayfly/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 raymarcher.js</a>
           <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/CLAUDE.md" target="_blank" style="color: var(--text); text-decoration: none;">📖 CLAUDE.md</a>
         </div>
       </div>
@@ -1683,7 +1683,7 @@
   </div>
 
   <script type="module">
-    import { SimpleRaymarcher } from './ui/raymarcher.js';
+    import { SimpleRaymarcher } from './mayfly/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
     import { PhysicsScene } from './core/physics/physics-scene.js';

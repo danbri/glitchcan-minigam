@@ -17,7 +17,7 @@ Scene JSON → json-loader.js → json-codegen.js → GLSL → WebGL
 
 ## Renderer
 
-- `ui/raymarcher.js` - SimpleRaymarcher class
+- `mayfly/raymarcher.js` - SimpleRaymarcher class
 - `ui/scene-panel.js` - Parameter sliders
 - `ui/tree-view.js` - Scene graph inspector
 
