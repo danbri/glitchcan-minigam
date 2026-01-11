@@ -858,7 +858,7 @@ function generateDisplace(node, ctx) {
 
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
   let c = ${childFuncName}(p);
-  let disp = fbm(p * ${scale}, 4) * ${amount};
+  let disp = (fbm(p * ${scale}, 4) - 0.5) * 2.0 * ${amount};
   return vec4f(c.x + disp, c.yzw);
 }`);
 
