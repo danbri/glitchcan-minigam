@@ -103,17 +103,40 @@
       margin-top: 5px;
     }
 
+    .backends {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .backend {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafafa;
+    }
+
+    .backend-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    .backend-title.mayfly { color: #2563eb; }
+    .backend-title.stinkyfish { color: #7c3aed; }
+
     .views {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-top: 10px;
+      gap: 4px;
     }
 
     .view {
       aspect-ratio: 1;
       background: #1a1a2e;
-      border-radius: 4px;
+      border-radius: 3px;
       overflow: hidden;
       position: relative;
     }
@@ -125,12 +148,12 @@
 
     .view-label {
       position: absolute;
-      bottom: 2px;
-      left: 2px;
-      font-size: 9px;
-      color: rgba(255,255,255,0.7);
-      background: rgba(0,0,0,0.5);
-      padding: 1px 4px;
+      bottom: 1px;
+      left: 1px;
+      font-size: 8px;
+      color: rgba(255,255,255,0.8);
+      background: rgba(0,0,0,0.6);
+      padding: 1px 3px;
       border-radius: 2px;
     }
 
@@ -145,8 +168,12 @@
       align-items: center;
       justify-content: center;
       color: #666;
-      font-size: 11px;
+      font-size: 10px;
+      height: 100%;
     }
+
+    .placeholder.error { color: #e44; }
+    .placeholder.na { color: #888; font-style: italic; }
 
     @media print {
       .controls { display: none; }
@@ -157,7 +184,7 @@
 </head>
 <body>
   <h1>Lucid SDF Scene Catalog</h1>
-  <p class="subtitle">4-view captures for AI evaluation and documentation</p>
+  <p class="subtitle">Mayfly (WebGL) vs Stinkyfish (WebGPU) - 4 angles per backend</p>
 
   <div class="controls">
     <button id="captureBtn" onclick="captureAllScenes()">Capture All Scenes</button>
@@ -167,26 +194,34 @@
 
   <div id="catalog"></div>
 
-  <!-- Hidden renderer for capturing -->
-  <canvas id="captureCanvas" width="400" height="400" style="display:none;"></canvas>
+  <!-- Hidden renderers for capturing -->
+  <canvas id="mayflyCanvas" width="300" height="300" style="display:none;"></canvas>
+  <canvas id="stinkyfishCanvas" width="300" height="300" style="display:none;"></canvas>
 
   <script type="module">
     import { SimpleRaymarcher } from './mayfly/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
+    import { generateWgslFromJson } from './core/wgsl-codegen.js';
+    import { StinkyfishRenderer } from './stinkyfish/raymarcher.js';
 
+    // More interesting camera angles
     const CAMERA_ANGLES = [
-      { name: 'Front', theta: 0, phi: 0.4 },
+      { name: 'Front', theta: 0.3, phi: 0.5 },
       { name: 'Side', theta: Math.PI/2, phi: 0.4 },
-      { name: '3/4', theta: 0.6, phi: 0.5 },
-      { name: 'Top', theta: 0, phi: 0.1 }
+      { name: 'Above', theta: 0.5, phi: 0.15 },
+      { name: 'Below', theta: -0.3, phi: 0.85 }
     ];
 
     let toc = null;
-    let renderer = null;
+    let mayflyRenderer = null;
+    let stinkyfishRenderer = null;
+    let webgpuSupported = false;
 
-    // Load TOC and build page structure
     async function init() {
+      // Check WebGPU support
+      webgpuSupported = !!navigator.gpu;
+
       const resp = await fetch('./scenes/toc.json');
       toc = await resp.json();
       buildCatalogStructure();
@@ -196,8 +231,8 @@
       const container = document.getElementById('catalog');
       container.innerHTML = '';
 
-      // Categories to skip (complex/slow scenes)
-      const SKIP_CATEGORIES = ['recent', 'physics', 'anim', 'creatures', 'archive', 'nature'];
+      // Categories to skip (complex/animated/physics scenes)
+      const SKIP_CATEGORIES = ['recent', 'physics', 'anim', 'creatures', 'archive', 'nature', 'animation'];
 
       for (const category of toc.categories) {
         if (SKIP_CATEGORIES.includes(category.id)) continue;
@@ -217,13 +252,29 @@
               <div class="scene-path">${scene.path}</div>
               <div class="scene-description">${scene.subtitle || ''}</div>
             </div>
-            <div class="views">
-              ${CAMERA_ANGLES.map((angle, i) => `
-                <div class="view" data-angle="${i}">
-                  <div class="placeholder">Click capture</div>
-                  <span class="view-label">${angle.name}</span>
+            <div class="backends">
+              <div class="backend">
+                <div class="backend-title mayfly">Mayfly (WebGL)</div>
+                <div class="views mayfly-views">
+                  ${CAMERA_ANGLES.map((angle, i) => `
+                    <div class="view" data-angle="${i}">
+                      <div class="placeholder">...</div>
+                      <span class="view-label">${angle.name}</span>
+                    </div>
+                  `).join('')}
                 </div>
-              `).join('')}
+              </div>
+              <div class="backend">
+                <div class="backend-title stinkyfish">Stinkyfish (WebGPU)</div>
+                <div class="views stinkyfish-views">
+                  ${CAMERA_ANGLES.map((angle, i) => `
+                    <div class="view" data-angle="${i}">
+                      <div class="placeholder ${webgpuSupported ? '' : 'na'}">${webgpuSupported ? '...' : 'N/A'}</div>
+                      <span class="view-label">${angle.name}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </div>
           `;
 
@@ -234,45 +285,102 @@
       }
     }
 
-    async function initRenderer() {
-      if (renderer) return;
-
-      const canvas = document.getElementById('captureCanvas');
-      renderer = new SimpleRaymarcher(canvas);
-      renderer.setQuality('high');
+    async function initMayfly() {
+      if (mayflyRenderer) return;
+      const canvas = document.getElementById('mayflyCanvas');
+      mayflyRenderer = new SimpleRaymarcher(canvas);
+      mayflyRenderer.setQuality('high');
     }
 
-    async function captureScene(scenePath) {
-      await initRenderer();
+    async function initStinkyfish() {
+      if (stinkyfishRenderer || !webgpuSupported) return;
+      try {
+        const canvas = document.getElementById('stinkyfishCanvas');
+        stinkyfishRenderer = new StinkyfishRenderer(canvas);
+        await stinkyfishRenderer.init();
+        stinkyfishRenderer.setQuality('high');
+      } catch (e) {
+        console.warn('Stinkyfish init failed:', e);
+        webgpuSupported = false;
+      }
+    }
+
+    async function captureMayfly(scenePath) {
+      await initMayfly();
 
       const resp = await fetch(`./scenes/${scenePath}`);
       const json = await resp.json();
 
       const scene = loadJsonScene(json);
       const glsl = generateGlslFromJson(scene, {});
-      renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
+      mayflyRenderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
 
-      // Get camera distance from scene or use default
       const camDist = json.camera?.distance || 6;
       const camTarget = json.camera?.target || [0, 0.5, 0];
 
       const images = [];
-
       for (const angle of CAMERA_ANGLES) {
-        renderer.cameraDistance = camDist;
-        renderer.cameraTarget = camTarget;
-        renderer.cameraTheta = angle.theta;
-        renderer.cameraPhi = angle.phi;
+        mayflyRenderer.cameraDistance = camDist;
+        mayflyRenderer.cameraTarget = camTarget;
+        mayflyRenderer.cameraTheta = angle.theta;
+        mayflyRenderer.cameraPhi = angle.phi;
+        mayflyRenderer.render();
+        images.push(mayflyRenderer.canvas.toDataURL('image/png'));
+      }
+      return images;
+    }
 
-        // Render a frame
-        renderer.render();
+    async function captureStinkyfish(scenePath) {
+      if (!webgpuSupported) return null;
+      await initStinkyfish();
+      if (!stinkyfishRenderer) return null;
 
-        // Capture as data URL
-        const dataUrl = renderer.canvas.toDataURL('image/png');
-        images.push(dataUrl);
+      const resp = await fetch(`./scenes/${scenePath}`);
+      const json = await resp.json();
+
+      const scene = loadJsonScene(json);
+      const wgsl = generateWgslFromJson(scene, {});
+
+      // Build uniform layout
+      const { getAllParamNames } = await import('./core/rig-evaluator.js');
+      const allParams = getAllParamNames(scene.params || {}, scene.rig);
+      const uniformLayout = {};
+      for (const [name, paramInfo] of Object.entries(allParams)) {
+        const type = paramInfo.type || 'scalar';
+        uniformLayout[`u_${name}`] = (type === 'color3' || type === 'position3' || type === 'radii3' || type === 'direction3') ? 'vec3f' : 'f32';
       }
 
+      await stinkyfishRenderer.compileScene(wgsl, Object.keys(uniformLayout).length > 0 ? uniformLayout : null);
+      if (scene.params) stinkyfishRenderer.setSceneParams(scene.params);
+
+      const camDist = json.camera?.distance || 6;
+      const camTarget = json.camera?.target || [0, 0.5, 0];
+
+      const images = [];
+      for (const angle of CAMERA_ANGLES) {
+        stinkyfishRenderer.cameraDistance = camDist;
+        stinkyfishRenderer.cameraTarget = camTarget;
+        stinkyfishRenderer.cameraTheta = angle.theta;
+        stinkyfishRenderer.cameraPhi = angle.phi;
+        stinkyfishRenderer.render(0);
+        images.push(stinkyfishRenderer.canvas.toDataURL('image/png'));
+      }
       return images;
+    }
+
+    function setViewImages(views, images, angles) {
+      images.forEach((dataUrl, i) => {
+        views[i].innerHTML = `
+          <img src="${dataUrl}" alt="${angles[i].name} view">
+          <span class="view-label">${angles[i].name}</span>
+        `;
+      });
+    }
+
+    function setViewError(views, msg) {
+      views.forEach(v => {
+        v.innerHTML = `<div class="placeholder error">${msg}</div>`;
+      });
     }
 
     window.captureAllScenes = async function() {
@@ -287,26 +395,37 @@
         const path = sceneDiv.dataset.path;
         progress.textContent = `Capturing ${completed + 1}/${scenes.length}: ${path}`;
 
-        try {
-          // Timeout after 5 seconds per scene
-          const images = await Promise.race([
-            captureScene(path),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-          ]);
-          const views = sceneDiv.querySelectorAll('.view');
+        const mayflyViews = sceneDiv.querySelectorAll('.mayfly-views .view');
+        const stinkyfishViews = sceneDiv.querySelectorAll('.stinkyfish-views .view');
 
-          images.forEach((dataUrl, i) => {
-            views[i].innerHTML = `
-              <img src="${dataUrl}" alt="${CAMERA_ANGLES[i].name} view">
-              <span class="view-label">${CAMERA_ANGLES[i].name}</span>
-            `;
-          });
+        // Capture Mayfly
+        try {
+          const images = await Promise.race([
+            captureMayfly(path),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+          ]);
+          setViewImages(mayflyViews, images, CAMERA_ANGLES);
         } catch (e) {
-          console.error(`Failed to capture ${path}:`, e);
-          const views = sceneDiv.querySelectorAll('.view');
-          views.forEach(v => {
-            v.innerHTML = `<div class="placeholder" style="color:#f44">${e.message}</div>`;
-          });
+          console.error(`Mayfly failed for ${path}:`, e);
+          setViewError(mayflyViews, e.message);
+        }
+
+        // Capture Stinkyfish
+        if (webgpuSupported) {
+          try {
+            const images = await Promise.race([
+              captureStinkyfish(path),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+            ]);
+            if (images) {
+              setViewImages(stinkyfishViews, images, CAMERA_ANGLES);
+            } else {
+              setViewError(stinkyfishViews, 'N/A');
+            }
+          } catch (e) {
+            console.error(`Stinkyfish failed for ${path}:`, e);
+            setViewError(stinkyfishViews, e.message);
+          }
         }
 
         completed++;
