@@ -75,6 +75,24 @@
   </main>
 
   <script type="module">
+    // Global error handler
+    window.onerror = (msg, src, line, col, err) => {
+      console.error('Global error:', msg, src, line, col, err);
+      const status = document.getElementById('status');
+      if (status) {
+        status.textContent = `Error: ${msg}`;
+        status.className = 'error';
+      }
+    };
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('Unhandled rejection:', e.reason);
+      const status = document.getElementById('status');
+      if (status) {
+        status.textContent = `Error: ${e.reason?.message || e.reason}`;
+        status.className = 'error';
+      }
+    });
+
     import { StinkyfishRenderer } from './raymarcher.js';
     import { loadJsonScene } from '../core/json-loader.js';
     import { generateWgslFromJson } from '../core/wgsl-codegen.js';
@@ -183,8 +201,11 @@
         console.log(`Generated ${wgsl.length} chars of WGSL for ${name}`);
 
         // Compile
+        console.log('Compiling shader...');
         await renderer.compileScene(wgsl);
+        console.log('Shader compiled, rendering...');
         renderer.render();
+        console.log('Render complete');
 
         status.textContent = `${name} loaded`;
         status.className = 'ok';

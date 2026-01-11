@@ -120,6 +120,7 @@ export class StinkyfishRenderer {
    */
   async compileScene(sceneWgsl) {
     const shaderCode = this.buildFullShader(sceneWgsl);
+    console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
 
     const shaderModule = this.device.createShaderModule({
       code: shaderCode,
@@ -127,9 +128,19 @@ export class StinkyfishRenderer {
 
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
+    console.log(`Shader compilation messages: ${compilationInfo.messages.length}`);
     for (const message of compilationInfo.messages) {
-      console.log(`${message.type}: ${message.message}`);
+      console.log(`${message.type}: ${message.message} (line ${message.lineNum}, col ${message.linePos})`);
       if (message.type === 'error') {
+        // Log context around the error
+        const lines = shaderCode.split('\n');
+        const errLine = message.lineNum - 1;
+        if (errLine >= 0 && errLine < lines.length) {
+          console.log('Error context:');
+          for (let i = Math.max(0, errLine - 2); i <= Math.min(lines.length - 1, errLine + 2); i++) {
+            console.log(`${i === errLine ? '>>>' : '   '} ${i + 1}: ${lines[i]}`);
+          }
+        }
         throw new Error(`Shader compilation error: ${message.message}`);
       }
     }
