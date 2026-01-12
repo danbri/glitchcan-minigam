@@ -808,6 +808,56 @@ node lucid/scripts/update-recent-changes.mjs --days=14 --max=8
 - `physics` - ⚛️ Physics
 - `archive` - 📁 Archive
 
+## Lucid Frontend Status (January 2026)
+
+### ✅ Backend-Neutral Architecture COMPLETE
+The Lucid SDF system is now fully backend-neutral with all 117 scenes loadable via either engine:
+
+**Backends:**
+- **Mayfly** (`lucid/mayfly/`) - WebGL raymarcher, works everywhere
+- **Stinkyfish** (`lucid/stinkyfish/`) - WebGPU raymarcher, auto-selected when available
+
+**Web Component:**
+```html
+<lucid-renderer backend="auto" scene="creatures/wolf.json"></lucid-renderer>
+```
+
+### Frontend Entry Points
+
+| Tool | Path | Purpose |
+|------|------|---------|
+| **Main Viewer** | `lucid/index.html` | Full-featured scene browser with params, debug |
+| **Node Editor** | `lucid/node-editor.html` | Visual SDF composition + timeline scrubber |
+| **Scene Catalog** | `lucid/scene-catalog.html` | Grid comparison Mayfly vs Stinkyfish |
+| **Compare** | `lucid/compare.html` | Side-by-side renderer comparison |
+
+### Recent Accomplishments (Session Jan 2026)
+
+1. **Node Editor Refactor** - Uses `<lucid-renderer>` web component
+   - Scene picker loads from TOC by category
+   - Live preview with proper animation/camera
+   - More node types: cone, plane, smoothSubtract, round, displace, shell
+
+2. **Scene Catalog Optimization** - Maximum pixel space layout
+   - Collapsible right sidebar for controls/stats
+   - Compact cards with 8 renders each (4 angles × 2 backends)
+   - Short labels: F/S/↑/↓ for angles, M/S for backends
+
+3. **Timeline Scrubber Widget** - Animation control panel
+   - Play/pause, rewind, loop, speed (0.1x-3x)
+   - Mini sparkline graphs for animated params
+   - Wiggler presets: sin, bounce, noise, pulse
+   - Gait presets: walk, trot, gallop
+   - Physics presets: spring, gravity
+   - Touch-friendly scrubbing
+
+### Integration TODO
+
+- [ ] Catalog → Node Editor: Click card to load scene in editor
+- [ ] Timeline → Rig: Wire wiggler outputs to scene uniforms
+- [ ] Node graph → Timeline: Visual param connections
+- [ ] Physics bridge: Connect XPBD solver to timeline
+
 ## Lucid Debugging Techniques
 
 ### 🚨 KEY INSIGHT: "Compiling is not enough - what is RENDERED?"
