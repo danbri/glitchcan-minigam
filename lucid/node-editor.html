@@ -6,505 +6,308 @@
   <title>Lucid Node Editor</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      height: 100%;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0d1117;
-      color: #c9d1d9;
-    }
+    html, body { height: 100%; font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; overflow: hidden; }
 
-    .app {
-      display: grid;
-      grid-template-columns: 180px 1fr 300px;
-      grid-template-rows: auto 1fr auto;
-      height: 100vh;
-    }
+    /* Canvas takes full screen */
+    #nodeCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
+    #nodeCanvas:active { cursor: grabbing; }
 
-    header {
-      grid-column: 1 / -1;
-      padding: 8px 16px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
+    /* Floating toolbar */
+    .toolbar {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      align-items: center;
-      gap: 16px;
+      gap: 6px;
+      padding: 6px 10px;
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      z-index: 100;
     }
-    header h1 { font-size: 15px; font-weight: 600; }
-    header .spacer { flex: 1; }
-    header button {
-      padding: 5px 12px;
+    .toolbar button {
+      padding: 6px 12px;
       background: #21262d;
       border: 1px solid #30363d;
       color: #c9d1d9;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
       font-size: 12px;
     }
-    header button:hover { background: #30363d; }
-    header button.primary { background: #238636; border-color: #238636; }
-    header button.primary:hover { background: #2ea043; }
+    .toolbar button:hover { background: #30363d; }
+    .toolbar button.active { background: #238636; border-color: #238636; }
 
-    .sidebar {
-      background: #161b22;
-      border-right: 1px solid #30363d;
-      overflow-y: auto;
-      padding: 10px;
-    }
-    .sidebar h2 {
-      font-size: 10px;
-      text-transform: uppercase;
-      color: #8b949e;
-      margin: 12px 0 6px;
-      letter-spacing: 0.5px;
-    }
-    .sidebar h2:first-child { margin-top: 0; }
-    .palette-item {
-      padding: 6px 8px;
-      margin: 3px 0;
-      background: #21262d;
+    /* Collapsible panels */
+    .panel {
+      position: fixed;
+      background: rgba(22, 27, 34, 0.98);
       border: 1px solid #30363d;
-      border-radius: 5px;
-      cursor: grab;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.15s;
+      z-index: 90;
+      transition: transform 0.2s ease;
     }
-    .palette-item:hover { border-color: #58a6ff; background: #30363d; }
-    .palette-item:active { cursor: grabbing; }
 
-    .canvas-area {
-      position: relative;
-      overflow: hidden;
-      background: #0d1117;
-    }
-    #nodeCanvas { position: absolute; top: 0; left: 0; cursor: grab; }
-    #nodeCanvas:active { cursor: grabbing; }
-
-    .right-panel {
-      background: #161b22;
-      border-left: 1px solid #30363d;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .panel-section { border-bottom: 1px solid #30363d; }
-    .panel-section h3 {
-      padding: 8px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      background: #21262d;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .panel-section h3 .count { font-weight: normal; color: #8b949e; }
-    .panel-content { padding: 10px; }
-
-    .scene-list {
-      max-height: 200px;
+    /* Left panel - node palette */
+    .panel-left {
+      top: 60px;
+      left: 0;
+      bottom: 60px;
+      width: 160px;
+      border-radius: 0 8px 8px 0;
       overflow-y: auto;
-      padding: 6px;
+      padding: 8px;
     }
-    .scene-category {
-      margin-bottom: 8px;
-    }
-    .scene-category-title {
-      font-size: 9px;
-      text-transform: uppercase;
-      color: #6e7681;
-      margin-bottom: 4px;
-      letter-spacing: 0.5px;
-    }
-    .scene-item {
-      padding: 6px 8px;
+    .panel-left.hidden { transform: translateX(-170px); }
+
+    .palette-section { margin-bottom: 12px; }
+    .palette-title { font-size: 9px; text-transform: uppercase; color: #6e7681; margin-bottom: 6px; }
+    .palette-item {
+      padding: 5px 8px;
       margin: 2px 0;
       background: #21262d;
       border: 1px solid #30363d;
       border-radius: 4px;
-      cursor: pointer;
       font-size: 11px;
-      transition: all 0.15s;
-    }
-    .scene-item:hover { border-color: #58a6ff; background: #30363d; }
-    .scene-item.active { border-color: #58a6ff; background: #388bfd22; }
-
-    .preview-wrap {
-      flex: 1;
-      min-height: 220px;
-      display: flex;
-      flex-direction: column;
-    }
-    .preview-wrap lucid-renderer {
-      flex: 1;
-      min-height: 180px;
-    }
-
-    .props-wrap { max-height: 180px; overflow-y: auto; }
-    .prop-row { margin-bottom: 8px; }
-    .prop-row label { display: block; font-size: 10px; color: #8b949e; margin-bottom: 3px; }
-    .prop-row input, .prop-row select {
-      width: 100%;
-      padding: 5px 7px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 4px;
-      color: #c9d1d9;
-      font-size: 11px;
-    }
-    .prop-row input:focus, .prop-row select:focus { outline: none; border-color: #58a6ff; }
-
-    .json-wrap { max-height: 120px; }
-    #jsonOutput {
-      width: 100%;
-      height: 80px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 4px;
-      color: #7ee787;
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 9px;
-      padding: 6px;
-      resize: vertical;
-    }
-    .no-selection { color: #8b949e; font-size: 11px; font-style: italic; }
-
-    /* Help tooltip */
-    .help-tip {
-      font-size: 10px;
-      color: #8b949e;
-      padding: 6px 10px;
-      background: #161b22;
-      border-top: 1px solid #30363d;
-    }
-    .help-tip kbd {
-      background: #30363d;
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-size: 9px;
-    }
-
-    /* Timeline Footer */
-    .timeline-footer {
-      grid-column: 1 / -1;
-      background: #161b22;
-      border-top: 1px solid #30363d;
-      display: flex;
-      flex-direction: column;
-      max-height: 140px;
-      transition: max-height 0.2s;
-    }
-    .timeline-footer.collapsed { max-height: 32px; }
-    .timeline-footer.collapsed .timeline-content { display: none; }
-
-    .timeline-header {
+      cursor: grab;
       display: flex;
       align-items: center;
-      padding: 6px 12px;
-      gap: 12px;
-      border-bottom: 1px solid #30363d;
-      min-height: 32px;
+      gap: 6px;
     }
-    .timeline-header h4 {
+    .palette-item:hover { border-color: #58a6ff; }
+
+    /* Right panel - preview & props */
+    .panel-right {
+      top: 60px;
+      right: 0;
+      bottom: 60px;
+      width: 240px;
+      border-radius: 8px 0 0 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-right.hidden { transform: translateX(250px); }
+
+    .panel-header {
+      padding: 8px 10px;
+      background: #21262d;
       font-size: 11px;
       font-weight: 600;
-      margin-right: auto;
-    }
-    .timeline-header .time-display {
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 11px;
-      color: #58a6ff;
-      min-width: 60px;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
     }
 
+    .scene-picker {
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 6px;
+      border-bottom: 1px solid #30363d;
+    }
+    .scene-item {
+      padding: 4px 8px;
+      margin: 2px 0;
+      background: #21262d;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .scene-item:hover { border-color: #58a6ff; }
+    .scene-item.active { background: #238636; }
+
+    .preview-area {
+      height: 160px;
+      border-bottom: 1px solid #30363d;
+    }
+    .preview-area lucid-renderer { width: 100%; height: 100%; }
+
+    .props-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .prop-row { margin-bottom: 6px; }
+    .prop-row label { display: block; font-size: 9px; color: #8b949e; margin-bottom: 2px; }
+    .prop-row input, .prop-row select {
+      width: 100%;
+      padding: 4px 6px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 3px;
+      color: #c9d1d9;
+      font-size: 10px;
+    }
+
+    /* Bottom panel - timeline */
+    .panel-bottom {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 50px;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+    }
+    .panel-bottom.expanded { height: 120px; flex-direction: column; align-items: stretch; padding: 8px 12px; }
+    .panel-bottom.hidden { transform: translateY(130px); }
+
+    .tl-controls { display: flex; align-items: center; gap: 8px; }
     .tl-btn {
+      width: 28px;
+      height: 28px;
       background: #21262d;
       border: 1px solid #30363d;
-      color: #c9d1d9;
-      width: 26px;
-      height: 26px;
       border-radius: 4px;
+      color: #c9d1d9;
       cursor: pointer;
       font-size: 12px;
+    }
+    .tl-btn:hover { background: #30363d; }
+    .tl-btn.active { background: #238636; }
+
+    .scrubber {
+      flex: 1;
+      height: 20px;
+      background: #21262d;
+      border-radius: 4px;
+      position: relative;
+      cursor: pointer;
+    }
+    .scrubber-fill { position: absolute; left: 0; top: 0; height: 100%; background: #58a6ff33; border-radius: 4px; }
+    .scrubber-handle { position: absolute; top: 2px; width: 3px; height: 16px; background: #58a6ff; border-radius: 2px; }
+
+    .time-display { font-family: monospace; font-size: 11px; color: #58a6ff; min-width: 50px; }
+
+    .wiggler-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .wiggler-chip {
+      padding: 3px 8px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      font-size: 9px;
+      cursor: pointer;
+    }
+    .wiggler-chip:hover { border-color: #58a6ff; }
+
+    /* Edge toggles */
+    .edge-toggle {
+      position: fixed;
+      width: 24px;
+      height: 48px;
+      background: rgba(22, 27, 34, 0.9);
+      border: 1px solid #30363d;
+      color: #8b949e;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 95;
     }
-    .tl-btn:hover { background: #30363d; }
-    .tl-btn.active { background: #238636; border-color: #238636; }
+    .edge-toggle:hover { color: #c9d1d9; }
+    .toggle-left { left: 0; top: 50%; transform: translateY(-50%); border-radius: 0 6px 6px 0; border-left: none; }
+    .toggle-right { right: 0; top: 50%; transform: translateY(-50%); border-radius: 6px 0 0 6px; border-right: none; }
+    .toggle-bottom { bottom: 0; left: 50%; transform: translateX(-50%); width: 48px; height: 24px; border-radius: 6px 6px 0 0; border-bottom: none; }
 
-    .timeline-content {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Scrubber track */
-    .scrubber-area {
-      flex: 1;
-      padding: 8px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .scrubber-track {
-      position: relative;
-      height: 24px;
-      background: #0d1117;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .scrubber-fill {
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      background: linear-gradient(90deg, #238636 0%, #58a6ff 100%);
-      border-radius: 4px;
-      opacity: 0.3;
-      pointer-events: none;
-    }
-    .scrubber-handle {
-      position: absolute;
-      top: 2px;
-      width: 4px;
-      height: 20px;
-      background: #58a6ff;
-      border-radius: 2px;
-      transform: translateX(-2px);
-      pointer-events: none;
-    }
-    .scrubber-ticks {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 100%;
-      pointer-events: none;
-    }
-    .scrubber-tick {
-      position: absolute;
-      top: 18px;
-      font-size: 8px;
-      color: #6e7681;
-      transform: translateX(-50%);
-    }
-
-    /* Param curves */
-    .param-curves {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .param-curve {
-      background: #21262d;
-      border-radius: 4px;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .param-curve-label {
-      font-size: 9px;
-      color: #8b949e;
-      min-width: 50px;
-    }
-    .param-curve-canvas {
-      width: 80px;
-      height: 24px;
-      background: #0d1117;
-      border-radius: 2px;
-    }
-    .param-curve-value {
-      font-size: 10px;
-      font-family: 'SF Mono', Monaco, monospace;
-      color: #7ee787;
-      min-width: 40px;
-      text-align: right;
-    }
-
-    /* Wiggler presets */
-    .wiggler-panel {
-      width: 200px;
-      border-left: 1px solid #30363d;
-      padding: 8px;
-      overflow-y: auto;
-    }
-    .wiggler-panel h5 {
-      font-size: 9px;
-      text-transform: uppercase;
-      color: #8b949e;
-      margin-bottom: 6px;
-    }
-    .wiggler-item {
-      padding: 4px 8px;
-      margin: 2px 0;
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 3px;
-      font-size: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .wiggler-item:hover { border-color: #58a6ff; }
-    .wiggler-icon { font-size: 12px; }
+    .no-selection { color: #6e7681; font-size: 10px; font-style: italic; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>Lucid Node Editor</h1>
-      <span class="spacer"></span>
-      <button id="btnClear">Clear</button>
-      <button id="btnExport" class="primary">Export JSON</button>
-    </header>
+  <canvas id="nodeCanvas"></canvas>
 
-    <aside class="sidebar">
-      <h2>Primitives</h2>
+  <!-- Floating toolbar -->
+  <div class="toolbar">
+    <button id="btnPalette" class="active" title="Node Palette (P)">☰ Nodes</button>
+    <button id="btnClear" title="Clear All">✕ Clear</button>
+    <button id="btnPreview" title="Preview Panel (V)">◐ Preview</button>
+    <select id="backendSelect" title="Renderer Backend" style="padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;">
+      <option value="mayfly">Mayfly (WebGL)</option>
+      <option value="stinkyfish">Stinkyfish (WebGPU)</option>
+    </select>
+    <button id="btnTimeline" title="Timeline (T)">⏱ Time</button>
+    <button id="btnExport" title="Export JSON">↓ Export</button>
+  </div>
+
+  <!-- Left panel - Node Palette -->
+  <div class="panel panel-left" id="panelLeft">
+    <div class="palette-section">
+      <div class="palette-title">Primitives</div>
       <div class="palette-item" draggable="true" data-type="sphere">● Sphere</div>
       <div class="palette-item" draggable="true" data-type="box">■ Box</div>
       <div class="palette-item" draggable="true" data-type="torus">◎ Torus</div>
       <div class="palette-item" draggable="true" data-type="cylinder">▮ Cylinder</div>
-      <div class="palette-item" draggable="true" data-type="capsule">⬬ Capsule</div>
       <div class="palette-item" draggable="true" data-type="ellipsoid">⬭ Ellipsoid</div>
-      <div class="palette-item" draggable="true" data-type="cone">▲ Cone</div>
-      <div class="palette-item" draggable="true" data-type="plane">▬ Plane</div>
-      <h2>CSG Operations</h2>
+    </div>
+    <div class="palette-section">
+      <div class="palette-title">CSG Ops</div>
       <div class="palette-item" draggable="true" data-type="union">∪ Union</div>
       <div class="palette-item" draggable="true" data-type="subtract">− Subtract</div>
-      <div class="palette-item" draggable="true" data-type="intersect">∩ Intersect</div>
-      <div class="palette-item" draggable="true" data-type="smoothUnion">⊎ Smooth Union</div>
-      <div class="palette-item" draggable="true" data-type="smoothSubtract">⊖ Smooth Subtract</div>
-      <h2>Transforms</h2>
-      <div class="palette-item" draggable="true" data-type="transform">↔ Transform</div>
-      <div class="palette-item" draggable="true" data-type="material">◐ Material</div>
+      <div class="palette-item" draggable="true" data-type="smoothUnion">⊎ Smooth</div>
+    </div>
+    <div class="palette-section">
+      <div class="palette-title">Modify</div>
+      <div class="palette-item" draggable="true" data-type="transform">↔ Move</div>
+      <div class="palette-item" draggable="true" data-type="material">◐ Color</div>
       <div class="palette-item" draggable="true" data-type="mirror">⇆ Mirror</div>
-      <div class="palette-item" draggable="true" data-type="round">○ Round</div>
-      <h2>Modifiers</h2>
-      <div class="palette-item" draggable="true" data-type="displace">≋ Displace</div>
-      <div class="palette-item" draggable="true" data-type="shell">◌ Shell</div>
-    </aside>
-
-    <main class="canvas-area">
-      <canvas id="nodeCanvas"></canvas>
-    </main>
-
-    <aside class="right-panel">
-      <div class="panel-section">
-        <h3>Load Scene <span class="count" id="sceneCount"></span></h3>
-        <div class="scene-list" id="sceneList">Loading...</div>
-      </div>
-      <div class="panel-section preview-wrap">
-        <h3>Live Preview</h3>
-        <lucid-renderer id="preview" backend="mayfly" quality="medium"></lucid-renderer>
-      </div>
-      <div class="panel-section props-wrap">
-        <h3>Properties</h3>
-        <div class="panel-content" id="propsContent"><p class="no-selection">Select a node to edit</p></div>
-      </div>
-      <div class="panel-section json-wrap">
-        <h3>JSON Output</h3>
-        <div class="panel-content"><textarea id="jsonOutput" readonly></textarea></div>
-      </div>
-      <div class="help-tip">
-        <kbd>Drag</kbd> nodes from palette · <kbd>Double-click</kbd> to delete · <kbd>Scroll</kbd> to zoom
-      </div>
-    </aside>
-
-    <!-- Timeline Footer -->
-    <footer class="timeline-footer" id="timeline">
-      <div class="timeline-header">
-        <h4>⏱ Timeline</h4>
-        <span class="time-display" id="timeDisplay">0.00s</span>
-        <button class="tl-btn" id="btnRewind" title="Rewind">⏮</button>
-        <button class="tl-btn" id="btnPlay" title="Play/Pause">▶</button>
-        <button class="tl-btn" id="btnLoop" title="Loop">🔁</button>
-        <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" style="width:60px" title="Speed">
-        <span style="font-size:10px;color:#8b949e" id="speedLabel">1×</span>
-        <button class="tl-btn" id="btnCollapse" title="Toggle">▼</button>
-      </div>
-      <div class="timeline-content">
-        <div class="scrubber-area">
-          <div class="scrubber-track" id="scrubberTrack">
-            <div class="scrubber-fill" id="scrubberFill"></div>
-            <div class="scrubber-handle" id="scrubberHandle"></div>
-            <div class="scrubber-ticks">
-              <span class="scrubber-tick" style="left:0%">0s</span>
-              <span class="scrubber-tick" style="left:25%">2.5s</span>
-              <span class="scrubber-tick" style="left:50%">5s</span>
-              <span class="scrubber-tick" style="left:75%">7.5s</span>
-              <span class="scrubber-tick" style="left:100%">10s</span>
-            </div>
-          </div>
-          <div class="param-curves" id="paramCurves">
-            <!-- Filled dynamically -->
-          </div>
-        </div>
-        <div class="wiggler-panel">
-          <h5>Wigglers</h5>
-          <div class="wiggler-item" data-fn="sin"><span class="wiggler-icon">∿</span> Sine</div>
-          <div class="wiggler-item" data-fn="bounce"><span class="wiggler-icon">⌢</span> Bounce</div>
-          <div class="wiggler-item" data-fn="noise"><span class="wiggler-icon">〰</span> Noise</div>
-          <div class="wiggler-item" data-fn="pulse"><span class="wiggler-icon">⎍</span> Pulse</div>
-          <h5>Gaits</h5>
-          <div class="wiggler-item" data-fn="walk"><span class="wiggler-icon">🚶</span> Walk</div>
-          <div class="wiggler-item" data-fn="trot"><span class="wiggler-icon">🐕</span> Trot</div>
-          <div class="wiggler-item" data-fn="gallop"><span class="wiggler-icon">🐎</span> Gallop</div>
-          <h5>Physics</h5>
-          <div class="wiggler-item" data-fn="spring"><span class="wiggler-icon">🌀</span> Spring</div>
-          <div class="wiggler-item" data-fn="gravity"><span class="wiggler-icon">⬇</span> Gravity</div>
-        </div>
-      </div>
-    </footer>
+    </div>
   </div>
+  <button class="edge-toggle toggle-left" id="toggleLeft">▶</button>
+
+  <!-- Right panel - Preview & Properties -->
+  <div class="panel panel-right hidden" id="panelRight">
+    <div class="panel-header">Load Scene ▼</div>
+    <div class="scene-picker" id="scenePicker">Loading...</div>
+    <div class="panel-header">Preview</div>
+    <div class="preview-area">
+      <lucid-renderer id="preview" backend="auto" quality="medium"></lucid-renderer>
+    </div>
+    <div class="panel-header">Properties</div>
+    <div class="props-area" id="propsArea"><p class="no-selection">Select a node</p></div>
+  </div>
+  <button class="edge-toggle toggle-right" id="toggleRight">◀</button>
+
+  <!-- Bottom panel - Timeline -->
+  <div class="panel panel-bottom hidden" id="panelBottom">
+    <div class="tl-controls">
+      <button class="tl-btn" id="btnRewind">⏮</button>
+      <button class="tl-btn" id="btnPlay">▶</button>
+      <button class="tl-btn active" id="btnLoop">🔁</button>
+      <span class="time-display" id="timeDisplay">0.00s</span>
+    </div>
+    <div class="scrubber" id="scrubber">
+      <div class="scrubber-fill" id="scrubberFill"></div>
+      <div class="scrubber-handle" id="scrubberHandle"></div>
+    </div>
+    <div class="wiggler-row">
+      <span class="wiggler-chip" data-fn="sin">∿ sin</span>
+      <span class="wiggler-chip" data-fn="bounce">⌢ bounce</span>
+      <span class="wiggler-chip" data-fn="pulse">⎍ pulse</span>
+      <span class="wiggler-chip" data-fn="spring">🌀 spring</span>
+    </div>
+  </div>
+  <button class="edge-toggle toggle-bottom" id="toggleBottom">▲</button>
 
   <script type="module">
-    // Import lucid-renderer web component
     import './components/lucid-renderer.js';
 
     const NODE_SCHEMAS = {
-      // Primitives
       sphere: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 1 } },
       box: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { size: [1, 1, 1] } },
       torus: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { major: 1, minor: 0.3 } },
       cylinder: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.5, h: 1 } },
-      capsule: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.3, h: 1 } },
       ellipsoid: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { radii: [1, 0.6, 0.8] } },
-      cone: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.5, h: 1 } },
-      plane: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { normal: [0, 1, 0], dist: 0 } },
-      // CSG Operations
       union: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
       subtract: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
-      intersect: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
       smoothUnion: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: { k: 0.3 } },
-      smoothSubtract: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: { k: 0.3 } },
-      // Transforms
       transform: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { translate: [0, 0, 0] } },
       material: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { color: [0.8, 0.3, 0.2] } },
       mirror: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { axis: 'x' } },
-      round: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { r: 0.05 } },
-      // Modifiers
-      displace: { cat: 'mod', color: '#7ee787', ins: 1, outs: 1, defaults: { amount: 0.1, frequency: 3 } },
-      shell: { cat: 'mod', color: '#7ee787', ins: 1, outs: 1, defaults: { thickness: 0.1 } },
     };
 
-    // Get lucid-renderer web component
-    const previewEl = document.getElementById('preview');
-    let previewReady = false;
-
-    previewEl.addEventListener('renderer-ready', () => {
-      previewReady = true;
-      console.log('Preview renderer ready');
-    });
-
-    previewEl.addEventListener('render-error', (e) => {
-      console.warn('Preview render error:', e.detail);
-    });
-
+    // ============ NODE GRAPH ============
     class NodeGraph {
       constructor(canvas) {
         this.canvas = canvas;
@@ -514,22 +317,22 @@
         this.selected = null;
         this.dragging = null;
         this.connecting = null;
-        this.pan = { x: 50, y: 50 };
+        this.pan = { x: 100, y: 100 };
         this.zoom = 1;
         this.dragStart = null;
-        this.W = 120; this.H = 50; this.SR = 5;
+        this.W = 110; this.H = 48; this.SR = 5;
         this.resize();
         this.setupEvents();
         this.render();
       }
 
       resize() {
-        const r = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = r.width * devicePixelRatio;
-        this.canvas.height = r.height * devicePixelRatio;
-        this.canvas.style.width = r.width + 'px';
-        this.canvas.style.height = r.height + 'px';
-        this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        this.canvas.style.width = window.innerWidth + 'px';
+        this.canvas.style.height = window.innerHeight + 'px';
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         this.render();
       }
 
@@ -538,20 +341,43 @@
         this.canvas.addEventListener('mousedown', e => this.onDown(e));
         this.canvas.addEventListener('mousemove', e => this.onMove(e));
         this.canvas.addEventListener('mouseup', e => this.onUp(e));
-        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = Math.max(0.4, Math.min(2, this.zoom * (e.deltaY > 0 ? 0.9 : 1.1))); this.render(); }, { passive: false });
+        this.canvas.addEventListener('wheel', e => {
+          e.preventDefault();
+          this.zoom = Math.max(0.3, Math.min(3, this.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+          this.render();
+        }, { passive: false });
         this.canvas.addEventListener('dblclick', e => this.onDbl(e));
         this.canvas.addEventListener('touchstart', e => { e.preventDefault(); this.onDown(e.touches[0]); }, { passive: false });
         this.canvas.addEventListener('touchmove', e => { e.preventDefault(); this.onMove(e.touches[0]); }, { passive: false });
         this.canvas.addEventListener('touchend', e => this.onUp(e));
       }
 
-      pos(e) { const r = this.canvas.getBoundingClientRect(); return { x: (e.clientX - r.left - this.pan.x) / this.zoom, y: (e.clientY - r.top - this.pan.y) / this.zoom }; }
-      nodeAt(p) { for (let i = this.nodes.length - 1; i >= 0; i--) { const n = this.nodes[i]; if (p.x >= n.x && p.x <= n.x + this.W && p.y >= n.y && p.y <= n.y + this.H) return n; } return null; }
+      pos(e) {
+        return {
+          x: (e.clientX - this.pan.x) / this.zoom,
+          y: (e.clientY - this.pan.y) / this.zoom
+        };
+      }
+
+      nodeAt(p) {
+        for (let i = this.nodes.length - 1; i >= 0; i--) {
+          const n = this.nodes[i];
+          if (p.x >= n.x && p.x <= n.x + this.W && p.y >= n.y && p.y <= n.y + this.H) return n;
+        }
+        return null;
+      }
+
       socketAt(p) {
         for (const n of this.nodes) {
           const s = NODE_SCHEMAS[n.type];
-          for (let i = 0; i < s.ins; i++) { const sy = n.y + 26 + i * 14; if (Math.hypot(p.x - n.x, p.y - sy) < 10) return { node: n, dir: 'in', idx: i, x: n.x, y: sy }; }
-          if (s.outs) { const sy = n.y + 26; if (Math.hypot(p.x - (n.x + this.W), p.y - sy) < 10) return { node: n, dir: 'out', idx: 0, x: n.x + this.W, y: sy }; }
+          for (let i = 0; i < s.ins; i++) {
+            const sy = n.y + 24 + i * 12;
+            if (Math.hypot(p.x - n.x, p.y - sy) < 10) return { node: n, dir: 'in', idx: i, x: n.x, y: sy };
+          }
+          if (s.outs) {
+            const sy = n.y + 24;
+            if (Math.hypot(p.x - (n.x + this.W), p.y - sy) < 10) return { node: n, dir: 'out', idx: 0, x: n.x + this.W, y: sy };
+          }
         }
         return null;
       }
@@ -561,16 +387,33 @@
         const sock = this.socketAt(p);
         if (sock?.dir === 'out') { this.connecting = { from: sock, to: p }; return; }
         const node = this.nodeAt(p);
-        if (node) { this.selected = node; this.dragging = { node, ox: p.x - node.x, oy: p.y - node.y }; this.nodes = [...this.nodes.filter(n => n !== node), node]; updateProps(); }
-        else { this.selected = null; this.dragStart = { x: e.clientX - this.pan.x, y: e.clientY - this.pan.y }; updateProps(); }
+        if (node) {
+          this.selected = node;
+          this.dragging = { node, ox: p.x - node.x, oy: p.y - node.y };
+          this.nodes = [...this.nodes.filter(n => n !== node), node];
+          updateProps();
+        } else {
+          this.selected = null;
+          this.dragStart = { x: e.clientX - this.pan.x, y: e.clientY - this.pan.y };
+          updateProps();
+        }
         this.render();
       }
 
       onMove(e) {
         const p = this.pos(e);
         if (this.connecting) { this.connecting.to = p; this.render(); return; }
-        if (this.dragging) { this.dragging.node.x = p.x - this.dragging.ox; this.dragging.node.y = p.y - this.dragging.oy; this.render(); updatePreview(); return; }
-        if (this.dragStart) { this.pan.x = e.clientX - this.dragStart.x; this.pan.y = e.clientY - this.dragStart.y; this.render(); }
+        if (this.dragging) {
+          this.dragging.node.x = p.x - this.dragging.ox;
+          this.dragging.node.y = p.y - this.dragging.oy;
+          this.render();
+          return;
+        }
+        if (this.dragStart) {
+          this.pan.x = e.clientX - this.dragStart.x;
+          this.pan.y = e.clientY - this.dragStart.y;
+          this.render();
+        }
       }
 
       onUp(e) {
@@ -582,9 +425,11 @@
             this.connections.push({ from: this.connecting.from.node.id, to: sock.node.id, ti: sock.idx });
             updatePreview();
           }
-          this.connecting = null; this.render();
+          this.connecting = null;
+          this.render();
         }
-        this.dragging = null; this.dragStart = null;
+        this.dragging = null;
+        this.dragStart = null;
       }
 
       onDbl(e) {
@@ -593,77 +438,157 @@
           this.nodes = this.nodes.filter(n => n !== node);
           this.connections = this.connections.filter(c => c.from !== node.id && c.to !== node.id);
           if (this.selected === node) this.selected = null;
-          this.render(); updatePreview(); updateProps();
+          this.render();
+          updatePreview();
+          updateProps();
         }
       }
 
       addNode(type, x, y) {
-        const s = NODE_SCHEMAS[type]; if (!s) return;
+        const s = NODE_SCHEMAS[type];
+        if (!s) return;
         const node = { id: crypto.randomUUID(), type, x, y, params: JSON.parse(JSON.stringify(s.defaults)) };
-        this.nodes.push(node); this.selected = node;
-        this.render(); updatePreview(); updateProps();
+        this.nodes.push(node);
+        this.selected = node;
+        this.render();
+        updatePreview();
+        updateProps();
       }
 
-      clear() { this.nodes = []; this.connections = []; this.selected = null; this.render(); updatePreview(); updateProps(); }
+      clear() {
+        this.nodes = [];
+        this.connections = [];
+        this.selected = null;
+        this.render();
+        updatePreview();
+        updateProps();
+      }
 
       render() {
-        const ctx = this.ctx, w = this.canvas.width / devicePixelRatio, h = this.canvas.height / devicePixelRatio;
+        const ctx = this.ctx;
+        const w = window.innerWidth, h = window.innerHeight;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
-        ctx.save(); ctx.translate(this.pan.x, this.pan.y); ctx.scale(this.zoom, this.zoom);
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, w, h);
+        ctx.save();
+        ctx.translate(this.pan.x, this.pan.y);
+        ctx.scale(this.zoom, this.zoom);
 
         // Grid
-        ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
-        const gs = 20, sx = Math.floor(-this.pan.x / this.zoom / gs) * gs, sy = Math.floor(-this.pan.y / this.zoom / gs) * gs;
-        for (let x = sx; x < w / this.zoom + 50; x += gs) { ctx.beginPath(); ctx.moveTo(x, sy); ctx.lineTo(x, h / this.zoom + 50); ctx.stroke(); }
-        for (let y = sy; y < h / this.zoom + 50; y += gs) { ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(w / this.zoom + 50, y); ctx.stroke(); }
+        ctx.strokeStyle = '#161b22';
+        ctx.lineWidth = 1;
+        const gs = 40;
+        const sx = Math.floor(-this.pan.x / this.zoom / gs) * gs - gs;
+        const sy = Math.floor(-this.pan.y / this.zoom / gs) * gs - gs;
+        const ex = w / this.zoom + gs;
+        const ey = h / this.zoom + gs;
+        for (let x = sx; x < ex; x += gs) { ctx.beginPath(); ctx.moveTo(x, sy); ctx.lineTo(x, ey); ctx.stroke(); }
+        for (let y = sy; y < ey; y += gs) { ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(ex, y); ctx.stroke(); }
 
         // Connections
         ctx.lineWidth = 2;
         for (const c of this.connections) {
-          const fn = this.nodes.find(n => n.id === c.from), tn = this.nodes.find(n => n.id === c.to);
+          const fn = this.nodes.find(n => n.id === c.from);
+          const tn = this.nodes.find(n => n.id === c.to);
           if (!fn || !tn) continue;
+          const fx = fn.x + this.W, fy = fn.y + 24;
+          const tx = tn.x, ty = tn.y + 24 + c.ti * 12;
           ctx.strokeStyle = '#58a6ff';
           ctx.beginPath();
-          ctx.moveTo(fn.x + this.W, fn.y + 26);
-          ctx.bezierCurveTo(fn.x + this.W + 35, fn.y + 26, tn.x - 35, tn.y + 26 + c.ti * 14, tn.x, tn.y + 26 + c.ti * 14);
+          ctx.moveTo(fx, fy);
+          ctx.bezierCurveTo(fx + 40, fy, tx - 40, ty, tx, ty);
           ctx.stroke();
         }
 
+        // Connecting line
         if (this.connecting) {
-          ctx.strokeStyle = '#58a6ff80'; ctx.setLineDash([4, 4]);
-          ctx.beginPath(); ctx.moveTo(this.connecting.from.x, this.connecting.from.y); ctx.lineTo(this.connecting.to.x, this.connecting.to.y); ctx.stroke();
+          ctx.strokeStyle = '#58a6ff80';
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(this.connecting.from.x, this.connecting.from.y);
+          ctx.lineTo(this.connecting.to.x, this.connecting.to.y);
+          ctx.stroke();
           ctx.setLineDash([]);
         }
 
+        // Nodes
         for (const n of this.nodes) this.drawNode(n);
         ctx.restore();
       }
 
       drawNode(n) {
-        const ctx = this.ctx, s = NODE_SCHEMAS[n.type], sel = n === this.selected;
-        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.roundRect(n.x + 2, n.y + 2, this.W, this.H, 5); ctx.fill();
-        ctx.fillStyle = '#21262d'; ctx.strokeStyle = sel ? '#fff' : s.color; ctx.lineWidth = sel ? 2 : 1;
-        ctx.beginPath(); ctx.roundRect(n.x, n.y, this.W, this.H, 5); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = s.color; ctx.beginPath(); ctx.roundRect(n.x, n.y, this.W, 18, [5, 5, 0, 0]); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 10px system-ui'; ctx.fillText(n.type, n.x + 6, n.y + 13);
-        for (let i = 0; i < s.ins; i++) { const sy = n.y + 26 + i * 14; ctx.fillStyle = '#0d1117'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(n.x, sy, this.SR, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-        if (s.outs) { ctx.fillStyle = '#0d1117'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(n.x + this.W, n.y + 26, this.SR, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-        ctx.fillStyle = '#8b949e'; ctx.font = '8px system-ui';
-        ctx.fillText(Object.entries(n.params).map(([k, v]) => `${k}=${Array.isArray(v) ? '[…]' : v}`).join(' ').slice(0, 20), n.x + 6, n.y + 38);
+        const ctx = this.ctx;
+        const s = NODE_SCHEMAS[n.type];
+        const sel = n === this.selected;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.roundRect(n.x + 3, n.y + 3, this.W, this.H, 6);
+        ctx.fill();
+
+        // Body
+        ctx.fillStyle = '#21262d';
+        ctx.strokeStyle = sel ? '#fff' : s.color;
+        ctx.lineWidth = sel ? 2 : 1;
+        ctx.beginPath();
+        ctx.roundRect(n.x, n.y, this.W, this.H, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // Header
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.roundRect(n.x, n.y, this.W, 18, [6, 6, 0, 0]);
+        ctx.fill();
+
+        // Title
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px system-ui';
+        ctx.fillText(n.type, n.x + 6, n.y + 13);
+
+        // Input sockets
+        for (let i = 0; i < s.ins; i++) {
+          const sy = n.y + 24 + i * 12;
+          ctx.fillStyle = '#0d1117';
+          ctx.strokeStyle = '#58a6ff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(n.x, sy, this.SR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Output socket
+        if (s.outs) {
+          ctx.fillStyle = '#0d1117';
+          ctx.strokeStyle = '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(n.x + this.W, n.y + 24, this.SR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Params preview
+        ctx.fillStyle = '#6e7681';
+        ctx.font = '8px system-ui';
+        const preview = Object.entries(n.params).map(([k, v]) => `${k}=${Array.isArray(v) ? '[…]' : v}`).join(' ').slice(0, 18);
+        ctx.fillText(preview, n.x + 6, n.y + 36);
       }
 
       toJSON() {
         const outs = new Set(this.connections.map(c => c.from));
-        const roots = this.nodes.filter(n => NODE_SCHEMAS[n.type].outs && !outs.has(n.id));
+        const roots = this.nodes.filter(n => NODE_SCHEMAS[n.type]?.outs && !outs.has(n.id));
         if (!roots.length && this.nodes.length) return { root: this.nodeJSON(this.nodes.at(-1)) };
         if (roots.length === 1) return { root: this.nodeJSON(roots[0]) };
         return { root: { type: 'union', children: roots.map(r => this.nodeJSON(r)) } };
       }
 
       nodeJSON(n) {
-        const s = NODE_SCHEMAS[n.type], r = { type: n.type, ...n.params };
-        const ins = this.connections.filter(c => c.to === n.id).sort((a, b) => a.ti - b.ti).map(c => this.nodes.find(x => x.id === c.from)).filter(Boolean).map(x => this.nodeJSON(x));
+        const s = NODE_SCHEMAS[n.type];
+        const r = { type: n.type, ...n.params };
+        const ins = this.connections.filter(c => c.to === n.id).sort((a, b) => a.ti - b.ti)
+          .map(c => this.nodes.find(x => x.id === c.from)).filter(Boolean).map(x => this.nodeJSON(x));
         if (s.cat === 'csg' && ins.length) r.children = ins;
         else if (s.cat === 'wrap' && ins.length) r.child = ins[0];
         return r;
@@ -671,30 +596,89 @@
 
       fromJSON(scene) {
         this.clear();
-        if (scene.root) this._fromNode(scene.root, 250, 80);
-        this.render(); updatePreview();
+        if (scene.root) this._fromNode(scene.root, 300, 150);
+        this.render();
+        updatePreview();
       }
 
       _fromNode(node, x, y) {
-        const s = NODE_SCHEMAS[node.type]; if (!s) return null;
+        const s = NODE_SCHEMAS[node.type];
+        if (!s) return null;
         const id = crypto.randomUUID();
         const params = {};
         for (const k of Object.keys(s.defaults)) params[k] = node[k] ?? s.defaults[k];
         this.nodes.push({ id, type: node.type, x, y, params });
         let cy = y;
-        for (let i = 0; i < (node.children?.length || (node.child ? 1 : 0)); i++) {
-          const child = node.children?.[i] || node.child;
-          const cid = this._fromNode(child, x - 160, cy);
+        const children = node.children || (node.child ? [node.child] : []);
+        for (let i = 0; i < children.length; i++) {
+          const cid = this._fromNode(children[i], x - 150, cy);
           if (cid) this.connections.push({ from: cid, to: id, ti: i });
-          cy += 70;
+          cy += 80;
         }
         return id;
       }
     }
 
+    // ============ INIT ============
     const canvas = document.getElementById('nodeCanvas');
     const graph = new NodeGraph(canvas);
-    window.graph = graph;
+    const previewEl = document.getElementById('preview');
+    const backendSelect = document.getElementById('backendSelect');
+
+    // Check WebGPU support and sync dropdown
+    if (!navigator.gpu) {
+      backendSelect.querySelector('option[value="stinkyfish"]').disabled = true;
+      backendSelect.querySelector('option[value="stinkyfish"]').textContent = 'Stinkyfish (no WebGPU)';
+      backendSelect.value = 'mayfly';
+    } else {
+      // Default to stinkyfish if WebGPU available
+      backendSelect.value = 'stinkyfish';
+    }
+
+    // Sync dropdown when renderer reports its actual backend
+    previewEl.addEventListener('renderer-ready', (e) => {
+      if (e.detail?.backend) {
+        backendSelect.value = e.detail.backend;
+      }
+    });
+
+    // Backend switching
+    backendSelect.addEventListener('change', () => {
+      previewEl.backend = backendSelect.value;
+      updatePreview();
+    });
+
+    // Panel toggles
+    const panelLeft = document.getElementById('panelLeft');
+    const panelRight = document.getElementById('panelRight');
+    const panelBottom = document.getElementById('panelBottom');
+
+    document.getElementById('toggleLeft').addEventListener('click', () => panelLeft.classList.toggle('hidden'));
+    document.getElementById('toggleRight').addEventListener('click', () => panelRight.classList.toggle('hidden'));
+    document.getElementById('toggleBottom').addEventListener('click', () => panelBottom.classList.toggle('hidden'));
+
+    document.getElementById('btnPalette').addEventListener('click', () => {
+      panelLeft.classList.toggle('hidden');
+      document.getElementById('btnPalette').classList.toggle('active', !panelLeft.classList.contains('hidden'));
+    });
+    document.getElementById('btnPreview').addEventListener('click', () => {
+      panelRight.classList.toggle('hidden');
+      document.getElementById('btnPreview').classList.toggle('active', !panelRight.classList.contains('hidden'));
+    });
+    document.getElementById('btnTimeline').addEventListener('click', () => {
+      panelBottom.classList.toggle('hidden');
+      document.getElementById('btnTimeline').classList.toggle('active', !panelBottom.classList.contains('hidden'));
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => graph.clear());
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const json = graph.toJSON();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lucid-scene.json';
+      a.click();
+    });
 
     // Drag from palette
     document.querySelectorAll('.palette-item').forEach(item => {
@@ -705,61 +689,45 @@
       e.preventDefault();
       const type = e.dataTransfer.getData('nodeType');
       if (type) {
-        const r = canvas.getBoundingClientRect();
-        graph.addNode(type, (e.clientX - r.left - graph.pan.x) / graph.zoom, (e.clientY - r.top - graph.pan.y) / graph.zoom);
+        const p = graph.pos(e);
+        graph.addNode(type, p.x, p.y);
       }
     });
 
-    // Update preview using lucid-renderer web component
+    // Preview
     function updatePreview() {
       const json = graph.toJSON();
-      document.getElementById('jsonOutput').value = JSON.stringify(json, null, 2);
-
       if (!json.root) return;
-
-      // Add default camera if not present
-      if (!json.camera) {
-        json.camera = { distance: 6, theta: 0.4, phi: 0.5 };
-      }
-
-      try {
-        previewEl.loadSceneJson(json);
-      } catch (e) {
-        console.error('Preview error:', e);
-      }
+      json.camera = { distance: 6, theta: 0.4, phi: 0.5 };
+      try { previewEl.loadSceneJson(json); } catch (e) { console.error(e); }
     }
 
+    // Properties
     function updateProps() {
-      const c = document.getElementById('propsContent');
+      const area = document.getElementById('propsArea');
       if (!graph.selected) {
-        c.innerHTML = '<p class="no-selection">Select a node to edit</p>';
+        area.innerHTML = '<p class="no-selection">Select a node</p>';
         return;
       }
-
       const n = graph.selected;
-      const schema = NODE_SCHEMAS[n.type];
-
-      let h = `<div class="prop-row"><label>Type</label><input value="${n.type}" disabled></div>`;
-
+      let h = '';
       for (const [k, v] of Object.entries(n.params)) {
         if (Array.isArray(v)) {
-          h += `<div class="prop-row"><label>${k}</label><input value="${v.join(', ')}" data-p="${k}" data-arr="1" placeholder="x, y, z"></div>`;
+          h += `<div class="prop-row"><label>${k}</label><input value="${v.join(', ')}" data-p="${k}" data-arr></div>`;
         } else if (k === 'axis') {
           h += `<div class="prop-row"><label>${k}</label><select data-p="${k}">
-            <option value="x" ${v === 'x' ? 'selected' : ''}>X</option>
-            <option value="y" ${v === 'y' ? 'selected' : ''}>Y</option>
-            <option value="z" ${v === 'z' ? 'selected' : ''}>Z</option>
+            <option ${v === 'x' ? 'selected' : ''}>x</option>
+            <option ${v === 'y' ? 'selected' : ''}>y</option>
+            <option ${v === 'z' ? 'selected' : ''}>z</option>
           </select></div>`;
         } else {
           h += `<div class="prop-row"><label>${k}</label><input type="number" step="0.1" value="${v}" data-p="${k}"></div>`;
         }
       }
-
-      c.innerHTML = h;
-
-      c.querySelectorAll('[data-p]').forEach(inp => {
+      area.innerHTML = h;
+      area.querySelectorAll('[data-p]').forEach(inp => {
         inp.addEventListener('input', () => {
-          if (inp.dataset.arr) {
+          if (inp.dataset.arr !== undefined) {
             n.params[inp.dataset.p] = inp.value.split(',').map(x => parseFloat(x.trim()) || 0);
           } else if (inp.type === 'number') {
             n.params[inp.dataset.p] = parseFloat(inp.value) || 0;
@@ -769,115 +737,45 @@
           graph.render();
           updatePreview();
         });
-        inp.addEventListener('change', () => inp.dispatchEvent(new Event('input')));
       });
     }
 
-    function exportJSON() {
-      const json = graph.toJSON();
-      json.title = 'Node Editor Export';
-      json.version = '1.0';
-      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'lucid-scene.json';
-      a.click();
-    }
-
-    // Load comprehensive scene list from TOC
-    async function loadSceneList() {
+    // Scene picker - load ALL scenes
+    async function loadScenes() {
       try {
         const resp = await fetch('./scenes/toc.json');
         const toc = await resp.json();
-        const list = document.getElementById('sceneList');
-        const countEl = document.getElementById('sceneCount');
-
-        // Skip categories that are complex/physics/animation
-        const skipCats = ['recent', 'archive', 'physics', 'anim', 'animation'];
-
+        const picker = document.getElementById('scenePicker');
         let html = '';
-        let totalScenes = 0;
-
         for (const cat of toc.categories) {
-          if (skipCats.includes(cat.id)) continue;
-
-          const scenes = cat.scenes.slice(0, 6); // Max 6 per category
-          if (scenes.length === 0) continue;
-
-          html += `<div class="scene-category">
-            <div class="scene-category-title">${cat.title || cat.id}</div>`;
-
-          for (const s of scenes) {
+          if (cat.id === 'recent') continue; // Skip recent (duplicates)
+          for (const s of cat.scenes) {
             html += `<div class="scene-item" data-path="${s.path}">${s.title}</div>`;
-            totalScenes++;
           }
-
-          html += '</div>';
         }
-
-        list.innerHTML = html;
-        countEl.textContent = `(${totalScenes})`;
-
-        // Attach click handlers
-        list.querySelectorAll('.scene-item').forEach(el => {
+        picker.innerHTML = html;
+        picker.querySelectorAll('.scene-item').forEach(el => {
           el.addEventListener('click', async () => {
-            // Update active state
-            list.querySelectorAll('.scene-item').forEach(x => x.classList.remove('active'));
+            picker.querySelectorAll('.scene-item').forEach(x => x.classList.remove('active'));
             el.classList.add('active');
-
             try {
               const resp = await fetch(`./scenes/${el.dataset.path}`);
               const json = await resp.json();
               graph.fromJSON(json);
-            } catch (e) {
-              console.error('Failed to load scene:', e);
-            }
+            } catch (e) { console.error(e); }
           });
         });
-
       } catch (e) {
-        document.getElementById('sceneList').innerHTML = '<p class="no-selection">Failed to load scenes</p>';
-        console.error('Failed to load TOC:', e);
+        document.getElementById('scenePicker').innerHTML = '<p class="no-selection">Failed to load</p>';
       }
     }
 
-    // Button handlers
-    document.getElementById('btnClear').addEventListener('click', () => graph.clear());
-    document.getElementById('btnExport').addEventListener('click', exportJSON);
-
-    // ============ TIMELINE SYSTEM ============
-    const timeline = {
-      time: 0,
-      duration: 10,
-      playing: false,
-      loop: true,
-      speed: 1,
-      animatedParams: []
-    };
-
-    // Wiggler functions
-    const wigglers = {
-      sin: (t, freq = 1, amp = 1) => Math.sin(t * freq * Math.PI * 2) * amp,
-      bounce: (t, freq = 1, amp = 1) => Math.abs(Math.sin(t * freq * Math.PI)) * amp,
-      noise: (t, freq = 1, amp = 1) => (Math.sin(t * 12.9898) * 43758.5453 % 1 - 0.5) * amp * 2,
-      pulse: (t, freq = 1, amp = 1) => (Math.sin(t * freq * Math.PI * 2) > 0 ? 1 : 0) * amp,
-      walk: (t, phase = 0) => Math.sin((t + phase) * Math.PI * 2) * 0.3,
-      trot: (t, phase = 0) => Math.sin((t * 2 + phase) * Math.PI * 2) * 0.4,
-      gallop: (t, phase = 0) => Math.sin((t * 3 + phase) * Math.PI * 2) * 0.5,
-      spring: (t, k = 5, d = 0.3) => Math.exp(-d * t) * Math.cos(k * t),
-      gravity: (t) => Math.max(0, 1 - 4.9 * t * t)
-    };
-
-    const timeDisplay = document.getElementById('timeDisplay');
-    const scrubberTrack = document.getElementById('scrubberTrack');
+    // Timeline
+    const timeline = { time: 0, duration: 10, playing: false, loop: true };
+    const scrubber = document.getElementById('scrubber');
     const scrubberFill = document.getElementById('scrubberFill');
     const scrubberHandle = document.getElementById('scrubberHandle');
-    const paramCurvesEl = document.getElementById('paramCurves');
-    const btnPlay = document.getElementById('btnPlay');
-    const btnLoop = document.getElementById('btnLoop');
-    const btnCollapse = document.getElementById('btnCollapse');
-    const speedSlider = document.getElementById('speedSlider');
-    const speedLabel = document.getElementById('speedLabel');
+    const timeDisplay = document.getElementById('timeDisplay');
 
     function updateScrubber() {
       const pct = (timeline.time / timeline.duration) * 100;
@@ -886,145 +784,42 @@
       timeDisplay.textContent = timeline.time.toFixed(2) + 's';
     }
 
-    function updateParamCurves() {
-      // Create mini sparkline for each animated param
-      paramCurvesEl.innerHTML = timeline.animatedParams.map(p => `
-        <div class="param-curve">
-          <span class="param-curve-label">${p.name}</span>
-          <canvas class="param-curve-canvas" data-param="${p.name}" width="80" height="24"></canvas>
-          <span class="param-curve-value" data-val="${p.name}">${p.fn(timeline.time).toFixed(2)}</span>
-        </div>
-      `).join('');
-
-      // Draw sparklines
-      timeline.animatedParams.forEach(p => {
-        const canvas = paramCurvesEl.querySelector(`canvas[data-param="${p.name}"]`);
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, 80, 24);
-        ctx.strokeStyle = '#58a6ff';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (let x = 0; x < 80; x++) {
-          const t = (x / 80) * timeline.duration;
-          const v = p.fn(t);
-          const y = 12 - v * 10;
-          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // Draw playhead
-        const px = (timeline.time / timeline.duration) * 80;
-        ctx.strokeStyle = '#f0883e';
-        ctx.beginPath();
-        ctx.moveTo(px, 0);
-        ctx.lineTo(px, 24);
-        ctx.stroke();
-      });
-
-      // Update values
-      timeline.animatedParams.forEach(p => {
-        const valEl = paramCurvesEl.querySelector(`[data-val="${p.name}"]`);
-        if (valEl) valEl.textContent = p.fn(timeline.time).toFixed(2);
-      });
-    }
-
-    let lastFrameTime = 0;
-    function animationLoop(timestamp) {
+    let lastFrame = 0;
+    function animate(ts) {
       if (timeline.playing) {
-        const dt = (timestamp - lastFrameTime) / 1000 * timeline.speed;
-        timeline.time += dt;
+        timeline.time += (ts - lastFrame) / 1000;
         if (timeline.time >= timeline.duration) {
           timeline.time = timeline.loop ? 0 : timeline.duration;
-          if (!timeline.loop) {
-            timeline.playing = false;
-            btnPlay.textContent = '▶';
-            btnPlay.classList.remove('active');
-          }
         }
         updateScrubber();
-        updateParamCurves();
-
-        // Update preview time
-        if (previewEl.renderer) {
-          previewEl.renderer.time = timeline.time;
-        }
       }
-      lastFrameTime = timestamp;
-      requestAnimationFrame(animationLoop);
+      lastFrame = ts;
+      requestAnimationFrame(animate);
     }
-    requestAnimationFrame(animationLoop);
+    requestAnimationFrame(animate);
 
-    // Scrubber interaction
+    document.getElementById('btnPlay').addEventListener('click', function() {
+      timeline.playing = !timeline.playing;
+      this.textContent = timeline.playing ? '⏸' : '▶';
+      this.classList.toggle('active', timeline.playing);
+    });
+    document.getElementById('btnRewind').addEventListener('click', () => { timeline.time = 0; updateScrubber(); });
+    document.getElementById('btnLoop').addEventListener('click', function() {
+      timeline.loop = !timeline.loop;
+      this.classList.toggle('active', timeline.loop);
+    });
+
     let scrubbing = false;
-    function scrubTo(e) {
-      const rect = scrubberTrack.getBoundingClientRect();
-      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      timeline.time = pct * timeline.duration;
-      updateScrubber();
-      updateParamCurves();
-    }
-
-    scrubberTrack.addEventListener('mousedown', e => { scrubbing = true; scrubTo(e); });
+    scrubber.addEventListener('mousedown', e => { scrubbing = true; scrubTo(e); });
     window.addEventListener('mousemove', e => { if (scrubbing) scrubTo(e); });
     window.addEventListener('mouseup', () => { scrubbing = false; });
-
-    // Touch support
-    scrubberTrack.addEventListener('touchstart', e => { scrubbing = true; scrubTo(e.touches[0]); }, { passive: true });
-    window.addEventListener('touchmove', e => { if (scrubbing) scrubTo(e.touches[0]); }, { passive: true });
-    window.addEventListener('touchend', () => { scrubbing = false; });
-
-    // Controls
-    btnPlay.addEventListener('click', () => {
-      timeline.playing = !timeline.playing;
-      btnPlay.textContent = timeline.playing ? '⏸' : '▶';
-      btnPlay.classList.toggle('active', timeline.playing);
-      lastFrameTime = performance.now();
-    });
-
-    document.getElementById('btnRewind').addEventListener('click', () => {
-      timeline.time = 0;
+    function scrubTo(e) {
+      const rect = scrubber.getBoundingClientRect();
+      timeline.time = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * timeline.duration;
       updateScrubber();
-      updateParamCurves();
-    });
+    }
 
-    btnLoop.addEventListener('click', () => {
-      timeline.loop = !timeline.loop;
-      btnLoop.classList.toggle('active', timeline.loop);
-    });
-    btnLoop.classList.add('active'); // Default on
-
-    speedSlider.addEventListener('input', () => {
-      timeline.speed = parseFloat(speedSlider.value);
-      speedLabel.textContent = timeline.speed.toFixed(1) + '×';
-    });
-
-    btnCollapse.addEventListener('click', () => {
-      document.getElementById('timeline').classList.toggle('collapsed');
-      btnCollapse.textContent = document.getElementById('timeline').classList.contains('collapsed') ? '▲' : '▼';
-    });
-
-    // Wiggler presets
-    document.querySelectorAll('.wiggler-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const fn = item.dataset.fn;
-        if (wigglers[fn]) {
-          const name = fn + '_' + timeline.animatedParams.length;
-          timeline.animatedParams.push({ name, fn: t => wigglers[fn](t) });
-          updateParamCurves();
-        }
-      });
-    });
-
-    // Add some default animated params for demo
-    timeline.animatedParams = [
-      { name: 'wobble', fn: t => wigglers.sin(t, 0.5, 0.5) },
-      { name: 'bounce', fn: t => wigglers.bounce(t, 1, 0.8) }
-    ];
-    updateParamCurves();
-
-    // Initialize
-    loadSceneList();
+    loadScenes();
   </script>
 </body>
 </html>
