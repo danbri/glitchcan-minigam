@@ -210,6 +210,7 @@
     </select>
     <button id="btnClear" title="Clear All">✕ Clear</button>
     <button id="btnExport" title="Export JSON">↓ Export</button>
+    <button id="btnPrint" title="Print Layout">🖨 Print</button>
   </div>
 
   <!-- Left panel - Node Palette -->
@@ -233,6 +234,10 @@
       <div class="palette-item" draggable="true" data-type="transform">↔ Move</div>
       <div class="palette-item" draggable="true" data-type="material">◐ Color</div>
       <div class="palette-item" draggable="true" data-type="mirror">⇆ Mirror</div>
+    </div>
+    <div class="palette-section">
+      <div class="palette-title">Organize</div>
+      <div class="palette-item" draggable="true" data-type="group">📦 Group</div>
     </div>
   </div>
   <button class="edge-toggle toggle-left" id="toggleLeft">▶</button>
@@ -286,6 +291,7 @@
       transform: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { translate: [0, 0, 0] } },
       material: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { color: [0.8, 0.3, 0.2] } },
       mirror: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { axis: 'x' } },
+      group: { cat: 'container', color: '#6e7681', ins: 0, outs: 1, defaults: { title: 'Group', collapsed: false, width: 250, height: 180 } },
     };
 
     // ============ NODE GRAPH ============
@@ -298,13 +304,29 @@
         this.selected = null;
         this.dragging = null;
         this.connecting = null;
+        this.dragOver = null; // Group drag-over highlighting
         this.pan = { x: 100, y: 100 };
         this.zoom = 1;
         this.dragStart = null;
         this.W = 110; this.H = 48; this.SR = 5;
+        this.TH = 24; // Title bar height for groups
+        this.connectHover = null; // Socket being hovered while connecting
+        this.dropTarget = null;   // Group being hovered for drop
+        this.glowPhase = 0;       // Animation phase for glow effects
+        this.loadViewState();     // Restore pan/zoom from localStorage
         this.resize();
         this.setupEvents();
+        this.startGlowAnimation();
         this.render();
+      }
+
+      startGlowAnimation() {
+        const animate = () => {
+          this.glowPhase = (this.glowPhase + 0.05) % (Math.PI * 2);
+          if (this.connecting || this.connectHover) this.render();
+          requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
       }
 
       resize() {
@@ -324,13 +346,212 @@
         this.canvas.addEventListener('mouseup', e => this.onUp(e));
         this.canvas.addEventListener('wheel', e => {
           e.preventDefault();
+          const oldZoom = this.zoom;
           this.zoom = Math.max(0.3, Math.min(3, this.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+          // Zoom toward cursor position
+          const rect = this.canvas.getBoundingClientRect();
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+          this.pan.x = mx - (mx - this.pan.x) * (this.zoom / oldZoom);
+          this.pan.y = my - (my - this.pan.y) * (this.zoom / oldZoom);
           this.render();
+          this.saveViewState();
         }, { passive: false });
         this.canvas.addEventListener('dblclick', e => this.onDbl(e));
-        this.canvas.addEventListener('touchstart', e => { e.preventDefault(); this.onDown(e.touches[0]); }, { passive: false });
-        this.canvas.addEventListener('touchmove', e => { e.preventDefault(); this.onMove(e.touches[0]); }, { passive: false });
-        this.canvas.addEventListener('touchend', e => this.onUp(e));
+
+        // Touch handling with pinch-zoom
+        this.touchState = { touches: [], lastDist: 0, lastCenter: null, mode: null };
+
+        this.canvas.addEventListener('touchstart', e => {
+          e.preventDefault();
+          const touches = Array.from(e.touches);
+          this.touchState.touches = touches;
+
+          if (touches.length === 2) {
+            // Two fingers = pinch zoom mode
+            this.touchState.mode = 'pinch';
+            this.touchState.lastDist = this.getTouchDistance(touches);
+            this.touchState.lastCenter = this.getTouchCenter(touches);
+            this.canvas.style.cursor = 'zoom-in';
+          } else if (touches.length === 1) {
+            // Single finger = check for node interaction first
+            const p = this.pos(touches[0]);
+            const sock = this.socketAt(p);
+            const node = this.nodeAt(p);
+
+            if (sock?.dir === 'out') {
+              this.touchState.mode = 'connect';
+              this.connecting = { from: sock, to: p };
+              this.haptic('light');
+            } else if (node) {
+              this.touchState.mode = 'drag';
+              this.selected = node;
+              this.dragging = { node, ox: p.x - node.x, oy: p.y - node.y };
+              this.nodes = [...this.nodes.filter(n => n !== node), node];
+              this.haptic('light');
+              updateProps();
+            } else {
+              this.touchState.mode = 'pan';
+              this.dragStart = { x: touches[0].clientX - this.pan.x, y: touches[0].clientY - this.pan.y };
+            }
+            this.render();
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', e => {
+          e.preventDefault();
+          const touches = Array.from(e.touches);
+
+          if (touches.length === 2 && this.touchState.mode === 'pinch') {
+            // Pinch zoom
+            const newDist = this.getTouchDistance(touches);
+            const newCenter = this.getTouchCenter(touches);
+            const scale = newDist / this.touchState.lastDist;
+            const oldZoom = this.zoom;
+
+            this.zoom = Math.max(0.3, Math.min(3, this.zoom * scale));
+
+            // Zoom toward pinch center
+            this.pan.x = newCenter.x - (newCenter.x - this.pan.x) * (this.zoom / oldZoom);
+            this.pan.y = newCenter.y - (newCenter.y - this.pan.y) * (this.zoom / oldZoom);
+
+            // Also allow panning while zooming
+            if (this.touchState.lastCenter) {
+              this.pan.x += newCenter.x - this.touchState.lastCenter.x;
+              this.pan.y += newCenter.y - this.touchState.lastCenter.y;
+            }
+
+            this.touchState.lastDist = newDist;
+            this.touchState.lastCenter = newCenter;
+            this.render();
+          } else if (touches.length === 1) {
+            const t = touches[0];
+            const p = this.pos(t);
+
+            if (this.touchState.mode === 'connect' && this.connecting) {
+              this.connecting.to = p;
+              // Check if over valid socket for feedback
+              const sock = this.socketAt(p);
+              this.connectHover = sock?.dir === 'in' ? sock : null;
+              this.render();
+            } else if (this.touchState.mode === 'drag' && this.dragging) {
+              const newX = p.x - this.dragging.ox;
+              const newY = p.y - this.dragging.oy;
+              this.dragging.node.x = newX;
+              this.dragging.node.y = newY;
+              // Move children if dragging a group
+              if (this.dragging.node.type === 'group') {
+                const children = this.getGroupChildren(this.dragging.node.id);
+                const dx = newX - (this.dragging.lastX || newX);
+                const dy = newY - (this.dragging.lastY || newY);
+                for (const c of children) {
+                  c.x += dx;
+                  c.y += dy;
+                }
+                this.dragging.lastX = newX;
+                this.dragging.lastY = newY;
+              }
+              // Check for group drop target
+              this.dropTarget = this.findDropTarget(this.dragging.node);
+              this.render();
+            } else if (this.touchState.mode === 'pan' && this.dragStart) {
+              this.pan.x = t.clientX - this.dragStart.x;
+              this.pan.y = t.clientY - this.dragStart.y;
+              this.render();
+            }
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', e => {
+          const wasConnecting = this.touchState.mode === 'connect';
+          const wasDragging = this.touchState.mode === 'drag';
+
+          if (wasConnecting && this.connecting) {
+            const lastTouch = e.changedTouches[0];
+            const p = this.pos(lastTouch);
+            const sock = this.socketAt(p);
+            if (sock?.dir === 'in' && sock.node !== this.connecting.from.node) {
+              this.connections = this.connections.filter(c => !(c.to === sock.node.id && c.ti === sock.idx));
+              this.connections.push({ from: this.connecting.from.node.id, to: sock.node.id, ti: sock.idx });
+              this.haptic('medium');
+              updatePreview();
+            } else if (sock) {
+              // Invalid connection - haptic feedback
+              this.haptic('heavy');
+            }
+            this.connecting = null;
+            this.connectHover = null;
+          }
+
+          if (wasDragging && this.dragging) {
+            // Check for group drop
+            if (this.dropTarget && this.dragging.node.id !== this.dropTarget.id) {
+              this.addToGroup(this.dragging.node.id, this.dropTarget.id);
+              this.haptic('medium');
+            }
+            this.dropTarget = null;
+          }
+
+          this.touchState.mode = null;
+          this.dragging = null;
+          this.dragStart = null;
+          this.canvas.style.cursor = 'grab';
+          this.render();
+          this.saveViewState();
+        });
+      }
+
+      // Touch helpers
+      getTouchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      getTouchCenter(touches) {
+        return {
+          x: (touches[0].clientX + touches[1].clientX) / 2,
+          y: (touches[0].clientY + touches[1].clientY) / 2
+        };
+      }
+
+      findDropTarget(node) {
+        if (node.type === 'group') return null; // Can't drop groups into groups (for now)
+        for (const n of this.nodes) {
+          if (n.type === 'group' && !n.params.collapsed && n.id !== node.id && n.id !== node.parent) {
+            const p = { x: node.x + this.W / 2, y: node.y + this.H / 2 };
+            if (p.x > n.x && p.x < n.x + n.params.width && p.y > n.y && p.y < n.y + n.params.height) {
+              return n;
+            }
+          }
+        }
+        return null;
+      }
+
+      // Haptic feedback
+      haptic(style = 'light') {
+        if (!navigator.vibrate) return;
+        const patterns = { light: 10, medium: 25, heavy: [30, 20, 30] };
+        navigator.vibrate(patterns[style] || 10);
+      }
+
+      // Persist view state
+      saveViewState() {
+        const state = { pan: this.pan, zoom: this.zoom };
+        try {
+          localStorage.setItem('lucid-node-editor-view', JSON.stringify(state));
+        } catch (e) { /* localStorage might be unavailable */ }
+      }
+
+      loadViewState() {
+        try {
+          const saved = localStorage.getItem('lucid-node-editor-view');
+          if (saved) {
+            const state = JSON.parse(saved);
+            this.pan = state.pan || this.pan;
+            this.zoom = state.zoom || this.zoom;
+          }
+        } catch (e) { /* ignore */ }
       }
 
       pos(e) {
@@ -343,14 +564,89 @@
       nodeAt(p) {
         for (let i = this.nodes.length - 1; i >= 0; i--) {
           const n = this.nodes[i];
-          if (p.x >= n.x && p.x <= n.x + this.W && p.y >= n.y && p.y <= n.y + this.H) return n;
+          const w = n.type === 'group' ? n.params.width : this.W;
+          const h = n.type === 'group' ? (n.params.collapsed ? this.TH : n.params.height) : this.H;
+          if (p.x >= n.x && p.x <= n.x + w && p.y >= n.y && p.y <= n.y + h) return n;
         }
         return null;
+      }
+
+      // Check if point is in group title bar
+      inGroupTitle(p, group) {
+        if (group.type !== 'group') return false;
+        const w = group.params.width;
+        return p.x >= group.x && p.x <= group.x + w && p.y >= group.y && p.y <= group.y + this.TH;
+      }
+
+      // Get all nodes that are children of a group
+      getGroupChildren(groupId) {
+        return this.nodes.filter(n => n.parent === groupId);
+      }
+
+      // Add node to group
+      addToGroup(nodeId, groupId) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        const group = this.nodes.find(n => n.id === groupId);
+        if (!node || !group || group.type !== 'group') return;
+        node.parent = groupId;
+        this.render();
+      }
+
+      // Remove node from group
+      removeFromGroup(nodeId) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        delete node.parent;
+        this.render();
+      }
+
+      // Toggle group collapsed state
+      toggleGroupCollapse(groupId) {
+        const group = this.nodes.find(n => n.id === groupId);
+        if (!group || group.type !== 'group') return;
+        group.params.collapsed = !group.params.collapsed;
+        this.render();
+      }
+
+      // Update group bounds to fit children
+      fitGroupToChildren(groupId) {
+        const children = this.getGroupChildren(groupId);
+        const group = this.nodes.find(n => n.id === groupId);
+        if (!group || children.length === 0) return;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const c of children) {
+          const w = c.type === 'group' ? c.params.width : this.W;
+          const h = c.type === 'group' ? c.params.height : this.H;
+          minX = Math.min(minX, c.x);
+          minY = Math.min(minY, c.y);
+          maxX = Math.max(maxX, c.x + w);
+          maxY = Math.max(maxY, c.y + h);
+        }
+
+        const pad = 15;
+        group.params.width = Math.max(250, maxX - minX + pad * 2);
+        group.params.height = Math.max(100, maxY - minY + pad * 2 + this.TH);
+        this.render();
       }
 
       socketAt(p) {
         for (const n of this.nodes) {
           const s = NODE_SCHEMAS[n.type];
+
+          // Handle group sockets (on title bar)
+          if (n.type === 'group') {
+            if (s.outs) {
+              const sx = n.x + n.params.width;
+              const sy = n.y + this.TH / 2;
+              if (Math.hypot(p.x - sx, p.y - sy) < 10) {
+                return { node: n, dir: 'out', idx: 0, x: sx, y: sy };
+              }
+            }
+            continue;
+          }
+
+          // Regular node sockets
           for (let i = 0; i < s.ins; i++) {
             const sy = n.y + 24 + i * 12;
             if (Math.hypot(p.x - n.x, p.y - sy) < 10) return { node: n, dir: 'in', idx: i, x: n.x, y: sy };
@@ -371,6 +667,14 @@
         if (node) {
           this.selected = node;
           this.dragging = { node, ox: p.x - node.x, oy: p.y - node.y };
+
+          // Track children for group dragging
+          if (node.type === 'group') {
+            this.dragging.children = this.getGroupChildren(node.id);
+            this.dragging.lastX = node.x;
+            this.dragging.lastY = node.y;
+          }
+
           this.nodes = [...this.nodes.filter(n => n !== node), node];
           updateProps();
         } else {
@@ -383,10 +687,45 @@
 
       onMove(e) {
         const p = this.pos(e);
-        if (this.connecting) { this.connecting.to = p; this.render(); return; }
+        if (this.connecting) {
+          this.connecting.to = p;
+          // Detect valid target sockets for glow feedback
+          const sock = this.socketAt(p);
+          this.connectHover = sock?.dir === 'in' && sock.node !== this.connecting.from.node ? sock : null;
+          this.render();
+          return;
+        }
         if (this.dragging) {
-          this.dragging.node.x = p.x - this.dragging.ox;
-          this.dragging.node.y = p.y - this.dragging.oy;
+          const node = this.dragging.node;
+          node.x = p.x - this.dragging.ox;
+          node.y = p.y - this.dragging.oy;
+
+          // Check if dragging over a group (for drop target highlighting)
+          if (node.type !== 'group') {
+            this.dragOver = null;
+            for (const n of this.nodes) {
+              if (n.type === 'group' && n !== node && !n.params.collapsed) {
+                const w = n.params.width, h = n.params.height;
+                if (p.x >= n.x && p.x <= n.x + w && p.y >= n.y && p.y <= n.y + h) {
+                  this.dragOver = n;
+                  break;
+                }
+              }
+            }
+          }
+
+          // Move children if dragging a group
+          if (node.type === 'group' && this.dragging.children) {
+            const dx = node.x - this.dragging.lastX;
+            const dy = node.y - this.dragging.lastY;
+            for (const child of this.dragging.children) {
+              child.x += dx;
+              child.y += dy;
+            }
+            this.dragging.lastX = node.x;
+            this.dragging.lastY = node.y;
+          }
+
           this.render();
           return;
         }
@@ -404,18 +743,49 @@
           if (sock?.dir === 'in' && sock.node !== this.connecting.from.node) {
             this.connections = this.connections.filter(c => !(c.to === sock.node.id && c.ti === sock.idx));
             this.connections.push({ from: this.connecting.from.node.id, to: sock.node.id, ti: sock.idx });
+            this.haptic('medium');
             updatePreview();
+          } else if (sock) {
+            // Invalid connection (e.g., output to output)
+            this.haptic('heavy');
           }
           this.connecting = null;
+          this.connectHover = null;
           this.render();
         }
+
+        // Handle drop into group
+        if (this.dragging && this.dragOver) {
+          this.addToGroup(this.dragging.node.id, this.dragOver.id);
+          this.dragOver = null;
+        }
+
         this.dragging = null;
         this.dragStart = null;
       }
 
       onDbl(e) {
-        const node = this.nodeAt(this.pos(e));
+        const p = this.pos(e);
+        const node = this.nodeAt(p);
         if (node) {
+          // Special handling for groups
+          if (node.type === 'group') {
+            if (this.inGroupTitle(p, node)) {
+              // Double-click on title = rename
+              const newTitle = prompt('Group name:', node.params.title);
+              if (newTitle !== null && newTitle.trim()) {
+                node.params.title = newTitle.trim();
+                this.render();
+                updateProps();
+              }
+            } else {
+              // Double-click on body = toggle collapse
+              this.toggleGroupCollapse(node.id);
+            }
+            return;
+          }
+
+          // Regular node: delete
           this.nodes = this.nodes.filter(n => n !== node);
           this.connections = this.connections.filter(c => c.from !== node.id && c.to !== node.id);
           if (this.selected === node) this.selected = null;
@@ -425,10 +795,11 @@
         }
       }
 
-      addNode(type, x, y) {
+      addNode(type, x, y, parentId = null) {
         const s = NODE_SCHEMAS[type];
         if (!s) return;
         const node = { id: crypto.randomUUID(), type, x, y, params: JSON.parse(JSON.stringify(s.defaults)) };
+        if (parentId) node.parent = parentId;
         this.nodes.push(node);
         this.selected = node;
         this.render();
@@ -475,8 +846,21 @@
           const fn = this.nodes.find(n => n.id === c.from);
           const tn = this.nodes.find(n => n.id === c.to);
           if (!fn || !tn) continue;
-          const fx = fn.x + this.W, fy = fn.y + 24;
-          const tx = tn.x, ty = tn.y + 24 + c.ti * 12;
+
+          // From socket position
+          let fx, fy;
+          if (fn.type === 'group') {
+            fx = fn.x + fn.params.width;
+            fy = fn.y + this.TH / 2;
+          } else {
+            fx = fn.x + this.W;
+            fy = fn.y + 24;
+          }
+
+          // To socket position
+          const tx = tn.x;
+          const ty = tn.y + 24 + c.ti * 12;
+
           ctx.strokeStyle = '#58a6ff';
           ctx.beginPath();
           ctx.moveTo(fx, fy);
@@ -484,20 +868,119 @@
           ctx.stroke();
         }
 
-        // Connecting line
+        // Connecting line with animated glow
         if (this.connecting) {
-          ctx.strokeStyle = '#58a6ff80';
-          ctx.setLineDash([5, 5]);
+          const glow = Math.sin(this.glowPhase) * 0.3 + 0.7; // 0.4 to 1.0
+          const glowColor = this.connectHover ? `rgba(35, 134, 54, ${glow})` : `rgba(88, 166, 255, ${glow * 0.5})`;
+
+          // Glow layer
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = 15 + Math.sin(this.glowPhase) * 5;
+          ctx.strokeStyle = glowColor;
+          ctx.lineWidth = 3;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(this.connecting.from.x, this.connecting.from.y);
+          ctx.lineTo(this.connecting.to.x, this.connecting.to.y);
+          ctx.stroke();
+
+          // Core line
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = this.connectHover ? '#238636' : '#58a6ff';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([8, 4]);
           ctx.beginPath();
           ctx.moveTo(this.connecting.from.x, this.connecting.from.y);
           ctx.lineTo(this.connecting.to.x, this.connecting.to.y);
           ctx.stroke();
           ctx.setLineDash([]);
+
+          // Highlight valid target socket with pulsing glow
+          if (this.connectHover) {
+            const pulse = Math.sin(this.glowPhase * 2) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(35, 134, 54, ${0.3 + pulse * 0.4})`;
+            ctx.strokeStyle = '#238636';
+            ctx.lineWidth = 2 + pulse;
+            ctx.shadowColor = '#238636';
+            ctx.shadowBlur = 10 + pulse * 10;
+            ctx.beginPath();
+            ctx.arc(this.connectHover.x, this.connectHover.y, this.SR + 4 + pulse * 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
         }
 
-        // Nodes
-        for (const n of this.nodes) this.drawNode(n);
+        // Render groups first (so they appear behind)
+        for (const n of this.nodes) {
+          if (n.type === 'group') this.drawGroup(n);
+        }
+
+        // Highlight drag-over group
+        if (this.dragOver) {
+          ctx.strokeStyle = '#58a6ff';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.roundRect(this.dragOver.x, this.dragOver.y, this.dragOver.params.width,
+                       this.dragOver.params.height, 8);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Render regular nodes
+        for (const n of this.nodes) {
+          if (n.type !== 'group') this.drawNode(n);
+        }
+
         ctx.restore();
+      }
+
+      drawGroup(g) {
+        const ctx = this.ctx;
+        const w = g.params.width;
+        const h = g.params.collapsed ? this.TH : g.params.height;
+        const sel = g === this.selected;
+
+        // Background (subtle fill)
+        ctx.fillStyle = g.params.collapsed ? '#21262d' : '#161b2288';
+        ctx.strokeStyle = sel ? '#fff' : '#30363d';
+        ctx.lineWidth = sel ? 2 : 1;
+        ctx.setLineDash(g.params.collapsed ? [] : [5, 3]);
+        ctx.beginPath();
+        ctx.roundRect(g.x, g.y, w, h, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Title bar
+        ctx.fillStyle = '#30363d';
+        ctx.beginPath();
+        ctx.roundRect(g.x, g.y, w, this.TH, [8, 8, 0, 0]);
+        ctx.fill();
+
+        // Title text
+        ctx.fillStyle = '#c9d1d9';
+        ctx.font = 'bold 11px system-ui';
+        ctx.fillText(g.params.title, g.x + 8, g.y + 16);
+
+        // Collapse indicator
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '10px system-ui';
+        const icon = g.params.collapsed ? '▸' : '▾';
+        ctx.fillText(icon, g.x + w - 20, g.y + 16);
+
+        // Output socket (on right edge, center of title bar)
+        const s = NODE_SCHEMAS[g.type];
+        if (s.outs) {
+          ctx.fillStyle = '#0d1117';
+          ctx.strokeStyle = '#58a6ff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(g.x + w, g.y + this.TH / 2, this.SR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
 
       drawNode(n) {
@@ -561,9 +1044,17 @@
       }
 
       toJSON() {
-        const outs = new Set(this.connections.map(c => c.from));
-        const roots = this.nodes.filter(n => NODE_SCHEMAS[n.type]?.outs && !outs.has(n.id));
-        if (!roots.length && this.nodes.length) return { root: this.nodeJSON(this.nodes.at(-1)) };
+        // Filter out groups - they're organizational only, not part of scene
+        const nonGroups = this.nodes.filter(n => n.type !== 'group');
+        const groupConnections = this.connections.filter(c => {
+          const from = this.nodes.find(n => n.id === c.from);
+          const to = this.nodes.find(n => n.id === c.to);
+          return from?.type !== 'group' && to?.type !== 'group';
+        });
+
+        const outs = new Set(groupConnections.map(c => c.from));
+        const roots = nonGroups.filter(n => NODE_SCHEMAS[n.type]?.outs && !outs.has(n.id));
+        if (!roots.length && nonGroups.length) return { root: this.nodeJSON(nonGroups.at(-1)) };
         if (roots.length === 1) return { root: this.nodeJSON(roots[0]) };
         return { root: { type: 'union', children: roots.map(r => this.nodeJSON(r)) } };
       }
@@ -600,6 +1091,24 @@
           cy += 80;
         }
         return id;
+      }
+
+      // Load full graph state including groups and layout
+      loadGraphState(state) {
+        this.clear();
+        this.nodes = state.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          x: n.x,
+          y: n.y,
+          params: { ...n.params },
+          parent: n.parent
+        }));
+        this.connections = [...state.connections];
+        if (state.pan) this.pan = { ...state.pan };
+        if (state.zoom) this.zoom = state.zoom;
+        this.render();
+        updatePreview();
       }
     }
 
@@ -651,6 +1160,11 @@
       a.download = 'lucid-scene.json';
       a.click();
     });
+    document.getElementById('btnPrint').addEventListener('click', () => {
+      const engine = new PrintLayoutEngine(graph);
+      engine.print();
+      graph.haptic('light');
+    });
 
     // Drag from palette
     document.querySelectorAll('.palette-item').forEach(item => {
@@ -683,23 +1197,48 @@
       }
       const n = graph.selected;
       let h = '';
-      for (const [k, v] of Object.entries(n.params)) {
-        if (Array.isArray(v)) {
-          h += `<div class="prop-row"><label>${k}</label><input value="${v.join(', ')}" data-p="${k}" data-arr></div>`;
-        } else if (k === 'axis') {
-          h += `<div class="prop-row"><label>${k}</label><select data-p="${k}">
-            <option ${v === 'x' ? 'selected' : ''}>x</option>
-            <option ${v === 'y' ? 'selected' : ''}>y</option>
-            <option ${v === 'z' ? 'selected' : ''}>z</option>
-          </select></div>`;
-        } else {
-          h += `<div class="prop-row"><label>${k}</label><input type="number" step="0.1" value="${v}" data-p="${k}"></div>`;
+
+      // Special handling for groups
+      if (n.type === 'group') {
+        h += `<div class="prop-row"><label>title</label><input type="text" value="${n.params.title}" data-p="title"></div>`;
+        h += `<div class="prop-row"><label>width</label><input type="number" step="10" value="${n.params.width}" data-p="width"></div>`;
+        h += `<div class="prop-row"><label>height</label><input type="number" step="10" value="${n.params.height}" data-p="height"></div>`;
+        h += `<div class="prop-row"><label>collapsed</label><input type="checkbox" ${n.params.collapsed ? 'checked' : ''} data-p="collapsed" data-bool></div>`;
+        h += `<div class="prop-row" style="margin-top:12px;"><button id="fitGroup" style="width:100%;padding:6px;">Fit to Children</button></div>`;
+      } else {
+        // Regular node properties
+        for (const [k, v] of Object.entries(n.params)) {
+          if (Array.isArray(v)) {
+            h += `<div class="prop-row"><label>${k}</label><input value="${v.join(', ')}" data-p="${k}" data-arr></div>`;
+          } else if (k === 'axis') {
+            h += `<div class="prop-row"><label>${k}</label><select data-p="${k}">
+              <option ${v === 'x' ? 'selected' : ''}>x</option>
+              <option ${v === 'y' ? 'selected' : ''}>y</option>
+              <option ${v === 'z' ? 'selected' : ''}>z</option>
+            </select></div>`;
+          } else {
+            h += `<div class="prop-row"><label>${k}</label><input type="number" step="0.1" value="${v}" data-p="${k}"></div>`;
+          }
         }
       }
+
       area.innerHTML = h;
+
+      // Fit group button handler
+      const fitBtn = document.getElementById('fitGroup');
+      if (fitBtn) {
+        fitBtn.addEventListener('click', () => {
+          graph.fitGroupToChildren(n.id);
+          updateProps();
+        });
+      }
+
+      // Property change handlers
       area.querySelectorAll('[data-p]').forEach(inp => {
         inp.addEventListener('input', () => {
-          if (inp.dataset.arr !== undefined) {
+          if (inp.dataset.bool !== undefined) {
+            n.params[inp.dataset.p] = inp.checked;
+          } else if (inp.dataset.arr !== undefined) {
             n.params[inp.dataset.p] = inp.value.split(',').map(x => parseFloat(x.trim()) || 0);
           } else if (inp.type === 'number') {
             n.params[inp.dataset.p] = parseFloat(inp.value) || 0;
@@ -773,6 +1312,264 @@
     }
 
     // Scene picker loads automatically via web component
+
+    // ============ PRINT LAYOUT ALGORITHM ============
+    class PrintLayoutEngine {
+      constructor(graph) {
+        this.graph = graph;
+        this.A4_WIDTH = 794;   // A4 at 96dpi
+        this.A4_HEIGHT = 1123;
+        this.MARGIN = 40;
+        this.NODE_WIDTH = 140;
+        this.NODE_HEIGHT = 60;
+        this.LAYER_SPACING = 180;
+        this.NODE_SPACING = 20;
+      }
+
+      computeLayout() {
+        if (this.graph.nodes.length === 0) {
+          return { layers: [], edges: [] };
+        }
+        const layers = this.assignLayers();
+        this.minimizeCrossings(layers);
+        const positioned = this.calculatePositions(layers);
+        const edges = this.prepareEdges(positioned);
+        return { layers: positioned, edges };
+      }
+
+      assignLayers() {
+        const nodeMap = new Map(this.graph.nodes.map(n => [n.id, n]));
+        const layerMap = new Map();
+        const visited = new Set();
+
+        const incoming = new Map();
+        for (const n of this.graph.nodes) {
+          incoming.set(n.id, []);
+        }
+        for (const conn of this.graph.connections) {
+          if (!incoming.has(conn.to)) incoming.set(conn.to, []);
+          incoming.get(conn.to).push(conn.from);
+        }
+
+        const assignLayer = (nodeId, depth = 0) => {
+          if (visited.has(nodeId)) return layerMap.get(nodeId);
+          visited.add(nodeId);
+          const deps = incoming.get(nodeId) || [];
+          let maxDepth = 0;
+          for (const depId of deps) {
+            maxDepth = Math.max(maxDepth, assignLayer(depId, depth) + 1);
+          }
+          layerMap.set(nodeId, maxDepth);
+          return maxDepth;
+        };
+
+        for (const node of this.graph.nodes) {
+          assignLayer(node.id);
+        }
+
+        const maxLayer = Math.max(...Array.from(layerMap.values()), 0);
+        const layers = Array.from({ length: maxLayer + 1 }, () => []);
+        for (const [nodeId, layer] of layerMap) {
+          const node = nodeMap.get(nodeId);
+          if (node) layers[layer].push(node);
+        }
+        return layers;
+      }
+
+      minimizeCrossings(layers, iterations = 4) {
+        const getConnections = (nodeId, direction) => {
+          if (direction === 'in') {
+            return this.graph.connections.filter(c => c.to === nodeId).map(c => c.from);
+          } else {
+            return this.graph.connections.filter(c => c.from === nodeId).map(c => c.to);
+          }
+        };
+
+        const getBarycenter = (node, refLayer, direction) => {
+          const conns = getConnections(node.id, direction);
+          if (conns.length === 0) return refLayer.indexOf(node);
+          let sum = 0;
+          for (const connId of conns) {
+            const idx = refLayer.findIndex(n => n.id === connId);
+            if (idx !== -1) sum += idx;
+          }
+          return sum / conns.length;
+        };
+
+        for (let iter = 0; iter < iterations; iter++) {
+          for (let i = 1; i < layers.length; i++) {
+            const prevLayer = layers[i - 1];
+            layers[i].sort((a, b) => getBarycenter(a, prevLayer, 'in') - getBarycenter(b, prevLayer, 'in'));
+          }
+          for (let i = layers.length - 2; i >= 0; i--) {
+            const nextLayer = layers[i + 1];
+            layers[i].sort((a, b) => getBarycenter(a, nextLayer, 'out') - getBarycenter(b, nextLayer, 'out'));
+          }
+        }
+        return layers;
+      }
+
+      calculatePositions(layers) {
+        const positioned = [];
+        const contentWidth = this.A4_WIDTH - 2 * this.MARGIN;
+        layers.forEach((layer, layerIdx) => {
+          const layerNodes = [];
+          const totalWidth = layer.length * this.NODE_WIDTH + (layer.length - 1) * this.NODE_SPACING;
+          const startX = this.MARGIN + (contentWidth - totalWidth) / 2;
+          const y = this.MARGIN + 80 + layerIdx * this.LAYER_SPACING;
+          layer.forEach((node, nodeIdx) => {
+            const x = startX + nodeIdx * (this.NODE_WIDTH + this.NODE_SPACING);
+            layerNodes.push({ ...node, px: x, py: y });
+          });
+          positioned.push(layerNodes);
+        });
+        return positioned;
+      }
+
+      prepareEdges(layers) {
+        const nodeMap = new Map();
+        layers.flat().forEach(n => nodeMap.set(n.id, n));
+        const edges = [];
+        for (const conn of this.graph.connections) {
+          const from = nodeMap.get(conn.from);
+          const to = nodeMap.get(conn.to);
+          if (!from || !to) continue;
+          const fromX = from.px + this.NODE_WIDTH;
+          const fromY = from.py + this.NODE_HEIGHT / 2;
+          const toX = to.px;
+          const toY = to.py + this.NODE_HEIGHT / 2;
+          const dx = (toX - fromX) * 0.5;
+          edges.push({
+            from: conn.from, to: conn.to,
+            path: `M ${fromX} ${fromY} C ${fromX + dx} ${fromY}, ${toX - dx} ${toY}, ${toX} ${toY}`,
+            fromNode: from, toNode: to
+          });
+        }
+        return edges;
+      }
+
+      generateSVG(layout) {
+        const { layers, edges } = layout;
+        const allNodes = layers.flat();
+        if (allNodes.length === 0) return this.generateEmptySVG();
+
+        const title = 'Lucid Node Graph';
+        const date = new Date().toISOString().split('T')[0];
+
+        let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${this.A4_WIDTH}" height="${this.A4_HEIGHT}" viewBox="0 0 ${this.A4_WIDTH} ${this.A4_HEIGHT}">
+  <defs><style>
+    .bg { fill: white; }
+    .grid-line { stroke: #e0e0e0; stroke-width: 0.5; }
+    .node-shadow { fill: rgba(0,0,0,0.1); }
+    .node-body { fill: #f8f9fa; stroke: #333; stroke-width: 1.5; }
+    .node-header { fill: #333; }
+    .node-title { fill: white; font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600; }
+    .node-params { fill: #666; font-family: system-ui, sans-serif; font-size: 9px; }
+    .socket { fill: white; stroke: #58a6ff; stroke-width: 2; }
+    .edge { stroke: #58a6ff; stroke-width: 2; fill: none; }
+    .header-title { font-family: system-ui, sans-serif; font-size: 20px; font-weight: 700; fill: #333; }
+    .header-date { font-family: system-ui, sans-serif; font-size: 11px; fill: #666; }
+    .layer-label { font-family: system-ui, sans-serif; font-size: 10px; fill: #999; }
+    .legend-title { font-family: system-ui, sans-serif; font-size: 10px; font-weight: 600; fill: #333; }
+    .legend-text { font-family: system-ui, sans-serif; font-size: 9px; fill: #666; }
+  </style></defs>
+  <rect class="bg" width="${this.A4_WIDTH}" height="${this.A4_HEIGHT}"/>
+  ${this.generateGrid()}
+  <text class="header-title" x="${this.A4_WIDTH / 2}" y="35" text-anchor="middle">${title}</text>
+  <text class="header-date" x="${this.A4_WIDTH / 2}" y="52" text-anchor="middle">${date}</text>
+  ${layers.map((layer, idx) => layer.length ? `<text class="layer-label" x="${this.MARGIN}" y="${layer[0].py - 15}">Layer ${idx}</text>` : '').join('\n  ')}
+  ${edges.map(e => `<path class="edge" d="${e.path}"/>`).join('\n  ')}
+  ${allNodes.map(n => this.generateNodeSVG(n)).join('\n  ')}
+  ${this.generateLegend()}
+</svg>`;
+        return svg;
+      }
+
+      generateGrid() {
+        const lines = [];
+        for (let x = this.MARGIN; x <= this.A4_WIDTH - this.MARGIN; x += 40) {
+          lines.push(`<line class="grid-line" x1="${x}" y1="${this.MARGIN}" x2="${x}" y2="${this.A4_HEIGHT - this.MARGIN}"/>`);
+        }
+        for (let y = this.MARGIN; y <= this.A4_HEIGHT - this.MARGIN; y += 40) {
+          lines.push(`<line class="grid-line" x1="${this.MARGIN}" y1="${y}" x2="${this.A4_WIDTH - this.MARGIN}" y2="${y}"/>`);
+        }
+        return lines.join('\n  ');
+      }
+
+      generateNodeSVG(node) {
+        const schema = NODE_SCHEMAS[node.type];
+        if (!schema) return '';
+        const { px: x, py: y } = node;
+        const w = this.NODE_WIDTH, h = this.NODE_HEIGHT;
+        const colorMap = { '#58a6ff': '#4A90E2', '#f0883e': '#E67E22', '#a371f7': '#9B59B6', '#6e7681': '#95a5a6' };
+        const headerColor = colorMap[schema.color] || schema.color;
+        const params = Object.entries(node.params).map(([k, v]) => `${k}=${Array.isArray(v) ? '[...]' : v}`).join(' ').slice(0, 30);
+        let svg = `<g class="node" data-id="${node.id}">
+    <rect class="node-shadow" x="${x + 3}" y="${y + 3}" width="${w}" height="${h}" rx="6"/>
+    <rect class="node-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>
+    <rect class="node-header" x="${x}" y="${y}" width="${w}" height="22" rx="6" fill="${headerColor}"/>
+    <text class="node-title" x="${x + 8}" y="${y + 15}">${node.type}</text>
+    <text class="node-params" x="${x + 8}" y="${y + 40}">${params}</text>`;
+        for (let i = 0; i < schema.ins; i++) {
+          svg += `\n    <circle class="socket" cx="${x}" cy="${y + 30 + i * 15}" r="4"/>`;
+        }
+        if (schema.outs) svg += `\n    <circle class="socket" cx="${x + w}" cy="${y + 30}" r="4"/>`;
+        return svg + '\n  </g>';
+      }
+
+      generateLegend() {
+        const x = this.A4_WIDTH - this.MARGIN - 150, y = this.A4_HEIGHT - this.MARGIN - 100;
+        return `<g class="legend">
+    <text class="legend-title" x="${x}" y="${y}">Node Types:</text>
+    <circle cx="${x + 5}" cy="${y + 15}" r="4" fill="#4A90E2"/><text class="legend-text" x="${x + 15}" y="${y + 18}">Primitives</text>
+    <circle cx="${x + 5}" cy="${y + 30}" r="4" fill="#E67E22"/><text class="legend-text" x="${x + 15}" y="${y + 33}">CSG Operations</text>
+    <circle cx="${x + 5}" cy="${y + 45}" r="4" fill="#9B59B6"/><text class="legend-text" x="${x + 15}" y="${y + 48}">Modifiers</text>
+    <text class="legend-title" x="${x}" y="${y + 70}">Layout Info:</text>
+    <text class="legend-text" x="${x}" y="${y + 83}">Nodes: ${this.graph.nodes.length}</text>
+    <text class="legend-text" x="${x}" y="${y + 95}">Connections: ${this.graph.connections.length}</text>
+  </g>`;
+      }
+
+      generateEmptySVG() {
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${this.A4_WIDTH}" height="${this.A4_HEIGHT}">
+  <rect fill="white" width="${this.A4_WIDTH}" height="${this.A4_HEIGHT}"/>
+  <text x="${this.A4_WIDTH / 2}" y="${this.A4_HEIGHT / 2}" text-anchor="middle" font-family="system-ui" font-size="16" fill="#666">No nodes to print</text>
+</svg>`;
+      }
+
+      openPrintWindow(svgContent) {
+        const printWindow = window.open('', '_blank', 'width=900,height=1200');
+        if (!printWindow) { alert('Please allow popups to use the print feature'); return; }
+        printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lucid Node Graph - Print</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  .toolbar { position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; }
+  button { padding: 8px 16px; background: #4A90E2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #357ABD; }
+  button.secondary { background: #95a5a6; }
+  button.secondary:hover { background: #7f8c8d; }
+  .container { background: white; box-shadow: 0 2px 16px rgba(0,0,0,0.1); margin-top: 70px; }
+  svg { display: block; max-width: 100%; height: auto; }
+  @media print { body { background: white; padding: 0; } .toolbar { display: none; } .container { box-shadow: none; margin: 0; width: 210mm; height: 297mm; } svg { width: 210mm; height: 297mm; } }
+</style></head><body>
+<div class="toolbar"><button onclick="window.print()">🖨 Print</button><button class="secondary" onclick="downloadSVG()">💾 Save SVG</button><button class="secondary" onclick="window.close()">✕ Close</button></div>
+<div class="container">${svgContent}</div>
+<script>function downloadSVG(){const svg=document.querySelector('svg').outerHTML;const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='lucid-node-graph-'+new Date().toISOString().split('T')[0]+'.svg';a.click();URL.revokeObjectURL(url);}</script>
+</body></html>`);
+        printWindow.document.close();
+      }
+
+      print() {
+        console.log('Computing print layout...');
+        const layout = this.computeLayout();
+        console.log(`Layout computed: ${layout.layers.length} layers, ${layout.edges.length} edges`);
+        const svg = this.generateSVG(layout);
+        this.openPrintWindow(svg);
+      }
+    }
   </script>
 </body>
 </html>
