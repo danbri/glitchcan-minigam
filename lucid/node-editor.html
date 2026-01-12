@@ -6,241 +6,290 @@
   <title>Lucid Node Editor</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    html, body {
+      height: 100%;
       font-family: system-ui, -apple-system, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      display: flex;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 180px 1fr 300px;
+      grid-template-rows: auto 1fr;
       height: 100vh;
-      overflow: hidden;
     }
 
-    /* Sidebar */
-    .sidebar {
-      width: 200px;
-      background: #16213e;
-      border-right: 1px solid #333;
+    header {
+      grid-column: 1 / -1;
+      padding: 8px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
       display: flex;
-      flex-direction: column;
-    }
-    .sidebar h2 {
-      padding: 12px;
-      font-size: 14px;
-      border-bottom: 1px solid #333;
-      background: #0f3460;
-    }
-    .node-palette {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-    }
-    .palette-section {
-      margin-bottom: 12px;
-    }
-    .palette-section h3 {
-      font-size: 11px;
-      color: #888;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-    }
-    .palette-item {
-      padding: 6px 10px;
-      margin: 2px 0;
-      background: #1a1a2e;
-      border: 1px solid #333;
-      border-radius: 4px;
-      cursor: grab;
-      font-size: 12px;
-      transition: background 0.15s;
-    }
-    .palette-item:hover {
-      background: #2a2a4e;
-      border-color: #4a9eff;
-    }
-    .palette-item .icon { margin-right: 6px; }
-
-    /* Main area */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    .toolbar {
-      padding: 8px 12px;
-      background: #0f3460;
-      border-bottom: 1px solid #333;
-      display: flex;
-      gap: 8px;
       align-items: center;
+      gap: 16px;
     }
-    .toolbar button {
-      padding: 6px 12px;
-      background: #1a1a2e;
-      border: 1px solid #333;
-      color: #eee;
-      border-radius: 4px;
+    header h1 { font-size: 15px; font-weight: 600; }
+    header .spacer { flex: 1; }
+    header button {
+      padding: 5px 12px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
     }
-    .toolbar button:hover { background: #2a2a4e; }
-    .toolbar .spacer { flex: 1; }
+    header button:hover { background: #30363d; }
+    header button.primary { background: #238636; border-color: #238636; }
+    header button.primary:hover { background: #2ea043; }
 
-    /* Canvas */
-    .canvas-container {
-      flex: 1;
+    .sidebar {
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .sidebar h2 {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #8b949e;
+      margin: 12px 0 6px;
+      letter-spacing: 0.5px;
+    }
+    .sidebar h2:first-child { margin-top: 0; }
+    .palette-item {
+      padding: 6px 8px;
+      margin: 3px 0;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 5px;
+      cursor: grab;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .palette-item:hover { border-color: #58a6ff; background: #30363d; }
+    .palette-item:active { cursor: grabbing; }
+
+    .canvas-area {
       position: relative;
       overflow: hidden;
+      background: #0d1117;
     }
-    #nodeCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
+    #nodeCanvas { position: absolute; top: 0; left: 0; cursor: grab; }
+    #nodeCanvas:active { cursor: grabbing; }
 
-    /* Properties panel */
-    .properties {
-      width: 250px;
-      background: #16213e;
-      border-left: 1px solid #333;
+    .right-panel {
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-section { border-bottom: 1px solid #30363d; }
+    .panel-section h3 {
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #21262d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-section h3 .count { font-weight: normal; color: #8b949e; }
+    .panel-content { padding: 10px; }
+
+    .scene-list {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 6px;
+    }
+    .scene-category {
+      margin-bottom: 8px;
+    }
+    .scene-category-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #6e7681;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+    .scene-item {
+      padding: 6px 8px;
+      margin: 2px 0;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+    .scene-item:hover { border-color: #58a6ff; background: #30363d; }
+    .scene-item.active { border-color: #58a6ff; background: #388bfd22; }
+
+    .preview-wrap {
+      flex: 1;
+      min-height: 220px;
       display: flex;
       flex-direction: column;
     }
-    .properties h2 {
-      padding: 12px;
-      font-size: 14px;
-      border-bottom: 1px solid #333;
-      background: #0f3460;
-    }
-    .prop-content {
+    .preview-wrap lucid-renderer {
       flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-    }
-    .prop-group {
-      margin-bottom: 12px;
-    }
-    .prop-group label {
-      display: block;
-      font-size: 11px;
-      color: #888;
-      margin-bottom: 4px;
-    }
-    .prop-group input, .prop-group select {
-      width: 100%;
-      padding: 6px 8px;
-      background: #1a1a2e;
-      border: 1px solid #333;
-      color: #eee;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    .prop-group input:focus {
-      outline: none;
-      border-color: #4a9eff;
-    }
-    #jsonOutput {
-      width: 100%;
-      height: 150px;
-      background: #0a0a1a;
-      border: 1px solid #333;
-      color: #8f8;
-      font-family: monospace;
-      font-size: 10px;
-      padding: 8px;
-      resize: vertical;
+      min-height: 180px;
     }
 
-    /* Preview */
-    .preview {
-      height: 200px;
-      border-top: 1px solid #333;
-      background: #0a0a1a;
-    }
-    .preview h3 {
-      padding: 8px 12px;
-      font-size: 12px;
-      background: #0f3460;
-      border-bottom: 1px solid #333;
-    }
-    #previewCanvas {
+    .props-wrap { max-height: 180px; overflow-y: auto; }
+    .prop-row { margin-bottom: 8px; }
+    .prop-row label { display: block; font-size: 10px; color: #8b949e; margin-bottom: 3px; }
+    .prop-row input, .prop-row select {
       width: 100%;
-      height: calc(100% - 32px);
+      padding: 5px 7px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #c9d1d9;
+      font-size: 11px;
+    }
+    .prop-row input:focus, .prop-row select:focus { outline: none; border-color: #58a6ff; }
+
+    .json-wrap { max-height: 120px; }
+    #jsonOutput {
+      width: 100%;
+      height: 80px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #7ee787;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 9px;
+      padding: 6px;
+      resize: vertical;
+    }
+    .no-selection { color: #8b949e; font-size: 11px; font-style: italic; }
+
+    /* Help tooltip */
+    .help-tip {
+      font-size: 10px;
+      color: #8b949e;
+      padding: 6px 10px;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+    }
+    .help-tip kbd {
+      background: #30363d;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 9px;
     }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h2>Node Palette</h2>
-    <div class="node-palette">
-      <div class="palette-section">
-        <h3>Primitives</h3>
-        <div class="palette-item" data-type="sphere"><span class="icon">●</span>Sphere</div>
-        <div class="palette-item" data-type="box"><span class="icon">■</span>Box</div>
-        <div class="palette-item" data-type="torus"><span class="icon">◯</span>Torus</div>
-        <div class="palette-item" data-type="cylinder"><span class="icon">▮</span>Cylinder</div>
-        <div class="palette-item" data-type="capsule"><span class="icon">◠</span>Capsule</div>
-      </div>
-      <div class="palette-section">
-        <h3>CSG Operations</h3>
-        <div class="palette-item" data-type="union"><span class="icon">∪</span>Union</div>
-        <div class="palette-item" data-type="subtract"><span class="icon">−</span>Subtract</div>
-        <div class="palette-item" data-type="intersect"><span class="icon">∩</span>Intersect</div>
-        <div class="palette-item" data-type="smoothUnion"><span class="icon">⊎</span>Smooth Union</div>
-      </div>
-      <div class="palette-section">
-        <h3>Transforms</h3>
-        <div class="palette-item" data-type="transform"><span class="icon">↔</span>Transform</div>
-        <div class="palette-item" data-type="material"><span class="icon">🎨</span>Material</div>
-        <div class="palette-item" data-type="mirror"><span class="icon">⬍</span>Mirror</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="main">
-    <div class="toolbar">
-      <button onclick="graph.clear()">Clear</button>
-      <button onclick="loadExample()">Load Example</button>
-      <button onclick="exportJSON()">Export JSON</button>
+  <div class="app">
+    <header>
+      <h1>Lucid Node Editor</h1>
       <span class="spacer"></span>
-      <span style="font-size:11px;color:#888">Drag nodes • Click to select • Drag sockets to connect</span>
-    </div>
-    <div class="canvas-container">
-      <canvas id="nodeCanvas"></canvas>
-    </div>
-  </div>
+      <button id="btnClear">Clear</button>
+      <button id="btnExport" class="primary">Export JSON</button>
+    </header>
 
-  <div class="properties">
-    <h2>Properties</h2>
-    <div class="prop-content" id="propContent">
-      <p style="color:#666;font-size:12px">Select a node to edit properties</p>
-    </div>
-    <h2>JSON Output</h2>
-    <textarea id="jsonOutput" readonly></textarea>
-    <div class="preview">
-      <h3>Preview</h3>
-      <canvas id="previewCanvas"></canvas>
-    </div>
+    <aside class="sidebar">
+      <h2>Primitives</h2>
+      <div class="palette-item" draggable="true" data-type="sphere">● Sphere</div>
+      <div class="palette-item" draggable="true" data-type="box">■ Box</div>
+      <div class="palette-item" draggable="true" data-type="torus">◎ Torus</div>
+      <div class="palette-item" draggable="true" data-type="cylinder">▮ Cylinder</div>
+      <div class="palette-item" draggable="true" data-type="capsule">⬬ Capsule</div>
+      <div class="palette-item" draggable="true" data-type="ellipsoid">⬭ Ellipsoid</div>
+      <div class="palette-item" draggable="true" data-type="cone">▲ Cone</div>
+      <div class="palette-item" draggable="true" data-type="plane">▬ Plane</div>
+      <h2>CSG Operations</h2>
+      <div class="palette-item" draggable="true" data-type="union">∪ Union</div>
+      <div class="palette-item" draggable="true" data-type="subtract">− Subtract</div>
+      <div class="palette-item" draggable="true" data-type="intersect">∩ Intersect</div>
+      <div class="palette-item" draggable="true" data-type="smoothUnion">⊎ Smooth Union</div>
+      <div class="palette-item" draggable="true" data-type="smoothSubtract">⊖ Smooth Subtract</div>
+      <h2>Transforms</h2>
+      <div class="palette-item" draggable="true" data-type="transform">↔ Transform</div>
+      <div class="palette-item" draggable="true" data-type="material">◐ Material</div>
+      <div class="palette-item" draggable="true" data-type="mirror">⇆ Mirror</div>
+      <div class="palette-item" draggable="true" data-type="round">○ Round</div>
+      <h2>Modifiers</h2>
+      <div class="palette-item" draggable="true" data-type="displace">≋ Displace</div>
+      <div class="palette-item" draggable="true" data-type="shell">◌ Shell</div>
+    </aside>
+
+    <main class="canvas-area">
+      <canvas id="nodeCanvas"></canvas>
+    </main>
+
+    <aside class="right-panel">
+      <div class="panel-section">
+        <h3>Load Scene <span class="count" id="sceneCount"></span></h3>
+        <div class="scene-list" id="sceneList">Loading...</div>
+      </div>
+      <div class="panel-section preview-wrap">
+        <h3>Live Preview</h3>
+        <lucid-renderer id="preview" backend="mayfly" quality="medium"></lucid-renderer>
+      </div>
+      <div class="panel-section props-wrap">
+        <h3>Properties</h3>
+        <div class="panel-content" id="propsContent"><p class="no-selection">Select a node to edit</p></div>
+      </div>
+      <div class="panel-section json-wrap">
+        <h3>JSON Output</h3>
+        <div class="panel-content"><textarea id="jsonOutput" readonly></textarea></div>
+      </div>
+      <div class="help-tip">
+        <kbd>Drag</kbd> nodes from palette · <kbd>Double-click</kbd> to delete · <kbd>Scroll</kbd> to zoom
+      </div>
+    </aside>
   </div>
 
   <script type="module">
-    // Node schemas
+    // Import lucid-renderer web component
+    import './components/lucid-renderer.js';
+
     const NODE_SCHEMAS = {
       // Primitives
-      sphere: { category: 'primitive', color: '#4a9eff', inputs: 0, outputs: 1, defaults: { r: 1 } },
-      box: { category: 'primitive', color: '#4a9eff', inputs: 0, outputs: 1, defaults: { size: [1, 1, 1] } },
-      torus: { category: 'primitive', color: '#4a9eff', inputs: 0, outputs: 1, defaults: { major: 1, minor: 0.3 } },
-      cylinder: { category: 'primitive', color: '#4a9eff', inputs: 0, outputs: 1, defaults: { r: 0.5, h: 1 } },
-      capsule: { category: 'primitive', color: '#4a9eff', inputs: 0, outputs: 1, defaults: { r: 0.3, h: 1 } },
-      // CSG
-      union: { category: 'csg', color: '#ff9f4a', inputs: 2, outputs: 1, defaults: {} },
-      subtract: { category: 'csg', color: '#ff9f4a', inputs: 2, outputs: 1, defaults: {} },
-      intersect: { category: 'csg', color: '#ff9f4a', inputs: 2, outputs: 1, defaults: {} },
-      smoothUnion: { category: 'csg', color: '#ff9f4a', inputs: 2, outputs: 1, defaults: { k: 0.3 } },
-      // Wrappers
-      transform: { category: 'wrapper', color: '#9f4aff', inputs: 1, outputs: 1, defaults: { translate: [0, 0, 0] } },
-      material: { category: 'wrapper', color: '#9f4aff', inputs: 1, outputs: 1, defaults: { color: [0.8, 0.3, 0.2] } },
-      mirror: { category: 'wrapper', color: '#9f4aff', inputs: 1, outputs: 1, defaults: { axis: 'x' } },
+      sphere: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 1 } },
+      box: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { size: [1, 1, 1] } },
+      torus: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { major: 1, minor: 0.3 } },
+      cylinder: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.5, h: 1 } },
+      capsule: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.3, h: 1 } },
+      ellipsoid: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { radii: [1, 0.6, 0.8] } },
+      cone: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 0.5, h: 1 } },
+      plane: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { normal: [0, 1, 0], dist: 0 } },
+      // CSG Operations
+      union: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
+      subtract: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
+      intersect: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: {} },
+      smoothUnion: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: { k: 0.3 } },
+      smoothSubtract: { cat: 'csg', color: '#f0883e', ins: 2, outs: 1, defaults: { k: 0.3 } },
+      // Transforms
+      transform: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { translate: [0, 0, 0] } },
+      material: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { color: [0.8, 0.3, 0.2] } },
+      mirror: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { axis: 'x' } },
+      round: { cat: 'wrap', color: '#a371f7', ins: 1, outs: 1, defaults: { r: 0.05 } },
+      // Modifiers
+      displace: { cat: 'mod', color: '#7ee787', ins: 1, outs: 1, defaults: { amount: 0.1, frequency: 3 } },
+      shell: { cat: 'mod', color: '#7ee787', ins: 1, outs: 1, defaults: { thickness: 0.1 } },
     };
+
+    // Get lucid-renderer web component
+    const previewEl = document.getElementById('preview');
+    let previewReady = false;
+
+    previewEl.addEventListener('renderer-ready', () => {
+      previewReady = true;
+      console.log('Preview renderer ready');
+    });
+
+    previewEl.addEventListener('render-error', (e) => {
+      console.warn('Preview render error:', e.detail);
+    });
 
     class NodeGraph {
       constructor(canvas) {
@@ -251,486 +300,339 @@
         this.selected = null;
         this.dragging = null;
         this.connecting = null;
-        this.pan = { x: 0, y: 0 };
+        this.pan = { x: 50, y: 50 };
         this.zoom = 1;
         this.dragStart = null;
-        this.nodeWidth = 140;
-        this.nodeHeight = 60;
-        this.socketRadius = 6;
-
+        this.W = 120; this.H = 50; this.SR = 5;
         this.resize();
         this.setupEvents();
         this.render();
       }
 
       resize() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width * devicePixelRatio;
-        this.canvas.height = rect.height * devicePixelRatio;
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
-        this.ctx.scale(devicePixelRatio, devicePixelRatio);
+        const r = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = r.width * devicePixelRatio;
+        this.canvas.height = r.height * devicePixelRatio;
+        this.canvas.style.width = r.width + 'px';
+        this.canvas.style.height = r.height + 'px';
+        this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
         this.render();
       }
 
       setupEvents() {
         window.addEventListener('resize', () => this.resize());
-
-        this.canvas.addEventListener('mousedown', e => this.onMouseDown(e));
-        this.canvas.addEventListener('mousemove', e => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', e => this.onMouseUp(e));
-        this.canvas.addEventListener('wheel', e => this.onWheel(e));
-        this.canvas.addEventListener('dblclick', e => this.onDoubleClick(e));
+        this.canvas.addEventListener('mousedown', e => this.onDown(e));
+        this.canvas.addEventListener('mousemove', e => this.onMove(e));
+        this.canvas.addEventListener('mouseup', e => this.onUp(e));
+        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = Math.max(0.4, Math.min(2, this.zoom * (e.deltaY > 0 ? 0.9 : 1.1))); this.render(); }, { passive: false });
+        this.canvas.addEventListener('dblclick', e => this.onDbl(e));
+        this.canvas.addEventListener('touchstart', e => { e.preventDefault(); this.onDown(e.touches[0]); }, { passive: false });
+        this.canvas.addEventListener('touchmove', e => { e.preventDefault(); this.onMove(e.touches[0]); }, { passive: false });
+        this.canvas.addEventListener('touchend', e => this.onUp(e));
       }
 
-      getMousePos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        return {
-          x: (e.clientX - rect.left - this.pan.x) / this.zoom,
-          y: (e.clientY - rect.top - this.pan.y) / this.zoom
-        };
-      }
-
-      getNodeAt(pos) {
-        for (let i = this.nodes.length - 1; i >= 0; i--) {
-          const n = this.nodes[i];
-          if (pos.x >= n.x && pos.x <= n.x + this.nodeWidth &&
-              pos.y >= n.y && pos.y <= n.y + this.nodeHeight) {
-            return n;
-          }
+      pos(e) { const r = this.canvas.getBoundingClientRect(); return { x: (e.clientX - r.left - this.pan.x) / this.zoom, y: (e.clientY - r.top - this.pan.y) / this.zoom }; }
+      nodeAt(p) { for (let i = this.nodes.length - 1; i >= 0; i--) { const n = this.nodes[i]; if (p.x >= n.x && p.x <= n.x + this.W && p.y >= n.y && p.y <= n.y + this.H) return n; } return null; }
+      socketAt(p) {
+        for (const n of this.nodes) {
+          const s = NODE_SCHEMAS[n.type];
+          for (let i = 0; i < s.ins; i++) { const sy = n.y + 26 + i * 14; if (Math.hypot(p.x - n.x, p.y - sy) < 10) return { node: n, dir: 'in', idx: i, x: n.x, y: sy }; }
+          if (s.outs) { const sy = n.y + 26; if (Math.hypot(p.x - (n.x + this.W), p.y - sy) < 10) return { node: n, dir: 'out', idx: 0, x: n.x + this.W, y: sy }; }
         }
         return null;
       }
 
-      getSocketAt(pos) {
-        for (const node of this.nodes) {
-          const schema = NODE_SCHEMAS[node.type];
-          // Input sockets (left side)
-          for (let i = 0; i < schema.inputs; i++) {
-            const sy = node.y + 30 + i * 20;
-            const sx = node.x;
-            if (Math.hypot(pos.x - sx, pos.y - sy) < this.socketRadius + 4) {
-              return { node, type: 'input', index: i, x: sx, y: sy };
-            }
-          }
-          // Output socket (right side)
-          if (schema.outputs > 0) {
-            const sy = node.y + 30;
-            const sx = node.x + this.nodeWidth;
-            if (Math.hypot(pos.x - sx, pos.y - sy) < this.socketRadius + 4) {
-              return { node, type: 'output', index: 0, x: sx, y: sy };
-            }
-          }
-        }
-        return null;
-      }
-
-      onMouseDown(e) {
-        const pos = this.getMousePos(e);
-        const socket = this.getSocketAt(pos);
-
-        if (socket && socket.type === 'output') {
-          this.connecting = { from: socket, to: pos };
-          return;
-        }
-
-        const node = this.getNodeAt(pos);
-        if (node) {
-          this.selected = node;
-          this.dragging = { node, offsetX: pos.x - node.x, offsetY: pos.y - node.y };
-          // Move to front
-          this.nodes = this.nodes.filter(n => n !== node);
-          this.nodes.push(node);
-          this.updateProperties();
-        } else {
-          this.selected = null;
-          this.dragStart = { x: e.clientX - this.pan.x, y: e.clientY - this.pan.y };
-          this.updateProperties();
-        }
+      onDown(e) {
+        const p = this.pos(e);
+        const sock = this.socketAt(p);
+        if (sock?.dir === 'out') { this.connecting = { from: sock, to: p }; return; }
+        const node = this.nodeAt(p);
+        if (node) { this.selected = node; this.dragging = { node, ox: p.x - node.x, oy: p.y - node.y }; this.nodes = [...this.nodes.filter(n => n !== node), node]; updateProps(); }
+        else { this.selected = null; this.dragStart = { x: e.clientX - this.pan.x, y: e.clientY - this.pan.y }; updateProps(); }
         this.render();
       }
 
-      onMouseMove(e) {
-        const pos = this.getMousePos(e);
-
-        if (this.connecting) {
-          this.connecting.to = pos;
-          this.render();
-          return;
-        }
-
-        if (this.dragging) {
-          this.dragging.node.x = pos.x - this.dragging.offsetX;
-          this.dragging.node.y = pos.y - this.dragging.offsetY;
-          this.render();
-          this.updateJSON();
-          return;
-        }
-
-        if (this.dragStart) {
-          this.pan.x = e.clientX - this.dragStart.x;
-          this.pan.y = e.clientY - this.dragStart.y;
-          this.render();
-        }
+      onMove(e) {
+        const p = this.pos(e);
+        if (this.connecting) { this.connecting.to = p; this.render(); return; }
+        if (this.dragging) { this.dragging.node.x = p.x - this.dragging.ox; this.dragging.node.y = p.y - this.dragging.oy; this.render(); updatePreview(); return; }
+        if (this.dragStart) { this.pan.x = e.clientX - this.dragStart.x; this.pan.y = e.clientY - this.dragStart.y; this.render(); }
       }
 
-      onMouseUp(e) {
+      onUp(e) {
         if (this.connecting) {
-          const pos = this.getMousePos(e);
-          const socket = this.getSocketAt(pos);
-          if (socket && socket.type === 'input' && socket.node !== this.connecting.from.node) {
-            // Remove existing connection to this input
-            this.connections = this.connections.filter(c =>
-              !(c.toNode === socket.node.id && c.toIndex === socket.index));
-            // Add new connection
-            this.connections.push({
-              fromNode: this.connecting.from.node.id,
-              toNode: socket.node.id,
-              toIndex: socket.index
-            });
-            this.updateJSON();
+          const p = this.pos(e.changedTouches?.[0] || e);
+          const sock = this.socketAt(p);
+          if (sock?.dir === 'in' && sock.node !== this.connecting.from.node) {
+            this.connections = this.connections.filter(c => !(c.to === sock.node.id && c.ti === sock.idx));
+            this.connections.push({ from: this.connecting.from.node.id, to: sock.node.id, ti: sock.idx });
+            updatePreview();
           }
-          this.connecting = null;
-          this.render();
+          this.connecting = null; this.render();
         }
-        this.dragging = null;
-        this.dragStart = null;
+        this.dragging = null; this.dragStart = null;
       }
 
-      onWheel(e) {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        this.zoom = Math.max(0.3, Math.min(2, this.zoom * delta));
-        this.render();
-      }
-
-      onDoubleClick(e) {
-        const pos = this.getMousePos(e);
-        const node = this.getNodeAt(pos);
+      onDbl(e) {
+        const node = this.nodeAt(this.pos(e));
         if (node) {
-          // Delete node
           this.nodes = this.nodes.filter(n => n !== node);
-          this.connections = this.connections.filter(c =>
-            c.fromNode !== node.id && c.toNode !== node.id);
+          this.connections = this.connections.filter(c => c.from !== node.id && c.to !== node.id);
           if (this.selected === node) this.selected = null;
-          this.render();
-          this.updateJSON();
-          this.updateProperties();
+          this.render(); updatePreview(); updateProps();
         }
       }
 
       addNode(type, x, y) {
-        const schema = NODE_SCHEMAS[type];
-        if (!schema) return;
-        const node = {
-          id: crypto.randomUUID(),
-          type,
-          x, y,
-          params: { ...schema.defaults }
-        };
-        this.nodes.push(node);
-        this.selected = node;
-        this.render();
-        this.updateJSON();
-        this.updateProperties();
+        const s = NODE_SCHEMAS[type]; if (!s) return;
+        const node = { id: crypto.randomUUID(), type, x, y, params: JSON.parse(JSON.stringify(s.defaults)) };
+        this.nodes.push(node); this.selected = node;
+        this.render(); updatePreview(); updateProps();
       }
 
-      clear() {
-        this.nodes = [];
-        this.connections = [];
-        this.selected = null;
-        this.render();
-        this.updateJSON();
-        this.updateProperties();
-      }
+      clear() { this.nodes = []; this.connections = []; this.selected = null; this.render(); updatePreview(); updateProps(); }
 
       render() {
-        const ctx = this.ctx;
-        const w = this.canvas.width / devicePixelRatio;
-        const h = this.canvas.height / devicePixelRatio;
-
+        const ctx = this.ctx, w = this.canvas.width / devicePixelRatio, h = this.canvas.height / devicePixelRatio;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
+        ctx.save(); ctx.translate(this.pan.x, this.pan.y); ctx.scale(this.zoom, this.zoom);
 
         // Grid
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, w, h);
-
-        ctx.save();
-        ctx.translate(this.pan.x, this.pan.y);
-        ctx.scale(this.zoom, this.zoom);
-
-        // Grid lines
-        ctx.strokeStyle = '#252540';
-        ctx.lineWidth = 1;
-        const gridSize = 30;
-        const startX = Math.floor(-this.pan.x / this.zoom / gridSize) * gridSize;
-        const startY = Math.floor(-this.pan.y / this.zoom / gridSize) * gridSize;
-        for (let x = startX; x < w / this.zoom - this.pan.x / this.zoom; x += gridSize) {
-          ctx.beginPath();
-          ctx.moveTo(x, -this.pan.y / this.zoom);
-          ctx.lineTo(x, h / this.zoom - this.pan.y / this.zoom);
-          ctx.stroke();
-        }
-        for (let y = startY; y < h / this.zoom - this.pan.y / this.zoom; y += gridSize) {
-          ctx.beginPath();
-          ctx.moveTo(-this.pan.x / this.zoom, y);
-          ctx.lineTo(w / this.zoom - this.pan.x / this.zoom, y);
-          ctx.stroke();
-        }
+        ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+        const gs = 20, sx = Math.floor(-this.pan.x / this.zoom / gs) * gs, sy = Math.floor(-this.pan.y / this.zoom / gs) * gs;
+        for (let x = sx; x < w / this.zoom + 50; x += gs) { ctx.beginPath(); ctx.moveTo(x, sy); ctx.lineTo(x, h / this.zoom + 50); ctx.stroke(); }
+        for (let y = sy; y < h / this.zoom + 50; y += gs) { ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(w / this.zoom + 50, y); ctx.stroke(); }
 
         // Connections
         ctx.lineWidth = 2;
-        for (const conn of this.connections) {
-          const fromNode = this.nodes.find(n => n.id === conn.fromNode);
-          const toNode = this.nodes.find(n => n.id === conn.toNode);
-          if (!fromNode || !toNode) continue;
-
-          const x1 = fromNode.x + this.nodeWidth;
-          const y1 = fromNode.y + 30;
-          const x2 = toNode.x;
-          const y2 = toNode.y + 30 + conn.toIndex * 20;
-
-          ctx.strokeStyle = '#4a9eff';
+        for (const c of this.connections) {
+          const fn = this.nodes.find(n => n.id === c.from), tn = this.nodes.find(n => n.id === c.to);
+          if (!fn || !tn) continue;
+          ctx.strokeStyle = '#58a6ff';
           ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.bezierCurveTo(x1 + 50, y1, x2 - 50, y2, x2, y2);
+          ctx.moveTo(fn.x + this.W, fn.y + 26);
+          ctx.bezierCurveTo(fn.x + this.W + 35, fn.y + 26, tn.x - 35, tn.y + 26 + c.ti * 14, tn.x, tn.y + 26 + c.ti * 14);
           ctx.stroke();
         }
 
-        // Connecting line
         if (this.connecting) {
-          ctx.strokeStyle = '#4a9eff80';
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(this.connecting.from.x, this.connecting.from.y);
-          ctx.lineTo(this.connecting.to.x, this.connecting.to.y);
-          ctx.stroke();
+          ctx.strokeStyle = '#58a6ff80'; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(this.connecting.from.x, this.connecting.from.y); ctx.lineTo(this.connecting.to.x, this.connecting.to.y); ctx.stroke();
           ctx.setLineDash([]);
         }
 
-        // Nodes
-        for (const node of this.nodes) {
-          this.renderNode(node);
-        }
-
+        for (const n of this.nodes) this.drawNode(n);
         ctx.restore();
       }
 
-      renderNode(node) {
-        const ctx = this.ctx;
-        const schema = NODE_SCHEMAS[node.type];
-        const isSelected = node === this.selected;
-
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.fillRect(node.x + 3, node.y + 3, this.nodeWidth, this.nodeHeight);
-
-        // Body
-        ctx.fillStyle = '#2a2a4e';
-        ctx.strokeStyle = isSelected ? '#fff' : schema.color;
-        ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.beginPath();
-        ctx.roundRect(node.x, node.y, this.nodeWidth, this.nodeHeight, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        // Header
-        ctx.fillStyle = schema.color;
-        ctx.beginPath();
-        ctx.roundRect(node.x, node.y, this.nodeWidth, 22, [6, 6, 0, 0]);
-        ctx.fill();
-
-        // Title
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 11px system-ui';
-        ctx.fillText(node.type, node.x + 8, node.y + 15);
-
-        // Input sockets
-        for (let i = 0; i < schema.inputs; i++) {
-          const sy = node.y + 30 + i * 20;
-          ctx.fillStyle = '#1a1a2e';
-          ctx.strokeStyle = '#4a9eff';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(node.x, sy, this.socketRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        // Output socket
-        if (schema.outputs > 0) {
-          const sy = node.y + 30;
-          ctx.fillStyle = '#1a1a2e';
-          ctx.strokeStyle = '#4a9eff';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(node.x + this.nodeWidth, sy, this.socketRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        // Params preview
-        ctx.fillStyle = '#888';
-        ctx.font = '10px system-ui';
-        const paramStr = Object.entries(node.params).map(([k, v]) =>
-          `${k}=${Array.isArray(v) ? '[...]' : v}`).join(' ');
-        ctx.fillText(paramStr.slice(0, 20), node.x + 8, node.y + 45);
-      }
-
-      updateProperties() {
-        const container = document.getElementById('propContent');
-        if (!this.selected) {
-          container.innerHTML = '<p style="color:#666;font-size:12px">Select a node to edit properties</p>';
-          return;
-        }
-
-        const node = this.selected;
-        let html = `<div class="prop-group"><label>Type</label><input value="${node.type}" disabled></div>`;
-
-        for (const [key, value] of Object.entries(node.params)) {
-          if (Array.isArray(value)) {
-            html += `<div class="prop-group"><label>${key}</label>
-              <input type="text" value="${value.join(', ')}" data-param="${key}" data-array="true"></div>`;
-          } else if (typeof value === 'number') {
-            html += `<div class="prop-group"><label>${key}</label>
-              <input type="number" step="0.1" value="${value}" data-param="${key}"></div>`;
-          } else {
-            html += `<div class="prop-group"><label>${key}</label>
-              <input type="text" value="${value}" data-param="${key}"></div>`;
-          }
-        }
-
-        container.innerHTML = html;
-
-        // Wire up inputs
-        container.querySelectorAll('input[data-param]').forEach(input => {
-          input.addEventListener('input', () => {
-            const param = input.dataset.param;
-            if (input.dataset.array) {
-              node.params[param] = input.value.split(',').map(v => parseFloat(v.trim()) || 0);
-            } else if (input.type === 'number') {
-              node.params[param] = parseFloat(input.value) || 0;
-            } else {
-              node.params[param] = input.value;
-            }
-            this.render();
-            this.updateJSON();
-          });
-        });
-      }
-
-      updateJSON() {
-        const json = this.toJSON();
-        document.getElementById('jsonOutput').value = JSON.stringify(json, null, 2);
-        this.updatePreview(json);
+      drawNode(n) {
+        const ctx = this.ctx, s = NODE_SCHEMAS[n.type], sel = n === this.selected;
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.roundRect(n.x + 2, n.y + 2, this.W, this.H, 5); ctx.fill();
+        ctx.fillStyle = '#21262d'; ctx.strokeStyle = sel ? '#fff' : s.color; ctx.lineWidth = sel ? 2 : 1;
+        ctx.beginPath(); ctx.roundRect(n.x, n.y, this.W, this.H, 5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = s.color; ctx.beginPath(); ctx.roundRect(n.x, n.y, this.W, 18, [5, 5, 0, 0]); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 10px system-ui'; ctx.fillText(n.type, n.x + 6, n.y + 13);
+        for (let i = 0; i < s.ins; i++) { const sy = n.y + 26 + i * 14; ctx.fillStyle = '#0d1117'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(n.x, sy, this.SR, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        if (s.outs) { ctx.fillStyle = '#0d1117'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(n.x + this.W, n.y + 26, this.SR, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        ctx.fillStyle = '#8b949e'; ctx.font = '8px system-ui';
+        ctx.fillText(Object.entries(n.params).map(([k, v]) => `${k}=${Array.isArray(v) ? '[…]' : v}`).join(' ').slice(0, 20), n.x + 6, n.y + 38);
       }
 
       toJSON() {
-        // Find root node (node with output not connected to anything)
-        const connectedOutputs = new Set(this.connections.map(c => c.fromNode));
-        const roots = this.nodes.filter(n => {
-          const schema = NODE_SCHEMAS[n.type];
-          return schema.outputs > 0 && !connectedOutputs.has(n.id);
-        });
-
-        if (roots.length === 0 && this.nodes.length > 0) {
-          // Just use last node
-          return this.nodeToJSON(this.nodes[this.nodes.length - 1]);
-        }
-
-        if (roots.length === 1) {
-          return { root: this.nodeToJSON(roots[0]) };
-        }
-
-        // Multiple roots - wrap in union
-        return {
-          root: {
-            type: 'union',
-            children: roots.map(r => this.nodeToJSON(r))
-          }
-        };
+        const outs = new Set(this.connections.map(c => c.from));
+        const roots = this.nodes.filter(n => NODE_SCHEMAS[n.type].outs && !outs.has(n.id));
+        if (!roots.length && this.nodes.length) return { root: this.nodeJSON(this.nodes.at(-1)) };
+        if (roots.length === 1) return { root: this.nodeJSON(roots[0]) };
+        return { root: { type: 'union', children: roots.map(r => this.nodeJSON(r)) } };
       }
 
-      nodeToJSON(node) {
-        const schema = NODE_SCHEMAS[node.type];
-        const result = { type: node.type, ...node.params };
-
-        // Get connected inputs
-        const inputs = this.connections
-          .filter(c => c.toNode === node.id)
-          .sort((a, b) => a.toIndex - b.toIndex)
-          .map(c => {
-            const fromNode = this.nodes.find(n => n.id === c.fromNode);
-            return fromNode ? this.nodeToJSON(fromNode) : null;
-          })
-          .filter(Boolean);
-
-        if (schema.category === 'csg' && inputs.length > 0) {
-          result.children = inputs;
-        } else if (schema.category === 'wrapper' && inputs.length > 0) {
-          result.child = inputs[0];
-        }
-
-        return result;
+      nodeJSON(n) {
+        const s = NODE_SCHEMAS[n.type], r = { type: n.type, ...n.params };
+        const ins = this.connections.filter(c => c.to === n.id).sort((a, b) => a.ti - b.ti).map(c => this.nodes.find(x => x.id === c.from)).filter(Boolean).map(x => this.nodeJSON(x));
+        if (s.cat === 'csg' && ins.length) r.children = ins;
+        else if (s.cat === 'wrap' && ins.length) r.child = ins[0];
+        return r;
       }
 
-      async updatePreview(json) {
-        // TODO: Wire to Mayfly renderer
+      fromJSON(scene) {
+        this.clear();
+        if (scene.root) this._fromNode(scene.root, 250, 80);
+        this.render(); updatePreview();
+      }
+
+      _fromNode(node, x, y) {
+        const s = NODE_SCHEMAS[node.type]; if (!s) return null;
+        const id = crypto.randomUUID();
+        const params = {};
+        for (const k of Object.keys(s.defaults)) params[k] = node[k] ?? s.defaults[k];
+        this.nodes.push({ id, type: node.type, x, y, params });
+        let cy = y;
+        for (let i = 0; i < (node.children?.length || (node.child ? 1 : 0)); i++) {
+          const child = node.children?.[i] || node.child;
+          const cid = this._fromNode(child, x - 160, cy);
+          if (cid) this.connections.push({ from: cid, to: id, ti: i });
+          cy += 70;
+        }
+        return id;
       }
     }
 
-    // Initialize
     const canvas = document.getElementById('nodeCanvas');
     const graph = new NodeGraph(canvas);
     window.graph = graph;
 
     // Drag from palette
     document.querySelectorAll('.palette-item').forEach(item => {
-      item.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('nodeType', item.dataset.type);
-      });
-      item.draggable = true;
+      item.addEventListener('dragstart', e => e.dataTransfer.setData('nodeType', item.dataset.type));
     });
-
     canvas.addEventListener('dragover', e => e.preventDefault());
     canvas.addEventListener('drop', e => {
       e.preventDefault();
       const type = e.dataTransfer.getData('nodeType');
       if (type) {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - graph.pan.x) / graph.zoom;
-        const y = (e.clientY - rect.top - graph.pan.y) / graph.zoom;
-        graph.addNode(type, x, y);
+        const r = canvas.getBoundingClientRect();
+        graph.addNode(type, (e.clientX - r.left - graph.pan.x) / graph.zoom, (e.clientY - r.top - graph.pan.y) / graph.zoom);
       }
     });
 
-    // Export
-    window.exportJSON = () => {
+    // Update preview using lucid-renderer web component
+    function updatePreview() {
       const json = graph.toJSON();
-      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'scene.json';
-      a.click();
-    };
+      document.getElementById('jsonOutput').value = JSON.stringify(json, null, 2);
 
-    // Load example
-    window.loadExample = () => {
-      graph.clear();
-      graph.addNode('sphere', 100, 100);
-      graph.addNode('box', 100, 200);
-      graph.addNode('smoothUnion', 300, 150);
-      // Connect
-      const sphere = graph.nodes[0];
-      const box = graph.nodes[1];
-      const union = graph.nodes[2];
-      graph.connections.push({ fromNode: sphere.id, toNode: union.id, toIndex: 0 });
-      graph.connections.push({ fromNode: box.id, toNode: union.id, toIndex: 1 });
-      graph.render();
-      graph.updateJSON();
-    };
+      if (!json.root) return;
+
+      // Add default camera if not present
+      if (!json.camera) {
+        json.camera = { distance: 6, theta: 0.4, phi: 0.5 };
+      }
+
+      try {
+        previewEl.loadSceneJson(json);
+      } catch (e) {
+        console.error('Preview error:', e);
+      }
+    }
+
+    function updateProps() {
+      const c = document.getElementById('propsContent');
+      if (!graph.selected) {
+        c.innerHTML = '<p class="no-selection">Select a node to edit</p>';
+        return;
+      }
+
+      const n = graph.selected;
+      const schema = NODE_SCHEMAS[n.type];
+
+      let h = `<div class="prop-row"><label>Type</label><input value="${n.type}" disabled></div>`;
+
+      for (const [k, v] of Object.entries(n.params)) {
+        if (Array.isArray(v)) {
+          h += `<div class="prop-row"><label>${k}</label><input value="${v.join(', ')}" data-p="${k}" data-arr="1" placeholder="x, y, z"></div>`;
+        } else if (k === 'axis') {
+          h += `<div class="prop-row"><label>${k}</label><select data-p="${k}">
+            <option value="x" ${v === 'x' ? 'selected' : ''}>X</option>
+            <option value="y" ${v === 'y' ? 'selected' : ''}>Y</option>
+            <option value="z" ${v === 'z' ? 'selected' : ''}>Z</option>
+          </select></div>`;
+        } else {
+          h += `<div class="prop-row"><label>${k}</label><input type="number" step="0.1" value="${v}" data-p="${k}"></div>`;
+        }
+      }
+
+      c.innerHTML = h;
+
+      c.querySelectorAll('[data-p]').forEach(inp => {
+        inp.addEventListener('input', () => {
+          if (inp.dataset.arr) {
+            n.params[inp.dataset.p] = inp.value.split(',').map(x => parseFloat(x.trim()) || 0);
+          } else if (inp.type === 'number') {
+            n.params[inp.dataset.p] = parseFloat(inp.value) || 0;
+          } else {
+            n.params[inp.dataset.p] = inp.value;
+          }
+          graph.render();
+          updatePreview();
+        });
+        inp.addEventListener('change', () => inp.dispatchEvent(new Event('input')));
+      });
+    }
+
+    function exportJSON() {
+      const json = graph.toJSON();
+      json.title = 'Node Editor Export';
+      json.version = '1.0';
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lucid-scene.json';
+      a.click();
+    }
+
+    // Load comprehensive scene list from TOC
+    async function loadSceneList() {
+      try {
+        const resp = await fetch('./scenes/toc.json');
+        const toc = await resp.json();
+        const list = document.getElementById('sceneList');
+        const countEl = document.getElementById('sceneCount');
+
+        // Skip categories that are complex/physics/animation
+        const skipCats = ['recent', 'archive', 'physics', 'anim', 'animation'];
+
+        let html = '';
+        let totalScenes = 0;
+
+        for (const cat of toc.categories) {
+          if (skipCats.includes(cat.id)) continue;
+
+          const scenes = cat.scenes.slice(0, 6); // Max 6 per category
+          if (scenes.length === 0) continue;
+
+          html += `<div class="scene-category">
+            <div class="scene-category-title">${cat.title || cat.id}</div>`;
+
+          for (const s of scenes) {
+            html += `<div class="scene-item" data-path="${s.path}">${s.title}</div>`;
+            totalScenes++;
+          }
+
+          html += '</div>';
+        }
+
+        list.innerHTML = html;
+        countEl.textContent = `(${totalScenes})`;
+
+        // Attach click handlers
+        list.querySelectorAll('.scene-item').forEach(el => {
+          el.addEventListener('click', async () => {
+            // Update active state
+            list.querySelectorAll('.scene-item').forEach(x => x.classList.remove('active'));
+            el.classList.add('active');
+
+            try {
+              const resp = await fetch(`./scenes/${el.dataset.path}`);
+              const json = await resp.json();
+              graph.fromJSON(json);
+            } catch (e) {
+              console.error('Failed to load scene:', e);
+            }
+          });
+        });
+
+      } catch (e) {
+        document.getElementById('sceneList').innerHTML = '<p class="no-selection">Failed to load scenes</p>';
+        console.error('Failed to load TOC:', e);
+      }
+    }
+
+    // Button handlers
+    document.getElementById('btnClear').addEventListener('click', () => graph.clear());
+    document.getElementById('btnExport').addEventListener('click', exportJSON);
+
+    // Initialize
+    loadSceneList();
   </script>
 </body>
 </html>
