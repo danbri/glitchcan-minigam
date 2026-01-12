@@ -99,23 +99,7 @@
       cursor: pointer;
     }
 
-    .scene-picker {
-      max-height: 150px;
-      overflow-y: auto;
-      padding: 6px;
-      border-bottom: 1px solid #30363d;
-    }
-    .scene-item {
-      padding: 4px 8px;
-      margin: 2px 0;
-      background: #21262d;
-      border: 1px solid transparent;
-      border-radius: 3px;
-      font-size: 10px;
-      cursor: pointer;
-    }
-    .scene-item:hover { border-color: #58a6ff; }
-    .scene-item.active { background: #238636; }
+    /* Scene picker uses <lucid-scene-picker> web component with encapsulated styles */
 
     .preview-area {
       height: 160px;
@@ -255,8 +239,7 @@
 
   <!-- Right panel - Preview & Properties -->
   <div class="panel panel-right hidden" id="panelRight">
-    <div class="panel-header">Load Scene ▼</div>
-    <div class="scene-picker" id="scenePicker">Loading...</div>
+    <lucid-scene-picker id="scenePicker" filter="validated" style="max-height:200px;border-bottom:1px solid #30363d;"></lucid-scene-picker>
     <div class="panel-header">Preview</div>
     <div class="preview-area">
       <lucid-renderer id="preview" backend="auto" quality="medium"></lucid-renderer>
@@ -289,6 +272,7 @@
 
   <script type="module">
     import './components/lucid-renderer.js';
+    import './components/lucid-scene-picker.js';
 
     const NODE_SCHEMAS = {
       sphere: { cat: 'prim', color: '#58a6ff', ins: 0, outs: 1, defaults: { r: 1 } },
@@ -728,35 +712,16 @@
       });
     }
 
-    // Scene picker - load ALL scenes
-    async function loadScenes() {
-      try {
-        const resp = await fetch('./scenes/toc.json');
-        const toc = await resp.json();
-        const picker = document.getElementById('scenePicker');
-        let html = '';
-        for (const cat of toc.categories) {
-          if (cat.id === 'recent') continue; // Skip recent (duplicates)
-          for (const s of cat.scenes) {
-            html += `<div class="scene-item" data-path="${s.path}">${s.title}</div>`;
-          }
-        }
-        picker.innerHTML = html;
-        picker.querySelectorAll('.scene-item').forEach(el => {
-          el.addEventListener('click', async () => {
-            picker.querySelectorAll('.scene-item').forEach(x => x.classList.remove('active'));
-            el.classList.add('active');
-            try {
-              const resp = await fetch(`./scenes/${el.dataset.path}`);
-              const json = await resp.json();
-              graph.fromJSON(json);
-            } catch (e) { console.error(e); }
-          });
-        });
-      } catch (e) {
-        document.getElementById('scenePicker').innerHTML = '<p class="no-selection">Failed to load</p>';
-      }
-    }
+    // Scene picker - uses <lucid-scene-picker> component
+    const scenePicker = document.getElementById('scenePicker');
+    scenePicker.addEventListener('scene-selected', (e) => {
+      const { json, path, title } = e.detail;
+      console.log(`Loading scene: ${title} (${path})`);
+      graph.fromJSON(json);
+    });
+    scenePicker.addEventListener('load-error', (e) => {
+      console.error(`Failed to load scene ${e.detail.path}:`, e.detail.error);
+    });
 
     // Timeline
     const timeline = { time: 0, duration: 10, playing: false, loop: true };
@@ -807,7 +772,7 @@
       updateScrubber();
     }
 
-    loadScenes();
+    // Scene picker loads automatically via web component
   </script>
 </body>
 </html>
