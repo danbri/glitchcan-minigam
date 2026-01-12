@@ -16,7 +16,7 @@
     .app {
       display: grid;
       grid-template-columns: 180px 1fr 300px;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto 1fr auto;
       height: 100vh;
     }
 
@@ -184,6 +184,174 @@
       border-radius: 3px;
       font-size: 9px;
     }
+
+    /* Timeline Footer */
+    .timeline-footer {
+      grid-column: 1 / -1;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      max-height: 140px;
+      transition: max-height 0.2s;
+    }
+    .timeline-footer.collapsed { max-height: 32px; }
+    .timeline-footer.collapsed .timeline-content { display: none; }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      gap: 12px;
+      border-bottom: 1px solid #30363d;
+      min-height: 32px;
+    }
+    .timeline-header h4 {
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: auto;
+    }
+    .timeline-header .time-display {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 11px;
+      color: #58a6ff;
+      min-width: 60px;
+    }
+
+    .tl-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tl-btn:hover { background: #30363d; }
+    .tl-btn.active { background: #238636; border-color: #238636; }
+
+    .timeline-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Scrubber track */
+    .scrubber-area {
+      flex: 1;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .scrubber-track {
+      position: relative;
+      height: 24px;
+      background: #0d1117;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .scrubber-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #238636 0%, #58a6ff 100%);
+      border-radius: 4px;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .scrubber-handle {
+      position: absolute;
+      top: 2px;
+      width: 4px;
+      height: 20px;
+      background: #58a6ff;
+      border-radius: 2px;
+      transform: translateX(-2px);
+      pointer-events: none;
+    }
+    .scrubber-ticks {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      pointer-events: none;
+    }
+    .scrubber-tick {
+      position: absolute;
+      top: 18px;
+      font-size: 8px;
+      color: #6e7681;
+      transform: translateX(-50%);
+    }
+
+    /* Param curves */
+    .param-curves {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .param-curve {
+      background: #21262d;
+      border-radius: 4px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .param-curve-label {
+      font-size: 9px;
+      color: #8b949e;
+      min-width: 50px;
+    }
+    .param-curve-canvas {
+      width: 80px;
+      height: 24px;
+      background: #0d1117;
+      border-radius: 2px;
+    }
+    .param-curve-value {
+      font-size: 10px;
+      font-family: 'SF Mono', Monaco, monospace;
+      color: #7ee787;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* Wiggler presets */
+    .wiggler-panel {
+      width: 200px;
+      border-left: 1px solid #30363d;
+      padding: 8px;
+      overflow-y: auto;
+    }
+    .wiggler-panel h5 {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #8b949e;
+      margin-bottom: 6px;
+    }
+    .wiggler-item {
+      padding: 4px 8px;
+      margin: 2px 0;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 3px;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wiggler-item:hover { border-color: #58a6ff; }
+    .wiggler-icon { font-size: 12px; }
   </style>
 </head>
 <body>
@@ -246,6 +414,52 @@
         <kbd>Drag</kbd> nodes from palette · <kbd>Double-click</kbd> to delete · <kbd>Scroll</kbd> to zoom
       </div>
     </aside>
+
+    <!-- Timeline Footer -->
+    <footer class="timeline-footer" id="timeline">
+      <div class="timeline-header">
+        <h4>⏱ Timeline</h4>
+        <span class="time-display" id="timeDisplay">0.00s</span>
+        <button class="tl-btn" id="btnRewind" title="Rewind">⏮</button>
+        <button class="tl-btn" id="btnPlay" title="Play/Pause">▶</button>
+        <button class="tl-btn" id="btnLoop" title="Loop">🔁</button>
+        <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" style="width:60px" title="Speed">
+        <span style="font-size:10px;color:#8b949e" id="speedLabel">1×</span>
+        <button class="tl-btn" id="btnCollapse" title="Toggle">▼</button>
+      </div>
+      <div class="timeline-content">
+        <div class="scrubber-area">
+          <div class="scrubber-track" id="scrubberTrack">
+            <div class="scrubber-fill" id="scrubberFill"></div>
+            <div class="scrubber-handle" id="scrubberHandle"></div>
+            <div class="scrubber-ticks">
+              <span class="scrubber-tick" style="left:0%">0s</span>
+              <span class="scrubber-tick" style="left:25%">2.5s</span>
+              <span class="scrubber-tick" style="left:50%">5s</span>
+              <span class="scrubber-tick" style="left:75%">7.5s</span>
+              <span class="scrubber-tick" style="left:100%">10s</span>
+            </div>
+          </div>
+          <div class="param-curves" id="paramCurves">
+            <!-- Filled dynamically -->
+          </div>
+        </div>
+        <div class="wiggler-panel">
+          <h5>Wigglers</h5>
+          <div class="wiggler-item" data-fn="sin"><span class="wiggler-icon">∿</span> Sine</div>
+          <div class="wiggler-item" data-fn="bounce"><span class="wiggler-icon">⌢</span> Bounce</div>
+          <div class="wiggler-item" data-fn="noise"><span class="wiggler-icon">〰</span> Noise</div>
+          <div class="wiggler-item" data-fn="pulse"><span class="wiggler-icon">⎍</span> Pulse</div>
+          <h5>Gaits</h5>
+          <div class="wiggler-item" data-fn="walk"><span class="wiggler-icon">🚶</span> Walk</div>
+          <div class="wiggler-item" data-fn="trot"><span class="wiggler-icon">🐕</span> Trot</div>
+          <div class="wiggler-item" data-fn="gallop"><span class="wiggler-icon">🐎</span> Gallop</div>
+          <h5>Physics</h5>
+          <div class="wiggler-item" data-fn="spring"><span class="wiggler-icon">🌀</span> Spring</div>
+          <div class="wiggler-item" data-fn="gravity"><span class="wiggler-icon">⬇</span> Gravity</div>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <script type="module">
@@ -630,6 +844,184 @@
     // Button handlers
     document.getElementById('btnClear').addEventListener('click', () => graph.clear());
     document.getElementById('btnExport').addEventListener('click', exportJSON);
+
+    // ============ TIMELINE SYSTEM ============
+    const timeline = {
+      time: 0,
+      duration: 10,
+      playing: false,
+      loop: true,
+      speed: 1,
+      animatedParams: []
+    };
+
+    // Wiggler functions
+    const wigglers = {
+      sin: (t, freq = 1, amp = 1) => Math.sin(t * freq * Math.PI * 2) * amp,
+      bounce: (t, freq = 1, amp = 1) => Math.abs(Math.sin(t * freq * Math.PI)) * amp,
+      noise: (t, freq = 1, amp = 1) => (Math.sin(t * 12.9898) * 43758.5453 % 1 - 0.5) * amp * 2,
+      pulse: (t, freq = 1, amp = 1) => (Math.sin(t * freq * Math.PI * 2) > 0 ? 1 : 0) * amp,
+      walk: (t, phase = 0) => Math.sin((t + phase) * Math.PI * 2) * 0.3,
+      trot: (t, phase = 0) => Math.sin((t * 2 + phase) * Math.PI * 2) * 0.4,
+      gallop: (t, phase = 0) => Math.sin((t * 3 + phase) * Math.PI * 2) * 0.5,
+      spring: (t, k = 5, d = 0.3) => Math.exp(-d * t) * Math.cos(k * t),
+      gravity: (t) => Math.max(0, 1 - 4.9 * t * t)
+    };
+
+    const timeDisplay = document.getElementById('timeDisplay');
+    const scrubberTrack = document.getElementById('scrubberTrack');
+    const scrubberFill = document.getElementById('scrubberFill');
+    const scrubberHandle = document.getElementById('scrubberHandle');
+    const paramCurvesEl = document.getElementById('paramCurves');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnLoop = document.getElementById('btnLoop');
+    const btnCollapse = document.getElementById('btnCollapse');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedLabel = document.getElementById('speedLabel');
+
+    function updateScrubber() {
+      const pct = (timeline.time / timeline.duration) * 100;
+      scrubberFill.style.width = pct + '%';
+      scrubberHandle.style.left = pct + '%';
+      timeDisplay.textContent = timeline.time.toFixed(2) + 's';
+    }
+
+    function updateParamCurves() {
+      // Create mini sparkline for each animated param
+      paramCurvesEl.innerHTML = timeline.animatedParams.map(p => `
+        <div class="param-curve">
+          <span class="param-curve-label">${p.name}</span>
+          <canvas class="param-curve-canvas" data-param="${p.name}" width="80" height="24"></canvas>
+          <span class="param-curve-value" data-val="${p.name}">${p.fn(timeline.time).toFixed(2)}</span>
+        </div>
+      `).join('');
+
+      // Draw sparklines
+      timeline.animatedParams.forEach(p => {
+        const canvas = paramCurvesEl.querySelector(`canvas[data-param="${p.name}"]`);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 80, 24);
+        ctx.strokeStyle = '#58a6ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = 0; x < 80; x++) {
+          const t = (x / 80) * timeline.duration;
+          const v = p.fn(t);
+          const y = 12 - v * 10;
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Draw playhead
+        const px = (timeline.time / timeline.duration) * 80;
+        ctx.strokeStyle = '#f0883e';
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, 24);
+        ctx.stroke();
+      });
+
+      // Update values
+      timeline.animatedParams.forEach(p => {
+        const valEl = paramCurvesEl.querySelector(`[data-val="${p.name}"]`);
+        if (valEl) valEl.textContent = p.fn(timeline.time).toFixed(2);
+      });
+    }
+
+    let lastFrameTime = 0;
+    function animationLoop(timestamp) {
+      if (timeline.playing) {
+        const dt = (timestamp - lastFrameTime) / 1000 * timeline.speed;
+        timeline.time += dt;
+        if (timeline.time >= timeline.duration) {
+          timeline.time = timeline.loop ? 0 : timeline.duration;
+          if (!timeline.loop) {
+            timeline.playing = false;
+            btnPlay.textContent = '▶';
+            btnPlay.classList.remove('active');
+          }
+        }
+        updateScrubber();
+        updateParamCurves();
+
+        // Update preview time
+        if (previewEl.renderer) {
+          previewEl.renderer.time = timeline.time;
+        }
+      }
+      lastFrameTime = timestamp;
+      requestAnimationFrame(animationLoop);
+    }
+    requestAnimationFrame(animationLoop);
+
+    // Scrubber interaction
+    let scrubbing = false;
+    function scrubTo(e) {
+      const rect = scrubberTrack.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      timeline.time = pct * timeline.duration;
+      updateScrubber();
+      updateParamCurves();
+    }
+
+    scrubberTrack.addEventListener('mousedown', e => { scrubbing = true; scrubTo(e); });
+    window.addEventListener('mousemove', e => { if (scrubbing) scrubTo(e); });
+    window.addEventListener('mouseup', () => { scrubbing = false; });
+
+    // Touch support
+    scrubberTrack.addEventListener('touchstart', e => { scrubbing = true; scrubTo(e.touches[0]); }, { passive: true });
+    window.addEventListener('touchmove', e => { if (scrubbing) scrubTo(e.touches[0]); }, { passive: true });
+    window.addEventListener('touchend', () => { scrubbing = false; });
+
+    // Controls
+    btnPlay.addEventListener('click', () => {
+      timeline.playing = !timeline.playing;
+      btnPlay.textContent = timeline.playing ? '⏸' : '▶';
+      btnPlay.classList.toggle('active', timeline.playing);
+      lastFrameTime = performance.now();
+    });
+
+    document.getElementById('btnRewind').addEventListener('click', () => {
+      timeline.time = 0;
+      updateScrubber();
+      updateParamCurves();
+    });
+
+    btnLoop.addEventListener('click', () => {
+      timeline.loop = !timeline.loop;
+      btnLoop.classList.toggle('active', timeline.loop);
+    });
+    btnLoop.classList.add('active'); // Default on
+
+    speedSlider.addEventListener('input', () => {
+      timeline.speed = parseFloat(speedSlider.value);
+      speedLabel.textContent = timeline.speed.toFixed(1) + '×';
+    });
+
+    btnCollapse.addEventListener('click', () => {
+      document.getElementById('timeline').classList.toggle('collapsed');
+      btnCollapse.textContent = document.getElementById('timeline').classList.contains('collapsed') ? '▲' : '▼';
+    });
+
+    // Wiggler presets
+    document.querySelectorAll('.wiggler-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const fn = item.dataset.fn;
+        if (wigglers[fn]) {
+          const name = fn + '_' + timeline.animatedParams.length;
+          timeline.animatedParams.push({ name, fn: t => wigglers[fn](t) });
+          updateParamCurves();
+        }
+      });
+    });
+
+    // Add some default animated params for demo
+    timeline.animatedParams = [
+      { name: 'wobble', fn: t => wigglers.sin(t, 0.5, 0.5) },
+      { name: 'bounce', fn: t => wigglers.bounce(t, 1, 0.8) }
+    ];
+    updateParamCurves();
 
     // Initialize
     loadSceneList();
