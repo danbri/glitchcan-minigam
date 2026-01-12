@@ -96,7 +96,11 @@ export class LucidRenderer extends HTMLElement {
 
   connectedCallback() {
     this._setupResizeObserver();
-    this._initBackend();
+    // Delay init slightly to ensure element is attached and sized
+    // This prevents WebGL context failures on hidden elements
+    requestAnimationFrame(() => {
+      this._initBackend();
+    });
   }
 
   disconnectedCallback() {
@@ -292,6 +296,15 @@ export class LucidRenderer extends HTMLElement {
     const basePath = this._getBasePath();
     const { SimpleRaymarcher } = await import(`${basePath}/mayfly/raymarcher.js`);
 
+    // Ensure canvas has valid dimensions before WebGL init
+    if (this._canvas.width === 0 || this._canvas.height === 0) {
+      // Set minimum dimensions for initial context creation
+      const rect = this.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this._canvas.width = Math.max(1, Math.floor((rect.width || 100) * dpr));
+      this._canvas.height = Math.max(1, Math.floor((rect.height || 100) * dpr));
+    }
+
     this._renderer = new SimpleRaymarcher(this._canvas);
     this._setStatus('Mayfly ready', 'ok');
   }
@@ -299,6 +312,14 @@ export class LucidRenderer extends HTMLElement {
   async _initStinkyfish() {
     const basePath = this._getBasePath();
     const { StinkyfishRenderer } = await import(`${basePath}/stinkyfish/raymarcher.js`);
+
+    // Ensure canvas has valid dimensions before WebGPU init
+    if (this._canvas.width === 0 || this._canvas.height === 0) {
+      const rect = this.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this._canvas.width = Math.max(1, Math.floor((rect.width || 100) * dpr));
+      this._canvas.height = Math.max(1, Math.floor((rect.height || 100) * dpr));
+    }
 
     this._renderer = new StinkyfishRenderer(this._canvas);
     await this._renderer.init();
