@@ -2476,6 +2476,10 @@
         const oldCanvas = canvas;
         const newCanvas = document.createElement('canvas');
         newCanvas.id = 'canvas';
+        // Copy dimensions and styles from old canvas
+        newCanvas.width = oldCanvas.width;
+        newCanvas.height = oldCanvas.height;
+        newCanvas.style.cssText = oldCanvas.style.cssText;
         oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
         canvas = newCanvas;
 
