@@ -483,14 +483,23 @@
     }
 
     .demo-info h1 {
-      font-size: 0.875rem;
+      font-size: 1.1rem;
       font-weight: 600;
       color: var(--text);
+      margin-bottom: 2px;
     }
 
     .demo-info p {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       color: var(--text-dim);
+    }
+
+    .demo-info .scene-path {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      opacity: 0.7;
+      font-family: 'Monaco', 'Menlo', monospace;
+      margin-top: 2px;
     }
 
     .header-actions {
@@ -1272,6 +1281,7 @@
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
           <p id="subtitle">JSON SDF Demo</p>
+          <div class="scene-path" id="scene-path"></div>
         </div>
       </div>
       <div class="header-actions">
@@ -2159,6 +2169,7 @@
     const appEl = $('app');
     const titleEl = $('title');
     const subtitleEl = $('subtitle');
+    const scenePathEl = $('scene-path');
     const editorPanel = $('editor-panel');
     const jsonEditor = $('json-editor');
     const mainMenu = $('main-menu');
@@ -2365,6 +2376,7 @@
         // Update UI
         titleEl.textContent = demo.title;
         subtitleEl.textContent = demo.subtitle;
+        scenePathEl.textContent = demo.path ? `scenes/${demo.path}` : '';
 
         // Update editor
         jsonEditor.value = JSON.stringify(demo.json, null, 2);
@@ -2405,7 +2417,7 @@
     async function switchBackend(newBackend) {
       if (newBackend === currentBackend) return;
 
-      const canvas = $('canvas');
+      let canvas = $('canvas');
       const currentScene = demos[currentDemo]?.json;
       const wasAutoRotating = autoRotate;
 
@@ -2422,6 +2434,13 @@
       showStatus(`Switching to ${newBackend}...`, 'info');
 
       try {
+        // Canvas context type can't be changed - must create new canvas
+        const oldCanvas = canvas;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = 'canvas';
+        oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+        canvas = newCanvas;
+
         if (newBackend === 'stinkyfish') {
           // Switch to WebGPU
           renderer = new StinkyfishRenderer(canvas);
@@ -2470,6 +2489,11 @@
 
     // Render scene using Stinkyfish (WebGPU)
     async function renderJsonStinkyfish(json) {
+      if (!renderer) {
+        console.error('Stinkyfish renderer not initialized');
+        return;
+      }
+
       const scene = loadJsonScene(json);
 
       // Update scene complexity for perf display
@@ -2479,6 +2503,7 @@
 
       // Generate WGSL code
       const wgsl = generateWgslFromJson(scene, { showCutters: debugSettings.showCutters });
+      currentGlsl = wgsl; // Store for shader tab display (WGSL in this case)
 
       // Build uniform layout from all params
       const allParams = getAllParamNames(scene.params || {}, scene.rig);
@@ -2509,6 +2534,31 @@
           renderer.cameraTarget = cam.target;
         }
       }
+
+      // Update params panel with new scene params and rig constraints
+      updateParamsPanel(scene.params || {}, scene.rig);
+
+      // Reinitialize wiggler with new scene params (sticky: keeps running if active)
+      const wasActive = wigglerState.active;
+      const wasFast = wigglerState.fast;
+      if (wasActive) {
+        cancelAnimationFrame(wigglerState.animationId);
+        wigglerState.animationId = null;
+      }
+      initWiggler(scene.params || {});
+      if (wasActive) {
+        wigglerState.active = false; // Reset so startWiggler works
+        wigglerState.fast = wasFast;
+        startWiggler();
+      }
+
+      // Update rig info display
+      updateRigInfo(scene.rig);
+
+      // Update shader tab if visible (shows WGSL for Stinkyfish)
+      if (activeTab === 'glsl') {
+        $('glsl-content').textContent = wgsl;
+      }
     }
 
     function renderJson(json) {
@@ -2519,6 +2569,11 @@
       }
 
       // Mayfly (WebGL) rendering
+      if (!renderer) {
+        console.error('Mayfly renderer not initialized');
+        return;
+      }
+
       const scene = loadJsonScene(json);
 
       // Update scene complexity for perf display
@@ -5215,6 +5270,7 @@
           renderJson(json);
           $('title').textContent = demos[currentDemo].title;
           $('subtitle').textContent = demos[currentDemo].subtitle;
+          $('scene-path').textContent = demos[currentDemo].path ? `scenes/${demos[currentDemo].path}` : '(pasted)';
           jsonEditor.value = JSON.stringify(json, null, 2);
 
           showStatus('✓ Pasted and applied!', 'success');

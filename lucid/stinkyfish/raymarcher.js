@@ -109,6 +109,13 @@ export class StinkyfishRenderer {
     }
   }
 
+  /**
+   * Alias for setSceneParam - provides API compatibility with Mayfly
+   */
+  setParam(name, value) {
+    this.setSceneParam(name, value);
+  }
+
   setupMouseHandlers() {
     // Prevent context menu on canvas
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
