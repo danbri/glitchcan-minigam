@@ -49,11 +49,54 @@ Lucid scenes are JSON trees where each node has a `type`. This maps directly to 
 
 | Library | Pros | Cons |
 |---------|------|------|
-| [Rete.js](https://rete.js.org/) | Vue/React/Vanilla, TypeScript, active | Complex API |
+| **Vanilla Canvas** | Zero deps, full control, matches Lucid philosophy | More code |
 | [Litegraph.js](https://github.com/jagenjo/litegraph.js) | Standalone, WebGL nodes, simple | Less maintained |
-| [Flume](https://flume.dev/) | React, type-safe connections | React only |
-| [Baklava](https://github.com/newcat/baern) | Vue 3, TypeScript | Vue only |
-| [Node-RED](https://nodered.org/) | Mature, huge ecosystem | Server-based, overkill |
+| [Rete.js](https://rete.js.org/) | Vue/React/Vanilla, TypeScript, active | Complex API |
+
+**Preferred: Vanilla Canvas** - no dependencies, just like the rest of Lucid.
+
+## Zero-Dep Implementation Sketch
+
+```javascript
+// ~300 lines for basic node graph
+class NodeGraph {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.nodes = [];
+    this.connections = [];
+    this.dragging = null;
+    this.connecting = null;
+    this.setupEvents();
+  }
+
+  addNode(type, x, y) {
+    const schema = NODE_SCHEMAS[type];
+    this.nodes.push({ id: crypto.randomUUID(), type, x, y, ...schema.defaults });
+  }
+
+  render() {
+    // Draw connections as bezier curves
+    // Draw nodes as rounded rects
+    // Draw sockets as circles
+  }
+
+  toJSON() {
+    // Convert graph → Lucid scene JSON
+  }
+
+  fromJSON(scene) {
+    // Convert Lucid scene JSON → graph
+  }
+}
+```
+
+Core features needed:
+- Drag nodes
+- Connect sockets (bezier curves)
+- Delete nodes/connections
+- Property panel (HTML overlay)
+- Zoom/pan
 
 ## Integration Points
 
@@ -64,11 +107,12 @@ Lucid scenes are JSON trees where each node has a `type`. This maps directly to 
 
 ## Minimal MVP
 
-1. Pick Litegraph.js (simplest, no framework deps)
-2. Register node types matching Lucid primitives/ops
-3. Graph → JSON export
-4. JSON → Graph import
-5. Wire to existing Mayfly renderer
+1. Single HTML file with canvas + sidebar
+2. NodeGraph class (~300 lines)
+3. NODE_SCHEMAS matching Lucid types
+4. Graph → JSON export (toJSON)
+5. JSON → Graph import (fromJSON)
+6. Wire to existing Mayfly renderer via postMessage or import
 
 ## Not Yet Implemented
 
