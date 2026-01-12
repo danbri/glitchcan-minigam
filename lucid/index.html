@@ -2476,6 +2476,10 @@
         const oldCanvas = canvas;
         const newCanvas = document.createElement('canvas');
         newCanvas.id = 'canvas';
+        // Copy dimensions and styles from old canvas
+        newCanvas.width = oldCanvas.width;
+        newCanvas.height = oldCanvas.height;
+        newCanvas.style.cssText = oldCanvas.style.cssText;
         oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
         canvas = newCanvas;
 
@@ -4636,9 +4640,14 @@
           </div>`;
         } else if (type === 'color3' && Array.isArray(value)) {
           const hex = rgbToHex(value);
-          html += `<div class="${rowClass}">
-            <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
-            <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
+          const hsl = rgbToHsl(value);
+          html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
+              <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
+            </div>
+            <input type="range" min="0" max="360" step="1" value="${Math.round(hsl.h * 360)}"
+                   id="param-hue-${name}" data-param="${name}" style="width: 100%; accent-color: hsl(${hsl.h * 360}, 100%, 50%);">
           </div>`;
         } else if (Array.isArray(value) && value.length === 3) {
           // position3, radii3, direction3 - show as 3 sliders
@@ -4759,11 +4768,32 @@
           }
         } else if (param.type === 'color3') {
           const picker = $(`param-color-${name}`);
+          const hueSlider = $(`param-hue-${name}`);
           if (picker) {
             picker.addEventListener('input', function() {
               const rgb = hexToRgb(this.value);
               param.value = rgb;
               renderer.setParam(name, rgb);
+              // Update hue slider to match
+              if (hueSlider) {
+                const hsl = rgbToHsl(rgb);
+                hueSlider.value = Math.round(hsl.h * 360);
+                hueSlider.style.accentColor = `hsl(${hsl.h * 360}, 100%, 50%)`;
+              }
+            });
+          }
+          if (hueSlider) {
+            hueSlider.addEventListener('input', function() {
+              const hsl = rgbToHsl(param.value);
+              const newH = parseFloat(this.value) / 360;
+              const rgb = hslToRgb(newH, hsl.s || 0.5, hsl.l || 0.5);
+              param.value = rgb;
+              renderer.setParam(name, rgb);
+              this.style.accentColor = `hsl(${this.value}, 100%, 50%)`;
+              // Update color picker to match
+              if (picker) {
+                picker.value = rgbToHex(rgb);
+              }
             });
           }
         } else if (Array.isArray(param.value) && param.value.length === 3) {
@@ -4981,6 +5011,48 @@
         parseInt(result[2], 16) / 255,
         parseInt(result[3], 16) / 255
       ] : [1, 1, 1];
+    }
+
+    // Helper: RGB [0-1] to HSL object
+    function rgbToHsl(rgb) {
+      const r = rgb[0], g = rgb[1], b = rgb[2];
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+      return { h, s, l };
+    }
+
+    // Helper: HSL to RGB [0-1]
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [r, g, b];
     }
 
     // ============================================
