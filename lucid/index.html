@@ -1023,6 +1023,44 @@
       color: var(--text-dim);
     }
 
+    /* Param binding state indicators */
+    .param-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.55rem;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-left: 4px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .param-badge.constrained {
+      background: rgba(147, 51, 234, 0.2);
+      color: #c084fc;
+      border: 1px solid rgba(147, 51, 234, 0.3);
+    }
+    .param-badge.physics {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .param-badge.expr {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .param-row-constrained {
+      border-left: 2px solid #9333ea;
+      padding-left: 6px;
+      margin-left: -8px;
+    }
+    .param-row-physics {
+      border-left: 2px solid #22c55e;
+      padding-left: 6px;
+      margin-left: -8px;
+    }
+
     .toggle {
       position: relative;
       width: 44px;
@@ -4537,6 +4575,14 @@
         return;
       }
 
+      // Build sets for quick lookup of constraint involvement
+      const constrainedParams = new Set();
+      const driverParams = new Set();
+      for (const [, constraint] of Object.entries(constraints)) {
+        if (constraint.driver) driverParams.add(constraint.driver);
+        if (constraint.follower) constrainedParams.add(constraint.follower);
+      }
+
       let html = '';
       for (const [name, param] of Object.entries(params)) {
         // Skip comment/metadata params (start with _)
@@ -4553,10 +4599,33 @@
         const max = param.max !== undefined ? param.max : (type === 'scalar' ? 10 : 10);
         const step = param.step || (max - min) / 100;
 
+        // Determine binding state and build badges
+        const hasPhysics = !!param.physics;
+        const isConstrained = constrainedParams.has(name);
+        const isDriver = driverParams.has(name);
+        const hasExpr = typeof param.expr === 'string';
+
+        let badges = '';
+        let rowClass = 'debug-row';
+        if (hasPhysics) {
+          badges += '<span class="param-badge physics" title="Physics-driven">⚛️ phys</span>';
+          rowClass += ' param-row-physics';
+        }
+        if (isConstrained) {
+          badges += '<span class="param-badge constrained" title="Constrained by rig">⚙️ constrained</span>';
+          rowClass += ' param-row-constrained';
+        }
+        if (isDriver) {
+          badges += '<span class="param-badge constrained" title="Drives other params">⚙️ driver</span>';
+        }
+        if (hasExpr) {
+          badges += '<span class="param-badge expr" title="Expression-driven">ƒ expr</span>';
+        }
+
         if (type === 'scalar' && typeof value === 'number') {
-          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
+          html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+              <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
               <span id="param-val-${name}" style="font-size: 0.7rem; min-width: 3rem; text-align: right; font-family: monospace;">${value.toFixed(2)}</span>
             </div>
             <input type="range" min="${min}" max="${max}" step="${step}" value="${value}"
@@ -4564,14 +4633,14 @@
           </div>`;
         } else if (type === 'color3' && Array.isArray(value)) {
           const hex = rgbToHex(value);
-          html += `<div class="debug-row">
-            <span class="debug-label" style="font-size: 0.75rem;">${name}</span>
+          html += `<div class="${rowClass}">
+            <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
             <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
           </div>`;
         } else if (Array.isArray(value) && value.length === 3) {
           // position3, radii3, direction3 - show as 3 sliders
-          html += `<div class="debug-row" style="flex-direction: column; gap: 0.25rem;">
-            <span class="debug-label" style="font-size: 0.75rem;">${name} [x,y,z]</span>
+          html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
+            <span class="debug-label" style="font-size: 0.75rem;">${name} [x,y,z]${badges}</span>
             <div style="display: flex; gap: 0.25rem; width: 100%;">
               <input type="number" value="${value[0].toFixed(2)}" step="0.1" id="param-vec-${name}-0" data-param="${name}" data-index="0" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
               <input type="number" value="${value[1].toFixed(2)}" step="0.1" id="param-vec-${name}-1" data-param="${name}" data-index="1" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
