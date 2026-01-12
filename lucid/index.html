@@ -1264,6 +1264,10 @@
             <span id="anim-icon" style="display:inline-block;">▶</span>
           </button>
           <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
+          <select id="backend-select" title="Renderer Backend" style="padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;cursor:pointer;">
+            <option value="mayfly">Mayfly</option>
+            <option value="stinkyfish">Stinkyfish</option>
+          </select>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -1684,8 +1688,11 @@
 
   <script type="module">
     import { SimpleRaymarcher } from './mayfly/raymarcher.js';
+    import { StinkyfishRenderer } from './stinkyfish/raymarcher.js';
     import { loadJsonScene } from './core/json-loader.js';
     import { generateGlslFromJson } from './core/json-codegen.js';
+    import { generateWgslFromJson } from './core/wgsl-codegen.js';
+    import { getAllParamNames } from './core/rig-evaluator.js';
     import { PhysicsScene } from './core/physics/physics-scene.js';
 
     // ============================================
@@ -1811,6 +1818,7 @@
     let currentDemo = 0;
     let demos = [...templates]; // Copy templates as demos
     let renderer = null;
+    let currentBackend = 'mayfly'; // 'mayfly' or 'stinkyfish'
     let editorOpen = false;
     let menuOpen = false;
     let debugOpen = false;
@@ -2366,7 +2374,126 @@
       }
     }
 
+    // ============================================
+    // BACKEND SWITCHING
+    // ============================================
+    async function switchBackend(newBackend) {
+      if (newBackend === currentBackend) return;
+
+      const canvas = $('canvas');
+      const currentScene = demos[currentDemo]?.json;
+      const wasAutoRotating = autoRotate;
+
+      // Save camera state from current renderer
+      let cameraState = null;
+      if (renderer?.camera) {
+        cameraState = {
+          theta: renderer.camera.theta,
+          phi: renderer.camera.phi,
+          distance: renderer.cameraDistance
+        };
+      }
+
+      showStatus(`Switching to ${newBackend}...`, 'info');
+
+      try {
+        if (newBackend === 'stinkyfish') {
+          // Switch to WebGPU
+          renderer = new StinkyfishRenderer(canvas);
+          await renderer.init();
+          currentBackend = 'stinkyfish';
+
+          // Reload scene with WGSL
+          if (currentScene) {
+            await renderJsonStinkyfish(currentScene);
+          }
+        } else {
+          // Switch to WebGL (Mayfly)
+          renderer = new SimpleRaymarcher(canvas);
+          window.renderer = renderer;
+          currentBackend = 'mayfly';
+
+          // Reload scene with GLSL
+          if (currentScene) {
+            renderJson(currentScene);
+          }
+        }
+
+        // Restore camera state
+        if (cameraState && renderer) {
+          renderer.camera.theta = cameraState.theta;
+          renderer.camera.phi = cameraState.phi;
+          renderer.cameraDistance = cameraState.distance;
+        }
+
+        // Update GPU info display
+        perfState.gpuName = currentBackend === 'stinkyfish' ? 'WebGPU' : getGpuInfo(renderer.gl);
+        const gpuEl = $('perf-gpu');
+        if (gpuEl) gpuEl.textContent = perfState.gpuName;
+
+        autoRotate = wasAutoRotating;
+        showStatus(`✓ Switched to ${newBackend}`, 'success');
+      } catch (err) {
+        console.error('Backend switch failed:', err);
+        showStatus(`Backend switch failed: ${err.message}`, 'error');
+
+        // Revert dropdown to current backend
+        const backendSelect = $('backend-select');
+        if (backendSelect) backendSelect.value = currentBackend;
+      }
+    }
+
+    // Render scene using Stinkyfish (WebGPU)
+    async function renderJsonStinkyfish(json) {
+      const scene = loadJsonScene(json);
+
+      // Update scene complexity for perf display
+      perfState.nodeCount = countSceneNodes(json.root);
+      const nodesEl = $('perf-nodes');
+      if (nodesEl) nodesEl.textContent = perfState.nodeCount;
+
+      // Generate WGSL code
+      const wgsl = generateWgslFromJson(scene, { showCutters: debugSettings.showCutters });
+
+      // Build uniform layout from all params
+      const allParams = getAllParamNames(scene.params || {}, scene.rig);
+      const uniformLayout = {};
+      for (const [name, paramInfo] of Object.entries(allParams)) {
+        const uniformName = `u_${name}`;
+        const type = paramInfo.type || 'scalar';
+        if (['color3', 'position3', 'radii3', 'direction3', 'vec3'].includes(type)) {
+          uniformLayout[uniformName] = 'vec3f';
+        } else {
+          uniformLayout[uniformName] = 'f32';
+        }
+      }
+
+      // Compile and set params
+      await renderer.compileScene(wgsl, Object.keys(uniformLayout).length ? uniformLayout : null);
+      if (scene.params) {
+        renderer.setSceneParams(scene.params);
+      }
+
+      // Apply camera settings
+      if (json.camera) {
+        const cam = json.camera;
+        renderer.cameraDistance = cam.distance || 8;
+        renderer.cameraTheta = cam.theta || 0.3;
+        renderer.cameraPhi = cam.phi || 0.4;
+        if (cam.target) {
+          renderer.cameraTarget = cam.target;
+        }
+      }
+    }
+
     function renderJson(json) {
+      // Dispatch to appropriate backend renderer
+      if (currentBackend === 'stinkyfish') {
+        renderJsonStinkyfish(json);
+        return;
+      }
+
+      // Mayfly (WebGL) rendering
       const scene = loadJsonScene(json);
 
       // Update scene complexity for perf display
@@ -5058,6 +5185,24 @@
       // Touch-friendly timing guard for menu interactions
       let lastMenuInteraction = 0;
       const MENU_GUARD_MS = 600; // Delay before allowing menu close on mobile
+
+      // Backend selector - check WebGPU support
+      const backendSelect = $('backend-select');
+      if (backendSelect) {
+        if (!navigator.gpu) {
+          const stinkyfishOption = backendSelect.querySelector('option[value="stinkyfish"]');
+          if (stinkyfishOption) {
+            stinkyfishOption.disabled = true;
+            stinkyfishOption.textContent = 'Stinkyfish (no WebGPU)';
+          }
+        }
+        backendSelect.addEventListener('change', async () => {
+          const newBackend = backendSelect.value;
+          if (newBackend !== currentBackend) {
+            await switchBackend(newBackend);
+          }
+        });
+      }
 
       // Keyboard navigation
       document.addEventListener('keydown', (e) => {

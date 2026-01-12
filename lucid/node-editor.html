@@ -218,16 +218,13 @@
 <body>
   <canvas id="nodeCanvas"></canvas>
 
-  <!-- Floating toolbar -->
+  <!-- Floating toolbar - minimal actions only; panels use edge toggles -->
   <div class="toolbar">
-    <button id="btnPalette" class="active" title="Node Palette (P)">☰ Nodes</button>
-    <button id="btnClear" title="Clear All">✕ Clear</button>
-    <button id="btnPreview" title="Preview Panel (V)">◐ Preview</button>
-    <select id="backendSelect" title="Renderer Backend" style="padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;">
+    <select id="backendSelect" title="Renderer Backend" style="padding:6px 10px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;">
       <option value="mayfly">Mayfly (WebGL)</option>
       <option value="stinkyfish">Stinkyfish (WebGPU)</option>
     </select>
-    <button id="btnTimeline" title="Timeline (T)">⏱ Time</button>
+    <button id="btnClear" title="Clear All">✕ Clear</button>
     <button id="btnExport" title="Export JSON">↓ Export</button>
   </div>
 
@@ -466,8 +463,11 @@
 
       render() {
         const ctx = this.ctx;
+        const dpr = window.devicePixelRatio || 1;
         const w = window.innerWidth, h = window.innerHeight;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        // Reset transform with DPR scaling
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.fillStyle = '#0d1117';
         ctx.fillRect(0, 0, w, h);
         ctx.save();
@@ -653,22 +653,10 @@
     const panelRight = document.getElementById('panelRight');
     const panelBottom = document.getElementById('panelBottom');
 
+    // Edge toggles for panels
     document.getElementById('toggleLeft').addEventListener('click', () => panelLeft.classList.toggle('hidden'));
     document.getElementById('toggleRight').addEventListener('click', () => panelRight.classList.toggle('hidden'));
     document.getElementById('toggleBottom').addEventListener('click', () => panelBottom.classList.toggle('hidden'));
-
-    document.getElementById('btnPalette').addEventListener('click', () => {
-      panelLeft.classList.toggle('hidden');
-      document.getElementById('btnPalette').classList.toggle('active', !panelLeft.classList.contains('hidden'));
-    });
-    document.getElementById('btnPreview').addEventListener('click', () => {
-      panelRight.classList.toggle('hidden');
-      document.getElementById('btnPreview').classList.toggle('active', !panelRight.classList.contains('hidden'));
-    });
-    document.getElementById('btnTimeline').addEventListener('click', () => {
-      panelBottom.classList.toggle('hidden');
-      document.getElementById('btnTimeline').classList.toggle('active', !panelBottom.classList.contains('hidden'));
-    });
 
     document.getElementById('btnClear').addEventListener('click', () => graph.clear());
     document.getElementById('btnExport').addEventListener('click', () => {
