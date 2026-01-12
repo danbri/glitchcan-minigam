@@ -1314,6 +1314,9 @@
           <button class="panel-tab" id="tab-dev" title="Debug Console">
             <span class="panel-tab-icon">🐛</span> Dev
           </button>
+          <button class="panel-tab" id="tab-browse" title="Browse Scenes">
+            <span class="panel-tab-icon">📁</span> Browse
+          </button>
           <button class="tab-copy-btn" id="copy-tab" title="Copy current tab content">📋</button>
         </div>
 
@@ -1411,6 +1414,11 @@
             </label>
           </div>
           <div class="code-display dev-view" id="dev-content" style="font-size:0.7rem;"></div>
+        </div>
+
+        <!-- Browse Tab Content -->
+        <div class="tab-content" id="content-browse">
+          <lucid-scene-picker id="main-scene-picker" filter="all" style="height:100%;"></lucid-scene-picker>
         </div>
       </div>
     </div>
@@ -1694,6 +1702,7 @@
     import { generateWgslFromJson } from './core/wgsl-codegen.js';
     import { getAllParamNames } from './core/rig-evaluator.js';
     import { PhysicsScene } from './core/physics/physics-scene.js';
+    import './components/lucid-scene-picker.js';
 
     // ============================================
     // VERSION INFO
@@ -2192,6 +2201,22 @@
 
         // Build hierarchical demos submenu
         buildDemosSubmenu();
+
+        // Wire up scene-picker component for Browse tab
+        const scenePicker = $('main-scene-picker');
+        if (scenePicker) {
+          scenePicker.addEventListener('scene-selected', async (e) => {
+            const { path } = e.detail;
+            if (path) {
+              await loadAndSwitchToScene(path);
+              // Update scene picker selection
+              scenePicker.currentScene = path;
+            }
+          });
+          scenePicker.addEventListener('load-error', (e) => {
+            showStatus(`Failed to load scene: ${e.detail.path}`, 'error');
+          });
+        }
 
         // Check for initial hash in URL, otherwise display first demo
         const initialPath = hashToPath(window.location.hash);
@@ -5243,6 +5268,7 @@
       addClick('tab-dsl', () => switchTab('dsl'));
       addClick('tab-glsl', () => switchTab('glsl'));
       addClick('tab-dev', () => switchTab('dev'));
+      addClick('tab-browse', () => switchTab('browse'));
 
       // Dev tab controls
       addClick('btn-dev-clear', () => {
