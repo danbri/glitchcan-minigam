@@ -3,198 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lucid SDF Scene Catalog</title>
+  <title>Lucid Scene Catalog</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; overflow: hidden; }
 
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #fff;
-      color: #1a1a1a;
-      line-height: 1.4;
-      padding: 20px;
-    }
+    .app { display: grid; grid-template-columns: 1fr auto; height: 100vh; }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 10px;
-      font-size: 24px;
-    }
+    /* Main content - maximize for images */
+    main { overflow-y: auto; padding: 12px; }
 
-    .subtitle {
-      text-align: center;
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 14px;
-    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
 
-    .controls {
-      text-align: center;
-      margin-bottom: 20px;
-      padding: 15px;
-      background: #f5f5f5;
-      border-radius: 8px;
-    }
-
-    .controls button {
-      padding: 10px 20px;
-      font-size: 14px;
-      cursor: pointer;
-      margin: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: #fff;
-    }
-
-    .controls button:hover {
-      background: #e8e8e8;
-    }
-
-    .controls button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    #progress {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #666;
-    }
-
-    .category {
-      margin-bottom: 30px;
-      page-break-inside: avoid;
-    }
-
-    .category-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 15px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #333;
-    }
-
-    .scene {
-      margin-bottom: 25px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      page-break-inside: avoid;
-    }
-
-    .scene-header {
-      margin-bottom: 10px;
-    }
-
-    .scene-title {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .scene-path {
-      font-size: 11px;
-      color: #888;
-      font-family: monospace;
-    }
-
-    .scene-description {
-      font-size: 13px;
-      color: #555;
-      margin-top: 5px;
-    }
-
-    .backends {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 10px;
-    }
-
-    .backend {
-      border: 1px solid #e0e0e0;
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
       border-radius: 6px;
-      padding: 8px;
-      background: #fafafa;
-    }
-
-    .backend-title {
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #444;
-    }
-
-    .backend-title.mayfly { color: #2563eb; }
-    .backend-title.stinkyfish { color: #7c3aed; }
-
-    .views {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-    }
-
-    .view {
-      aspect-ratio: 1;
-      background: #1a1a2e;
-      border-radius: 3px;
       overflow: hidden;
+    }
+    .card-head {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-head .path { font-weight: normal; color: #6e7681; font-family: monospace; font-size: 9px; }
+
+    .renders { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; }
+    .render {
+      aspect-ratio: 1;
+      background: #0d1117;
       position: relative;
-    }
-
-    .view canvas {
-      width: 100%;
-      height: 100%;
-    }
-
-    .view-label {
-      position: absolute;
-      bottom: 1px;
-      left: 1px;
-      font-size: 8px;
-      color: rgba(255,255,255,0.8);
-      background: rgba(0,0,0,0.6);
-      padding: 1px 3px;
       border-radius: 2px;
+      overflow: hidden;
     }
-
-    .view img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .render img { width: 100%; height: 100%; object-fit: cover; }
+    .render .lbl {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      font-size: 7px;
+      color: #fff;
+      background: rgba(0,0,0,0.7);
+      padding: 1px 3px;
     }
-
-    .placeholder {
+    .render .placeholder {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #666;
-      font-size: 10px;
       height: 100%;
+      font-size: 9px;
+      color: #484f58;
     }
+    .render .placeholder.err { color: #f85149; }
 
-    .placeholder.error { color: #e44; }
-    .placeholder.na { color: #888; font-style: italic; }
+    .backend-row {
+      display: flex;
+      gap: 2px;
+      font-size: 8px;
+      padding: 2px 4px;
+      background: #21262d;
+    }
+    .backend-row span { padding: 1px 4px; border-radius: 2px; }
+    .backend-row .mayfly { background: #1f6feb22; color: #58a6ff; }
+    .backend-row .stinkyfish { background: #8957e522; color: #a371f7; }
+
+    /* Collapsible sidebar */
+    aside {
+      width: 260px;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.2s, padding 0.2s;
+      overflow: hidden;
+    }
+    aside.collapsed { width: 36px; }
+    aside.collapsed .sidebar-content { display: none; }
+    aside.collapsed .toggle-btn { transform: rotate(180deg); }
+
+    .sidebar-header {
+      padding: 10px;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+    }
+    .sidebar-header h2 { font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      transition: transform 0.2s;
+    }
+    .toggle-btn:hover { color: #c9d1d9; }
+
+    .sidebar-content { padding: 12px; overflow-y: auto; flex: 1; }
+
+    .ctrl-section { margin-bottom: 16px; }
+    .ctrl-section h3 { font-size: 10px; text-transform: uppercase; color: #8b949e; margin-bottom: 8px; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #c9d1d9;
+      font-size: 11px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .btn:hover { background: #30363d; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.primary { background: #238636; border-color: #238636; }
+    .btn.primary:hover { background: #2ea043; }
+
+    #progress { font-size: 10px; color: #8b949e; margin-top: 8px; min-height: 28px; }
+
+    .stat { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #21262d; }
+    .stat:last-child { border: none; }
+    .stat .val { color: #58a6ff; }
+
+    .legend { font-size: 10px; color: #8b949e; }
+    .legend div { margin: 4px 0; display: flex; align-items: center; gap: 6px; }
+    .legend .dot { width: 8px; height: 8px; border-radius: 2px; }
+    .legend .dot.m { background: #1f6feb; }
+    .legend .dot.s { background: #8957e5; }
 
     @media print {
-      .controls { display: none; }
-      body { padding: 10px; }
-      .scene { border: 1px solid #ccc; }
+      aside { display: none; }
+      body { background: #fff; color: #000; overflow: visible; height: auto; }
+      .app { display: block; }
+      main { padding: 10px; }
+      .card { border-color: #ccc; break-inside: avoid; }
+      .card-head { background: #f5f5f5; color: #333; }
+      .renders { background: #fff; }
     }
   </style>
 </head>
 <body>
-  <h1>Lucid SDF Scene Catalog</h1>
-  <p class="subtitle">Mayfly (WebGL) vs Stinkyfish (WebGPU) - 4 angles per backend</p>
+  <div class="app">
+    <main>
+      <div class="grid" id="catalog"></div>
+    </main>
 
-  <div class="controls">
-    <button id="captureBtn" onclick="captureAllScenes()">Capture All Scenes</button>
-    <button id="printBtn" onclick="window.print()">Print / Save PDF</button>
-    <div id="progress"></div>
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h2>Catalog</h2>
+        <button class="toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">◀</button>
+      </div>
+      <div class="sidebar-content">
+        <div class="ctrl-section">
+          <h3>Actions</h3>
+          <button class="btn primary" id="captureBtn" onclick="captureAll()">▶ Capture All</button>
+          <button class="btn" onclick="window.print()">⎙ Print PDF</button>
+          <div id="progress"></div>
+        </div>
+
+        <div class="ctrl-section">
+          <h3>Stats</h3>
+          <div class="stat"><span>Scenes</span><span class="val" id="statScenes">-</span></div>
+          <div class="stat"><span>Categories</span><span class="val" id="statCats">-</span></div>
+          <div class="stat"><span>WebGPU</span><span class="val" id="statGpu">-</span></div>
+        </div>
+
+        <div class="ctrl-section">
+          <h3>Legend</h3>
+          <div class="legend">
+            <div><span class="dot m"></span> Mayfly (WebGL)</div>
+            <div><span class="dot s"></span> Stinkyfish (WebGPU)</div>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
 
-  <div id="catalog"></div>
-
-  <!-- Hidden renderers for capturing -->
   <canvas id="mayflyCanvas" width="300" height="300" style="display:none;"></canvas>
   <canvas id="stinkyfishCanvas" width="300" height="300" style="display:none;"></canvas>
 
@@ -205,235 +198,163 @@
     import { generateWgslFromJson } from './core/wgsl-codegen.js';
     import { StinkyfishRenderer } from './stinkyfish/raymarcher.js';
 
-    // More interesting camera angles
-    const CAMERA_ANGLES = [
-      { name: 'Front', theta: 0.3, phi: 0.5 },
-      { name: 'Side', theta: Math.PI/2, phi: 0.4 },
-      { name: 'Above', theta: 0.5, phi: 0.15 },
-      { name: 'Below', theta: -0.3, phi: 0.85 }
+    const ANGLES = [
+      { n: 'F', theta: 0.3, phi: 0.5 },
+      { n: 'S', theta: Math.PI/2, phi: 0.4 },
+      { n: '↑', theta: 0.5, phi: 0.15 },
+      { n: '↓', theta: -0.3, phi: 0.85 }
     ];
 
-    let toc = null;
-    let mayflyRenderer = null;
-    let stinkyfishRenderer = null;
-    let webgpuSupported = false;
+    const SKIP = ['recent', 'physics', 'anim', 'creatures', 'archive', 'nature', 'animation'];
+
+    let toc, mayfly, stinkyfish, hasGpu = !!navigator.gpu;
 
     async function init() {
-      // Check WebGPU support
-      webgpuSupported = !!navigator.gpu;
+      document.getElementById('statGpu').textContent = hasGpu ? '✓' : '✗';
 
       const resp = await fetch('./scenes/toc.json');
       toc = await resp.json();
-      buildCatalogStructure();
+      buildCatalog();
     }
 
-    function buildCatalogStructure() {
-      const container = document.getElementById('catalog');
-      container.innerHTML = '';
+    function buildCatalog() {
+      const el = document.getElementById('catalog');
+      let html = '', sceneCount = 0, catCount = 0;
 
-      // Categories to skip (complex/animated/physics scenes)
-      const SKIP_CATEGORIES = ['recent', 'physics', 'anim', 'creatures', 'archive', 'nature', 'animation'];
+      for (const cat of toc.categories) {
+        if (SKIP.includes(cat.id)) continue;
+        catCount++;
 
-      for (const category of toc.categories) {
-        if (SKIP_CATEGORIES.includes(category.id)) continue;
-
-        const catDiv = document.createElement('div');
-        catDiv.className = 'category';
-        catDiv.innerHTML = `<div class="category-title">${category.title}</div>`;
-
-        for (const scene of category.scenes) {
-          const sceneDiv = document.createElement('div');
-          sceneDiv.className = 'scene';
-          sceneDiv.dataset.path = scene.path;
-
-          sceneDiv.innerHTML = `
-            <div class="scene-header">
-              <div class="scene-title">${scene.title}</div>
-              <div class="scene-path">${scene.path}</div>
-              <div class="scene-description">${scene.subtitle || ''}</div>
-            </div>
-            <div class="backends">
-              <div class="backend">
-                <div class="backend-title mayfly">Mayfly (WebGL)</div>
-                <div class="views mayfly-views">
-                  ${CAMERA_ANGLES.map((angle, i) => `
-                    <div class="view" data-angle="${i}">
-                      <div class="placeholder">...</div>
-                      <span class="view-label">${angle.name}</span>
-                    </div>
-                  `).join('')}
-                </div>
+        for (const s of cat.scenes) {
+          sceneCount++;
+          const shortPath = s.path.replace('prim/', '').replace('csg/', '').replace('transform/', '');
+          html += `
+            <div class="card" data-path="${s.path}">
+              <div class="card-head">
+                <span>${s.title}</span>
+                <span class="path">${shortPath}</span>
               </div>
-              <div class="backend">
-                <div class="backend-title stinkyfish">Stinkyfish (WebGPU)</div>
-                <div class="views stinkyfish-views">
-                  ${CAMERA_ANGLES.map((angle, i) => `
-                    <div class="view" data-angle="${i}">
-                      <div class="placeholder ${webgpuSupported ? '' : 'na'}">${webgpuSupported ? '...' : 'N/A'}</div>
-                      <span class="view-label">${angle.name}</span>
-                    </div>
-                  `).join('')}
-                </div>
+              <div class="backend-row">
+                <span class="mayfly">M</span>
+                <span class="stinkyfish">S</span>
+              </div>
+              <div class="renders mayfly-renders">
+                ${ANGLES.map(a => `<div class="render"><div class="placeholder">·</div><span class="lbl">M${a.n}</span></div>`).join('')}
+              </div>
+              <div class="renders stinkyfish-renders">
+                ${ANGLES.map(a => `<div class="render"><div class="placeholder">${hasGpu ? '·' : '-'}</div><span class="lbl">S${a.n}</span></div>`).join('')}
               </div>
             </div>
           `;
-
-          catDiv.appendChild(sceneDiv);
         }
-
-        container.appendChild(catDiv);
       }
+
+      el.innerHTML = html;
+      document.getElementById('statScenes').textContent = sceneCount;
+      document.getElementById('statCats').textContent = catCount;
     }
 
     async function initMayfly() {
-      if (mayflyRenderer) return;
-      const canvas = document.getElementById('mayflyCanvas');
-      mayflyRenderer = new SimpleRaymarcher(canvas);
-      mayflyRenderer.setQuality('high');
+      if (mayfly) return;
+      mayfly = new SimpleRaymarcher(document.getElementById('mayflyCanvas'));
+      mayfly.setQuality('high');
     }
 
     async function initStinkyfish() {
-      if (stinkyfishRenderer || !webgpuSupported) return;
+      if (stinkyfish || !hasGpu) return;
       try {
-        const canvas = document.getElementById('stinkyfishCanvas');
-        stinkyfishRenderer = new StinkyfishRenderer(canvas);
-        await stinkyfishRenderer.init();
-        stinkyfishRenderer.setQuality('high');
-      } catch (e) {
-        console.warn('Stinkyfish init failed:', e);
-        webgpuSupported = false;
-      }
+        stinkyfish = new StinkyfishRenderer(document.getElementById('stinkyfishCanvas'));
+        await stinkyfish.init();
+        stinkyfish.setQuality('high');
+      } catch { hasGpu = false; }
     }
 
-    async function captureMayfly(scenePath) {
-      await initMayfly();
-
-      const resp = await fetch(`./scenes/${scenePath}`);
+    async function capture(renderer, path, isGpu) {
+      const resp = await fetch(`./scenes/${path}`);
       const json = await resp.json();
-
       const scene = loadJsonScene(json);
-      const glsl = generateGlslFromJson(scene, {});
-      mayflyRenderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
 
-      const camDist = json.camera?.distance || 6;
-      const camTarget = json.camera?.target || [0, 0.5, 0];
-
-      const images = [];
-      for (const angle of CAMERA_ANGLES) {
-        mayflyRenderer.cameraDistance = camDist;
-        mayflyRenderer.cameraTarget = camTarget;
-        mayflyRenderer.cameraTheta = angle.theta;
-        mayflyRenderer.cameraPhi = angle.phi;
-        mayflyRenderer.render();
-        images.push(mayflyRenderer.canvas.toDataURL('image/png'));
-      }
-      return images;
-    }
-
-    async function captureStinkyfish(scenePath) {
-      if (!webgpuSupported) return null;
-      await initStinkyfish();
-      if (!stinkyfishRenderer) return null;
-
-      const resp = await fetch(`./scenes/${scenePath}`);
-      const json = await resp.json();
-
-      const scene = loadJsonScene(json);
-      const wgsl = generateWgslFromJson(scene, {});
-
-      // Build uniform layout
-      const { getAllParamNames } = await import('./core/rig-evaluator.js');
-      const allParams = getAllParamNames(scene.params || {}, scene.rig);
-      const uniformLayout = {};
-      for (const [name, paramInfo] of Object.entries(allParams)) {
-        const type = paramInfo.type || 'scalar';
-        uniformLayout[`u_${name}`] = (type === 'color3' || type === 'position3' || type === 'radii3' || type === 'direction3') ? 'vec3f' : 'f32';
+      if (isGpu) {
+        const wgsl = generateWgslFromJson(scene, {});
+        const { getAllParamNames } = await import('./core/rig-evaluator.js');
+        const params = getAllParamNames(scene.params || {}, scene.rig);
+        const layout = {};
+        for (const [k, v] of Object.entries(params)) {
+          layout[`u_${k}`] = ['color3','position3','radii3','direction3'].includes(v.type) ? 'vec3f' : 'f32';
+        }
+        await renderer.compileScene(wgsl, Object.keys(layout).length ? layout : null);
+        if (scene.params) renderer.setSceneParams(scene.params);
+      } else {
+        const glsl = generateGlslFromJson(scene, {});
+        renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
       }
 
-      await stinkyfishRenderer.compileScene(wgsl, Object.keys(uniformLayout).length > 0 ? uniformLayout : null);
-      if (scene.params) stinkyfishRenderer.setSceneParams(scene.params);
+      const dist = json.camera?.distance || 6;
+      const target = json.camera?.target || [0, 0.5, 0];
 
-      const camDist = json.camera?.distance || 6;
-      const camTarget = json.camera?.target || [0, 0.5, 0];
-
-      const images = [];
-      for (const angle of CAMERA_ANGLES) {
-        stinkyfishRenderer.cameraDistance = camDist;
-        stinkyfishRenderer.cameraTarget = camTarget;
-        stinkyfishRenderer.cameraTheta = angle.theta;
-        stinkyfishRenderer.cameraPhi = angle.phi;
-        stinkyfishRenderer.render(0);
-        images.push(stinkyfishRenderer.canvas.toDataURL('image/png'));
-      }
-      return images;
-    }
-
-    function setViewImages(views, images, angles) {
-      images.forEach((dataUrl, i) => {
-        views[i].innerHTML = `
-          <img src="${dataUrl}" alt="${angles[i].name} view">
-          <span class="view-label">${angles[i].name}</span>
-        `;
+      return ANGLES.map(a => {
+        renderer.cameraDistance = dist;
+        renderer.cameraTarget = target;
+        renderer.cameraTheta = a.theta;
+        renderer.cameraPhi = a.phi;
+        renderer.render(isGpu ? 0 : undefined);
+        return renderer.canvas.toDataURL('image/png');
       });
     }
 
-    function setViewError(views, msg) {
-      views.forEach(v => {
-        v.innerHTML = `<div class="placeholder error">${msg}</div>`;
+    function setImages(renders, imgs) {
+      renders.forEach((r, i) => {
+        const lbl = r.querySelector('.lbl').textContent;
+        r.innerHTML = `<img src="${imgs[i]}"><span class="lbl">${lbl}</span>`;
       });
     }
 
-    window.captureAllScenes = async function() {
+    function setError(renders, msg) {
+      renders.forEach(r => {
+        const lbl = r.querySelector('.lbl').textContent;
+        r.innerHTML = `<div class="placeholder err">${msg}</div><span class="lbl">${lbl}</span>`;
+      });
+    }
+
+    window.captureAll = async function() {
       const btn = document.getElementById('captureBtn');
-      const progress = document.getElementById('progress');
+      const prog = document.getElementById('progress');
       btn.disabled = true;
 
-      const scenes = document.querySelectorAll('.scene');
-      let completed = 0;
+      const cards = document.querySelectorAll('.card');
+      let done = 0;
 
-      for (const sceneDiv of scenes) {
-        const path = sceneDiv.dataset.path;
-        progress.textContent = `Capturing ${completed + 1}/${scenes.length}: ${path}`;
+      for (const card of cards) {
+        const path = card.dataset.path;
+        prog.textContent = `${++done}/${cards.length} ${path.split('/').pop()}`;
 
-        const mayflyViews = sceneDiv.querySelectorAll('.mayfly-views .view');
-        const stinkyfishViews = sceneDiv.querySelectorAll('.stinkyfish-views .view');
+        const mRenders = card.querySelectorAll('.mayfly-renders .render');
+        const sRenders = card.querySelectorAll('.stinkyfish-renders .render');
 
-        // Capture Mayfly
         try {
-          const images = await Promise.race([
-            captureMayfly(path),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-          ]);
-          setViewImages(mayflyViews, images, CAMERA_ANGLES);
-        } catch (e) {
-          console.error(`Mayfly failed for ${path}:`, e);
-          setViewError(mayflyViews, e.message);
-        }
+          await initMayfly();
+          const imgs = await Promise.race([capture(mayfly, path, false), timeout(6000)]);
+          setImages(mRenders, imgs);
+        } catch (e) { setError(mRenders, '!'); }
 
-        // Capture Stinkyfish
-        if (webgpuSupported) {
+        if (hasGpu) {
           try {
-            const images = await Promise.race([
-              captureStinkyfish(path),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-            ]);
-            if (images) {
-              setViewImages(stinkyfishViews, images, CAMERA_ANGLES);
-            } else {
-              setViewError(stinkyfishViews, 'N/A');
+            await initStinkyfish();
+            if (stinkyfish) {
+              const imgs = await Promise.race([capture(stinkyfish, path, true), timeout(6000)]);
+              setImages(sRenders, imgs);
             }
-          } catch (e) {
-            console.error(`Stinkyfish failed for ${path}:`, e);
-            setViewError(stinkyfishViews, e.message);
-          }
+          } catch (e) { setError(sRenders, '!'); }
         }
-
-        completed++;
       }
 
-      progress.textContent = `Done! Captured ${completed} scenes. Click "Print / Save PDF" to export.`;
+      prog.textContent = `✓ ${done} scenes captured`;
       btn.disabled = false;
     };
+
+    function timeout(ms) { return new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)); }
+
+    window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('collapsed');
 
     init();
   </script>
