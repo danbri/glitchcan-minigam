@@ -373,12 +373,12 @@ export class LucidRenderer extends HTMLElement {
       this._renderer.setSceneParams(scene.params);
     }
 
-    // Apply camera settings
+    // Apply camera settings - use same defaults as Mayfly for consistency
     if (json.camera) {
       const cam = json.camera;
-      this._renderer.cameraDistance = cam.distance || 4;
-      this._renderer.cameraTheta = cam.theta || 0;
-      this._renderer.cameraPhi = cam.phi || Math.PI / 4;
+      this._renderer.cameraDistance = cam.distance || 8;
+      this._renderer.cameraTheta = cam.theta || 0.3;
+      this._renderer.cameraPhi = cam.phi || 0.4;
       if (cam.target) {
         this._renderer.cameraTarget = cam.target;
       }

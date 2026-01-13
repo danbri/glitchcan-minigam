@@ -54,11 +54,11 @@ export class SimpleRaymarcher {
     this.program = null;
     this.startTime = performance.now();
 
-    // Camera orbit controls
+    // Camera orbit controls - unified defaults for consistent comparison
     this.camera = {
-      distance: 4.0,
-      theta: 0.0,      // horizontal angle
-      phi: Math.PI / 4, // vertical angle (45 degrees)
+      distance: 8.0,
+      theta: 0.3,      // horizontal angle
+      phi: 0.4,        // vertical angle
       target: [0, 0, 0]
     };
 
