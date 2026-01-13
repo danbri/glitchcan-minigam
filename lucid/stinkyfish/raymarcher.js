@@ -104,6 +104,21 @@ export class StinkyfishRenderer {
     // Visibility state - for battery management
     this.isPaused = false;
     this.isVisible = true;  // Default to visible - startRenderLoop will track actual visibility
+
+    // Camera proxy object for Mayfly API compatibility
+    // Mayfly uses renderer.camera.{theta, phi, distance, target}
+    // Stinkyfish uses flat properties, but this proxy provides compatibility
+    const self = this;
+    this.camera = {
+      get theta() { return self.cameraTheta; },
+      set theta(v) { self.cameraTheta = v; },
+      get phi() { return self.cameraPhi; },
+      set phi(v) { self.cameraPhi = v; },
+      get distance() { return self.cameraDistance; },
+      set distance(v) { self.cameraDistance = v; },
+      get target() { return self.cameraTarget; },
+      set target(v) { self.cameraTarget = v; }
+    };
   }
 
   /**
@@ -394,13 +409,7 @@ export class StinkyfishRenderer {
    * @param {Object} sceneUniformLayout - Layout info for scene params (name -> type)
    */
   async compileScene(sceneWgsl, sceneUniformLayout = null) {
-    console.log('Stinkyfish compileScene() called', {
-      wgslLength: sceneWgsl?.length,
-      layoutKeys: sceneUniformLayout ? Object.keys(sceneUniformLayout) : null
-    });
     const shaderCode = this.buildFullShader(sceneWgsl);
-    console.log(`Swapchain format: ${this.format} (sRGB: ${this.isSrgbFormat})`);
-    console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
 
     const shaderModule = this.device.createShaderModule({
       code: shaderCode,
@@ -408,17 +417,15 @@ export class StinkyfishRenderer {
 
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
-    console.log(`Shader compilation messages: ${compilationInfo.messages.length}`);
     for (const message of compilationInfo.messages) {
-      console.log(`${message.type}: ${message.message} (line ${message.lineNum}, col ${message.linePos})`);
       if (message.type === 'error') {
         // Log context around the error
         const lines = shaderCode.split('\n');
         const errLine = message.lineNum - 1;
+        console.error(`WGSL Error: ${message.message} (line ${message.lineNum})`);
         if (errLine >= 0 && errLine < lines.length) {
-          console.log('Error context:');
           for (let i = Math.max(0, errLine - 2); i <= Math.min(lines.length - 1, errLine + 2); i++) {
-            console.log(`${i === errLine ? '>>>' : '   '} ${i + 1}: ${lines[i]}`);
+            console.error(`${i === errLine ? '>>>' : '   '} ${i + 1}: ${lines[i]}`);
           }
         }
         throw new Error(`Shader compilation error: ${message.message}`);
@@ -498,14 +505,10 @@ export class StinkyfishRenderer {
           resource: { buffer: this.sceneUniformBuffer },
         }],
       });
-
-      console.log(`Created scene uniform buffer: ${bufferSize} bytes for ${Object.keys(sceneUniformLayout).length} params`);
     } else {
       this.sceneUniformBuffer = null;
       this.sceneBindGroup = null;
-      console.log('No scene uniforms needed (no custom params)');
     }
-    console.log('Stinkyfish compileScene() completed successfully, pipeline ready:', !!this.pipeline);
   }
 
   buildFullShader(sceneWgsl) {
@@ -797,20 +800,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   render(physicsParams = null) {
     // Guard: need pipeline and valid canvas size
     if (!this.pipeline || !this.device || !this.context) {
-      console.log('Stinkyfish render() early return: pipeline/device/context missing', {
-        pipeline: !!this.pipeline,
-        device: !!this.device,
-        context: !!this.context
-      });
       return;
     }
 
     // Skip rendering if paused or not visible (battery saver)
     if (!this.shouldRender()) {
-      console.log('Stinkyfish render() early return: shouldRender=false', {
-        isPaused: this.isPaused,
-        isVisible: this.isVisible
-      });
       return;
     }
 
