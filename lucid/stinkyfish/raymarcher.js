@@ -440,16 +440,21 @@ export class StinkyfishRenderer {
     // Create scene uniforms buffer if layout provided (group 1)
     this.sceneUniformLayout = sceneUniformLayout;
     if (sceneUniformLayout && Object.keys(sceneUniformLayout).length > 0) {
-      // Calculate buffer size: each entry is either f32 (4 bytes) or vec3f (12 bytes), with padding
+      // Calculate buffer size following WGSL struct alignment rules:
+      // - f32: 4-byte aligned
+      // - vec3f: 16-byte aligned (takes 16 bytes)
+      // We must account for padding BEFORE vec3f fields
       let bufferSize = 0;
       for (const [name, type] of Object.entries(sceneUniformLayout)) {
         if (type === 'vec3f') {
-          bufferSize += 16; // vec3f needs 16-byte alignment (12 data + 4 pad)
+          // Pad to 16-byte alignment before vec3f
+          bufferSize = Math.ceil(bufferSize / 16) * 16;
+          bufferSize += 16; // vec3f takes 16 bytes (12 + 4 trailing pad)
         } else {
           bufferSize += 4; // f32
         }
       }
-      // Round up to 16-byte alignment
+      // Round up to 16-byte alignment for struct
       bufferSize = Math.ceil(bufferSize / 16) * 16;
 
       this.sceneUniformBuffer = this.device.createBuffer({
@@ -723,20 +728,33 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   updateSceneUniforms(sceneParamValues) {
     if (!this.sceneUniformBuffer || !this.sceneUniformLayout) return;
 
-    // Build buffer data matching the layout order
+    // Build buffer data matching WGSL struct alignment rules:
+    // - f32: 4-byte aligned
+    // - vec3f: 16-byte aligned (takes 16 bytes including padding)
+    // We must pad BEFORE vec3f if current offset isn't 16-byte aligned
     const data = [];
+    let currentOffset = 0;  // Track byte offset
+
     for (const [name, type] of Object.entries(this.sceneUniformLayout)) {
-      // Layout has u_ prefix, sceneParamValues might not
       const baseName = name.startsWith('u_') ? name.slice(2) : name;
       const value = sceneParamValues[name] ?? sceneParamValues[baseName];
+
       if (type === 'vec3f') {
+        // vec3f needs 16-byte alignment - pad to reach it
+        while (currentOffset % 16 !== 0) {
+          data.push(0);  // padding float
+          currentOffset += 4;
+        }
         if (Array.isArray(value) && value.length >= 3) {
-          data.push(value[0], value[1], value[2], 0); // vec3 + padding
+          data.push(value[0], value[1], value[2], 0); // vec3 + trailing pad
         } else {
           data.push(0, 0, 0, 0); // default
         }
+        currentOffset += 16;
       } else {
+        // f32 - just push the value
         data.push(typeof value === 'number' ? value : 0);
+        currentOffset += 4;
       }
     }
 
