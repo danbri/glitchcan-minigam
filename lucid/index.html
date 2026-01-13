@@ -1303,6 +1303,7 @@
       <div class="header-left">
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
+          <button class="icon-btn" id="btn-perf" title="Performance Stats">📊</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-params" title="Scene Params (P)">🎛️</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
@@ -1340,6 +1341,11 @@
           <div><span class="perf-label">Frame:</span> <span id="perf-frame">--</span>ms</div>
           <div><span class="perf-label">Nodes:</span> <span id="perf-nodes">--</span></div>
           <div><span class="perf-label">GPU:</span> <span id="perf-gpu">--</span></div>
+          <div id="perf-stinkyfish-stats" style="display:none; border-top: 1px solid #444; margin-top: 4px; padding-top: 4px;">
+            <div><span class="perf-label">Shader:</span> <span id="perf-shader">--</span>KB</div>
+            <div><span class="perf-label">Cache:</span> <span id="perf-cache">--</span></div>
+            <div><span class="perf-label">Steps:</span> <span id="perf-steps">--</span></div>
+          </div>
         </div>
       </div>
 
@@ -2174,6 +2180,37 @@
 
       nodesEl.textContent = perfState.nodeCount;
       nodesEl.className = nodeClass;
+
+      // Stinkyfish-specific metrics
+      const stinkyStatsEl = $('perf-stinkyfish-stats');
+      if (stinkyStatsEl && currentBackend === 'stinkyfish' && renderer && renderer.getMetrics) {
+        stinkyStatsEl.style.display = 'block';
+        const metrics = renderer.getMetrics();
+        if (metrics) {
+          const shaderEl = $('perf-shader');
+          const cacheEl = $('perf-cache');
+          const stepsEl = $('perf-steps');
+
+          if (shaderEl) shaderEl.textContent = (metrics.shaderSizeBytes / 1024).toFixed(1);
+          if (cacheEl) {
+            const hitRate = (metrics.cacheHitRate * 100).toFixed(0);
+            cacheEl.textContent = `${hitRate}% hit`;
+          }
+          if (stepsEl) stepsEl.textContent = metrics.maxSteps;
+
+          // Use Stinkyfish's own FPS/frame metrics if available (more accurate)
+          if (metrics.fps > 0) {
+            fpsEl.textContent = metrics.fps.toFixed(0);
+            fpsEl.className = metrics.fps < 30 ? 'perf-bad' : (metrics.fps < 50 ? 'perf-warn' : '');
+          }
+          if (metrics.avgFrameTimeMs > 0) {
+            frameEl.textContent = metrics.avgFrameTimeMs.toFixed(1);
+            frameEl.className = metrics.avgFrameTimeMs > 33 ? 'perf-bad' : (metrics.avgFrameTimeMs > 20 ? 'perf-warn' : '');
+          }
+        }
+      } else if (stinkyStatsEl) {
+        stinkyStatsEl.style.display = 'none';
+      }
     }
 
     // Lighting settings
@@ -2514,7 +2551,13 @@
 
         if (newBackend === 'stinkyfish') {
           // Switch to WebGPU (disable built-in controls - index.html provides its own)
-          renderer = new StinkyfishRenderer(canvas, { disableControls: true });
+          // Enable metrics and caching for performance monitoring
+          renderer = new StinkyfishRenderer(canvas, {
+            disableControls: true,
+            enableMetrics: true,
+            enableShaderCache: true,
+            adaptiveStepping: true
+          });
           await renderer.init();
           currentBackend = 'stinkyfish';
 
@@ -4481,7 +4524,7 @@
         }
       });
 
-      // Perf stats toggle
+      // Perf stats toggle (debug panel toggle)
       addClick('toggle-perf', function() {
         this.classList.toggle('active');
         debugSettings.showPerf = this.classList.contains('active');
@@ -4494,6 +4537,27 @@
             perfState.frameTimes = [];
           }
         }
+        // Sync toolbar button state
+        const btnPerf = $('btn-perf');
+        if (btnPerf) btnPerf.classList.toggle('active', debugSettings.showPerf);
+      });
+
+      // Perf stats toggle (main toolbar button - mobile friendly)
+      addClick('btn-perf', function() {
+        debugSettings.showPerf = !debugSettings.showPerf;
+        this.classList.toggle('active', debugSettings.showPerf);
+        const overlay = $('perf-overlay');
+        if (overlay) {
+          overlay.classList.toggle('visible', debugSettings.showPerf);
+          if (debugSettings.showPerf) {
+            perfState.lastFpsUpdate = performance.now();
+            perfState.frameCount = 0;
+            perfState.frameTimes = [];
+          }
+        }
+        // Sync debug panel toggle state
+        const togglePerf = $('toggle-perf');
+        if (togglePerf) togglePerf.classList.toggle('active', debugSettings.showPerf);
       });
 
       // Camera distance slider
