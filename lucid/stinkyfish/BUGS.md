@@ -16,6 +16,10 @@ Known issues where Stinkyfish (WebGPU/WGSL) renders differently from Mayfly (Web
 - **Root cause**: Primitives used hardcoded `'p'` instead of `ctx.currentP || 'p'` in `applyTransform()`. When nested inside `transform` nodes, the transformed point was ignored.
 - **Fix**: All primitives and CSG operations now use `applyTransform(ctx.currentP || 'p', node.transform, ctx)`
 
+### Cobra spinning weirdly (FIXED)
+- **Root cause**: WGSL applied Euler rotations in XYZ order, but GLSL applies them in ZYX order (reverse). This is required for correct SDF point transformation.
+- **Fix**: Changed rotation application order to ZYX in all rotation handling paths
+
 ## Remaining Issues
 
 ### Critical - Shader Compilation Errors
@@ -39,12 +43,6 @@ Known issues where Stinkyfish (WebGPU/WGSL) renders differently from Mayfly (Web
 - **Actual**: Massively oversized
 - **Likely cause**: Scale parameter not applied, or applied inversely
 
-#### Cobra - spinning weirdly
-- **Scene**: `creatures/cobra.json`
-- **Expected**: Smooth animation
-- **Actual**: Erratic or wrong rotation axis
-- **Likely cause**: Animation time uniform or rotation matrix issues
-
 ### Medium Priority - Positioning Issues
 
 #### Sunflowers/poppies below ground plane
@@ -64,8 +62,8 @@ Known issues where Stinkyfish (WebGPU/WGSL) renders differently from Mayfly (Web
 - [x] Mirror scene shows symmetry
 - [x] Radial flower loads and displays
 - [x] Grid array shows distinct objects
+- [x] Cobra animates smoothly
 - [ ] Infinite demos tile correctly
 - [ ] Snowman at correct scale
-- [ ] Cobra animates smoothly
 - [ ] All flowers above ground
 - [ ] Physics container positioned correctly

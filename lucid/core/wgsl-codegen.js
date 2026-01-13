@@ -1300,43 +1300,46 @@ function applyTransform(pVar, transform, ctx) {
     };
 
     // Handle raw array format [x, y, z] (degrees)
+    // Apply rotations in ZYX order (reverse) to match GLSL SDF convention
     if (Array.isArray(rot)) {
-      if (isNonZero(rot[0])) {
-        result = `rotX(${result}, ${toRad(rot[0])})`;
+      if (isNonZero(rot[2])) {
+        result = `rotZ(${result}, ${toRad(rot[2])})`;
       }
       if (isNonZero(rot[1])) {
         result = `rotY(${result}, ${toRad(rot[1])})`;
       }
-      if (isNonZero(rot[2])) {
-        result = `rotZ(${result}, ${toRad(rot[2])})`;
+      if (isNonZero(rot[0])) {
+        result = `rotX(${result}, ${toRad(rot[0])})`;
       }
     }
     // Handle normalized array format { type: 'array', values: [...] } (degrees)
     else if (rot.type === 'array' && rot.values) {
       const vals = rot.values;
-      if (isNonZero(vals[0])) {
-        result = `rotX(${result}, ${toRad(vals[0])})`;
+      // Apply rotations in ZYX order (reverse) to match GLSL SDF convention
+      if (isNonZero(vals[2])) {
+        result = `rotZ(${result}, ${toRad(vals[2])})`;
       }
       if (isNonZero(vals[1])) {
         result = `rotY(${result}, ${toRad(vals[1])})`;
       }
-      if (isNonZero(vals[2])) {
-        result = `rotZ(${result}, ${toRad(vals[2])})`;
+      if (isNonZero(vals[0])) {
+        result = `rotX(${result}, ${toRad(vals[0])})`;
       }
     }
     // Handle object format {x, y, z} (radians)
+    // Apply rotations in ZYX order (reverse) to match GLSL SDF convention
     else {
-      if (rot.x !== undefined) {
-        const angle = valueToWgsl(rot.x, ctx);
-        result = `rotX(${result}, ${angle})`;
+      if (rot.z !== undefined) {
+        const angle = valueToWgsl(rot.z, ctx);
+        result = `rotZ(${result}, ${angle})`;
       }
       if (rot.y !== undefined) {
         const angle = valueToWgsl(rot.y, ctx);
         result = `rotY(${result}, ${angle})`;
       }
-      if (rot.z !== undefined) {
-        const angle = valueToWgsl(rot.z, ctx);
-        result = `rotZ(${result}, ${angle})`;
+      if (rot.x !== undefined) {
+        const angle = valueToWgsl(rot.x, ctx);
+        result = `rotX(${result}, ${angle})`;
       }
       if (rot.axis && rot.angle !== undefined) {
         const axis = valueToWgsl(rot.axis, ctx);
