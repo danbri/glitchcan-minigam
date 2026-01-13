@@ -584,7 +584,7 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
     if (t > u.maxDistance) { break; }
   }
 
-  // Determine what to render: ground or scene (whichever is closer)
+  // Surface mode: compare scene hit vs ground plane, render closer one (matching Mayfly)
   let useGround = groundT > 0.0 && (sceneHitT < 0.0 || groundT < sceneHitT);
 
   if (useGround) {
