@@ -1070,7 +1070,15 @@ function generateCustomExpr(node, ctx) {
 
 function generateScaledNode(node, ctx) {
   const scale = node.transform.scale;
-  const scaleVec = valueToWgsl(scale, ctx);
+  let scaleWgsl = valueToWgsl(scale, ctx);
+
+  // Ensure scale is a vec3f - scalar or single-element arrays need expansion
+  // Check if it's a scalar by seeing if it starts with 'vec'
+  const isVec = scaleWgsl.startsWith('vec');
+  if (!isVec) {
+    // Expand scalar to uniform scale vec3f
+    scaleWgsl = `vec3f(${scaleWgsl}, ${scaleWgsl}, ${scaleWgsl})`;
+  }
 
   // Clone node without scale
   const unscaledNode = { ...node, transform: { ...node.transform, scale: undefined } };
@@ -1085,7 +1093,7 @@ function generateScaledNode(node, ctx) {
 
   // Non-uniform scale: multiply by min component
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
-  let s = ${scaleVec};
+  let s = ${scaleWgsl};
   let c = ${childFuncName}(p / s);
   return vec4f(c.x * min(s.x, min(s.y, s.z)), c.yzw);
 }`);

@@ -1,8 +1,15 @@
 {
   "title": "Snowman",
   "subtitle": "Parametric winter scene with falling snow",
-  "version": "2.0",
+  "version": "2.1",
   "notes": "Classic snowman with carrot nose, coal eyes, stick arms. Adjust body proportions, snow fall speed, and colors.",
+
+  "camera": {
+    "distance": 5,
+    "phi": 0.5,
+    "theta": 0.3,
+    "target": [0, 0.4, 0]
+  },
 
   "params": {
     "_body": "=== BODY PROPORTIONS ===",
