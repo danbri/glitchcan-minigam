@@ -103,6 +103,7 @@ export class StinkyfishRenderer {
 
     // Visibility state - for battery management
     this.isPaused = false;
+    this.isVisible = true;  // Default to visible - startRenderLoop will track actual visibility
   }
 
   /**
@@ -567,7 +568,8 @@ ${sceneWgsl}
 fn getGroundColor(p: vec3f) -> vec3f {
   let scale = 0.5;
   let q = floor(p.xz / scale);
-  let checker = (i32(q.x) + i32(q.y)) % 2;
+  // Use abs() to handle negative coordinates - WGSL % can return negative unlike GLSL mod()
+  let checker = (abs(i32(q.x)) + abs(i32(q.y))) % 2;
   let color1 = vec3f(0.15, 0.15, 0.2);
   let color2 = vec3f(0.25, 0.25, 0.3);
   return select(color1, color2, checker == 1);
