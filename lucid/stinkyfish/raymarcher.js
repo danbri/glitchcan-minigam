@@ -100,6 +100,30 @@ export class StinkyfishRenderer {
     if (!this._controlsDisabled) {
       this.setupMouseHandlers();
     }
+
+    // Visibility state - for battery management
+    this.isPaused = false;
+  }
+
+  /**
+   * Check if renderer should actually render (not paused and visible)
+   */
+  shouldRender() {
+    return !this.isPaused && this.isVisible;
+  }
+
+  /**
+   * Pause rendering (external control)
+   */
+  pause() {
+    this.isPaused = true;
+  }
+
+  /**
+   * Resume rendering (external control)
+   */
+  resume() {
+    this.isPaused = false;
   }
 
   setRenderSettings(settings) {
@@ -765,6 +789,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   render(physicsParams = null) {
     // Guard: need pipeline and valid canvas size
     if (!this.pipeline || !this.device || !this.context) return;
+
+    // Skip rendering if paused or not visible (battery saver)
+    if (!this.shouldRender()) return;
 
     const width = this.canvas.width;
     const height = this.canvas.height;

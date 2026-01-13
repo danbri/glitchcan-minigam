@@ -1539,28 +1539,33 @@
 
   <!-- About Modal -->
   <div class="modal" id="about-modal">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content" style="max-width: 450px;">
       <h2 style="margin-bottom: 0.5rem;">Lucid SDF-CSG</h2>
       <p style="color: var(--text-dim); font-size: 0.75rem; margin-bottom: 1rem;" id="about-version">v0.9.0</p>
 
       <div style="font-size: 0.8rem; margin-bottom: 1rem;">
-        <p style="margin-bottom: 0.5rem;">Node-based CSG/SDF scene language with WebGL raymarching.</p>
+        <p style="margin-bottom: 0.5rem;">Node-based CSG/SDF scene language with WebGL/WebGPU raymarching.</p>
       </div>
 
       <div style="font-size: 0.75rem; margin-bottom: 1rem;">
-        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent);">GitHub Links:</p>
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent);">Tools:</p>
         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/demos_json.html" target="_blank" style="color: var(--text); text-decoration: none;">📄 demos_json.html</a>
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-loader.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-loader.js</a>
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 json-codegen.js</a>
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/mayfly/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 raymarcher.js</a>
-          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/CLAUDE.md" target="_blank" style="color: var(--text); text-decoration: none;">📖 CLAUDE.md</a>
+          <a href="compare.html" target="_blank" style="color: var(--text); text-decoration: none;">🔀 Backend Comparison (Mayfly vs Stinkyfish)</a>
+          <a href="scene-catalog.html" target="_blank" style="color: var(--text); text-decoration: none;">📊 Scene Catalog / PDF Report</a>
+          <a href="node-editor.html" target="_blank" style="color: var(--text); text-decoration: none;">🔧 Node Editor</a>
         </div>
       </div>
 
-      <div style="font-size: 0.75rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--code-bg); border-radius: 6px;">
-        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-alt);">Current Branch:</p>
-        <a href="https://github.com/danbri/glitchcan-minigam/compare/main...claude/review-lucid-sdf-csg-01LwLJbyktFL2QnzQMWy6QsT" target="_blank" style="color: var(--accent); text-decoration: none; word-break: break-all; font-family: monospace; font-size: 0.7rem;">🔀 View PR / Compare Changes</a>
+      <div style="font-size: 0.75rem; margin-bottom: 1rem;">
+        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent);">Source Code:</p>
+        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <a href="https://github.com/danbri/glitchcan-minigam/tree/main/lucid" target="_blank" style="color: var(--text); text-decoration: none;">📁 /lucid/ (GitHub)</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/mayfly/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">🦋 mayfly/raymarcher.js (WebGL)</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/stinkyfish/raymarcher.js" target="_blank" style="color: var(--text); text-decoration: none;">🐟 stinkyfish/raymarcher.js (WebGPU)</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/json-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 core/json-codegen.js (GLSL)</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/core/wgsl-codegen.js" target="_blank" style="color: var(--text); text-decoration: none;">📄 core/wgsl-codegen.js (WGSL)</a>
+          <a href="https://github.com/danbri/glitchcan-minigam/blob/main/lucid/CLAUDE.md" target="_blank" style="color: var(--text); text-decoration: none;">📖 CLAUDE.md</a>
+        </div>
       </div>
 
       <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -1760,8 +1765,7 @@
     // VERSION INFO
     // ============================================
     // Best practice: Update VERSION on releases, tag with: git tag v0.5.0
-    const VERSION = '0.20.0';
-    const BUILD_DATE = '2025-12-01';
+    const VERSION = '0.21.0';
 
     // ============================================
     // TOC-BASED DEMO LOADING (index-test.html)
@@ -2361,6 +2365,17 @@
           console.log(`App visibility: ${isAppVisible ? 'visible' : 'hidden'}`);
         });
 
+        // Window focus - pause when window loses focus (another app in front)
+        window.addEventListener('blur', () => {
+          isAppVisible = false;
+          console.log('App paused: window blur');
+        });
+        window.addEventListener('focus', () => {
+          isAppVisible = true;
+          lastFrameTime = performance.now();
+          console.log('App resumed: window focus');
+        });
+
         // Initialize animation button state
         updateAnimButton();
 
@@ -2380,7 +2395,7 @@
         });
 
         // Display version
-        $('version-display').textContent = `v${VERSION} (${BUILD_DATE})`;
+        $('version-display').textContent = `v${VERSION}`;
 
         console.log(`SDF JSON Demos v${VERSION} initialized`);
         console.log(`${demos.length} demos available`);
@@ -6115,7 +6130,7 @@
         menuOpen = false;
         mainMenu.classList.remove('open');
         $('btn-menu').classList.remove('active');
-        $('about-version').textContent = `v${VERSION} (${BUILD_DATE})`;
+        $('about-version').textContent = `v${VERSION}`;
         if (aboutModal) aboutModal.classList.add('open');
       });
 
