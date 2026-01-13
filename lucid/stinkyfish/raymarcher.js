@@ -348,6 +348,11 @@ export class StinkyfishRenderer {
     this.context = this.canvas.getContext('webgpu');
 
     const format = navigator.gpu.getPreferredCanvasFormat();
+    console.log(`WebGPU swapchain format: ${format}`);
+
+    // Track if format is sRGB (auto gamma correction) vs linear (needs manual gamma)
+    this.isSrgbFormat = format.includes('srgb');
+
     this.context.configure({
       device: this.device,
       format: format,
@@ -365,6 +370,7 @@ export class StinkyfishRenderer {
    */
   async compileScene(sceneWgsl, sceneUniformLayout = null) {
     const shaderCode = this.buildFullShader(sceneWgsl);
+    console.log(`Swapchain format: ${this.format} (sRGB: ${this.isSrgbFormat})`);
     console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
 
     const shaderModule = this.device.createShaderModule({
@@ -702,13 +708,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);
   let result = raymarch(u.cameraPos, rd, uv);
 
-  // Gamma correction: linear -> sRGB
-  // WebGPU outputs linear; WebGL implicitly converts to sRGB
-  // Manual gamma correction gives visual parity with Mayfly
-  let gamma = 1.0 / 2.2;
-  let corrected = pow(result.xyz, vec3f(gamma));
-
-  return vec4f(corrected, 1.0);
+  // No gamma correction for surface mode - matches Mayfly behavior
+  // Mayfly only applies gamma in volume mode, not surface mode
+  // WebGL/WebGPU both display linear colors the same way for surface rendering
+  return vec4f(result.xyz, 1.0);
 }
 `;
   }
