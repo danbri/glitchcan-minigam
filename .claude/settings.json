@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "command": "node .claude/hooks/log-tool-use.mjs"
+      },
+      {
+        "matcher": ".*",
+        "command": "node .claude/hooks/archive-transcript.mjs"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "command": "node .claude/hooks/check-todo-drift.mjs"
+      }
+    ],
+    "Notification": [
+      {
+        "command": "node .claude/hooks/log-notification.mjs"
+      }
+    ]
+  }
+}

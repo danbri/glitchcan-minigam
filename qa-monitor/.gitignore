@@ -1,0 +1,10 @@
+# QA Monitor - Private Data
+# Logs and transcripts may contain sensitive conversation content
+
+logs/
+transcripts/
+issues/*.json
+!issues/.gitkeep
+
+# Keep directory structure
+!.gitkeep
