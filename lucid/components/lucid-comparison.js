@@ -154,18 +154,23 @@ export class LucidComparison extends HTMLElement {
           mix-blend-mode: difference;
         }
 
-        /* Cross-eye stereoscopic view */
+        /* Cross-eye stereoscopic view - both panes overlap in center */
         :host([layout="crossview"]) .comparison {
-          justify-content: center;
-          align-items: center;
-          gap: 20px;
+          position: relative;
         }
 
         :host([layout="crossview"]) .pane {
-          flex: 0 0 auto;
-          width: 45%;
-          max-width: 400px;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 70%;
+          max-width: 500px;
           aspect-ratio: 1;
+        }
+
+        :host([layout="crossview"]) .pane.stinkyfish {
+          opacity: 0.5;
         }
 
         :host([layout="crossview"]) .pane-header {
