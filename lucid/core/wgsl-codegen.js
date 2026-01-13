@@ -886,20 +886,12 @@ function generateMirror(node, ctx) {
   return ${childExpr};
 }`);
 
-  let mirrorExpr;
-  switch (axis) {
-  case 'x':
-    mirrorExpr = `vec3f(abs(p.x) - ${offset}, p.y, p.z)`;
-    break;
-  case 'y':
-    mirrorExpr = `vec3f(p.x, abs(p.y) - ${offset}, p.z)`;
-    break;
-  case 'z':
-    mirrorExpr = `vec3f(p.x, p.y, abs(p.z) - ${offset})`;
-    break;
-  default:
-    mirrorExpr = 'p';
-  }
+  // Handle single and compound mirror axes (matching GLSL codegen)
+  // Build mirror expression by checking which axes are included
+  const mirrorX = axis.includes('x') ? `abs(p.x) - ${offset}` : 'p.x';
+  const mirrorY = axis.includes('y') ? `abs(p.y) - ${offset}` : 'p.y';
+  const mirrorZ = axis.includes('z') ? `abs(p.z) - ${offset}` : 'p.z';
+  const mirrorExpr = `vec3f(${mirrorX}, ${mirrorY}, ${mirrorZ})`;
 
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
   let mp = ${mirrorExpr};
@@ -914,7 +906,9 @@ function generateRadial(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const count = node.count || 6;
+  // Handle count as either a number or variable expression
+  const countValue = node.count || 6;
+  const countWgsl = valueToWgsl(countValue, ctx);
   const axis = node.axis || 'y'; // Default to Y-axis (XZ plane rotation)
   const funcName = `radial_${ctx.helperCounter++}`;
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
@@ -925,13 +919,14 @@ function generateRadial(node, ctx) {
 }`);
 
   // Generate different rotation based on axis
+  // Uses countWgsl which can be a literal (12.0) or uniform (scene.u_petalCount)
   let rotationCode;
   switch (axis) {
   case 'x':
     // Rotate around X-axis (YZ plane)
     rotationCode = `
   let angle = atan2(p.z, p.y);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / ${countWgsl};
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
@@ -941,7 +936,7 @@ function generateRadial(node, ctx) {
     // Rotate around Z-axis (XY plane)
     rotationCode = `
   let angle = atan2(p.y, p.x);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / ${countWgsl};
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
@@ -952,7 +947,7 @@ function generateRadial(node, ctx) {
     // Rotate around Y-axis (XZ plane) - default
     rotationCode = `
   let angle = atan2(p.z, p.x);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / ${countWgsl};
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
@@ -1075,7 +1070,15 @@ function generateCustomExpr(node, ctx) {
 
 function generateScaledNode(node, ctx) {
   const scale = node.transform.scale;
-  const scaleVec = valueToWgsl(scale, ctx);
+  let scaleWgsl = valueToWgsl(scale, ctx);
+
+  // Ensure scale is a vec3f - scalar or single-element arrays need expansion
+  // Check if it's a scalar by seeing if it starts with 'vec'
+  const isVec = scaleWgsl.startsWith('vec');
+  if (!isVec) {
+    // Expand scalar to uniform scale vec3f
+    scaleWgsl = `vec3f(${scaleWgsl}, ${scaleWgsl}, ${scaleWgsl})`;
+  }
 
   // Clone node without scale
   const unscaledNode = { ...node, transform: { ...node.transform, scale: undefined } };
@@ -1090,7 +1093,7 @@ function generateScaledNode(node, ctx) {
 
   // Non-uniform scale: multiply by min component
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
-  let s = ${scaleVec};
+  let s = ${scaleWgsl};
   let c = ${childFuncName}(p / s);
   return vec4f(c.x * min(s.x, min(s.y, s.z)), c.yzw);
 }`);
@@ -1116,14 +1119,15 @@ function valueToWgsl(value, ctx, expectedType = null) {
   }
 
   if (Array.isArray(value)) {
+    // Recursively convert each element - handles numbers, vars, and expressions
     if (value.length === 3) {
-      return `vec3f(${value.map(v => formatFloat(v)).join(', ')})`;
+      return `vec3f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
     } else if (value.length === 2) {
-      return `vec2f(${value.map(v => formatFloat(v)).join(', ')})`;
+      return `vec2f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
     } else if (value.length === 4) {
-      return `vec4f(${value.map(v => formatFloat(v)).join(', ')})`;
+      return `vec4f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
     }
-    return formatFloat(value[0] || 0);
+    return valueToWgsl(value[0], ctx);
   }
 
   switch (value.type) {
@@ -1191,6 +1195,14 @@ function valueToWgsl(value, ctx, expectedType = null) {
     return exprToWgsl(value, ctx);
 
   default:
+    // Handle raw { var: "X" } without type field (backward compatibility)
+    if (value.var) {
+      return valueToWgsl({ type: 'var', name: value.var }, ctx);
+    }
+    // Handle raw { expr: "...", args: [...] } without type field
+    if (value.expr) {
+      return exprToWgsl({ type: 'expr', op: value.expr, args: value.args || [] }, ctx);
+    }
     if (typeof value.value === 'number') {
       return formatFloat(value.value);
     }
