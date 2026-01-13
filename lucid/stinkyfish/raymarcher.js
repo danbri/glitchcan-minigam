@@ -638,7 +638,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);
   let result = raymarch(u.cameraPos, rd, uv);
 
-  return vec4f(result.xyz, 1.0);
+  // Gamma correction: linear -> sRGB
+  // WebGPU outputs linear; WebGL implicitly converts to sRGB
+  // Manual gamma correction gives visual parity with Mayfly
+  let gamma = 1.0 / 2.2;
+  let corrected = pow(result.xyz, vec3f(gamma));
+
+  return vec4f(corrected, 1.0);
 }
 `;
   }
