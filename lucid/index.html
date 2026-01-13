@@ -1312,10 +1312,13 @@
           </button>
           <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
           <button class="icon-btn" id="btn-display-mode" title="Display: None (G)">⬚</button>
-          <select id="backend-select" title="Renderer Backend" style="padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;cursor:pointer;">
-            <option value="mayfly">Mayfly</option>
-            <option value="stinkyfish">Stinkyfish</option>
-          </select>
+          <div style="position:relative;display:inline-block;">
+            <button class="icon-btn" id="btn-backend" title="Backend: Mayfly (click=cycle, hold=menu)">🦋</button>
+            <div id="backend-menu" style="display:none;position:absolute;top:100%;left:0;background:#21262d;border:1px solid #30363d;border-radius:4px;z-index:1000;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+              <div class="backend-option" data-backend="mayfly" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;border-bottom:1px solid #30363d;">🦋 Mayfly</div>
+              <div class="backend-option" data-backend="stinkyfish" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;">🐟 Stinkyfish</div>
+            </div>
+          </div>
         </div>
         <div class="demo-info">
           <h1 id="title">Loading...</h1>
@@ -2572,9 +2575,10 @@
         console.error('Backend switch failed:', err);
         showStatus(`Backend switch failed: ${err.message}`, 'error');
 
-        // Revert dropdown to current backend
-        const backendSelect = $('backend-select');
-        if (backendSelect) backendSelect.value = currentBackend;
+        // Revert button to current backend icon
+        const backendIcons = { mayfly: '🦋', stinkyfish: '🐟' };
+        const btnBackend = $('btn-backend');
+        if (btnBackend) btnBackend.textContent = backendIcons[currentBackend] || '🦋';
       }
     }
 
@@ -4095,11 +4099,11 @@
     }
 
     // ============================================
-    // EDGE DETECTION (5% edges for navigation)
+    // EDGE DETECTION (2% edges for iOS gesture blocking only)
     // ============================================
     function isInEdge(x, side) {
       const width = window.innerWidth;
-      const edgeWidth = width * 0.05;
+      const edgeWidth = width * 0.02;  // Reduced from 5% to 2%
       if (side === 'left') return x < edgeWidth;
       if (side === 'right') return x > width - edgeWidth;
       return false;
@@ -4249,10 +4253,12 @@
         }
 
         // Check if starting from edge - block iOS back gesture by preventing default
-        isEdgeSwipe = isInEdge(touch.clientX, 'left') || isInEdge(touch.clientX, 'right');
-        if (isEdgeSwipe) {
+        // But still allow orbit rotation (don't set isEdgeSwipe to block orbit)
+        const inEdge = isInEdge(touch.clientX, 'left') || isInEdge(touch.clientX, 'right');
+        if (inEdge) {
           e.preventDefault(); // Block iOS back/forward gesture
         }
+        isEdgeSwipe = false;  // Always allow orbit, even from edges
 
         // Pinch zoom and pan setup
         if (e.touches.length === 2) {
@@ -5573,20 +5579,86 @@
       let lastMenuInteraction = 0;
       const MENU_GUARD_MS = 600; // Delay before allowing menu close on mobile
 
-      // Backend selector - check WebGPU support
-      const backendSelect = $('backend-select');
-      if (backendSelect) {
+      // Backend button - short click cycles, long press shows menu
+      const btnBackend = $('btn-backend');
+      const backendMenu = $('backend-menu');
+      let backendLongPressTimer = null;
+      let backendLongPressed = false;
+      const LONG_PRESS_MS = 400;
+      const backends = ['mayfly', 'stinkyfish'];
+      const backendIcons = { mayfly: '🦋', stinkyfish: '🐟' };
+
+      function updateBackendButton() {
+        if (btnBackend) {
+          btnBackend.textContent = backendIcons[currentBackend] || '🦋';
+          btnBackend.title = `Backend: ${currentBackend} (click=cycle, hold=menu)`;
+        }
+      }
+
+      if (btnBackend && backendMenu) {
+        // Check WebGPU support
         if (!navigator.gpu) {
-          const stinkyfishOption = backendSelect.querySelector('option[value="stinkyfish"]');
-          if (stinkyfishOption) {
-            stinkyfishOption.disabled = true;
-            stinkyfishOption.textContent = 'Stinkyfish (no WebGPU)';
+          const stinkyOption = backendMenu.querySelector('[data-backend="stinkyfish"]');
+          if (stinkyOption) {
+            stinkyOption.style.opacity = '0.5';
+            stinkyOption.style.pointerEvents = 'none';
+            stinkyOption.textContent = '🐟 Stinkyfish (no WebGPU)';
           }
         }
-        backendSelect.addEventListener('change', async () => {
-          const newBackend = backendSelect.value;
-          if (newBackend !== currentBackend) {
-            await switchBackend(newBackend);
+
+        // Mouse/touch start - begin long press timer
+        const startPress = (e) => {
+          backendLongPressed = false;
+          backendLongPressTimer = setTimeout(() => {
+            backendLongPressed = true;
+            backendMenu.style.display = 'block';
+          }, LONG_PRESS_MS);
+        };
+
+        // Mouse/touch end - cycle if short press, or close menu if long press
+        const endPress = async (e) => {
+          clearTimeout(backendLongPressTimer);
+          if (!backendLongPressed) {
+            // Short press - cycle to next backend
+            const currentIdx = backends.indexOf(currentBackend);
+            let nextIdx = (currentIdx + 1) % backends.length;
+            // Skip stinkyfish if no WebGPU
+            if (!navigator.gpu && backends[nextIdx] === 'stinkyfish') {
+              nextIdx = (nextIdx + 1) % backends.length;
+            }
+            const nextBackend = backends[nextIdx];
+            if (nextBackend !== currentBackend) {
+              await switchBackend(nextBackend);
+              updateBackendButton();
+            }
+          }
+        };
+
+        btnBackend.addEventListener('mousedown', startPress);
+        btnBackend.addEventListener('mouseup', endPress);
+        btnBackend.addEventListener('mouseleave', () => clearTimeout(backendLongPressTimer));
+        btnBackend.addEventListener('touchstart', startPress, { passive: true });
+        btnBackend.addEventListener('touchend', endPress);
+
+        // Menu option clicks
+        backendMenu.querySelectorAll('.backend-option').forEach(opt => {
+          opt.addEventListener('click', async () => {
+            const newBackend = opt.dataset.backend;
+            if (newBackend && newBackend !== currentBackend) {
+              await switchBackend(newBackend);
+              updateBackendButton();
+            }
+            backendMenu.style.display = 'none';
+          });
+          // Hover effect
+          opt.addEventListener('mouseenter', () => opt.style.background = '#30363d');
+          opt.addEventListener('mouseleave', () => opt.style.background = 'transparent');
+        });
+
+        // Close menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+          if (!btnBackend.contains(e.target) && !backendMenu.contains(e.target)) {
+            backendMenu.style.display = 'none';
           }
         });
       }
