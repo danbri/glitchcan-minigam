@@ -27,7 +27,7 @@ const BACKENDS = {
 
 export class LucidRenderer extends HTMLElement {
   static get observedAttributes() {
-    return ['backend', 'scene', 'quality'];
+    return ['backend', 'scene', 'quality', 'disable-controls'];
   }
 
   constructor() {
@@ -321,7 +321,9 @@ export class LucidRenderer extends HTMLElement {
       this._canvas.height = Math.max(1, Math.floor((rect.height || 100) * dpr));
     }
 
-    this._renderer = new StinkyfishRenderer(this._canvas);
+    // Pass disableControls option if attribute is set
+    const disableControls = this.hasAttribute('disable-controls');
+    this._renderer = new StinkyfishRenderer(this._canvas, { disableControls });
     await this._renderer.init();
     this._setStatus('Stinkyfish ready', 'ok');
   }

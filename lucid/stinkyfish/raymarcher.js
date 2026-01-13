@@ -104,6 +104,21 @@ export class StinkyfishRenderer {
     // Visibility state - for battery management
     this.isPaused = false;
     this.isVisible = true;  // Default to visible - startRenderLoop will track actual visibility
+
+    // Camera proxy object for Mayfly API compatibility
+    // Mayfly uses renderer.camera.{theta, phi, distance, target}
+    // Stinkyfish uses flat properties, but this proxy provides compatibility
+    const self = this;
+    this.camera = {
+      get theta() { return self.cameraTheta; },
+      set theta(v) { self.cameraTheta = v; },
+      get phi() { return self.cameraPhi; },
+      set phi(v) { self.cameraPhi = v; },
+      get distance() { return self.cameraDistance; },
+      set distance(v) { self.cameraDistance = v; },
+      get target() { return self.cameraTarget; },
+      set target(v) { self.cameraTarget = v; }
+    };
   }
 
   /**
@@ -395,8 +410,6 @@ export class StinkyfishRenderer {
    */
   async compileScene(sceneWgsl, sceneUniformLayout = null) {
     const shaderCode = this.buildFullShader(sceneWgsl);
-    console.log(`Swapchain format: ${this.format} (sRGB: ${this.isSrgbFormat})`);
-    console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
 
     const shaderModule = this.device.createShaderModule({
       code: shaderCode,
@@ -404,17 +417,15 @@ export class StinkyfishRenderer {
 
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
-    console.log(`Shader compilation messages: ${compilationInfo.messages.length}`);
     for (const message of compilationInfo.messages) {
-      console.log(`${message.type}: ${message.message} (line ${message.lineNum}, col ${message.linePos})`);
       if (message.type === 'error') {
         // Log context around the error
         const lines = shaderCode.split('\n');
         const errLine = message.lineNum - 1;
+        console.error(`WGSL Error: ${message.message} (line ${message.lineNum})`);
         if (errLine >= 0 && errLine < lines.length) {
-          console.log('Error context:');
           for (let i = Math.max(0, errLine - 2); i <= Math.min(lines.length - 1, errLine + 2); i++) {
-            console.log(`${i === errLine ? '>>>' : '   '} ${i + 1}: ${lines[i]}`);
+            console.error(`${i === errLine ? '>>>' : '   '} ${i + 1}: ${lines[i]}`);
           }
         }
         throw new Error(`Shader compilation error: ${message.message}`);
@@ -494,8 +505,6 @@ export class StinkyfishRenderer {
           resource: { buffer: this.sceneUniformBuffer },
         }],
       });
-
-      console.log(`Created scene uniform buffer: ${bufferSize} bytes for ${Object.keys(sceneUniformLayout).length} params`);
     } else {
       this.sceneUniformBuffer = null;
       this.sceneBindGroup = null;
@@ -790,10 +799,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
   render(physicsParams = null) {
     // Guard: need pipeline and valid canvas size
-    if (!this.pipeline || !this.device || !this.context) return;
+    if (!this.pipeline || !this.device || !this.context) {
+      return;
+    }
 
     // Skip rendering if paused or not visible (battery saver)
-    if (!this.shouldRender()) return;
+    if (!this.shouldRender()) {
+      return;
+    }
 
     const width = this.canvas.width;
     const height = this.canvas.height;
@@ -855,27 +868,36 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       }
     }
 
-    const commandEncoder = this.device.createCommandEncoder();
-    const textureView = this.context.getCurrentTexture().createView();
+    try {
+      const commandEncoder = this.device.createCommandEncoder();
+      const texture = this.context.getCurrentTexture();
+      if (!texture) {
+        console.error('Stinkyfish: getCurrentTexture() returned null');
+        return;
+      }
+      const textureView = texture.createView();
 
-    const renderPass = commandEncoder.beginRenderPass({
-      colorAttachments: [{
-        view: textureView,
-        clearValue: { r: 0.1, g: 0.1, b: 0.15, a: 1.0 },
-        loadOp: 'clear',
-        storeOp: 'store',
-      }],
-    });
+      const renderPass = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+          view: textureView,
+          clearValue: { r: 0.1, g: 0.1, b: 0.15, a: 1.0 },
+          loadOp: 'clear',
+          storeOp: 'store',
+        }],
+      });
 
-    renderPass.setPipeline(this.pipeline);
-    renderPass.setBindGroup(0, this.bindGroup);
-    if (this.sceneBindGroup) {
-      renderPass.setBindGroup(1, this.sceneBindGroup);
+      renderPass.setPipeline(this.pipeline);
+      renderPass.setBindGroup(0, this.bindGroup);
+      if (this.sceneBindGroup) {
+        renderPass.setBindGroup(1, this.sceneBindGroup);
+      }
+      renderPass.draw(3); // Fullscreen triangle
+      renderPass.end();
+
+      this.device.queue.submit([commandEncoder.finish()]);
+    } catch (e) {
+      console.error('Stinkyfish render() error:', e);
     }
-    renderPass.draw(3); // Fullscreen triangle
-    renderPass.end();
-
-    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   startRenderLoop() {
