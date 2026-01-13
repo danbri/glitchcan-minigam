@@ -201,7 +201,7 @@ function walkNode(node, ctx) {
 function generateSphere(node, ctx) {
   const params = node.params || {};
   const r = valueToWgsl(params.r || { type: 'const', value: 1.0 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdSphere(${p}, ${r}), ${color})`;
 }
@@ -209,7 +209,7 @@ function generateSphere(node, ctx) {
 function generateBox(node, ctx) {
   const params = node.params || {};
   const size = valueToWgsl(params.size || { type: 'array', values: [1, 1, 1].map(v => ({ type: 'const', value: v })) }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdBox(${p}, ${size}), ${color})`;
 }
@@ -218,7 +218,7 @@ function generateTorus(node, ctx) {
   const params = node.params || {};
   const major = valueToWgsl(params.major || { type: 'const', value: 1.0 }, ctx);
   const minor = valueToWgsl(params.minor || { type: 'const', value: 0.3 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdTorus(${p}, vec2f(${major}, ${minor})), ${color})`;
 }
@@ -227,7 +227,7 @@ function generateCylinder(node, ctx) {
   const params = node.params || {};
   const h = valueToWgsl(params.h || { type: 'const', value: 1.0 }, ctx);
   const r = valueToWgsl(params.r || { type: 'const', value: 0.5 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdCylinder(${p}, ${h}, ${r}), ${color})`;
 }
@@ -236,7 +236,7 @@ function generateCapsule(node, ctx) {
   const params = node.params || {};
   const h = valueToWgsl(params.h || { type: 'const', value: 1.0 }, ctx);
   const r = valueToWgsl(params.r || { type: 'const', value: 0.25 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdCapsule(${p}, ${h}, ${r}), ${color})`;
 }
@@ -244,7 +244,7 @@ function generateCapsule(node, ctx) {
 function generateEllipsoid(node, ctx) {
   const params = node.params || {};
   const radii = valueToWgsl(params.radii || { type: 'array', values: [1, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdEllipsoid(${p}, ${radii}), ${color})`;
 }
@@ -252,7 +252,7 @@ function generateEllipsoid(node, ctx) {
 function generateCone(node, ctx) {
   const params = node.params || {};
   const h = valueToWgsl(params.h || { type: 'const', value: 1.0 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
 
   if (params.r1 !== undefined || params.r2 !== undefined) {
@@ -269,7 +269,7 @@ function generatePlane(node, ctx) {
   const params = node.params || {};
   const normal = valueToWgsl(params.normal || { type: 'array', values: [0, 1, 0].map(v => ({ type: 'const', value: v })) }, ctx);
   const h = valueToWgsl(params.h || { type: 'const', value: 0 }, ctx);
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.5, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
   return `vec4f(sdPlane(${p}, ${normal}, ${h}), ${color})`;
 }
@@ -284,7 +284,7 @@ function generateUnion(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const transformedP = applyTransform('p', node.transform, ctx);
+  const transformedP = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
   const savedAncestorRotation = ctx.ancestorRotation;
@@ -392,7 +392,7 @@ function generateSubtract(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const transformedP = applyTransform('p', node.transform, ctx);
+  const transformedP = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
@@ -454,7 +454,7 @@ function generateIntersect(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const transformedP = applyTransform('p', node.transform, ctx);
+  const transformedP = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
@@ -521,7 +521,7 @@ function generateSmoothUnion(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const transformedP = applyTransform('p', node.transform, ctx);
+  const transformedP = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
   if (children.length === 1) {
@@ -673,7 +673,7 @@ function generateTransform(node, ctx) {
   if (!node.child) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
-  const p = applyTransform('p', node.transform, ctx);
+  const p = applyTransform(ctx.currentP || 'p', node.transform, ctx);
   const savedP = ctx.currentP;
   ctx.currentP = p;
   const result = walkNode(node.child, ctx);
@@ -821,7 +821,6 @@ function generateMirror(node, ctx) {
   }
 
   const axis = node.axis || 'x';
-  const offset = valueToWgsl(node.offset || { type: 'const', value: 0 }, ctx);
 
   const funcName = `mirror_${ctx.helperCounter++}`;
   const childFuncName = `mirror_child_${ctx.helperCounter++}`;
@@ -831,24 +830,21 @@ function generateMirror(node, ctx) {
   return ${childExpr};
 }`);
 
-  let mirrorExpr;
-  switch (axis) {
-  case 'x':
-    mirrorExpr = `vec3f(abs(p.x) - ${offset}, p.y, p.z)`;
-    break;
-  case 'y':
-    mirrorExpr = `vec3f(p.x, abs(p.y) - ${offset}, p.z)`;
-    break;
-  case 'z':
-    mirrorExpr = `vec3f(p.x, p.y, abs(p.z) - ${offset})`;
-    break;
-  default:
-    mirrorExpr = 'p';
+  // Build mirror code for each axis - matches GLSL behavior
+  // Supports multi-axis strings like "xz", "xy", "xyz"
+  let mirrorCode = '  var q = p;\n';
+  if (axis.includes('x')) {
+    mirrorCode += '  q.x = abs(q.x);\n';
+  }
+  if (axis.includes('y')) {
+    mirrorCode += '  q.y = abs(q.y);\n';
+  }
+  if (axis.includes('z')) {
+    mirrorCode += '  q.z = abs(q.z);\n';
   }
 
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
-  let mp = ${mirrorExpr};
-  return ${childFuncName}(mp);
+${mirrorCode}  return ${childFuncName}(q);
 }`);
 
   return `${funcName}(${ctx.currentP || 'p'})`;
@@ -859,7 +855,9 @@ function generateRadial(node, ctx) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
 
-  const count = node.count || 6;
+  // Convert count to WGSL - handles variable references like {"var": "petalCount"}
+  const countValue = node.count || { type: 'const', value: 6 };
+  const countWgsl = valueToWgsl(countValue, ctx);
   const axis = node.axis || 'y'; // Default to Y-axis (XZ plane rotation)
   const funcName = `radial_${ctx.helperCounter++}`;
   const childFuncName = `radial_child_${ctx.helperCounter++}`;
@@ -876,7 +874,7 @@ function generateRadial(node, ctx) {
     // Rotate around X-axis (YZ plane)
     rotationCode = `
   let angle = atan2(p.z, p.y);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / f32(${countWgsl});
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
@@ -886,7 +884,7 @@ function generateRadial(node, ctx) {
     // Rotate around Z-axis (XY plane)
     rotationCode = `
   let angle = atan2(p.y, p.x);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / f32(${countWgsl});
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
@@ -897,7 +895,7 @@ function generateRadial(node, ctx) {
     // Rotate around Y-axis (XZ plane) - default
     rotationCode = `
   let angle = atan2(p.z, p.x);
-  let sector = 6.283185 / f32(${count});
+  let sector = 6.283185 / f32(${countWgsl});
   let a = (floor(angle / sector + 0.5)) * sector;
   let c = cos(a);
   let s = sin(a);
