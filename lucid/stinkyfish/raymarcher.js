@@ -80,7 +80,17 @@ export class StinkyfishRenderer {
     this.sceneParams = {};
     this.sceneParamValues = {};
 
-    // Mouse state
+    // Animation/time state (Shadertoy-style inputs)
+    this.startTime = performance.now();
+    this.overrideTime = null;  // When set, use this instead of elapsed time
+    this.frameCount = 0;       // iFrame equivalent
+    this.lastFrameTime = 0;    // For calculating delta time
+    this.timeDelta = 0;        // Time between frames (seconds)
+
+    // Mouse state (iMouse equivalent: xy = current pos, zw = click pos)
+    this.mouse = { x: 0, y: 0, clickX: 0, clickY: 0, isDown: false };
+
+    // Mouse state for camera control
     this.isDragging = false;
     this.lastMouse = { x: 0, y: 0 };
 
@@ -164,20 +174,42 @@ export class StinkyfishRenderer {
     // Prevent context menu on canvas
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    // Helper to get mouse position in canvas pixels (Shadertoy-style)
+    const getCanvasPos = (clientX, clientY) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      return {
+        x: (clientX - rect.left) * dpr,
+        y: (rect.height - (clientY - rect.top)) * dpr  // Y inverted for GL convention
+      };
+    };
+
     this.canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.isDragging = true;
       this.lastMouse = { x: e.clientX, y: e.clientY };
       this.canvas.style.cursor = 'grabbing';
+
+      // Update iMouse click position (z, w)
+      const pos = getCanvasPos(e.clientX, e.clientY);
+      this.mouse.clickX = pos.x;
+      this.mouse.clickY = pos.y;
+      this.mouse.isDown = true;
     });
 
     window.addEventListener('mouseup', (e) => {
       this.isDragging = false;
+      this.mouse.isDown = false;
       this.canvas.style.cursor = 'grab';
     });
 
     window.addEventListener('mousemove', (e) => {
+      // Always update mouse position for iMouse uniform
+      const pos = getCanvasPos(e.clientX, e.clientY);
+      this.mouse.x = pos.x;
+      this.mouse.y = pos.y;
+
       if (!this.isDragging) return;
       e.preventDefault();
       const dx = e.clientX - this.lastMouse.x;
@@ -194,18 +226,32 @@ export class StinkyfishRenderer {
       this.cameraDistance = Math.max(1, Math.min(100, this.cameraDistance));
     }, { passive: false });
 
-    // Touch support
+    // Touch support (also updates iMouse)
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (e.touches.length === 1) {
         this.isDragging = true;
         this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+        // Update iMouse click position
+        const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
+        this.mouse.clickX = pos.x;
+        this.mouse.clickY = pos.y;
+        this.mouse.x = pos.x;
+        this.mouse.y = pos.y;
+        this.mouse.isDown = true;
       }
     }, { passive: false });
 
     this.canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
       if (!this.isDragging || e.touches.length !== 1) return;
+
+      // Update iMouse position
+      const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
+      this.mouse.x = pos.x;
+      this.mouse.y = pos.y;
+
       const dx = e.touches[0].clientX - this.lastMouse.x;
       const dy = e.touches[0].clientY - this.lastMouse.y;
       this.cameraTheta += dx * 0.01;
@@ -216,10 +262,27 @@ export class StinkyfishRenderer {
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
       this.isDragging = false;
+      this.mouse.isDown = false;
     });
 
     // Set initial cursor
     this.canvas.style.cursor = 'grab';
+  }
+
+  /**
+   * Update mouse state externally (for when parent provides controls)
+   * @param {number} x - Current X position (pixels)
+   * @param {number} y - Current Y position (pixels)
+   * @param {boolean} isDown - Whether mouse/touch is pressed
+   * @param {number} clickX - X position where click started (optional)
+   * @param {number} clickY - Y position where click started (optional)
+   */
+  updateMouse(x, y, isDown = false, clickX = null, clickY = null) {
+    this.mouse.x = x;
+    this.mouse.y = y;
+    this.mouse.isDown = isDown;
+    if (clickX !== null) this.mouse.clickX = clickX;
+    if (clickY !== null) this.mouse.clickY = clickY;
   }
 
   getCameraPos() {
@@ -405,11 +468,11 @@ export class StinkyfishRenderer {
 
   buildFullShader(sceneWgsl) {
     return `
-// Uniforms
+// Uniforms (Shadertoy-style inputs)
 struct Uniforms {
-  resolution: vec2f,
-  time: f32,
-  _pad: f32,
+  resolution: vec2f,  // iResolution.xy
+  time: f32,          // iTime (seconds since start)
+  timeDelta: f32,     // iTimeDelta (seconds since last frame)
   cameraPos: vec3f,
   _pad2: f32,
   cameraTarget: vec3f,
@@ -435,7 +498,8 @@ struct Uniforms {
   _pad4b: f32,
   _pad4c: f32,
   bgColor: vec3f,
-  _pad5: f32,
+  frame: f32,           // iFrame (frame count since start)
+  mouse: vec4f,         // iMouse: xy = current pos, zw = click pos (pixel coords)
 }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -677,7 +741,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     this.device.queue.writeBuffer(this.sceneUniformBuffer, 0, uniformData);
   }
 
-  render(time = 0, physicsParams = null) {
+  render(physicsParams = null) {
     // Guard: need pipeline and valid canvas size
     if (!this.pipeline || !this.device || !this.context) return;
 
@@ -686,6 +750,19 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
     // Skip render if canvas has no size
     if (width === 0 || height === 0) return;
+
+    // Calculate time (Shadertoy-style: seconds since start)
+    const now = performance.now();
+    const time = this.overrideTime !== null
+      ? this.overrideTime
+      : (now - this.startTime) / 1000.0;
+
+    // Calculate delta time
+    this.timeDelta = this.lastFrameTime > 0 ? (now - this.lastFrameTime) / 1000.0 : 0;
+    this.lastFrameTime = now;
+
+    // Increment frame counter
+    this.frameCount++;
 
     const camPos = this.getCameraPos();
     const rs = this.renderSettings;
@@ -696,8 +773,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     this.groundOpacity += (this.groundOpacityTarget - this.groundOpacity) * opacityLerpSpeed;
 
     // Update main uniforms (must match shader struct layout)
+    const m = this.mouse;
     const uniformData = new Float32Array([
-      width, height, time, 0,
+      width, height, time, this.timeDelta,  // resolution + time + timeDelta
       camPos[0], camPos[1], camPos[2], 0,  // cameraPos
       this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
       // Render settings
@@ -708,7 +786,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       lt.diffuse, lt.specular, lt.shininess, this.showGroundPlane ? 1.0 : 0.0,
       // Display settings
       this.showAxes ? 1.0 : 0.0, this.groundOpacity, 0, 0,  // showAxes + groundOpacity + 2 pads
-      rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], 0, // bgColor + pad
+      rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], this.frameCount, // bgColor + frame
+      m.x, m.y, m.clickX, m.clickY,  // mouse (iMouse style: xy=current, zw=click)
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
@@ -770,12 +849,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     }, { threshold: 0.1 });
     observer.observe(this.canvas);
 
-    const loop = (time) => {
+    const loop = () => {
       if (!this.isVisible) {
         this.animationId = null;
         return;
       }
-      this.render(time * 0.001);
+      this.render();  // Time is now computed internally
       this.animationId = requestAnimationFrame(loop);
     };
     this.animationId = requestAnimationFrame(loop);
