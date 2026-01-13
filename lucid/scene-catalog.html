@@ -297,10 +297,18 @@
       const target = json.camera?.target || [0, 0.5, 0];
 
       return ANGLES.map(a => {
-        renderer.cameraDistance = dist;
-        renderer.cameraTarget = target;
-        renderer.cameraTheta = a.theta;
-        renderer.cameraPhi = a.phi;
+        // Use camera object for Mayfly, flat properties for Stinkyfish
+        if (isGpu) {
+          renderer.cameraDistance = dist;
+          renderer.cameraTarget = target;
+          renderer.cameraTheta = a.theta;
+          renderer.cameraPhi = a.phi;
+        } else {
+          renderer.camera.distance = dist;
+          renderer.camera.target = target;
+          renderer.camera.theta = a.theta;
+          renderer.camera.phi = a.phi;
+        }
         renderer.render(isGpu ? 0 : undefined);
         return renderer.canvas.toDataURL('image/png');
       });

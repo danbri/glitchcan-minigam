@@ -568,16 +568,29 @@ export class LucidComparison extends HTMLElement {
 
   /**
    * Apply camera state to a specific renderer
+   * Handles both Mayfly (camera object) and Stinkyfish (flat properties) APIs
    */
   _applyCameraToRenderer(rendererEl) {
     const renderer = rendererEl?.renderer;
     if (!renderer) return;
 
-    renderer.cameraTheta = this._camera.theta;
-    renderer.cameraPhi = this._camera.phi;
-    renderer.cameraDistance = this._camera.distance;
-    if (this._camera.target) {
-      renderer.cameraTarget = [...this._camera.target];
+    // Mayfly uses camera.theta, Stinkyfish uses cameraTheta
+    if (renderer.camera) {
+      // Mayfly API
+      renderer.camera.theta = this._camera.theta;
+      renderer.camera.phi = this._camera.phi;
+      renderer.camera.distance = this._camera.distance;
+      if (this._camera.target) {
+        renderer.camera.target = [...this._camera.target];
+      }
+    } else {
+      // Stinkyfish API (flat properties)
+      renderer.cameraTheta = this._camera.theta;
+      renderer.cameraPhi = this._camera.phi;
+      renderer.cameraDistance = this._camera.distance;
+      if (this._camera.target) {
+        renderer.cameraTarget = [...this._camera.target];
+      }
     }
   }
 
