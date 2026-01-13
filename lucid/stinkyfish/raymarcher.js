@@ -10,19 +10,25 @@ export class StinkyfishRenderer {
       maxSteps: 100,
       hitThreshold: 0.005,
       maxDistance: 50.0,
-      normalEpsilon: 0.004
+      normalEpsilon: 0.004,
+      minStep: 0.006,
+      relaxation: 0.5
     },
     medium: {
       maxSteps: 150,
       hitThreshold: 0.003,
       maxDistance: 50.0,
-      normalEpsilon: 0.002
+      normalEpsilon: 0.002,
+      minStep: 0.004,
+      relaxation: 0.7
     },
     high: {
       maxSteps: 200,
       hitThreshold: 0.002,
       maxDistance: 50.0,
-      normalEpsilon: 0.001
+      normalEpsilon: 0.001,
+      minStep: 0.003,
+      relaxation: 0.6
     }
   };
 
@@ -343,13 +349,14 @@ export class StinkyfishRenderer {
     //   cameraPos(3) + pad(1)                               = 16 bytes
     //   cameraTarget(3) + pad(1)                            = 16 bytes
     //   maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1) = 16 bytes
+    //   minStep(1) + relaxation(1) + pad(2)                 = 16 bytes
     //   lightDir(3) + ambient(1)                            = 16 bytes
     //   diffuse(1) + specular(1) + shininess(1) + showGroundPlane(1) = 16 bytes
-    //   showAxes(1) + pad(3)                                = 16 bytes
+    //   showAxes(1) + groundOpacity(1) + pad(2)             = 16 bytes
     //   bgColor(3) + pad(1)                                 = 16 bytes
-    // Total: 128 bytes
+    // Total: 144 bytes
     this.uniformBuffer = this.device.createBuffer({
-      size: 144,
+      size: 160,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -412,6 +419,10 @@ struct Uniforms {
   hitThreshold: f32,
   maxDistance: f32,
   normalEpsilon: f32,
+  minStep: f32,
+  relaxation: f32,
+  _pad6: f32,
+  _pad7: f32,
   // Lighting (Blinn-Phong, Mayfly parity)
   lightDir: vec3f,
   ambient: f32,
@@ -562,7 +573,8 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
       break;
     }
 
-    t += hit.x;
+    // Conservative stepping with minimum step size (Mayfly parity)
+    t += max(abs(hit.x) * u.relaxation, u.minStep);
     if (t > u.maxDistance) { break; }
   }
 
@@ -669,6 +681,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
       // Render settings
       rs.maxSteps, rs.hitThreshold, rs.maxDistance, rs.normalEpsilon,
+      rs.minStep, rs.relaxation, 0, 0,  // minStep + relaxation + 2 pads
       // Lighting (Blinn-Phong)
       lt.lightDir[0], lt.lightDir[1], lt.lightDir[2], lt.ambient,
       lt.diffuse, lt.specular, lt.shininess, this.showGroundPlane ? 1.0 : 0.0,
