@@ -525,7 +525,7 @@ fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   return normalize(uv.x * right + uv.y * up + forward);
 }
 
-fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
+fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
   var t = 0.0;
   var color = vec3f(0.5, 0.5, 0.5);
   let steps = i32(u.maxSteps);
@@ -588,12 +588,15 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
     let diff = max(dot(normal, light), 0.0);
     let groundCol = getGroundColor(groundHitPos) * (u.ambient + diff * u.diffuse);
 
+    // Background gradient matches Mayfly
+    let bg = mix(vec3f(0.02, 0.02, 0.08), vec3f(0.05, 0.0, 0.1), uv.y * 0.5 + 0.5);
+
     // Blend with background based on ground opacity
-    color = mix(u.bgColor, groundCol, u.groundOpacity);
+    color = mix(bg, groundCol, u.groundOpacity);
 
     // Add slight fade at distance for more natural look
     let distFade = 1.0 - smoothstep(10.0, 30.0, groundT);
-    color = mix(u.bgColor, color, distFade);
+    color = mix(bg, color, distFade);
 
     return vec4f(color, groundT);
   }
@@ -607,7 +610,9 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
     return vec4f(color, sceneHitT);
   }
 
-  return vec4f(u.bgColor, -1.0);
+  // No hit - return gradient background matching Mayfly
+  let bg = mix(vec3f(0.02, 0.02, 0.08), vec3f(0.05, 0.0, 0.1), uv.y * 0.5 + 0.5);
+  return vec4f(bg, -1.0);
 }
 
 @fragment
@@ -617,10 +622,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   // This centers at (0,0) and normalizes by height only
   let fragCoord = input.uv * u.resolution;
   var uv = (fragCoord - 0.5 * u.resolution) / u.resolution.y;
-  uv.y = -uv.y;  // WebGPU framebuffer Y is top-down, unlike WebGL
+  // Note: No Y flip needed - input.uv.y=0 at bottom matches WebGL gl_FragCoord
 
   let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);
-  let result = raymarch(u.cameraPos, rd);
+  let result = raymarch(u.cameraPos, rd, uv);
 
   return vec4f(result.xyz, 1.0);
 }
