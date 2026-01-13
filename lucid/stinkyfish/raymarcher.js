@@ -61,11 +61,11 @@ export class StinkyfishRenderer {
       bgColor: [0.1, 0.1, 0.15]
     };
 
-    // Lighting settings (Mayfly parity - Blinn-Phong model)
+    // Lighting settings (Mayfly parity - Phong model)
     this.lighting = {
       lightDir: [1.0, 1.0, -1.0],
-      ambient: 0.3,
-      diffuse: 0.7,
+      ambient: 0.8,
+      diffuse: 0.8,
       specular: 0.3,
       shininess: 32
     };
@@ -423,7 +423,7 @@ struct Uniforms {
   relaxation: f32,
   _pad6: f32,
   _pad7: f32,
-  // Lighting (Blinn-Phong, Mayfly parity)
+  // Lighting (Phong, Mayfly parity)
   lightDir: vec3f,
   ambient: f32,
   diffuse: f32,
@@ -599,11 +599,10 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
   }
 
   if (sceneHitT > 0.0) {
-    // Render scene hit with Blinn-Phong lighting
+    // Render scene hit with Phong lighting (matching Mayfly)
     let light = normalize(u.lightDir);
     let diff = max(dot(sceneHitNormal, light), 0.0);
-    let halfVec = normalize(light - rd);
-    let spec = pow(max(dot(sceneHitNormal, halfVec), 0.0), u.shininess);
+    let spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u.shininess);
     color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
     return vec4f(color, sceneHitT);
   }
