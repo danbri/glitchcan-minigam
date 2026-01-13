@@ -1047,7 +1047,7 @@ function generateScaledNode(node, ctx) {
 // Value conversion
 // ============================================
 
-function valueToWgsl(value, ctx) {
+function valueToWgsl(value, ctx, expectedType = null) {
   if (value === undefined || value === null) {
     return '0.0';
   }
@@ -1097,8 +1097,27 @@ function valueToWgsl(value, ctx) {
       }
       return formatFloat(defaultVal);
     }
-    ctx.uniforms.add(`u_${value.name}`);
-    return `scene.u_${value.name}`;
+
+    // Register uniform with type hint if provided, or infer from name
+    const uniformName = `u_${value.name}`;
+    const nameLower = value.name.toLowerCase();
+    const isVec3 = expectedType === 'vec3' ||
+      nameLower.includes('color') ||
+      nameLower.includes('radii') ||
+      nameLower.includes('pos') ||
+      nameLower.includes('translate') ||
+      nameLower.includes('rotate') ||
+      nameLower.includes('normal') ||
+      nameLower.includes('direction') ||
+      nameLower.includes('size') ||
+      nameLower.includes('offset') && !nameLower.includes('time');
+
+    if (isVec3) {
+      ctx.uniforms.add(`${uniformName}:vec3f`);
+    } else {
+      ctx.uniforms.add(uniformName);
+    }
+    return `scene.${uniformName}`;
 
   case 'array':
     if (value.values) {
