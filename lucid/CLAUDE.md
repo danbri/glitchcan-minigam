@@ -32,7 +32,7 @@ lucid/
 ├── core/           # Shared: json-loader, json-codegen, wgsl-codegen, rig-evaluator
 ├── mayfly/         # WebGL backend (SimpleRaymarcher)
 ├── stinkyfish/     # WebGPU backend (StinkyfishRenderer)
-├── components/     # Web components: lucid-renderer, scene-picker, scene-params
+├── components/     # Web components: lucid-renderer, scene-picker, scene-params, orbit-controls
 ├── scenes/         # JSON scene library organized by category
 │   ├── toc.json    # Master table of contents
 │   ├── creatures/  # Animals and characters
@@ -84,6 +84,34 @@ The params panel in index.html shows:
 - Timeline scrubber with play/pause/loop
 - Print layout for documentation (uses `print-layout.js`)
 - Touch-friendly with pinch-zoom and haptic feedback
+
+## Orbit Controls Component
+
+`<lucid-orbit-controls>` provides unified mouse/touch camera controls:
+
+```html
+<lucid-orbit-controls distance="4" min-distance="1" max-distance="15">
+  <canvas id="my-canvas"></canvas>
+</lucid-orbit-controls>
+```
+
+**Controls:**
+- Mouse drag: Orbit camera
+- Mouse wheel: Zoom
+- Single touch drag: Orbit camera
+- Two-finger pinch: Zoom
+- Two-finger pan: Move target
+
+**Events:**
+- `camera-change`: Fired on any camera movement, detail contains { theta, phi, distance, target }
+- `drag-start`: Fired when drag begins (useful for ground fade)
+- `drag-end`: Fired when drag ends
+
+**API:**
+- `getCamera()`: Returns current camera state
+- `setCamera({ theta?, phi?, distance?, target? })`: Set camera
+- `getCameraPosition()`: Returns [x, y, z] camera position
+- `isDragging`: Boolean property for drag state
 
 ## Common Issues
 
