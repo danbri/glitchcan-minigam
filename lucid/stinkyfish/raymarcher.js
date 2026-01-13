@@ -47,11 +47,16 @@ export class StinkyfishRenderer {
     this.quality = 'medium';
     this.renderSettings = {
       ...StinkyfishRenderer.QUALITY_PRESETS.medium,
-      keyIntensity: 0.7,
-      fillIntensity: 0.3,
-      rimIntensity: 0.15,
-      ambient: 0.15,
       bgColor: [0.1, 0.1, 0.15]
+    };
+
+    // Lighting settings (Mayfly parity - Blinn-Phong model)
+    this.lighting = {
+      lightDir: [1.0, 1.0, -1.0],
+      ambient: 0.3,
+      diffuse: 0.7,
+      specular: 0.3,
+      shininess: 32
     };
 
     // Scene parameters (from loaded scene JSON)
@@ -67,6 +72,23 @@ export class StinkyfishRenderer {
 
   setRenderSettings(settings) {
     Object.assign(this.renderSettings, settings);
+  }
+
+  /**
+   * Set lighting parameters (Mayfly API parity)
+   * @param {Object} settings - Lighting settings
+   * @param {number[]} [settings.lightDir] - Light direction [x, y, z]
+   * @param {number} [settings.ambient] - Ambient intensity (0-1)
+   * @param {number} [settings.diffuse] - Diffuse intensity (0-1)
+   * @param {number} [settings.specular] - Specular intensity (0-1)
+   * @param {number} [settings.shininess] - Specular shininess (1-128)
+   */
+  setLighting(settings) {
+    if (settings.lightDir) this.lighting.lightDir = settings.lightDir;
+    if (settings.ambient !== undefined) this.lighting.ambient = settings.ambient;
+    if (settings.diffuse !== undefined) this.lighting.diffuse = settings.diffuse;
+    if (settings.specular !== undefined) this.lighting.specular = settings.specular;
+    if (settings.shininess !== undefined) this.lighting.shininess = settings.shininess;
   }
 
   /**
@@ -300,12 +322,17 @@ export class StinkyfishRenderer {
     });
 
     // Create uniform buffer for camera/time/render settings
-    // Layout: resolution(2) + time(1) + pad(1) + cameraPos(3) + pad(1) + cameraTarget(3) + pad(1)
-    //         + maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1)
-    //         + keyIntensity(1) + fillIntensity(1) + rimIntensity(1) + ambient(1)
-    //         + bgColor(3) + pad(1)
+    // Layout (16-byte aligned blocks):
+    //   resolution(2) + time(1) + pad(1)                    = 16 bytes
+    //   cameraPos(3) + pad(1)                               = 16 bytes
+    //   cameraTarget(3) + pad(1)                            = 16 bytes
+    //   maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1) = 16 bytes
+    //   lightDir(3) + ambient(1)                            = 16 bytes
+    //   diffuse(1) + specular(1) + shininess(1) + pad(1)    = 16 bytes
+    //   bgColor(3) + pad(1)                                 = 16 bytes
+    // Total: 112 bytes (using 128 for safety)
     this.uniformBuffer = this.device.createBuffer({
-      size: 128, // Extended for render settings
+      size: 128,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -368,12 +395,15 @@ struct Uniforms {
   hitThreshold: f32,
   maxDistance: f32,
   normalEpsilon: f32,
-  keyIntensity: f32,
-  fillIntensity: f32,
-  rimIntensity: f32,
+  // Lighting (Blinn-Phong, Mayfly parity)
+  lightDir: vec3f,
   ambient: f32,
-  bgColor: vec3f,
+  diffuse: f32,
+  specular: f32,
+  shininess: f32,
   _pad4: f32,
+  bgColor: vec3f,
+  _pad5: f32,
 }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -407,7 +437,8 @@ fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   let forward = normalize(camTarget - camPos);
   let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
   let up = cross(forward, right);
-  return normalize(uv.x * right + uv.y * up + 1.5 * forward);
+  // FOV matched to Mayfly (~90 degrees)
+  return normalize(uv.x * right + uv.y * up + forward);
 }
 
 fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
@@ -431,15 +462,13 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
         sceneSDF(p + vec3f(0.0, 0.0, e)).x - sceneSDF(p - vec3f(0.0, 0.0, e)).x
       ));
 
-      // Simple 3-point lighting
-      let keyDir = normalize(vec3f(1.0, 2.0, 1.5));
-      let fillDir = normalize(vec3f(-1.0, 0.5, 0.0));
+      // Blinn-Phong lighting (Mayfly parity)
+      let light = normalize(u.lightDir);
+      let diff = max(dot(n, light), 0.0);
+      let halfVec = normalize(light - rd);
+      let spec = pow(max(dot(n, halfVec), 0.0), u.shininess);
 
-      let keyLight = max(dot(n, keyDir), 0.0) * u.keyIntensity;
-      let fillLight = max(dot(n, fillDir), 0.0) * u.fillIntensity;
-      let rimLight = pow(max(1.0 - dot(n, -rd), 0.0), 3.0) * u.rimIntensity;
-
-      color = color * (u.ambient + keyLight + fillLight) + vec3f(rimLight);
+      color = color * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
 
       return vec4f(color, t);
     }
@@ -506,6 +535,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
     const camPos = this.getCameraPos();
     const rs = this.renderSettings;
+    const lt = this.lighting;
 
     // Update main uniforms (must match shader struct layout)
     const uniformData = new Float32Array([
@@ -514,7 +544,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
       // Render settings
       rs.maxSteps, rs.hitThreshold, rs.maxDistance, rs.normalEpsilon,
-      rs.keyIntensity, rs.fillIntensity, rs.rimIntensity, rs.ambient,
+      // Lighting (Blinn-Phong)
+      lt.lightDir[0], lt.lightDir[1], lt.lightDir[2], lt.ambient,
+      lt.diffuse, lt.specular, lt.shininess, 0,  // pad
       rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], 0, // bgColor + pad
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);

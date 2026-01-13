@@ -2460,12 +2460,13 @@
       const wasAutoRotating = autoRotate;
 
       // Save camera state from current renderer
+      // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses renderer.cameraTheta etc.
       let cameraState = null;
-      if (renderer?.camera) {
+      if (renderer) {
         cameraState = {
-          theta: renderer.camera.theta,
-          phi: renderer.camera.phi,
-          distance: renderer.cameraDistance
+          theta: renderer.camera?.theta ?? renderer.cameraTheta ?? 0,
+          phi: renderer.camera?.phi ?? renderer.cameraPhi ?? Math.PI / 4,
+          distance: renderer.camera?.distance ?? renderer.cameraDistance ?? 4
         };
       }
 
@@ -2506,10 +2507,19 @@
         }
 
         // Restore camera state
+        // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses flat properties
         if (cameraState && renderer) {
-          renderer.camera.theta = cameraState.theta;
-          renderer.camera.phi = cameraState.phi;
-          renderer.cameraDistance = cameraState.distance;
+          if (renderer.camera) {
+            // Mayfly
+            renderer.camera.theta = cameraState.theta;
+            renderer.camera.phi = cameraState.phi;
+            renderer.camera.distance = cameraState.distance;
+          } else {
+            // Stinkyfish
+            renderer.cameraTheta = cameraState.theta;
+            renderer.cameraPhi = cameraState.phi;
+            renderer.cameraDistance = cameraState.distance;
+          }
         }
 
         // Update GPU info display
