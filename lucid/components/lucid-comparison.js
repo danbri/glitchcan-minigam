@@ -105,6 +105,7 @@ export class LucidComparison extends HTMLElement {
 
         lucid-renderer {
           flex: 1;
+          min-width: 0;
           min-height: 0;
         }
 
@@ -151,6 +152,24 @@ export class LucidComparison extends HTMLElement {
 
         :host([layout="overlay"]) .pane.stinkyfish {
           mix-blend-mode: difference;
+        }
+
+        /* Cross-eye stereoscopic view */
+        :host([layout="crossview"]) .comparison {
+          justify-content: center;
+          align-items: center;
+          gap: 20px;
+        }
+
+        :host([layout="crossview"]) .pane {
+          flex: 0 0 auto;
+          width: 45%;
+          max-width: 400px;
+          aspect-ratio: 1;
+        }
+
+        :host([layout="crossview"]) .pane-header {
+          display: none;
         }
 
         /* Diff highlights */
@@ -265,6 +284,7 @@ export class LucidComparison extends HTMLElement {
         <button id="layout-h" class="active" title="Horizontal split">◫</button>
         <button id="layout-v" title="Vertical split">⬒</button>
         <button id="layout-o" title="Overlay diff">◉</button>
+        <button id="layout-x" title="Cross-eyed stereo">👀</button>
         <button id="sync-cam" class="active" title="Sync cameras">🔗</button>
       </div>
       <button class="display-btn" id="display-mode" title="Toggle ground/axes">⬚</button>
@@ -347,6 +367,7 @@ export class LucidComparison extends HTMLElement {
     const layoutH = this.shadowRoot.querySelector('#layout-h');
     const layoutV = this.shadowRoot.querySelector('#layout-v');
     const layoutO = this.shadowRoot.querySelector('#layout-o');
+    const layoutX = this.shadowRoot.querySelector('#layout-x');
     const syncCam = this.shadowRoot.querySelector('#sync-cam');
     const displayMode = this.shadowRoot.querySelector('#display-mode');
 
@@ -359,6 +380,7 @@ export class LucidComparison extends HTMLElement {
       layoutH.classList.toggle('active', this.layout === 'horizontal');
       layoutV.classList.toggle('active', this.layout === 'vertical');
       layoutO.classList.toggle('active', this.layout === 'overlay');
+      layoutX.classList.toggle('active', this.layout === 'crossview');
     };
 
     const updateDisplayMode = () => {
@@ -393,6 +415,11 @@ export class LucidComparison extends HTMLElement {
 
     layoutO.addEventListener('click', () => {
       this.layout = 'overlay';
+      updateLayoutButtons();
+    });
+
+    layoutX.addEventListener('click', () => {
+      this.layout = 'crossview';
       updateLayoutButtons();
     });
 
