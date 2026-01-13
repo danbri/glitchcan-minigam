@@ -1311,6 +1311,7 @@
             <span id="anim-icon" style="display:inline-block;">▶</span>
           </button>
           <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
+          <button class="icon-btn" id="btn-display-mode" title="Display: None (G)">⬚</button>
           <select id="backend-select" title="Renderer Backend" style="padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:11px;cursor:pointer;">
             <option value="mayfly">Mayfly</option>
             <option value="stinkyfish">Stinkyfish</option>
@@ -2460,12 +2461,13 @@
       const wasAutoRotating = autoRotate;
 
       // Save camera state from current renderer
+      // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses renderer.cameraTheta etc.
       let cameraState = null;
-      if (renderer?.camera) {
+      if (renderer) {
         cameraState = {
-          theta: renderer.camera.theta,
-          phi: renderer.camera.phi,
-          distance: renderer.cameraDistance
+          theta: renderer.camera?.theta ?? renderer.cameraTheta ?? 0,
+          phi: renderer.camera?.phi ?? renderer.cameraPhi ?? Math.PI / 4,
+          distance: renderer.camera?.distance ?? renderer.cameraDistance ?? 4
         };
       }
 
@@ -2506,10 +2508,19 @@
         }
 
         // Restore camera state
+        // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses flat properties
         if (cameraState && renderer) {
-          renderer.camera.theta = cameraState.theta;
-          renderer.camera.phi = cameraState.phi;
-          renderer.cameraDistance = cameraState.distance;
+          if (renderer.camera) {
+            // Mayfly
+            renderer.camera.theta = cameraState.theta;
+            renderer.camera.phi = cameraState.phi;
+            renderer.camera.distance = cameraState.distance;
+          } else {
+            // Stinkyfish
+            renderer.cameraTheta = cameraState.theta;
+            renderer.cameraPhi = cameraState.phi;
+            renderer.cameraDistance = cameraState.distance;
+          }
         }
 
         // Update GPU info display
@@ -4071,6 +4082,10 @@
         lastMouseY = e.clientY;
         mouseDownPos = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'grabbing';
+        // Fade out ground plane during drag for unobstructed view
+        if (renderer && renderer.groundOpacityTarget !== undefined) {
+          renderer.groundOpacityTarget = 0.1;
+        }
       });
 
       document.addEventListener('mousemove', (e) => {
@@ -4099,6 +4114,10 @@
         mouseDownPos = null;
         isDragging = false;
         canvas.style.cursor = 'grab';
+        // Restore ground plane opacity after drag
+        if (renderer && renderer.groundOpacityTarget !== undefined) {
+          renderer.groundOpacityTarget = 0.6;
+        }
       });
 
       // Mouse wheel zoom
@@ -4136,6 +4155,11 @@
         swipeStartX = touch.clientX; // Store original for swipe detection
         swipeStartY = touch.clientY;
         touchStartTime = Date.now();
+
+        // Fade out ground plane during touch for unobstructed view
+        if (renderer && renderer.groundOpacityTarget !== undefined) {
+          renderer.groundOpacityTarget = 0.1;
+        }
 
         // Check if starting from edge - block iOS back gesture by preventing default
         isEdgeSwipe = isInEdge(touch.clientX, 'left') || isInEdge(touch.clientX, 'right');
@@ -4238,6 +4262,11 @@
 
         isEdgeSwipe = false;
         activeTouches = 0;
+
+        // Restore ground plane opacity after touch ends
+        if (renderer && renderer.groundOpacityTarget !== undefined) {
+          renderer.groundOpacityTarget = 0.6;
+        }
       }, { passive: true });
     }
 
@@ -4292,6 +4321,49 @@
         this.classList.toggle('active');
         debugSettings.showAxes = this.classList.contains('active');
         renderer.showAxes = debugSettings.showAxes;
+        updateDisplayModeButton();
+      });
+
+      // Display mode tristate button (None → Ground → Ground+Axes)
+      // State: 0=none, 1=ground only, 2=ground+axes
+      let displayMode = 0;  // Start with none
+      const displayModeIcons = ['⬚', '⬓', '⊞'];  // none, ground, ground+axes
+      const displayModeTitles = ['Display: None (G)', 'Display: Ground (G)', 'Display: Ground+Axes (G)'];
+
+      function updateDisplayModeButton() {
+        const btn = $('btn-display-mode');
+        if (btn) {
+          btn.textContent = displayModeIcons[displayMode];
+          btn.title = displayModeTitles[displayMode];
+        }
+      }
+
+      function setDisplayMode(mode) {
+        displayMode = mode;
+        debugSettings.showGround = mode >= 1;
+        debugSettings.showAxes = mode >= 2;
+        renderer.showGroundPlane = debugSettings.showGround;
+        renderer.showAxes = debugSettings.showAxes;
+        // Update the individual toggles to match
+        const groundToggle = $('toggle-ground');
+        const axesToggle = $('toggle-axes');
+        if (groundToggle) groundToggle.classList.toggle('active', debugSettings.showGround);
+        if (axesToggle) axesToggle.classList.toggle('active', debugSettings.showAxes);
+        updateDisplayModeButton();
+      }
+
+      addClick('btn-display-mode', function() {
+        displayMode = (displayMode + 1) % 3;
+        setDisplayMode(displayMode);
+      });
+
+      // Keyboard shortcut G for display mode
+      document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'g' || e.key === 'G') {
+          displayMode = (displayMode + 1) % 3;
+          setDisplayMode(displayMode);
+        }
       });
 
       // Perf stats toggle

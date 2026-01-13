@@ -63,6 +63,9 @@ export class SimpleRaymarcher {
     };
 
     this.showGroundPlane = true;
+    this.groundOpacity = 0.6;        // Base ground opacity (0-1)
+    this.groundOpacityTarget = 0.6;  // Target for animation
+    this.isDragging = false;         // Track drag state for translucency
     this.volumeRender = false;
     this.showEdges = true;
     this.showAxes = false;
@@ -249,6 +252,7 @@ export class SimpleRaymarcher {
       uniform vec3 u_cameraPos;
       uniform vec3 u_cameraTarget;
       uniform float u_showGroundPlane;
+      uniform float u_groundOpacity;   // Ground translucency (0-1)
       uniform float u_volumeRender;
       uniform float u_showEdges;
       uniform float u_showAxes;
@@ -268,7 +272,7 @@ export class SimpleRaymarcher {
 
       // Ground plane SDF with checkerboard pattern
       float sdGroundPlane(vec3 p) {
-        return p.y + 1.5; // Plane at y = -1.5
+        return p.y; // Plane at y = 0
       }
 
       // Axis arrow SDFs - Blender-style RGB arrows
@@ -338,7 +342,7 @@ export class SimpleRaymarcher {
       #define MIN_STEP ${this.raymarchParams.minStep.toFixed(6)}
       #define RELAXATION ${this.raymarchParams.relaxation.toFixed(6)}
 
-      vec4 raymarch(vec3 ro, vec3 rd) {
+      vec4 raymarch(vec3 ro, vec3 rd, vec2 uv) {
         float t = 0.0;
         vec3 colVol = vec3(0.0);
         float trans = 1.0;
@@ -353,7 +357,7 @@ export class SimpleRaymarcher {
         float groundT = -1.0;
         vec3 groundHitPos = vec3(0.0);
         if (u_showGroundPlane > 0.5 && abs(rd.y) > 0.001) {
-          float groundY = -1.5;
+          float groundY = 0.0;  // Ground at Y=0 (aligned with Stinkyfish)
           groundT = (groundY - ro.y) / rd.y;
           if (groundT > 0.0) {
             groundHitPos = ro + rd * groundT;
@@ -488,11 +492,21 @@ export class SimpleRaymarcher {
         bool useGround = groundT > 0.0 && (sceneHitT < 0.0 || groundT < sceneHitT);
 
         if (useGround) {
-          // Render ground plane with checkerboard
+          // Render ground plane with checkerboard and translucency
           vec3 normal = vec3(0.0, 1.0, 0.0);
           vec3 light = normalize(u_lightDir);
           float diff = max(dot(normal, light), 0.0);
-          vec3 col = getGroundColor(groundHitPos) * (u_ambient + diff * u_diffuse);
+          vec3 groundCol = getGroundColor(groundHitPos) * (u_ambient + diff * u_diffuse);
+
+          // Blend with background based on ground opacity
+          // Background gradient matches the one in main()
+          vec3 bg = mix(vec3(0.02, 0.02, 0.08), vec3(0.05, 0.0, 0.1), uv.y * 0.5 + 0.5);
+          vec3 col = mix(bg, groundCol, u_groundOpacity);
+
+          // Add slight fade at distance for more natural look
+          float distFade = 1.0 - smoothstep(10.0, 30.0, groundT);
+          col = mix(bg, col, distFade);
+
           return vec4(col, 1.0);
         }
 
@@ -525,7 +539,7 @@ export class SimpleRaymarcher {
         vec3 up = cross(forward, right);
         vec3 rd = normalize(forward + uv.x * right + uv.y * up);
 
-        vec4 col = raymarch(ro, rd);
+        vec4 col = raymarch(ro, rd, uv);
 
         // Background gradient
         if (col.a < 0.5) {
@@ -625,6 +639,13 @@ export class SimpleRaymarcher {
 
     const groundPlaneLocation = gl.getUniformLocation(this.program, 'u_showGroundPlane');
     gl.uniform1f(groundPlaneLocation, this.showGroundPlane ? 1.0 : 0.0);
+
+    // Animate ground opacity toward target (smooth interpolation)
+    const opacityLerpSpeed = 0.1; // Lower = smoother
+    this.groundOpacity += (this.groundOpacityTarget - this.groundOpacity) * opacityLerpSpeed;
+
+    const groundOpacityLocation = gl.getUniformLocation(this.program, 'u_groundOpacity');
+    gl.uniform1f(groundOpacityLocation, this.groundOpacity);
 
     const volumeRenderLocation = gl.getUniformLocation(this.program, 'u_volumeRender');
     gl.uniform1f(volumeRenderLocation, this.volumeRender ? 1.0 : 0.0);

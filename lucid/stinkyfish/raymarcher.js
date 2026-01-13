@@ -47,12 +47,23 @@ export class StinkyfishRenderer {
     this.quality = 'medium';
     this.renderSettings = {
       ...StinkyfishRenderer.QUALITY_PRESETS.medium,
-      keyIntensity: 0.7,
-      fillIntensity: 0.3,
-      rimIntensity: 0.15,
-      ambient: 0.15,
       bgColor: [0.1, 0.1, 0.15]
     };
+
+    // Lighting settings (Mayfly parity - Blinn-Phong model)
+    this.lighting = {
+      lightDir: [1.0, 1.0, -1.0],
+      ambient: 0.3,
+      diffuse: 0.7,
+      specular: 0.3,
+      shininess: 32
+    };
+
+    // Display settings (Mayfly parity)
+    this.showGroundPlane = false;
+    this.showAxes = false;
+    this.groundOpacity = 0.6;        // Base ground opacity (0-1)
+    this.groundOpacityTarget = 0.6;  // Target for animation
 
     // Scene parameters (from loaded scene JSON)
     this.sceneParams = {};
@@ -67,6 +78,23 @@ export class StinkyfishRenderer {
 
   setRenderSettings(settings) {
     Object.assign(this.renderSettings, settings);
+  }
+
+  /**
+   * Set lighting parameters (Mayfly API parity)
+   * @param {Object} settings - Lighting settings
+   * @param {number[]} [settings.lightDir] - Light direction [x, y, z]
+   * @param {number} [settings.ambient] - Ambient intensity (0-1)
+   * @param {number} [settings.diffuse] - Diffuse intensity (0-1)
+   * @param {number} [settings.specular] - Specular intensity (0-1)
+   * @param {number} [settings.shininess] - Specular shininess (1-128)
+   */
+  setLighting(settings) {
+    if (settings.lightDir) this.lighting.lightDir = settings.lightDir;
+    if (settings.ambient !== undefined) this.lighting.ambient = settings.ambient;
+    if (settings.diffuse !== undefined) this.lighting.diffuse = settings.diffuse;
+    if (settings.specular !== undefined) this.lighting.specular = settings.specular;
+    if (settings.shininess !== undefined) this.lighting.shininess = settings.shininess;
   }
 
   /**
@@ -300,12 +328,18 @@ export class StinkyfishRenderer {
     });
 
     // Create uniform buffer for camera/time/render settings
-    // Layout: resolution(2) + time(1) + pad(1) + cameraPos(3) + pad(1) + cameraTarget(3) + pad(1)
-    //         + maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1)
-    //         + keyIntensity(1) + fillIntensity(1) + rimIntensity(1) + ambient(1)
-    //         + bgColor(3) + pad(1)
+    // Layout (16-byte aligned blocks):
+    //   resolution(2) + time(1) + pad(1)                    = 16 bytes
+    //   cameraPos(3) + pad(1)                               = 16 bytes
+    //   cameraTarget(3) + pad(1)                            = 16 bytes
+    //   maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1) = 16 bytes
+    //   lightDir(3) + ambient(1)                            = 16 bytes
+    //   diffuse(1) + specular(1) + shininess(1) + showGroundPlane(1) = 16 bytes
+    //   showAxes(1) + pad(3)                                = 16 bytes
+    //   bgColor(3) + pad(1)                                 = 16 bytes
+    // Total: 128 bytes
     this.uniformBuffer = this.device.createBuffer({
-      size: 128, // Extended for render settings
+      size: 144,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -368,12 +402,19 @@ struct Uniforms {
   hitThreshold: f32,
   maxDistance: f32,
   normalEpsilon: f32,
-  keyIntensity: f32,
-  fillIntensity: f32,
-  rimIntensity: f32,
+  // Lighting (Blinn-Phong, Mayfly parity)
+  lightDir: vec3f,
   ambient: f32,
+  diffuse: f32,
+  specular: f32,
+  shininess: f32,
+  showGroundPlane: f32,
+  showAxes: f32,
+  groundOpacity: f32,
+  _pad4b: f32,
+  _pad4c: f32,
   bgColor: vec3f,
-  _pad4: f32,
+  _pad5: f32,
 }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -402,12 +443,65 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 ${sceneWgsl}
 // ========== END SCENE CODE ==========
 
+// Ground plane checkerboard pattern
+fn getGroundColor(p: vec3f) -> vec3f {
+  let scale = 0.5;
+  let q = floor(p.xz / scale);
+  let checker = (i32(q.x) + i32(q.y)) % 2;
+  let color1 = vec3f(0.15, 0.15, 0.2);
+  let color2 = vec3f(0.25, 0.25, 0.3);
+  return select(color1, color2, checker == 1);
+}
+
+// Axis arrows SDF - Blender-style RGB arrows
+// Returns vec4(distance, r, g, b)
+fn sdAxisArrows(p: vec3f) -> vec4f {
+  let arrowLen = 2.5;
+  let shaftR = 0.035;
+  let headR = 0.10;
+  let headH = 0.22;
+
+  // X axis - Red arrow (positive X direction)
+  let px = p - vec3f(arrowLen * 0.5, 0.0, 0.0);
+  let dXshaft = length(vec2f(length(px.yz), max(abs(px.x) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+  let pxHead = p - vec3f(arrowLen, 0.0, 0.0);
+  var dXhead = length(vec2f(length(pxHead.yz) - headR * (1.0 - clamp(pxHead.x / headH, 0.0, 1.0)), max(-pxHead.x, pxHead.x - headH)));
+  dXhead = max(dXhead, -pxHead.x);
+  let dX = min(dXshaft, dXhead);
+
+  // Y axis - Green arrow (positive Y direction)
+  let py = p - vec3f(0.0, arrowLen * 0.5, 0.0);
+  let dYshaft = length(vec2f(length(py.xz), max(abs(py.y) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+  let pyHead = p - vec3f(0.0, arrowLen, 0.0);
+  var dYhead = length(vec2f(length(pyHead.xz) - headR * (1.0 - clamp(pyHead.y / headH, 0.0, 1.0)), max(-pyHead.y, pyHead.y - headH)));
+  dYhead = max(dYhead, -pyHead.y);
+  let dY = min(dYshaft, dYhead);
+
+  // Z axis - Blue arrow (positive Z direction)
+  let pz = p - vec3f(0.0, 0.0, arrowLen * 0.5);
+  let dZshaft = length(vec2f(length(pz.xy), max(abs(pz.z) - arrowLen * 0.5 + headH, 0.0))) - shaftR;
+  let pzHead = p - vec3f(0.0, 0.0, arrowLen);
+  var dZhead = length(vec2f(length(pzHead.xy) - headR * (1.0 - clamp(pzHead.z / headH, 0.0, 1.0)), max(-pzHead.z, pzHead.z - headH)));
+  dZhead = max(dZhead, -pzHead.z);
+  let dZ = min(dZshaft, dZhead);
+
+  // Find closest axis and return with color
+  if (dX < dY && dX < dZ) {
+    return vec4f(dX, 0.9, 0.2, 0.2);  // Red for X
+  } else if (dY < dZ) {
+    return vec4f(dY, 0.2, 0.9, 0.2);  // Green for Y
+  } else {
+    return vec4f(dZ, 0.3, 0.4, 0.9);  // Blue for Z
+  }
+}
+
 // Raymarching
 fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   let forward = normalize(camTarget - camPos);
   let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
   let up = cross(forward, right);
-  return normalize(uv.x * right + uv.y * up + 1.5 * forward);
+  // FOV matched to Mayfly (~90 degrees)
+  return normalize(uv.x * right + uv.y * up + forward);
 }
 
 fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
@@ -415,37 +509,81 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
   var color = vec3f(0.5, 0.5, 0.5);
   let steps = i32(u.maxSteps);
 
+  // Ground plane: compute ray-plane intersection ONCE
+  var groundT = -1.0;
+  var groundHitPos = vec3f(0.0);
+  if (u.showGroundPlane > 0.5 && abs(rd.y) > 0.001) {
+    let groundY = 0.0;  // Ground at Y=0
+    groundT = (groundY - ro.y) / rd.y;
+    if (groundT > 0.0) {
+      groundHitPos = ro + rd * groundT;
+    }
+  }
+
+  // Track scene hit
+  var sceneHitT = -1.0;
+  var sceneHitColor = vec3f(0.0);
+  var sceneHitNormal = vec3f(0.0);
+
   for (var i = 0; i < 200; i++) {
     if (i >= steps) { break; }
     let p = ro + rd * t;
-    let hit = sceneSDF(p);
+    var hit = sceneSDF(p);
 
-    if (hit.x < u.hitThreshold) {
-      color = hit.yzw;
+    // Check axes if enabled
+    if (u.showAxes > 0.5) {
+      let axes = sdAxisArrows(p);
+      if (axes.x < hit.x) {
+        hit = vec4f(axes.x, axes.yzw);
+      }
+    }
+
+    if (hit.x < u.hitThreshold && sceneHitT < 0.0) {
+      sceneHitT = t;
+      sceneHitColor = hit.yzw;
 
       // Normal calculation
       let e = u.normalEpsilon;
-      let n = normalize(vec3f(
+      sceneHitNormal = normalize(vec3f(
         sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
         sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
         sceneSDF(p + vec3f(0.0, 0.0, e)).x - sceneSDF(p - vec3f(0.0, 0.0, e)).x
       ));
-
-      // Simple 3-point lighting
-      let keyDir = normalize(vec3f(1.0, 2.0, 1.5));
-      let fillDir = normalize(vec3f(-1.0, 0.5, 0.0));
-
-      let keyLight = max(dot(n, keyDir), 0.0) * u.keyIntensity;
-      let fillLight = max(dot(n, fillDir), 0.0) * u.fillIntensity;
-      let rimLight = pow(max(1.0 - dot(n, -rd), 0.0), 3.0) * u.rimIntensity;
-
-      color = color * (u.ambient + keyLight + fillLight) + vec3f(rimLight);
-
-      return vec4f(color, t);
+      break;
     }
 
     t += hit.x;
     if (t > u.maxDistance) { break; }
+  }
+
+  // Determine what to render: ground or scene (whichever is closer)
+  let useGround = groundT > 0.0 && (sceneHitT < 0.0 || groundT < sceneHitT);
+
+  if (useGround) {
+    // Render ground plane with checkerboard and translucency
+    let normal = vec3f(0.0, 1.0, 0.0);
+    let light = normalize(u.lightDir);
+    let diff = max(dot(normal, light), 0.0);
+    let groundCol = getGroundColor(groundHitPos) * (u.ambient + diff * u.diffuse);
+
+    // Blend with background based on ground opacity
+    color = mix(u.bgColor, groundCol, u.groundOpacity);
+
+    // Add slight fade at distance for more natural look
+    let distFade = 1.0 - smoothstep(10.0, 30.0, groundT);
+    color = mix(u.bgColor, color, distFade);
+
+    return vec4f(color, groundT);
+  }
+
+  if (sceneHitT > 0.0) {
+    // Render scene hit with Blinn-Phong lighting
+    let light = normalize(u.lightDir);
+    let diff = max(dot(sceneHitNormal, light), 0.0);
+    let halfVec = normalize(light - rd);
+    let spec = pow(max(dot(sceneHitNormal, halfVec), 0.0), u.shininess);
+    color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
+    return vec4f(color, sceneHitT);
   }
 
   return vec4f(u.bgColor, -1.0);
@@ -506,6 +644,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
     const camPos = this.getCameraPos();
     const rs = this.renderSettings;
+    const lt = this.lighting;
+
+    // Animate ground opacity toward target (smooth interpolation)
+    const opacityLerpSpeed = 0.1;
+    this.groundOpacity += (this.groundOpacityTarget - this.groundOpacity) * opacityLerpSpeed;
 
     // Update main uniforms (must match shader struct layout)
     const uniformData = new Float32Array([
@@ -514,7 +657,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2], 0, // cameraTarget
       // Render settings
       rs.maxSteps, rs.hitThreshold, rs.maxDistance, rs.normalEpsilon,
-      rs.keyIntensity, rs.fillIntensity, rs.rimIntensity, rs.ambient,
+      // Lighting (Blinn-Phong)
+      lt.lightDir[0], lt.lightDir[1], lt.lightDir[2], lt.ambient,
+      lt.diffuse, lt.specular, lt.shininess, this.showGroundPlane ? 1.0 : 0.0,
+      // Display settings
+      this.showAxes ? 1.0 : 0.0, this.groundOpacity, 0, 0,  // showAxes + groundOpacity + 2 pads
       rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], 0, // bgColor + pad
     ]);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
