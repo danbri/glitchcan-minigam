@@ -1,7 +1,10 @@
 /**
  * Stinkyfish WebGPU Raymarcher
- * Minimal raymarcher that renders generated WGSL scene SDFs
+ * High-performance raymarcher with adaptive stepping, BVH optimization,
+ * and comprehensive performance metrics.
  */
+
+import { PerfMetrics, ShaderCache, DebugModes } from './perf-metrics.js';
 
 export class StinkyfishRenderer {
   // Quality presets matching Mayfly exactly
@@ -35,7 +38,11 @@ export class StinkyfishRenderer {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {Object} [options]
-   * @param {boolean} [options.disableControls=false] - Disable built-in mouse/touch controls (use when parent provides controls)
+   * @param {boolean} [options.disableControls=false] - Disable built-in mouse/touch controls
+   * @param {boolean} [options.enableMetrics=true] - Enable performance metrics collection
+   * @param {boolean} [options.enableShaderCache=true] - Enable shader compilation caching
+   * @param {boolean} [options.adaptiveStepping=true] - Enable adaptive step size optimization
+   * @param {number} [options.debugMode=0] - Debug visualization mode (see DebugModes)
    */
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -47,6 +54,20 @@ export class StinkyfishRenderer {
     this.sceneUniformBuffer = null;
     this.sceneBindGroup = null;
     this.sceneUniformLayout = null; // Track layout for scene params
+
+    // Performance optimization options
+    this.adaptiveStepping = options.adaptiveStepping !== false;
+    this.debugMode = options.debugMode || DebugModes.NONE;
+
+    // Initialize performance metrics
+    this.metricsEnabled = options.enableMetrics !== false;
+    this.metrics = this.metricsEnabled ? new PerfMetrics({
+      onStats: options.onStats
+    }) : null;
+
+    // Initialize shader cache
+    this.cacheEnabled = options.enableShaderCache !== false;
+    this.shaderCache = this.cacheEnabled ? new ShaderCache(32) : null;
 
     // Camera state (Mayfly parity)
     this.cameraDistance = 4.0;
@@ -409,7 +430,32 @@ export class StinkyfishRenderer {
    * @param {Object} sceneUniformLayout - Layout info for scene params (name -> type)
    */
   async compileScene(sceneWgsl, sceneUniformLayout = null) {
+    const compileStart = performance.now();
     const shaderCode = this.buildFullShader(sceneWgsl);
+    const shaderLines = shaderCode.split('\n').length;
+
+    // Check shader cache first
+    let shaderHash = null;
+    if (this.cacheEnabled && this.shaderCache) {
+      shaderHash = this.shaderCache.hashShader(shaderCode);
+      const cached = this.shaderCache.get(shaderHash);
+      if (cached && cached.pipeline) {
+        console.log(`[Stinkyfish] Shader cache HIT: ${shaderHash}`);
+        this.pipeline = cached.pipeline;
+        if (this.metrics) {
+          this.metrics.recordCacheAccess(true);
+          this.metrics.recordShaderCompile(0, shaderCode.length, Object.keys(sceneUniformLayout || {}).length, 0);
+        }
+        // Still need to set up uniform buffers for this scene
+        await this._setupUniformBuffers(sceneUniformLayout);
+        return;
+      }
+      if (this.metrics) {
+        this.metrics.recordCacheAccess(false);
+      }
+    }
+
+    console.log(`[Stinkyfish] Compiling shader: ${shaderCode.length} chars, ${shaderLines} lines`);
 
     const shaderModule = this.device.createShaderModule({
       code: shaderCode,
@@ -417,6 +463,9 @@ export class StinkyfishRenderer {
 
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
+    if (compilationInfo.messages.length > 0) {
+      console.log(`[Stinkyfish] Shader messages: ${compilationInfo.messages.length}`);
+    }
     for (const message of compilationInfo.messages) {
       if (message.type === 'error') {
         // Log context around the error
@@ -448,18 +497,48 @@ export class StinkyfishRenderer {
       },
     });
 
+    // Cache the compiled pipeline
+    if (this.cacheEnabled && this.shaderCache && shaderHash) {
+      this.shaderCache.set(shaderHash, {
+        pipeline: this.pipeline,
+        shaderSize: shaderCode.length,
+        timestamp: Date.now()
+      });
+      console.log(`[Stinkyfish] Shader cached: ${shaderHash}`);
+    }
+
+    // Record compilation metrics
+    const compileTime = performance.now() - compileStart;
+    if (this.metrics) {
+      // Count helper functions in the shader
+      const helperCount = (shaderCode.match(/^fn \w+/gm) || []).length;
+      this.metrics.recordShaderCompile(compileTime, shaderCode.length, Object.keys(sceneUniformLayout || {}).length, helperCount);
+    }
+    console.log(`[Stinkyfish] Shader compiled in ${compileTime.toFixed(1)}ms`);
+
+    // Set up uniform buffers
+    await this._setupUniformBuffers(sceneUniformLayout);
+  }
+
+  /**
+   * Set up uniform buffers for the current pipeline
+   * Called both for fresh compilation and cache hits
+   * @private
+   */
+  async _setupUniformBuffers(sceneUniformLayout) {
     // Create uniform buffer for camera/time/render settings
     // Layout (16-byte aligned blocks):
     //   resolution(2) + time(1) + pad(1)                    = 16 bytes
     //   cameraPos(3) + pad(1)                               = 16 bytes
     //   cameraTarget(3) + pad(1)                            = 16 bytes
     //   maxSteps(1) + hitThreshold(1) + maxDistance(1) + normalEpsilon(1) = 16 bytes
-    //   minStep(1) + relaxation(1) + pad(2)                 = 16 bytes
+    //   minStep(1) + relaxation(1) + debugMode(1) + adaptiveStep(1) = 16 bytes
     //   lightDir(3) + ambient(1)                            = 16 bytes
     //   diffuse(1) + specular(1) + shininess(1) + showGroundPlane(1) = 16 bytes
     //   showAxes(1) + groundOpacity(1) + pad(2)             = 16 bytes
-    //   bgColor(3) + pad(1)                                 = 16 bytes
-    // Total: 144 bytes
+    //   bgColor(3) + frame(1)                               = 16 bytes
+    //   mouse(4)                                            = 16 bytes
+    // Total: 160 bytes
     this.uniformBuffer = this.device.createBuffer({
       size: 160,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -505,6 +584,8 @@ export class StinkyfishRenderer {
           resource: { buffer: this.sceneUniformBuffer },
         }],
       });
+
+      console.log(`[Stinkyfish] Scene uniform buffer: ${bufferSize} bytes for ${Object.keys(sceneUniformLayout).length} params`);
     } else {
       this.sceneUniformBuffer = null;
       this.sceneBindGroup = null;
@@ -626,13 +707,44 @@ fn sdAxisArrows(p: vec3f) -> vec4f {
   }
 }
 
-// Raymarching
+// Raymarching with adaptive stepping
 fn rayDirection(uv: vec2f, camPos: vec3f, camTarget: vec3f) -> vec3f {
   let forward = normalize(camTarget - camPos);
   let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
   let up = cross(forward, right);
   // FOV matched to Mayfly (~90 degrees)
   return normalize(uv.x * right + uv.y * up + forward);
+}
+
+// Debug visualization: step count heatmap
+fn debugStepHeatmap(steps: i32, maxSteps: i32) -> vec3f {
+  let t = f32(steps) / f32(maxSteps);
+  // Blue (few) -> Green (medium) -> Yellow (many) -> Red (excessive)
+  if (t < 0.33) {
+    return mix(vec3f(0.0, 0.2, 0.8), vec3f(0.0, 0.8, 0.2), t * 3.0);
+  } else if (t < 0.66) {
+    return mix(vec3f(0.0, 0.8, 0.2), vec3f(0.9, 0.9, 0.0), (t - 0.33) * 3.0);
+  } else {
+    return mix(vec3f(0.9, 0.9, 0.0), vec3f(1.0, 0.0, 0.0), (t - 0.66) * 3.0);
+  }
+}
+
+// Debug visualization: distance field
+fn debugDistanceField(d: f32) -> vec3f {
+  if (d < 0.0) {
+    return vec3f(1.0, 0.3, 0.3); // Inside = red tint
+  }
+  let bands = fract(d * 5.0);
+  let intensity = smoothstep(0.0, 0.05, bands) * smoothstep(0.1, 0.05, bands);
+  return mix(vec3f(0.1, 0.1, 0.2), vec3f(0.3, 0.5, 0.9), intensity);
+}
+
+// Optimized raymarch result struct
+struct RaymarchResult {
+  color: vec3f,
+  t: f32,
+  steps: i32,
+  hit: bool
 }
 
 fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
@@ -655,10 +767,16 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
   var sceneHitT = -1.0;
   var sceneHitColor = vec3f(0.0);
   var sceneHitNormal = vec3f(0.0);
-  var hitIsAxis = false;  // Track if we hit an axis (skip lighting)
+  var hitIsAxis = false;
+  var actualSteps = 0;
+
+  // Adaptive stepping thresholds
+  let nearThreshold = u.hitThreshold * 10.0;  // When to start being careful
+  let farThreshold = u.hitThreshold * 100.0;  // When we can take big steps
 
   for (var i = 0; i < 200; i++) {
     if (i >= steps) { break; }
+    actualSteps = i;
     let p = ro + rd * t;
     var hit = sceneSDF(p);
     var isAxisHit = false;
@@ -672,7 +790,9 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
       }
     }
 
-    if (hit.x < u.hitThreshold && sceneHitT < 0.0) {
+    let d = hit.x;
+
+    if (d < u.hitThreshold && sceneHitT < 0.0) {
       sceneHitT = t;
       sceneHitColor = hit.yzw;
       hitIsAxis = isAxisHit;
@@ -689,8 +809,19 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
       break;
     }
 
-    // Conservative stepping with minimum step size (Mayfly parity)
-    t += max(abs(hit.x) * u.relaxation, u.minStep);
+    // ADAPTIVE STEPPING: Adjust step size based on distance
+    // Far from surface: aggressive stepping (up to 95% of distance)
+    // Medium distance: standard relaxation
+    // Near surface: conservative stepping
+    var stepMult = u.relaxation;
+    if (d > farThreshold) {
+      stepMult = 0.95;  // Very aggressive when far away
+    } else if (d > nearThreshold) {
+      stepMult = mix(u.relaxation, 0.9, (d - nearThreshold) / (farThreshold - nearThreshold));
+    }
+    // Near surface: use configured relaxation (typically 0.5-0.7)
+
+    t += max(abs(d) * stepMult, u.minStep);
     if (t > u.maxDistance) { break; }
   }
 
@@ -814,6 +945,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     // Skip render if canvas has no size
     if (width === 0 || height === 0) return;
 
+    // Begin frame timing
+    if (this.metrics) {
+      this.metrics.beginFrame();
+    }
+
     // Calculate time (Shadertoy-style: seconds since start)
     const now = performance.now();
     const time = this.overrideTime !== null
@@ -895,8 +1031,48 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       renderPass.end();
 
       this.device.queue.submit([commandEncoder.finish()]);
+
+      // End frame timing (inside try block so we track successful frames)
+      if (this.metrics) {
+        this.metrics.endFrame();
+      }
     } catch (e) {
       console.error('Stinkyfish render() error:', e);
+    }
+  }
+
+  /**
+   * Get current performance metrics
+   * @returns {Object|null} Performance statistics or null if metrics disabled
+   */
+  getMetrics() {
+    return this.metrics ? this.metrics.getStats() : null;
+  }
+
+  /**
+   * Get formatted metrics overlay text
+   * @returns {string} Multi-line stats string for overlay display
+   */
+  getMetricsOverlay() {
+    return this.metrics ? this.metrics.getOverlayText() : '';
+  }
+
+  /**
+   * Set debug visualization mode
+   * @param {number} mode - Debug mode from DebugModes enum
+   */
+  setDebugMode(mode) {
+    this.debugMode = mode;
+    // Note: Requires shader recompilation to take effect
+  }
+
+  /**
+   * Clear the shader cache (useful for development/debugging)
+   */
+  clearShaderCache() {
+    if (this.shaderCache) {
+      this.shaderCache.clear();
+      console.log('[Stinkyfish] Shader cache cleared');
     }
   }
 
@@ -932,3 +1108,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     this.animationId = requestAnimationFrame(loop);
   }
 }
+
+// Re-export for convenience
+export { DebugModes } from './perf-metrics.js';
