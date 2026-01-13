@@ -1303,6 +1303,7 @@
       <div class="header-left">
         <div class="header-icons">
           <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
+          <button class="icon-btn" id="btn-perf" title="Performance Stats">📊</button>
           <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
           <button class="icon-btn" id="btn-params" title="Scene Params (P)">🎛️</button>
           <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
@@ -4523,7 +4524,7 @@
         }
       });
 
-      // Perf stats toggle
+      // Perf stats toggle (debug panel toggle)
       addClick('toggle-perf', function() {
         this.classList.toggle('active');
         debugSettings.showPerf = this.classList.contains('active');
@@ -4536,6 +4537,27 @@
             perfState.frameTimes = [];
           }
         }
+        // Sync toolbar button state
+        const btnPerf = $('btn-perf');
+        if (btnPerf) btnPerf.classList.toggle('active', debugSettings.showPerf);
+      });
+
+      // Perf stats toggle (main toolbar button - mobile friendly)
+      addClick('btn-perf', function() {
+        debugSettings.showPerf = !debugSettings.showPerf;
+        this.classList.toggle('active', debugSettings.showPerf);
+        const overlay = $('perf-overlay');
+        if (overlay) {
+          overlay.classList.toggle('visible', debugSettings.showPerf);
+          if (debugSettings.showPerf) {
+            perfState.lastFpsUpdate = performance.now();
+            perfState.frameCount = 0;
+            perfState.frameTimes = [];
+          }
+        }
+        // Sync debug panel toggle state
+        const togglePerf = $('toggle-perf');
+        if (togglePerf) togglePerf.classList.toggle('active', debugSettings.showPerf);
       });
 
       // Camera distance slider
