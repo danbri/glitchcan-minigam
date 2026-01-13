@@ -874,27 +874,36 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       }
     }
 
-    const commandEncoder = this.device.createCommandEncoder();
-    const textureView = this.context.getCurrentTexture().createView();
+    try {
+      const commandEncoder = this.device.createCommandEncoder();
+      const texture = this.context.getCurrentTexture();
+      if (!texture) {
+        console.error('Stinkyfish: getCurrentTexture() returned null');
+        return;
+      }
+      const textureView = texture.createView();
 
-    const renderPass = commandEncoder.beginRenderPass({
-      colorAttachments: [{
-        view: textureView,
-        clearValue: { r: 0.1, g: 0.1, b: 0.15, a: 1.0 },
-        loadOp: 'clear',
-        storeOp: 'store',
-      }],
-    });
+      const renderPass = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+          view: textureView,
+          clearValue: { r: 0.1, g: 0.1, b: 0.15, a: 1.0 },
+          loadOp: 'clear',
+          storeOp: 'store',
+        }],
+      });
 
-    renderPass.setPipeline(this.pipeline);
-    renderPass.setBindGroup(0, this.bindGroup);
-    if (this.sceneBindGroup) {
-      renderPass.setBindGroup(1, this.sceneBindGroup);
+      renderPass.setPipeline(this.pipeline);
+      renderPass.setBindGroup(0, this.bindGroup);
+      if (this.sceneBindGroup) {
+        renderPass.setBindGroup(1, this.sceneBindGroup);
+      }
+      renderPass.draw(3); // Fullscreen triangle
+      renderPass.end();
+
+      this.device.queue.submit([commandEncoder.finish()]);
+    } catch (e) {
+      console.error('Stinkyfish render() error:', e);
     }
-    renderPass.draw(3); // Fullscreen triangle
-    renderPass.end();
-
-    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   startRenderLoop() {
