@@ -2471,6 +2471,15 @@
         };
       }
 
+      // Save display settings from current state
+      // Compute displayMode from debugSettings (0=none, 1=ground, 2=ground+axes)
+      const computedDisplayMode = debugSettings.showAxes ? 2 : (debugSettings.showGround ? 1 : 0);
+      const displayState = {
+        showGround: debugSettings.showGround,
+        showAxes: debugSettings.showAxes,
+        displayMode: computedDisplayMode
+      };
+
       showStatus(`Switching to ${newBackend}...`, 'info');
 
       try {
@@ -2486,8 +2495,8 @@
         canvas = newCanvas;
 
         if (newBackend === 'stinkyfish') {
-          // Switch to WebGPU
-          renderer = new StinkyfishRenderer(canvas);
+          // Switch to WebGPU (disable built-in controls - index.html provides its own)
+          renderer = new StinkyfishRenderer(canvas, { disableControls: true });
           await renderer.init();
           currentBackend = 'stinkyfish';
 
@@ -2522,6 +2531,35 @@
             renderer.cameraDistance = cameraState.distance;
           }
         }
+
+        // Restore display settings to new renderer
+        if (renderer) {
+          renderer.showGroundPlane = displayState.showGround;
+          renderer.showAxes = displayState.showAxes;
+          // Restore ground opacity settings
+          if (renderer.groundOpacity !== undefined) {
+            renderer.groundOpacity = 0.6;
+            renderer.groundOpacityTarget = 0.6;
+          }
+        }
+
+        // Update display mode button to match restored state
+        const displayModeIcons = ['⬚', '⬓', '⊞'];
+        const displayModeTitles = ['Display: None (G)', 'Display: Ground (G)', 'Display: Ground+Axes (G)'];
+        const btnDisplayMode = $('btn-display-mode');
+        if (btnDisplayMode) {
+          btnDisplayMode.textContent = displayModeIcons[displayState.displayMode];
+          btnDisplayMode.title = displayModeTitles[displayState.displayMode];
+        }
+        // Also update the individual toggle buttons
+        const groundToggle = $('toggle-ground');
+        const axesToggle = $('toggle-axes');
+        if (groundToggle) groundToggle.classList.toggle('active', displayState.showGround);
+        if (axesToggle) axesToggle.classList.toggle('active', displayState.showAxes);
+
+        // Re-setup controls on new canvas (old canvas event listeners are now orphaned)
+        setupOrbitControls();
+        setupTouchControls();
 
         // Update GPU info display
         perfState.gpuName = currentBackend === 'stinkyfish' ? 'WebGPU' : getGpuInfo(renderer.gl);
@@ -4068,10 +4106,51 @@
     }
 
     // ============================================
+    // CAMERA ABSTRACTION (handles Mayfly vs Stinkyfish)
+    // ============================================
+    function getCameraState() {
+      if (!renderer) return { theta: 0, phi: Math.PI / 4, distance: 4 };
+      // Mayfly uses renderer.camera.{theta,phi,distance}
+      // Stinkyfish uses renderer.cameraTheta, cameraPhi, cameraDistance
+      return {
+        theta: renderer.camera?.theta ?? renderer.cameraTheta ?? 0,
+        phi: renderer.camera?.phi ?? renderer.cameraPhi ?? Math.PI / 4,
+        distance: renderer.camera?.distance ?? renderer.cameraDistance ?? 4
+      };
+    }
+
+    function setCameraState(state) {
+      if (!renderer) return;
+      if (renderer.camera) {
+        // Mayfly
+        if (state.theta !== undefined) renderer.camera.theta = state.theta;
+        if (state.phi !== undefined) renderer.camera.phi = state.phi;
+        if (state.distance !== undefined) renderer.camera.distance = state.distance;
+      } else {
+        // Stinkyfish
+        if (state.theta !== undefined) renderer.cameraTheta = state.theta;
+        if (state.phi !== undefined) renderer.cameraPhi = state.phi;
+        if (state.distance !== undefined) renderer.cameraDistance = state.distance;
+      }
+    }
+
+    // ============================================
     // ORBIT CAMERA CONTROLS
     // ============================================
+    // Track handlers for cleanup on backend switch
+    let orbitMouseMoveHandler = null;
+    let orbitMouseUpHandler = null;
+
     function setupOrbitControls() {
       const canvas = $('canvas');
+
+      // Remove old document listeners if they exist
+      if (orbitMouseMoveHandler) {
+        document.removeEventListener('mousemove', orbitMouseMoveHandler);
+      }
+      if (orbitMouseUpHandler) {
+        document.removeEventListener('mouseup', orbitMouseUpHandler);
+      }
 
       // Mouse controls
       let mouseDownPos = null;
@@ -4088,19 +4167,23 @@
         }
       });
 
-      document.addEventListener('mousemove', (e) => {
+      orbitMouseMoveHandler = (e) => {
         if (!isDragging) return;
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
 
-        // Orbit camera
-        renderer.camera.theta += dx * 0.01;
-        renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, renderer.camera.phi - dy * 0.01));
-      });
+        // Orbit camera (using abstraction for Mayfly/Stinkyfish parity)
+        const cam = getCameraState();
+        setCameraState({
+          theta: cam.theta + dx * 0.01,
+          phi: Math.max(0.1, Math.min(Math.PI - 0.1, cam.phi - dy * 0.01))
+        });
+      };
+      document.addEventListener('mousemove', orbitMouseMoveHandler);
 
-      document.addEventListener('mouseup', (e) => {
+      orbitMouseUpHandler = (e) => {
         // Check if it was a click (not a drag) - apply physics impulse
         if (mouseDownPos && currentPhysicsScene && currentPhysicsScene.enabled) {
           const dx = e.clientX - mouseDownPos.x;
@@ -4113,21 +4196,25 @@
         }
         mouseDownPos = null;
         isDragging = false;
-        canvas.style.cursor = 'grab';
+        const currentCanvas = $('canvas');
+        if (currentCanvas) currentCanvas.style.cursor = 'grab';
         // Restore ground plane opacity after drag
         if (renderer && renderer.groundOpacityTarget !== undefined) {
           renderer.groundOpacityTarget = 0.6;
         }
-      });
+      };
+      document.addEventListener('mouseup', orbitMouseUpHandler);
 
       // Mouse wheel zoom
       canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomSpeed = 0.001;
-        renderer.camera.distance = Math.max(1, Math.min(15,
-          renderer.camera.distance + e.deltaY * zoomSpeed * renderer.camera.distance));
-        debugSettings.cameraDistance = renderer.camera.distance;
-        $('slider-distance').value = renderer.camera.distance;
+        const cam = getCameraState();
+        const newDistance = Math.max(1, Math.min(15, cam.distance + e.deltaY * zoomSpeed * cam.distance));
+        setCameraState({ distance: newDistance });
+        debugSettings.cameraDistance = newDistance;
+        const distSlider = $('slider-distance');
+        if (distSlider) distSlider.value = newDistance;
       }, { passive: false });
 
       // Set initial cursor
@@ -4191,15 +4278,18 @@
           const panDx = centerX - pinchCenterX;
           const panDy = centerY - pinchCenterY;
 
-          // Pan camera target (move in camera-relative direction)
-          const panScale = 0.003 * renderer.camera.distance;
-          const cosTheta = Math.cos(renderer.camera.theta);
-          const sinTheta = Math.sin(renderer.camera.theta);
+          // Pan camera target (move in camera-relative direction) - using abstraction
+          const cam = getCameraState();
+          const panScale = 0.003 * cam.distance;
+          const cosTheta = Math.cos(cam.theta);
+          const sinTheta = Math.sin(cam.theta);
 
           // Pan in screen X -> camera right, screen Y -> camera up
-          renderer.camera.target[0] -= (panDx * cosTheta) * panScale;
-          renderer.camera.target[2] -= (panDx * sinTheta) * panScale;
-          renderer.camera.target[1] += panDy * panScale;
+          // Get target from appropriate property
+          const target = renderer.camera?.target ?? renderer.cameraTarget ?? [0, 0, 0];
+          target[0] -= (panDx * cosTheta) * panScale;
+          target[2] -= (panDx * sinTheta) * panScale;
+          target[1] += panDy * panScale;
 
           // Update center tracking
           pinchCenterX = centerX;
@@ -4207,8 +4297,8 @@
 
           // Zoom based on pinch distance change
           const scale = pinchStartDist / dist;
-          renderer.camera.distance = Math.max(1, Math.min(15,
-            debugSettings.cameraDistance * scale));
+          const newDistance = Math.max(1, Math.min(15, debugSettings.cameraDistance * scale));
+          setCameraState({ distance: newDistance });
           return;
         }
 
@@ -4218,10 +4308,12 @@
           const dx = touch.clientX - touchStartX;
           const dy = touch.clientY - touchStartY;
 
-          // Orbit camera
-          renderer.camera.theta += dx * 0.005;
-          renderer.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1,
-            renderer.camera.phi - dy * 0.005));
+          // Orbit camera (using abstraction)
+          const cam = getCameraState();
+          setCameraState({
+            theta: cam.theta + dx * 0.005,
+            phi: Math.max(0.1, Math.min(Math.PI - 0.1, cam.phi - dy * 0.005))
+          });
 
           touchStartX = touch.clientX;
           touchStartY = touch.clientY;
@@ -4231,8 +4323,10 @@
       canvas.addEventListener('touchend', (e) => {
         // Update pinch end distance
         if (activeTouches === 2) {
-          debugSettings.cameraDistance = renderer.camera.distance;
-          $('slider-distance').value = renderer.camera.distance;
+          const cam = getCameraState();
+          debugSettings.cameraDistance = cam.distance;
+          const distSlider = $('slider-distance');
+          if (distSlider) distSlider.value = cam.distance;
         }
 
         // Swipe navigation - works anywhere on canvas
