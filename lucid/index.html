@@ -2361,6 +2361,17 @@
           console.log(`App visibility: ${isAppVisible ? 'visible' : 'hidden'}`);
         });
 
+        // Window focus - pause when window loses focus (another app in front)
+        window.addEventListener('blur', () => {
+          isAppVisible = false;
+          console.log('App paused: window blur');
+        });
+        window.addEventListener('focus', () => {
+          isAppVisible = true;
+          lastFrameTime = performance.now();
+          console.log('App resumed: window focus');
+        });
+
         // Initialize animation button state
         updateAnimButton();
 

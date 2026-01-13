@@ -103,8 +103,55 @@ export class SimpleRaymarcher {
       shininess: 32
     };
 
+    // Visibility state - renderers should pause when not visible
+    this.isPaused = false;
+    this.isVisible = true;
+
     this.resize();
     window.addEventListener('resize', () => this.resize());
+
+    // Self-visibility management: pause when hidden/blurred
+    this._setupVisibilityHandlers();
+  }
+
+  /**
+   * Setup visibility handlers to auto-pause when not visible
+   * This helps prevent battery drain on mobile
+   */
+  _setupVisibilityHandlers() {
+    // Tab visibility
+    document.addEventListener('visibilitychange', () => {
+      this.isVisible = !document.hidden;
+    });
+
+    // IntersectionObserver for offscreen detection
+    if (typeof IntersectionObserver !== 'undefined') {
+      const observer = new IntersectionObserver((entries) => {
+        this.isVisible = entries[0].isIntersecting;
+      }, { threshold: 0.1 });
+      observer.observe(this.canvas);
+    }
+  }
+
+  /**
+   * Check if renderer should actually render (not paused and visible)
+   */
+  shouldRender() {
+    return !this.isPaused && this.isVisible;
+  }
+
+  /**
+   * Pause rendering (external control)
+   */
+  pause() {
+    this.isPaused = true;
+  }
+
+  /**
+   * Resume rendering (external control)
+   */
+  resume() {
+    this.isPaused = false;
   }
 
   resize() {
@@ -616,6 +663,9 @@ export class SimpleRaymarcher {
 
   render() {
     if (!this.program) return;
+
+    // Skip rendering if paused or not visible (battery saver)
+    if (!this.shouldRender()) return;
 
     const gl = this.gl;
     gl.useProgram(this.program);
