@@ -673,12 +673,13 @@ function generateTransform(node, ctx) {
   if (!node.child) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
-  const p = applyTransform('p', node.transform, ctx);
-  const savedP = ctx.currentP;
-  ctx.currentP = p;
-  const result = walkNode(node.child, ctx);
-  ctx.currentP = savedP;
-  return result;
+  // Combine parent transform with child's transform and apply to child
+  // This propagates transforms correctly through the tree
+  const childWithTransform = {
+    ...node.child,
+    transform: combineTransforms(node.child.transform, node.transform)
+  };
+  return walkNode(childWithTransform, ctx);
 }
 
 function generateGroup(node, ctx) {
@@ -690,8 +691,12 @@ function generateMaterial(node, ctx) {
   if (!node.child) {
     return 'vec4f(1000.0, 1.0, 0.0, 1.0)';
   }
+  // Propagate transform to child (fix: transform was being dropped)
+  const childWithTransform = node.transform
+    ? { ...node.child, transform: combineTransforms(node.child.transform, node.transform) }
+    : node.child;
   // Material wraps child with color override
-  const childExpr = walkNode(node.child, ctx);
+  const childExpr = walkNode(childWithTransform, ctx);
   // Check both node.color and node.params.color for the color value
   const colorValue = node.color || node.params?.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) };
   const color = valueToWgsl(colorValue, ctx);
@@ -801,18 +806,68 @@ function applyParamOverrides(def, overrides) {
   return cloned;
 }
 
-// Combine transforms
-function combineTransforms(t1, t2) {
-  if (!t1) return t2;
-  if (!t2) return t1;
-
+// Add two translation values (arrays or expressions)
+function addValues(a, b) {
+  // Both are array type with values
+  if (a.type === 'array' && b.type === 'array') {
+    return {
+      type: 'array',
+      values: a.values.map((av, i) => ({
+        type: 'expr',
+        expr: 'add',
+        args: [av, b.values[i]]
+      }))
+    };
+  }
+  // Both are raw arrays
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.map((av, i) => ({
+      type: 'expr',
+      expr: 'add',
+      args: [{ type: 'const', value: av }, { type: 'const', value: b[i] || 0 }]
+    }));
+  }
+  // Fallback for scalar addition
   return {
-    translate: t1.translate || t2.translate,
-    rotateX: t1.rotateX || t2.rotateX,
-    rotateY: t1.rotateY || t2.rotateY,
-    rotateZ: t1.rotateZ || t2.rotateZ,
-    scale: t1.scale || t2.scale,
+    type: 'expr',
+    expr: 'add',
+    args: [a, b]
   };
+}
+
+// Combine transforms - child transform applied first, then parent
+function combineTransforms(child, parent) {
+  if (!parent) return child;
+  if (!child) return parent;
+
+  const combined = { ...parent };
+
+  // Combine translations additively (parent + child)
+  if (parent.translate && child.translate) {
+    combined.translate = addValues(parent.translate, child.translate);
+  } else if (child.translate) {
+    combined.translate = child.translate;
+  }
+
+  // For rotate: combine arrays additively, or child takes precedence
+  if (parent.rotate && child.rotate) {
+    // Both arrays - add them
+    if (Array.isArray(parent.rotate) && Array.isArray(child.rotate)) {
+      combined.rotate = parent.rotate.map((v, i) => v + (child.rotate[i] || 0));
+    } else if (parent.rotate.type === 'array' && child.rotate.type === 'array') {
+      combined.rotate = addValues(parent.rotate, child.rotate);
+    } else {
+      // Complex rotation - child takes precedence
+      combined.rotate = child.rotate;
+    }
+  } else if (child.rotate) {
+    combined.rotate = child.rotate;
+  }
+
+  // Scale: child takes precedence for now (proper composition is complex)
+  if (child.scale) combined.scale = child.scale;
+
+  return combined;
 }
 
 function generateMirror(node, ctx) {
