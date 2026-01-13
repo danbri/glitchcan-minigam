@@ -243,7 +243,7 @@
   <button class="edge-toggle toggle-left" id="toggleLeft">▶</button>
 
   <!-- Right panel - Preview & Properties -->
-  <div class="panel panel-right hidden" id="panelRight">
+  <div class="panel panel-right" id="panelRight">
     <lucid-scene-picker id="scenePicker" filter="validated" style="max-height:200px;border-bottom:1px solid #30363d;"></lucid-scene-picker>
     <div class="panel-header">Preview</div>
     <div class="preview-area">
@@ -255,7 +255,7 @@
   <button class="edge-toggle toggle-right" id="toggleRight">◀</button>
 
   <!-- Bottom panel - Timeline -->
-  <div class="panel panel-bottom hidden" id="panelBottom">
+  <div class="panel panel-bottom" id="panelBottom">
     <div class="tl-controls">
       <button class="tl-btn" id="btnRewind">⏮</button>
       <button class="tl-btn" id="btnPlay">▶</button>
@@ -1407,6 +1407,9 @@
     }
 
     // Scene picker loads automatically via web component
+
+    // Add initial node so canvas isn't empty
+    graph.addNode('sphere', 200, 200);
   </script>
 </body>
 </html>
