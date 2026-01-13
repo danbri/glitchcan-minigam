@@ -545,31 +545,37 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
   var sceneHitT = -1.0;
   var sceneHitColor = vec3f(0.0);
   var sceneHitNormal = vec3f(0.0);
+  var hitIsAxis = false;  // Track if we hit an axis (skip lighting)
 
   for (var i = 0; i < 200; i++) {
     if (i >= steps) { break; }
     let p = ro + rd * t;
     var hit = sceneSDF(p);
+    var isAxisHit = false;
 
     // Check axes if enabled
     if (u.showAxes > 0.5) {
       let axes = sdAxisArrows(p);
       if (axes.x < hit.x) {
         hit = vec4f(axes.x, axes.yzw);
+        isAxisHit = true;
       }
     }
 
     if (hit.x < u.hitThreshold && sceneHitT < 0.0) {
       sceneHitT = t;
       sceneHitColor = hit.yzw;
+      hitIsAxis = isAxisHit;
 
-      // Normal calculation
-      let e = u.normalEpsilon;
-      sceneHitNormal = normalize(vec3f(
-        sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
-        sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
-        sceneSDF(p + vec3f(0.0, 0.0, e)).x - sceneSDF(p - vec3f(0.0, 0.0, e)).x
-      ));
+      // Only calculate normal for non-axis hits (axis uses flat color)
+      if (!isAxisHit) {
+        let e = u.normalEpsilon;
+        sceneHitNormal = normalize(vec3f(
+          sceneSDF(p + vec3f(e, 0.0, 0.0)).x - sceneSDF(p - vec3f(e, 0.0, 0.0)).x,
+          sceneSDF(p + vec3f(0.0, e, 0.0)).x - sceneSDF(p - vec3f(0.0, e, 0.0)).x,
+          sceneSDF(p + vec3f(0.0, 0.0, e)).x - sceneSDF(p - vec3f(0.0, 0.0, e)).x
+        ));
+      }
       break;
     }
 
@@ -602,11 +608,16 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
   }
 
   if (sceneHitT > 0.0) {
-    // Render scene hit with Phong lighting (matching Mayfly)
-    let light = normalize(u.lightDir);
-    let diff = max(dot(sceneHitNormal, light), 0.0);
-    let spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u.shininess);
-    color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
+    if (hitIsAxis) {
+      // Axis arrows use flat colors (no lighting) for clean RGB display
+      color = sceneHitColor;
+    } else {
+      // Scene objects use Phong lighting (matching Mayfly)
+      let light = normalize(u.lightDir);
+      let diff = max(dot(sceneHitNormal, light), 0.0);
+      let spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u.shininess);
+      color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
+    }
     return vec4f(color, sceneHitT);
   }
 

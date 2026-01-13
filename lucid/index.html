@@ -2615,7 +2615,7 @@
 
       // Compile and set params
       await renderer.compileScene(wgsl, Object.keys(uniformLayout).length ? uniformLayout : null);
-      if (scene.params) {
+      if (scene.params && renderer.setSceneParams) {
         renderer.setSceneParams(scene.params);
       }
 
@@ -5582,8 +5582,8 @@
       // Backend button - short click cycles, long press shows menu
       const btnBackend = $('btn-backend');
       const backendMenu = $('backend-menu');
+      let backendPressStart = 0;
       let backendLongPressTimer = null;
-      let backendLongPressed = false;
       const LONG_PRESS_MS = 400;
       const backends = ['mayfly', 'stinkyfish'];
       const backendIcons = { mayfly: '🦋', stinkyfish: '🐟' };
@@ -5606,20 +5606,30 @@
           }
         }
 
-        // Mouse/touch start - begin long press timer
+        // Track press start time and set up long press timer
         const startPress = (e) => {
-          backendLongPressed = false;
+          backendPressStart = Date.now();
           backendLongPressTimer = setTimeout(() => {
-            backendLongPressed = true;
             backendMenu.style.display = 'block';
           }, LONG_PRESS_MS);
         };
 
-        // Mouse/touch end - cycle if short press, or close menu if long press
-        const endPress = async (e) => {
+        // Cancel timer on leave
+        const cancelPress = () => {
           clearTimeout(backendLongPressTimer);
-          if (!backendLongPressed) {
-            // Short press - cycle to next backend
+        };
+
+        // Use click event for short press detection (works on both mouse and touch)
+        btnBackend.addEventListener('click', async (e) => {
+          clearTimeout(backendLongPressTimer);
+          const pressDuration = Date.now() - backendPressStart;
+
+          // Only cycle if it was a short press (not a long press that showed menu)
+          if (pressDuration < LONG_PRESS_MS) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Cycle to next backend
             const currentIdx = backends.indexOf(currentBackend);
             let nextIdx = (currentIdx + 1) % backends.length;
             // Skip stinkyfish if no WebGPU
@@ -5632,17 +5642,16 @@
               updateBackendButton();
             }
           }
-        };
+        });
 
         btnBackend.addEventListener('mousedown', startPress);
-        btnBackend.addEventListener('mouseup', endPress);
-        btnBackend.addEventListener('mouseleave', () => clearTimeout(backendLongPressTimer));
+        btnBackend.addEventListener('mouseleave', cancelPress);
         btnBackend.addEventListener('touchstart', startPress, { passive: true });
-        btnBackend.addEventListener('touchend', endPress);
 
         // Menu option clicks
         backendMenu.querySelectorAll('.backend-option').forEach(opt => {
-          opt.addEventListener('click', async () => {
+          opt.addEventListener('click', async (e) => {
+            e.stopPropagation();
             const newBackend = opt.dataset.backend;
             if (newBackend && newBackend !== currentBackend) {
               await switchBackend(newBackend);
