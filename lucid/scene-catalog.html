@@ -258,6 +258,8 @@
       if (mayfly) return;
       mayfly = new SimpleRaymarcher(document.getElementById('mayflyCanvas'));
       mayfly.setQuality('high');
+      mayfly.showGroundPlane = true;  // Enable ground for visual context
+      mayfly.showAxes = false;
     }
 
     async function initStinkyfish() {
@@ -266,6 +268,8 @@
         stinkyfish = new StinkyfishRenderer(document.getElementById('stinkyfishCanvas'));
         await stinkyfish.init();
         stinkyfish.setQuality('high');
+        stinkyfish.showGroundPlane = true;  // Enable ground for visual context
+        stinkyfish.showAxes = false;
       } catch { hasGpu = false; }
     }
 

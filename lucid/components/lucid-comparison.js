@@ -189,6 +189,7 @@ export class LucidComparison extends HTMLElement {
         <button id="layout-v" title="Vertical split">⬒</button>
         <button id="layout-o" title="Overlay diff">◉</button>
         <button id="sync-cam" title="Sync cameras">🔗</button>
+        <button id="display-mode" title="Toggle ground/axes (G)">⬓</button>
       </div>
     `;
 
@@ -273,11 +274,36 @@ export class LucidComparison extends HTMLElement {
     const layoutV = this.shadowRoot.querySelector('#layout-v');
     const layoutO = this.shadowRoot.querySelector('#layout-o');
     const syncCam = this.shadowRoot.querySelector('#sync-cam');
+    const displayMode = this.shadowRoot.querySelector('#display-mode');
+
+    // Display mode: 0=none, 1=ground, 2=ground+axes
+    this._displayMode = 1; // Default: ground visible
+    const displayModeIcons = ['⬚', '⬓', '⊞'];
+    const displayModeTitles = ['Display: None (G)', 'Display: Ground (G)', 'Display: Ground+Axes (G)'];
 
     const updateLayoutButtons = () => {
       layoutH.classList.toggle('active', this.layout === 'horizontal');
       layoutV.classList.toggle('active', this.layout === 'vertical');
       layoutO.classList.toggle('active', this.layout === 'overlay');
+    };
+
+    const updateDisplayMode = () => {
+      const showGround = this._displayMode >= 1;
+      const showAxes = this._displayMode >= 2;
+
+      displayMode.textContent = displayModeIcons[this._displayMode];
+      displayMode.title = displayModeTitles[this._displayMode];
+      displayMode.classList.toggle('active', this._displayMode > 0);
+
+      // Apply to both renderers
+      const applyToRenderer = (renderer) => {
+        if (renderer?.renderer) {
+          renderer.renderer.showGroundPlane = showGround;
+          renderer.renderer.showAxes = showAxes;
+        }
+      };
+      applyToRenderer(this._mayflyRenderer);
+      applyToRenderer(this._stinkyfishRenderer);
     };
 
     layoutH.addEventListener('click', () => {
@@ -303,10 +329,24 @@ export class LucidComparison extends HTMLElement {
       }
     });
 
+    displayMode.addEventListener('click', () => {
+      this._displayMode = (this._displayMode + 1) % 3;
+      updateDisplayMode();
+    });
+
+    // Keyboard shortcut for display mode
+    this.shadowRoot.host.addEventListener('keydown', (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        this._displayMode = (this._displayMode + 1) % 3;
+        updateDisplayMode();
+      }
+    });
+
     // Set initial state
     if (this._syncCamera) {
       syncCam.classList.add('active');
     }
+    updateDisplayMode();
   }
 
   _checkBothReady() {

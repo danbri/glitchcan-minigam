@@ -190,8 +190,9 @@
   </div>
 
   <div class="shortcuts">
-    <kbd>←</kbd><kbd>→</kbd> Navigate scenes
+    <kbd>←</kbd><kbd>→</kbd> Navigate
     <kbd>H</kbd><kbd>V</kbd><kbd>O</kbd> Layout
+    <kbd>G</kbd> Ground/Axes
   </div>
 
   <script type="module">
@@ -263,6 +264,11 @@
         case 'o':
         case 'O':
           comparison.layout = 'overlay';
+          break;
+        case 'g':
+        case 'G':
+          // Cycle display mode on the comparison component
+          comparison.shadowRoot.querySelector('#display-mode')?.click();
           break;
       }
     });
