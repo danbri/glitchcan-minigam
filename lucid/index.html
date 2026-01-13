@@ -1996,12 +1996,11 @@
       const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
       const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
 
-      // Get camera info
-      const cam = renderer.camera;
-      const dist = cam.distance || 5;
-      const theta = cam.theta || 0;
-      const phi = cam.phi || Math.PI / 2;
-      const target = cam.target || [0, 0, 0];
+      // Get camera info (using flat properties)
+      const dist = renderer.cameraDistance || 5;
+      const theta = renderer.cameraTheta || 0;
+      const phi = renderer.cameraPhi || Math.PI / 2;
+      const target = renderer.cameraTarget || [0, 0, 0];
 
       // Camera position in world space (spherical coords around target)
       const sinPhi = Math.sin(phi);
@@ -2342,7 +2341,7 @@
 
           // Auto-rotate camera
           if (autoRotate && !isDragging) {
-            renderer.camera.theta += autoRotateSpeed * deltaTime;
+            renderer.cameraTheta += autoRotateSpeed * deltaTime;
           }
 
           // Handle animation state for time control
@@ -2460,11 +2459,11 @@
         // Reset camera - use demo-specific settings if available
         // First check json.camera, then top-level demo.camera
         const camera = demo.json?.camera || demo.camera;
-        if (renderer && renderer.camera) {
-          renderer.camera.target = camera?.target || [0, 0, 0];
-          renderer.camera.distance = camera?.distance || debugSettings.cameraDistance;
-          renderer.camera.phi = camera?.phi || Math.PI / 4;
-          renderer.camera.theta = camera?.theta || 0;
+        if (renderer) {
+          renderer.cameraTarget = camera?.target || [0, 0, 0];
+          renderer.cameraDistance = camera?.distance || debugSettings.cameraDistance;
+          renderer.cameraPhi = camera?.phi || Math.PI / 4;
+          renderer.cameraTheta = camera?.theta || 0;
         }
 
         // Update UI
@@ -2516,13 +2515,13 @@
       const wasAutoRotating = autoRotate;
 
       // Save camera state from current renderer
-      // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses renderer.cameraTheta etc.
+      // Both backends now use flat properties: renderer.cameraTheta, cameraPhi, cameraDistance, cameraTarget
       let cameraState = null;
       if (renderer) {
         cameraState = {
-          theta: renderer.camera?.theta ?? renderer.cameraTheta ?? 0,
-          phi: renderer.camera?.phi ?? renderer.cameraPhi ?? Math.PI / 4,
-          distance: renderer.camera?.distance ?? renderer.cameraDistance ?? 4
+          theta: renderer.cameraTheta ?? 0,
+          phi: renderer.cameraPhi ?? Math.PI / 4,
+          distance: renderer.cameraDistance ?? 4
         };
       }
 
@@ -2577,20 +2576,11 @@
           }
         }
 
-        // Restore camera state
-        // Note: Mayfly uses renderer.camera.{theta,phi}, Stinkyfish uses flat properties
+        // Restore camera state (both backends use flat properties)
         if (cameraState && renderer) {
-          if (renderer.camera) {
-            // Mayfly
-            renderer.camera.theta = cameraState.theta;
-            renderer.camera.phi = cameraState.phi;
-            renderer.camera.distance = cameraState.distance;
-          } else {
-            // Stinkyfish
-            renderer.cameraTheta = cameraState.theta;
-            renderer.cameraPhi = cameraState.phi;
-            renderer.cameraDistance = cameraState.distance;
-          }
+          renderer.cameraTheta = cameraState.theta;
+          renderer.cameraPhi = cameraState.phi;
+          renderer.cameraDistance = cameraState.distance;
         }
 
         // Restore display settings to new renderer
@@ -4168,32 +4158,23 @@
     }
 
     // ============================================
-    // CAMERA ABSTRACTION (handles Mayfly vs Stinkyfish)
+    // CAMERA ABSTRACTION
     // ============================================
+    // Both backends now use flat properties: cameraTheta, cameraPhi, cameraDistance, cameraTarget
     function getCameraState() {
       if (!renderer) return { theta: 0, phi: Math.PI / 4, distance: 4 };
-      // Mayfly uses renderer.camera.{theta,phi,distance}
-      // Stinkyfish uses renderer.cameraTheta, cameraPhi, cameraDistance
       return {
-        theta: renderer.camera?.theta ?? renderer.cameraTheta ?? 0,
-        phi: renderer.camera?.phi ?? renderer.cameraPhi ?? Math.PI / 4,
-        distance: renderer.camera?.distance ?? renderer.cameraDistance ?? 4
+        theta: renderer.cameraTheta ?? 0,
+        phi: renderer.cameraPhi ?? Math.PI / 4,
+        distance: renderer.cameraDistance ?? 4
       };
     }
 
     function setCameraState(state) {
       if (!renderer) return;
-      if (renderer.camera) {
-        // Mayfly
-        if (state.theta !== undefined) renderer.camera.theta = state.theta;
-        if (state.phi !== undefined) renderer.camera.phi = state.phi;
-        if (state.distance !== undefined) renderer.camera.distance = state.distance;
-      } else {
-        // Stinkyfish
-        if (state.theta !== undefined) renderer.cameraTheta = state.theta;
-        if (state.phi !== undefined) renderer.cameraPhi = state.phi;
-        if (state.distance !== undefined) renderer.cameraDistance = state.distance;
-      }
+      if (state.theta !== undefined) renderer.cameraTheta = state.theta;
+      if (state.phi !== undefined) renderer.cameraPhi = state.phi;
+      if (state.distance !== undefined) renderer.cameraDistance = state.distance;
     }
 
     // ============================================
@@ -4349,8 +4330,7 @@
           const sinTheta = Math.sin(cam.theta);
 
           // Pan in screen X -> camera right, screen Y -> camera up
-          // Get target from appropriate property
-          const target = renderer.camera?.target ?? renderer.cameraTarget ?? [0, 0, 0];
+          const target = renderer.cameraTarget ?? [0, 0, 0];
           target[0] -= (panDx * cosTheta) * panScale;
           target[2] -= (panDx * sinTheta) * panScale;
           target[1] += panDy * panScale;
@@ -4563,7 +4543,7 @@
       // Camera distance slider
       addEvent('slider-distance', 'input', function() {
         debugSettings.cameraDistance = parseFloat(this.value);
-        renderer.camera.distance = debugSettings.cameraDistance;
+        renderer.cameraDistance = debugSettings.cameraDistance;
       });
 
       // Volume step size slider

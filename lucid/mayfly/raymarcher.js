@@ -54,12 +54,23 @@ export class SimpleRaymarcher {
     this.program = null;
     this.startTime = performance.now();
 
-    // Camera orbit controls - unified defaults for consistent comparison
+    // Camera state - flat properties (standardized API matching Stinkyfish)
+    this.cameraDistance = 8.0;
+    this.cameraTheta = 0.3;      // horizontal angle
+    this.cameraPhi = 0.4;        // vertical angle
+    this.cameraTarget = [0, 0, 0];
+
+    // Backward-compatible camera object (proxy to flat properties)
+    const self = this;
     this.camera = {
-      distance: 8.0,
-      theta: 0.3,      // horizontal angle
-      phi: 0.4,        // vertical angle
-      target: [0, 0, 0]
+      get distance() { return self.cameraDistance; },
+      set distance(v) { self.cameraDistance = v; },
+      get theta() { return self.cameraTheta; },
+      set theta(v) { self.cameraTheta = v; },
+      get phi() { return self.cameraPhi; },
+      set phi(v) { self.cameraPhi = v; },
+      get target() { return self.cameraTarget; },
+      set target(v) { self.cameraTarget = v; }
     };
 
     this.showGroundPlane = true;
@@ -653,11 +664,11 @@ export class SimpleRaymarcher {
   }
 
   getCameraPosition() {
-    const { distance, theta, phi, target } = this.camera;
+    const { cameraDistance, cameraTheta, cameraPhi, cameraTarget } = this;
     return [
-      target[0] + distance * Math.sin(phi) * Math.sin(theta),
-      target[1] + distance * Math.cos(phi),
-      target[2] + distance * Math.sin(phi) * Math.cos(theta)
+      cameraTarget[0] + cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
+      cameraTarget[1] + cameraDistance * Math.cos(cameraPhi),
+      cameraTarget[2] + cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta)
     ];
   }
 
@@ -685,7 +696,7 @@ export class SimpleRaymarcher {
     gl.uniform3f(cameraPosLocation, cameraPos[0], cameraPos[1], cameraPos[2]);
 
     const cameraTargetLocation = gl.getUniformLocation(this.program, 'u_cameraTarget');
-    gl.uniform3f(cameraTargetLocation, this.camera.target[0], this.camera.target[1], this.camera.target[2]);
+    gl.uniform3f(cameraTargetLocation, this.cameraTarget[0], this.cameraTarget[1], this.cameraTarget[2]);
 
     const groundPlaneLocation = gl.getUniformLocation(this.program, 'u_showGroundPlane');
     gl.uniform1f(groundPlaneLocation, this.showGroundPlane ? 1.0 : 0.0);
