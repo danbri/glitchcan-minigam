@@ -29,7 +29,26 @@ export class LucidComparison extends HTMLElement {
     this.attachShadow({ mode: 'open' });
 
     this._scene = null;
-    this._syncCamera = false;
+    this._syncCamera = true; // Default: synced
+    this._activePane = null; // Track which pane is being interacted with
+
+    // Camera state (unified for both views)
+    this._camera = {
+      theta: 0.3,
+      phi: 0.4,
+      distance: 8,
+      target: [0, 0.5, 0]
+    };
+
+    // Interaction state
+    this._isDragging = false;
+    this._lastPointer = { x: 0, y: 0 };
+    this._pinchStartDistance = 0;
+    this._pinchStartZoom = 0;
+
+    // Sync timer state
+    this._syncTimeout = null;
+    this._syncDelay = 200; // 1/5 second = 200ms
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -61,6 +80,7 @@ export class LucidComparison extends HTMLElement {
           min-width: 0;
           min-height: 0;
           background: var(--bg);
+          position: relative;
         }
 
         .pane-header {
@@ -93,6 +113,30 @@ export class LucidComparison extends HTMLElement {
         lucid-renderer {
           flex: 1;
           min-height: 0;
+        }
+
+        /* Fade overlay for sync transitions */
+        .fade-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #0d1117;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s ease-out;
+          z-index: 5;
+        }
+
+        .fade-overlay.active {
+          opacity: 1;
+        }
+
+        /* Active pane indicator */
+        .pane.active {
+          outline: 2px solid rgba(34, 211, 238, 0.5);
+          outline-offset: -2px;
         }
 
         /* Overlay mode */
@@ -164,31 +208,45 @@ export class LucidComparison extends HTMLElement {
           background: rgba(34, 211, 238, 0.3);
           border-color: #22d3ee;
         }
+
+        /* Touch-friendly styling */
+        @media (pointer: coarse) {
+          .pane-header {
+            padding: 10px 16px;
+            font-size: 14px;
+          }
+          .controls button {
+            padding: 8px 14px;
+            font-size: 14px;
+          }
+        }
       </style>
 
       <div class="comparison">
-        <div class="pane mayfly">
+        <div class="pane mayfly" id="pane-mayfly">
           <div class="pane-header">
             <span>Mayfly</span>
             <span class="backend">WebGL</span>
             <span class="status" id="mayfly-status">...</span>
           </div>
-          <lucid-renderer id="mayfly" backend="mayfly"></lucid-renderer>
+          <lucid-renderer id="mayfly" backend="mayfly" disable-controls></lucid-renderer>
+          <div class="fade-overlay" id="fade-mayfly"></div>
         </div>
-        <div class="pane stinkyfish">
+        <div class="pane stinkyfish" id="pane-stinkyfish">
           <div class="pane-header">
             <span>Stinkyfish</span>
             <span class="backend">WebGPU</span>
             <span class="status" id="stinkyfish-status">...</span>
           </div>
-          <lucid-renderer id="stinkyfish" backend="stinkyfish"></lucid-renderer>
+          <lucid-renderer id="stinkyfish" backend="stinkyfish" disable-controls></lucid-renderer>
+          <div class="fade-overlay" id="fade-stinkyfish"></div>
         </div>
       </div>
       <div class="controls">
         <button id="layout-h" class="active" title="Horizontal split">◫</button>
         <button id="layout-v" title="Vertical split">⬒</button>
         <button id="layout-o" title="Overlay diff">◉</button>
-        <button id="sync-cam" title="Sync cameras">🔗</button>
+        <button id="sync-cam" class="active" title="Sync cameras">🔗</button>
         <button id="display-mode" title="Toggle ground/axes (G)">⬓</button>
       </div>
     `;
@@ -197,9 +255,14 @@ export class LucidComparison extends HTMLElement {
     this._stinkyfishRenderer = this.shadowRoot.querySelector('#stinkyfish');
     this._mayflyStatus = this.shadowRoot.querySelector('#mayfly-status');
     this._stinkyfishStatus = this.shadowRoot.querySelector('#stinkyfish-status');
+    this._mayflyPane = this.shadowRoot.querySelector('#pane-mayfly');
+    this._stinkyfishPane = this.shadowRoot.querySelector('#pane-stinkyfish');
+    this._fadeMayfly = this.shadowRoot.querySelector('#fade-mayfly');
+    this._fadeStinkyfish = this.shadowRoot.querySelector('#fade-stinkyfish');
 
     this._setupEventListeners();
     this._setupControls();
+    this._setupUnifiedInput();
   }
 
   connectedCallback() {
@@ -242,6 +305,8 @@ export class LucidComparison extends HTMLElement {
     this._mayflyRenderer.addEventListener('scene-loaded', () => {
       this._mayflyStatus.textContent = 'Loaded';
       this._mayflyStatus.className = 'status ok';
+      // Apply unified camera after scene load
+      this._applyCameraToRenderer(this._mayflyRenderer);
     });
 
     this._mayflyRenderer.addEventListener('render-error', (e) => {
@@ -260,6 +325,8 @@ export class LucidComparison extends HTMLElement {
     this._stinkyfishRenderer.addEventListener('scene-loaded', () => {
       this._stinkyfishStatus.textContent = 'Loaded';
       this._stinkyfishStatus.className = 'status ok';
+      // Apply unified camera after scene load
+      this._applyCameraToRenderer(this._stinkyfishRenderer);
     });
 
     this._stinkyfishRenderer.addEventListener('render-error', (e) => {
@@ -324,9 +391,6 @@ export class LucidComparison extends HTMLElement {
     syncCam.addEventListener('click', () => {
       this._syncCamera = !this._syncCamera;
       syncCam.classList.toggle('active', this._syncCamera);
-      if (this._syncCamera) {
-        this._setupCameraSync();
-      }
     });
 
     displayMode.addEventListener('click', () => {
@@ -347,6 +411,230 @@ export class LucidComparison extends HTMLElement {
       syncCam.classList.add('active');
     }
     updateDisplayMode();
+  }
+
+  /**
+   * Setup unified mouse/touch input handling for both panes
+   */
+  _setupUnifiedInput() {
+    // Helper to determine which pane an event originated from
+    const getPaneFromEvent = (e) => {
+      const target = e.target;
+      if (this._mayflyPane.contains(target)) return 'mayfly';
+      if (this._stinkyfishPane.contains(target)) return 'stinkyfish';
+      return null;
+    };
+
+    // Mouse handlers
+    const handleMouseDown = (e) => {
+      const pane = getPaneFromEvent(e);
+      if (!pane) return;
+
+      e.preventDefault();
+      this._isDragging = true;
+      this._activePane = pane;
+      this._lastPointer = { x: e.clientX, y: e.clientY };
+
+      // Highlight active pane
+      this._mayflyPane.classList.toggle('active', pane === 'mayfly');
+      this._stinkyfishPane.classList.toggle('active', pane === 'stinkyfish');
+    };
+
+    const handleMouseMove = (e) => {
+      if (!this._isDragging) return;
+
+      const dx = e.clientX - this._lastPointer.x;
+      const dy = e.clientY - this._lastPointer.y;
+      this._lastPointer = { x: e.clientX, y: e.clientY };
+
+      // Update camera rotation
+      this._camera.theta += dx * 0.01;
+      this._camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this._camera.phi + dy * 0.01));
+
+      // Apply to active renderer immediately
+      this._applyCameraToActiveRenderer();
+
+      // Schedule sync to other renderer with fade effect
+      this._scheduleSyncWithFade();
+    };
+
+    const handleMouseUp = () => {
+      if (this._isDragging) {
+        this._isDragging = false;
+        this._mayflyPane.classList.remove('active');
+        this._stinkyfishPane.classList.remove('active');
+      }
+    };
+
+    const handleWheel = (e) => {
+      const pane = getPaneFromEvent(e);
+      if (!pane) return;
+
+      e.preventDefault();
+      this._activePane = pane;
+
+      // Zoom
+      this._camera.distance *= 1 + e.deltaY * 0.001;
+      this._camera.distance = Math.max(1, Math.min(100, this._camera.distance));
+
+      // Apply to active renderer immediately
+      this._applyCameraToActiveRenderer();
+
+      // Schedule sync to other renderer
+      this._scheduleSyncWithFade();
+    };
+
+    // Touch handlers
+    const handleTouchStart = (e) => {
+      const pane = getPaneFromEvent(e);
+      if (!pane) return;
+
+      e.preventDefault();
+      this._activePane = pane;
+
+      if (e.touches.length === 1) {
+        // Single touch - drag
+        this._isDragging = true;
+        this._lastPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        // Two finger - pinch zoom
+        this._isDragging = false;
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        this._pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+        this._pinchStartZoom = this._camera.distance;
+      }
+
+      // Highlight active pane
+      this._mayflyPane.classList.toggle('active', pane === 'mayfly');
+      this._stinkyfishPane.classList.toggle('active', pane === 'stinkyfish');
+    };
+
+    const handleTouchMove = (e) => {
+      if (!this._activePane) return;
+      e.preventDefault();
+
+      if (e.touches.length === 1 && this._isDragging) {
+        // Single touch drag - rotate
+        const dx = e.touches[0].clientX - this._lastPointer.x;
+        const dy = e.touches[0].clientY - this._lastPointer.y;
+        this._lastPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+        this._camera.theta += dx * 0.01;
+        this._camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this._camera.phi + dy * 0.01));
+      } else if (e.touches.length === 2) {
+        // Pinch zoom
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (this._pinchStartDistance > 0) {
+          const scale = this._pinchStartDistance / dist;
+          this._camera.distance = Math.max(1, Math.min(100, this._pinchStartZoom * scale));
+        }
+      }
+
+      // Apply to active renderer immediately
+      this._applyCameraToActiveRenderer();
+
+      // Schedule sync to other renderer
+      this._scheduleSyncWithFade();
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length === 0) {
+        this._isDragging = false;
+        this._mayflyPane.classList.remove('active');
+        this._stinkyfishPane.classList.remove('active');
+      }
+    };
+
+    // Attach listeners to both panes
+    [this._mayflyPane, this._stinkyfishPane].forEach(pane => {
+      pane.addEventListener('mousedown', handleMouseDown);
+      pane.addEventListener('wheel', handleWheel, { passive: false });
+      pane.addEventListener('touchstart', handleTouchStart, { passive: false });
+      pane.addEventListener('touchmove', handleTouchMove, { passive: false });
+      pane.addEventListener('touchend', handleTouchEnd);
+    });
+
+    // Global mouse events for drag continuation outside panes
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    // Prevent context menu on panes
+    this.shadowRoot.querySelector('.comparison').addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  /**
+   * Apply camera state to a specific renderer
+   */
+  _applyCameraToRenderer(rendererEl) {
+    const renderer = rendererEl?.renderer;
+    if (!renderer) return;
+
+    renderer.cameraTheta = this._camera.theta;
+    renderer.cameraPhi = this._camera.phi;
+    renderer.cameraDistance = this._camera.distance;
+    if (this._camera.target) {
+      renderer.cameraTarget = [...this._camera.target];
+    }
+  }
+
+  /**
+   * Apply camera to the currently active renderer (no fade)
+   */
+  _applyCameraToActiveRenderer() {
+    if (!this._activePane) return;
+
+    const activeRenderer = this._activePane === 'mayfly'
+      ? this._mayflyRenderer
+      : this._stinkyfishRenderer;
+
+    this._applyCameraToRenderer(activeRenderer);
+  }
+
+  /**
+   * Schedule sync to the inactive renderer with fade transition
+   */
+  _scheduleSyncWithFade() {
+    if (!this._syncCamera || !this._activePane) return;
+
+    // Clear existing timeout
+    if (this._syncTimeout) {
+      clearTimeout(this._syncTimeout);
+    }
+
+    // Schedule sync after delay
+    this._syncTimeout = setTimeout(() => {
+      this._syncOtherRendererWithFade();
+    }, this._syncDelay);
+  }
+
+  /**
+   * Sync the other renderer with fade-out/update/fade-in effect
+   */
+  async _syncOtherRendererWithFade() {
+    if (!this._activePane) return;
+
+    const isActiveStinkyfish = this._activePane === 'stinkyfish';
+    const otherRenderer = isActiveStinkyfish ? this._mayflyRenderer : this._stinkyfishRenderer;
+    const fadeOverlay = isActiveStinkyfish ? this._fadeMayfly : this._fadeStinkyfish;
+
+    // Fade out (fast)
+    fadeOverlay.classList.add('active');
+
+    // Wait for fade out
+    await new Promise(r => setTimeout(r, 150));
+
+    // Update camera
+    this._applyCameraToRenderer(otherRenderer);
+
+    // Small delay for render to complete
+    await new Promise(r => setTimeout(r, 50));
+
+    // Fade in (fast)
+    fadeOverlay.classList.remove('active');
   }
 
   _checkBothReady() {
@@ -374,16 +662,27 @@ export class LucidComparison extends HTMLElement {
     this._stinkyfishStatus.textContent = 'Loading...';
     this._stinkyfishStatus.className = 'status loading';
 
+    // Load scene JSON to extract camera settings
+    try {
+      const resp = await fetch(`./scenes/${path}`);
+      const json = await resp.json();
+
+      // Extract camera from scene JSON
+      if (json.camera) {
+        this._camera.distance = json.camera.distance || 8;
+        this._camera.theta = json.camera.theta || 0.3;
+        this._camera.phi = json.camera.phi || 0.4;
+        if (json.camera.target) {
+          this._camera.target = [...json.camera.target];
+        }
+      }
+    } catch (e) {
+      console.warn('Could not pre-load camera from scene:', e);
+    }
+
     // Load in both renderers
     this._mayflyRenderer.scene = path;
     this._stinkyfishRenderer.scene = path;
-  }
-
-  _setupCameraSync() {
-    // TODO: Implement camera sync between renderers
-    // This would involve listening to camera changes on one renderer
-    // and applying them to the other
-    console.log('Camera sync enabled - implementation pending');
   }
 
   // API for programmatic scene loading
@@ -398,6 +697,20 @@ export class LucidComparison extends HTMLElement {
         detail: { error }
       }));
     }
+  }
+
+  /**
+   * Programmatically set camera for both views
+   */
+  setCamera(options) {
+    if (options.theta !== undefined) this._camera.theta = options.theta;
+    if (options.phi !== undefined) this._camera.phi = options.phi;
+    if (options.distance !== undefined) this._camera.distance = options.distance;
+    if (options.target !== undefined) this._camera.target = [...options.target];
+
+    // Apply to both renderers immediately
+    this._applyCameraToRenderer(this._mayflyRenderer);
+    this._applyCameraToRenderer(this._stinkyfishRenderer);
   }
 }
 
