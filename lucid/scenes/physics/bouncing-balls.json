@@ -7,7 +7,7 @@
   "physics": {
     "enabled": true,
     "gravity": [0, -9.8, 0],
-    "groundY": -1.5,
+    "groundY": 0.1,
     "bounds": {
       "minX": -1.7,
       "maxX": 1.7,
@@ -131,14 +131,14 @@
         }
       },
       {
-        "comment": "Ground plane",
+        "comment": "Ground plane - raised to y=0 to align with renderer ground",
         "type": "box",
         "id": "ground",
         "params": {
           "size": [4, 0.2, 4],
           "color": { "var": "groundColor" }
         },
-        "transform": { "translate": [0, -1.6, 0] }
+        "transform": { "translate": [0, 0, 0] }
       },
       {
         "comment": "Table lip - left",
@@ -147,7 +147,7 @@
           "size": [0.1, 0.15, 4],
           "color": [0.35, 0.35, 0.4]
         },
-        "transform": { "translate": [-1.95, -1.425, 0] }
+        "transform": { "translate": [-1.95, 0.175, 0] }
       },
       {
         "comment": "Table lip - right",
@@ -156,7 +156,7 @@
           "size": [0.1, 0.15, 4],
           "color": [0.35, 0.35, 0.4]
         },
-        "transform": { "translate": [1.95, -1.425, 0] }
+        "transform": { "translate": [1.95, 0.175, 0] }
       },
       {
         "comment": "Table lip - front",
@@ -165,7 +165,7 @@
           "size": [3.8, 0.15, 0.1],
           "color": [0.35, 0.35, 0.4]
         },
-        "transform": { "translate": [0, -1.425, 1.95] }
+        "transform": { "translate": [0, 0.175, 1.95] }
       },
       {
         "comment": "Table lip - back",
@@ -174,7 +174,7 @@
           "size": [3.8, 0.15, 0.1],
           "color": [0.35, 0.35, 0.4]
         },
-        "transform": { "translate": [0, -1.425, -1.95] }
+        "transform": { "translate": [0, 0.175, -1.95] }
       }
     ]
   }

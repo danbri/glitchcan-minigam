@@ -169,14 +169,16 @@ function processNode(node, registry, depth = 0) {
 
     // Radial symmetry
     case 'radial':
-      processed.count = node.count || 6;
+      // Process count through processValue to handle variable expressions
+      processed.count = processValue(node.count !== undefined ? node.count : 6);
       processed.axis = node.axis || 'y';
       processed.child = processNode(node.child, registry, depth + 1);
       break;
 
     // Infinite repeat/tiling
     case 'repeat':
-      processed.period = node.period || [2, 0, 2];
+      // Process period through processValue to handle variable expressions in array elements
+      processed.period = processValue(node.period || [2, 0, 2]);
       if (node.exposeId) processed.exposeId = node.exposeId;  // Expose instance ID for per-instance variation
       processed.child = processNode(node.child, registry, depth + 1);
       break;

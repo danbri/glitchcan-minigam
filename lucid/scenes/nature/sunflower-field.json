@@ -48,6 +48,7 @@
   "root": {
     "type": "repeat",
     "period": [2.5, 0, 2.5],
-    "child": { "type": "ref", "id": "sunflower" }
+    "child": { "type": "ref", "id": "sunflower" },
+    "transform": { "translate": [0, 0.35, 0] }
   }
 }
