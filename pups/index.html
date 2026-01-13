@@ -675,9 +675,19 @@ class ShepardAudioEngine {
 const audioEngine = new ShepardAudioEngine();
 
 // ============ EMOJI CAROUSEL ============
-const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️'];
+const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️', '🎲'];
+const ANIMAL_EMOJIS = EMOJI_OPTIONS.slice(0, -1); // All except dice
 let currentEmojiIndex = 0;
 let currentEmoji = EMOJI_OPTIONS[0];
+let randomMode = false; // When true, each puppy gets a random animal
+
+function getRandomAnimal() {
+  return ANIMAL_EMOJIS[Math.floor(Math.random() * ANIMAL_EMOJIS.length)];
+}
+
+function getCurrentEmoji() {
+  return randomMode ? getRandomAnimal() : currentEmoji;
+}
 
 class EmojiCarousel {
   constructor() {
@@ -995,9 +1005,13 @@ class EmojiCarousel {
     currentEmojiIndex = this.currentIndex;
     currentEmoji = EMOJI_OPTIONS[this.currentIndex];
 
+    // Check if dice (random mode) was selected
+    const isDiceMode = currentEmoji === '🎲';
+    randomMode = isDiceMode;
+
     // Start rainbow shimmer animation
     this.selectionHue = 0;
-    const shimmerDuration = 800;
+    const shimmerDuration = isDiceMode ? 1200 : 800; // Longer for dice
     const startTime = Date.now();
 
     // Play celebratory shimmer
@@ -1013,14 +1027,33 @@ class EmojiCarousel {
         // Rainbow cycle: go through full spectrum
         this.selectionHue = (progress * 720) % 360;
         this.render(true); // Selection mode
+
+        // In dice mode, cycle through random emojis on existing puppies
+        if (isDiceMode && Math.random() > 0.7) {
+          puppies.forEach(p => {
+            if (p.element && Math.random() > 0.5) {
+              p.element.textContent = getRandomAnimal();
+            }
+          });
+        }
+
         requestAnimationFrame(animateSelection);
       } else {
         // Animation complete - update everything and close
         this.settingsBtn.textContent = currentEmoji;
 
-        puppies.forEach(p => {
-          if (p.element) p.element.textContent = currentEmoji;
-        });
+        // In random mode, give each puppy a different random animal
+        if (isDiceMode) {
+          puppies.forEach(p => {
+            if (p.element) {
+              p.element.textContent = getRandomAnimal();
+            }
+          });
+        } else {
+          puppies.forEach(p => {
+            if (p.element) p.element.textContent = currentEmoji;
+          });
+        }
 
         this.isSelecting = false;
         this.close();
@@ -1142,7 +1175,7 @@ class Puppy {
 
     this.element = document.createElement('div');
     this.element.className = 'puppy spawning';
-    this.element.textContent = currentEmoji;
+    this.element.textContent = getCurrentEmoji(); // Uses random animal in dice mode
     this.element.style.lineHeight = '1';
 
     game.appendChild(this.element);
