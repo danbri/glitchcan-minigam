@@ -601,9 +601,11 @@ fn raymarch(ro: vec3f, rd: vec3f) -> vec4f {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  let aspect = u.resolution.x / u.resolution.y;
-  var uv = input.uv * 2.0 - 1.0;
-  uv.x *= aspect;
+  // UV calculation matching Mayfly exactly:
+  // Mayfly: (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y
+  // This centers at (0,0) and normalizes by height only
+  let fragCoord = input.uv * u.resolution;
+  var uv = (fragCoord - 0.5 * u.resolution) / u.resolution.y;
   uv.y = -uv.y;  // WebGPU framebuffer Y is top-down, unlike WebGL
 
   let rd = rayDirection(uv, u.cameraPos, u.cameraTarget);

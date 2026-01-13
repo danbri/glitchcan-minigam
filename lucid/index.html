@@ -2472,10 +2472,12 @@
       }
 
       // Save display settings from current state
+      // Compute displayMode from debugSettings (0=none, 1=ground, 2=ground+axes)
+      const computedDisplayMode = debugSettings.showAxes ? 2 : (debugSettings.showGround ? 1 : 0);
       const displayState = {
         showGround: debugSettings.showGround,
         showAxes: debugSettings.showAxes,
-        displayMode: displayMode  // Tristate: 0=none, 1=ground, 2=ground+axes
+        displayMode: computedDisplayMode
       };
 
       showStatus(`Switching to ${newBackend}...`, 'info');
@@ -2540,6 +2542,20 @@
             renderer.groundOpacityTarget = 0.6;
           }
         }
+
+        // Update display mode button to match restored state
+        const displayModeIcons = ['⬚', '⬓', '⊞'];
+        const displayModeTitles = ['Display: None (G)', 'Display: Ground (G)', 'Display: Ground+Axes (G)'];
+        const btnDisplayMode = $('btn-display-mode');
+        if (btnDisplayMode) {
+          btnDisplayMode.textContent = displayModeIcons[displayState.displayMode];
+          btnDisplayMode.title = displayModeTitles[displayState.displayMode];
+        }
+        // Also update the individual toggle buttons
+        const groundToggle = $('toggle-ground');
+        const axesToggle = $('toggle-axes');
+        if (groundToggle) groundToggle.classList.toggle('active', displayState.showGround);
+        if (axesToggle) axesToggle.classList.toggle('active', displayState.showAxes);
 
         // Re-setup controls on new canvas (old canvas event listeners are now orphaned)
         setupOrbitControls();
