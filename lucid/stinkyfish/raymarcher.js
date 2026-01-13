@@ -394,6 +394,10 @@ export class StinkyfishRenderer {
    * @param {Object} sceneUniformLayout - Layout info for scene params (name -> type)
    */
   async compileScene(sceneWgsl, sceneUniformLayout = null) {
+    console.log('Stinkyfish compileScene() called', {
+      wgslLength: sceneWgsl?.length,
+      layoutKeys: sceneUniformLayout ? Object.keys(sceneUniformLayout) : null
+    });
     const shaderCode = this.buildFullShader(sceneWgsl);
     console.log(`Swapchain format: ${this.format} (sRGB: ${this.isSrgbFormat})`);
     console.log(`Full shader size: ${shaderCode.length} chars, ${shaderCode.split('\n').length} lines`);
@@ -499,7 +503,9 @@ export class StinkyfishRenderer {
     } else {
       this.sceneUniformBuffer = null;
       this.sceneBindGroup = null;
+      console.log('No scene uniforms needed (no custom params)');
     }
+    console.log('Stinkyfish compileScene() completed successfully, pipeline ready:', !!this.pipeline);
   }
 
   buildFullShader(sceneWgsl) {
@@ -790,10 +796,23 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
   render(physicsParams = null) {
     // Guard: need pipeline and valid canvas size
-    if (!this.pipeline || !this.device || !this.context) return;
+    if (!this.pipeline || !this.device || !this.context) {
+      console.log('Stinkyfish render() early return: pipeline/device/context missing', {
+        pipeline: !!this.pipeline,
+        device: !!this.device,
+        context: !!this.context
+      });
+      return;
+    }
 
     // Skip rendering if paused or not visible (battery saver)
-    if (!this.shouldRender()) return;
+    if (!this.shouldRender()) {
+      console.log('Stinkyfish render() early return: shouldRender=false', {
+        isPaused: this.isPaused,
+        isVisible: this.isVisible
+      });
+      return;
+    }
 
     const width = this.canvas.width;
     const height = this.canvas.height;
