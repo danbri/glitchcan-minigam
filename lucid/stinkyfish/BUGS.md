@@ -20,14 +20,12 @@ Known issues where Stinkyfish (WebGPU/WGSL) renders differently from Mayfly (Web
 - **Root cause**: WGSL applied Euler rotations in XYZ order, but GLSL applies them in ZYX order (reverse). This is required for correct SDF point transformation.
 - **Fix**: Changed rotation application order to ZYX in all rotation handling paths
 
-## Remaining Issues
-
-### Critical - Shader Compilation Errors
-
-#### Backend switch failed: vector/struct member access
+### Shader compilation error: vector/struct member access (FIXED)
 - **Error**: `Shader compilation error: invalid member access expression. Expected vector or struct, got 'f32'`
-- **Symptom**: Scene fails to load entirely
-- **Likely cause**: WGSL codegen producing `.x`/`.y`/`.z` on scalar float instead of vec3
+- **Root cause**: `generateScaledNode()` used `s.x` on scale value without checking if it's a scalar or vec3. Uniform scale (single number) would produce `let s = 0.5;` then fail on `s.x`.
+- **Fix**: Detect uniform vs non-uniform scale; for uniform scale, expand to `vec3f(scalar)` and multiply by scalar directly instead of using `.x` accessor
+
+## Remaining Issues
 
 ### High Priority - Incorrect Rendering
 

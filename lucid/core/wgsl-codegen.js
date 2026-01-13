@@ -1018,7 +1018,10 @@ function generateCustomExpr(node, ctx) {
 
 function generateScaledNode(node, ctx) {
   const scale = node.transform.scale;
-  const scaleVec = valueToWgsl(scale, ctx);
+
+  // Determine if scale is a known scalar (uniform scale) vs vec3 (non-uniform)
+  const isUniformScale = typeof scale === 'number' ||
+    (scale && scale.type === 'const' && typeof scale.value === 'number' && !Array.isArray(scale.value));
 
   // Clone node without scale
   const unscaledNode = { ...node, transform: { ...node.transform, scale: undefined } };
@@ -1031,12 +1034,23 @@ function generateScaledNode(node, ctx) {
   return ${innerExpr};
 }`);
 
-  // Non-uniform scale: multiply by min component
-  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  if (isUniformScale) {
+    // Uniform scale: scalar value, expand to vec3 for consistency
+    const scaleScalar = valueToWgsl(scale, ctx);
+    ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  let s = vec3f(${scaleScalar});
+  let c = ${childFuncName}(p / s);
+  return vec4f(c.x * ${scaleScalar}, c.yzw);
+}`);
+  } else {
+    // Non-uniform scale: vec3 or array, need to use min component for distance correction
+    const scaleVec = valueToWgsl(scale, ctx);
+    ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
   let s = ${scaleVec};
   let c = ${childFuncName}(p / s);
   return vec4f(c.x * min(s.x, min(s.y, s.z)), c.yzw);
 }`);
+  }
 
   return `${funcName}(${ctx.currentP || 'p'})`;
 }
