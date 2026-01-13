@@ -26,7 +26,12 @@ export class StinkyfishRenderer {
     }
   };
 
-  constructor(canvas) {
+  /**
+   * @param {HTMLCanvasElement} canvas
+   * @param {Object} [options]
+   * @param {boolean} [options.disableControls=false] - Disable built-in mouse/touch controls (use when parent provides controls)
+   */
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.device = null;
     this.context = null;
@@ -73,7 +78,12 @@ export class StinkyfishRenderer {
     this.isDragging = false;
     this.lastMouse = { x: 0, y: 0 };
 
-    this.setupMouseHandlers();
+    // Only setup built-in controls if not disabled
+    // (disabled when parent like index.html provides its own controls)
+    this._controlsDisabled = options.disableControls || false;
+    if (!this._controlsDisabled) {
+      this.setupMouseHandlers();
+    }
   }
 
   setRenderSettings(settings) {
