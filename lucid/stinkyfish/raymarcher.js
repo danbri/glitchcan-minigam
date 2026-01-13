@@ -69,10 +69,10 @@ export class StinkyfishRenderer {
     this.cacheEnabled = options.enableShaderCache !== false;
     this.shaderCache = this.cacheEnabled ? new ShaderCache(32) : null;
 
-    // Camera state (Mayfly parity)
-    this.cameraDistance = 4.0;
-    this.cameraTheta = 0.0;
-    this.cameraPhi = Math.PI / 4;  // 45 degrees
+    // Camera state - unified defaults for consistent comparison
+    this.cameraDistance = 8.0;
+    this.cameraTheta = 0.3;
+    this.cameraPhi = 0.4;
     this.cameraTarget = [0, 0, 0];
 
     // Render settings (Mayfly 'medium' quality)
