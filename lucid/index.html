@@ -2197,15 +2197,9 @@
           }
           if (stepsEl) stepsEl.textContent = metrics.maxSteps;
 
-          // Use Stinkyfish's own FPS/frame metrics if available (more accurate)
-          if (metrics.fps > 0) {
-            fpsEl.textContent = metrics.fps.toFixed(0);
-            fpsEl.className = metrics.fps < 30 ? 'perf-bad' : (metrics.fps < 50 ? 'perf-warn' : '');
-          }
-          if (metrics.avgFrameTimeMs > 0) {
-            frameEl.textContent = metrics.avgFrameTimeMs.toFixed(1);
-            frameEl.className = metrics.avgFrameTimeMs > 33 ? 'perf-bad' : (metrics.avgFrameTimeMs > 20 ? 'perf-warn' : '');
-          }
+          // NOTE: Don't override FPS/frame from Stinkyfish metrics - those only measure
+          // CPU command submission time (~0.3ms), not actual GPU render time.
+          // The requestAnimationFrame-based perfState timing is more accurate.
         }
       } else if (stinkyStatsEl) {
         stinkyStatsEl.style.display = 'none';
