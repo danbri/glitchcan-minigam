@@ -84,31 +84,24 @@ export class LucidComparison extends HTMLElement {
         }
 
         .pane-header {
-          padding: 6px 12px;
+          padding: 4px 10px;
           font-family: system-ui, -apple-system, sans-serif;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
           color: var(--text);
-          background: rgba(0,0,0,0.3);
+          background: rgba(0,0,0,0.4);
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
-        .pane-header .backend {
-          font-weight: 400;
-          opacity: 0.7;
-        }
-
-        .pane-header .status {
+        .pane-header .fps {
           margin-left: auto;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 400;
+          opacity: 0.6;
+          font-family: monospace;
         }
-
-        .pane-header .status.ok { color: #3fb950; }
-        .pane-header .status.error { color: #f85149; }
-        .pane-header .status.loading { color: #f0a020; }
 
         lucid-renderer {
           flex: 1;
@@ -209,14 +202,42 @@ export class LucidComparison extends HTMLElement {
           border-color: #22d3ee;
         }
 
+        /* Display mode button - bottom left */
+        .display-btn {
+          position: absolute;
+          bottom: 8px;
+          left: 8px;
+          padding: 6px 10px;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          background: rgba(30,30,40,0.9);
+          color: #ccc;
+          font-size: 12px;
+          cursor: pointer;
+          z-index: 20;
+        }
+
+        .display-btn:hover {
+          background: rgba(50,50,60,0.9);
+        }
+
+        .display-btn.active {
+          background: rgba(34, 211, 238, 0.3);
+          border-color: #22d3ee;
+        }
+
         /* Touch-friendly styling */
         @media (pointer: coarse) {
           .pane-header {
-            padding: 10px 16px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 12px;
           }
           .controls button {
             padding: 8px 14px;
+            font-size: 14px;
+          }
+          .display-btn {
+            padding: 10px 14px;
             font-size: 14px;
           }
         }
@@ -226,8 +247,7 @@ export class LucidComparison extends HTMLElement {
         <div class="pane mayfly" id="pane-mayfly">
           <div class="pane-header">
             <span>Mayfly</span>
-            <span class="backend">WebGL</span>
-            <span class="status" id="mayfly-status">...</span>
+            <span class="fps" id="mayfly-fps"></span>
           </div>
           <lucid-renderer id="mayfly" backend="mayfly" disable-controls></lucid-renderer>
           <div class="fade-overlay" id="fade-mayfly"></div>
@@ -235,8 +255,7 @@ export class LucidComparison extends HTMLElement {
         <div class="pane stinkyfish" id="pane-stinkyfish">
           <div class="pane-header">
             <span>Stinkyfish</span>
-            <span class="backend">WebGPU</span>
-            <span class="status" id="stinkyfish-status">...</span>
+            <span class="fps" id="stinkyfish-fps"></span>
           </div>
           <lucid-renderer id="stinkyfish" backend="stinkyfish" disable-controls></lucid-renderer>
           <div class="fade-overlay" id="fade-stinkyfish"></div>
@@ -247,14 +266,14 @@ export class LucidComparison extends HTMLElement {
         <button id="layout-v" title="Vertical split">⬒</button>
         <button id="layout-o" title="Overlay diff">◉</button>
         <button id="sync-cam" class="active" title="Sync cameras">🔗</button>
-        <button id="display-mode" title="Toggle ground/axes (G)">⬓</button>
       </div>
+      <button class="display-btn" id="display-mode" title="Toggle ground/axes">⬚</button>
     `;
 
     this._mayflyRenderer = this.shadowRoot.querySelector('#mayfly');
     this._stinkyfishRenderer = this.shadowRoot.querySelector('#stinkyfish');
-    this._mayflyStatus = this.shadowRoot.querySelector('#mayfly-status');
-    this._stinkyfishStatus = this.shadowRoot.querySelector('#stinkyfish-status');
+    this._mayflyFps = this.shadowRoot.querySelector('#mayfly-fps');
+    this._stinkyfishFps = this.shadowRoot.querySelector('#stinkyfish-fps');
     this._mayflyPane = this.shadowRoot.querySelector('#pane-mayfly');
     this._stinkyfishPane = this.shadowRoot.querySelector('#pane-stinkyfish');
     this._fadeMayfly = this.shadowRoot.querySelector('#fade-mayfly');
@@ -297,41 +316,29 @@ export class LucidComparison extends HTMLElement {
   _setupEventListeners() {
     // Mayfly events
     this._mayflyRenderer.addEventListener('renderer-ready', () => {
-      this._mayflyStatus.textContent = 'Ready';
-      this._mayflyStatus.className = 'status ok';
       this._checkBothReady();
     });
 
     this._mayflyRenderer.addEventListener('scene-loaded', () => {
-      this._mayflyStatus.textContent = 'Loaded';
-      this._mayflyStatus.className = 'status ok';
       // Apply unified camera after scene load
       this._applyCameraToRenderer(this._mayflyRenderer);
     });
 
     this._mayflyRenderer.addEventListener('render-error', (e) => {
-      this._mayflyStatus.textContent = 'Error';
-      this._mayflyStatus.className = 'status error';
       console.error('Mayfly error:', e.detail.error);
     });
 
     // Stinkyfish events
     this._stinkyfishRenderer.addEventListener('renderer-ready', () => {
-      this._stinkyfishStatus.textContent = 'Ready';
-      this._stinkyfishStatus.className = 'status ok';
       this._checkBothReady();
     });
 
     this._stinkyfishRenderer.addEventListener('scene-loaded', () => {
-      this._stinkyfishStatus.textContent = 'Loaded';
-      this._stinkyfishStatus.className = 'status ok';
       // Apply unified camera after scene load
       this._applyCameraToRenderer(this._stinkyfishRenderer);
     });
 
     this._stinkyfishRenderer.addEventListener('render-error', (e) => {
-      this._stinkyfishStatus.textContent = 'Error';
-      this._stinkyfishStatus.className = 'status error';
       console.error('Stinkyfish error:', e.detail.error);
     });
   }
@@ -343,10 +350,10 @@ export class LucidComparison extends HTMLElement {
     const syncCam = this.shadowRoot.querySelector('#sync-cam');
     const displayMode = this.shadowRoot.querySelector('#display-mode');
 
-    // Display mode: 0=none, 1=ground, 2=ground+axes
-    this._displayMode = 1; // Default: ground visible
-    const displayModeIcons = ['⬚', '⬓', '⊞'];
-    const displayModeTitles = ['Display: None (G)', 'Display: Ground (G)', 'Display: Ground+Axes (G)'];
+    // Display mode: 0=none, 1=axes, 2=axes+ground, 3=ground
+    this._displayMode = 0; // Default: nothing
+    const displayModeIcons = ['⬚', '╋', '⊞', '⬓'];
+    const displayModeTitles = ['Nothing', 'Axes', 'Axes + Ground', 'Ground'];
 
     const updateLayoutButtons = () => {
       layoutH.classList.toggle('active', this.layout === 'horizontal');
@@ -355,8 +362,9 @@ export class LucidComparison extends HTMLElement {
     };
 
     const updateDisplayMode = () => {
-      const showGround = this._displayMode >= 1;
-      const showAxes = this._displayMode >= 2;
+      // 0=none, 1=axes, 2=axes+ground, 3=ground
+      const showAxes = this._displayMode === 1 || this._displayMode === 2;
+      const showGround = this._displayMode === 2 || this._displayMode === 3;
 
       displayMode.textContent = displayModeIcons[this._displayMode];
       displayMode.title = displayModeTitles[this._displayMode];
@@ -394,14 +402,14 @@ export class LucidComparison extends HTMLElement {
     });
 
     displayMode.addEventListener('click', () => {
-      this._displayMode = (this._displayMode + 1) % 3;
+      this._displayMode = (this._displayMode + 1) % 4;
       updateDisplayMode();
     });
 
     // Keyboard shortcut for display mode
     this.shadowRoot.host.addEventListener('keydown', (e) => {
       if (e.key === 'g' || e.key === 'G') {
-        this._displayMode = (this._displayMode + 1) % 3;
+        this._displayMode = (this._displayMode + 1) % 4;
         updateDisplayMode();
       }
     });
