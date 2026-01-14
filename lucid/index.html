@@ -1765,6 +1765,7 @@
     import { generateWgslFromJson } from './core/wgsl-codegen.js';
     import { getAllParamNames } from './core/rig-evaluator.js';
     import { PhysicsScene } from './core/physics/physics-scene.js';
+    import { sceneToSexpr } from './core/sexpr-dsl.js';
     import './components/lucid-scene-picker.js';
 
     // ============================================
@@ -3772,110 +3773,11 @@
     // ============================================
     // DSL S-EXPRESSION GENERATOR
     // ============================================
+    // Uses sexpr-dsl.js module for full round-trip capable s-expression format
     function generateDslView(json) {
-      const indent = (level) => '  '.repeat(level);
-
-      function exprToDsl(value) {
-        if (typeof value === 'number') return value.toFixed(3).replace(/\.?0+$/, '');
-        if (typeof value === 'string') return `"${value}"`;
-        if (Array.isArray(value)) return `[${value.map(exprToDsl).join(' ')}]`;
-        if (value === null || value === undefined) return 'nil';
-        if (typeof value === 'object') {
-          if (value.var) return `$${value.var}`;
-          if (value.expr) {
-            const args = (value.args || []).map(exprToDsl).join(' ');
-            return `(${value.expr} ${args})`;
-          }
-        }
-        return String(value);
-      }
-
-      function formatParams(params) {
-        if (!params) return '';
-        const parts = [];
-        for (const [key, val] of Object.entries(params)) {
-          if (key === 'color') {
-            parts.push(`:color [${val.map(v => exprToDsl(v)).join(' ')}]`);
-          } else if (Array.isArray(val)) {
-            parts.push(`:${key} [${val.map(exprToDsl).join(' ')}]`);
-          } else {
-            parts.push(`:${key} ${exprToDsl(val)}`);
-          }
-        }
-        return parts.join(' ');
-      }
-
-      function formatTransform(t, level) {
-        if (!t) return '';
-        const parts = [];
-        if (t.translate) {
-          const tr = Array.isArray(t.translate) ? t.translate.map(exprToDsl).join(' ') : exprToDsl(t.translate);
-          parts.push(`(translate ${tr})`);
-        }
-        if (t.rotate) {
-          const rot = Array.isArray(t.rotate) ? t.rotate.map(exprToDsl).join(' ') : exprToDsl(t.rotate);
-          parts.push(`(rotate ${rot})`);
-        }
-        if (t.rotateAxis) {
-          const axis = Array.isArray(t.rotateAxis.axis) ? t.rotateAxis.axis.join(' ') : exprToDsl(t.rotateAxis.axis);
-          parts.push(`(rotate-axis [${axis}] ${t.rotateAxis.angle})`);
-        }
-        if (t.rotateQ) {
-          const q = Array.isArray(t.rotateQ) ? t.rotateQ.map(exprToDsl).join(' ') : exprToDsl(t.rotateQ);
-          parts.push(`(rotate-q ${q})`);
-        }
-        if (t.scale) {
-          const s = Array.isArray(t.scale) ? t.scale.map(exprToDsl).join(' ') : exprToDsl(t.scale);
-          parts.push(`(scale ${s})`);
-        }
-        return parts.length ? '\n' + indent(level + 1) + parts.join('\n' + indent(level + 1)) : '';
-      }
-
-      function walkNode(node, level = 0) {
-        if (!node) return 'nil';
-        if (!node.type) return JSON.stringify(node);
-        const type = node.type;
-
-        const primitives = ['sphere', 'box', 'cylinder', 'torus', 'capsule', 'ellipsoid', 'plane', 'cone'];
-        if (primitives.includes(type)) {
-          const params = formatParams(node.params);
-          const transform = formatTransform(node.transform, level);
-          return `(${type} ${params}${transform})`;
-        }
-
-        const csgOps = { union: '∪', subtract: '−', intersect: '∩', smoothUnion: '∪~', smoothSubtract: '−~', smoothIntersect: '∩~' };
-        if (csgOps[type]) {
-          const op = csgOps[type];
-          const k = node.k ? ` :k ${node.k}` : '';
-          const children = (node.children || []).map(c => walkNode(c, level + 1));
-          const childStr = children.map(c => '\n' + indent(level + 1) + c).join('');
-          return `(${op}${k}${childStr})`;
-        }
-
-        if (type === 'mirror') return `(mirror :axis "${node.axis}"\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'radial') return `(radial :count ${node.count} :axis "${node.axis || 'z'}"\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'repeat') return `(repeat :period [${(node.period||[]).join(' ')}]\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'transform') return `(transform${formatTransform(node.transform, level)}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'shell') return `(shell :thickness ${node.thickness || 0.05}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'round') return `(round :radius ${node.radius || 0.05}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'displace') return `(displace :strength ${exprToDsl(node.strength)} :freq ${exprToDsl(node.frequency)}\n${indent(level + 1)}${walkNode(node.child, level + 1)})`;
-        if (type === 'ref') return `(ref "${node.id}")`;
-        if (type === 'customExpr') return `(custom-glsl ...)`;
-
-        return `(${type} ...)`;
-      }
-
-      let output = `;; S-expression DSL view (readonly)\n`;
-      output += `;; Scene: ${json.title || 'Untitled'}\n\n`;
-      if (json.defs && Object.keys(json.defs).length > 0) {
-        output += `;; Definitions\n`;
-        for (const [id, def] of Object.entries(json.defs)) {
-          output += `(def ${id}\n  ${walkNode(def, 1)})\n\n`;
-        }
-      }
-      output += `;; Scene root\n`;
-      output += walkNode(json.root, 0);
-      return output;
+      // The sceneToSexpr function produces a complete s-expression representation
+      // that can be parsed back to JSON with sexprToScene (round-trip capable)
+      return sceneToSexpr(json);
     }
 
     // Update navigation indicator display

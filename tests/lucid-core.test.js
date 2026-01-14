@@ -1037,6 +1037,418 @@ function tokenizeLispy(str) {
   return tokens;
 }
 
+// ============================================================
+// S-expression DSL Module Tests (sexpr-dsl.js)
+// ============================================================
+
+// Import the DSL module
+const { sceneToSexpr, sexprToScene, nodeToSexpr, sexprToNode } = await import('../lucid/core/sexpr-dsl.js');
+
+describe('sexpr-dsl.js - Scene S-expression DSL', () => {
+  describe('sceneToSexpr - JSON to S-expression', () => {
+    it('should convert a simple scene to s-expression', () => {
+      const json = {
+        title: 'Test Sphere',
+        version: '1.0',
+        root: {
+          type: 'sphere',
+          params: { r: 1.0 }
+        }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(scene "Test Sphere"');
+      expect(sexpr).toContain(':version "1.0"');
+      expect(sexpr).toContain('(sphere :r 1)');
+    });
+
+    it('should convert params section correctly', () => {
+      const json = {
+        title: 'Parametric Test',
+        params: {
+          radius: { type: 'scalar', value: 0.5, min: 0, max: 2 },
+          color: { type: 'color3', value: [1, 0, 0] }
+        },
+        root: { type: 'sphere', params: { r: { var: 'radius' } } }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(params');
+      expect(sexpr).toContain('(radius :type scalar :value 0.5 :min 0 :max 2)');
+      expect(sexpr).toContain('(color :type color3 :value [1 0 0])');
+    });
+
+    it('should convert camera settings', () => {
+      const json = {
+        title: 'Camera Test',
+        camera: { distance: 8, phi: 0.4, theta: 0.2, target: [0, 1, 0] },
+        root: { type: 'sphere', params: { r: 1 } }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(camera :distance 8 :phi 0.4 :theta 0.2 :target [0 1 0])');
+    });
+
+    it('should convert defs section', () => {
+      const json = {
+        title: 'Defs Test',
+        defs: {
+          mySphere: { type: 'sphere', params: { r: 0.5 } }
+        },
+        root: { type: 'ref', id: 'mySphere' }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(defs');
+      expect(sexpr).toContain('(mySphere');
+      expect(sexpr).toContain('(sphere :r 0.5)');
+      expect(sexpr).toContain('(ref "mySphere")');
+    });
+
+    it('should convert variable references as $name', () => {
+      const json = {
+        title: 'Var Test',
+        root: { type: 'sphere', params: { r: { var: 'radius' } } }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('$radius');
+    });
+
+    it('should convert expressions correctly', () => {
+      const json = {
+        title: 'Expr Test',
+        root: {
+          type: 'sphere',
+          params: {
+            r: { expr: 'add', args: [1, { expr: 'sin', args: [{ var: 'time' }] }] }
+          }
+        }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(add 1 (sin $time))');
+    });
+
+    it('should convert CSG operations with children', () => {
+      const json = {
+        title: 'CSG Test',
+        root: {
+          type: 'smoothUnion',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1 } },
+            { type: 'box', params: { size: [1, 1, 1] } }
+          ]
+        }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(smoothUnion :k 0.3');
+      expect(sexpr).toContain('(sphere :r 1)');
+      expect(sexpr).toContain('(box :size [1 1 1])');
+    });
+
+    it('should convert modifiers (mirror, radial, repeat)', () => {
+      const json = {
+        title: 'Modifier Test',
+        root: {
+          type: 'mirror',
+          axis: 'x',
+          child: {
+            type: 'radial',
+            count: 6,
+            axis: 'y',
+            child: { type: 'sphere', params: { r: 0.2 }, transform: { translate: [1, 0, 0] } }
+          }
+        }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain('(mirror :axis "x"');
+      expect(sexpr).toContain('(radial :count 6 :axis "y"');
+    });
+
+    it('should convert transforms', () => {
+      const json = {
+        title: 'Transform Test',
+        root: {
+          type: 'sphere',
+          params: { r: 1 },
+          transform: {
+            translate: [1, 2, 3],
+            rotate: [45, 0, 0],
+            scale: 2
+          }
+        }
+      };
+
+      const sexpr = sceneToSexpr(json);
+      expect(sexpr).toContain(':translate [1 2 3]');
+      expect(sexpr).toContain(':rotate [45 0 0]');
+      expect(sexpr).toContain(':scale 2');
+    });
+  });
+
+  describe('sexprToScene - S-expression to JSON', () => {
+    it('should parse a simple scene', () => {
+      const sexpr = `(scene "Test Sphere"
+        :version "1.0"
+        (root
+          (sphere :r 1.5)))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.title).toBe('Test Sphere');
+      expect(json.version).toBe('1.0');
+      expect(json.root.type).toBe('sphere');
+      expect(json.root.params.r).toBe(1.5);
+    });
+
+    it('should parse params section', () => {
+      const sexpr = `(scene "Params Test"
+        (params
+          (radius :type scalar :value 0.5 :min 0 :max 2)
+          (color :type color3 :value [1 0 0]))
+        (root
+          (sphere :r $radius)))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.params.radius.type).toBe('scalar');
+      expect(json.params.radius.value).toBe(0.5);
+      expect(json.params.radius.min).toBe(0);
+      expect(json.params.radius.max).toBe(2);
+      expect(json.params.color.type).toBe('color3');
+      expect(json.params.color.value).toEqual([1, 0, 0]);
+    });
+
+    it('should parse camera settings', () => {
+      const sexpr = `(scene "Camera Test"
+        (camera :distance 8 :phi 0.4 :theta 0.2)
+        (root (sphere :r 1)))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.camera.distance).toBe(8);
+      expect(json.camera.phi).toBe(0.4);
+      expect(json.camera.theta).toBe(0.2);
+    });
+
+    it('should parse defs section', () => {
+      const sexpr = `(scene "Defs Test"
+        (defs
+          (mySphere (sphere :r 0.5)))
+        (root (ref "mySphere")))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.defs.mySphere.type).toBe('sphere');
+      expect(json.defs.mySphere.params.r).toBe(0.5);
+      expect(json.root.type).toBe('ref');
+      expect(json.root.id).toBe('mySphere');
+    });
+
+    it('should parse variable references', () => {
+      const sexpr = `(scene "Var Test"
+        (root (sphere :r $radius)))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.root.params.r).toEqual({ var: 'radius' });
+    });
+
+    it('should parse expressions', () => {
+      const sexpr = `(scene "Expr Test"
+        (root (sphere :r (add 1 (sin $time)))))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.root.params.r).toEqual({
+        expr: 'add',
+        args: [1, { expr: 'sin', args: [{ var: 'time' }] }]
+      });
+    });
+
+    it('should parse CSG operations with children', () => {
+      const sexpr = `(scene "CSG Test"
+        (root
+          (smoothUnion :k 0.3
+            (sphere :r 1)
+            (box :size [1 1 1]))))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.root.type).toBe('smoothUnion');
+      expect(json.root.k).toBe(0.3);
+      expect(json.root.children.length).toBe(2);
+      expect(json.root.children[0].type).toBe('sphere');
+      expect(json.root.children[1].type).toBe('box');
+    });
+
+    it('should parse modifiers with child', () => {
+      const sexpr = `(scene "Modifier Test"
+        (root
+          (mirror :axis "x"
+            (sphere :r 0.5))))`;
+
+      const json = sexprToScene(sexpr);
+      expect(json.root.type).toBe('mirror');
+      expect(json.root.axis).toBe('x');
+      expect(json.root.child.type).toBe('sphere');
+    });
+  });
+
+  describe('Round-trip: sceneToSexpr → sexprToScene', () => {
+    it('should round-trip a simple scene', () => {
+      const original = {
+        title: 'Round Trip Test',
+        version: '1.0',
+        root: {
+          type: 'sphere',
+          params: { r: 1.5 }
+        }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.title).toBe(original.title);
+      expect(roundTripped.version).toBe(original.version);
+      expect(roundTripped.root.type).toBe(original.root.type);
+      expect(roundTripped.root.params.r).toBe(original.root.params.r);
+    });
+
+    it('should round-trip params correctly', () => {
+      const original = {
+        title: 'Params Round Trip',
+        params: {
+          radius: { type: 'scalar', value: 0.5, min: 0, max: 2 }
+        },
+        root: { type: 'sphere', params: { r: { var: 'radius' } } }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.params.radius.type).toBe(original.params.radius.type);
+      expect(roundTripped.params.radius.value).toBe(original.params.radius.value);
+      expect(roundTripped.root.params.r).toEqual({ var: 'radius' });
+    });
+
+    it('should round-trip camera settings', () => {
+      const original = {
+        title: 'Camera Round Trip',
+        camera: { distance: 8, phi: 0.4, theta: 0.2 },
+        root: { type: 'sphere', params: { r: 1 } }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.camera.distance).toBe(original.camera.distance);
+      expect(roundTripped.camera.phi).toBe(original.camera.phi);
+      expect(roundTripped.camera.theta).toBe(original.camera.theta);
+    });
+
+    it('should round-trip defs and refs', () => {
+      const original = {
+        title: 'Defs Round Trip',
+        defs: {
+          part: { type: 'sphere', params: { r: 0.5 } }
+        },
+        root: { type: 'ref', id: 'part' }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.defs.part.type).toBe('sphere');
+      expect(roundTripped.defs.part.params.r).toBe(0.5);
+      expect(roundTripped.root.id).toBe('part');
+    });
+
+    it('should round-trip nested CSG operations', () => {
+      const original = {
+        title: 'CSG Round Trip',
+        root: {
+          type: 'smoothUnion',
+          k: 0.3,
+          children: [
+            { type: 'sphere', params: { r: 1 } },
+            { type: 'box', params: { size: [1, 1, 1] } }
+          ]
+        }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.root.type).toBe('smoothUnion');
+      expect(roundTripped.root.k).toBe(0.3);
+      expect(roundTripped.root.children.length).toBe(2);
+      expect(roundTripped.root.children[0].params.r).toBe(1);
+      expect(roundTripped.root.children[1].params.size).toEqual([1, 1, 1]);
+    });
+
+    it('should round-trip expressions', () => {
+      const original = {
+        title: 'Expr Round Trip',
+        root: {
+          type: 'sphere',
+          params: {
+            r: { expr: 'add', args: [1, { expr: 'mul', args: [0.3, { var: 'time' }] }] }
+          }
+        }
+      };
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      expect(roundTripped.root.params.r.expr).toBe('add');
+      expect(roundTripped.root.params.r.args[0]).toBe(1);
+      expect(roundTripped.root.params.r.args[1].expr).toBe('mul');
+    });
+  });
+
+  describe('Real scene file round-trips', () => {
+    it('should round-trip smooth-union.json', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const scenePath = path.resolve('./lucid/scenes/csg/smooth-union.json');
+      const content = fs.readFileSync(scenePath, 'utf-8');
+      const original = JSON.parse(content);
+
+      const sexpr = sceneToSexpr(original);
+      const roundTripped = sexprToScene(sexpr);
+
+      // Check key properties preserved
+      expect(roundTripped.title).toBe(original.title);
+      expect(roundTripped.root.type).toBe(original.root.type);
+      expect(roundTripped.root.children.length).toBe(original.root.children.length);
+
+      // Check params preserved
+      expect(Object.keys(roundTripped.params || {})).toEqual(Object.keys(original.params || {}));
+    });
+
+    it('should produce readable s-expression output', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const scenePath = path.resolve('./lucid/scenes/csg/smooth-union.json');
+      const content = fs.readFileSync(scenePath, 'utf-8');
+      const json = JSON.parse(content);
+
+      const sexpr = sceneToSexpr(json);
+
+      // Basic structure checks
+      expect(sexpr).toContain('(scene');
+      expect(sexpr).toContain('(params');
+      expect(sexpr).toContain('(root');
+      expect(sexpr.startsWith('(scene')).toBe(true);
+      expect(sexpr.endsWith(')')).toBe(true);
+
+      // Log for manual inspection
+      console.log('=== S-expression DSL output (smooth-union.json) ===');
+      console.log(sexpr);
+    });
+  });
+});
+
 describe('Format Conversion & Round-trips', () => {
   it('should convert JSON to lispy s-expression format', () => {
     const json = {
