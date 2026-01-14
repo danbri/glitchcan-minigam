@@ -7,9 +7,9 @@ Last updated: 2026-01-14
 | Issue | Status | Details |
 |-------|--------|---------|
 | Mirror compound axes | ✅ FIXED | Commit b186a5f |
-| Radial variable count | ✅ FIXED | Both GLSL and WGSL |
-| Grid array/table legs merge | ✅ FIXED | fract-based modulo |
-| Infinite field distortion | ✅ FIXED | Per-axis repeat + fract-based radial |
+| Radial variable count | ✅ FIXED (GLSL) | WGSL code changed but **UNVERIFIED** |
+| Grid array/table legs merge | ⚠️ CODE CHANGED | WGSL fix **UNVERIFIED** - needs real browser test |
+| Infinite field distortion | ⚠️ CODE CHANGED | WGSL fix **UNVERIFIED** - needs real browser test |
 | Sunflowers/poppies position | ✅ FIXED | Transform added |
 | Snowman size | ✅ FIXED | Camera settings added |
 | Backend switch shader error | ✅ FIXED | Commit 12b3785 |
@@ -19,15 +19,24 @@ Last updated: 2026-01-14
 
 ---
 
-## ALL BUGS RESOLVED
+## ⚠️ VERIFICATION WARNING
 
-All previously open bugs have been fixed in this session.
+**WGSL fixes have NOT been visually verified.**
+
+The WGSL algorithm changes (repeat, radial) were tested only via:
+- Shader code generation (text output looks correct)
+- Headless browser captures (which **only test GLSL/Mayfly**)
+
+WebGPU is NOT available in headless Chromium. To verify WGSL fixes:
+1. Open `compare.html` or `scene-catalog.html` in a real browser
+2. Check the Stinkyfish column explicitly
+3. Compare against Mayfly output
 
 ---
 
-## RESOLVED BUGS
+## CODE CHANGES (Verification Status Noted)
 
-### Grid Array / Table Legs Merge (Fixed: Jan 14 2026)
+### Grid Array / Table Legs Merge (Code Changed: Jan 14 2026) ⚠️ WGSL UNVERIFIED
 
 **Was:** In scenes using `repeat` with multiple instances (e.g., table legs), instances appeared merged ("pogo stick").
 
@@ -35,12 +44,16 @@ All previously open bugs have been fixed in this session.
 - WGSL used `round()`-based quantization instead of continuous modulo folding
 - IR array format `{type: 'array', values: [...]}` wasn't being extracted, causing `undefined` values
 
-**Fix:**
+**Code Changes:**
 1. WGSL `generateRepeat()` rewritten to use `fract()`-based modulo per-axis
 2. Both GLSL and WGSL now properly extract IR array values
 3. Axes with period=0 are skipped to avoid division by zero
 
-### Infinite Field / Repeat+Radial Distortion (Fixed: Jan 14 2026)
+**Verification:**
+- ✅ GLSL: Visually verified via headless capture (table shows 4 distinct legs)
+- ❌ WGSL: NOT verified - requires real browser with WebGPU
+
+### Infinite Field / Repeat+Radial Distortion (Code Changed: Jan 14 2026) ⚠️ WGSL UNVERIFIED
 
 **Was:** Scenes combining `repeat` and `radial` showed distortion. Also, scenes with partial repeat (e.g., X and Z only, not Y) failed completely.
 
@@ -48,17 +61,25 @@ All previously open bugs have been fixed in this session.
 - WGSL radial used `floor()` quantization vs GLSL's continuous modulo
 - Vector-based repeat `p / spacing` caused NaN when any spacing component was 0
 
-**Fix:**
+**Code Changes:**
 1. WGSL radial rewritten to use `fract()`-based angle folding with polar reconstruction
 2. Both codegens now handle per-axis repeat, skipping axes where period=0
 
-### GLSL Radial Variable Count (Fixed: Jan 14 2026)
+**Verification:**
+- ✅ GLSL: Visually verified via headless capture (infinite-field shows grid of spheres)
+- ❌ WGSL: NOT verified - requires real browser with WebGPU
+
+### GLSL Radial Variable Count (Fixed: Jan 14 2026) ✅ VERIFIED
 
 **Was:** Radial scenes with variable count (e.g., `{"var": "petalCount"}`) failed in Mayfly (GLSL).
 
 **Root Cause:** GLSL did compile-time division `(2 * Math.PI / count).toFixed(6)` which returned NaN when count was an object.
 
 **Fix:** Use `valueToGlsl()` for count and emit runtime division `6.283185 / ${countGlsl}` in shader.
+
+**Verification:**
+- ✅ GLSL: Visually verified via headless capture (radial-flower renders with petals)
+- N/A WGSL: This was a GLSL-only bug
 
 ### Mirror Compound Axes (Fixed: b186a5f, Jan 13 2026)
 
