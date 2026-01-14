@@ -297,6 +297,7 @@ export class LucidScenePicker extends HTMLElement {
 
       <div class="filter-bar">
         <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="static">Static</button>
         <button class="filter-btn" data-filter="validated">Working</button>
         <button class="filter-btn" data-filter="recent">Recent</button>
         <button class="filter-btn" data-filter="broken">Broken</button>
@@ -418,6 +419,11 @@ export class LucidScenePicker extends HTMLElement {
 
     // Apply filter
     switch (this._activeFilter) {
+      case 'static':
+        // Filter to scenes without time-based animation (isAnimated: false)
+        // Useful for backend comparison testing where animation causes flicker
+        scenes = scenes.filter(s => s.isAnimated === false);
+        break;
       case 'validated':
         scenes = scenes.filter(s => s.status !== 'broken');
         break;
