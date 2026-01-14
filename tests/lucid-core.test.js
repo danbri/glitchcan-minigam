@@ -155,7 +155,8 @@ describe('json-loader.js', () => {
       };
       const scene = loadJsonScene(json);
       expect(scene.root.type).toBe('radial');
-      expect(scene.root.count).toBe(8);
+      // Loader normalizes values to IR format: {type: 'const', value: N}
+      expect(scene.root.count).toEqual({ type: 'const', value: 8 });
     });
 
     it('should process mirror modifier', () => {
@@ -183,7 +184,15 @@ describe('json-loader.js', () => {
       };
       const scene = loadJsonScene(json);
       expect(scene.root.type).toBe('repeat');
-      expect(scene.root.period).toEqual([2, 0, 2]);
+      // Loader normalizes arrays to IR format: {type: 'array', values: [...]}
+      expect(scene.root.period).toEqual({
+        type: 'array',
+        values: [
+          { type: 'const', value: 2 },
+          { type: 'const', value: 0 },
+          { type: 'const', value: 2 }
+        ]
+      });
     });
 
     it('should process Euler rotation', () => {

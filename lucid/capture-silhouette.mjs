@@ -1,12 +1,19 @@
 // Automatic modeling workflow: capture renders for blind evaluation
-// Usage: node capture-silhouette.mjs [scene-hash] [output-dir]
-// Example: node capture-silhouette.mjs creatures.subag1.silhouette-v5 ./eval-shots
+// Usage: node capture-silhouette.mjs [scene-hash] [output-dir] [--backend=mayfly|stinkyfish]
+// Example: node capture-silhouette.mjs creatures.wolf ./eval-shots --backend=stinkyfish
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
 const SCENE = process.argv[2] || 'creatures.subag1.silhouette-v5';
 const OUTPUT_DIR = process.argv[3] || 'lucid/screenshots/eval';
+
+// Parse --backend flag
+const backendArg = process.argv.find(a => a.startsWith('--backend='));
+const BACKEND = backendArg ? backendArg.split('=')[1] : null;
+
+// Check for --webgpu flag (enables WebGPU-specific browser args)
+const ENABLE_WEBGPU = process.argv.includes('--webgpu') || BACKEND === 'stinkyfish';
 
 // Camera angles: 6 neutral viewpoints for comprehensive evaluation
 const ANGLES = [
@@ -21,19 +28,56 @@ const ANGLES = [
 async function main() {
   mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  // Browser launch args - include WebGPU flags if requested
+  const baseArgs = ['--headless=new', '--no-sandbox'];
+  const webgpuArgs = [
+    '--enable-unsafe-webgpu',             // Mandatory for WebGPU in headless
+    '--use-angle=vulkan',                 // Directs ANGLE to use Vulkan
+    '--use-vulkan=swiftshader',           // Forces the software Vulkan driver
+    '--disable-vulkan-surface',           // Required for Linux/Headless stability
+    '--disable-vulkan-fallback-to-gl-for-testing',
+    '--ignore-gpu-blocklist',             // Bypasses "unsupported" hardware warnings
+  ];
+
+  const launchArgs = ENABLE_WEBGPU ? [...baseArgs, ...webgpuArgs] : baseArgs;
+
+  if (ENABLE_WEBGPU) {
+    console.log('WebGPU mode enabled with Vulkan/SwiftShader flags');
+  }
+
   const browser = await chromium.launch({
     headless: true,
     executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
-    args: ['--headless=new', '--no-sandbox']
+    args: launchArgs
   });
 
   const page = await browser.newPage();
   await page.setViewportSize({ width: 800, height: 600 });
 
-  const url = `${BASE_URL}/lucid/index.html#${SCENE}`;
+  // Add backend parameter to URL if specified
+  const backendParam = BACKEND ? `?backend=${BACKEND}` : '';
+  const url = `${BASE_URL}/lucid/index.html${backendParam}#${SCENE}`;
   console.log(`Loading: ${url}`);
+
+  // Capture console messages to detect WebGPU availability
+  page.on('console', msg => {
+    const text = msg.text();
+    if (text.includes('WebGPU') || text.includes('backend') || text.includes('GPU')) {
+      console.log(`[browser] ${text}`);
+    }
+  });
+
   await page.goto(url);
   await page.waitForTimeout(3000);
+
+  // Check which backend is actually being used
+  const actualBackend = await page.evaluate(() => {
+    if (window.renderer) {
+      return window.renderer.backendName || window.renderer.constructor?.name || 'unknown';
+    }
+    return 'no renderer';
+  });
+  console.log(`Active backend: ${actualBackend}`);
 
   // Find the canvas element for cropped screenshots (no UI)
   const canvas = await page.$('canvas');
