@@ -32,6 +32,10 @@ export class LucidComparison extends HTMLElement {
     this._syncCamera = true; // Default: synced
     this._activePane = null; // Track which pane is being interacted with
 
+    // Readiness flags for both renderers
+    this._mayflyReady = false;
+    this._stinkyfishReady = false;
+
     // Camera state (unified for both views)
     this._camera = {
       theta: 0.3,
@@ -341,6 +345,7 @@ export class LucidComparison extends HTMLElement {
   _setupEventListeners() {
     // Mayfly events
     this._mayflyRenderer.addEventListener('renderer-ready', () => {
+      this._mayflyReady = true;
       this._checkBothReady();
     });
 
@@ -355,6 +360,7 @@ export class LucidComparison extends HTMLElement {
 
     // Stinkyfish events
     this._stinkyfishRenderer.addEventListener('renderer-ready', () => {
+      this._stinkyfishReady = true;
       this._checkBothReady();
     });
 
@@ -679,12 +685,7 @@ export class LucidComparison extends HTMLElement {
   }
 
   _checkBothReady() {
-    const mayflyReady = this._mayflyStatus.textContent === 'Ready' ||
-                        this._mayflyStatus.textContent === 'Loaded';
-    const stinkyfishReady = this._stinkyfishStatus.textContent === 'Ready' ||
-                            this._stinkyfishStatus.textContent === 'Loaded';
-
-    if (mayflyReady && stinkyfishReady) {
+    if (this._mayflyReady && this._stinkyfishReady) {
       this.dispatchEvent(new CustomEvent('comparison-ready'));
 
       // Load scene if specified
@@ -697,11 +698,6 @@ export class LucidComparison extends HTMLElement {
 
   async _loadScene(path) {
     if (!path) return;
-
-    this._mayflyStatus.textContent = 'Loading...';
-    this._mayflyStatus.className = 'status loading';
-    this._stinkyfishStatus.textContent = 'Loading...';
-    this._stinkyfishStatus.className = 'status loading';
 
     // Load scene JSON to extract camera settings
     try {

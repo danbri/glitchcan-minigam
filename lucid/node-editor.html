@@ -1118,6 +1118,7 @@
     const graph = new NodeGraph(canvas);
     const previewEl = document.getElementById('preview');
     const backendSelect = document.getElementById('backendSelect');
+    let rendererReady = false;
 
     // Check WebGPU support and sync dropdown
     if (!navigator.gpu) {
@@ -1131,9 +1132,12 @@
 
     // Sync dropdown when renderer reports its actual backend
     previewEl.addEventListener('renderer-ready', (e) => {
+      rendererReady = true;
       if (e.detail?.backend) {
         backendSelect.value = e.detail.backend;
       }
+      // Now safe to preview any pending graph state
+      updatePreview();
     });
 
     // Backend switching
@@ -1183,10 +1187,11 @@
 
     // Preview
     function updatePreview() {
+      if (!rendererReady) return; // Wait for renderer to initialize
       const json = graph.toJSON();
       if (!json.root) return;
       json.camera = { distance: 6, theta: 0.4, phi: 0.5 };
-      try { previewEl.loadSceneJson(json); } catch (e) { console.error(e); }
+      previewEl.loadSceneJson(json).catch(e => console.error('Preview error:', e));
     }
 
     // Color conversion helpers
