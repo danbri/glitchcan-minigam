@@ -1079,13 +1079,22 @@ function generateRef(node, ctx) {
 /**
  * Apply parameter overrides to a definition node
  * Recursively substitutes { type: 'var', name: X } with override values
+ * Also merges new override params into the root node's params
  */
 function applyParamOverrides(def, overrides) {
   // Deep clone to avoid mutating the original definition
   const cloned = JSON.parse(JSON.stringify(def));
 
   // Recursively substitute var references
-  return substituteVarRefs(cloned, overrides);
+  const substituted = substituteVarRefs(cloned, overrides);
+
+  // Merge override params into root node's params (allows overriding color, r, etc.)
+  if (!substituted.params) substituted.params = {};
+  for (const [key, value] of Object.entries(overrides)) {
+    substituted.params[key] = value;
+  }
+
+  return substituted;
 }
 
 /**
