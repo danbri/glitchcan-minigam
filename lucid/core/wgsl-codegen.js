@@ -918,44 +918,42 @@ function generateRadial(node, ctx) {
   return ${childExpr};
 }`);
 
-  // Generate different rotation based on axis
-  // Uses countWgsl which can be a literal (12.0) or uniform (scene.u_petalCount)
-  let rotationCode;
+  // Generate radial folding based on axis
+  // Uses modulo-based angle folding (matching GLSL behavior) and polar coordinate reconstruction
+  // This creates continuous domain folding instead of discrete quantization
+  let radialCode;
   switch (axis) {
   case 'x':
     // Rotate around X-axis (YZ plane)
-    rotationCode = `
+    radialCode = `
   let angle = atan2(p.z, p.y);
   let sector = 6.283185 / ${countWgsl};
-  let a = (floor(angle / sector + 0.5)) * sector;
-  let c = cos(a);
-  let s = sin(a);
-  let rp = vec3f(p.x, c * p.y + s * p.z, -s * p.y + c * p.z);`;
+  let a = (fract(angle / sector + 0.5) - 0.5) * sector;
+  let r = length(p.yz);
+  let rp = vec3f(p.x, r * cos(a), r * sin(a));`;
     break;
   case 'z':
     // Rotate around Z-axis (XY plane)
-    rotationCode = `
+    radialCode = `
   let angle = atan2(p.y, p.x);
   let sector = 6.283185 / ${countWgsl};
-  let a = (floor(angle / sector + 0.5)) * sector;
-  let c = cos(a);
-  let s = sin(a);
-  let rp = vec3f(c * p.x + s * p.y, -s * p.x + c * p.y, p.z);`;
+  let a = (fract(angle / sector + 0.5) - 0.5) * sector;
+  let r = length(p.xy);
+  let rp = vec3f(r * cos(a), r * sin(a), p.z);`;
     break;
   case 'y':
   default:
     // Rotate around Y-axis (XZ plane) - default
-    rotationCode = `
+    radialCode = `
   let angle = atan2(p.z, p.x);
   let sector = 6.283185 / ${countWgsl};
-  let a = (floor(angle / sector + 0.5)) * sector;
-  let c = cos(a);
-  let s = sin(a);
-  let rp = vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);`;
+  let a = (fract(angle / sector + 0.5) - 0.5) * sector;
+  let r = length(p.xz);
+  let rp = vec3f(r * cos(a), p.y, r * sin(a));`;
     break;
   }
 
-  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {${rotationCode}
+  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {${radialCode}
   return ${childFuncName}(rp);
 }`);
 
@@ -968,8 +966,20 @@ function generateRepeat(node, ctx) {
   }
 
   // Support both 'spacing' and 'period' properties
-  const spacingValue = node.spacing || node.period || { type: 'array', values: [2, 2, 2].map(v => ({ type: 'const', value: v })) };
-  const spacing = valueToWgsl(spacingValue, ctx);
+  const rawSpacing = node.spacing || node.period || { type: 'array', values: [2, 2, 2].map(v => ({ type: 'const', value: v })) };
+
+  // Handle IR array format: {type: 'array', values: [...]}
+  const spacingArr = (rawSpacing && rawSpacing.type === 'array' && rawSpacing.values)
+    ? rawSpacing.values
+    : (Array.isArray(rawSpacing) ? rawSpacing : [rawSpacing, rawSpacing, rawSpacing]);
+
+  // Helper to check if a spacing component is statically zero
+  function isStaticZero(v) {
+    if (typeof v === 'number') return v === 0;
+    if (v && v.type === 'const') return v.value === 0;
+    return false;
+  }
+
   const funcName = `repeat_${ctx.helperCounter++}`;
   const childFuncName = `repeat_child_${ctx.helperCounter++}`;
   const childExpr = walkNode(node.child, ctx);
@@ -978,10 +988,21 @@ function generateRepeat(node, ctx) {
   return ${childExpr};
 }`);
 
+  // Build per-axis repeat code, skipping axes with zero period
+  // This avoids division by zero when period is 0 for an axis
+  let repeatCode = '  var rp = p;\n';
+  const axes = ['x', 'y', 'z'];
+
+  for (let i = 0; i < 3; i++) {
+    if (!isStaticZero(spacingArr[i])) {
+      const sp = valueToWgsl(spacingArr[i], ctx);
+      // Use fract-based modulo: maps to [-spacing/2, spacing/2]
+      repeatCode += `  rp.${axes[i]} = (fract(p.${axes[i]} / ${sp} + 0.5) - 0.5) * ${sp};\n`;
+    }
+  }
+
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
-  let spacing = ${spacing};
-  let rp = p - spacing * round(p / spacing);
-  return ${childFuncName}(rp);
+${repeatCode}  return ${childFuncName}(rp);
 }`);
 
   return `${funcName}(${ctx.currentP || 'p'})`;

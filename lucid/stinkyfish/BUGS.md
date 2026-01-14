@@ -7,9 +7,9 @@ Last updated: 2026-01-14
 | Issue | Status | Details |
 |-------|--------|---------|
 | Mirror compound axes | ✅ FIXED | Commit b186a5f |
-| Radial variable count | ✅ FIXED (WGSL) | GLSL still broken |
-| Grid array/table legs merge | ❌ OPEN | Algorithm mismatch |
-| Infinite field distortion | ❌ OPEN | Radial algorithm mismatch |
+| Radial variable count | ✅ FIXED | Both GLSL and WGSL |
+| Grid array/table legs merge | ✅ FIXED | fract-based modulo |
+| Infinite field distortion | ✅ FIXED | Per-axis repeat + fract-based radial |
 | Sunflowers/poppies position | ✅ FIXED | Transform added |
 | Snowman size | ✅ FIXED | Camera settings added |
 | Backend switch shader error | ✅ FIXED | Commit 12b3785 |
@@ -19,72 +19,46 @@ Last updated: 2026-01-14
 
 ---
 
-## OPEN BUGS
+## ALL BUGS RESOLVED
 
-### 1. Grid Array / Table Legs Merge ("Pogo Stick")
-
-**Symptom:** In scenes using `repeat` with multiple instances (e.g., table legs), instances can appear merged together instead of distinct.
-
-**Root Cause:** WGSL uses different domain folding algorithm than GLSL:
-
-| Backend | Algorithm | Code |
-|---------|-----------|------|
-| GLSL | `mod(p + half, period) - half` | Continuous modulo folding |
-| WGSL | `p - spacing * round(p / spacing)` | Discrete round-based |
-
-The `round()` approach can cause aliasing where multiple instances converge into same cell.
-
-**Location:** `wgsl-codegen.js:965-988` `generateRepeat()`
-
-**Fix Required:** Rewrite WGSL repeat to use modulo-based folding:
-```wgsl
-let half = spacing * 0.5;
-let rp = (p + half) % spacing - half;  // or use fract()
-```
-
----
-
-### 2. Infinite Field / Repeat+Radial Distortion
-
-**Symptom:** Scenes combining `repeat` and `radial` (sunflower-field, poppy-field) show distortion in WGSL that doesn't appear in GLSL. Animation is disabled in these scenes due to this issue.
-
-**Root Cause:** WGSL radial uses discrete quantization vs GLSL's continuous modulo:
-
-| Backend | Radial Algorithm |
-|---------|-----------------|
-| GLSL | `mod(angle + seg*0.5, seg) - seg*0.5` |
-| WGSL | `floor(angle/seg + 0.5) * seg` |
-
-When repeat+radial combine, the different algorithms don't compose correctly, causing phase discontinuities.
-
-**Location:** `wgsl-codegen.js:947-954` in `generateRadial()`
-
-**Fix Required:** Align WGSL radial to use modulo-based folding:
-```wgsl
-let sector = 6.283185 / count;
-let a = fract((angle + sector * 0.5) / sector) * sector - sector * 0.5;
-```
-
----
-
-### 3. GLSL Radial Variable Count (Mayfly bug, not Stinkyfish)
-
-**Symptom:** Radial scenes with variable count (e.g., `{"var": "petalCount"}`) fail to load in Mayfly (GLSL), but work in Stinkyfish (WGSL).
-
-**Root Cause:** GLSL `generateRadial()` does compile-time division on object:
-```javascript
-// json-codegen.js:1313
-const segment = (2 * Math.PI / count).toFixed(6);
-// When count = {type: "var", name: "petalCount"} → NaN
-```
-
-**Location:** `json-codegen.js:1287-1313`
-
-**Fix Required:** Use `valueToGlsl()` for count and emit runtime division in shader.
+All previously open bugs have been fixed in this session.
 
 ---
 
 ## RESOLVED BUGS
+
+### Grid Array / Table Legs Merge (Fixed: Jan 14 2026)
+
+**Was:** In scenes using `repeat` with multiple instances (e.g., table legs), instances appeared merged ("pogo stick").
+
+**Root Cause:**
+- WGSL used `round()`-based quantization instead of continuous modulo folding
+- IR array format `{type: 'array', values: [...]}` wasn't being extracted, causing `undefined` values
+
+**Fix:**
+1. WGSL `generateRepeat()` rewritten to use `fract()`-based modulo per-axis
+2. Both GLSL and WGSL now properly extract IR array values
+3. Axes with period=0 are skipped to avoid division by zero
+
+### Infinite Field / Repeat+Radial Distortion (Fixed: Jan 14 2026)
+
+**Was:** Scenes combining `repeat` and `radial` showed distortion. Also, scenes with partial repeat (e.g., X and Z only, not Y) failed completely.
+
+**Root Cause:**
+- WGSL radial used `floor()` quantization vs GLSL's continuous modulo
+- Vector-based repeat `p / spacing` caused NaN when any spacing component was 0
+
+**Fix:**
+1. WGSL radial rewritten to use `fract()`-based angle folding with polar reconstruction
+2. Both codegens now handle per-axis repeat, skipping axes where period=0
+
+### GLSL Radial Variable Count (Fixed: Jan 14 2026)
+
+**Was:** Radial scenes with variable count (e.g., `{"var": "petalCount"}`) failed in Mayfly (GLSL).
+
+**Root Cause:** GLSL did compile-time division `(2 * Math.PI / count).toFixed(6)` which returned NaN when count was an object.
+
+**Fix:** Use `valueToGlsl()` for count and emit runtime division `6.283185 / ${countGlsl}` in shader.
 
 ### Mirror Compound Axes (Fixed: b186a5f, Jan 13 2026)
 
@@ -129,12 +103,16 @@ const segment = (2 * Math.PI / count).toFixed(6);
 ### Cobra Spinning
 This is **working as intended**. The cobra has Y-axis rotation animated via `rotationSpeed * time` expression (default 20°/sec). This is an intentional demo animation, not a bug.
 
-### WGSL vs GLSL Algorithm Differences
+### Algorithm Alignment Complete
 
-The two remaining open bugs (grid array, infinite field) share a common theme: WGSL implementations use mathematically different algorithms than GLSL. While both produce similar results for simple cases, they diverge when:
+WGSL and GLSL now use the same algorithms for domain folding:
 
-1. Multiple domain modifiers are nested (repeat + radial)
-2. Viewing at certain angles or scales
-3. Using dynamic parameters
+| Operation | Algorithm |
+|-----------|-----------|
+| Repeat | `(fract(p/spacing + 0.5) - 0.5) * spacing` |
+| Radial | `(fract(angle/sector + 0.5) - 0.5) * sector` with polar reconstruction |
 
-**Recommended approach:** Align WGSL algorithms to match GLSL exactly, using modulo-based domain folding rather than round/floor-based quantization.
+Both backends properly handle:
+- Variable parameters via `valueToWgsl()`/`valueToGlsl()`
+- IR array format `{type: 'array', values: [...]}`
+- Partial repeat (period=0 on some axes)
