@@ -1,0 +1,1350 @@
+app<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Finger Puppies</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            touch-action: none;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        #webcam {
+            display: none;
+        }
+
+        #skeleton-canvas {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            width: 100px;
+            height: 75px;
+            border-radius: 10px;
+            border: 3px solid rgba(255,255,255,0.4);
+            background: rgba(0,0,0,0.7);
+            z-index: 10;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        #skeleton-canvas.minimized {
+            opacity: 0.3;
+            transform: scale(0.7);
+        }
+
+        #status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        #finger-count {
+            position: fixed;
+            top: 20px;
+            right: 130px;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        /* Edge warning flashes */
+        .edge-warning {
+            position: fixed;
+            background: linear-gradient(to bottom, rgba(255,60,60,0.8), transparent);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .edge-warning.top {
+            top: 0; left: 0; right: 0;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(255,50,50,0.9), transparent);
+            transform-origin: top center;
+        }
+
+        .edge-warning.bottom {
+            bottom: 0; left: 0; right: 0;
+            height: 80px;
+            background: linear-gradient(to top, rgba(255,50,50,0.9), transparent);
+            transform-origin: bottom center;
+        }
+
+        .edge-warning.left {
+            top: 0; bottom: 0; left: 0;
+            width: 80px;
+            background: linear-gradient(to right, rgba(255,50,50,0.9), transparent);
+            transform-origin: left center;
+        }
+
+        .edge-warning.right {
+            top: 0; bottom: 0; right: 0;
+            width: 80px;
+            background: linear-gradient(to left, rgba(255,50,50,0.9), transparent);
+            transform-origin: right center;
+        }
+
+        .edge-warning.flash {
+            animation: edgeFlash 0.5s ease-out forwards;
+        }
+
+        @keyframes edgeFlash {
+            0% { opacity: 1; transform: scaleY(1.2); }
+            20% { opacity: 0.9; }
+            100% { opacity: 0; transform: scaleY(1); }
+        }
+
+        #start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        #start-overlay h1 {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+
+        #start-overlay p {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        #start-overlay button {
+            padding: 20px 60px;
+            font-size: 24px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #start-overlay button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-overlay">
+        <h1>🐶</h1>
+        <p>Puppies! <div style="font-family:monospace;display:inline-grid;
+            grid-template-columns:repeat(22,1.1em);
+            grid-auto-rows:1.1em;
+            font-size:2.2vw;line-height:1;
+            background:#222;padding:1vw;
+            border-radius:1vw;">
+
+<!-- helper for short form -->
+<!-- each “pixel” -->
+<!-- I won’t comment further; only the cells -->
+
+<span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span>
+<span style="background:#333">🤟🏻</span><span style="background:#333">🤟🏽</span><span style="background:#333">🤟🏿</span>
+<span style="background:#333">🤟🏼</span><span style="background:#333">🤟🏾</span>
+<span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span>
+<span style="background:#333">🤟🏻</span><span style="background:#333">🤟🏽</span><span style="background:#333">🤟🏾</span>
+<span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span><span style="background:#333"></span>
+
+<span style="background:#2b2b2b"></span><span style="background:#2b2b2b"></span>
+<span style="background:#2b2b2b">👉🏻</span><span style="background:#2b2b2b">👉🏾</span><span style="background:#2b2b2b">👉🏿</span><span style="background:#2b2b2b">👉🏼</span>
+<span style="background:#2b2b2b"></span><span style="background:#2b2b2b"></span>
+<span style="background:#2b2b2b">👉🏽</span><span style="background:#2b2b2b">👉🏿</span><span style="background:#2b2b2b">👉🏻</span><span style="background:#2b2b2b">👉🏾</span>
+<span style="background:#2b2b2b"></span><span style="background:#2b2b2b"></span>
+<span style="background:#2b2b2b">👉🏼</span><span style="background:#2b2b2b">👉🏽</span><span style="background:#2b2b2b">👉🏻</span>
+<span style="background:#2b2b2b"></span><span style="background:#2b2b2b"></span><span style="background:#2b2b2b"></span>
+
+<span style="background:#303030"></span>
+<span style="background:#303030">✋🏻</span><span style="background:#303030">✋🏽</span><span style="background:#303030">✋🏿</span>
+<span style="background:#303030">✋🏼</span><span style="background:#303030">✋🏾</span><span style="background:#303030">✋🏻</span><span style="background:#303030">✋🏽</span>
+<span style="background:#303030"></span><span style="background:#303030">✋🏿</span><span style="background:#303030">✋🏼</span>
+<span style="background:#303030">✋🏾</span><span style="background:#303030">✋🏻</span><span style="background:#303030">✋🏽</span>
+<span style="background:#303030"></span><span style="background:#303030"></span><span style="background:#303030"></span>
+
+<span style="background:#383838"></span>
+<span style="background:#383838">🫱🏻</span><span style="background:#383838"></span>
+<span style="background:#383838">🫵🏿</span><span style="background:#383838"></span><span style="background:#383838">🫵🏻</span>
+<span style="background:#383838"></span><span style="background:#383838">🫵🏾</span><span style="background:#383838"></span>
+<span style="background:#383838">🫱🏽</span><span style="background:#383838"></span>
+<span style="background:#383838">🫵🏼</span><span style="background:#383838"></span><span style="background:#383838">🫵🏾</span>
+<span style="background:#383838"></span><span style="background:#383838"></span><span style="background:#383838"></span>
+
+<span style="background:#404040"></span>
+<span style="background:#404040">🤲🏻</span><span style="background:#404040">🤲🏽</span><span style="background:#404040">🤲🏿</span>
+<span style="background:#404040">🤲🏼</span><span style="background:#404040">🤲🏾</span><span style="background:#404040">🤲🏻</span>
+<span style="background:#404040"></span>
+<span style="background:#404040">🤲🏽</span><span style="background:#404040">🤲🏿</span>
+<span style="background:#404040">🤲🏼</span><span style="background:#404040">🤲🏾</span>
+<span style="background:#404040">🤲🏻</span><span style="background:#404040"></span><span style="background:#404040"></span>
+
+<span style="background:#3a3a3a"></span><span style="background:#3a3a3a"></span>
+<span style="background:#3a3a3a">👇🏻</span><span style="background:#3a3a3a">👇🏽</span><span style="background:#3a3a3a">👇🏿</span>
+<span style="background:#3a3a3a">👇🏼</span><span style="background:#3a3a3a">👇🏾</span><span style="background:#3a3a3a">👇🏻</span>
+<span style="background:#3a3a3a">👇🏽</span><span style="background:#3a3a3a">👇🏿</span>
+<span style="background:#3a3a3a">👇🏼</span><span style="background:#3a3a3a">👇🏾</span>
+<span style="background:#3a3a3a"></span><span style="background:#3a3a3a"></span><span style="background:#3a3a3a"></span>
+
+<span style="background:#2e2e2e"></span>
+<span style="background:#2e2e2e">👐🏻</span><span style="background:#2e2e2e">👐🏿</span><span style="background:#2e2e2e">👐🏼</span><span style="background:#2e2e2e">👐🏾</span>
+<span style="background:#2e2e2e">👐🏻</span><span style="background:#2e2e2e">👐🏽</span><span style="background:#2e2e2e"></span>
+<span style="background:#2e2e2e">👐🏿</span><span style="background:#2e2e2e">👐🏼</span><span style="background:#2e2e2e">👐🏾</span>
+<span style="background:#2e2e2e">👐🏻</span><span style="background:#2e2e2e">👐🏽</span><span style="background:#2e2e2e"></span><span style="background:#2e2e2e"></span>
+
+<span style="background:#262626"></span>
+<span style="background:#262626">✊🏻</span><span style="background:#262626">✊🏽</span><span style="background:#262626">✊🏿</span>
+<span style="background:#262626">✊🏼</span><span style="background:#262626">✊🏾</span>
+<span style="background:#262626">✊🏻</span><span style="background:#262626">✊🏽</span><span style="background:#262626"></span>
+<span style="background:#262626">✊🏿</span><span style="background:#262626">✊🏼</span><span style="background:#262626">✊🏾</span>
+<span style="background:#262626">✊🏻</span><span style="background:#262626"></span><span style="background:#262626"></span>
+
+<span style="background:#1e1e1e"></span><span style="background:#1e1e1e"></span>
+<span style="background:#1e1e1e">👉🏻</span><span style="background:#1e1e1e">👉🏽</span><span style="background:#1e1e1e">👉🏿</span>
+<span style="background:#1e1e1e">👈🏼</span><span style="background:#1e1e1e">👈🏾</span><span style="background:#1e1e1e">👈🏻</span>
+<span style="background:#1e1e1e">👈🏽</span><span style="background:#1e1e1e">👈🏿</span>
+<span style="background:#1e1e1e">👉🏼</span><span style="background:#1e1e1e">👉🏾</span>
+<span style="background:#1e1e1e"></span><span style="background:#1e1e1e"></span><span style="background:#1e1e1e"></span>
+
+</div>
+        <button id="start-btn">Start Camera</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="skeleton-canvas"></canvas>
+    <div id="status">Loading hand tracking...</div>
+    <div id="finger-count"></div>
+
+    <!-- Edge warnings -->
+    <div class="edge-warning top"></div>
+    <div class="edge-warning bottom"></div>
+    <div class="edge-warning left"></div>
+    <div class="edge-warning right"></div>
+
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
+
+    <script>
+        // ============ Configuration ============
+        const CONFIG = {
+            maxPuppies: 20,
+            fingerStableTimeUp: 500,    // ms to wait before adding puppy
+            fingerStableTimeDown: 1000, // ms to wait before removing puppy
+            smoothingFactor: 0.15,      // for finger count smoothing
+            physicsTickRate: 60,        // Hz
+            puppyMinSize: 0.12,         // min size as fraction of screen height
+            puppyMaxSize: 0.20,         // max size as fraction of screen height (20%)
+            bounceEnergyBoost: 1.02,    // energy multiplier on wall bounce
+            maxSpeed: 8,
+            minSpeed: 1,
+            rotationSpeed: 0.02,
+            friction: 0.998,
+            puppyFadeOutTime: 400,      // ms for puppy to fade out
+            footprintWalkSpeed: 6,      // pixels per frame for footprint trail
+            footprintSpacing: 60,       // pixels between footprints
+            footprintFadeTime: 2500,    // ms for footprints to fade
+            footprintMinSize: 0.06,     // min footprint size as fraction of screen height
+            footprintMaxSize: 0.10,     // max footprint size as fraction of screen height
+        };
+
+        // ============ State ============
+        let canvas, ctx;
+        let skeletonCanvas, skeletonCtx;
+        let puppies = [];
+        let footprintTrails = [];      // animated walking trails
+        let staticFootprints = [];     // individual fading footprints
+        let handsReady = false;
+        let lastFrameTime = 0;
+        let lastHandLandmarks = null;
+        let edgeWarnings = { top: 0, bottom: 0, left: 0, right: 0 };
+        let audioCtx = null;
+
+        // Per-hand tracking state
+        let handStates = {
+            left: {
+                fingerCount: 0,
+                lastFingerCount: 0,
+                lastCenter: null,      // for tracking movement
+                velocity: { x: 0, y: 0 },  // smoothed hand velocity
+                jiggleEnergy: 0        // accumulated movement energy
+            },
+            right: {
+                fingerCount: 0,
+                lastFingerCount: 0,
+                lastCenter: null,
+                velocity: { x: 0, y: 0 },
+                jiggleEnergy: 0
+            }
+        };
+        let lastHandedness = [];  // track which hands are present
+
+        // ============ Web Audio - Placeholder for MP3s ============
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // TODO: Replace these with cute puppy bark MP3s and kid-friendly number readings
+        function playSpawnSound() {
+            // Commented out - will be replaced with MP3
+            // if (!audioCtx) return;
+            // ...
+        }
+
+        function playDespawnSound() {
+            // Commented out - will be replaced with MP3
+        }
+
+        function playBounceSound() {
+            // Commented out - will be replaced with MP3
+        }
+
+        function playCollisionSound() {
+            // Commented out - will be replaced with MP3
+        }
+
+        function playThrowSound() {
+            // TODO: Add whoosh sound for throw gesture
+        }
+
+        // ============ Skeleton Drawing ============
+        const HAND_COLORS = {
+            // Cheerful kids-book colors for each finger
+            thumb: '#FF6B6B',      // coral red
+            index: '#4ECDC4',      // teal
+            middle: '#FFE66D',     // sunny yellow
+            ring: '#95E1D3',       // mint
+            pinky: '#DDA0DD',      // plum
+            palm: '#FFA07A',       // light salmon
+            wrist: '#87CEEB'       // sky blue
+        };
+
+        const FINGER_CONNECTIONS = [
+            // Thumb
+            [0, 1], [1, 2], [2, 3], [3, 4],
+            // Index
+            [0, 5], [5, 6], [6, 7], [7, 8],
+            // Middle
+            [0, 9], [9, 10], [10, 11], [11, 12],
+            // Ring
+            [0, 13], [13, 14], [14, 15], [15, 16],
+            // Pinky
+            [0, 17], [17, 18], [18, 19], [19, 20],
+            // Palm connections
+            [5, 9], [9, 13], [13, 17]
+        ];
+
+        function getFingerColor(pointIndex) {
+            if (pointIndex <= 4) return HAND_COLORS.thumb;
+            if (pointIndex <= 8) return HAND_COLORS.index;
+            if (pointIndex <= 12) return HAND_COLORS.middle;
+            if (pointIndex <= 16) return HAND_COLORS.ring;
+            if (pointIndex <= 20) return HAND_COLORS.pinky;
+            return HAND_COLORS.palm;
+        }
+
+        function getConnectionColor(start, end) {
+            // Use the color of the fingertip end
+            return getFingerColor(Math.max(start, end));
+        }
+
+        function drawSkeleton(landmarks) {
+            if (!skeletonCtx) return;
+
+            const w = skeletonCanvas.width;
+            const h = skeletonCanvas.height;
+
+            // Always clear with dark background
+            skeletonCtx.fillStyle = 'rgba(20, 20, 30, 1)';
+            skeletonCtx.fillRect(0, 0, w, h);
+
+            if (!landmarks || landmarks.length === 0) {
+                // Draw "no hands" indicator
+                skeletonCtx.fillStyle = 'rgba(100, 100, 120, 0.5)';
+                skeletonCtx.font = '12px Arial';
+                skeletonCtx.textAlign = 'center';
+                skeletonCtx.fillText('Show hands', w/2, h/2);
+                return;
+            }
+
+            for (const hand of landmarks) {
+                // Draw connections first (behind joints)
+                for (const [start, end] of FINGER_CONNECTIONS) {
+                    const p1 = hand[start];
+                    const p2 = hand[end];
+
+                    // Thick black outline (kids book style)
+                    skeletonCtx.strokeStyle = '#222';
+                    skeletonCtx.lineWidth = 5;
+                    skeletonCtx.beginPath();
+                    skeletonCtx.moveTo((1 - p1.x) * w, p1.y * h);
+                    skeletonCtx.lineTo((1 - p2.x) * w, p2.y * h);
+                    skeletonCtx.stroke();
+
+                    // Colored inner line
+                    skeletonCtx.strokeStyle = getConnectionColor(start, end);
+                    skeletonCtx.lineWidth = 3;
+                    skeletonCtx.beginPath();
+                    skeletonCtx.moveTo((1 - p1.x) * w, p1.y * h);
+                    skeletonCtx.lineTo((1 - p2.x) * w, p2.y * h);
+                    skeletonCtx.stroke();
+                }
+
+                // Draw joints as circles
+                for (let i = 0; i < hand.length; i++) {
+                    const p = hand[i];
+                    const x = (1 - p.x) * w;
+                    const y = p.y * h;
+                    const isTip = [4, 8, 12, 16, 20].includes(i);
+                    const radius = isTip ? 6 : 4;
+
+                    // Black outline
+                    skeletonCtx.fillStyle = '#222';
+                    skeletonCtx.beginPath();
+                    skeletonCtx.arc(x, y, radius + 2, 0, Math.PI * 2);
+                    skeletonCtx.fill();
+
+                    // Colored fill
+                    skeletonCtx.fillStyle = getFingerColor(i);
+                    skeletonCtx.beginPath();
+                    skeletonCtx.arc(x, y, radius, 0, Math.PI * 2);
+                    skeletonCtx.fill();
+
+                    // Extra glow on fingertips
+                    if (isTip) {
+                        skeletonCtx.fillStyle = 'rgba(255,255,255,0.5)';
+                        skeletonCtx.beginPath();
+                        skeletonCtx.arc(x - 1, y - 1, 2, 0, Math.PI * 2);
+                        skeletonCtx.fill();
+                    }
+                }
+            }
+        }
+
+        // ============ Edge Warning Detection ============
+        function checkEdgeWarnings(landmarks) {
+            if (!landmarks || landmarks.length === 0) return;
+
+            const margin = 0.08; // 8% from edge triggers warning
+            let nearTop = false, nearBottom = false, nearLeft = false, nearRight = false;
+
+            for (const hand of landmarks) {
+                for (const point of hand) {
+                    if (point.y < margin) nearTop = true;
+                    if (point.y > 1 - margin) nearBottom = true;
+                    if (point.x < margin) nearRight = true; // mirrored
+                    if (point.x > 1 - margin) nearLeft = true; // mirrored
+                }
+            }
+
+            const now = performance.now();
+            const flashCooldown = 500; // ms between flashes
+
+            if (nearTop && now - edgeWarnings.top > flashCooldown) {
+                flashEdge('top');
+                edgeWarnings.top = now;
+            }
+            if (nearBottom && now - edgeWarnings.bottom > flashCooldown) {
+                flashEdge('bottom');
+                edgeWarnings.bottom = now;
+            }
+            if (nearLeft && now - edgeWarnings.left > flashCooldown) {
+                flashEdge('left');
+                edgeWarnings.left = now;
+            }
+            if (nearRight && now - edgeWarnings.right > flashCooldown) {
+                flashEdge('right');
+                edgeWarnings.right = now;
+            }
+        }
+
+        function flashEdge(edge) {
+            const el = document.querySelector(`.edge-warning.${edge}`);
+            if (el) {
+                el.classList.remove('flash');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('flash');
+            }
+        }
+
+        // Helper to get puppy size based on screen
+        function getPuppySize() {
+            const minPx = canvas.height * CONFIG.puppyMinSize;
+            const maxPx = canvas.height * CONFIG.puppyMaxSize;
+            return minPx + Math.random() * (maxPx - minPx);
+        }
+
+        function getFootprintSize() {
+            const minPx = canvas.height * CONFIG.footprintMinSize;
+            const maxPx = canvas.height * CONFIG.footprintMaxSize;
+            return minPx + Math.random() * (maxPx - minPx);
+        }
+
+        // ============ Puppy Class ============
+        class Puppy {
+            constructor(x, y, hand = 'left', appearing = true) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.size = getPuppySize();
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationVelocity = (Math.random() - 0.5) * CONFIG.rotationSpeed * 2;
+                this.opacity = appearing ? 0 : 1;
+                this.scale = appearing ? 0.1 : 1;
+                this.appearing = appearing;
+                this.disappearing = false;
+                this.disappearStartTime = 0;
+                this.hand = hand;  // 'left' or 'right' - which hand owns this puppy
+            }
+
+            update(dt) {
+                // Appearance animation
+                if (this.appearing) {
+                    this.opacity = Math.min(1, this.opacity + dt * 0.003);
+                    this.scale = Math.min(1, this.scale + dt * 0.003);
+                    if (this.opacity >= 1 && this.scale >= 1) {
+                        this.appearing = false;
+                    }
+                }
+
+                // Disappearing animation - quick fade in place
+                if (this.disappearing) {
+                    const elapsed = performance.now() - this.disappearStartTime;
+                    const progress = Math.min(1, elapsed / CONFIG.puppyFadeOutTime);
+
+                    // Quick fade and shrink
+                    this.opacity = 1 - progress;
+                    this.scale = 1 - progress * 0.5;
+
+                    // Stop moving
+                    this.vx *= 0.9;
+                    this.vy *= 0.9;
+
+                    return progress < 1;
+                }
+
+                // Physics update
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotationVelocity;
+
+                // Wraparound edges (Asteroids style) - left/right
+                const radius = this.size * this.scale / 2;
+                if (this.x + radius < 0) {
+                    this.x = canvas.width + radius;
+                } else if (this.x - radius > canvas.width) {
+                    this.x = -radius;
+                }
+
+                // Top/bottom still bounce (keeps puppies visible)
+                if (this.y - radius < 0) {
+                    this.y = radius;
+                    this.vy = Math.abs(this.vy) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                } else if (this.y + radius > canvas.height) {
+                    this.y = canvas.height - radius;
+                    this.vy = -Math.abs(this.vy) * CONFIG.bounceEnergyBoost;
+                    this.rotationVelocity *= -0.8;
+                }
+
+                // Speed limits
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > CONFIG.maxSpeed) {
+                    this.vx = (this.vx / speed) * CONFIG.maxSpeed;
+                    this.vy = (this.vy / speed) * CONFIG.maxSpeed;
+                } else if (speed < CONFIG.minSpeed && !this.disappearing) {
+                    // Gentle random nudge if too slow
+                    this.vx += (Math.random() - 0.5) * 0.5;
+                    this.vy += (Math.random() - 0.5) * 0.5;
+                }
+
+                // Light friction
+                this.vx *= CONFIG.friction;
+                this.vy *= CONFIG.friction;
+
+                return true;
+            }
+
+            // Boost toward a target with energy, adjusting rotation to face direction
+            boostToward(targetX, targetY, energy) {
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0 && energy > 0) {
+                    // Adjust rotation to face target direction
+                    const targetAngle = Math.atan2(dy, dx);
+                    const angleDiff = targetAngle - this.rotation;
+                    // Normalize angle difference
+                    const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+                    this.rotationVelocity += normalizedDiff * energy * 0.02;
+
+                    // Kick velocity toward target
+                    const kickStrength = energy * 0.5;
+                    this.vx += (dx / dist) * kickStrength;
+                    this.vy += (dy / dist) * kickStrength;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.scale(this.scale, this.scale);
+                ctx.globalAlpha = this.opacity;
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🐶', 0, 0);
+                ctx.restore();
+            }
+
+            startDisappearing() {
+                this.disappearing = true;
+                this.disappearStartTime = performance.now();
+
+                // Spawn animated footprint trail heading to furthest corner
+                const targetCorner = getFurthestEmptyishCorner(this.x, this.y);
+                footprintTrails.push(new FootprintTrail(this.x, this.y, targetCorner));
+            }
+        }
+
+        // ============ Footprint Trail Class ============
+        class FootprintTrail {
+            constructor(startX, startY, targetCorner) {
+                this.x = startX;
+                this.y = startY;
+                this.targetX = targetCorner.x;
+                this.targetY = targetCorner.y;
+                this.size = getFootprintSize();
+                this.stepCount = 0;
+                this.lastStepDist = 0;
+                this.done = false;
+
+                // Calculate direction
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                this.angle = Math.atan2(dy, dx);
+                this.vx = (dx / dist) * CONFIG.footprintWalkSpeed;
+                this.vy = (dy / dist) * CONFIG.footprintWalkSpeed;
+                this.totalDist = dist;
+                this.traveled = 0;
+            }
+
+            update() {
+                if (this.done) return false;
+
+                // Move toward target
+                this.x += this.vx;
+                this.y += this.vy;
+                this.traveled += CONFIG.footprintWalkSpeed;
+
+                // Leave footprints at intervals
+                if (this.traveled - this.lastStepDist >= CONFIG.footprintSpacing) {
+                    this.lastStepDist = this.traveled;
+                    const isLeft = this.stepCount % 2 === 0;
+
+                    // Offset perpendicular to walking direction for left/right paw
+                    const perpAngle = this.angle + Math.PI / 2;
+                    const offset = isLeft ? -this.size * 0.3 : this.size * 0.3;
+
+                    staticFootprints.push({
+                        x: this.x + Math.cos(perpAngle) * offset,
+                        y: this.y + Math.sin(perpAngle) * offset,
+                        angle: this.angle,
+                        size: this.size * (0.8 + Math.random() * 0.4),
+                        opacity: 1,
+                        createdAt: performance.now(),
+                        isLeft: isLeft
+                    });
+
+                    this.stepCount++;
+                }
+
+                // Check if reached target (or close enough)
+                const distToTarget = Math.sqrt(
+                    Math.pow(this.targetX - this.x, 2) +
+                    Math.pow(this.targetY - this.y, 2)
+                );
+
+                if (distToTarget < 30 || this.traveled > this.totalDist + 50) {
+                    this.done = true;
+                }
+
+                return !this.done;
+            }
+        }
+
+        // ============ Collision Detection ============
+        function checkCollisions() {
+            for (let i = 0; i < puppies.length; i++) {
+                for (let j = i + 1; j < puppies.length; j++) {
+                    const a = puppies[i];
+                    const b = puppies[j];
+
+                    if (a.disappearing || b.disappearing) continue;
+
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = (a.size * a.scale + b.size * b.scale) / 2 * 0.8;
+
+                    if (dist < minDist && dist > 0) {
+                        // Collision response
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // Relative velocity
+                        const dvx = a.vx - b.vx;
+                        const dvy = a.vy - b.vy;
+                        const dvn = dvx * nx + dvy * ny;
+
+                        // Only resolve if approaching
+                        if (dvn > 0) {
+                            // Elastic collision with slight energy boost
+                            const restitution = 1.05;
+                            a.vx -= dvn * nx * restitution;
+                            a.vy -= dvn * ny * restitution;
+                            b.vx += dvn * nx * restitution;
+                            b.vy += dvn * ny * restitution;
+
+                            // Spin effect
+                            a.rotationVelocity += (Math.random() - 0.5) * 0.02;
+                            b.rotationVelocity += (Math.random() - 0.5) * 0.02;
+
+                            // Separate overlapping puppies
+                            const overlap = minDist - dist;
+                            a.x -= nx * overlap / 2;
+                            a.y -= ny * overlap / 2;
+                            b.x += nx * overlap / 2;
+                            b.y += ny * overlap / 2;
+
+                            // Sound!
+                            playCollisionSound();
+                        }
+                    }
+                }
+            }
+        }
+
+        // ============ Corner Utilities ============
+        function getCorners() {
+            return [
+                { x: 50, y: 50 },
+                { x: canvas.width - 50, y: 50 },
+                { x: 50, y: canvas.height - 50 },
+                { x: canvas.width - 50, y: canvas.height - 50 }
+            ];
+        }
+
+        function getEmptiestCorner() {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestScore = -Infinity;
+
+            for (const corner of corners) {
+                let minDist = Infinity;
+                for (const puppy of puppies) {
+                    const dist = Math.sqrt(
+                        Math.pow(puppy.x - corner.x, 2) +
+                        Math.pow(puppy.y - corner.y, 2)
+                    );
+                    minDist = Math.min(minDist, dist);
+                }
+                if (minDist > bestScore) {
+                    bestScore = minDist;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        function getFurthestCorner(x, y) {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestDist = 0;
+
+            for (const corner of corners) {
+                const dist = Math.sqrt(
+                    Math.pow(x - corner.x, 2) +
+                    Math.pow(y - corner.y, 2)
+                );
+                if (dist > bestDist) {
+                    bestDist = dist;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        function getFurthestEmptyishCorner(x, y) {
+            const corners = getCorners();
+            let bestCorner = corners[0];
+            let bestScore = -Infinity;
+
+            for (const corner of corners) {
+                // Distance from puppy position (want far)
+                const distFromPuppy = Math.sqrt(
+                    Math.pow(x - corner.x, 2) +
+                    Math.pow(y - corner.y, 2)
+                );
+
+                // Distance from other puppies (want far from them too)
+                let minPuppyDist = Infinity;
+                for (const puppy of puppies) {
+                    if (!puppy.disappearing) {
+                        const dist = Math.sqrt(
+                            Math.pow(puppy.x - corner.x, 2) +
+                            Math.pow(puppy.y - corner.y, 2)
+                        );
+                        minPuppyDist = Math.min(minPuppyDist, dist);
+                    }
+                }
+
+                // Score combines distance from origin and emptiness
+                const score = distFromPuppy * 0.7 + (minPuppyDist === Infinity ? 500 : minPuppyDist) * 0.3;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCorner = corner;
+                }
+            }
+
+            return bestCorner;
+        }
+
+        // ============ Finger Counting (Per-Hand) ============
+        function countFingersForHand(hand) {
+            // Thumb - special case, check if extended sideways
+            const thumbTip = hand[4];
+            const thumbMcp = hand[2];
+            const wrist = hand[0];
+
+            // Determine if left or right hand based on thumb position
+            const isRightHand = thumbMcp.x < wrist.x;
+
+            let fingerCount = 0;
+
+            // Thumb is extended if tip is further from palm center than MCP
+            const thumbExtended = isRightHand
+                ? thumbTip.x < thumbMcp.x - 0.02
+                : thumbTip.x > thumbMcp.x + 0.02;
+
+            if (thumbExtended) fingerCount++;
+
+            // Other fingers - check if fingertip is above PIP joint
+            const fingerTips = [8, 12, 16, 20];  // index, middle, ring, pinky
+            const fingerPips = [6, 10, 14, 18];
+
+            for (let i = 0; i < 4; i++) {
+                const tip = hand[fingerTips[i]];
+                const pip = hand[fingerPips[i]];
+
+                // Finger is extended if tip is above (lower y) PIP
+                if (tip.y < pip.y - 0.02) {
+                    fingerCount++;
+                }
+            }
+
+            return { fingerCount, isRightHand };
+        }
+
+        function getHandCenter(hand) {
+            // Return palm center position in screen coordinates
+            const wrist = hand[0];
+            const middleMcp = hand[9];
+            return {
+                x: (1 - (wrist.x + middleMcp.x) / 2) * canvas.width,  // mirrored
+                y: ((wrist.y + middleMcp.y) / 2) * canvas.height
+            };
+        }
+
+        // Get center of gravity of puppies (optionally excluding a specific hand's puppies)
+        function getPuppiesCenterOfGravity(excludeHand = null) {
+            let totalX = 0, totalY = 0, count = 0;
+            for (const puppy of puppies) {
+                if (!puppy.disappearing && puppy.hand !== excludeHand) {
+                    totalX += puppy.x;
+                    totalY += puppy.y;
+                    count++;
+                }
+            }
+            if (count === 0) {
+                // Default to screen center if no other puppies
+                return { x: canvas.width / 2, y: canvas.height / 2 };
+            }
+            return { x: totalX / count, y: totalY / count };
+        }
+
+        function processHands(landmarks, handedness) {
+            const now = performance.now();
+            const presentHands = { left: false, right: false };
+            const handCenters = {};
+
+            // Process each detected hand
+            if (landmarks && landmarks.length > 0) {
+                for (let i = 0; i < landmarks.length; i++) {
+                    const hand = landmarks[i];
+                    const { fingerCount, isRightHand } = countFingersForHand(hand);
+
+                    // MediaPipe handedness is from camera's perspective, we mirror it
+                    const handLabel = isRightHand ? 'right' : 'left';
+                    presentHands[handLabel] = true;
+                    const center = getHandCenter(hand);
+                    handCenters[handLabel] = center;
+
+                    const state = handStates[handLabel];
+                    state.fingerCount = fingerCount;
+
+                    // Track hand movement/jiggling
+                    if (state.lastCenter) {
+                        // Calculate hand velocity
+                        const dx = center.x - state.lastCenter.x;
+                        const dy = center.y - state.lastCenter.y;
+
+                        // Smooth velocity tracking
+                        state.velocity.x = state.velocity.x * 0.7 + dx * 0.3;
+                        state.velocity.y = state.velocity.y * 0.7 + dy * 0.3;
+
+                        // Calculate jiggle energy from movement magnitude
+                        const moveMagnitude = Math.sqrt(dx * dx + dy * dy);
+                        state.jiggleEnergy = state.jiggleEnergy * 0.9 + moveMagnitude * 0.1;
+
+                        // If hand is moving significantly, boost its puppies toward other puppies
+                        if (state.jiggleEnergy > 2) {
+                            const otherPuppiesCenter = getPuppiesCenterOfGravity(handLabel);
+
+                            for (const puppy of puppies) {
+                                if (puppy.hand === handLabel && !puppy.disappearing) {
+                                    // Boost puppy toward center of other puppies
+                                    puppy.boostToward(
+                                        otherPuppiesCenter.x,
+                                        otherPuppiesCenter.y,
+                                        state.jiggleEnergy * 0.3
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    state.lastCenter = { x: center.x, y: center.y };
+
+                    // Handle finger count changes (spawn/despawn puppies)
+                    if (fingerCount !== state.lastFingerCount) {
+                        handleHandFingerChange(handLabel, fingerCount, state.lastFingerCount);
+                        state.lastFingerCount = fingerCount;
+                    }
+                }
+            }
+
+            // Decay jiggle energy for hands not detected
+            for (const handLabel of ['left', 'right']) {
+                if (!presentHands[handLabel]) {
+                    handStates[handLabel].jiggleEnergy *= 0.95;
+                    handStates[handLabel].lastCenter = null;
+                }
+            }
+
+            // Update display
+            const totalFingers = handStates.left.fingerCount + handStates.right.fingerCount;
+            document.getElementById('finger-count').textContent =
+                totalFingers > 0 ? `${totalFingers}` : '';
+
+            lastHandedness = presentHands;
+        }
+
+        function handleHandFingerChange(handLabel, newCount, oldCount) {
+            const diff = newCount - oldCount;
+
+            if (diff > 0) {
+                // Add puppies for this hand
+                for (let i = 0; i < diff; i++) {
+                    const totalPuppies = puppies.filter(p => !p.disappearing).length;
+                    if (totalPuppies < CONFIG.maxPuppies) {
+                        const corner = getEmptiestCorner();
+                        const puppy = new Puppy(corner.x, corner.y, handLabel, true);
+                        puppies.push(puppy);
+                        playSpawnSound();
+                    }
+                }
+            } else if (diff < 0) {
+                // Remove puppies for this hand
+                let toRemove = Math.abs(diff);
+                for (const puppy of puppies) {
+                    if (puppy.hand === handLabel && !puppy.disappearing && toRemove > 0) {
+                        puppy.startDisappearing();
+                        playDespawnSound();
+                        toRemove--;
+                    }
+                }
+            }
+        }
+
+        // ============ Drawing ============
+        function updateFootprintTrails() {
+            // Update animated trails (they spawn static footprints)
+            for (let i = footprintTrails.length - 1; i >= 0; i--) {
+                const alive = footprintTrails[i].update();
+                if (!alive) {
+                    footprintTrails.splice(i, 1);
+                }
+            }
+        }
+
+        function drawFootprints(ctx) {
+            const now = performance.now();
+
+            // Draw static footprints (left behind by trails)
+            for (let i = staticFootprints.length - 1; i >= 0; i--) {
+                const fp = staticFootprints[i];
+                const age = now - fp.createdAt;
+
+                if (age > CONFIG.footprintFadeTime) {
+                    staticFootprints.splice(i, 1);
+                    continue;
+                }
+
+                // Smooth fade out
+                const fadeProgress = age / CONFIG.footprintFadeTime;
+                const opacity = fp.opacity * (1 - fadeProgress * fadeProgress); // ease-out
+
+                ctx.save();
+                ctx.translate(fp.x, fp.y);
+                ctx.rotate(fp.angle + Math.PI / 2);
+                ctx.globalAlpha = opacity;
+                ctx.font = `${fp.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🐾', 0, 0);
+                ctx.restore();
+            }
+        }
+
+        function drawBackground(ctx) {
+            // Subtle animated gradient
+            const time = performance.now() / 5000;
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2 + Math.sin(time) * 100,
+                canvas.height / 2 + Math.cos(time) * 100,
+                0,
+                canvas.width / 2,
+                canvas.height / 2,
+                Math.max(canvas.width, canvas.height)
+            );
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(0.5, '#16213e');
+            gradient.addColorStop(1, '#0f3460');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 50; i++) {
+                const x = (Math.sin(i * 123.456) * 0.5 + 0.5) * canvas.width;
+                const y = (Math.cos(i * 789.012) * 0.5 + 0.5) * canvas.height;
+                const twinkle = Math.sin(time * 3 + i) * 0.5 + 0.5;
+                ctx.globalAlpha = 0.2 + twinkle * 0.3;
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + twinkle, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // ============ Main Loop ============
+        function gameLoop(timestamp) {
+            const dt = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+
+            // Clear and draw background
+            drawBackground(ctx);
+
+            // Update footprint trails (animated walking)
+            updateFootprintTrails();
+
+            // Draw footprints (behind puppies)
+            drawFootprints(ctx);
+
+            // Update and draw puppies
+            for (let i = puppies.length - 1; i >= 0; i--) {
+                const alive = puppies[i].update(dt);
+                if (!alive) {
+                    puppies.splice(i, 1);
+                } else {
+                    puppies[i].draw(ctx);
+                }
+            }
+
+            // Check collisions
+            checkCollisions();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ============ MediaPipe Setup ============
+        async function initMediaPipe() {
+            const video = document.getElementById('webcam');
+            const status = document.getElementById('status');
+
+            // Try multiple camera configurations for cross-platform support
+            const cameraConfigs = [
+                // Preferred: front camera with ideal resolution
+                {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640, max: 1280 },
+                        height: { ideal: 480, max: 720 }
+                    }
+                },
+                // Fallback 1: front camera, any resolution
+                {
+                    video: { facingMode: 'user' }
+                },
+                // Fallback 2: any camera with resolution hints
+                {
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                },
+                // Fallback 3: just give me any camera
+                {
+                    video: true
+                }
+            ];
+
+            let stream = null;
+            let configUsed = -1;
+
+            // Try each config until one works
+            for (let i = 0; i < cameraConfigs.length; i++) {
+                try {
+                    status.textContent = `Requesting camera (attempt ${i + 1})...`;
+                    stream = await navigator.mediaDevices.getUserMedia(cameraConfigs[i]);
+                    configUsed = i;
+                    console.log(`Camera config ${i} succeeded:`, cameraConfigs[i]);
+                    break;
+                } catch (err) {
+                    console.warn(`Camera config ${i} failed:`, err.message);
+                    if (i === cameraConfigs.length - 1) {
+                        throw err; // All configs failed
+                    }
+                }
+            }
+
+            try {
+                video.srcObject = stream;
+                video.setAttribute('playsinline', 'true'); // Critical for iOS
+                video.setAttribute('autoplay', 'true');
+                video.muted = true; // Required for autoplay on some browsers
+
+                await video.play();
+
+                // Get actual video dimensions
+                const videoWidth = video.videoWidth || 640;
+                const videoHeight = video.videoHeight || 480;
+                console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
+
+                status.textContent = 'Initializing hand tracking...';
+                status.classList.add('loading');
+
+                // Initialize MediaPipe Hands
+                const hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
+                    }
+                });
+
+                // Use lower complexity on mobile for performance
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: isMobile ? 0 : 1,  // Simpler model on mobile
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.5
+                });
+
+                hands.onResults((results) => {
+                    if (!handsReady) {
+                        handsReady = true;
+                        status.textContent = 'Show your fingers!';
+                        status.classList.remove('loading');
+                    }
+
+                    lastHandLandmarks = results.multiHandLandmarks;
+
+                    // Draw skeleton on mini canvas
+                    drawSkeleton(results.multiHandLandmarks);
+
+                    // Check for edge warnings
+                    checkEdgeWarnings(results.multiHandLandmarks);
+
+                    // Minimize skeleton canvas when no hands
+                    const skelCanvas = document.getElementById('skeleton-canvas');
+                    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                        skelCanvas.classList.add('minimized');
+                    } else {
+                        skelCanvas.classList.remove('minimized');
+                    }
+
+                    // Process per-hand finger counting and jiggle energy
+                    processHands(results.multiHandLandmarks, results.multiHandedness);
+                });
+
+                // Start camera processing
+                const camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: videoWidth,
+                    height: videoHeight
+                });
+
+                await camera.start();
+
+            } catch (err) {
+                console.error('Camera/MediaPipe error:', err);
+                let errorMsg = err.message;
+                if (err.name === 'NotAllowedError') {
+                    errorMsg = 'Camera permission denied. Please allow camera access.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = 'No camera found on this device.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = 'Camera is in use by another app.';
+                } else if (err.name === 'OverconstrainedError') {
+                    errorMsg = 'Camera does not support required features.';
+                }
+                status.textContent = `Error: ${errorMsg}`;
+                status.classList.remove('loading');
+            }
+        }
+
+        // ============ Initialization ============
+        function init() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+
+            // Set up skeleton canvas
+            skeletonCanvas = document.getElementById('skeleton-canvas');
+            skeletonCtx = skeletonCanvas.getContext('2d');
+            skeletonCanvas.width = 160;
+            skeletonCanvas.height = 120;
+
+            // Initialize audio
+            initAudio();
+
+            // Handle resize
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Prevent default touch behaviors
+            document.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+            document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('gesturechange', (e) => e.preventDefault());
+            document.addEventListener('gestureend', (e) => e.preventDefault());
+
+            // Start game loop
+            lastFrameTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start button handler
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            document.getElementById('start-overlay').classList.add('hidden');
+
+            // Request fullscreen
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (e) {
+                console.log('Fullscreen not available:', e);
+            }
+
+            init();
+            await initMediaPipe();
+        });
+
+        // Exit fullscreen handler
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                // Still allow the app to work without fullscreen
+            }
+        });
+    </script>
+</body>
+</html>
