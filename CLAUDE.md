@@ -912,6 +912,29 @@ await browser.close();
 - "no matching overloaded function" → type mismatch (e.g., float vs int)
 - Black screen → uniforms not initialized, missing default values
 
+### 🚨 CRITICAL: WebGPU NOT AVAILABLE IN HEADLESS BROWSERS 🚨
+
+**Playwright/Puppeteer headless Chromium does NOT support WebGPU.**
+
+When using `capture-silhouette.mjs` or any headless browser testing:
+- `backend="auto"` falls back to **Mayfly (WebGL/GLSL)** only
+- **Stinkyfish (WebGPU/WGSL) code is NOT tested** by headless captures
+- You can claim to "visually verify" WGSL fixes but you're only seeing GLSL output
+
+**How this causes false confidence:**
+1. You fix a bug in `wgsl-codegen.js`
+2. You run `capture-silhouette.mjs` and see correct output
+3. You claim the WGSL fix is "visually verified"
+4. Reality: You only tested GLSL, WGSL changes are completely untested
+
+**To actually test WebGPU/Stinkyfish:**
+- Use a real browser with WebGPU support (Chrome/Edge with WebGPU enabled)
+- Manually open `compare.html` or `scene-catalog.html`
+- Explicitly check the Stinkyfish column/panel
+- Or use `index.html?backend=stinkyfish` to force WebGPU
+
+**NEVER claim WGSL fixes are "verified" based on headless browser captures alone.**
+
 ### Quick GLSL Compilation Check (Node.js)
 
 Fast check that scene generates valid GLSL:

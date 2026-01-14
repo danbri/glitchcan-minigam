@@ -1284,7 +1284,9 @@ ${mirrorCode}  return ${childFuncName}(${childCallArgs});
  * so the entire radial assembly rotates as a unit.
  */
 function generateRadial(node, ctx) {
-  const count = node.count || 6;
+  // Handle count as either a number or variable expression
+  const countValue = node.count || { type: 'const', value: 6 };
+  const countGlsl = valueToGlsl(countValue, ctx);
   const axis = node.axis || 'y';
   const idParam = ctx.instanceIdParam;
   const paramList = idParam ? `vec3 p, float ${idParam}` : 'vec3 p';
@@ -1309,29 +1311,27 @@ function generateRadial(node, ctx) {
   // Now generate the radial wrapper
   const funcName = `radial_${ctx.helperCounter++}`;
 
-  // TAU = 2*PI
-  const segment = (2 * Math.PI / count).toFixed(6);
-
   // Build radial fold code based on axis - apply AFTER parent transform
+  // Segment is computed at runtime to support variable counts
   let radialCode;
   if (axis === 'y') {
     radialCode = `  vec3 rp = ${rp};
   float angle = atan(rp.z, rp.x);
-  float segment = ${segment};
+  float segment = 6.283185 / ${countGlsl};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
   float r = length(rp.xz);
   vec3 q = vec3(r * cos(angle), rp.y, r * sin(angle));`;
   } else if (axis === 'x') {
     radialCode = `  vec3 rp = ${rp};
   float angle = atan(rp.z, rp.y);
-  float segment = ${segment};
+  float segment = 6.283185 / ${countGlsl};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
   float r = length(rp.yz);
   vec3 q = vec3(rp.x, r * cos(angle), r * sin(angle));`;
   } else { // z
     radialCode = `  vec3 rp = ${rp};
   float angle = atan(rp.y, rp.x);
-  float segment = ${segment};
+  float segment = 6.283185 / ${countGlsl};
   angle = mod(angle + segment * 0.5, segment) - segment * 0.5;
   float r = length(rp.xy);
   vec3 q = vec3(r * cos(angle), r * sin(angle), rp.z);`;
@@ -1355,20 +1355,38 @@ ${radialCode}
  *   period: [{ "var": "density" }, 2.0, { "var": "density" }]
  */
 function generateRepeat(node, ctx) {
-  const period = node.period || [2, 0, 2];
+  const rawPeriod = node.period || [2, 0, 2];
   const exposeId = node.exposeId;  // e.g., "instanceId"
+
+  // Handle IR array format: {type: 'array', values: [...]}
+  const period = (rawPeriod && rawPeriod.type === 'array' && rawPeriod.values)
+    ? rawPeriod.values
+    : rawPeriod;
 
   // Apply any transform from the repeat node itself
   const p = applyTransform('p', node.transform, ctx);
 
   // Helper to check if a period component is statically zero
+  // Handles both raw numbers and IR const objects
   function isStaticZero(v) {
-    return typeof v === 'number' && v === 0;
+    if (typeof v === 'number') return v === 0;
+    if (v && v.type === 'const') return v.value === 0;
+    return false;
   }
 
   // Helper to check if a period component is statically non-zero (can skip dynamic check)
+  // Handles both raw numbers and IR const objects
   function isStaticNonZero(v) {
-    return typeof v === 'number' && v > 0;
+    if (typeof v === 'number') return v > 0;
+    if (v && v.type === 'const') return v.value > 0;
+    return false;
+  }
+
+  // Helper to get raw numeric value for static optimization
+  function getRawValue(v) {
+    if (typeof v === 'number') return v;
+    if (v && v.type === 'const') return v.value;
+    return null;
   }
 
   // Convert each period component to GLSL using valueToGlsl
@@ -1394,7 +1412,7 @@ function generateRepeat(node, ctx) {
   if (!isStaticZero(period[0])) {
     if (isStaticNonZero(period[0])) {
       // Static optimization: inline the half-period
-      const half = (period[0] / 2).toFixed(4);
+      const half = (getRawValue(period[0]) / 2).toFixed(4);
       repeatCode += `  q.x = mod(q.x + ${half}, ${p0}) - ${half};\n`;
     } else {
       // Dynamic: compute half at runtime
@@ -1403,7 +1421,7 @@ function generateRepeat(node, ctx) {
   }
   if (!isStaticZero(period[1])) {
     if (isStaticNonZero(period[1])) {
-      const half = (period[1] / 2).toFixed(4);
+      const half = (getRawValue(period[1]) / 2).toFixed(4);
       repeatCode += `  q.y = mod(q.y + ${half}, ${p1}) - ${half};\n`;
     } else {
       repeatCode += `  { float _hp = ${p1} * 0.5; q.y = mod(q.y + _hp, ${p1}) - _hp; }\n`;
@@ -1411,7 +1429,7 @@ function generateRepeat(node, ctx) {
   }
   if (!isStaticZero(period[2])) {
     if (isStaticNonZero(period[2])) {
-      const half = (period[2] / 2).toFixed(4);
+      const half = (getRawValue(period[2]) / 2).toFixed(4);
       repeatCode += `  q.z = mod(q.z + ${half}, ${p2}) - ${half};\n`;
     } else {
       repeatCode += `  { float _hp = ${p2} * 0.5; q.z = mod(q.z + _hp, ${p2}) - _hp; }\n`;
