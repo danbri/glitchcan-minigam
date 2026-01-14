@@ -81,9 +81,20 @@
       transition: width 0.2s, padding 0.2s;
       overflow: hidden;
     }
-    aside.collapsed { width: 36px; }
+    aside.collapsed { width: 0; border-left: none; }
     aside.collapsed .sidebar-content { display: none; }
-    aside.collapsed .toggle-btn { transform: rotate(180deg); }
+    aside.collapsed .sidebar-header h2 { display: none; }
+    aside.collapsed .toggle-btn {
+      position: fixed;
+      right: 8px;
+      top: 8px;
+      transform: rotate(180deg);
+      background: rgba(22, 27, 34, 0.9);
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 6px 8px;
+      z-index: 100;
+    }
 
     .sidebar-header {
       padding: 10px;
