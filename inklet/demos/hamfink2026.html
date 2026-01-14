@@ -371,8 +371,13 @@ You've escaped the cavern!
         const inkSource = document.getElementById('ink-story').textContent;
         try {
             log('Compiling Ink story...');
-            const compiled = new inkjs.Compiler(inkSource).Compile();
-            story = new inkjs.Story(compiled);
+            const compiler = new inkjs.Compiler(inkSource);
+            story = compiler.Compile();
+
+            // Check for compilation errors
+            if (compiler.errors && compiler.errors.length > 0) {
+                throw new Error('Compilation errors: ' + compiler.errors.join('\n'));
+            }
             log('Story compiled successfully');
             setStatus('Story ready');
             continueStory();
