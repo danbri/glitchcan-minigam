@@ -775,12 +775,25 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
             score: story.variablesState['score']
         } : null;
 
+        // Strip VAR declarations for variables we're carrying over
+        // This prevents "variable already declared" errors when loading chapters
+        let processedContent = finkContent;
+        if (savedState) {
+            const varsToStrip = Object.keys(savedState);
+            log(`Stripping VAR declarations for: ${varsToStrip.join(', ')}`);
+            varsToStrip.forEach(varName => {
+                // Match "VAR varname = value" with optional whitespace
+                const varPattern = new RegExp(`^\\s*VAR\\s+${varName}\\s*=.*$`, 'gm');
+                processedContent = processedContent.replace(varPattern, `// [IMPORTED: ${varName}]`);
+            });
+        }
+
         // Clear output for new chapter
         storyOutput.innerHTML = '';
         choicesContainer.innerHTML = '';
 
         // Compile and run the new story
-        initStory(finkContent);
+        initStory(processedContent);
 
         // Restore state if we had one
         if (savedState && story) {
