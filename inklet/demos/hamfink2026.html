@@ -1480,6 +1480,20 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     function playAudio(audioPath, trackName = '') {
+        // Support synthetic audio via synth: prefix
+        if (audioPath.startsWith('synth:')) {
+            const synthType = audioPath.replace('synth:', '').trim().toLowerCase();
+            log(`Playing synthetic audio: ${synthType}`, 'info');
+            switch(synthType) {
+                case 'water': SoundSynth.playWater(60); break;
+                case 'wind': SoundSynth.playWind(60); break;
+                case 'rumble': SoundSynth.playRumble(60); break;
+                case 'chimes': SoundSynth.playChimes(60); break;
+                case 'stop': SoundSynth.stop(); break;
+                default: log(`Unknown synth type: ${synthType}`, 'warn');
+            }
+            return;
+        }
         const resolvedUrl = resolveMediaUrl(audioPath);
         AudioManager.play(resolvedUrl, trackName);
     }
