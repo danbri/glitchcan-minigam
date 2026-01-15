@@ -29,30 +29,22 @@ html, body {
     }
 }
 
+/* Minimal header - just essential buttons */
 header {
-    padding: .5em 1em; background: #000; border-bottom: 4px solid var(--zx-blue);
-    display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
+    padding: .3em .5em; background: rgba(0,0,0,0.8);
+    display: flex; gap: .5em; align-items: center;
+    position: absolute; top: 0; right: 0; z-index: 100;
+    border-radius: 0 0 0 8px;
 }
-header h1 { font-size: 14px; margin: 0; color: var(--zx-cyan); }
 header button {
-    font-family: inherit; font-size: 12px; padding: .5em 1em;
-    border: none; cursor: pointer;
-    min-height: 44px; /* Touch-friendly minimum */
-    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit; font-size: 16px; padding: .3em .5em;
+    border: none; cursor: pointer; background: transparent; color: #888;
+    min-height: 36px; min-width: 36px;
+    transition: color 0.15s ease, transform 0.1s ease;
 }
-header button:focus-visible {
-    outline: 3px solid var(--zx-yellow);
-    outline-offset: 2px;
-}
+header button:hover { color: var(--zx-cyan); }
 header button:active { transform: scale(0.96); }
-#restartBtn { background: var(--zx-cyan); color: #000; }
-#viewToggle { background: var(--zx-mag); color: #fff; }
-/* Accessible hover: brightness change + underline, not color swap */
-header button:hover { filter: brightness(1.3); text-decoration: underline; }
-#statusDisplay {
-    margin-left: auto; font-size: 10px; color: var(--zx-yellow);
-    padding: 0.2em 0.5em; border: 1px dashed var(--zx-yellow);
-}
+#homeBtn { color: var(--zx-yellow); }
 
 /* Main container */
 main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -85,34 +77,18 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     filter: blur(0);
 }
 
-/* Latest chunk gets a glowing lozenge effect - MORE PROMINENT */
+/* FOAF pastel colors for decision blocks */
+:root {
+    --foaf-pink: rgba(255,200,210,0.15);
+    --foaf-blue: rgba(200,220,255,0.15);
+    --foaf-green: rgba(200,255,210,0.15);
+    --foaf-yellow: rgba(255,245,200,0.15);
+}
+
+/* Latest chunk - subtle highlight, no glow */
 #story-output .text-chunk.latest {
-    background: linear-gradient(90deg, rgba(0,255,255,0.25) 0%, rgba(0,255,0,0.15) 50%, rgba(0,255,255,0.25) 100%);
-    border-left: 4px solid var(--zx-cyan);
-    padding: 0.6em 1em;
-    border-radius: 0 12px 12px 0;
-    box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.15), 0 2px 10px rgba(0,0,0,0.3);
-    animation: lozengeGlow 1.5s ease-in-out infinite, chunkAppear 0.6s ease-out forwards;
-    position: relative;
-}
-
-/* Pulsing dot indicator for latest content */
-#story-output .text-chunk.latest::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: var(--zx-cyan);
-    border-radius: 50%;
-    animation: dotPulse 1s ease-in-out infinite;
-}
-
-@keyframes dotPulse {
-    0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
-    50% { transform: translateY(-50%) scale(1.5); opacity: 0.6; }
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
 }
 
 /* Word-by-word reveal animation */
@@ -212,25 +188,28 @@ button.choice {
 
 /* Player decision marker - shows what the user chose */
 .player-decision {
-    color: var(--zx-yellow);
+    color: #ddd;
     font-style: italic;
-    border-left: 3px solid var(--zx-yellow);
-    padding-left: 0.8em;
-    margin: 0.5em 0;
-    opacity: 0.9;
+    padding: 0.3em 0.6em;
+    margin: 0.3em 0;
+    opacity: 0.7;
+    font-size: 0.9em;
 }
 .player-decision::before {
-    content: '→ You: ';
-    font-style: normal;
-    opacity: 0.7;
+    content: '▸ ';
+    opacity: 0.5;
 }
 
-/* Text since last decision gets subtle grouping */
+/* FOAF pastel backgrounds for decision blocks - cycles through 4 colors */
 .text-chunk.since-decision {
-    border-left: 2px solid rgba(0,255,255,0.3);
-    padding-left: 0.5em;
-    margin-left: 0.2em;
+    padding: 0.4em 0.6em;
+    margin: 0.2em 0;
+    border-radius: 4px;
 }
+.decision-block-0 .text-chunk.since-decision { background: var(--foaf-pink); }
+.decision-block-1 .text-chunk.since-decision { background: var(--foaf-blue); }
+.decision-block-2 .text-chunk.since-decision { background: var(--foaf-green); }
+.decision-block-3 .text-chunk.since-decision { background: var(--foaf-yellow); }
 
 /* Media elements in story timeline */
 .media-chunk {
@@ -485,11 +464,9 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 <body>
 
 <header>
-    <h1>FINK 2-Engine Demo</h1>
-    <button id="restartBtn">Restart</button>
-    <button id="viewToggle">View: Story</button>
+    <button id="homeBtn" title="Back to start">🏠</button>
+    <button id="restartBtn">↺</button>
     <button id="settingsBtn">⚙️</button>
-    <div id="statusDisplay">Ready</div>
 </header>
 
 <!-- Developer Panel (top of page, tabbed) -->
@@ -842,6 +819,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     // --- State ---
     let story = null;
     let currentView = 'narrative';
+    let decisionCount = 0;  // For FOAF pastel color cycling
     let minigameActive = false;
     let minigameMode = 'normal'; // 'normal' or 'mega'
     let gemsCollectedThisRound = 0;
@@ -965,10 +943,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     const gameContainer = document.getElementById('game-container');
     const gemsCollectedDisplay = document.getElementById('gems-collected');
     const returnToStoryBtn = document.getElementById('returnToStory');
-    const viewToggleBtn = document.getElementById('viewToggle');
+    const homeBtn = document.getElementById('homeBtn');
     const restartBtn = document.getElementById('restartBtn');
     const settingsBtn = document.getElementById('settingsBtn');
-    const statusDisplay = document.getElementById('statusDisplay');
     const finkSandbox = document.getElementById('fink-sandbox');
     const minigameInstructions = document.getElementById('minigame-instructions');
 
@@ -1063,7 +1040,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     function setStatus(text) {
-        statusDisplay.textContent = text;
+        // Status now just logs - no UI element
+        log(`Status: ${text}`, 'debug');
     }
 
     // --- View Management ---
@@ -1071,7 +1049,6 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         currentView = viewName;
         narrativeView.classList.toggle('active', viewName === 'narrative');
         minigameView.classList.toggle('active', viewName === 'minigame');
-        viewToggleBtn.textContent = `View: ${viewName === 'narrative' ? 'Story' : 'Minigame'}`;
         log(`Switched to ${viewName} view`);
     }
 
@@ -1111,6 +1088,18 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
     }
 
+    // --- Debounced Scroll to Bottom ---
+    // Single scroll strategy to prevent multiple scroll calls fighting
+    let scrollTimeout = null;
+    function scrollToBottom() {
+        // Cancel any pending scroll
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        // Debounce: wait 50ms for more content, then scroll once
+        scrollTimeout = setTimeout(() => {
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        }, 50);
+    }
+
     // --- Media Display Functions ---
     function displayImage(imagePath, caption = '') {
         const resolvedUrl = resolveMediaUrl(imagePath);
@@ -1125,10 +1114,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         img.onload = () => {
             chunk.classList.remove('loading');
-            requestAnimationFrame(() => {
-                chunk.classList.add('visible');
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            });
+            chunk.classList.add('visible');
+            scrollToBottom();
         };
         img.onerror = () => {
             chunk.classList.remove('loading');
@@ -1147,7 +1134,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
+        scrollToBottom();
     }
 
     function displayVideo(videoPath, caption = '') {
@@ -1164,10 +1151,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         video.playsInline = true;
 
         video.onloadedmetadata = () => {
-            requestAnimationFrame(() => {
-                chunk.classList.add('visible');
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            });
+            chunk.classList.add('visible');
+            scrollToBottom();
         };
         video.onerror = () => {
             chunk.classList.add('error');
@@ -1185,7 +1170,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
+        scrollToBottom();
     }
 
     function playAudio(audioPath, trackName = '') {
@@ -1247,30 +1232,14 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             chunk.classList.add('visible');
         });
 
-        // Remove latest highlight after a delay (5s for better visibility)
+        // Remove latest highlight after a delay (3s)
         setTimeout(() => {
             chunk.classList.remove('latest');
             chunk.classList.add('settled');
-        }, 5000);
+        }, 3000);
 
-        // Scroll helper - ensures new content is fully visible
-        const scrollToBottom = () => {
-            // Use scrollIntoView on the chunk for reliable scrolling
-            chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
-        };
-
-        // Immediate scroll to show new content appearing
-        requestAnimationFrame(scrollToBottom);
-
-        // For word-by-word animation, scroll again after words have appeared
-        if (!hasLinks) {
-            const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
-            const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
-            // Single scroll at the end of animation - no interval jitter
-            setTimeout(() => {
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }, totalAnimTime);
-        }
+        // Single debounced scroll - no fighting
+        scrollToBottom();
     }
 
     // --- Ink Story Engine ---
@@ -1499,6 +1468,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             // Mark all previous "since-decision" chunks as settled
             const prevChunks = storyOutput.querySelectorAll('.text-chunk.since-decision');
             prevChunks.forEach(el => el.classList.remove('since-decision'));
+
+            // Cycle FOAF pastel color for next decision block
+            decisionCount++;
+            storyOutput.className = `decision-block-${decisionCount % 4}`;
 
             // Semantic swimlane event for player choice
             swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
@@ -1864,10 +1837,18 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     // --- Event Listeners ---
     returnToStoryBtn.addEventListener('click', endMinigame);
 
-    viewToggleBtn.addEventListener('click', () => {
-        if (!minigameActive) {
-            switchView(currentView === 'narrative' ? 'minigame' : 'narrative');
-        }
+    // Home button - back to main story start
+    homeBtn.addEventListener('click', () => {
+        log('Home button - returning to main story');
+        storyOutput.innerHTML = '';
+        choicesContainer.innerHTML = '';
+        minigameActive = false;
+        decisionCount = 0;
+        currentLoadingFinkUrl = null;
+        currentBasehref = '';
+        clearInterval(gemSpawnTimer);
+        switchView('narrative');
+        initStory();  // Reload embedded story
     });
 
     restartBtn.addEventListener('click', () => {
