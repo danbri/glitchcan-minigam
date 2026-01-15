@@ -12,6 +12,7 @@ VAR keys = 0
 VAR score = 0
 VAR portal_stable = false
 VAR collected_shard = false
+VAR was_mugged = false
 
 -> mega_dimension_intro
 
@@ -163,13 +164,180 @@ Keys remaining: {keys}
 
 TOTAL SCORE: {score} points
 
+// Check if too wealthy - triggers mugging!
+{mega_diamonds >= 5:
+    -> too_wealthy_warning
+}
+
 {collected_shard:
     # CLASS: info
     You secured the Crystal Shard - portals will always be stable for you now!
 }
 
++ [Enter the Wood Between the Worlds] -> wood_between_worlds
 + [View source code info] -> source_info
 + [Return to Chapter 1] -> back_to_chapter1
+
+=== too_wealthy_warning ===
+# CLASS: danger
+But wait... your pockets bulge with {mega_diamonds} Mega Diamonds!
+
+The glint of your wealth has attracted attention. Shadowy figures emerge from the treeline.
+
+"That's quite a haul you've got there, friend..."
+
++ [Try to run!] -> mugging_attempt
++ [Offer to share] -> mugging_attempt
+
+=== mugging_attempt ===
+~was_mugged = true
+
+# CLASS: danger
+The bandits are too fast! They surround you in moments.
+
+"We'll be taking those Mega Diamonds. ALL of them."
+
+They rifle through your pockets, taking everything...
+
+~mega_diamonds = 0
+~diamonds = 1
+~keys = 0
+~score = 0
+
+...except a single ordinary diamond that slipped through a hole in your pocket.
+
+# CLASS: info
+You're left with exactly 1 diamond.
+
+One of the bandits laughs. "Try your luck in Hampstead, maybe? I hear there's opportunities there for the... resourceful."
+
+A shimmering portal opens behind them - it leads to a grimy London street.
+
++ [Step through to Hampstead...] -> portal_to_hampstead
+
+=== portal_to_hampstead ===
+# FINK: ../hampstead.fink.js
+# CLASS: info
+You step through the portal into the neon-lit drizzle of 1980s London...
+
+With nothing but a single diamond and your wits, you'll have to start over.
+
+-> END
+
+=== wood_between_worlds ===
+# CLASS: info
+=== THE WOOD BETWEEN THE WORLDS ===
+
+You find yourself in a quiet forest. The trees are enormous, their leaves filtering golden light. The air is warm and still.
+
+Scattered across the mossy ground are pools of water - each one perfectly circular, perfectly still, reflecting different skies.
+
+You remember reading about this place... in a book, long ago. Each pool leads to a different world.
+
+You can see your reflection in several pools nearby:
+
++ [A pool showing a cozy hobbit-hole] -> pool_bagend
++ [A pool showing dark underground mines] -> pool_mines
++ [A pool showing a chocolate-box village] -> pool_riverbend
++ [A misty pool with strange symbols] -> pool_mystery
++ [Return the way you came] -> leave_wood
+
+=== pool_bagend ===
+# CLASS: info
+The pool shows a round green door set into a hillside. Smoke rises from a chimney. A wizard in grey robes approaches the door...
+
+"Bag End," you whisper. The words feel familiar.
+
+This pool leads to the Shire - to a hobbit's comfortable home, just before an unexpected adventure begins.
+
++ [Step into the pool...] -> enter_bagend
++ [Look at other pools] -> wood_between_worlds
+
+=== enter_bagend ===
+# FINK: ../bagend.fink.js
+# CLASS: success
+You step into the pool. The water is warm, like a bath. You sink through it...
+
+...and emerge, somehow dry, standing before a round green door.
+
+A sign reads: "Bag End"
+
+-> END
+
+=== pool_mines ===
+# CLASS: danger
+This pool is darker than the others. You can barely make out the reflection - torchlight flickering off wet stone walls, the glint of gems in the darkness...
+
+"The Mudslide Mines," you sense somehow. A place of danger and treasure.
+
+Rocks tumble. Something moves in the shadows.
+
++ [Brave the mines...] -> enter_mines
++ [Look at other pools] -> wood_between_worlds
+
+=== enter_mines ===
+# FINK: ../mudslidemines.fink.js
+# CLASS: danger
+You take a breath and plunge into the dark pool...
+
+The cold hits you first. Then the smell of damp earth and old stone.
+
+You're underground. The mineshaft stretches ahead.
+
+-> END
+
+=== pool_riverbend ===
+# CLASS: success
+This pool shows a picture-perfect English village. Thatched cottages, a village green, a pub with hanging baskets of flowers...
+
+But something feels wrong. The villagers' smiles seem fixed. Curtains twitch.
+
+"Riverbend," the name comes to you. "Where everyone has secrets."
+
++ [Enter the village...] -> enter_riverbend
++ [Look at other pools] -> wood_between_worlds
+
+=== enter_riverbend ===
+# FINK: ../riverbend.fink.js
+# CLASS: info
+You step into the peaceful pool...
+
+...and emerge on a village green. Birds sing. A church bell chimes.
+
+Everything seems perfect. Perhaps too perfect.
+
+-> END
+
+=== pool_mystery ===
+# CLASS: info
+This pool ripples strangely, even though there's no wind. The reflection shows... text? Symbols?
+
+Ukrainian letters swim across the surface: Привіт...
+
+A language lesson? In a magic pool?
+
+The multiverse is strange indeed.
+
++ [Dive into learning...] -> enter_language
++ [Look at other pools] -> wood_between_worlds
+
+=== enter_language ===
+# FINK: ../tml-2025-langlearn.fink.js
+# CLASS: info
+You touch the surface and words flow into your mind...
+
+Привіт means hello. Дякую means thank you.
+
+The pool pulls you in, and suddenly you're learning Ukrainian.
+
+-> END
+
+=== leave_wood ===
+The way back seems to have closed. The pool you came through has gone still and dark.
+
+You'll need to choose another world... or stay here forever, in this peaceful in-between place.
+
++ [Look at the pools again] -> wood_between_worlds
 
 === source_info ===
 # CLASS: code
@@ -184,7 +352,15 @@ State (diamonds, score, etc.) was preserved across the chapter transition!
 Key code patterns:
 - oooOO\`...\` wraps the entire Ink content
 - # MINIGAME: mega triggers the mega gem minigame
+- # FINK: loads external stories
 - Variables sync between JavaScript and Ink
+
+The Wood Between the Worlds connects to:
+- ../bagend.fink.js (Hobbit adventure)
+- ../mudslidemines.fink.js (Underground mines)
+- ../riverbend.fink.js (Village mystery)
+- ../tml-2025-langlearn.fink.js (Language learning)
+- ../hampstead.fink.js (80s London - via mugging!)
 
 + [Back to ending] -> chapter2_end
 
