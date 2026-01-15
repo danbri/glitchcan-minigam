@@ -747,28 +747,36 @@ Source files:
         const chunk = document.createElement('div');
         chunk.className = `text-chunk latest ${cssClass}`.trim();
 
-        // Handle links in text (for GitHub URLs)
+        // Check if text contains linkifiable content
         const linkPattern = /(https?:\/\/[^\s]+|hamfink2026[^\s]*\.(?:html|js))/g;
-        const processedText = text.replace(linkPattern, (match) => {
-            if (match.startsWith('http')) {
-                return `<a href="${match}" target="_blank">${match}</a>`;
-            } else {
-                const baseUrl = 'https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/';
-                return `<a href="${baseUrl}${match}" target="_blank">${match}</a>`;
-            }
-        });
+        const hasLinks = linkPattern.test(text);
+        linkPattern.lastIndex = 0; // Reset regex state
 
-        // Wrap words in spans for staggered animation
-        const words = processedText.split(/(\s+)/);  // Keep whitespace
-        let wordIndex = 0;
-        const wrappedHtml = words.map(word => {
-            if (word.trim() === '') return word;  // Keep whitespace as-is
-            const delay = wordIndex * WORD_DELAY_MS;
-            wordIndex++;
-            return `<span class="word" style="animation-delay: ${delay}ms">${word}</span>`;
-        }).join('');
+        if (hasLinks) {
+            // Text has links - process links but skip word animation
+            // (word animation breaks HTML anchor tags)
+            const processedText = text.replace(linkPattern, (match) => {
+                if (match.startsWith('http')) {
+                    return `<a href="${match}" target="_blank">${match}</a>`;
+                } else {
+                    const baseUrl = 'https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/';
+                    return `<a href="${baseUrl}${match}" target="_blank">${match}</a>`;
+                }
+            });
+            chunk.innerHTML = processedText;
+        } else {
+            // No links - apply word-by-word animation
+            const words = text.split(/(\s+)/);  // Keep whitespace
+            let wordIndex = 0;
+            const wrappedHtml = words.map(word => {
+                if (word.trim() === '') return word;  // Keep whitespace as-is
+                const delay = wordIndex * WORD_DELAY_MS;
+                wordIndex++;
+                return `<span class="word" style="animation-delay: ${delay}ms">${word}</span>`;
+            }).join('');
+            chunk.innerHTML = wrappedHtml;
+        }
 
-        chunk.innerHTML = wrappedHtml;
         storyOutput.appendChild(chunk);
 
         // Trigger animation
@@ -858,6 +866,14 @@ Source files:
             // Display text with animation
             if (text.trim()) {
                 displayTextWithAnimation(text.trim(), cssClass);
+            }
+
+            // CRITICAL: Break immediately when MINIGAME or FINK tag detected
+            // This prevents the story from advancing past the return point
+            // before the minigame/external load completes
+            if (shouldStartMinigame || pendingFinkUrl) {
+                log(`Breaking story loop for ${shouldStartMinigame ? 'minigame' : 'FINK load'}`, 'debug');
+                break;
             }
         }
 
