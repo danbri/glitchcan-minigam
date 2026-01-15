@@ -149,7 +149,7 @@ You emerge back in the hillside overlooking the peaceful valley.
 
 === chapter2_end ===
 # CLASS: success
-=== CHAPTER 2 COMPLETE! ===
+--- CHAPTER 2 COMPLETE! ---
 
 Your adventure statistics:
 
@@ -226,7 +226,7 @@ With nothing but a single diamond and your wits, you'll have to start over.
 
 === wood_between_worlds ===
 # CLASS: info
-=== THE WOOD BETWEEN THE WORLDS ===
+--- THE WOOD BETWEEN THE WORLDS ---
 
 You find yourself in a quiet forest. The trees are enormous, their leaves filtering golden light. The air is warm and still.
 
