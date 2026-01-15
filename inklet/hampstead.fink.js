@@ -115,13 +115,33 @@ Queues coil like serpents.
 
 { giro_cashed == false and giro_collected:
     + Cash the giro
-        You pocket £120 in crisp tens. #CLASS:info
+        You pocket £120 in crisp tens. #CLASS:success
         ~ giro_cashed = true
         ~ score += 1
         -> street
 }
 
+{ giro_cashed and giro_collected:
+    + Cash the giro again
+        -> giro_fraud_video
+}
+
 + Leave → street -> street
+
+=== giro_fraud_video ===
+#BG:#200
+# CLASS: danger
+The clerk's eyes narrow. "You've already cashed this one, haven't you?"
+
+Before you can protest, a TV on the wall flickers to life...
+
+# VIDEO: 5437e4f1_e62e_4211_a301_9306d1ca3c9c.mp4
+
+*ATTENTION: Benefits fraud is a serious offence. This interaction has been logged.*
+
+~ score -= 2
+
++ [Shuffle away in shame] -> street
 
 === oxfam ===
 Musk and mothballs swirl.

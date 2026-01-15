@@ -6,6 +6,8 @@ oooOO`
 === intro ===
 
 # IMAGE: village_overview.png
+# FOLEY: water(pan:-0.5, vol:0.4, drip:0.2)
+# FOLEY: wind(pan:0.3, vol:0.3, gust:0.3)
 
 The village of Riverbend nestled beside its namesake river, seems peaceful. Smoke curls from chimney pots, children laugh in the square, and the gentle murmur of the water fills the air. But Riverbend holds a secret, a carefully guarded piece of knowledge passed down through generations.
 
@@ -53,6 +55,9 @@ The main door is heavy oak, weathered but surprisingly solid. When you push agai
 
 === enter_mill ===
 # IMAGE: inside_dilapidated_mill.png
+# FOLEY: stop
+# FOLEY: wind(pan:0, vol:0.2, gust:0.1, pitch:0.7)
+# FOLEY: rumble(vol:0.15, pitch:0.5)
 You carefully step inside the mill. Dust motes dance in the faint light filtering through cracks in the walls. The air is damp and smells of decay. The old machinery stands silent and rusted.
 
 But as you look more carefully, you notice something odd...
@@ -85,6 +90,8 @@ The Roman numerals etched on the gear seem to represent the numbers 5, 8, and 12
 
 === correct_code ===
 # IMAGE: hidden_inscription.png
+# FOLEY: stop
+# FOLEY: machinery(vol:0.5, throb:1.5, pitch:0.8)
 With a soft beep, the keypad accepts your code! The heavy metal door slides open with a hydraulic hiss, revealing a small, clean chamber. Inside is what appears to be an ATM machine, but unlike any you've seen before. Its interface glows with a soft blue light, and above the screen are the words "WHISPERWIND - River's Bounty."
 
 You've discovered Riverbend's secret. What will you do with this knowledge?

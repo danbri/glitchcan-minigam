@@ -54,21 +54,31 @@ async function main() {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  // Use system proxy if available
+  // Use system proxy if available (but skip for localhost)
   const proxyUrl = process.env.HTTP_PROXY || process.env.http_proxy;
+  const isLocalhost = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
   const launchOptions = {
     headless: true,
     executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
-    args: ['--headless=new', '--no-sandbox']
+    args: [
+      '--headless=new',
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-software-rasterizer',
+      '--single-process'
+    ]
   };
 
   const browser = await chromium.launch(launchOptions);
 
-  // Create context with proxy if available
+  // Create context with proxy if available (skip for localhost)
   const contextOptions = { };
-  if (proxyUrl) {
+  if (proxyUrl && !isLocalhost) {
     console.log(`   Using proxy: ${proxyUrl.slice(0, 50)}...`);
     contextOptions.proxy = { server: proxyUrl };
+  } else if (isLocalhost) {
+    console.log(`   Localhost detected - skipping proxy`);
   }
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
