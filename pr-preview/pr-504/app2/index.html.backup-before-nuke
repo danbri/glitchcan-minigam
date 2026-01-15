@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>App2 - FINK + Minigame</title>
+
+    <!-- Real INK compiler -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .badge {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            background: #ff4400;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 9999;
+        }
+
+        .error {
+            position: fixed;
+            top: 40px;
+            left: 8px;
+            right: 8px;
+            background: #f00;
+            color: #fff;
+            padding: 12px;
+            border-radius: 4px;
+            display: none;
+            z-index: 9998;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 12px 16px;
+            border-bottom: 1px solid #444;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9000;
+        }
+
+        .status.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #444;
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .content {
+            padding: 16px;
+            padding-bottom: 200px;
+        }
+
+        .content p {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .choices {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #2a2a2a;
+            padding: 16px;
+            border-top: 1px solid #444;
+        }
+
+        .image-container {
+            width: 100%;
+            max-height: 40vh;
+            overflow: hidden;
+            background: #000;
+            display: none;
+        }
+
+        .image-container.show {
+            display: block;
+        }
+
+        .story-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .story-image.hidden {
+            display: none;
+        }
+
+        .choice {
+            display: block;
+            width: 100%;
+            background: #4a4a4a;
+            color: #fff;
+            border: none;
+            padding: 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .choice:active {
+            background: #5a5a5a;
+        }
+
+        .debug {
+            position: fixed;
+            bottom: 60px;
+            right: 8px;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 8000;
+        }
+
+        .console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50vh;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 10px;
+            overflow-y: auto;
+            padding: 8px;
+            display: none;
+            z-index: 8001;
+        }
+
+        .console.show {
+            display: block;
+        }
+
+        .minigame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 7000;
+        }
+
+        .minigame.active {
+            display: flex;
+        }
+
+        .minigame-box {
+            background: #2a2a2a;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .minigame-box h2 {
+            margin-bottom: 12px;
+        }
+
+        .minigame-box button {
+            background: #4a9eff;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            margin: 4px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="badge">APP2 v2</div>
+    <div class="error" id="error"></div>
+
+    <div class="header">
+        <div class="title">FINK + Minigame Demo</div>
+    </div>
+
+    <div class="status" id="status">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="image-container" id="image-container">
+        <img id="story-image" class="story-image hidden" alt="Story scene">
+    </div>
+
+    <div class="content" id="content"></div>
+    <div class="choices" id="choices"></div>
+
+    <button class="debug" id="debug-btn">CONSOLE</button>
+    <div class="console" id="console"></div>
+
+    <div class="minigame" id="minigame">
+        <div class="minigame-box">
+            <h2 id="mg-title">Minigame</h2>
+            <p id="mg-text">Instructions</p>
+            <div id="mg-controls"></div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const $ = id => document.getElementById(id);
+        const log = (msg, data) => {
+            const line = `${new Date().toLocaleTimeString()}: ${msg}`;
+            console.log(line, data || '');
+            const div = document.createElement('div');
+            div.textContent = line + (data ? ' ' + JSON.stringify(data) : '');
+            $('console').appendChild(div);
+            $('console').scrollTop = $('console').scrollHeight;
+        };
+
+        const showError = msg => {
+            $('error').textContent = msg;
+            $('error').style.display = 'block';
+            log('ERROR: ' + msg);
+        };
+
+        const hideStatus = () => $('status').classList.add('hidden');
+        const showStatus = () => $('status').classList.remove('hidden');
+
+        // Check inkjs
+        if (!window.inkjs) {
+            showError('InkJS failed to load. Check network.');
+            hideStatus();
+            return;
+        }
+        log('InkJS loaded OK');
+
+        // Inline FINK extraction
+        function extractFink(jsCode) {
+            const items = [];
+            function oooOO(strings) {
+                try {
+                    const txt = strings && strings.raw ? strings.raw.join('') : String(strings || '');
+                    items.push(txt);
+                    return txt;
+                } catch (e) {
+                    return '';
+                }
+            }
+            try {
+                new Function('oooOO', jsCode)(oooOO);
+            } catch (e) {
+                log('Extract error', e.message);
+            }
+            const seen = new Set();
+            const unique = [];
+            items.forEach(x => { if (!seen.has(x)) { seen.add(x); unique.push(x); } });
+            return unique.join('\n');
+        }
+
+        // State
+        let story = null;
+        let storyUrl = null;
+        let currentBasehref = '../inklet/media/'; // Default media path
+
+        // Load FINK file
+        async function loadFink(url) {
+            log('Loading FINK: ' + url);
+            showStatus();
+
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('Fetch failed: ' + resp.statusText);
+
+                const jsCode = await resp.text();
+                log('FINK downloaded', { bytes: jsCode.length });
+
+                const ink = extractFink(jsCode);
+                log('INK extracted', { bytes: ink.length });
+
+                if (!ink || ink.length < 10) throw new Error('No INK content extracted');
+
+                story = new window.inkjs.Compiler(ink).Compile();
+                if (!story) throw new Error('Compile failed');
+
+                storyUrl = url;
+                log('Story compiled OK');
+
+                // Init vars
+                story.variablesState.minigame_score = story.variablesState.minigame_score || 0;
+                story.variablesState.minigame_attempts = story.variablesState.minigame_attempts || 0;
+
+                hideStatus();
+                continueStory();
+            } catch (e) {
+                hideStatus();
+                showError(e.message);
+            }
+        }
+
+        // Display image
+        function displayImage(imagePath) {
+            if (!imagePath) return;
+
+            const fullUrl = resolveMediaUrl(imagePath);
+            log('Displaying image: ' + fullUrl);
+
+            const img = $('story-image');
+            const container = $('image-container');
+
+            img.src = fullUrl;
+            img.classList.remove('hidden');
+            container.classList.add('show');
+        }
+
+        // Resolve media URL using current BASEHREF
+        function resolveMediaUrl(path) {
+            // Absolute URL
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+                return path;
+            }
+
+            // Root-relative path
+            if (path.startsWith('/')) {
+                return window.location.origin + path;
+            }
+
+            // BASEHREF-relative path
+            try {
+                const baseUrl = new URL(currentBasehref, window.location.href);
+                return new URL(path, baseUrl).href;
+            } catch (e) {
+                log('URL resolve error', e.message);
+                return currentBasehref + path;
+            }
+        }
+
+        // Continue story
+        function continueStory() {
+            if (!story) return;
+
+            $('choices').innerHTML = '';
+            const content = $('content');
+
+            while (story.canContinue) {
+                const text = story.Continue();
+                const tags = story.currentTags || [];
+
+                // Process tags
+                tags.forEach(tag => {
+                    // BASEHREF tag
+                    if (tag.includes('BASEHREF:')) {
+                        const newBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                        currentBasehref = newBasehref.endsWith('/') ? newBasehref : newBasehref + '/';
+                        log('BASEHREF updated: ' + currentBasehref);
+                    }
+
+                    // IMAGE tag
+                    if (tag.includes('IMAGE:')) {
+                        const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                        displayImage(imagePath);
+                    }
+                });
+
+                // Check for minigame tag
+                const mgTag = tags.find(t => t.startsWith('MINIGAME:'));
+                if (mgTag) {
+                    const game = mgTag.split(':')[1].trim();
+                    log('Minigame tag: ' + game);
+                    launchMinigame(game);
+                    return;
+                }
+
+                if (text.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = text.trim();
+                    content.appendChild(p);
+                }
+            }
+
+            // Render choices
+            if (story.currentChoices && story.currentChoices.length > 0) {
+                log('Rendering choices', { count: story.currentChoices.length });
+                story.currentChoices.forEach((ch, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice';
+                    btn.textContent = ch.text;
+                    btn.onclick = () => makeChoice(i);
+                    $('choices').appendChild(btn);
+                });
+            } else {
+                log('Story ended');
+                const p = document.createElement('p');
+                p.textContent = '— THE END —';
+                p.style.textAlign = 'center';
+                p.style.opacity = '0.5';
+                content.appendChild(p);
+            }
+
+            content.scrollTop = content.scrollHeight;
+        }
+
+        // Make choice
+        function makeChoice(idx) {
+            log('Choice: ' + idx);
+            story.ChooseChoiceIndex(idx);
+            continueStory();
+        }
+
+        // Launch minigame
+        function launchMinigame(name) {
+            log('Launching minigame: ' + name);
+            $('mg-title').textContent = 'Minigame: ' + name;
+            $('mg-controls').innerHTML = '';
+
+            if (name === 'simple-score') {
+                $('mg-text').textContent = 'Choose outcome:';
+
+                ['Low Score (50)', 'High Score (200)', 'Failed (0)'].forEach((label, i) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = label;
+                    btn.onclick = () => completeMinigame({ score: [50, 200, 0][i], attempts: 1 });
+                    $('mg-controls').appendChild(btn);
+                });
+            } else {
+                $('mg-text').textContent = 'Not implemented';
+                const btn = document.createElement('button');
+                btn.textContent = 'Back to Story';
+                btn.onclick = () => {
+                    $('minigame').classList.remove('active');
+                    continueStory();
+                };
+                $('mg-controls').appendChild(btn);
+            }
+
+            $('minigame').classList.add('active');
+        }
+
+        // Complete minigame
+        function completeMinigame(result) {
+            log('Minigame complete', result);
+
+            if (result.score !== undefined) {
+                story.variablesState.minigame_score = result.score;
+            }
+            if (result.attempts !== undefined) {
+                story.variablesState.minigame_attempts = result.attempts;
+            }
+
+            $('minigame').classList.remove('active');
+            continueStory();
+        }
+
+        // Debug toggle
+        $('debug-btn').onclick = () => {
+            $('console').classList.toggle('show');
+        };
+
+        // Start
+        log('App2 starting...');
+        loadFink('./toc.fink.js');
+    })();
+    </script>
+</body>
+</html>
