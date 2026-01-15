@@ -190,15 +190,72 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 }
 #returnToStory:hover { background: var(--zx-cyan); }
 
-/* Debug panel */
-#debug-panel {
-    max-height: 30vh; overflow-y: auto; padding: 0.5em;
-    background: rgba(0,0,50,0.8); border-top: 2px solid var(--zx-blue);
-    font-size: 11px; color: #aaa; display: none;
-    font-family: 'Courier New', monospace;
+/* Developer Panel - Top of page tabbed interface */
+#dev-panel {
+    display: none; flex-direction: column;
+    background: rgba(0,0,30,0.95); border-bottom: 3px solid var(--zx-mag);
+    max-height: 50vh; overflow: hidden;
 }
-#debug-panel.visible { display: block; }
-#debug-panel div { white-space: pre-wrap; word-break: break-word; }
+#dev-panel.visible { display: flex; }
+
+/* Tab bar */
+#dev-tabs {
+    display: flex; gap: 0; background: #111; border-bottom: 1px solid #333;
+}
+#dev-tabs button {
+    padding: 0.5em 1em; background: #222; color: #888; border: none;
+    font-family: inherit; font-size: 10px; cursor: pointer;
+    border-right: 1px solid #333;
+}
+#dev-tabs button.active { background: var(--zx-mag); color: #fff; }
+#dev-tabs button:hover { background: #444; }
+
+/* Tab content panels */
+.dev-tab-content { display: none; flex: 1; overflow: hidden; }
+.dev-tab-content.active { display: flex; flex-direction: column; }
+
+/* Logs tab */
+#logs-content { padding: 0.5em; }
+#log-filters { display: flex; gap: 0.5em; padding: 0.5em; background: #1a1a2e; flex-wrap: wrap; }
+#log-filters label { font-size: 9px; color: #aaa; cursor: pointer; }
+#log-filters input { margin-right: 3px; }
+#log-output {
+    flex: 1; overflow-y: auto; padding: 0.5em;
+    font-family: 'Courier New', monospace; font-size: 11px;
+}
+#log-output div { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+
+/* Swimlanes tab - vertical parallel columns */
+#swimlanes-content { flex-direction: row; }
+.swimlane {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 1px solid #333; overflow: hidden;
+}
+.swimlane:last-child { border-right: none; }
+.swimlane-header {
+    padding: 0.5em; background: #1a1a2e; font-size: 10px;
+    text-align: center; border-bottom: 1px solid #333;
+}
+.swimlane-header.ink { color: var(--zx-cyan); }
+.swimlane-header.fink { color: var(--zx-mag); }
+.swimlane-header.game { color: var(--zx-green); }
+.swimlane-header.net { color: var(--zx-yellow); }
+.swimlane-body {
+    flex: 1; overflow-y: auto; padding: 0.3em;
+    font-size: 9px; font-family: 'Courier New', monospace;
+}
+.swimlane-event {
+    padding: 0.3em; margin-bottom: 0.3em; border-radius: 3px;
+    background: rgba(255,255,255,0.05);
+}
+
+/* State tab */
+#state-content { padding: 0.5em; overflow-y: auto; }
+#state-content pre {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    background: #1a1a2e; padding: 0.5em; border-radius: 4px;
+    overflow-x: auto;
+}
 
 /* Ensure page fits viewport */
 html { height: 100%; overflow: hidden; }
@@ -209,13 +266,12 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 #fink-sandbox { display: none; }
 
 /* Links in story */
-#story-output a {
-    color: var(--zx-cyan);
-    text-decoration: underline;
-}
-#story-output a:hover {
-    color: var(--zx-yellow);
-}
+#story-output a { color: var(--zx-cyan); text-decoration: underline; }
+#story-output a:hover { color: var(--zx-yellow); }
+
+/* Settings button in header */
+#settingsBtn { background: #333; color: #aaa; font-size: 16px; padding: 0.3em 0.6em; }
+#settingsBtn:hover { background: var(--zx-mag); color: #fff; }
 </style>
 </head>
 <body>
@@ -224,10 +280,60 @@ main { flex: 1; min-height: 0; overflow: hidden; }
     <h1>FINK 2-Engine Demo</h1>
     <button id="restartBtn">Restart</button>
     <button id="viewToggle">View: Story</button>
-    <button id="debugToggle">Debug</button>
-    <button id="copyLogsBtn" style="display:none;">📋 Copy Logs</button>
+    <button id="settingsBtn">⚙️</button>
     <div id="statusDisplay">Ready</div>
 </header>
+
+<!-- Developer Panel (top of page, tabbed) -->
+<div id="dev-panel">
+    <div id="dev-tabs">
+        <button class="active" data-tab="logs">📋 Logs</button>
+        <button data-tab="swimlanes">🏊 Swimlanes</button>
+        <button data-tab="state">📊 State</button>
+        <button id="copyLogsBtn">📋 Copy</button>
+        <button id="closeDevPanel" style="margin-left:auto;">✕ Close</button>
+    </div>
+
+    <!-- Logs Tab -->
+    <div id="logs-content" class="dev-tab-content active">
+        <div id="log-filters">
+            <label><input type="checkbox" data-filter="error" checked> ❌ Error</label>
+            <label><input type="checkbox" data-filter="warn" checked> ⚠️ Warn</label>
+            <label><input type="checkbox" data-filter="info" checked> ℹ️ Info</label>
+            <label><input type="checkbox" data-filter="fink" checked> 📜 FINK</label>
+            <label><input type="checkbox" data-filter="ink" checked> 🖋️ Ink</label>
+            <label><input type="checkbox" data-filter="game" checked> 🎮 Game</label>
+            <label><input type="checkbox" data-filter="net" checked> 🌐 Net</label>
+            <label><input type="checkbox" data-filter="debug"> 🔧 Debug</label>
+        </div>
+        <div id="log-output"></div>
+    </div>
+
+    <!-- Swimlanes Tab -->
+    <div id="swimlanes-content" class="dev-tab-content">
+        <div class="swimlane">
+            <div class="swimlane-header ink">🖋️ INK</div>
+            <div class="swimlane-body" id="swim-ink"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header fink">📜 FINK</div>
+            <div class="swimlane-body" id="swim-fink"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header game">🎮 GAME</div>
+            <div class="swimlane-body" id="swim-game"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header net">🌐 NET</div>
+            <div class="swimlane-body" id="swim-net"></div>
+        </div>
+    </div>
+
+    <!-- State Tab -->
+    <div id="state-content" class="dev-tab-content">
+        <pre id="state-display">Loading...</pre>
+    </div>
+</div>
 
 <main>
     <!-- Narrative View -->
@@ -252,8 +358,6 @@ main { flex: 1; min-height: 0; overflow: hidden; }
         <div class="stat"><span class="stat-icon">⭐</span> Score: <span class="stat-value" id="stat-score">0</span></div>
     </div>
 </main>
-
-<div id="debug-panel"></div>
 
 <!-- Hidden sandbox for FINK loading -->
 <iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
@@ -506,11 +610,21 @@ Source files:
     const returnToStoryBtn = document.getElementById('returnToStory');
     const viewToggleBtn = document.getElementById('viewToggle');
     const restartBtn = document.getElementById('restartBtn');
-    const debugToggleBtn = document.getElementById('debugToggle');
-    const debugPanel = document.getElementById('debug-panel');
+    const settingsBtn = document.getElementById('settingsBtn');
     const statusDisplay = document.getElementById('statusDisplay');
     const finkSandbox = document.getElementById('fink-sandbox');
     const minigameInstructions = document.getElementById('minigame-instructions');
+
+    // Dev panel elements
+    const devPanel = document.getElementById('dev-panel');
+    const logOutput = document.getElementById('log-output');
+    const stateDisplay = document.getElementById('state-display');
+
+    // Swimlane elements
+    const swimInk = document.getElementById('swim-ink');
+    const swimFink = document.getElementById('swim-fink');
+    const swimGame = document.getElementById('swim-game');
+    const swimNet = document.getElementById('swim-net');
 
     // Stats display
     const statDiamonds = document.getElementById('stat-diamonds');
@@ -518,18 +632,22 @@ Source files:
     const statKeys = document.getElementById('stat-keys');
     const statScore = document.getElementById('stat-score');
 
+    // --- Log Filtering State ---
+    const logFilters = { error: true, warn: true, info: true, fink: true, ink: true, game: true, net: true, debug: false };
+
     // --- Debug Logging ---
     // Verbosity levels: 0=errors, 1=important, 2=verbose, 3=debug
     let verbosity = 2;
 
     const LOG_LEVELS = {
-        error: { level: 0, color: '#f55', prefix: '❌' },
-        warn:  { level: 1, color: '#ff0', prefix: '⚠️' },
-        info:  { level: 1, color: '#8f8', prefix: 'ℹ️' },
-        fink:  { level: 2, color: '#f0f', prefix: '📜' },  // FINK operations
-        ink:   { level: 2, color: '#0ff', prefix: '🖋️' },  // Ink operations
-        net:   { level: 2, color: '#fa0', prefix: '🌐' },  // Network/fetch
-        debug: { level: 3, color: '#888', prefix: '🔧' }
+        error: { level: 0, color: '#f55', prefix: '❌', swim: null },
+        warn:  { level: 1, color: '#ff0', prefix: '⚠️', swim: null },
+        info:  { level: 1, color: '#8f8', prefix: 'ℹ️', swim: null },
+        fink:  { level: 2, color: '#f0f', prefix: '📜', swim: 'fink' },
+        ink:   { level: 2, color: '#0ff', prefix: '🖋️', swim: 'ink' },
+        net:   { level: 2, color: '#fa0', prefix: '🌐', swim: 'net' },
+        game:  { level: 2, color: '#0f0', prefix: '🎮', swim: 'game' },
+        debug: { level: 3, color: '#888', prefix: '🔧', swim: null }
     };
 
     function log(message, type = 'info') {
@@ -537,12 +655,49 @@ Source files:
         if (config.level > verbosity) return;
 
         const timestamp = new Date().toLocaleTimeString();
+
+        // Add to main log output
         const entry = document.createElement('div');
+        entry.dataset.logType = type;
         entry.textContent = `[${timestamp}] ${config.prefix} ${message}`;
         entry.style.color = config.color;
-        debugPanel.appendChild(entry);
-        debugPanel.scrollTop = debugPanel.scrollHeight;
+        entry.style.display = logFilters[type] ? 'block' : 'none';
+        logOutput.appendChild(entry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+
+        // Add to swimlane if applicable
+        if (config.swim) {
+            const swimTarget = { ink: swimInk, fink: swimFink, game: swimGame, net: swimNet }[config.swim];
+            if (swimTarget) {
+                const swimEntry = document.createElement('div');
+                swimEntry.className = 'swimlane-event';
+                swimEntry.style.borderLeft = `3px solid ${config.color}`;
+                swimEntry.textContent = `${timestamp.split(' ')[0]} ${message.slice(0, 60)}${message.length > 60 ? '...' : ''}`;
+                swimTarget.appendChild(swimEntry);
+                swimTarget.scrollTop = swimTarget.scrollHeight;
+            }
+        }
         console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // --- Swimlane Event Helpers (semantic entries) ---
+    function swimEvent(lane, icon, label, detail = '', highlight = false) {
+        const swimTargets = { ink: swimInk, fink: swimFink, game: swimGame, net: swimNet };
+        const swimTarget = swimTargets[lane];
+        if (!swimTarget) return;
+
+        const colors = { ink: '#0ff', fink: '#f0f', game: '#0f0', net: '#fa0' };
+        const entry = document.createElement('div');
+        entry.className = 'swimlane-event' + (highlight ? ' highlight' : '');
+        entry.style.borderLeft = `3px solid ${colors[lane]}`;
+        if (highlight) {
+            entry.style.background = 'rgba(255,255,255,0.15)';
+            entry.style.fontWeight = 'bold';
+        }
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        entry.innerHTML = `<span style="opacity:0.6">${time}</span> ${icon} <strong>${label}</strong>${detail ? '<br><span style="opacity:0.7;font-size:8px;margin-left:1em">' + detail + '</span>' : ''}`;
+        swimTarget.appendChild(entry);
+        swimTarget.scrollTop = swimTarget.scrollHeight;
     }
 
     function setVerbosity(level) {
@@ -634,9 +789,11 @@ Source files:
     // --- Ink Story Engine ---
     function initStory(inkSource = null) {
         const source = inkSource || document.getElementById('ink-story').textContent;
+        const isExternal = inkSource !== null;
         try {
             log('Compiling Ink story...');
             log(`Source length: ${source.length} chars, ${source.split('\n').length} lines`);
+            swimEvent('ink', '⚙️', isExternal ? 'Compile FINK' : 'Compile INK', `${source.split('\n').length} lines`);
 
             const compiler = new inkjs.Compiler(source);
             story = compiler.Compile();
@@ -646,9 +803,11 @@ Source files:
             }
             log('Story compiled successfully');
             setStatus('Story ready');
+            swimEvent('ink', '✅', 'Compiled OK', isExternal ? 'Chapter loaded' : 'Main story ready', true);
             continueStory();
         } catch (e) {
             log(`Compilation error: ${e.message}`, 'error');
+            swimEvent('ink', '❌', 'Compile Failed', e.message.slice(0, 50));
 
             // Debug: show problematic lines if error mentions line numbers
             const lineMatch = e.message.match(/line (\d+)/g);
@@ -752,7 +911,10 @@ Source files:
     }
 
     function selectChoice(index) {
-        log(`Selected choice ${index}: ${story.currentChoices[index].text}`);
+        const choiceText = story.currentChoices[index].text;
+        log(`Selected choice ${index}: ${choiceText}`);
+        // Semantic swimlane event for player choice
+        swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
         story.ChooseChoiceIndex(index);
         continueStory();
     }
@@ -762,6 +924,7 @@ Source files:
         // Validate URL before proceeding
         if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') {
             log(`FINK load aborted: invalid URL "${url}"`, 'error');
+            swimEvent('net', '❌', 'URL Invalid', url);
             setStatus('Invalid FINK URL');
             displayChoices();
             return;
@@ -777,12 +940,17 @@ Source files:
             resolvedUrl = new URL(url, window.location.href).href;
         } catch (e) {
             log(`FINK URL resolution failed: ${e.message}`, 'error');
+            swimEvent('net', '❌', 'URL Resolution Failed', e.message);
             setStatus('URL error');
             displayChoices();
             return;
         }
         log(`Resolved to absolute URL: ${resolvedUrl}`, 'net');
         log(`Cross-origin safe: sandbox iframe isolates execution`, 'net');
+
+        // Semantic swimlane events
+        swimEvent('fink', '📂', 'Loading Chapter', url, true);
+        swimEvent('net', '🌐', 'Fetch', resolvedUrl.split('/').pop());
 
         // Track URL for namespace derivation in handleFinkLoaded
         currentLoadingFinkUrl = resolvedUrl;
@@ -842,6 +1010,7 @@ Source files:
     function handleFinkLoaded(dataArray) {
         if (!dataArray || dataArray.length === 0) {
             log('FINK loaded but no content found', 'error');
+            swimEvent('fink', '❌', 'Empty Content', 'No oooOO blocks found');
             setStatus('FINK empty');
             return;
         }
@@ -852,6 +1021,9 @@ Source files:
         log(`Content: ${finkContent.length} chars, ${finkContent.split('\\n').length} lines`, 'fink');
         log(`oooOO blocks captured: ${dataArray.length} (using first only)`, 'debug');
         setStatus('Chapter loaded!');
+
+        swimEvent('net', '✅', 'Content Received', `${finkContent.length} chars`);
+        swimEvent('fink', '📜', 'Parsing FINK', `${finkContent.split('\\n').length} lines`);
 
         // Store current state for IMPORT injection
         const savedState = story ? {
@@ -883,6 +1055,15 @@ Source files:
             log(`IMPORT vars (canonical names): [${nsResult.imports.join(', ') || 'none'}]`, 'fink');
             log(`EXPORT vars: [${nsResult.exports.join(', ') || 'none'}]`, 'fink');
             log(`Transformed vars: ${Object.keys(nsResult.transformedVars).length} prefixed`, 'debug');
+
+            // Semantic swimlane events for namespace processing
+            swimEvent('fink', '🔧', `Namespace: ${nsResult.namespace}`, `SHA-256 prefix from URL`);
+            if (nsResult.imports.length > 0) {
+                swimEvent('fink', '📥', 'IMPORT', nsResult.imports.join(', '));
+            }
+            if (nsResult.exports.length > 0) {
+                swimEvent('fink', '📤', 'EXPORT', nsResult.exports.join(', '));
+            }
         } else if (savedState) {
             // Legacy fallback: Strip VAR declarations for variables we're carrying over
             log('Preprocessor not loaded, using legacy VAR stripping', 'warn');
@@ -923,6 +1104,7 @@ Source files:
     function startMinigame(mode = 'normal') {
         log(`Starting ${mode} gem minigame!`);
         setStatus(`${mode === 'mega' ? 'MEGA ' : ''}Minigame active!`);
+        swimEvent('game', '🎮', `Minigame: ${mode.toUpperCase()}`, 'Gem collection started', true);
 
         minigameActive = true;
         minigameMode = mode;
@@ -1029,6 +1211,8 @@ Source files:
         log(`Minigame ended. Mode: ${minigameMode}, Collected: ${gemsCollectedThisRound}`);
         setStatus('Returning to story...');
 
+        swimEvent('game', '🏁', 'Minigame Complete', `Collected: ${gemsCollectedThisRound}`, true);
+
         minigameActive = false;
         clearInterval(gemSpawnTimer);
         gameContainer.classList.remove('mega-mode');
@@ -1039,10 +1223,12 @@ Source files:
                 const oldMega = story.variablesState['mega_diamonds'] || 0;
                 story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
                 log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
+                swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
             } else {
                 const oldDiamonds = story.variablesState['diamonds'] || 0;
                 story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
                 log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
+                swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
             }
             story.variablesState['minigame_played'] = true;
         }
@@ -1076,15 +1262,58 @@ Source files:
         initStory();
     });
 
+    // --- Dev Panel Event Listeners ---
     const copyLogsBtn = document.getElementById('copyLogsBtn');
+    const closeDevPanelBtn = document.getElementById('closeDevPanel');
+    const devTabs = document.querySelectorAll('#dev-tabs button[data-tab]');
+    const devTabContents = document.querySelectorAll('.dev-tab-content');
+    const logFilterCheckboxes = document.querySelectorAll('#log-filters input[type="checkbox"]');
 
-    debugToggleBtn.addEventListener('click', () => {
-        const isVisible = debugPanel.classList.toggle('visible');
-        copyLogsBtn.style.display = isVisible ? 'inline-block' : 'none';
+    // Settings button toggles dev panel
+    settingsBtn.addEventListener('click', () => {
+        devPanel.classList.toggle('visible');
+        updateStateDisplay();
     });
 
+    // Close button hides dev panel
+    closeDevPanelBtn.addEventListener('click', () => {
+        devPanel.classList.remove('visible');
+    });
+
+    // Tab switching
+    devTabs.forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+            const tabName = tabBtn.dataset.tab;
+            // Update active tab button
+            devTabs.forEach(t => t.classList.remove('active'));
+            tabBtn.classList.add('active');
+            // Show corresponding content
+            devTabContents.forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-content`);
+            });
+            // Update state display when switching to state tab
+            if (tabName === 'state') {
+                updateStateDisplay();
+            }
+        });
+    });
+
+    // Log filter checkboxes
+    logFilterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const filterType = checkbox.dataset.filter;
+            logFilters[filterType] = checkbox.checked;
+            // Update visibility of existing log entries
+            logOutput.querySelectorAll(`div[data-log-type="${filterType}"]`).forEach(entry => {
+                entry.style.display = checkbox.checked ? 'block' : 'none';
+            });
+        });
+    });
+
+    // Copy logs button
     copyLogsBtn.addEventListener('click', () => {
-        const logText = Array.from(debugPanel.querySelectorAll('div'))
+        const logText = Array.from(logOutput.querySelectorAll('div'))
+            .filter(div => div.style.display !== 'none')
             .map(div => div.textContent)
             .join('\n');
         navigator.clipboard.writeText(logText).then(() => {
@@ -1096,8 +1325,38 @@ Source files:
         });
     });
 
+    // State display update function
+    function updateStateDisplay() {
+        if (!story) {
+            stateDisplay.textContent = 'No story loaded';
+            return;
+        }
+        const state = {
+            'Story Variables': {
+                diamonds: story.variablesState['diamonds'],
+                mega_diamonds: story.variablesState['mega_diamonds'],
+                keys: story.variablesState['keys'],
+                score: story.variablesState['score'],
+                minigame_played: story.variablesState['minigame_played'],
+                cavern_explored: story.variablesState['cavern_explored'],
+                tried_passage: story.variablesState['tried_passage']
+            },
+            'Engine State': {
+                currentView,
+                minigameActive,
+                minigameMode,
+                pendingFinkUrl,
+                currentLoadingFinkUrl,
+                canContinue: story.canContinue,
+                choiceCount: story.currentChoices?.length || 0
+            }
+        };
+        stateDisplay.textContent = JSON.stringify(state, null, 2);
+    }
+
     // --- Initialize ---
     log('FINK 2-Engine Demo initializing...');
+    swimEvent('ink', '🚀', 'Demo Start', 'FINK 2-Engine Demo', true);
     initStory();
 
 })();
