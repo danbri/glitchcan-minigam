@@ -1,8 +1,8 @@
 {
   "title": "Conic Sections",
   "subtitle": "Slice a cone to reveal circles, ellipses, parabolas, and hyperbolas",
-  "version": "1.0",
-  "notes": "Educational demo inspired by science museum laser cut exhibits. Adjust the cutting plane angle to see different conic sections emerge. Circle (0°), Ellipse (~15°), Parabola (~27°), Hyperbola (>30°).",
+  "version": "1.1",
+  "notes": "Educational demo inspired by science museum laser cut exhibits. Nested cones (green outer, brown inner at 96%) reveal cross-section when cut. Circle (0°), Ellipse (~15°), Parabola (~27°), Hyperbola (>30°).",
 
   "camera": {
     "distance": 6,
@@ -14,17 +14,17 @@
   "params": {
     "_cutting": "=== CUTTING PLANE ===",
     "cutAngle": {
-      "value": 0,
+      "value": 15,
       "type": "scalar",
       "min": 0,
       "max": 60,
       "description": "Cutting plane angle (degrees from horizontal). 0=circle, ~15=ellipse, ~27=parabola, >30=hyperbola"
     },
     "cutPosition": {
-      "value": 0.5,
+      "value": 0.8,
       "type": "scalar",
-      "min": -1.0,
-      "max": 1.5,
+      "min": -1.5,
+      "max": 2.0,
       "description": "Height of cutting plane center"
     },
 
@@ -45,93 +45,105 @@
     },
 
     "_appearance": "=== COLORS ===",
-    "coneColor": {
-      "value": [0.3, 0.6, 0.9],
+    "outerColor": {
+      "value": [0.2, 0.7, 0.3],
       "type": "color3",
-      "description": "Cone surface color"
+      "description": "Outer cone color (green)"
     },
-    "cutPlaneColor": {
-      "value": [1.0, 0.3, 0.3],
+    "innerColor": {
+      "value": [0.6, 0.4, 0.2],
       "type": "color3",
-      "description": "Cutting plane indicator color"
-    },
-    "crossSectionColor": {
-      "value": [1.0, 0.9, 0.2],
-      "type": "color3",
-      "description": "Cross-section surface color"
+      "description": "Inner cone / cross-section color (brown)"
     }
   },
 
   "defs": {
-    "singleCone": {
-      "comment": "Single cone nappe - tip at origin, opens upward",
+    "outerCone": {
+      "comment": "Outer green cone - single nappe",
       "type": "cone",
       "params": {
         "h": { "var": "coneHeight" },
-        "r1": 0.001,
+        "r1": 0.01,
         "r2": { "var": "coneRadius" },
-        "color": { "var": "coneColor" }
+        "color": { "var": "outerColor" }
       }
     },
 
-    "doubleCone": {
-      "comment": "Double cone (bicone) - two nappes meeting at apex",
+    "innerCone": {
+      "comment": "Inner brown cone at 96% size - reveals cross-section",
+      "type": "cone",
+      "params": {
+        "h": { "expr": "mul", "args": [{ "var": "coneHeight" }, 0.96] },
+        "r1": 0.01,
+        "r2": { "expr": "mul", "args": [{ "var": "coneRadius" }, 0.96] },
+        "color": { "var": "innerColor" }
+      }
+    },
+
+    "doubleConeOuter": {
+      "comment": "Double cone (bicone) - outer green",
       "type": "union",
       "children": [
         {
-          "comment": "Upper nappe - opens upward",
           "type": "ref",
-          "id": "singleCone"
+          "id": "outerCone"
         },
         {
-          "comment": "Lower nappe - opens downward (mirrored)",
           "type": "ref",
-          "id": "singleCone",
+          "id": "outerCone",
           "transform": { "rotate": [180, 0, 0] }
         }
       ]
     },
 
-    "cuttingPlaneVisual": {
-      "comment": "Visual indicator for the cutting plane - thin translucent rectangle",
-      "type": "box",
+    "doubleConeInner": {
+      "comment": "Double cone (bicone) - inner brown at 96%",
+      "type": "union",
+      "children": [
+        {
+          "type": "ref",
+          "id": "innerCone"
+        },
+        {
+          "type": "ref",
+          "id": "innerCone",
+          "transform": { "rotate": [180, 0, 0] }
+        }
+      ]
+    },
+
+    "nestedCones": {
+      "comment": "Green outer + brown inner nested cones",
+      "type": "union",
+      "children": [
+        { "type": "ref", "id": "doubleConeOuter" },
+        { "type": "ref", "id": "doubleConeInner" }
+      ]
+    },
+
+    "cutter": {
+      "comment": "Invisible half-space cutter",
+      "type": "plane",
       "params": {
-        "size": [3.0, 0.02, 3.0],
-        "color": { "var": "cutPlaneColor" }
+        "normal": [0, 1, 0],
+        "h": 0,
+        "color": [0.5, 0.5, 0.5]
       }
     }
   },
 
   "root": {
-    "type": "union",
+    "comment": "Subtract the cutter from nested cones to reveal cross-section",
+    "type": "subtract",
     "children": [
       {
-        "comment": "=== CUT CONE: Intersection of double cone with half-space ===",
-        "type": "intersect",
-        "children": [
-          {
-            "type": "ref",
-            "id": "doubleCone"
-          },
-          {
-            "comment": "Half-space below the cutting plane",
-            "type": "plane",
-            "params": {
-              "normal": [0, -1, 0],
-              "h": 0,
-              "color": { "var": "crossSectionColor" }
-            },
-            "transform": {
-              "translate": [0, { "var": "cutPosition" }, 0],
-              "rotate": [{ "var": "cutAngle" }, 0, 0]
-            }
-          }
-        ]
+        "type": "ref",
+        "id": "nestedCones"
       },
       {
-        "comment": "=== CUTTING PLANE INDICATOR ===",
+        "comment": "Cutting plane - positioned and rotated",
         "type": "ref",
-        "id": "cuttingPlaneVisual",
+        "id": "cutter",
         "transform": {
           "translate": [0, { "var": "cutPosition" }, 0],
           "rotate": [{ "var": "cutAngle" }, 0, 0]
