@@ -8,6 +8,10 @@
  * Auto-namespace variables so writers don't need globally unique names.
  * Writers just write normal Ink; the preprocessor handles collisions.
  *
+ * NAMESPACE DERIVATION:
+ * Uses SHA-256 hash of context URL for deterministic, collision-resistant prefixes.
+ * Example: "https://example.com/stories/dragon.fink.js" → "f7a3b2c1_"
+ *
  * WRITER EXPERIENCE:
  * ```ink
  * # IMPORT: player_gold           // "I need this from the world"
@@ -18,7 +22,7 @@
  * ```
  *
  * WHAT THE PREPROCESSOR DOES:
- * 1. Derives namespace from filename: "dragon-story.fink.js" → "dragon_story_"
+ * 1. Derives namespace from SHA-256(url) → 8-char hex prefix
  * 2. Prefixes all VAR declarations (except IMPORTs)
  * 3. Transforms all variable references to match
  * 4. EXPORT vars get canonical aliases
@@ -34,31 +38,69 @@
  * Each level maintains its own namespace, explicit bridges only.
  *
  * @module fink-namespace-preprocessor
- * @version STRAWMAN-0.1
+ * @version STRAWMAN-0.2
  */
 
 const FinkNamespacePreprocessor = (function() {
     'use strict';
 
     /**
-     * Derive namespace from FINK filename or URL
-     * "dragon-story.fink.js" → "dragon_story"
-     * "../chapters/ch2-castle.fink.js" → "ch2_castle"
+     * Compute SHA-256 hash of a string (async, uses SubtleCrypto)
+     * @param {string} str - Input string
+     * @returns {Promise<string>} - Hex-encoded hash
      */
-    function deriveNamespace(filenameOrUrl) {
-        // Extract filename from path/URL
-        const filename = filenameOrUrl.split('/').pop();
+    async function sha256(str) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(str);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
-        // Remove .fink.js or .js extension
-        const base = filename.replace(/\.fink\.js$|\.js$/, '');
+    /**
+     * Synchronous fallback hash (djb2 variant) for environments without SubtleCrypto
+     * @param {string} str - Input string
+     * @returns {string} - 8-char hex hash
+     */
+    function syncHash(str) {
+        let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+        for (let i = 0; i < str.length; i++) {
+            const ch = str.charCodeAt(i);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+        h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+        h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        const hash = (h2 >>> 0).toString(16).padStart(8, '0') +
+                     (h1 >>> 0).toString(16).padStart(8, '0');
+        return hash;
+    }
 
-        // Convert to valid identifier: kebab-case → snake_case, remove invalid chars
-        const namespace = base
-            .replace(/-/g, '_')
-            .replace(/[^a-zA-Z0-9_]/g, '')
-            .toLowerCase();
+    /**
+     * Derive namespace from SHA-256 of context URL
+     * @param {string} url - Full URL of FINK file
+     * @param {boolean} async - Use async SHA-256 (default: false for sync fallback)
+     * @returns {string|Promise<string>} - 8-char namespace prefix
+     */
+    function deriveNamespace(url, useAsync = false) {
+        if (useAsync && typeof crypto !== 'undefined' && crypto.subtle) {
+            return sha256(url).then(hash => hash.slice(0, 8));
+        }
+        // Synchronous fallback
+        return syncHash(url).slice(0, 8);
+    }
 
-        return namespace;
+    /**
+     * Async version of deriveNamespace
+     */
+    async function deriveNamespaceAsync(url) {
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+            const hash = await sha256(url);
+            return hash.slice(0, 8);
+        }
+        return syncHash(url).slice(0, 8);
     }
 
     /**
@@ -278,9 +320,12 @@ const FinkNamespacePreprocessor = (function() {
         transform,
         parseTags,
         deriveNamespace,
+        deriveNamespaceAsync,
+        sha256,
+        syncHash,
         createExportMappings,
         injectImports,
-        VERSION: 'STRAWMAN-0.1'
+        VERSION: 'STRAWMAN-0.2'
     };
 
 })();
