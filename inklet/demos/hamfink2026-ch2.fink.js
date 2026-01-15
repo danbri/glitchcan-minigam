@@ -10,8 +10,12 @@ oooOO`
 # IMPORT: diamonds, mega_diamonds, keys, score
 # EXPORT: mega_diamonds, was_mugged
 
-// Imported vars: diamonds, mega_diamonds, keys, score (from Chapter 1)
-// These are NOT redeclared - values injected by loader
+// Imported vars need VAR declarations for Ink compiler,
+// but values are injected by loader (overwriting defaults)
+VAR diamonds = 0
+VAR mega_diamonds = 0
+VAR keys = 0
+VAR score = 0
 
 // Chapter-local vars (will be auto-namespaced by preprocessor)
 VAR portal_stable = false
