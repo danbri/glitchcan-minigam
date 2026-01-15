@@ -19,6 +19,7 @@ VAR mortgage_signed = false
 VAR debug_message = ""
 VAR diamond_disposed = false
 VAR met_artist = false
+VAR fraud_caught = false
 
 -> splash
 
@@ -144,8 +145,40 @@ Before you can protest, a TV on the wall flickers to life...
 *ATTENTION: Benefits fraud is a serious offence. This interaction has been logged.*
 
 ~ score -= 2
+~ fraud_caught = true
 
-+ [Shuffle away in shame] -> street
++ [Shuffle away in shame] -> fraud_aftermath
+
+=== fraud_aftermath ===
+#BG:#111
+# CLASS: gritty
+You stumble out into the grey daylight, cheeks burning.
+
+The queue behind you parts like you're contagious. A woman clutches her handbag tighter. A security guard watches you leave, speaking into his radio.
+
+Your hands are shaking. The fluorescent lights have given you a headache that won't quit.
+
+{ jeans_worn and tie_worn:
+    That cheap tie suddenly feels like a noose. #CLASS:warning
+}
+
++ [Keep walking, don't look back]
+    You put your head down and march toward the door.
+    -> street_shameful
++ [Mutter an excuse to no one]
+    "Computer error... happens all the time..."
+    Nobody believes you. Not even you.
+    -> street_shameful
+
+=== street_shameful ===
+#BG:#001515
+The neon rain feels colder now. People seem to stare.
+
+{ fraud_caught:
+    A police car crawls past. You freeze until it rounds the corner. #CLASS:danger
+}
+
+-> street
 
 === oxfam ===
 Musk and mothballs swirl.
@@ -203,6 +236,10 @@ The Duke of Cumberland's ale-stench clings.
 === gallery_pass ===
 #BG:#021
 The Avant-Garden Gallery casts long reflections in the rain.
+
+{ fraud_caught:
+    You catch your reflection in the glass. You look... guilty. Is that guard watching you? #CLASS:warning
+}
 
 { key_2cv == false:
     + Bluff modern-art theory
@@ -275,12 +312,34 @@ Blueprints hang on walls.
 #BG:#041
 Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
 
+{ fraud_caught:
+    #CLASS:danger
+    The doorbell rings. Two plain-clothes officers. "Sorry to interrupt the party, but we need a word about some irregularities at the Post Office..."
+    Pippa gasps. Tarquin backs away as if you've caught fire.
+    -> fraud_ending
+}
+
 { score >= 8:
     -> victory
 - else:
     They sense imposture. #CLASS:warning
     -> street
 }
+
+=== fraud_ending ===
+#BG:#300
+#CLASS:danger
+The mews house dream evaporates. The mortgage is void. The keys are confiscated.
+
+You're escorted out past the champagne flutes and the horrified neighbours.
+
+Six months community service. A criminal record. And absolutely, definitely, permanently banned from Hampstead.
+
+*** FRAUD DETECTED — GAME OVER ***
+
+Final Score: {score}/8 (invalidated)
+
+-> END
 
 === victory ===
 #BG:#041
