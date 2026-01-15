@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FINK 2-Engine Demo: Ink + Minigame</title>
-<script src="https://cdn.jsdelivr.net/npm/inkjs/dist/ink-full.min.js"></script>
+<script src="../../third_party/ink/ink-full.min.js"></script>
 <script src="fink-namespace-preprocessor.js"></script>
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
@@ -976,10 +976,12 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     };
 
     // --- Sound Synthesizer (WebAudio ambient sounds) ---
+    // Improved with pseudo-Perlin modulation, stereo panning, organic randomization
     const SoundSynth = {
         context: null,
         activeNodes: [],
         masterGain: null,
+        intervals: [],
 
         async init() {
             if (!this.context) {
@@ -1002,123 +1004,235 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                     if (node.disconnect) node.disconnect();
                 } catch(e) {}
             });
+            this.intervals.forEach(id => clearInterval(id));
             this.activeNodes = [];
+            this.intervals = [];
             log('SoundSynth: Stopped all sounds', 'debug');
         },
 
-        // Water trickling: filtered noise bursts with varying rates
+        // Create noise buffer helper
+        createNoise(ctx, seconds = 2) {
+            const bufferSize = ctx.sampleRate * seconds;
+            const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate); // Stereo
+            for (let ch = 0; ch < 2; ch++) {
+                const data = buffer.getChannelData(ch);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+            }
+            return buffer;
+        },
+
+        // Water: layered drips + gentle stream with stereo movement
         async playWater(duration = 30) {
             await this.init();
             this.stop();
-            log('SoundSynth: Playing water trickling', 'info');
+            log('SoundSynth: Playing water (organic)', 'info');
             const ctx = this.context;
 
-            // Create noise buffer
-            const bufferSize = ctx.sampleRate * 2;
-            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
+            // Stereo merger for panning
+            const merger = ctx.createChannelMerger(2);
+            merger.connect(this.masterGain);
 
-            // Main water layer
-            const noise = ctx.createBufferSource();
-            noise.buffer = noiseBuffer;
-            noise.loop = true;
+            // Base stream layer - very quiet, filtered noise
+            const streamNoise = ctx.createBufferSource();
+            streamNoise.buffer = this.createNoise(ctx, 3);
+            streamNoise.loop = true;
 
-            // Bandpass filter for water character
-            const filter = ctx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 2000;
-            filter.Q.value = 1.5;
+            const streamFilter = ctx.createBiquadFilter();
+            streamFilter.type = 'bandpass';
+            streamFilter.frequency.value = 800;
+            streamFilter.Q.value = 0.8;
 
-            // LFO to modulate filter for "trickling"
-            const lfo = ctx.createOscillator();
-            const lfoGain = ctx.createGain();
-            lfo.frequency.value = 3;
-            lfoGain.gain.value = 800;
-            lfo.connect(lfoGain);
-            lfoGain.connect(filter.frequency);
+            const streamGain = ctx.createGain();
+            streamGain.gain.value = 0.08;
 
-            // Volume envelope
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5);
-            gain.gain.setValueAtTime(0.3, ctx.currentTime + duration - 1);
-            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+            streamNoise.connect(streamFilter);
+            streamFilter.connect(streamGain);
+            streamGain.connect(merger, 0, 0);
+            streamGain.connect(merger, 0, 1);
 
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.masterGain);
+            streamNoise.start();
+            streamNoise.stop(ctx.currentTime + duration);
+            this.activeNodes.push(streamNoise, streamFilter, streamGain);
 
-            lfo.start();
-            noise.start();
-            noise.stop(ctx.currentTime + duration);
-            lfo.stop(ctx.currentTime + duration);
+            // Drip generator - random individual drips with stereo placement
+            const playDrip = () => {
+                const pan = Math.random() * 2 - 1; // -1 to 1
+                const freq = 1200 + Math.random() * 2000; // Varied pitch
+                const volume = 0.05 + Math.random() * 0.1;
 
-            this.activeNodes.push(noise, lfo, filter, gain);
-            swimEvent('game', '🎵', 'Synth', 'Water trickling');
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.3, ctx.currentTime + 0.15);
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(volume, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+
+                const panner = ctx.createStereoPanner();
+                panner.pan.value = pan;
+
+                osc.connect(gain);
+                gain.connect(panner);
+                panner.connect(this.masterGain);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            };
+
+            // Splash/trickle burst generator
+            const playTrickle = () => {
+                const pan = Math.random() * 2 - 1;
+                const noise = ctx.createBufferSource();
+                noise.buffer = this.createNoise(ctx, 0.5);
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 2000 + Math.random() * 3000;
+                filter.Q.value = 2 + Math.random() * 3;
+
+                const gain = ctx.createGain();
+                const vol = 0.03 + Math.random() * 0.06;
+                gain.gain.setValueAtTime(vol, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3 + Math.random() * 0.2);
+
+                const panner = ctx.createStereoPanner();
+                panner.pan.value = pan;
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(panner);
+                panner.connect(this.masterGain);
+
+                noise.start();
+                noise.stop(ctx.currentTime + 0.5);
+            };
+
+            // Schedule random drips
+            const dripInterval = setInterval(() => {
+                if (Math.random() < 0.4) playDrip();
+                if (Math.random() < 0.25) playTrickle();
+            }, 150 + Math.random() * 200);
+            this.intervals.push(dripInterval);
+
+            // Fade out at end
+            setTimeout(() => {
+                streamGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+            }, (duration - 2) * 1000);
+
+            setTimeout(() => this.stop(), duration * 1000);
+            swimEvent('game', '🎵', 'Synth', 'Water (organic)');
         },
 
-        // Wind: low-pass filtered noise with slow modulation
+        // Wind: multi-layer with pseudo-Perlin, stereo drift, occasional gusts
         async playWind(duration = 30) {
             await this.init();
             this.stop();
-            log('SoundSynth: Playing wind', 'info');
+            log('SoundSynth: Playing wind (organic)', 'info');
             const ctx = this.context;
 
-            const bufferSize = ctx.sampleRate * 2;
-            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
+            // Multiple noise layers at different frequency bands
+            const layers = [
+                { freq: 150, q: 0.3, gain: 0.25 },  // Low rumble
+                { freq: 400, q: 0.5, gain: 0.15 },  // Mid whoosh
+                { freq: 1200, q: 0.8, gain: 0.08 }, // High whistle
+            ];
 
-            const noise = ctx.createBufferSource();
-            noise.buffer = noiseBuffer;
-            noise.loop = true;
+            const masterPanner = ctx.createStereoPanner();
+            masterPanner.connect(this.masterGain);
 
-            // Low-pass for wind whoosh
-            const lowpass = ctx.createBiquadFilter();
-            lowpass.type = 'lowpass';
-            lowpass.frequency.value = 400;
-            lowpass.Q.value = 0.5;
+            const masterGain = ctx.createGain();
+            masterGain.gain.setValueAtTime(0, ctx.currentTime);
+            masterGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 2);
+            masterGain.connect(masterPanner);
 
-            // Slow LFO for gusts
-            const lfo = ctx.createOscillator();
-            const lfoGain = ctx.createGain();
-            lfo.type = 'sine';
-            lfo.frequency.value = 0.15; // Very slow
-            lfoGain.gain.value = 300;
-            lfo.connect(lfoGain);
-            lfoGain.connect(lowpass.frequency);
+            // Pseudo-Perlin: sum of multiple LFOs at different rates
+            const createPerlinLFO = (baseFreq, depth, target) => {
+                const rates = [0.07, 0.13, 0.31, 0.53]; // Non-harmonic for organic feel
+                rates.forEach((rate, i) => {
+                    const lfo = ctx.createOscillator();
+                    lfo.type = 'sine';
+                    lfo.frequency.value = baseFreq * rate;
+                    const lfoGain = ctx.createGain();
+                    lfoGain.gain.value = depth / (i + 1); // Decreasing contribution
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(target);
+                    lfo.start();
+                    lfo.stop(ctx.currentTime + duration);
+                    this.activeNodes.push(lfo, lfoGain);
+                });
+            };
 
-            // Volume modulation for gusts
-            const volumeLfo = ctx.createOscillator();
-            const volumeLfoGain = ctx.createGain();
-            volumeLfo.type = 'sine';
-            volumeLfo.frequency.value = 0.08;
-            volumeLfoGain.gain.value = 0.15;
-            volumeLfo.connect(volumeLfoGain);
+            // Create each layer
+            layers.forEach(layer => {
+                const noise = ctx.createBufferSource();
+                noise.buffer = this.createNoise(ctx, 3);
+                noise.loop = true;
 
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 1);
-            volumeLfoGain.connect(gain.gain);
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = layer.freq;
+                filter.Q.value = layer.q;
 
-            noise.connect(lowpass);
-            lowpass.connect(gain);
-            gain.connect(this.masterGain);
+                const gain = ctx.createGain();
+                gain.gain.value = layer.gain;
 
-            lfo.start();
-            volumeLfo.start();
-            noise.start();
-            noise.stop(ctx.currentTime + duration);
-            lfo.stop(ctx.currentTime + duration);
-            volumeLfo.stop(ctx.currentTime + duration);
+                // Modulate filter frequency with pseudo-Perlin
+                createPerlinLFO(1, layer.freq * 0.5, filter.frequency);
+                // Modulate volume
+                createPerlinLFO(1, layer.gain * 0.3, gain.gain);
 
-            this.activeNodes.push(noise, lfo, volumeLfo, lowpass, gain);
-            swimEvent('game', '🎵', 'Synth', 'Wind');
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+
+                noise.start();
+                noise.stop(ctx.currentTime + duration);
+                this.activeNodes.push(noise, filter, gain);
+            });
+
+            // Stereo panning drift (pseudo-Perlin on pan)
+            createPerlinLFO(0.5, 0.4, masterPanner.pan);
+
+            // Occasional gusts - sudden swells
+            const gustInterval = setInterval(() => {
+                if (Math.random() < 0.15) { // 15% chance per interval
+                    const gustGain = ctx.createGain();
+                    gustGain.gain.setValueAtTime(0, ctx.currentTime);
+                    gustGain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5);
+                    gustGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+
+                    const gustNoise = ctx.createBufferSource();
+                    gustNoise.buffer = this.createNoise(ctx, 2);
+                    const gustFilter = ctx.createBiquadFilter();
+                    gustFilter.type = 'lowpass';
+                    gustFilter.frequency.value = 300 + Math.random() * 200;
+
+                    const gustPan = ctx.createStereoPanner();
+                    gustPan.pan.value = Math.random() * 2 - 1;
+
+                    gustNoise.connect(gustFilter);
+                    gustFilter.connect(gustGain);
+                    gustGain.connect(gustPan);
+                    gustPan.connect(this.masterGain);
+
+                    gustNoise.start();
+                    gustNoise.stop(ctx.currentTime + 2.5);
+                }
+            }, 2000);
+            this.intervals.push(gustInterval);
+
+            this.activeNodes.push(masterGain, masterPanner);
+
+            // Fade out
+            setTimeout(() => {
+                masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+            }, (duration - 2) * 1000);
+
+            setTimeout(() => this.stop(), duration * 1000);
+            swimEvent('game', '🎵', 'Synth', 'Wind (organic)');
         },
 
         // Low ominous rumble: very low frequency with subtle noise
