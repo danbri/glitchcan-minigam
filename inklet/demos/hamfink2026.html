@@ -67,7 +67,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     flex: 1; overflow-y: auto; padding: 1em;
     background: rgba(0,20,0,0.5); border: 2px solid var(--zx-green);
     margin-bottom: 1em;
-    scroll-behavior: smooth;
+    /* scroll-behavior: smooth removed - causes jitter with repeated scrollTop updates */
 }
 
 /* Text animation styles */
@@ -1055,8 +1055,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         img.onload = () => {
             chunk.classList.remove('loading');
-            requestAnimationFrame(() => chunk.classList.add('visible'));
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            requestAnimationFrame(() => {
+                chunk.classList.add('visible');
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            });
         };
         img.onerror = () => {
             chunk.classList.remove('loading');
@@ -1075,7 +1077,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        storyOutput.scrollTop = storyOutput.scrollHeight;
+        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
 
     function displayVideo(videoPath, caption = '') {
@@ -1092,8 +1094,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         video.playsInline = true;
 
         video.onloadedmetadata = () => {
-            requestAnimationFrame(() => chunk.classList.add('visible'));
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            requestAnimationFrame(() => {
+                chunk.classList.add('visible');
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            });
         };
         video.onerror = () => {
             chunk.classList.add('error');
@@ -1111,7 +1115,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        storyOutput.scrollTop = storyOutput.scrollHeight;
+        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
 
     function playAudio(audioPath, trackName = '') {
@@ -1181,22 +1185,20 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         // Scroll helper - ensures new content is fully visible
         const scrollToBottom = () => {
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            // Use scrollIntoView on the chunk for reliable scrolling
+            chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
         };
 
         // Immediate scroll to show new content appearing
-        scrollToBottom();
+        requestAnimationFrame(scrollToBottom);
 
         // For word-by-word animation, scroll again after words have appeared
-        // Total time = (wordCount * WORD_DELAY_MS) + animation duration (400ms)
         if (!hasLinks) {
             const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
             const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
-            // Scroll periodically during animation to keep up with appearing words
-            const scrollInterval = setInterval(scrollToBottom, 100);
+            // Single scroll at the end of animation - no interval jitter
             setTimeout(() => {
-                clearInterval(scrollInterval);
-                scrollToBottom(); // Final scroll after animation completes
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, totalAnimTime);
         }
     }
