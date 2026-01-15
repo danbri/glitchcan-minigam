@@ -1,15 +1,19 @@
 // FINK Chapter 2: The Mega Diamond Dimension
 // Loaded via # FINK: tag from hamfink2026.html
 // Demonstrates cross-file story loading with state preservation
+// Uses STRAWMAN namespace preprocessor for variable scoping
 
 oooOO`
 // Chapter 2: Mega Diamond Dimension
-// Variables are preserved from Chapter 1!
+// IMPORT/EXPORT tags declare variable contracts with parent chapter
 
-VAR diamonds = 0
-VAR mega_diamonds = 0
-VAR keys = 0
-VAR score = 0
+# IMPORT: diamonds, mega_diamonds, keys, score
+# EXPORT: mega_diamonds, was_mugged
+
+// Imported vars: diamonds, mega_diamonds, keys, score (from Chapter 1)
+// These are NOT redeclared - values injected by loader
+
+// Chapter-local vars (will be auto-namespaced by preprocessor)
 VAR portal_stable = false
 VAR collected_shard = false
 VAR was_mugged = false

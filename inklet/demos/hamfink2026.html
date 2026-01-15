@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FINK 2-Engine Demo: Ink + Minigame</title>
 <script src="https://cdn.jsdelivr.net/npm/inkjs/dist/ink-full.min.js"></script>
+<script src="fink-namespace-preprocessor.js"></script>
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 :root {
@@ -489,6 +490,7 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
     let gemSpawnTimer = null;
     let totalGemsSpawned = 0;
     let pendingFinkUrl = null;
+    let currentLoadingFinkUrl = null;  // Track URL for namespace derivation
 
     // --- DOM Elements ---
     const storyOutput = document.getElementById('story-output');
@@ -703,6 +705,9 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
         const resolvedUrl = new URL(url, window.location.href).href;
         log(`Resolved URL: ${resolvedUrl}`);
 
+        // Track URL for namespace derivation in handleFinkLoaded
+        currentLoadingFinkUrl = resolvedUrl;
+
         // Create sandbox content
         const sandboxHtml = `
             <!DOCTYPE html>
@@ -767,7 +772,7 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
         log(`FINK content loaded: ${finkContent.length} chars (${dataArray.length} block(s))`);
         setStatus('Chapter loaded!');
 
-        // Store current state
+        // Store current state for IMPORT injection
         const savedState = story ? {
             diamonds: story.variablesState['diamonds'],
             mega_diamonds: story.variablesState['mega_diamonds'],
@@ -775,14 +780,26 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
             score: story.variablesState['score']
         } : null;
 
-        // Strip VAR declarations for variables we're carrying over
-        // This prevents "variable already declared" errors when loading chapters
+        // --- STRAWMAN: Namespace Preprocessor ---
+        // Use FinkNamespacePreprocessor if available, fallback to legacy VAR stripping
         let processedContent = finkContent;
-        if (savedState) {
+        let nsResult = null;
+
+        if (typeof FinkNamespacePreprocessor !== 'undefined') {
+            log('[NS] Using FinkNamespacePreprocessor (STRAWMAN)');
+            nsResult = FinkNamespacePreprocessor.transform(
+                finkContent,
+                currentLoadingFinkUrl || 'unknown.fink.js',
+                { debug: true }
+            );
+            processedContent = nsResult.content;
+            log(`[NS] Namespace: ${nsResult.namespace}, Imports: [${nsResult.imports.join(', ')}]`);
+        } else if (savedState) {
+            // Legacy fallback: Strip VAR declarations for variables we're carrying over
+            log('[NS] Preprocessor not loaded, using legacy VAR stripping');
             const varsToStrip = Object.keys(savedState);
             log(`Stripping VAR declarations for: ${varsToStrip.join(', ')}`);
             varsToStrip.forEach(varName => {
-                // Match "VAR varname = value" with optional whitespace
                 const varPattern = new RegExp(`^\\s*VAR\\s+${varName}\\s*=.*$`, 'gm');
                 processedContent = processedContent.replace(varPattern, `// [IMPORTED: ${varName}]`);
             });
@@ -795,12 +812,19 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
         // Compile and run the new story
         initStory(processedContent);
 
-        // Restore state if we had one
+        // Inject imported values from parent state
         if (savedState && story) {
-            story.variablesState['diamonds'] = savedState.diamonds;
-            story.variablesState['mega_diamonds'] = savedState.mega_diamonds;
-            story.variablesState['keys'] = savedState.keys;
-            story.variablesState['score'] = savedState.score;
+            if (nsResult && nsResult.imports.length > 0) {
+                // Use preprocessor's import list
+                log(`[NS] Injecting imports: ${nsResult.imports.join(', ')}`);
+                FinkNamespacePreprocessor.injectImports(story, nsResult.imports, savedState);
+            } else {
+                // Legacy: restore all saved state
+                story.variablesState['diamonds'] = savedState.diamonds;
+                story.variablesState['mega_diamonds'] = savedState.mega_diamonds;
+                story.variablesState['keys'] = savedState.keys;
+                story.variablesState['score'] = savedState.score;
+            }
             updateStatsDisplay();
         }
     }
