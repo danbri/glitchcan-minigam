@@ -859,6 +859,14 @@ Source files:
             if (text.trim()) {
                 displayTextWithAnimation(text.trim(), cssClass);
             }
+
+            // CRITICAL: Break immediately when MINIGAME or FINK tag detected
+            // This prevents the story from advancing past the return point
+            // before the minigame/external load completes
+            if (shouldStartMinigame || pendingFinkUrl) {
+                log(`Breaking story loop for ${shouldStartMinigame ? 'minigame' : 'FINK load'}`, 'debug');
+                break;
+            }
         }
 
         // Update stats

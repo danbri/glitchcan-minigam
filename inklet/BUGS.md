@@ -68,6 +68,7 @@ The dev panel logs tab should have a sort-by widget at top/bottom to sort by dat
 **Severity:** Critical
 **File:** `inklet/demos/hamfink2026.html`
 **Reported:** 2026-01-15
+**Status:** FIXED
 
 Playing the second (mega) minigame, collecting 7 gems, then leaving does not:
 - Return to narrative view automatically
@@ -75,14 +76,15 @@ Playing the second (mega) minigame, collecting 7 gems, then leaving does not:
 
 When manually switching to story mode, the mega_diamonds count is 0.
 
-**Steps to reproduce:**
-1. Play through to Chapter 2 mega dimension
-2. Play the mega minigame
-3. Collect gems (e.g., 7)
-4. Return to story (or wait for game to end)
-5. Observe: stuck in minigame view, no mega diamonds credited
+**Root cause found:** The `while (story.canContinue)` loop in `continueStory()` kept processing AFTER detecting the MINIGAME tag. By the time the minigame started, the story had already:
+1. Advanced through `-> mega_minigame_return` divert
+2. Evaluated `{mega_diamonds > 0:` with mega_diamonds=0
+3. Output "The Mega Diamonds were too fast!" text
+4. Moved to `explore_mega`
 
-**Likely cause:** The `endMinigame()` function may not be triggering correctly in the mega dimension context, or the story variable update is failing when story context has changed.
+When minigame ended and updated `mega_diamonds` to 7, the story was already past the return point.
+
+**Fix:** Break out of the story loop immediately when MINIGAME or FINK tag is detected, preserving story position for when the external action completes.
 
 ---
 
