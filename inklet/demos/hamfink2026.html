@@ -45,9 +45,10 @@ header button:focus-visible {
     outline-offset: 2px;
 }
 header button:active { transform: scale(0.96); }
-#restartBtn { background: var(--zx-green); color: #000; }
+#restartBtn { background: var(--zx-cyan); color: #000; }
 #viewToggle { background: var(--zx-mag); color: #fff; }
-header button:hover { background: var(--zx-red); color: #fff; }
+/* Accessible hover: brightness change + underline, not color swap */
+header button:hover { filter: brightness(1.3); text-decoration: underline; }
 #statusDisplay {
     margin-left: auto; font-size: 10px; color: var(--zx-yellow);
     padding: 0.2em 0.5em; border: 1px dashed var(--zx-yellow);
@@ -160,11 +161,16 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 #choices { display: flex; flex-direction: column; gap: 0.5em; }
 button.choice {
-    padding: .8em; text-align: left; background: #070; color: #0ff;
-    border: 2px solid var(--zx-green); font-family: inherit; font-size: 14px; cursor: pointer;
+    padding: .8em; text-align: left; background: #024; color: #0ff;
+    border: 2px solid var(--zx-cyan); font-family: inherit; font-size: 14px; cursor: pointer;
     animation: choiceAppear 0.4s ease-out forwards;
     opacity: 0;
     transform: translateX(-20px);
+    position: relative;
+}
+button.choice::before {
+    content: '▶ ';
+    opacity: 0.6;
 }
 button.choice:nth-child(1) { animation-delay: 0.1s; }
 button.choice:nth-child(2) { animation-delay: 0.2s; }
@@ -176,7 +182,15 @@ button.choice:nth-child(4) { animation-delay: 0.4s; }
     100% { opacity: 1; transform: translateX(0); }
 }
 
-button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(--zx-red); }
+/* Accessible hover: blue→orange with underline, not red/green */
+button.choice:hover {
+    background: #630; color: #fff; border-color: var(--zx-yellow);
+    text-decoration: underline;
+}
+button.choice:hover::before {
+    content: '▶▶ ';
+    opacity: 1;
+}
 button.choice:focus-visible {
     outline: 3px solid var(--zx-yellow);
     outline-offset: 2px;
@@ -187,12 +201,112 @@ button.choice {
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
-/* Special styles for story content */
-.success { color: var(--zx-green); text-shadow: 0 0 10px var(--zx-green); }
-.danger { color: var(--zx-red); }
+/* Special styles for story content - ACCESSIBLE (not red/green dependent) */
+.success { color: var(--zx-cyan); text-shadow: 0 0 10px var(--zx-cyan); }
+.success::before { content: '✓ '; }
+.danger { color: #f90; } /* Orange, not red */
+.danger::before { content: '⚠ '; }
 .info { color: var(--zx-cyan); }
 .code { font-size: 10px; background: #111; padding: 0.5em; border: 1px solid var(--zx-blue); }
 .mega { color: var(--zx-yellow); font-size: 1.2em; text-shadow: 0 0 20px var(--zx-yellow); }
+
+/* Player decision marker - shows what the user chose */
+.player-decision {
+    color: var(--zx-yellow);
+    font-style: italic;
+    border-left: 3px solid var(--zx-yellow);
+    padding-left: 0.8em;
+    margin: 0.5em 0;
+    opacity: 0.9;
+}
+.player-decision::before {
+    content: '→ You: ';
+    font-style: normal;
+    opacity: 0.7;
+}
+
+/* Text since last decision gets subtle grouping */
+.text-chunk.since-decision {
+    border-left: 2px solid rgba(0,255,255,0.3);
+    padding-left: 0.5em;
+    margin-left: 0.2em;
+}
+
+/* Media elements in story timeline */
+.media-chunk {
+    margin: 1em 0;
+    animation: mediaAppear 0.5s ease-out forwards;
+    opacity: 0;
+    transform: scale(0.95);
+}
+.media-chunk.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+@keyframes mediaAppear {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+.media-chunk img {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid var(--zx-cyan);
+    border-radius: 4px;
+    display: block;
+}
+.media-chunk video {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid var(--zx-mag);
+    border-radius: 4px;
+    display: block;
+}
+.media-chunk .media-caption {
+    font-size: 10px;
+    color: var(--zx-cyan);
+    opacity: 0.7;
+    margin-top: 0.3em;
+}
+.media-chunk.loading {
+    min-height: 100px;
+    background: rgba(0,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.media-chunk.loading::after {
+    content: '⏳ Loading...';
+    color: var(--zx-cyan);
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+.media-chunk.error {
+    color: #f90;
+    padding: 1em;
+    border: 1px dashed #f90;
+}
+
+/* Audio indicator (non-visual, but shows in UI) */
+#audio-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid var(--zx-mag);
+    padding: 0.5em 1em;
+    font-size: 10px;
+    color: var(--zx-mag);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+#audio-indicator.playing {
+    opacity: 1;
+}
 
 /* Stats bar */
 #stats-bar {
@@ -639,6 +753,13 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
 + [View source on GitHub] -> github_links
 + [Return to ending] -> victory
++ [Dev: World Between Worlds] -> dev_pools
+
+=== dev_pools ===
+# CLASS: info
+Teleporting to the World Between Worlds...
+# FINK: dev-worldpools.fink.js
+-> END
 
 === github_links ===
 # CLASS: code
@@ -685,6 +806,92 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     let totalGemsSpawned = 0;
     let pendingFinkUrl = null;
     let currentLoadingFinkUrl = null;  // Track URL for namespace derivation
+    let currentBasehref = '';  // Base path for media resolution
+
+    // --- Audio Manager (WebAudio with crossfade) ---
+    const AudioManager = {
+        context: null,
+        currentSource: null,
+        currentGain: null,
+        nextSource: null,
+        nextGain: null,
+        currentTrack: null,
+        fadeDuration: 2.0, // seconds
+
+        init() {
+            if (!this.context) {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return this.context.state === 'running' || this.context.resume();
+        },
+
+        async play(url, trackName = '') {
+            try {
+                await this.init();
+                log(`Audio: Loading ${url}`, 'debug');
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+
+                // Crossfade from current to new
+                if (this.currentSource) {
+                    this.fadeOut(this.currentGain);
+                }
+
+                // Create new source
+                const source = this.context.createBufferSource();
+                const gain = this.context.createGain();
+                source.buffer = audioBuffer;
+                source.loop = true;
+                source.connect(gain);
+                gain.connect(this.context.destination);
+
+                // Fade in
+                gain.gain.setValueAtTime(0, this.context.currentTime);
+                gain.gain.linearRampToValueAtTime(1, this.context.currentTime + this.fadeDuration);
+
+                source.start();
+                this.currentSource = source;
+                this.currentGain = gain;
+                this.currentTrack = trackName || url.split('/').pop();
+
+                // Update indicator
+                const indicator = document.getElementById('audio-indicator');
+                const trackNameEl = document.getElementById('audio-track-name');
+                if (indicator && trackNameEl) {
+                    trackNameEl.textContent = this.currentTrack;
+                    indicator.classList.add('playing');
+                }
+
+                log(`Audio: Playing ${this.currentTrack}`, 'info');
+                swimEvent('game', '🎵', 'Audio', this.currentTrack);
+            } catch (e) {
+                log(`Audio error: ${e.message}`, 'error');
+            }
+        },
+
+        fadeOut(gainNode) {
+            if (gainNode) {
+                gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + this.fadeDuration);
+                setTimeout(() => {
+                    try { this.currentSource?.stop(); } catch(e) {}
+                }, this.fadeDuration * 1000);
+            }
+        },
+
+        stop() {
+            if (this.currentSource) {
+                this.fadeOut(this.currentGain);
+                this.currentSource = null;
+                this.currentGain = null;
+                this.currentTrack = null;
+                const indicator = document.getElementById('audio-indicator');
+                if (indicator) indicator.classList.remove('playing');
+            }
+        }
+    };
 
     // --- DOM Elements ---
     const storyOutput = document.getElementById('story-output');
@@ -817,21 +1024,117 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
     }
 
+    // --- Media URL Resolution ---
+    function resolveMediaUrl(path) {
+        if (!path) return '';
+        // Absolute URL - use as-is
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            return path;
+        }
+        // Resolve relative to basehref or current page
+        const base = currentBasehref || window.location.href;
+        try {
+            return new URL(path, base).href;
+        } catch (e) {
+            log(`Media URL resolution failed: ${e.message}`, 'error');
+            return path;
+        }
+    }
+
+    // --- Media Display Functions ---
+    function displayImage(imagePath, caption = '') {
+        const resolvedUrl = resolveMediaUrl(imagePath);
+        log(`Displaying image: ${resolvedUrl}`, 'ink');
+        swimEvent('fink', '🖼️', 'Image', imagePath);
+
+        const chunk = document.createElement('div');
+        chunk.className = 'media-chunk since-decision loading';
+
+        const img = document.createElement('img');
+        img.alt = caption || imagePath;
+
+        img.onload = () => {
+            chunk.classList.remove('loading');
+            requestAnimationFrame(() => chunk.classList.add('visible'));
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+        img.onerror = () => {
+            chunk.classList.remove('loading');
+            chunk.classList.add('error');
+            chunk.textContent = `⚠ Image not found: ${imagePath}`;
+        };
+
+        img.src = resolvedUrl;
+        chunk.appendChild(img);
+
+        if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'media-caption';
+            cap.textContent = caption;
+            chunk.appendChild(cap);
+        }
+
+        storyOutput.appendChild(chunk);
+        storyOutput.scrollTop = storyOutput.scrollHeight;
+    }
+
+    function displayVideo(videoPath, caption = '') {
+        const resolvedUrl = resolveMediaUrl(videoPath);
+        log(`Displaying video: ${resolvedUrl}`, 'ink');
+        swimEvent('fink', '🎬', 'Video', videoPath);
+
+        const chunk = document.createElement('div');
+        chunk.className = 'media-chunk since-decision';
+
+        const video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+
+        video.onloadedmetadata = () => {
+            requestAnimationFrame(() => chunk.classList.add('visible'));
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+        video.onerror = () => {
+            chunk.classList.add('error');
+            chunk.textContent = `⚠ Video not found: ${videoPath}`;
+        };
+
+        video.src = resolvedUrl;
+        chunk.appendChild(video);
+
+        if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'media-caption';
+            cap.textContent = caption;
+            chunk.appendChild(cap);
+        }
+
+        storyOutput.appendChild(chunk);
+        storyOutput.scrollTop = storyOutput.scrollHeight;
+    }
+
+    function playAudio(audioPath, trackName = '') {
+        const resolvedUrl = resolveMediaUrl(audioPath);
+        AudioManager.play(resolvedUrl, trackName);
+    }
+
     // --- Animated Text Display ---
     const WORD_DELAY_MS = 30;  // Delay between each word appearing
 
     function displayTextWithAnimation(text, cssClass = '') {
         log(`Displaying text: "${text.slice(0, 50)}..."`, 'ink');
 
-        // Remove 'latest' class from previous chunks
+        // Remove 'latest' class from previous chunks (but keep since-decision)
         const previousLatest = storyOutput.querySelectorAll('.text-chunk.latest');
         previousLatest.forEach(el => {
             el.classList.remove('latest');
-            el.classList.add('settled');
+            // Don't add 'settled' yet - keep the since-decision grouping
         });
 
         const chunk = document.createElement('div');
-        chunk.className = `text-chunk latest ${cssClass}`.trim();
+        // Add 'since-decision' to group all text since player's last choice
+        chunk.className = `text-chunk latest since-decision ${cssClass}`.trim();
 
         // Check if text contains linkifiable content
         const linkPattern = /(https?:\/\/[^\s]+|hamfink2026[^\s]*\.(?:html|js))/g;
@@ -971,6 +1274,30 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                     pendingFinkUrl = tag.replace('FINK:', '').trim();
                     log(`FINK tag detected: ${pendingFinkUrl}`, 'warn');
                 }
+                if (tag.startsWith('IMAGE:')) {
+                    const imagePath = tag.replace('IMAGE:', '').trim();
+                    log(`IMAGE tag: ${imagePath}`, 'debug');
+                    displayImage(imagePath);
+                }
+                if (tag.startsWith('VIDEO:')) {
+                    const videoPath = tag.replace('VIDEO:', '').trim();
+                    log(`VIDEO tag: ${videoPath}`, 'debug');
+                    displayVideo(videoPath);
+                }
+                if (tag.startsWith('AUDIO:')) {
+                    const audioPath = tag.replace('AUDIO:', '').trim();
+                    log(`AUDIO tag: ${audioPath}`, 'debug');
+                    playAudio(audioPath);
+                }
+                if (tag.startsWith('BASEHREF:')) {
+                    currentBasehref = tag.replace('BASEHREF:', '').trim();
+                    log(`BASEHREF set to: ${currentBasehref}`, 'debug');
+                }
+                if (tag.startsWith('BG:')) {
+                    const bgColor = tag.replace('BG:', '').trim();
+                    document.body.style.backgroundColor = bgColor;
+                    log(`Background color: ${bgColor}`, 'debug');
+                }
             }
 
             // Display text with animation
@@ -1020,16 +1347,34 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     function displayChoices() {
         choicesContainer.innerHTML = '';
 
-        if (!story || story.currentChoices.length === 0) {
+        if (!story) {
+            log('No story object - cannot display choices', 'error');
+            return;
+        }
+
+        if (!story.currentChoices || story.currentChoices.length === 0) {
             log('No choices available (story end or waiting)');
             return;
         }
 
+        log(`Creating ${story.currentChoices.length} choice buttons...`, 'debug');
         story.currentChoices.forEach((choice, index) => {
             const btn = document.createElement('button');
             btn.className = 'choice';
             btn.textContent = `${index + 1}. ${choice.text}`;
-            btn.addEventListener('click', () => selectChoice(index));
+            btn.addEventListener('click', (e) => {
+                log(`Choice button ${index} clicked`, 'debug');
+                // Visual feedback - flash the button
+                btn.style.boxShadow = '0 0 20px var(--zx-yellow)';
+                setTimeout(() => btn.style.boxShadow = '', 200);
+                selectChoice(index);
+            });
+            // Also add touch support
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                log(`Choice button ${index} touched`, 'debug');
+                btn.click();
+            });
             choicesContainer.appendChild(btn);
         });
 
@@ -1037,12 +1382,56 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     function selectChoice(index) {
-        const choiceText = story.currentChoices[index].text;
-        log(`Selected choice ${index}: ${choiceText}`);
-        // Semantic swimlane event for player choice
-        swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
-        story.ChooseChoiceIndex(index);
-        continueStory();
+        log(`selectChoice(${index}) called`, 'debug');
+        try {
+            if (!story) {
+                log('ERROR: story is null/undefined in selectChoice', 'error');
+                setStatus('Error: No story!');
+                return;
+            }
+            log(`story.canContinue=${story.canContinue}, story.currentChoices.length=${story.currentChoices?.length || 0}`, 'debug');
+
+            if (!story.currentChoices || story.currentChoices.length === 0) {
+                log('ERROR: no choices available in story', 'error');
+                setStatus('Error: No choices!');
+                return;
+            }
+            if (index >= story.currentChoices.length) {
+                log(`ERROR: choice index ${index} out of bounds (${story.currentChoices.length} choices)`, 'error');
+                setStatus('Error: Bad index!');
+                return;
+            }
+            const choiceText = story.currentChoices[index].text;
+            log(`Selected choice ${index}: ${choiceText}`);
+
+            // Display player's decision visually
+            displayPlayerDecision(choiceText);
+
+            // Mark all previous "since-decision" chunks as settled
+            const prevChunks = storyOutput.querySelectorAll('.text-chunk.since-decision');
+            prevChunks.forEach(el => el.classList.remove('since-decision'));
+
+            // Semantic swimlane event for player choice
+            swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
+
+            log(`Calling story.ChooseChoiceIndex(${index})...`, 'debug');
+            story.ChooseChoiceIndex(index);
+            log(`Choice registered, calling continueStory()...`, 'debug');
+            continueStory();
+            log(`continueStory() completed`, 'debug');
+        } catch (e) {
+            log(`ERROR in selectChoice: ${e.message}`, 'error');
+            log(`Error stack: ${e.stack}`, 'error');
+            setStatus(`Error: ${e.message.slice(0, 30)}`);
+            console.error('selectChoice error:', e);
+        }
+    }
+
+    function displayPlayerDecision(text) {
+        const decision = document.createElement('div');
+        decision.className = 'text-chunk player-decision';
+        decision.textContent = text;
+        storyOutput.appendChild(decision);
     }
 
     // --- FINK External Loading ---
@@ -1498,5 +1887,6 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 })();
 </script>
 
+<div id="audio-indicator">🎵 <span id="audio-track-name"></span></div>
 </body>
 </html>
