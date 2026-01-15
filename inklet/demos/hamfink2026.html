@@ -1291,6 +1291,23 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             log('Story compiled successfully');
             setStatus('Story ready');
             swimEvent('ink', '✅', 'Compiled OK', isExternal ? 'Chapter loaded' : 'Main story ready', true);
+
+            // Process global tags (story-level tags before any knot)
+            if (story.globalTags && story.globalTags.length > 0) {
+                log(`Processing ${story.globalTags.length} global tags`, 'debug');
+                for (const tag of story.globalTags) {
+                    if (tag.startsWith('BASEHREF:')) {
+                        currentBasehref = tag.replace('BASEHREF:', '').trim();
+                        log(`Global BASEHREF set to: ${currentBasehref}`, 'debug');
+                    }
+                    if (tag.startsWith('AUDIO:')) {
+                        const audioPath = tag.replace('AUDIO:', '').trim();
+                        log(`Global AUDIO tag: ${audioPath}`, 'debug');
+                        playAudio(audioPath);
+                    }
+                }
+            }
+
             continueStory();
         } catch (e) {
             log(`Compilation error: ${e.message}`, 'error');
