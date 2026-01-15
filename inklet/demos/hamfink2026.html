@@ -448,6 +448,16 @@ button.choice {
     overflow-x: auto;
 }
 
+/* FINKs tab */
+#finks-content { padding: 1em; overflow-y: auto; }
+#local-finks a {
+    color: var(--zx-cyan); text-decoration: none; padding: 0.2em 0.4em;
+    border-radius: 3px; transition: all 0.15s ease;
+}
+#local-finks a:hover {
+    background: var(--zx-cyan); color: #000; text-decoration: none;
+}
+
 /* Ensure page fits viewport */
 html { height: 100%; overflow: hidden; }
 body { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
@@ -488,6 +498,7 @@ main { flex: 1; min-height: 0; overflow: hidden; }
         <button class="active" data-tab="logs">📋 Logs</button>
         <button data-tab="swimlanes">🏊 Swimlanes</button>
         <button data-tab="state">📊 State</button>
+        <button data-tab="finks">📂 FINKs</button>
         <button id="copyLogsBtn">📋 Copy</button>
         <button id="closeDevPanel" style="margin-left:auto;">✕ Close</button>
     </div>
@@ -530,6 +541,37 @@ main { flex: 1; min-height: 0; overflow: hidden; }
     <!-- State Tab -->
     <div id="state-content" class="dev-tab-content">
         <pre id="state-display">Loading...</pre>
+    </div>
+
+    <!-- FINKs Tab -->
+    <div id="finks-content" class="dev-tab-content">
+        <div style="display:flex; gap:2em; flex-wrap:wrap;">
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">📁 This Repo</h4>
+                <div id="local-finks" style="display:flex; flex-direction:column; gap:0.3em; font-size:12px;">
+                    <a href="#" data-fink="bagend.fink.js">🏠 Bag End</a>
+                    <a href="#" data-fink="hampstead.fink.js">🎮 Hampstead</a>
+                    <a href="#" data-fink="mudslidemines.fink.js">⛏️ Mudslide Mines</a>
+                    <a href="#" data-fink="riverbend.fink.js">🏞️ Riverbend</a>
+                    <a href="#" data-fink="shane-manor.fink.js">🏚️ Shane Manor</a>
+                    <a href="#" data-fink="../cozyverse/maple-hollow.fink.js">🍁 Maple Hollow</a>
+                    <a href="#" data-fink="dev-worldpools.fink.js">🌊 World Pools (dev)</a>
+                    <a href="#" data-fink="hamfink2026-ch2.fink.js">📖 Chapter 2</a>
+                    <a href="#" data-fink="tml-2025-langlearn.fink.js">🗣️ Language Learning</a>
+                    <a href="#" data-fink="../toc.fink.js">📑 TOC (inklet)</a>
+                </div>
+            </div>
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-mag);">🌐 External URL</h4>
+                <div style="display:flex; gap:0.5em;">
+                    <input type="text" id="external-fink-url" placeholder="https://example.com/story.fink.js" style="flex:1; min-width:200px; padding:0.3em; font-size:12px; background:#111; color:#fff; border:1px solid var(--zx-mag);">
+                    <button id="load-external-fink" style="padding:0.3em 0.6em; font-size:12px;">Load</button>
+                </div>
+                <div style="margin-top:0.5em; font-size:10px; color:#888;">
+                    Paste any .fink.js URL to load external stories
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1863,6 +1905,42 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }).catch(err => {
             log(`Failed to copy: ${err}`, 'error');
         });
+    });
+
+    // FINK quick-load links
+    document.querySelectorAll('#local-finks a[data-fink]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const finkPath = link.dataset.fink;
+            // Resolve relative to inklet/ folder (go up from demos/)
+            const resolvedPath = finkPath.startsWith('../') ? finkPath : `../${finkPath}`;
+            log(`Quick-loading FINK: ${resolvedPath}`, 'fink');
+            storyOutput.innerHTML = ''; // Clear story
+            choicesContainer.innerHTML = '';
+            currentLoadingFinkUrl = null; // Reset so path resolves from HTML
+            loadFinkFile(resolvedPath);
+            devPanel.classList.remove('visible'); // Hide dev panel
+        });
+    });
+
+    // External FINK URL loader
+    const externalFinkInput = document.getElementById('external-fink-url');
+    const loadExternalFinkBtn = document.getElementById('load-external-fink');
+    loadExternalFinkBtn.addEventListener('click', () => {
+        const url = externalFinkInput.value.trim();
+        if (!url) {
+            log('Please enter a FINK URL', 'warn');
+            return;
+        }
+        log(`Loading external FINK: ${url}`, 'fink');
+        storyOutput.innerHTML = '';
+        choicesContainer.innerHTML = '';
+        currentLoadingFinkUrl = null;
+        loadFinkFile(url);
+        devPanel.classList.remove('visible');
+    });
+    externalFinkInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadExternalFinkBtn.click();
     });
 
     // State display update function
