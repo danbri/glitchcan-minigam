@@ -1,119 +1,74 @@
 {
   "title": "Conic Sections",
   "subtitle": "Slice a cone to reveal circles, ellipses, parabolas, and hyperbolas",
-  "version": "1.1",
-  "notes": "Educational demo inspired by science museum laser cut exhibits. Nested cones (green outer, brown inner at 96%) reveal cross-section when cut. Circle (0°), Ellipse (~15°), Parabola (~27°), Hyperbola (>30°).",
+  "version": "1.3",
+  "notes": "Educational demo inspired by science museum laser cut exhibits. Adjust the cutting angle to see different conic sections emerge.",
 
   "camera": {
-    "distance": 6,
-    "phi": 0.4,
-    "theta": 0.3,
-    "target": [0, 0, 0]
+    "distance": 5,
+    "phi": 0.5,
+    "theta": 0.4,
+    "target": [0, 0.3, 0]
   },
 
   "params": {
-    "_cutting": "=== CUTTING PLANE ===",
     "cutAngle": {
       "value": 15,
       "type": "scalar",
       "min": 0,
-      "max": 60,
-      "description": "Cutting plane angle (degrees from horizontal). 0=circle, ~15=ellipse, ~27=parabola, >30=hyperbola"
+      "max": 55,
+      "description": "Cutting angle: 0°=circle, 15°=ellipse, 27°=parabola, 40°+=hyperbola"
     },
-    "cutPosition": {
-      "value": 0.8,
+    "cutHeight": {
+      "value": 0.6,
       "type": "scalar",
-      "min": -1.5,
-      "max": 2.0,
-      "description": "Height of cutting plane center"
-    },
-
-    "_cone": "=== CONE GEOMETRY ===",
-    "coneHeight": {
-      "value": 2.0,
-      "type": "scalar",
-      "min": 1.0,
-      "max": 3.0,
-      "description": "Height of each cone nappe"
-    },
-    "coneRadius": {
-      "value": 1.0,
-      "type": "scalar",
-      "min": 0.5,
+      "min": -0.5,
       "max": 1.5,
-      "description": "Base radius of cone"
-    },
-
-    "_appearance": "=== COLORS ===",
-    "outerColor": {
-      "value": [0.2, 0.7, 0.3],
-      "type": "color3",
-      "description": "Outer cone color (green)"
-    },
-    "innerColor": {
-      "value": [0.6, 0.4, 0.2],
-      "type": "color3",
-      "description": "Inner cone / cross-section color (brown)"
+      "description": "Cut position along cone"
     }
   },
 
   "defs": {
     "outerCone": {
-      "comment": "Outer green cone - single nappe",
+      "comment": "Outer green cone - sharp tip using sdCone (h, r only)",
       "type": "cone",
       "params": {
-        "h": { "var": "coneHeight" },
-        "r1": 0.01,
-        "r2": { "var": "coneRadius" },
-        "color": { "var": "outerColor" }
+        "h": 2.0,
+        "r": 1.0,
+        "color": [0.25, 0.65, 0.35]
       }
     },
 
     "innerCone": {
-      "comment": "Inner brown cone at 96% size - reveals cross-section",
+      "comment": "Inner brown cone at 96% - sharp tip",
       "type": "cone",
       "params": {
-        "h": { "expr": "mul", "args": [{ "var": "coneHeight" }, 0.96] },
-        "r1": 0.01,
-        "r2": { "expr": "mul", "args": [{ "var": "coneRadius" }, 0.96] },
-        "color": { "var": "innerColor" }
+        "h": 1.92,
+        "r": 0.96,
+        "color": [0.65, 0.45, 0.25]
       }
     },
 
     "doubleConeOuter": {
-      "comment": "Double cone (bicone) - outer green",
+      "comment": "Double cone - outer green",
       "type": "union",
       "children": [
-        {
-          "type": "ref",
-          "id": "outerCone"
-        },
-        {
-          "type": "ref",
-          "id": "outerCone",
-          "transform": { "rotate": [180, 0, 0] }
-        }
+        { "type": "ref", "id": "outerCone" },
+        { "type": "ref", "id": "outerCone", "transform": { "rotate": [180, 0, 0] } }
       ]
     },
 
     "doubleConeInner": {
-      "comment": "Double cone (bicone) - inner brown at 96%",
+      "comment": "Double cone - inner brown",
       "type": "union",
       "children": [
-        {
-          "type": "ref",
-          "id": "innerCone"
-        },
-        {
-          "type": "ref",
-          "id": "innerCone",
-          "transform": { "rotate": [180, 0, 0] }
-        }
+        { "type": "ref", "id": "innerCone" },
+        { "type": "ref", "id": "innerCone", "transform": { "rotate": [180, 0, 0] } }
       ]
     },
 
     "nestedCones": {
-      "comment": "Green outer + brown inner nested cones",
+      "comment": "Green outer + brown inner",
       "type": "union",
       "children": [
         { "type": "ref", "id": "doubleConeOuter" },
@@ -133,19 +88,15 @@
   },
 
   "root": {
-    "comment": "Subtract the cutter from nested cones to reveal cross-section",
+    "comment": "Subtract cutter from nested cones",
     "type": "subtract",
     "children": [
+      { "type": "ref", "id": "nestedCones" },
       {
-        "type": "ref",
-        "id": "nestedCones"
-      },
-      {
-        "comment": "Cutting plane - positioned and rotated",
         "type": "ref",
         "id": "cutter",
         "transform": {
-          "translate": [0, { "var": "cutPosition" }, 0],
+          "translate": [0, { "var": "cutHeight" }, 0],
           "rotate": [{ "var": "cutAngle" }, 0, 0]
         }
       }
