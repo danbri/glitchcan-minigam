@@ -1497,7 +1497,21 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     // --- FINK External Loading ---
+    // Track current FINK load to enable abort
+    let currentFinkLoadId = 0;
+    let currentFinkMessageHandler = null;
+
     function loadFinkFile(url) {
+        // Abort any previous pending load
+        if (currentFinkMessageHandler) {
+            window.removeEventListener('message', currentFinkMessageHandler);
+            currentFinkMessageHandler = null;
+            log('Aborted previous FINK load', 'debug');
+        }
+
+        // Increment load ID to invalidate stale responses
+        const thisLoadId = ++currentFinkLoadId;
+
         // Validate URL before proceeding
         if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') {
             log(`FINK load aborted: invalid URL "${url}"`, 'error');
@@ -1507,7 +1521,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             return;
         }
 
-        log(`FINK load requested: ${url}`, 'fink');
+        log(`FINK load requested: ${url} (load #${thisLoadId})`, 'fink');
         log(`Using JSONP-like sandbox injection technique`, 'fink');
         setStatus(`Loading ${url}...`);
 
@@ -1567,15 +1581,27 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             </html>
         `;
 
-        // Set up message listener
+        // Set up message listener with stale-check
+        let loadTimeout = null;
         const messageHandler = function(e) {
+            // Ignore if this load was aborted (stale)
+            if (thisLoadId !== currentFinkLoadId) {
+                log(`Ignoring stale FINK response (load #${thisLoadId}, current #${currentFinkLoadId})`, 'debug');
+                return;
+            }
+
             if (e.data.type === 'sandbox-ready') {
+                log(`Sandbox ready, requesting script load`, 'debug');
                 finkSandbox.contentWindow.postMessage({ type: 'load-script', url: resolvedUrl }, '*');
             } else if (e.data.type === 'fink-loaded') {
+                clearTimeout(loadTimeout);
                 window.removeEventListener('message', messageHandler);
+                currentFinkMessageHandler = null;
                 handleFinkLoaded(e.data.data);
             } else if (e.data.type === 'fink-error') {
+                clearTimeout(loadTimeout);
                 window.removeEventListener('message', messageHandler);
+                currentFinkMessageHandler = null;
                 log(`FINK load error: ${e.data.error}`, 'error');
                 setStatus('FINK load failed');
                 displayTextWithAnimation(`Failed to load chapter: ${e.data.error}`, 'danger');
@@ -1583,8 +1609,26 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             }
         };
 
+        // Store handler reference for abort
+        currentFinkMessageHandler = messageHandler;
         window.addEventListener('message', messageHandler);
-        finkSandbox.srcdoc = sandboxHtml;
+
+        // Timeout after 10 seconds
+        loadTimeout = setTimeout(() => {
+            if (thisLoadId === currentFinkLoadId && currentFinkMessageHandler === messageHandler) {
+                window.removeEventListener('message', messageHandler);
+                currentFinkMessageHandler = null;
+                log(`FINK load timeout for ${url}`, 'error');
+                displayTextWithAnimation(`Timeout loading chapter: ${url}`, 'danger');
+                displayChoices();
+            }
+        }, 10000);
+
+        // Reset sandbox by setting new srcdoc
+        finkSandbox.srcdoc = '';
+        requestAnimationFrame(() => {
+            finkSandbox.srcdoc = sandboxHtml;
+        });
     }
 
     function handleFinkLoaded(dataArray) {
@@ -1857,6 +1901,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         choicesContainer.innerHTML = '';
         minigameActive = false;
         minigameMode = 'normal';
+        decisionCount = 0;
+        currentLoadingFinkUrl = null;  // Reset URL context
+        currentBasehref = '';
+        pendingFinkUrl = null;  // Cancel any pending FINK load
         clearInterval(gemSpawnTimer);
         gameContainer.classList.remove('mega-mode');
         switchView('narrative');
