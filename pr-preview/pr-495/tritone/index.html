@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tritone Rick - Diabolus in Musica</title>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a0a0a 0%, #2d1f1f 50%, #0a0a1a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #888;
+            font-style: italic;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        button {
+            background: linear-gradient(180deg, #cc3333 0%, #991111 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .controls button {
+            padding: 12px 20px;
+            font-size: 1rem;
+        }
+        #stop-btn {
+            background: linear-gradient(180deg, #666 0%, #444 100%);
+        }
+        .visualizer {
+            height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .bar {
+            width: 8px;
+            background: linear-gradient(180deg, #ff4444, #cc0000);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.05s;
+        }
+        .info {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .info h3 {
+            color: #ff6666;
+            margin-top: 0;
+        }
+        .midi-data {
+            background: #111;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .midi-data h4 {
+            color: #ff6666;
+            margin-top: 0;
+        }
+        .copy-btn {
+            background: #333;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        .status {
+            text-align: center;
+            color: #888;
+            margin-top: 10px;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tritone Rick</h1>
+    <p class="subtitle">Diabolus in Musica - The Devil's Interval Rick Roll</p>
+
+    <div class="container">
+        <button id="play-btn">Play the Forbidden Interval</button>
+
+        <div class="controls">
+            <button id="stop-btn">Stop</button>
+            <button id="loop-btn">Loop: OFF</button>
+        </div>
+
+        <div class="visualizer" id="visualizer"></div>
+
+        <p class="status" id="status"></p>
+
+        <div class="info">
+            <h3>What is this?</h3>
+            <p>The <strong>tritone</strong> (augmented 4th / diminished 5th) spans exactly 6 semitones.
+            Medieval theorists called it "diabolus in musica" (the devil in music) and banned it from sacred compositions.</p>
+            <p>This plays a recognizable melodic pattern harmonized entirely with tritone intervals,
+            creating an unsettling, "evil" version of a familiar tune.</p>
+        </div>
+
+        <div class="midi-data">
+            <h4>MIDI Data (shareable)</h4>
+            <div id="midi-output"></div>
+            <button class="copy-btn" id="copy-btn">Copy MIDI JSON</button>
+        </div>
+    </div>
+
+    <script>
+// Tritone Rick - MIDI data and playback
+// The tritone interval = 6 semitones (augmented 4th / diminished 5th)
+
+// MIDI note data - melody with tritone bass harmony
+// Each note: [midiNote, duration in 16th notes, velocity]
+// The melody follows a recognizable contour, harmonized with tritones below
+const TRITONE_RICK_MIDI = {
+    name: "Tritone Rick - Diabolus in Musica",
+    tempo: 114, // BPM
+    timeSignature: [4, 4],
+    // Main melody notes (MIDI numbers) with tritone bass
+    tracks: [
+        {
+            name: "Lead (Tritone Melody)",
+            instrument: "synth",
+            notes: [
+                // Intro riff - tritone-ified
+                { note: 65, time: 0, duration: 0.25, velocity: 0.8 },      // F4
+                { note: 67, time: 0.25, duration: 0.25, velocity: 0.8 },   // G4
+                { note: 70, time: 0.5, duration: 0.25, velocity: 0.8 },    // Bb4 (tritone from E)
+                { note: 67, time: 0.75, duration: 0.25, velocity: 0.8 },   // G4
+
+                // "Never gonna" rhythm pattern with tritone intervals
+                { note: 74, time: 1, duration: 0.5, velocity: 0.9 },       // D5
+                { note: 74, time: 1.5, duration: 0.25, velocity: 0.85 },   // D5
+                { note: 76, time: 1.75, duration: 0.5, velocity: 0.9 },    // E5
+                { note: 70, time: 2.25, duration: 0.75, velocity: 0.85 },  // Bb4 (tritone)
+
+                // "give you up" - descending tritone
+                { note: 74, time: 3, duration: 0.25, velocity: 0.8 },      // D5
+                { note: 68, time: 3.25, duration: 0.25, velocity: 0.8 },   // Ab4 (tritone from D)
+                { note: 67, time: 3.5, duration: 0.5, velocity: 0.85 },    // G4
+                { note: 65, time: 4, duration: 0.5, velocity: 0.8 },       // F4
+
+                // "Never gonna" repeat
+                { note: 74, time: 4.5, duration: 0.5, velocity: 0.9 },     // D5
+                { note: 74, time: 5, duration: 0.25, velocity: 0.85 },     // D5
+                { note: 76, time: 5.25, duration: 0.5, velocity: 0.9 },    // E5
+                { note: 70, time: 5.75, duration: 0.75, velocity: 0.85 },  // Bb4
+
+                // "let you down"
+                { note: 72, time: 6.5, duration: 0.25, velocity: 0.8 },    // C5
+                { note: 70, time: 6.75, duration: 0.25, velocity: 0.8 },   // Bb4
+                { note: 67, time: 7, duration: 0.75, velocity: 0.85 },     // G4
+                { note: 66, time: 7.75, duration: 0.25, velocity: 0.7 },   // F#4 (tritone from C)
+
+                // Second phrase
+                { note: 74, time: 8, duration: 0.5, velocity: 0.9 },       // D5
+                { note: 74, time: 8.5, duration: 0.25, velocity: 0.85 },   // D5
+                { note: 76, time: 8.75, duration: 0.5, velocity: 0.9 },    // E5
+                { note: 70, time: 9.25, duration: 0.75, velocity: 0.85 },  // Bb4
+
+                // "run around"
+                { note: 74, time: 10, duration: 0.25, velocity: 0.8 },     // D5
+                { note: 79, time: 10.25, duration: 0.25, velocity: 0.85 }, // G5
+                { note: 77, time: 10.5, duration: 0.5, velocity: 0.9 },    // F5
+                { note: 70, time: 11, duration: 0.5, velocity: 0.8 },      // Bb4
+
+                // "desert you" - final tritone resolution
+                { note: 74, time: 11.5, duration: 0.25, velocity: 0.8 },   // D5
+                { note: 68, time: 11.75, duration: 0.25, velocity: 0.8 },  // Ab4
+                { note: 67, time: 12, duration: 0.5, velocity: 0.85 },     // G4
+                { note: 66, time: 12.5, duration: 1, velocity: 0.9 },      // F#4 (tritone ending)
+            ]
+        },
+        {
+            name: "Bass (Tritone Harmony)",
+            instrument: "bass",
+            notes: [
+                // Bass plays tritone below melody anchor points
+                { note: 41, time: 0, duration: 1, velocity: 0.7 },         // F2
+                { note: 35, time: 1, duration: 1, velocity: 0.75 },        // B1 (tritone from F)
+                { note: 43, time: 2, duration: 1, velocity: 0.7 },         // G2
+                { note: 37, time: 3, duration: 1, velocity: 0.75 },        // Db2 (tritone from G)
+
+                { note: 41, time: 4, duration: 1, velocity: 0.7 },         // F2
+                { note: 35, time: 5, duration: 1, velocity: 0.75 },        // B1
+                { note: 38, time: 6, duration: 1, velocity: 0.7 },         // D2
+                { note: 44, time: 7, duration: 1, velocity: 0.75 },        // Ab2 (tritone from D)
+
+                { note: 41, time: 8, duration: 1, velocity: 0.7 },         // F2
+                { note: 35, time: 9, duration: 1, velocity: 0.75 },        // B1
+                { note: 43, time: 10, duration: 1, velocity: 0.7 },        // G2
+                { note: 37, time: 11, duration: 0.5, velocity: 0.75 },     // Db2
+                { note: 42, time: 11.5, duration: 1, velocity: 0.8 },      // F#2 (final tritone)
+            ]
+        }
+    ]
+};
+
+// Convert MIDI note number to frequency
+function midiToFreq(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+// Convert MIDI note to note name
+function midiToNoteName(midi) {
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const octave = Math.floor(midi / 12) - 1;
+    return notes[midi % 12] + octave;
+}
+
+// Synthesizer setup
+let synth, bassSynth, isPlaying = false, isLooping = false;
+let scheduledEvents = [];
+
+async function initAudio() {
+    await Tone.start();
+
+    // Lead synth - slightly detuned for that unsettling feel
+    synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'sawtooth' },
+        envelope: {
+            attack: 0.02,
+            decay: 0.3,
+            sustain: 0.4,
+            release: 0.5
+        }
+    }).toDestination();
+    synth.volume.value = -6;
+
+    // Add chorus for thickness
+    const chorus = new Tone.Chorus(4, 2.5, 0.5).toDestination();
+    synth.connect(chorus);
+
+    // Bass synth
+    bassSynth = new Tone.MonoSynth({
+        oscillator: { type: 'square' },
+        envelope: {
+            attack: 0.05,
+            decay: 0.2,
+            sustain: 0.6,
+            release: 0.4
+        },
+        filterEnvelope: {
+            attack: 0.06,
+            decay: 0.2,
+            sustain: 0.5,
+            release: 0.2,
+            baseFrequency: 200,
+            octaves: 3
+        }
+    }).toDestination();
+    bassSynth.volume.value = -8;
+}
+
+function stopPlayback() {
+    isPlaying = false;
+    Tone.Transport.stop();
+    Tone.Transport.cancel();
+    scheduledEvents = [];
+    updateStatus('Stopped');
+}
+
+function scheduleNotes() {
+    const data = TRITONE_RICK_MIDI;
+    const beatDuration = 60 / data.tempo;
+
+    // Schedule lead notes
+    data.tracks[0].notes.forEach(n => {
+        const freq = midiToFreq(n.note);
+        const time = n.time * beatDuration;
+        const dur = n.duration * beatDuration;
+
+        Tone.Transport.schedule((t) => {
+            synth.triggerAttackRelease(freq, dur, t, n.velocity);
+            pulseVisualizer();
+        }, time);
+    });
+
+    // Schedule bass notes
+    data.tracks[1].notes.forEach(n => {
+        const freq = midiToFreq(n.note);
+        const time = n.time * beatDuration;
+        const dur = n.duration * beatDuration;
+
+        Tone.Transport.schedule((t) => {
+            bassSynth.triggerAttackRelease(freq, dur, t, n.velocity);
+        }, time);
+    });
+
+    // Calculate total duration
+    const lastNote = data.tracks[0].notes[data.tracks[0].notes.length - 1];
+    const totalDuration = (lastNote.time + lastNote.duration + 0.5) * beatDuration;
+
+    // Schedule end or loop
+    Tone.Transport.schedule(() => {
+        if (isLooping) {
+            Tone.Transport.stop();
+            Tone.Transport.cancel();
+            Tone.Transport.position = 0;
+            scheduleNotes();
+            Tone.Transport.start();
+        } else {
+            stopPlayback();
+            document.getElementById('play-btn').disabled = false;
+        }
+    }, totalDuration);
+}
+
+async function play() {
+    if (!synth) {
+        await initAudio();
+    }
+
+    if (isPlaying) {
+        stopPlayback();
+        document.getElementById('play-btn').disabled = false;
+        return;
+    }
+
+    isPlaying = true;
+    document.getElementById('play-btn').disabled = true;
+    updateStatus('Playing the forbidden interval...');
+
+    Tone.Transport.bpm.value = TRITONE_RICK_MIDI.tempo;
+    Tone.Transport.position = 0;
+
+    scheduleNotes();
+    Tone.Transport.start();
+}
+
+function toggleLoop() {
+    isLooping = !isLooping;
+    document.getElementById('loop-btn').textContent = `Loop: ${isLooping ? 'ON' : 'OFF'}`;
+}
+
+function updateStatus(msg) {
+    document.getElementById('status').textContent = msg;
+}
+
+// Visualizer
+function createVisualizer() {
+    const viz = document.getElementById('visualizer');
+    for (let i = 0; i < 32; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = '5px';
+        viz.appendChild(bar);
+    }
+}
+
+function pulseVisualizer() {
+    const bars = document.querySelectorAll('.bar');
+    bars.forEach(bar => {
+        const height = Math.random() * 80 + 10;
+        bar.style.height = height + 'px';
+        setTimeout(() => {
+            bar.style.height = Math.random() * 20 + 5 + 'px';
+        }, 150);
+    });
+}
+
+// Display MIDI data
+function displayMidiData() {
+    const output = document.getElementById('midi-output');
+    output.textContent = JSON.stringify(TRITONE_RICK_MIDI, null, 2);
+}
+
+function copyMidiData() {
+    const data = JSON.stringify(TRITONE_RICK_MIDI, null, 2);
+    navigator.clipboard.writeText(data).then(() => {
+        updateStatus('MIDI data copied to clipboard!');
+        setTimeout(() => updateStatus(''), 2000);
+    });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    createVisualizer();
+    displayMidiData();
+
+    document.getElementById('play-btn').addEventListener('click', play);
+    document.getElementById('stop-btn').addEventListener('click', () => {
+        stopPlayback();
+        document.getElementById('play-btn').disabled = false;
+    });
+    document.getElementById('loop-btn').addEventListener('click', toggleLoop);
+    document.getElementById('copy-btn').addEventListener('click', copyMidiData);
+});
+    </script>
+</body>
+</html>

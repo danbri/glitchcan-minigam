@@ -1,0 +1,152 @@
+{
+  "title": "Celly",
+  "subtitle": "Dividing microbes with waving tails",
+  "version": "1.1",
+  "quality": "medium",
+
+  "params": {
+    "cellColor": {
+      "value": [0.1, 0.7, 0.6],
+      "type": "color3",
+      "description": "Cell membrane color"
+    },
+    "nucleusColor": {
+      "value": [0.5, 0.3, 0.6],
+      "type": "color3",
+      "description": "Nucleus glow color"
+    },
+    "tailSpeed": {
+      "value": 5.0,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 12.0,
+      "description": "Tail wave speed"
+    }
+  },
+
+  "camera": {
+    "distance": 5,
+    "phi": 0.3,
+    "theta": 0.2,
+    "target": [0, 0, 0]
+  },
+  "defs": {
+    "nucleus": {
+      "type": "material",
+      "params": {
+        "color": {"var": "nucleusColor"},
+        "emit": 0.3
+      },
+      "child": {
+        "type": "sphere",
+        "params": { "r": 0.08 }
+      }
+    },
+    "cell_membrane": {
+      "type": "material",
+      "params": {
+        "color": {"var": "cellColor"},
+        "roughness": 0.8
+      },
+      "child": {
+        "type": "sphere",
+        "params": { "r": 0.25 }
+      }
+    },
+    "cell_lobe": {
+      "type": "union",
+      "children": [
+        { "type": "ref", "id": "cell_membrane" },
+        {
+          "type": "ref",
+          "id": "nucleus",
+          "transform": {
+            "translate": [0.05, 0.05, 0]
+          }
+        }
+      ]
+    },
+    "mitosis_body": {
+      "type": "smoothUnion",
+      "k": 0.25,
+      "children": [
+        {
+          "type": "ref",
+          "id": "cell_lobe",
+          "transform": {
+            "translate": [-0.18, 0, 0],
+            "scale": [1.1, 1, 0.8]
+          }
+        },
+        {
+          "type": "ref",
+          "id": "cell_lobe",
+          "transform": {
+            "translate": [0.18, 0, 0],
+            "scale": [0.9, 1, 0.8]
+          }
+        }
+      ]
+    },
+    "tail_segment": {
+      "type": "material",
+      "params": {
+        "color": [0.35, 0.6, 0.5],
+        "roughness": 0.6
+      },
+      "child": {
+        "type": "ellipsoid",
+        "params": {
+          "radii": [0.15, 0.03, 0.03]
+        }
+      }
+    },
+    "waving_tail": {
+      "type": "transform",
+      "transform": {
+        "translate": [0.4, 0, 0],
+        "rotate": [
+          0,
+          0,
+          { "expr": "mul", "args": [30, { "expr": "sin", "args": [{ "expr": "mul", "args": [{"var": "tailSpeed"}, { "var": "time" }] }] }] }
+        ]
+      },
+      "child": {
+        "type": "ref",
+        "id": "tail_segment"
+      }
+    },
+    "microbe": {
+      "type": "smoothUnion",
+      "k": 0.1,
+      "children": [
+        { "type": "ref", "id": "mitosis_body" },
+        { "type": "ref", "id": "waving_tail" }
+      ]
+    }
+  },
+  "root": {
+    "type": "repeat",
+    "period": [2.5, 2.5, 2.5],
+    "exposeId": "cellId",
+    "child": {
+      "type": "transform",
+      "transform": {
+        "translate": [
+          { "expr": "mul", "args": [0.3, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, { "expr": "mul", "args": [{ "var": "cellId" }, 0.7] }] }] }] },
+          { "expr": "mul", "args": [0.2, { "expr": "cos", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 0.8] }, { "var": "cellId" }] }] }] },
+          { "expr": "mul", "args": [0.15, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "expr": "mul", "args": [{ "var": "time" }, 1.2] }, { "expr": "mul", "args": [{ "var": "cellId" }, 0.5] }] }] }] }
+        ],
+        "rotate": [
+          0,
+          { "expr": "mul", "args": [{ "expr": "hash", "args": [{ "var": "cellId" }] }, 360] },
+          { "expr": "mul", "args": [15, { "expr": "sin", "args": [{ "expr": "add", "args": [{ "var": "time" }, { "var": "cellId" }] }] }] }
+        ]
+      },
+      "child": {
+        "type": "ref",
+        "id": "microbe"
+      }
+    }
+  }
+}
