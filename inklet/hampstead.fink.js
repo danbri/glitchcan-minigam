@@ -413,59 +413,132 @@ They leap through and vanish. The portal begins to collapse.
 
 You clutch twelve mega diamonds. The portal flickers, unstable.
 
-+ Dive through after them -> woods_between_worlds
++ Dive through after them -> world_between_worlds
 
-=== woods_between_worlds ===
-#BG:#030
-#CLASS:info
-*** THE WOODS BETWEEN WORLDS ***
-
-You tumble through into endless twilight forest. Trees stretch impossibly tall, their bark shifting through colors that don't exist.
-
-The artist is gone — fled deeper into the impossible wood.
-
-But paths branch before you. Each one leads to a different reality, a different possibility.
-
-You have 12 mega diamonds now. Whatever happens next, you're no longer playing by Hampstead's rules.
-
-+ Enter the shimmering cave (seek treasure) -> woods_cave
-+ Follow the crystal stream (find peace) -> woods_stream
-+ Take the overgrown path (embrace mystery) -> woods_mystery
-
-=== woods_cave ===
-#BG:#210
-The cave glitters with mineral deposits. A gem minigame perhaps awaits...
-
-But that's a story for another FINK file.
-
--> woods_end
-
-=== woods_stream ===
-#BG:#024
-The stream whispers secrets of a thousand realities. Fish made of pure light swim past.
-
-Somewhere, in some world, there's a version of you who made it to Hampstead. And one who didn't.
-
--> woods_end
-
-=== woods_mystery ===
-#BG:#203
-The path winds through spaces that shouldn't exist. You glimpse other travellers — some human, some decidedly not.
-
-The conceptual artist is out there somewhere. You'll find them eventually.
-
--> woods_end
-
-=== woods_end ===
+=== world_between_worlds ===
 #BG:#020
-#CLASS:mega
-You emerge from the Woods Between Worlds, diamonds heavy in your pocket, forever changed.
+#CLASS:info
+*** THE WORLD BETWEEN WORLDS ***
 
-Final Score: {score}/8 (but what does score even mean between realities?)
+You tumble through into a place of impossible stillness.
+
+A vast, quiet wood stretches in all directions. The trees are ancient beyond measure, their leaves rustling with whispers from a thousand realities.
+
+The ground is soft with moss. Scattered throughout the glade are pools — perfectly still, perfectly round, each reflecting a different sky.
+
+The conceptual artist's footprints lead toward the largest pool... and vanish.
+
+You have {mega_diamonds} mega diamonds. Your old life feels very far away now.
+
++ Approach the golden pool (warm light, distant hills) -> pool_bagend
++ Peer into the dark pool (flickering torches, stone walls) -> pool_mines
++ Examine the misty pool (manor silhouette, ravens) -> pool_manor
++ Study the gentle pool (autumn leaves, chimney smoke) -> pool_maple
++ Look into the rippling pool (flowing water, reeds) -> pool_riverbend
++ Rest here a while -> world_rest
+
+=== pool_bagend ===
+#BG:#141
+The golden pool shows rolling green hills, round doors set into hillsides, and the distant glint of a river.
+
+A sign half-buried in moss reads: "The Shire — Bag End — Second Breakfast Served Daily"
+
+Somewhere down there, a hobbit is putting the kettle on.
+
++ Step into the pool
+    # FINK: bagend.fink.js
+    The warm light envelops you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== pool_mines ===
+#BG:#210
+The dark pool shows torchlit tunnels, glittering ore veins, and the distant clang of pickaxes.
+
+Minecarts rumble in the deep. There's treasure down there — and danger.
+
+A weathered sign says: "Mudslide Mines — Hard Hats Required"
+
++ Descend into the pool
+    # FINK: mudslidemines.fink.js
+    The darkness swallows you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== pool_manor ===
+#BG:#203
+The misty pool shows a grand but crumbling manor house. Ravens circle its chimneys. One window glows with candlelight.
+
+Something happened there. Something that wants to be discovered.
+
+A tarnished plaque reads: "Shane Manor — Visitors by Appointment Only"
+
++ Enter the pool
+    # FINK: shane-manor.fink.js
+    The mist closes around you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== pool_maple ===
+#BG:#320
+The gentle pool shows a cozy village nestled in autumn woods. Smoke rises from cottages. A cat sleeps on a windowsill.
+
+It looks peaceful. Safe. The kind of place where nothing terrible ever happens.
+
+A wooden sign carved with care: "Maple Hollow — Population: Friendly"
+
++ Slip into the pool
+    # FINK: ../cozyverse/maple-hollow.fink.js
+    Warmth surrounds you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== pool_riverbend ===
+#BG:#024
+The rippling pool shows a wide river winding through marshland. Herons stand motionless. A small boat is tied to a dock.
+
+The water looks cool and inviting. Adventures await downstream.
+
+A driftwood sign: "Riverbend — Go With The Flow"
+
++ Wade into the pool
+    # FINK: riverbend.fink.js
+    The current takes you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== world_rest ===
+#BG:#010
+#CLASS:info
+You sit on the soft moss between the pools.
+
+The mega diamonds in your pocket pulse gently with otherworldly light. Each one contains a frozen moment from another reality.
+
+The conceptual artist is out there somewhere, hopping between worlds, causing chaos. But that's a problem for another day.
+
+For now, you rest in the space between all stories.
 
 Mega Diamonds: {mega_diamonds}
 
-THE END... for now.
++ Continue exploring -> world_between_worlds
++ Close your eyes and drift... -> world_end
+
+=== world_end ===
+#BG:#000
+#CLASS:mega
+You close your eyes in the World Between Worlds.
+
+When you open them again, you could be anywhere. Anyone.
+
+But that's the thing about the spaces between stories — they're always there, waiting.
+
+Final tally from your travels:
+- Hampstead Score: {score}/8
+- Mega Diamonds: {mega_diamonds}
+- Realities Glimpsed: Many
+- Artist Apprehended: Not yet
+
+*** THE END... FOR NOW ***
 
 -> END
 `
