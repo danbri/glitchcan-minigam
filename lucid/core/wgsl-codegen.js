@@ -1141,12 +1141,38 @@ function valueToWgsl(value, ctx, expectedType = null) {
 
   if (Array.isArray(value)) {
     // Recursively convert each element - handles numbers, vars, and expressions
-    if (value.length === 3) {
-      return `vec3f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
-    } else if (value.length === 2) {
-      return `vec2f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
-    } else if (value.length === 4) {
-      return `vec4f(${value.map(v => valueToWgsl(v, ctx)).join(', ')})`;
+    const converted = value.map(v => valueToWgsl(v, ctx));
+
+    // Check if any element is already a vec3f (would cause vec3f(vec3f, vec3f, vec3f) error)
+    const hasVec3Uniform = converted.some(v => {
+      if (typeof v === 'string' && v.startsWith('scene.u_')) {
+        const uniformName = v.replace('scene.', '');
+        return ctx.uniforms.has(`${uniformName}:vec3f`);
+      }
+      return false;
+    });
+
+    // If we have vec3f uniforms in a 3-element array, don't wrap - it's likely a single color var ref
+    // that got expanded, or a malformed array. Return first element if it's a vec3f.
+    if (hasVec3Uniform && converted.length === 3) {
+      // Check if first element is the vec3f uniform - if so, just return it
+      const first = converted[0];
+      if (typeof first === 'string' && first.startsWith('scene.u_')) {
+        const uniformName = first.replace('scene.', '');
+        if (ctx.uniforms.has(`${uniformName}:vec3f`)) {
+          return first;
+        }
+      }
+      // Otherwise construct from first elements (fallback)
+      return converted[0];
+    }
+
+    if (converted.length === 3) {
+      return `vec3f(${converted.join(', ')})`;
+    } else if (converted.length === 2) {
+      return `vec2f(${converted.join(', ')})`;
+    } else if (converted.length === 4) {
+      return `vec4f(${converted.join(', ')})`;
     }
     return valueToWgsl(value[0], ctx);
   }
@@ -1181,15 +1207,16 @@ function valueToWgsl(value, ctx, expectedType = null) {
     // Register uniform with type hint if provided, or infer from name
     const uniformName = `u_${value.name}`;
     const nameLower = value.name.toLowerCase();
+    // Use more specific patterns to avoid false positives (e.g., "hipposcale" matching "pos")
     const isVec3 = expectedType === 'vec3' ||
       nameLower.includes('color') ||
       nameLower.includes('radii') ||
-      nameLower.includes('pos') ||
+      nameLower.includes('position') ||  // Changed from 'pos' to avoid "hipposcale" matching
       nameLower.includes('translate') ||
       nameLower.includes('rotate') ||
       nameLower.includes('normal') ||
       nameLower.includes('direction') ||
-      nameLower.includes('size') ||
+      (nameLower.includes('size') && !nameLower.includes('scale')) ||  // Exclude scale from size match
       nameLower.includes('offset') && !nameLower.includes('time');
 
     if (isVec3) {
@@ -1202,6 +1229,28 @@ function valueToWgsl(value, ctx, expectedType = null) {
   case 'array':
     if (value.values) {
       const vals = value.values.map(v => valueToWgsl(v, ctx));
+
+      // Check if any element is already a vec3f uniform
+      const hasVec3Uniform = vals.some(v => {
+        if (typeof v === 'string' && v.startsWith('scene.u_')) {
+          const uniformName = v.replace('scene.', '');
+          return ctx.uniforms.has(`${uniformName}:vec3f`);
+        }
+        return false;
+      });
+
+      // If first element is already vec3f, return it directly
+      if (hasVec3Uniform && vals.length === 3) {
+        const first = vals[0];
+        if (typeof first === 'string' && first.startsWith('scene.u_')) {
+          const uniformName = first.replace('scene.', '');
+          if (ctx.uniforms.has(`${uniformName}:vec3f`)) {
+            return first;
+          }
+        }
+        return vals[0];
+      }
+
       if (vals.length === 3) {
         return `vec3f(${vals.join(', ')})`;
       } else if (vals.length === 2) {
