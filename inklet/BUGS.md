@@ -6,19 +6,20 @@
 **Severity:** Medium
 **File:** `inklet/demos/hamfink2026.html`
 **Reported:** 2026-01-15
+**Status:** FIXED
 
 The "View source on GitHub" section in the `how_it_works` / `github_links` knots displays raw HTML markup instead of rendered links:
 ```
 href="https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/hamfink2026.html" target="_blank">hamfink2026.html (this demo)
 ```
 
-**Root cause:** The `displayTextWithAnimation` function processes URLs but the Ink content contains raw HTML anchor tags which aren't being rendered as HTML.
+**Root cause found:** The `displayTextWithAnimation` function:
+1. Auto-linkifies filenames like `hamfink2026.html` by wrapping in `<a>` tags
+2. Then splits by whitespace for word-by-word animation
+3. This breaks the HTML structure: `<a href="...">` becomes `<a`, `href="..."`, etc.
+4. Browser renders broken HTML as literal text
 
-**Fix needed:** Either:
-- Strip HTML from Ink output and use plain URLs (let the display function linkify them)
-- Or render Ink output as HTML (security implications)
-
-**Additional requirement:** External links should show a warning UI before leaving the game. This should be a separate PR.
+**Fix:** Check if text contains linkifiable content; if so, skip word animation and render links directly. Word animation only applied to plain text.
 
 ---
 
