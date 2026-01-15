@@ -570,14 +570,15 @@ main { flex: 1; min-height: 0; overflow: hidden; }
     <div id="audio-content" class="dev-tab-content">
         <div style="display:flex; flex-direction:column; gap:1em;">
             <div>
-                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">🎵 Synthesized Ambience (WebAudio)</h4>
-                <p style="font-size:11px; color:#888; margin:0 0 0.5em;">Test audio without external files. Each plays for 30 seconds.</p>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">🎵 Foley (WebAudio)</h4>
+                <p style="font-size:11px; color:#888; margin:0 0 0.5em;">Layered procedural sounds. Multiple can play together.</p>
                 <div style="display:flex; gap:0.5em; flex-wrap:wrap;">
-                    <button class="synth-btn" data-sound="water">💧 Water Trickling</button>
+                    <button class="synth-btn" data-sound="water">💧 Water</button>
                     <button class="synth-btn" data-sound="wind">🌬️ Wind</button>
-                    <button class="synth-btn" data-sound="rumble">🌋 Ominous Rumble</button>
-                    <button class="synth-btn" data-sound="chimes">🎐 Wind Chimes</button>
-                    <button id="stopSynthBtn" style="background:#522;">⏹️ Stop</button>
+                    <button class="synth-btn" data-sound="fire">🔥 Fire</button>
+                    <button class="synth-btn" data-sound="machinery">⚙️ Machinery</button>
+                    <button class="synth-btn" data-sound="rumble">🌋 Rumble</button>
+                    <button id="stopSynthBtn" style="background:#522;">⏹️ Stop All</button>
                 </div>
             </div>
             <div>
@@ -975,54 +976,44 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
     };
 
-    // --- Sound Synthesizer (WebAudio ambient sounds) ---
+    // --- Sound Synthesizer (WebAudio foley with layer management) ---
+    // Supports multiple simultaneous sounds via named layers
     // Uses real Perlin noise for organic modulation
     const SoundSynth = {
         context: null,
-        activeNodes: [],
         masterGain: null,
-        intervals: [],
+        layers: {},  // Named layers for concurrent sounds: { layerId: { nodes, intervals, gainNode } }
 
         // Classic 1D Perlin noise implementation
         perlinGrad: null,
         perlinPerm: null,
         initPerlin() {
             if (this.perlinPerm) return;
-            // Generate random permutation table
             const perm = [];
             for (let i = 0; i < 256; i++) perm[i] = i;
             for (let i = 255; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [perm[i], perm[j]] = [perm[j], perm[i]];
             }
-            // Double it for wrapping
             this.perlinPerm = [...perm, ...perm];
-            // Random gradients for 1D
             this.perlinGrad = perm.map(() => Math.random() * 2 - 1);
         },
 
-        // Smooth interpolation (6t^5 - 15t^4 + 10t^3)
-        fade(t) {
-            return t * t * t * (t * (t * 6 - 15) + 10);
-        },
+        fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); },
+        lerp(a, b, t) { return a + t * (b - a); },
 
-        // Linear interpolation
-        lerp(a, b, t) {
-            return a + t * (b - a);
-        },
-
-        // 1D Perlin noise at position x
         perlin(x) {
             this.initPerlin();
             const xi = Math.floor(x) & 255;
             const xf = x - Math.floor(x);
             const u = this.fade(xf);
-            const g0 = this.perlinGrad[this.perlinPerm[xi]];
-            const g1 = this.perlinGrad[this.perlinPerm[xi + 1]];
-            return this.lerp(g0 * xf, g1 * (xf - 1), u);
+            return this.lerp(
+                this.perlinGrad[this.perlinPerm[xi]] * xf,
+                this.perlinGrad[this.perlinPerm[xi + 1]] * (xf - 1),
+                u
+            );
         },
 
-        // Fractal Brownian Motion - layered Perlin for more complexity
         fbm(x, octaves = 4, lacunarity = 2, persistence = 0.5) {
             let value = 0, amplitude = 1, frequency = 1, maxValue = 0;
             for (let i = 0; i < octaves; i++) {
@@ -1034,380 +1025,447 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             return value / maxValue;
         },
 
-        // Schedule Perlin-modulated automation on an AudioParam
         perlinModulate(param, baseValue, depth, rate, duration) {
             const ctx = this.context;
             const startTime = ctx.currentTime;
-            const steps = Math.ceil(duration * 20); // 20 updates/sec
-            const offset = Math.random() * 1000; // Random starting point
-
+            const steps = Math.ceil(duration * 20);
+            const offset = Math.random() * 1000;
             for (let i = 0; i <= steps; i++) {
                 const t = i / 20;
                 const noise = this.fbm((offset + t) * rate, 4);
-                const value = baseValue + noise * depth;
-                param.setValueAtTime(Math.max(0.001, value), startTime + t);
+                param.setValueAtTime(Math.max(0.001, baseValue + noise * depth), startTime + t);
             }
         },
 
         async init() {
             if (!this.context) {
                 this.context = AudioManager.context || new (window.AudioContext || window.webkitAudioContext)();
-                AudioManager.context = this.context; // Share context
+                AudioManager.context = this.context;
                 this.masterGain = this.context.createGain();
                 this.masterGain.gain.value = 0.5;
                 this.masterGain.connect(this.context.destination);
             }
-            if (this.context.state === 'suspended') {
-                await this.context.resume();
-            }
+            if (this.context.state === 'suspended') await this.context.resume();
             return true;
         },
 
-        stop() {
-            this.activeNodes.forEach(node => {
-                try {
-                    if (node.stop) node.stop();
-                    if (node.disconnect) node.disconnect();
-                } catch(e) {}
-            });
-            this.intervals.forEach(id => clearInterval(id));
-            this.activeNodes = [];
-            this.intervals = [];
-            log('SoundSynth: Stopped all sounds', 'debug');
+        // Stop a specific layer or all layers
+        stop(layerId = null) {
+            const stopLayer = (id) => {
+                const layer = this.layers[id];
+                if (!layer) return;
+                layer.nodes.forEach(node => {
+                    try { if (node.stop) node.stop(); if (node.disconnect) node.disconnect(); } catch(e) {}
+                });
+                layer.intervals.forEach(id => clearInterval(id));
+                delete this.layers[id];
+            };
+            if (layerId) {
+                stopLayer(layerId);
+                log(`Foley: Stopped layer '${layerId}'`, 'debug');
+            } else {
+                Object.keys(this.layers).forEach(stopLayer);
+                log('Foley: Stopped all layers', 'debug');
+            }
+        },
+
+        // Create a new layer with its own gain/panner
+        createLayer(layerId, params = {}) {
+            this.stop(layerId); // Stop existing layer with same ID
+            const ctx = this.context;
+            const panner = ctx.createStereoPanner();
+            panner.pan.value = params.pan ?? 0;
+            const gain = ctx.createGain();
+            gain.gain.value = params.vol ?? 1;
+            gain.connect(panner);
+            panner.connect(this.masterGain);
+            this.layers[layerId] = { nodes: [gain, panner], intervals: [], gainNode: gain, pannerNode: panner };
+            return { gain, panner, output: gain };
         },
 
         // Create noise buffer helper
         createNoise(ctx, seconds = 2) {
             const bufferSize = ctx.sampleRate * seconds;
-            const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate); // Stereo
+            const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
             for (let ch = 0; ch < 2; ch++) {
                 const data = buffer.getChannelData(ch);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
             }
             return buffer;
         },
 
-        // Water: layered drips + gentle stream with Perlin-controlled timing
-        async playWater(duration = 30) {
+        // Default params helper
+        defaults(params, defs) {
+            return { ...defs, ...params };
+        },
+
+        // ===== FOLEY SOUND TYPES (all parameterized, layer-based) =====
+
+        // WATER: drips + stream with Perlin timing
+        // Params: pan, vol, pitch, rate, depth, drip (0-1)
+        async water(params = {}, layerId = 'water') {
             await this.init();
-            this.stop();
-            log('SoundSynth: Playing water (Perlin)', 'info');
+            const p = this.defaults(params, { pan: 0, vol: 1, pitch: 1, rate: 1, depth: 0.5, drip: 0.5, dur: 60 });
             const ctx = this.context;
+            const layer = this.createLayer(layerId, p);
+            log(`Foley: water(pan:${p.pan}, vol:${p.vol}, drip:${p.drip})`, 'info');
 
-            // Stereo merger for panning
-            const merger = ctx.createChannelMerger(2);
-            merger.connect(this.masterGain);
-
-            // Base stream layer - very quiet, filtered noise
-            const streamNoise = ctx.createBufferSource();
-            streamNoise.buffer = this.createNoise(ctx, 3);
-            streamNoise.loop = true;
-
+            // Base stream - filtered noise
+            const stream = ctx.createBufferSource();
+            stream.buffer = this.createNoise(ctx, 3);
+            stream.loop = true;
             const streamFilter = ctx.createBiquadFilter();
             streamFilter.type = 'bandpass';
-            streamFilter.frequency.value = 800;
+            streamFilter.frequency.value = 800 * p.pitch;
             streamFilter.Q.value = 0.8;
-
             const streamGain = ctx.createGain();
-            streamGain.gain.value = 0.08;
-
-            streamNoise.connect(streamFilter);
+            streamGain.gain.value = 0.12 * p.vol * (1 - p.drip * 0.5);
+            stream.connect(streamFilter);
             streamFilter.connect(streamGain);
-            streamGain.connect(merger, 0, 0);
-            streamGain.connect(merger, 0, 1);
+            streamGain.connect(layer.output);
+            stream.start();
+            stream.stop(ctx.currentTime + p.dur);
+            this.layers[layerId].nodes.push(stream, streamFilter, streamGain);
 
-            streamNoise.start();
-            streamNoise.stop(ctx.currentTime + duration);
-            this.activeNodes.push(streamNoise, streamFilter, streamGain);
-
-            // Drip generator - random individual drips with stereo placement
+            // Drip generator
             const playDrip = () => {
-                const pan = Math.random() * 2 - 1; // -1 to 1
-                const freq = 1200 + Math.random() * 2000; // Varied pitch
-                const volume = 0.05 + Math.random() * 0.1;
-
+                const dripPan = (Math.random() * 2 - 1) * 0.8;
+                const freq = (1200 + Math.random() * 2000) * p.pitch;
                 const osc = ctx.createOscillator();
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(freq * 0.3, ctx.currentTime + 0.15);
-
-                const gain = ctx.createGain();
-                gain.gain.setValueAtTime(volume, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-
-                const panner = ctx.createStereoPanner();
-                panner.pan.value = pan;
-
-                osc.connect(gain);
-                gain.connect(panner);
-                panner.connect(this.masterGain);
-
-                osc.start();
-                osc.stop(ctx.currentTime + 0.25);
+                const g = ctx.createGain();
+                g.gain.setValueAtTime(0.08 * p.vol, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+                const pan = ctx.createStereoPanner();
+                pan.pan.value = p.pan + dripPan * 0.3;
+                osc.connect(g); g.connect(pan); pan.connect(this.masterGain);
+                osc.start(); osc.stop(ctx.currentTime + 0.25);
             };
 
-            // Splash/trickle burst generator
-            const playTrickle = () => {
-                const pan = Math.random() * 2 - 1;
-                const noise = ctx.createBufferSource();
-                noise.buffer = this.createNoise(ctx, 0.5);
-
-                const filter = ctx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.value = 2000 + Math.random() * 3000;
-                filter.Q.value = 2 + Math.random() * 3;
-
-                const gain = ctx.createGain();
-                const vol = 0.03 + Math.random() * 0.06;
-                gain.gain.setValueAtTime(vol, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3 + Math.random() * 0.2);
-
-                const panner = ctx.createStereoPanner();
-                panner.pan.value = pan;
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(panner);
-                panner.connect(this.masterGain);
-
-                noise.start();
-                noise.stop(ctx.currentTime + 0.5);
-            };
-
-            // Schedule drips using Perlin noise for organic clustering
-            let dripTime = 0;
-            const dripInterval = setInterval(() => {
-                dripTime += 0.1;
-                // Perlin controls probability - creates natural clusters and lulls
-                const dripChance = 0.3 + this.fbm(dripTime * 2, 3) * 0.4;
-                const trickleChance = 0.15 + this.fbm(dripTime * 1.5 + 100, 3) * 0.3;
-                if (Math.random() < dripChance) playDrip();
-                if (Math.random() < trickleChance) playTrickle();
+            let t = 0;
+            const dripInt = setInterval(() => {
+                t += 0.1;
+                const chance = (0.2 + p.drip * 0.5) + this.fbm(t * p.rate * 2, 3) * p.depth * 0.4;
+                if (Math.random() < chance) playDrip();
             }, 150);
-            this.intervals.push(dripInterval);
-
-            // Fade out at end
-            setTimeout(() => {
-                streamGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
-            }, (duration - 2) * 1000);
-
-            setTimeout(() => this.stop(), duration * 1000);
-            swimEvent('game', '🎵', 'Synth', 'Water (Perlin)');
+            this.layers[layerId].intervals.push(dripInt);
+            setTimeout(() => this.stop(layerId), p.dur * 1000);
+            swimEvent('game', '🎵', 'Foley', `Water (${layerId})`);
         },
 
-        // Wind: multi-layer with real Perlin noise modulation
-        async playWind(duration = 30) {
+        // WIND: multi-layer noise with gusts
+        // Params: pan, vol, pitch, rate, depth, gust (0-1)
+        async wind(params = {}, layerId = 'wind') {
             await this.init();
-            this.stop();
-            log('SoundSynth: Playing wind (Perlin)', 'info');
+            const p = this.defaults(params, { pan: 0, vol: 1, pitch: 1, rate: 1, depth: 0.5, gust: 0.5, dur: 60 });
             const ctx = this.context;
+            const layer = this.createLayer(layerId, p);
+            log(`Foley: wind(pan:${p.pan}, vol:${p.vol}, gust:${p.gust})`, 'info');
 
-            // Multiple noise layers at different frequency bands
-            const layers = [
-                { freq: 150, q: 0.3, gain: 0.25, rate: 0.15 },  // Low rumble - slow variation
-                { freq: 400, q: 0.5, gain: 0.15, rate: 0.25 },  // Mid whoosh - medium
-                { freq: 1200, q: 0.8, gain: 0.08, rate: 0.4 },  // High whistle - faster
+            // Frequency layers
+            const bands = [
+                { freq: 150 * p.pitch, q: 0.3, g: 0.25, r: 0.15 },
+                { freq: 400 * p.pitch, q: 0.5, g: 0.15, r: 0.25 },
+                { freq: 1200 * p.pitch, q: 0.8, g: 0.08, r: 0.4 }
             ];
-
-            const masterPanner = ctx.createStereoPanner();
-            masterPanner.connect(this.masterGain);
-
-            const masterGain = ctx.createGain();
-            masterGain.gain.setValueAtTime(0, ctx.currentTime);
-            masterGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 2);
-            masterGain.connect(masterPanner);
-
-            // Create each layer with real Perlin modulation
-            layers.forEach(layer => {
-                const noise = ctx.createBufferSource();
-                noise.buffer = this.createNoise(ctx, 3);
-                noise.loop = true;
-
-                const filter = ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = layer.freq;
-                filter.Q.value = layer.q;
-
-                const gain = ctx.createGain();
-                gain.gain.value = layer.gain;
-
-                // Real Perlin modulation on filter frequency
-                this.perlinModulate(filter.frequency, layer.freq, layer.freq * 0.6, layer.rate, duration);
-                // Real Perlin modulation on volume
-                this.perlinModulate(gain.gain, layer.gain, layer.gain * 0.4, layer.rate * 0.7, duration);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(masterGain);
-
-                noise.start();
-                noise.stop(ctx.currentTime + duration);
-                this.activeNodes.push(noise, filter, gain);
+            bands.forEach(b => {
+                const n = ctx.createBufferSource();
+                n.buffer = this.createNoise(ctx, 3);
+                n.loop = true;
+                const f = ctx.createBiquadFilter();
+                f.type = 'lowpass'; f.frequency.value = b.freq; f.Q.value = b.q;
+                const g = ctx.createGain();
+                g.gain.value = b.g * p.vol;
+                this.perlinModulate(f.frequency, b.freq, b.freq * 0.6 * p.depth, b.r * p.rate, p.dur);
+                this.perlinModulate(g.gain, b.g * p.vol, b.g * p.vol * 0.4 * p.depth, b.r * p.rate * 0.7, p.dur);
+                n.connect(f); f.connect(g); g.connect(layer.output);
+                n.start(); n.stop(ctx.currentTime + p.dur);
+                this.layers[layerId].nodes.push(n, f, g);
             });
 
-            // Stereo panning with Perlin drift
-            this.perlinModulate(masterPanner.pan, 0, 0.5, 0.1, duration);
+            // Perlin pan drift
+            this.perlinModulate(layer.panner.pan, p.pan, 0.4 * p.depth, 0.1 * p.rate, p.dur);
 
-            // Occasional gusts - sudden swells triggered by Perlin threshold
-            const gustCheck = setInterval(() => {
-                const gustNoise = this.fbm(Date.now() / 5000, 3);
-                if (gustNoise > 0.3) { // Organic threshold
-                    const gustGain = ctx.createGain();
-                    const intensity = (gustNoise - 0.3) * 0.6; // Scale 0-0.4
-                    gustGain.gain.setValueAtTime(0, ctx.currentTime);
-                    gustGain.gain.linearRampToValueAtTime(intensity, ctx.currentTime + 0.5);
-                    gustGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
-
-                    const gustSource = ctx.createBufferSource();
-                    gustSource.buffer = this.createNoise(ctx, 2);
-                    const gustFilter = ctx.createBiquadFilter();
-                    gustFilter.type = 'lowpass';
-                    gustFilter.frequency.value = 300 + this.fbm(Date.now() / 3000) * 200;
-
-                    const gustPan = ctx.createStereoPanner();
-                    gustPan.pan.value = this.fbm(Date.now() / 4000) * 2;
-
-                    gustSource.connect(gustFilter);
-                    gustFilter.connect(gustGain);
-                    gustGain.connect(gustPan);
-                    gustPan.connect(this.masterGain);
-
-                    gustSource.start();
-                    gustSource.stop(ctx.currentTime + 2.5);
-                }
-            }, 2000);
-            this.intervals.push(gustCheck);
-
-            this.activeNodes.push(masterGain, masterPanner);
-
-            // Fade out
-            setTimeout(() => {
-                masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
-            }, (duration - 2) * 1000);
-
-            setTimeout(() => this.stop(), duration * 1000);
-            swimEvent('game', '🎵', 'Synth', 'Wind (Perlin)');
-        },
-
-        // Low ominous rumble: very low frequency with subtle noise
-        async playRumble(duration = 30) {
-            await this.init();
-            this.stop();
-            log('SoundSynth: Playing ominous rumble', 'info');
-            const ctx = this.context;
-
-            // Sub-bass oscillator
-            const osc1 = ctx.createOscillator();
-            osc1.type = 'sine';
-            osc1.frequency.value = 40;
-
-            const osc2 = ctx.createOscillator();
-            osc2.type = 'sine';
-            osc2.frequency.value = 45; // Slight detuning for movement
-
-            // Slow pitch modulation
-            const pitchLfo = ctx.createOscillator();
-            const pitchGain = ctx.createGain();
-            pitchLfo.frequency.value = 0.1;
-            pitchGain.gain.value = 5;
-            pitchLfo.connect(pitchGain);
-            pitchGain.connect(osc1.frequency);
-            pitchGain.connect(osc2.frequency);
-
-            // Add filtered noise layer
-            const bufferSize = ctx.sampleRate * 2;
-            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
+            // Gusts
+            if (p.gust > 0) {
+                const gustInt = setInterval(() => {
+                    const gustVal = this.fbm(Date.now() / 5000, 3);
+                    if (gustVal > (1 - p.gust) * 0.6) {
+                        const intensity = (gustVal - (1 - p.gust) * 0.6) * p.gust * p.vol;
+                        const gGain = ctx.createGain();
+                        gGain.gain.setValueAtTime(0, ctx.currentTime);
+                        gGain.gain.linearRampToValueAtTime(intensity, ctx.currentTime + 0.5);
+                        gGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+                        const gNoise = ctx.createBufferSource();
+                        gNoise.buffer = this.createNoise(ctx, 2);
+                        const gFilter = ctx.createBiquadFilter();
+                        gFilter.type = 'lowpass';
+                        gFilter.frequency.value = (300 + this.fbm(Date.now() / 3000) * 200) * p.pitch;
+                        gNoise.connect(gFilter); gFilter.connect(gGain); gGain.connect(layer.output);
+                        gNoise.start(); gNoise.stop(ctx.currentTime + 2.5);
+                    }
+                }, 2000);
+                this.layers[layerId].intervals.push(gustInt);
             }
-            const noise = ctx.createBufferSource();
-            noise.buffer = noiseBuffer;
-            noise.loop = true;
-
-            const lowpass = ctx.createBiquadFilter();
-            lowpass.type = 'lowpass';
-            lowpass.frequency.value = 80;
-
-            const noiseGain = ctx.createGain();
-            noiseGain.gain.value = 0.1;
-
-            // Master volume
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 2);
-            gain.gain.setValueAtTime(0.5, ctx.currentTime + duration - 2);
-            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
-
-            osc1.connect(gain);
-            osc2.connect(gain);
-            noise.connect(lowpass);
-            lowpass.connect(noiseGain);
-            noiseGain.connect(gain);
-            gain.connect(this.masterGain);
-
-            pitchLfo.start();
-            osc1.start();
-            osc2.start();
-            noise.start();
-
-            osc1.stop(ctx.currentTime + duration);
-            osc2.stop(ctx.currentTime + duration);
-            noise.stop(ctx.currentTime + duration);
-            pitchLfo.stop(ctx.currentTime + duration);
-
-            this.activeNodes.push(osc1, osc2, noise, pitchLfo, gain);
-            swimEvent('game', '🎵', 'Synth', 'Ominous rumble');
+            setTimeout(() => this.stop(layerId), p.dur * 1000);
+            swimEvent('game', '🎵', 'Foley', `Wind (${layerId})`);
         },
 
-        // Wind chimes: random high-pitched tones with decay
-        async playChimes(duration = 30) {
+        // FIRE: crackling with pops and roar
+        // Params: pan, vol, pitch, rate, depth, crackle (0-1)
+        async fire(params = {}, layerId = 'fire') {
             await this.init();
-            this.stop();
-            log('SoundSynth: Playing wind chimes', 'info');
+            const p = this.defaults(params, { pan: 0, vol: 1, pitch: 1, rate: 1, depth: 0.5, crackle: 0.6, dur: 60 });
             const ctx = this.context;
+            const layer = this.createLayer(layerId, p);
+            log(`Foley: fire(pan:${p.pan}, vol:${p.vol}, crackle:${p.crackle})`, 'info');
 
-            // Pentatonic frequencies for pleasant chimes
-            const notes = [523, 587, 659, 784, 880, 1047, 1175, 1319];
-            const masterGain = ctx.createGain();
-            masterGain.gain.value = 0.4;
-            masterGain.connect(this.masterGain);
-            this.activeNodes.push(masterGain);
+            // Base roar - filtered noise
+            const roar = ctx.createBufferSource();
+            roar.buffer = this.createNoise(ctx, 3);
+            roar.loop = true;
+            const roarFilter = ctx.createBiquadFilter();
+            roarFilter.type = 'lowpass';
+            roarFilter.frequency.value = 400 * p.pitch;
+            roarFilter.Q.value = 1;
+            const roarGain = ctx.createGain();
+            roarGain.gain.value = 0.15 * p.vol;
+            this.perlinModulate(roarFilter.frequency, 400 * p.pitch, 200 * p.depth, 0.3 * p.rate, p.dur);
+            this.perlinModulate(roarGain.gain, 0.15 * p.vol, 0.08 * p.vol * p.depth, 0.2 * p.rate, p.dur);
+            roar.connect(roarFilter); roarFilter.connect(roarGain); roarGain.connect(layer.output);
+            roar.start(); roar.stop(ctx.currentTime + p.dur);
+            this.layers[layerId].nodes.push(roar, roarFilter, roarGain);
 
-            const playChime = () => {
-                const freq = notes[Math.floor(Math.random() * notes.length)];
+            // Crackle/pop generator
+            const playCrackle = () => {
+                const n = ctx.createBufferSource();
+                n.buffer = this.createNoise(ctx, 0.1);
+                const f = ctx.createBiquadFilter();
+                f.type = 'highpass';
+                f.frequency.value = (1500 + Math.random() * 3000) * p.pitch;
+                const g = ctx.createGain();
+                const vol = (0.1 + Math.random() * 0.2) * p.vol * p.crackle;
+                g.gain.setValueAtTime(vol, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05 + Math.random() * 0.1);
+                const pan = ctx.createStereoPanner();
+                pan.pan.value = p.pan + (Math.random() - 0.5) * 0.6;
+                n.connect(f); f.connect(g); g.connect(pan); pan.connect(this.masterGain);
+                n.start(); n.stop(ctx.currentTime + 0.15);
+            };
+
+            const playPop = () => {
                 const osc = ctx.createOscillator();
                 osc.type = 'sine';
-                osc.frequency.value = freq * (0.98 + Math.random() * 0.04); // Slight detune
-
-                const gain = ctx.createGain();
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2);
-
-                osc.connect(gain);
-                gain.connect(masterGain);
-                osc.start();
-                osc.stop(ctx.currentTime + 2);
+                const freq = (80 + Math.random() * 120) * p.pitch;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.2, ctx.currentTime + 0.08);
+                const g = ctx.createGain();
+                g.gain.setValueAtTime(0.3 * p.vol * p.crackle, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+                const pan = ctx.createStereoPanner();
+                pan.pan.value = p.pan + (Math.random() - 0.5) * 0.4;
+                osc.connect(g); g.connect(pan); pan.connect(this.masterGain);
+                osc.start(); osc.stop(ctx.currentTime + 0.12);
             };
 
-            // Play random chimes
-            let chimesPlayed = 0;
-            const scheduleChime = () => {
-                if (chimesPlayed++ > duration * 2) return;
-                playChime();
-                const nextDelay = 300 + Math.random() * 1500;
-                setTimeout(scheduleChime, nextDelay);
-            };
-            scheduleChime();
+            let t = 0;
+            const crackleInt = setInterval(() => {
+                t += 0.05;
+                const intensity = 0.3 + this.fbm(t * p.rate * 3, 3) * p.depth * 0.5;
+                if (Math.random() < intensity * p.crackle) playCrackle();
+                if (Math.random() < intensity * p.crackle * 0.3) playPop();
+            }, 50);
+            this.layers[layerId].intervals.push(crackleInt);
+            setTimeout(() => this.stop(layerId), p.dur * 1000);
+            swimEvent('game', '🎵', 'Foley', `Fire (${layerId})`);
+        },
 
-            // Auto-stop after duration
-            setTimeout(() => {
-                masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
-            }, (duration - 1) * 1000);
+        // MACHINERY: throbbing, pulsing industrial sound
+        // Params: pan, vol, pitch, rate, depth, throb (Hz)
+        async machinery(params = {}, layerId = 'machinery') {
+            await this.init();
+            const p = this.defaults(params, { pan: 0, vol: 1, pitch: 1, rate: 1, depth: 0.5, throb: 2, dur: 60 });
+            const ctx = this.context;
+            const layer = this.createLayer(layerId, p);
+            log(`Foley: machinery(pan:${p.pan}, vol:${p.vol}, throb:${p.throb}Hz)`, 'info');
 
-            swimEvent('game', '🎵', 'Synth', 'Wind chimes');
+            // Base drone - detuned oscillators
+            const baseFreq = 55 * p.pitch; // Low A
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc1.frequency.value = baseFreq;
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sawtooth';
+            osc2.frequency.value = baseFreq * 1.005; // Slight detune
+            const osc3 = ctx.createOscillator();
+            osc3.type = 'square';
+            osc3.frequency.value = baseFreq * 2;
+
+            // Throb LFO - amplitude modulation
+            const throbLfo = ctx.createOscillator();
+            throbLfo.type = 'sine';
+            throbLfo.frequency.value = p.throb;
+            const throbGain = ctx.createGain();
+            throbGain.gain.value = 0.3 * p.depth;
+            throbLfo.connect(throbGain);
+
+            // Mixer for oscillators
+            const oscMix = ctx.createGain();
+            oscMix.gain.value = 0.2 * p.vol;
+            throbGain.connect(oscMix.gain); // AM modulation
+            osc1.connect(oscMix);
+            osc2.connect(oscMix);
+            const osc3Gain = ctx.createGain();
+            osc3Gain.gain.value = 0.3;
+            osc3.connect(osc3Gain);
+            osc3Gain.connect(oscMix);
+
+            // Low-pass filter for warmth
+            const lpf = ctx.createBiquadFilter();
+            lpf.type = 'lowpass';
+            lpf.frequency.value = 800 * p.pitch;
+            lpf.Q.value = 2;
+            this.perlinModulate(lpf.frequency, 800 * p.pitch, 400 * p.depth, 0.2 * p.rate, p.dur);
+
+            // Mechanical noise layer
+            const mechNoise = ctx.createBufferSource();
+            mechNoise.buffer = this.createNoise(ctx, 2);
+            mechNoise.loop = true;
+            const noiseBpf = ctx.createBiquadFilter();
+            noiseBpf.type = 'bandpass';
+            noiseBpf.frequency.value = 2000 * p.pitch;
+            noiseBpf.Q.value = 5;
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.value = 0.05 * p.vol;
+            // Noise also modulated by throb
+            const noiseThrobGain = ctx.createGain();
+            noiseThrobGain.gain.value = 0.03 * p.depth;
+            throbLfo.connect(noiseThrobGain);
+            noiseThrobGain.connect(noiseGain.gain);
+
+            mechNoise.connect(noiseBpf);
+            noiseBpf.connect(noiseGain);
+            noiseGain.connect(layer.output);
+
+            oscMix.connect(lpf);
+            lpf.connect(layer.output);
+
+            // Fade in
+            layer.gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            layer.gainNode.gain.linearRampToValueAtTime(p.vol, ctx.currentTime + 2);
+
+            throbLfo.start();
+            osc1.start(); osc2.start(); osc3.start();
+            mechNoise.start();
+            throbLfo.stop(ctx.currentTime + p.dur);
+            osc1.stop(ctx.currentTime + p.dur);
+            osc2.stop(ctx.currentTime + p.dur);
+            osc3.stop(ctx.currentTime + p.dur);
+            mechNoise.stop(ctx.currentTime + p.dur);
+
+            this.layers[layerId].nodes.push(osc1, osc2, osc3, throbLfo, mechNoise, lpf, oscMix);
+            setTimeout(() => this.stop(layerId), p.dur * 1000);
+            swimEvent('game', '🎵', 'Foley', `Machinery (${layerId})`);
+        },
+
+        // RUMBLE: low ominous bass
+        // Params: pan, vol, pitch, rate, depth
+        async rumble(params = {}, layerId = 'rumble') {
+            await this.init();
+            const p = this.defaults(params, { pan: 0, vol: 1, pitch: 1, rate: 1, depth: 0.5, dur: 60 });
+            const ctx = this.context;
+            const layer = this.createLayer(layerId, p);
+            log(`Foley: rumble(pan:${p.pan}, vol:${p.vol})`, 'info');
+
+            const baseFreq = 40 * p.pitch;
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.value = baseFreq;
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = baseFreq * 1.125; // Slight detuning
+
+            // Slow pitch modulation via Perlin
+            this.perlinModulate(osc1.frequency, baseFreq, 5 * p.depth, 0.1 * p.rate, p.dur);
+            this.perlinModulate(osc2.frequency, baseFreq * 1.125, 5 * p.depth, 0.12 * p.rate, p.dur);
+
+            // Noise layer
+            const noise = ctx.createBufferSource();
+            noise.buffer = this.createNoise(ctx, 2);
+            noise.loop = true;
+            const lpf = ctx.createBiquadFilter();
+            lpf.type = 'lowpass';
+            lpf.frequency.value = 80 * p.pitch;
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.value = 0.1 * p.vol;
+            noise.connect(lpf); lpf.connect(noiseGain); noiseGain.connect(layer.output);
+
+            const oscGain = ctx.createGain();
+            oscGain.gain.value = 0.4 * p.vol;
+            osc1.connect(oscGain);
+            osc2.connect(oscGain);
+            oscGain.connect(layer.output);
+
+            // Fade in/out
+            layer.gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            layer.gainNode.gain.linearRampToValueAtTime(p.vol, ctx.currentTime + 2);
+
+            osc1.start(); osc2.start(); noise.start();
+            osc1.stop(ctx.currentTime + p.dur);
+            osc2.stop(ctx.currentTime + p.dur);
+            noise.stop(ctx.currentTime + p.dur);
+
+            this.layers[layerId].nodes.push(osc1, osc2, noise, lpf, oscGain, noiseGain);
+            setTimeout(() => this.stop(layerId), p.dur * 1000);
+            swimEvent('game', '🎵', 'Foley', `Rumble (${layerId})`);
+        },
+
+        // ===== LEGACY WRAPPERS (for backward compat with synth: prefix) =====
+        async playWater(dur) { return this.water({ dur }); },
+        async playWind(dur) { return this.wind({ dur }); },
+        async playRumble(dur) { return this.rumble({ dur }); },
+        async playChimes(dur) { /* chimes removed - use other foley */ },
+
+        // ===== FOLEY TAG PARSER =====
+        // Parse: "wind(pan:-0.3, vol:0.8, gust:0.6)" → { type:'wind', params:{pan:-0.3, vol:0.8, gust:0.6} }
+        parseFoleyTag(tagValue) {
+            const match = tagValue.match(/^(\w+)(?:\(([^)]*)\))?$/);
+            if (!match) return null;
+            const type = match[1].toLowerCase();
+            const params = {};
+            if (match[2]) {
+                match[2].split(',').forEach(pair => {
+                    const [key, val] = pair.split(':').map(s => s.trim());
+                    if (key && val !== undefined) {
+                        params[key] = parseFloat(val) || val;
+                    }
+                });
+            }
+            return { type, params };
+        },
+
+        // Play foley from parsed tag
+        async playFoley(tagValue, layerPrefix = 'foley') {
+            const parsed = this.parseFoleyTag(tagValue);
+            if (!parsed) {
+                log(`Foley: Invalid tag format: ${tagValue}`, 'warn');
+                return;
+            }
+            const { type, params } = parsed;
+            const layerId = `${layerPrefix}_${type}_${Date.now() % 10000}`;
+
+            switch(type) {
+                case 'wind': return this.wind(params, layerId);
+                case 'water': return this.water(params, layerId);
+                case 'fire': return this.fire(params, layerId);
+                case 'machinery': return this.machinery(params, layerId);
+                case 'rumble': return this.rumble(params, layerId);
+                case 'stop': return this.stop();
+                default:
+                    log(`Foley: Unknown type '${type}'`, 'warn');
+            }
         }
     };
 
@@ -1764,6 +1822,11 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                         log(`Global AUDIO tag: ${audioPath}`, 'debug');
                         playAudio(audioPath);
                     }
+                    if (tag.startsWith('FOLEY:')) {
+                        const foleySpec = tag.replace('FOLEY:', '').trim();
+                        log(`Global FOLEY tag: ${foleySpec}`, 'info');
+                        SoundSynth.playFoley(foleySpec);
+                    }
                 }
             }
 
@@ -1836,6 +1899,11 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                     const audioPath = tag.replace('AUDIO:', '').trim();
                     log(`AUDIO tag: ${audioPath}`, 'debug');
                     playAudio(audioPath);
+                }
+                if (tag.startsWith('FOLEY:')) {
+                    const foleySpec = tag.replace('FOLEY:', '').trim();
+                    log(`FOLEY tag: ${foleySpec}`, 'info');
+                    SoundSynth.playFoley(foleySpec);
                 }
                 if (tag.startsWith('BASEHREF:')) {
                     currentBasehref = tag.replace('BASEHREF:', '').trim();
@@ -2545,34 +2613,38 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         if (e.key === 'Enter') loadExternalFinkBtn.click();
     });
 
-    // Synth sound buttons
+    // Foley sound buttons (layered - don't stop others)
     document.querySelectorAll('.synth-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const sound = btn.dataset.sound;
             const audioCurrentEl = document.getElementById('audio-current');
             const audioCtxStateEl = document.getElementById('audio-ctx-state');
+            const layerId = `test_${sound}_${Date.now() % 1000}`;
 
             switch(sound) {
-                case 'water': await SoundSynth.playWater(30); break;
-                case 'wind': await SoundSynth.playWind(30); break;
-                case 'rumble': await SoundSynth.playRumble(30); break;
-                case 'chimes': await SoundSynth.playChimes(30); break;
+                case 'water': await SoundSynth.water({ dur: 30 }, layerId); break;
+                case 'wind': await SoundSynth.wind({ dur: 30 }, layerId); break;
+                case 'fire': await SoundSynth.fire({ dur: 30 }, layerId); break;
+                case 'machinery': await SoundSynth.machinery({ dur: 30, throb: 2.5 }, layerId); break;
+                case 'rumble': await SoundSynth.rumble({ dur: 30 }, layerId); break;
             }
 
-            if (audioCurrentEl) audioCurrentEl.textContent = btn.textContent;
+            // Show active layers count
+            const layerCount = Object.keys(SoundSynth.layers).length;
+            if (audioCurrentEl) audioCurrentEl.textContent = `${layerCount} layer(s) active`;
             if (audioCtxStateEl && SoundSynth.context) {
                 audioCtxStateEl.textContent = SoundSynth.context.state;
             }
         });
     });
 
-    // Stop synth button
+    // Stop all foley button
     const stopSynthBtn = document.getElementById('stopSynthBtn');
     if (stopSynthBtn) {
         stopSynthBtn.addEventListener('click', () => {
             SoundSynth.stop();
             const audioCurrentEl = document.getElementById('audio-current');
-            if (audioCurrentEl) audioCurrentEl.textContent = 'None';
+            if (audioCurrentEl) audioCurrentEl.textContent = '0 layers active';
         });
     }
 
