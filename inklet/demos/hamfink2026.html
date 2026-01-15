@@ -976,12 +976,78 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     };
 
     // --- Sound Synthesizer (WebAudio ambient sounds) ---
-    // Improved with pseudo-Perlin modulation, stereo panning, organic randomization
+    // Uses real Perlin noise for organic modulation
     const SoundSynth = {
         context: null,
         activeNodes: [],
         masterGain: null,
         intervals: [],
+
+        // Classic 1D Perlin noise implementation
+        perlinGrad: null,
+        perlinPerm: null,
+        initPerlin() {
+            if (this.perlinPerm) return;
+            // Generate random permutation table
+            const perm = [];
+            for (let i = 0; i < 256; i++) perm[i] = i;
+            for (let i = 255; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [perm[i], perm[j]] = [perm[j], perm[i]];
+            }
+            // Double it for wrapping
+            this.perlinPerm = [...perm, ...perm];
+            // Random gradients for 1D
+            this.perlinGrad = perm.map(() => Math.random() * 2 - 1);
+        },
+
+        // Smooth interpolation (6t^5 - 15t^4 + 10t^3)
+        fade(t) {
+            return t * t * t * (t * (t * 6 - 15) + 10);
+        },
+
+        // Linear interpolation
+        lerp(a, b, t) {
+            return a + t * (b - a);
+        },
+
+        // 1D Perlin noise at position x
+        perlin(x) {
+            this.initPerlin();
+            const xi = Math.floor(x) & 255;
+            const xf = x - Math.floor(x);
+            const u = this.fade(xf);
+            const g0 = this.perlinGrad[this.perlinPerm[xi]];
+            const g1 = this.perlinGrad[this.perlinPerm[xi + 1]];
+            return this.lerp(g0 * xf, g1 * (xf - 1), u);
+        },
+
+        // Fractal Brownian Motion - layered Perlin for more complexity
+        fbm(x, octaves = 4, lacunarity = 2, persistence = 0.5) {
+            let value = 0, amplitude = 1, frequency = 1, maxValue = 0;
+            for (let i = 0; i < octaves; i++) {
+                value += this.perlin(x * frequency) * amplitude;
+                maxValue += amplitude;
+                amplitude *= persistence;
+                frequency *= lacunarity;
+            }
+            return value / maxValue;
+        },
+
+        // Schedule Perlin-modulated automation on an AudioParam
+        perlinModulate(param, baseValue, depth, rate, duration) {
+            const ctx = this.context;
+            const startTime = ctx.currentTime;
+            const steps = Math.ceil(duration * 20); // 20 updates/sec
+            const offset = Math.random() * 1000; // Random starting point
+
+            for (let i = 0; i <= steps; i++) {
+                const t = i / 20;
+                const noise = this.fbm((offset + t) * rate, 4);
+                const value = baseValue + noise * depth;
+                param.setValueAtTime(Math.max(0.001, value), startTime + t);
+            }
+        },
 
         async init() {
             if (!this.context) {
@@ -1023,11 +1089,11 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             return buffer;
         },
 
-        // Water: layered drips + gentle stream with stereo movement
+        // Water: layered drips + gentle stream with Perlin-controlled timing
         async playWater(duration = 30) {
             await this.init();
             this.stop();
-            log('SoundSynth: Playing water (organic)', 'info');
+            log('SoundSynth: Playing water (Perlin)', 'info');
             const ctx = this.context;
 
             // Stereo merger for panning
@@ -1110,11 +1176,16 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                 noise.stop(ctx.currentTime + 0.5);
             };
 
-            // Schedule random drips
+            // Schedule drips using Perlin noise for organic clustering
+            let dripTime = 0;
             const dripInterval = setInterval(() => {
-                if (Math.random() < 0.4) playDrip();
-                if (Math.random() < 0.25) playTrickle();
-            }, 150 + Math.random() * 200);
+                dripTime += 0.1;
+                // Perlin controls probability - creates natural clusters and lulls
+                const dripChance = 0.3 + this.fbm(dripTime * 2, 3) * 0.4;
+                const trickleChance = 0.15 + this.fbm(dripTime * 1.5 + 100, 3) * 0.3;
+                if (Math.random() < dripChance) playDrip();
+                if (Math.random() < trickleChance) playTrickle();
+            }, 150);
             this.intervals.push(dripInterval);
 
             // Fade out at end
@@ -1123,21 +1194,21 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             }, (duration - 2) * 1000);
 
             setTimeout(() => this.stop(), duration * 1000);
-            swimEvent('game', '🎵', 'Synth', 'Water (organic)');
+            swimEvent('game', '🎵', 'Synth', 'Water (Perlin)');
         },
 
-        // Wind: multi-layer with pseudo-Perlin, stereo drift, occasional gusts
+        // Wind: multi-layer with real Perlin noise modulation
         async playWind(duration = 30) {
             await this.init();
             this.stop();
-            log('SoundSynth: Playing wind (organic)', 'info');
+            log('SoundSynth: Playing wind (Perlin)', 'info');
             const ctx = this.context;
 
             // Multiple noise layers at different frequency bands
             const layers = [
-                { freq: 150, q: 0.3, gain: 0.25 },  // Low rumble
-                { freq: 400, q: 0.5, gain: 0.15 },  // Mid whoosh
-                { freq: 1200, q: 0.8, gain: 0.08 }, // High whistle
+                { freq: 150, q: 0.3, gain: 0.25, rate: 0.15 },  // Low rumble - slow variation
+                { freq: 400, q: 0.5, gain: 0.15, rate: 0.25 },  // Mid whoosh - medium
+                { freq: 1200, q: 0.8, gain: 0.08, rate: 0.4 },  // High whistle - faster
             ];
 
             const masterPanner = ctx.createStereoPanner();
@@ -1148,24 +1219,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             masterGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 2);
             masterGain.connect(masterPanner);
 
-            // Pseudo-Perlin: sum of multiple LFOs at different rates
-            const createPerlinLFO = (baseFreq, depth, target) => {
-                const rates = [0.07, 0.13, 0.31, 0.53]; // Non-harmonic for organic feel
-                rates.forEach((rate, i) => {
-                    const lfo = ctx.createOscillator();
-                    lfo.type = 'sine';
-                    lfo.frequency.value = baseFreq * rate;
-                    const lfoGain = ctx.createGain();
-                    lfoGain.gain.value = depth / (i + 1); // Decreasing contribution
-                    lfo.connect(lfoGain);
-                    lfoGain.connect(target);
-                    lfo.start();
-                    lfo.stop(ctx.currentTime + duration);
-                    this.activeNodes.push(lfo, lfoGain);
-                });
-            };
-
-            // Create each layer
+            // Create each layer with real Perlin modulation
             layers.forEach(layer => {
                 const noise = ctx.createBufferSource();
                 noise.buffer = this.createNoise(ctx, 3);
@@ -1179,10 +1233,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                 const gain = ctx.createGain();
                 gain.gain.value = layer.gain;
 
-                // Modulate filter frequency with pseudo-Perlin
-                createPerlinLFO(1, layer.freq * 0.5, filter.frequency);
-                // Modulate volume
-                createPerlinLFO(1, layer.gain * 0.3, gain.gain);
+                // Real Perlin modulation on filter frequency
+                this.perlinModulate(filter.frequency, layer.freq, layer.freq * 0.6, layer.rate, duration);
+                // Real Perlin modulation on volume
+                this.perlinModulate(gain.gain, layer.gain, layer.gain * 0.4, layer.rate * 0.7, duration);
 
                 noise.connect(filter);
                 filter.connect(gain);
@@ -1193,36 +1247,38 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                 this.activeNodes.push(noise, filter, gain);
             });
 
-            // Stereo panning drift (pseudo-Perlin on pan)
-            createPerlinLFO(0.5, 0.4, masterPanner.pan);
+            // Stereo panning with Perlin drift
+            this.perlinModulate(masterPanner.pan, 0, 0.5, 0.1, duration);
 
-            // Occasional gusts - sudden swells
-            const gustInterval = setInterval(() => {
-                if (Math.random() < 0.15) { // 15% chance per interval
+            // Occasional gusts - sudden swells triggered by Perlin threshold
+            const gustCheck = setInterval(() => {
+                const gustNoise = this.fbm(Date.now() / 5000, 3);
+                if (gustNoise > 0.3) { // Organic threshold
                     const gustGain = ctx.createGain();
+                    const intensity = (gustNoise - 0.3) * 0.6; // Scale 0-0.4
                     gustGain.gain.setValueAtTime(0, ctx.currentTime);
-                    gustGain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5);
+                    gustGain.gain.linearRampToValueAtTime(intensity, ctx.currentTime + 0.5);
                     gustGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
 
-                    const gustNoise = ctx.createBufferSource();
-                    gustNoise.buffer = this.createNoise(ctx, 2);
+                    const gustSource = ctx.createBufferSource();
+                    gustSource.buffer = this.createNoise(ctx, 2);
                     const gustFilter = ctx.createBiquadFilter();
                     gustFilter.type = 'lowpass';
-                    gustFilter.frequency.value = 300 + Math.random() * 200;
+                    gustFilter.frequency.value = 300 + this.fbm(Date.now() / 3000) * 200;
 
                     const gustPan = ctx.createStereoPanner();
-                    gustPan.pan.value = Math.random() * 2 - 1;
+                    gustPan.pan.value = this.fbm(Date.now() / 4000) * 2;
 
-                    gustNoise.connect(gustFilter);
+                    gustSource.connect(gustFilter);
                     gustFilter.connect(gustGain);
                     gustGain.connect(gustPan);
                     gustPan.connect(this.masterGain);
 
-                    gustNoise.start();
-                    gustNoise.stop(ctx.currentTime + 2.5);
+                    gustSource.start();
+                    gustSource.stop(ctx.currentTime + 2.5);
                 }
             }, 2000);
-            this.intervals.push(gustInterval);
+            this.intervals.push(gustCheck);
 
             this.activeNodes.push(masterGain, masterPanner);
 
@@ -1232,7 +1288,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             }, (duration - 2) * 1000);
 
             setTimeout(() => this.stop(), duration * 1000);
-            swimEvent('game', '🎵', 'Synth', 'Wind (organic)');
+            swimEvent('game', '🎵', 'Synth', 'Wind (Perlin)');
         },
 
         // Low ominous rumble: very low frequency with subtle noise
