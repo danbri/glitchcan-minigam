@@ -642,9 +642,11 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
 === github_links ===
 # CLASS: code
-Source files:
-- hamfink2026.html (this demo)
-- hamfink2026-ch2.fink.js (Chapter 2)
+Source files in the inklet/demos folder:
+- Main demo (HTML with embedded Ink)
+- Chapter 2 (external FINK file)
+
+View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/demos
 
 + [Back to ending] -> victory
 + [Play again?] -> restart
@@ -874,8 +876,26 @@ Source files:
             chunk.classList.add('settled');
         }, 5000);
 
-        // Smooth scroll to new content
-        chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // Scroll helper - ensures new content is fully visible
+        const scrollToBottom = () => {
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+
+        // Immediate scroll to show new content appearing
+        scrollToBottom();
+
+        // For word-by-word animation, scroll again after words have appeared
+        // Total time = (wordCount * WORD_DELAY_MS) + animation duration (400ms)
+        if (!hasLinks) {
+            const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
+            const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
+            // Scroll periodically during animation to keep up with appearing words
+            const scrollInterval = setInterval(scrollToBottom, 100);
+            setTimeout(() => {
+                clearInterval(scrollInterval);
+                scrollToBottom(); // Final scroll after animation completes
+            }, totalAnimTime);
+        }
     }
 
     // --- Ink Story Engine ---
