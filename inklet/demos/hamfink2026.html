@@ -76,6 +76,21 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     animation: lozengeGlow 2s ease-in-out infinite, chunkAppear 0.6s ease-out forwards;
 }
 
+/* Word-by-word reveal animation */
+#story-output .text-chunk .word {
+    display: inline-block;
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(5px) scale(0.9);
+    animation: wordReveal 0.4s ease-out forwards;
+}
+
+@keyframes wordReveal {
+    0% { opacity: 0; filter: blur(8px); transform: translateY(5px) scale(0.9); }
+    60% { opacity: 1; filter: blur(2px); transform: translateY(-2px) scale(1.02); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+}
+
 @keyframes chunkAppear {
     0% { opacity: 0; transform: translateY(10px) scale(0.95); filter: blur(4px); }
     100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
@@ -496,14 +511,35 @@ Source files:
     const statScore = document.getElementById('stat-score');
 
     // --- Debug Logging ---
+    // Verbosity levels: 0=errors, 1=important, 2=verbose, 3=debug
+    let verbosity = 2;
+
+    const LOG_LEVELS = {
+        error: { level: 0, color: '#f55', prefix: '❌' },
+        warn:  { level: 1, color: '#ff0', prefix: '⚠️' },
+        info:  { level: 1, color: '#8f8', prefix: 'ℹ️' },
+        fink:  { level: 2, color: '#f0f', prefix: '📜' },  // FINK operations
+        ink:   { level: 2, color: '#0ff', prefix: '🖋️' },  // Ink operations
+        net:   { level: 2, color: '#fa0', prefix: '🌐' },  // Network/fetch
+        debug: { level: 3, color: '#888', prefix: '🔧' }
+    };
+
     function log(message, type = 'info') {
+        const config = LOG_LEVELS[type] || LOG_LEVELS.info;
+        if (config.level > verbosity) return;
+
         const timestamp = new Date().toLocaleTimeString();
         const entry = document.createElement('div');
-        entry.textContent = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
-        entry.style.color = type === 'error' ? '#f55' : type === 'warn' ? '#ff0' : '#8f8';
+        entry.textContent = `[${timestamp}] ${config.prefix} ${message}`;
+        entry.style.color = config.color;
         debugPanel.appendChild(entry);
         debugPanel.scrollTop = debugPanel.scrollHeight;
-        console.log(`[${type}] ${message}`);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function setVerbosity(level) {
+        verbosity = Math.max(0, Math.min(3, level));
+        log(`Verbosity set to ${verbosity} (0=errors, 1=important, 2=verbose, 3=debug)`, 'info');
     }
 
     function setStatus(text) {
@@ -533,7 +569,11 @@ Source files:
     }
 
     // --- Animated Text Display ---
+    const WORD_DELAY_MS = 30;  // Delay between each word appearing
+
     function displayTextWithAnimation(text, cssClass = '') {
+        log(`Displaying text: "${text.slice(0, 50)}..."`, 'ink');
+
         // Remove 'latest' class from previous chunks
         const previousLatest = storyOutput.querySelectorAll('.text-chunk.latest');
         previousLatest.forEach(el => {
@@ -546,17 +586,26 @@ Source files:
 
         // Handle links in text (for GitHub URLs)
         const linkPattern = /(https?:\/\/[^\s]+|hamfink2026[^\s]*\.(?:html|js))/g;
-        const htmlText = text.replace(linkPattern, (match) => {
+        const processedText = text.replace(linkPattern, (match) => {
             if (match.startsWith('http')) {
                 return `<a href="${match}" target="_blank">${match}</a>`;
             } else {
-                // Local file reference
                 const baseUrl = 'https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/';
                 return `<a href="${baseUrl}${match}" target="_blank">${match}</a>`;
             }
         });
 
-        chunk.innerHTML = htmlText;
+        // Wrap words in spans for staggered animation
+        const words = processedText.split(/(\s+)/);  // Keep whitespace
+        let wordIndex = 0;
+        const wrappedHtml = words.map(word => {
+            if (word.trim() === '') return word;  // Keep whitespace as-is
+            const delay = wordIndex * WORD_DELAY_MS;
+            wordIndex++;
+            return `<span class="word" style="animation-delay: ${delay}ms">${word}</span>`;
+        }).join('');
+
+        chunk.innerHTML = wrappedHtml;
         storyOutput.appendChild(chunk);
 
         // Trigger animation
@@ -692,12 +741,14 @@ Source files:
 
     // --- FINK External Loading ---
     function loadFinkFile(url) {
-        log(`Loading FINK file: ${url}`);
+        log(`FINK load requested: ${url}`, 'fink');
+        log(`Using JSONP-like sandbox injection technique`, 'fink');
         setStatus(`Loading ${url}...`);
 
         // Resolve relative URL
         const resolvedUrl = new URL(url, window.location.href).href;
-        log(`Resolved URL: ${resolvedUrl}`);
+        log(`Resolved to absolute URL: ${resolvedUrl}`, 'net');
+        log(`Cross-origin safe: sandbox iframe isolates execution`, 'net');
 
         // Track URL for namespace derivation in handleFinkLoaded
         currentLoadingFinkUrl = resolvedUrl;
@@ -763,7 +814,9 @@ Source files:
 
         // Use only the first oooOO block (avoid duplicates if script runs twice)
         const finkContent = dataArray[0];
-        log(`FINK content loaded: ${finkContent.length} chars (${dataArray.length} block(s))`);
+        log(`FINK content received via oooOO template literal`, 'fink');
+        log(`Content: ${finkContent.length} chars, ${finkContent.split('\\n').length} lines`, 'fink');
+        log(`oooOO blocks captured: ${dataArray.length} (using first only)`, 'debug');
         setStatus('Chapter loaded!');
 
         // Store current state for IMPORT injection
@@ -774,25 +827,33 @@ Source files:
             score: story.variablesState['score']
         } : null;
 
+        if (savedState) {
+            log(`Captured parent state: diamonds=${savedState.diamonds}, mega=${savedState.mega_diamonds}, keys=${savedState.keys}, score=${savedState.score}`, 'ink');
+        }
+
         // --- STRAWMAN: Namespace Preprocessor ---
         // Use FinkNamespacePreprocessor if available, fallback to legacy VAR stripping
         let processedContent = finkContent;
         let nsResult = null;
 
         if (typeof FinkNamespacePreprocessor !== 'undefined') {
-            log('[NS] Using FinkNamespacePreprocessor (STRAWMAN)');
+            log(`Namespace preprocessor v${FinkNamespacePreprocessor.VERSION}`, 'fink');
+            log(`Deriving namespace from SHA-256(${currentLoadingFinkUrl})`, 'fink');
             nsResult = FinkNamespacePreprocessor.transform(
                 finkContent,
                 currentLoadingFinkUrl || 'unknown.fink.js',
                 { debug: true }
             );
             processedContent = nsResult.content;
-            log(`[NS] Namespace: ${nsResult.namespace}, Imports: [${nsResult.imports.join(', ')}]`);
+            log(`Namespace: ${nsResult.namespace} (8-char hash prefix)`, 'fink');
+            log(`IMPORT vars (canonical names): [${nsResult.imports.join(', ') || 'none'}]`, 'fink');
+            log(`EXPORT vars: [${nsResult.exports.join(', ') || 'none'}]`, 'fink');
+            log(`Transformed vars: ${Object.keys(nsResult.transformedVars).length} prefixed`, 'debug');
         } else if (savedState) {
             // Legacy fallback: Strip VAR declarations for variables we're carrying over
-            log('[NS] Preprocessor not loaded, using legacy VAR stripping');
+            log('Preprocessor not loaded, using legacy VAR stripping', 'warn');
             const varsToStrip = Object.keys(savedState);
-            log(`Stripping VAR declarations for: ${varsToStrip.join(', ')}`);
+            log(`Stripping VAR declarations for: ${varsToStrip.join(', ')}`, 'fink');
             varsToStrip.forEach(varName => {
                 const varPattern = new RegExp(`^\\s*VAR\\s+${varName}\\s*=.*$`, 'gm');
                 processedContent = processedContent.replace(varPattern, `// [IMPORTED: ${varName}]`);
@@ -804,13 +865,14 @@ Source files:
         choicesContainer.innerHTML = '';
 
         // Compile and run the new story
+        log(`Compiling FINK content with inkjs...`, 'ink');
         initStory(processedContent);
 
         // Inject imported values from parent state
         if (savedState && story) {
             if (nsResult && nsResult.imports.length > 0) {
                 // Use preprocessor's import list
-                log(`[NS] Injecting imports: ${nsResult.imports.join(', ')}`);
+                log(`Injecting ${nsResult.imports.length} imported values into story.variablesState`, 'ink');
                 FinkNamespacePreprocessor.injectImports(story, nsResult.imports, savedState);
             } else {
                 // Legacy: restore all saved state
