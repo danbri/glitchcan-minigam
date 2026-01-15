@@ -47,6 +47,7 @@ This tried to load the full HTML page as a FINK file, but the sandbox expects `.
 **Severity:** Medium (UX)
 **File:** `inklet/demos/hamfink2026.html`
 **Reported:** 2026-01-15
+**Status:** FIXED
 
 The current lozenge highlight implementation is improving but:
 - Need slow/smooth scroll to new content
@@ -54,7 +55,12 @@ The current lozenge highlight implementation is improving but:
 - Incremental display of new sentences (one at a time?)
 - Keep current lozenge highlighted longer
 
-**Current behavior:** Word-by-word animation exists but scroll is instant and highlight fades too quickly.
+**Improvements made:**
+1. Smooth scroll via `scrollIntoView({ behavior: 'smooth' })` and CSS `scroll-behavior: smooth`
+2. More prominent lozenge: brighter colors, stronger glow, thicker border
+3. Pulsing cyan dot indicator on left side of latest content
+4. Extended highlight duration from 3s to 5s
+5. Enhanced glow animation cycles between cyan and green
 
 ---
 
