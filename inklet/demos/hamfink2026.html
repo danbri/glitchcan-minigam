@@ -19,6 +19,16 @@ html, body {
     background-size: 4px 4px; display: flex; flex-direction: column;
     font: 14px/1.5 "Press Start 2P", Courier, monospace; color: var(--zx-white);
 }
+
+/* Accessibility: respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 header {
     padding: .5em 1em; background: #000; border-bottom: 4px solid var(--zx-blue);
     display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
@@ -27,7 +37,14 @@ header h1 { font-size: 14px; margin: 0; color: var(--zx-cyan); }
 header button {
     font-family: inherit; font-size: 12px; padding: .5em 1em;
     border: none; cursor: pointer;
+    min-height: 44px; /* Touch-friendly minimum */
+    transition: background 0.15s ease, transform 0.1s ease;
 }
+header button:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+header button:active { transform: scale(0.96); }
 #restartBtn { background: var(--zx-green); color: #000; }
 #viewToggle { background: var(--zx-mag); color: #fff; }
 header button:hover { background: var(--zx-red); color: #fff; }
@@ -160,6 +177,15 @@ button.choice:nth-child(4) { animation-delay: 0.4s; }
 }
 
 button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(--zx-red); }
+button.choice:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+button.choice:active { transform: scale(0.98); }
+button.choice {
+    min-height: 48px; /* Touch-friendly */
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
 
 /* Special styles for story content */
 .success { color: var(--zx-green); text-shadow: 0 0 10px var(--zx-green); }
@@ -214,8 +240,27 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 #returnToStory {
     margin-top: 1em; padding: 1em 2em; font-family: inherit; font-size: 14px;
     background: var(--zx-green); color: #000; border: none; cursor: pointer;
+    min-height: 48px; min-width: 200px;
+    transition: background 0.15s ease, transform 0.1s ease;
 }
 #returnToStory:hover { background: var(--zx-cyan); }
+#returnToStory:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+#returnToStory:active { transform: scale(0.96); }
+
+/* Mobile responsive improvements */
+@media (max-width: 600px) {
+    header h1 { font-size: 11px; }
+    header { padding: 0.4em 0.6em; gap: 0.5em; }
+    #story-output { padding: 0.6em; font-size: 12px; }
+    #choices { gap: 0.4em; }
+    button.choice { padding: 0.6em; font-size: 12px; }
+    #stats-bar { gap: 1em; font-size: 10px; padding: 0.4em 0.6em; }
+    .stat-icon { font-size: 1.2em; }
+    #game-container { max-width: 100%; }
+}
 
 /* Developer Panel - Top of page tabbed interface */
 #dev-panel {
@@ -236,6 +281,11 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 }
 #dev-tabs button.active { background: var(--zx-mag); color: #fff; }
 #dev-tabs button:hover { background: #444; }
+#dev-tabs button:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: -2px;
+}
+#dev-tabs button { transition: background 0.15s ease; }
 
 /* Tab content panels */
 .dev-tab-content { display: none; flex: 1; overflow: hidden; }
@@ -293,8 +343,15 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 #fink-sandbox { display: none; }
 
 /* Links in story */
-#story-output a { color: var(--zx-cyan); text-decoration: underline; }
+#story-output a {
+    color: var(--zx-cyan); text-decoration: underline;
+    transition: color 0.15s ease;
+}
 #story-output a:hover { color: var(--zx-yellow); }
+#story-output a:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
 
 /* Settings button in header */
 #settingsBtn { background: #333; color: #aaa; font-size: 16px; padding: 0.3em 0.6em; }
