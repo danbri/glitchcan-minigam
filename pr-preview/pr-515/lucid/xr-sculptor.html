@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<!--
+  WebXR SDF Sculptor - Immersive VR/AR sculpting with signed distance fields
+
+  Features:
+  - WebXR VR/AR viewing with head tracking
+  - Controller-based sculpting tools (add/subtract primitives)
+  - Operations edit list (CSG history with undo)
+  - Transform, scale, color tools in VR
+  - Noise displacement for organic sculpting
+
+  Based on the Lucid SDF system.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>WebXR SDF Sculptor</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel-bg: #12121a;
+      --border: #2a2a3a;
+      --text: #e0e0e8;
+      --text-dim: #808090;
+      --accent: #00d4ff;
+      --accent-add: #22ff88;
+      --accent-sub: #ff4466;
+      --accent-warn: #ffaa22;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      height: 100dvh;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Main canvas */
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* UI Overlay */
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    .ui-overlay > * {
+      pointer-events: auto;
+    }
+
+    /* Header bar */
+    .header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(to bottom, rgba(10,10,15,0.95), rgba(10,10,15,0));
+    }
+
+    .header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header h1 span { color: var(--accent); }
+
+    .header-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover { background: #1a1a2a; border-color: var(--accent); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: #000; }
+    .btn.add { border-color: var(--accent-add); color: var(--accent-add); }
+    .btn.add.active { background: var(--accent-add); color: #000; }
+    .btn.sub { border-color: var(--accent-sub); color: var(--accent-sub); }
+    .btn.sub.active { background: var(--accent-sub); color: #000; }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      font-size: 1.1rem;
+    }
+
+    /* XR button */
+    #xr-button {
+      background: linear-gradient(135deg, #4a00e0, #00d4ff);
+      border: none;
+      font-weight: 600;
+    }
+
+    #xr-button:hover { opacity: 0.9; }
+    #xr-button:disabled { background: var(--border); }
+
+    /* Tool palette (left side) */
+    .tool-palette {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    .tool-palette .btn { width: 44px; height: 44px; padding: 0; font-size: 1.2rem; }
+    .tool-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+    /* Operations panel (right side) */
+    .ops-panel {
+      position: absolute;
+      right: 1rem;
+      top: 60px;
+      bottom: 80px;
+      width: 280px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ops-header {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ops-header h3 {
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+
+    .ops-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    .op-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+    }
+
+    .op-item:hover { background: rgba(255,255,255,0.06); border-color: var(--border); }
+    .op-item.selected { border-color: var(--accent); background: rgba(0,212,255,0.1); }
+
+    .op-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .op-icon.add { background: rgba(34,255,136,0.2); }
+    .op-icon.sub { background: rgba(255,68,102,0.2); }
+
+    .op-info { flex: 1; }
+    .op-name { color: var(--text); }
+    .op-detail { color: var(--text-dim); font-size: 0.65rem; }
+
+    .op-actions {
+      display: flex;
+      gap: 0.25rem;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .op-item:hover .op-actions { opacity: 1; }
+
+    .op-btn {
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: var(--border);
+      color: var(--text-dim);
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .op-btn:hover { background: var(--accent); color: #000; }
+    .op-btn.delete:hover { background: var(--accent-sub); }
+
+    /* Property panel */
+    .props-panel {
+      border-top: 1px solid var(--border);
+      padding: 0.75rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .props-panel h4 {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .prop-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      min-width: 50px;
+    }
+
+    .prop-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.3rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: 'SF Mono', monospace;
+    }
+
+    .prop-input:focus { outline: none; border-color: var(--accent); }
+
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(to top, rgba(10,10,15,0.95), rgba(10,10,15,0));
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .status-left { display: flex; gap: 1.5rem; }
+    .status-item { display: flex; align-items: center; gap: 0.4rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    .status-dot.warn { background: var(--accent-warn); }
+    .status-dot.error { background: var(--accent-sub); }
+
+    /* XR info overlay */
+    .xr-info {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      padding: 2rem;
+      background: rgba(10,10,15,0.9);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .xr-info.visible { display: block; }
+    .xr-info h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .xr-info p { color: var(--text-dim); font-size: 0.9rem; }
+
+    /* Hide UI in XR mode */
+    body.in-xr .ui-overlay { display: none; }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+      .ops-panel { display: none; }
+      .tool-palette { bottom: 70px; top: auto; transform: none; flex-direction: row; }
+    }
+
+    /* Log panel */
+    .log-panel {
+      position: absolute;
+      bottom: 40px;
+      left: 1rem;
+      max-width: 400px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: rgba(10,10,15,0.8);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      display: none;
+    }
+
+    .log-panel.visible { display: block; }
+    .log-entry { margin-bottom: 0.2rem; }
+    .log-entry.error { color: var(--accent-sub); }
+    .log-entry.success { color: var(--accent-add); }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div class="ui-overlay">
+    <!-- Header -->
+    <div class="header">
+      <h1><span>SDF</span> Sculptor</h1>
+      <div class="header-buttons">
+        <button class="btn" id="btn-undo" title="Undo (Ctrl+Z)">Undo</button>
+        <button class="btn" id="btn-redo" title="Redo (Ctrl+Y)">Redo</button>
+        <button class="btn" id="btn-clear">Clear</button>
+        <button class="btn btn-icon" id="btn-log" title="Toggle log">i</button>
+        <button class="btn primary" id="xr-button" disabled>Enter VR</button>
+      </div>
+    </div>
+
+    <!-- Tool Palette -->
+    <div class="tool-palette">
+      <button class="btn add active" id="tool-add" title="Add mode (Union)">+</button>
+      <button class="btn sub" id="tool-sub" title="Subtract mode">-</button>
+      <div class="tool-divider"></div>
+      <button class="btn active" id="prim-sphere" title="Sphere">O</button>
+      <button class="btn" id="prim-box" title="Box">[]</button>
+      <button class="btn" id="prim-cylinder" title="Cylinder">||</button>
+      <button class="btn" id="prim-torus" title="Torus">@</button>
+      <button class="btn" id="prim-capsule" title="Capsule">()</button>
+      <div class="tool-divider"></div>
+      <button class="btn" id="tool-move" title="Move">+</button>
+      <button class="btn" id="tool-scale" title="Scale">S</button>
+      <button class="btn" id="tool-noise" title="Noise displacement">~</button>
+    </div>
+
+    <!-- Operations Panel -->
+    <div class="ops-panel">
+      <div class="ops-header">
+        <h3>Operations</h3>
+        <span id="ops-count">0 ops</span>
+      </div>
+      <div class="ops-list" id="ops-list">
+        <!-- Operations will be added here -->
+      </div>
+      <div class="props-panel" id="props-panel" style="display: none;">
+        <h4>Properties</h4>
+        <div class="prop-row">
+          <span class="prop-label">X</span>
+          <input type="number" class="prop-input" id="prop-x" step="0.1">
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Y</span>
+          <input type="number" class="prop-input" id="prop-y" step="0.1">
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Z</span>
+          <input type="number" class="prop-input" id="prop-z" step="0.1">
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Scale</span>
+          <input type="number" class="prop-input" id="prop-scale" step="0.1" min="0.1">
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Color</span>
+          <input type="color" id="prop-color" class="color-swatch">
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Noise</span>
+          <input type="number" class="prop-input" id="prop-noise" step="0.01" min="0" max="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-item">
+          <span class="status-dot" id="status-xr"></span>
+          <span id="status-xr-text">Checking XR...</span>
+        </div>
+        <div class="status-item" id="fps-display">-- FPS</div>
+      </div>
+      <div class="status-right">
+        <span>Scroll: zoom | Drag: orbit | Click: place</span>
+      </div>
+    </div>
+
+    <!-- XR Info -->
+    <div class="xr-info" id="xr-info">
+      <h2>WebXR Not Available</h2>
+      <p>Use a VR headset or enable WebXR in your browser.</p>
+    </div>
+
+    <!-- Log Panel -->
+    <div class="log-panel" id="log-panel"></div>
+  </div>
+
+  <!-- Core modules -->
+  <script type="module">
+    import { parseJson } from './core/json-loader.js';
+    import { generateGlslFromJson } from './core/json-codegen.js';
+    import { SimpleRaymarcher } from './mayfly/raymarcher.js';
+
+    // =========================================================================
+    // Logging
+    // =========================================================================
+    const logPanel = document.getElementById('log-panel');
+    function log(msg, type = '') {
+      console.log(msg);
+      const entry = document.createElement('div');
+      entry.className = 'log-entry' + (type ? ' ' + type : '');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logPanel.appendChild(entry);
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    // =========================================================================
+    // SDF Operations Edit List
+    // =========================================================================
+    class SDFOperationsList {
+      constructor() {
+        this.operations = [];
+        this.undoStack = [];
+        this.selectedIndex = -1;
+        this.onChange = null;
+      }
+
+      // Add a new operation
+      add(op) {
+        // Clear redo stack when adding new operation
+        this.undoStack = [];
+        this.operations.push({
+          id: Date.now(),
+          type: op.type || 'union',     // 'union' or 'subtract'
+          primitive: op.primitive || 'sphere',
+          position: op.position || [0, 0, 0],
+          scale: op.scale || 1.0,
+          color: op.color || [0.8, 0.3, 0.3],
+          params: op.params || {},       // Primitive-specific params
+          noise: op.noise || 0,          // Noise displacement amount
+          smoothK: op.smoothK || 0       // Smooth blend factor
+        });
+        this.selectedIndex = this.operations.length - 1;
+        this._notify();
+        return this.operations[this.selectedIndex];
+      }
+
+      // Update an operation
+      update(index, changes) {
+        if (index >= 0 && index < this.operations.length) {
+          Object.assign(this.operations[index], changes);
+          this._notify();
+        }
+      }
+
+      // Remove an operation
+      remove(index) {
+        if (index >= 0 && index < this.operations.length) {
+          const removed = this.operations.splice(index, 1)[0];
+          this.undoStack.push({ action: 'remove', op: removed, index });
+          if (this.selectedIndex >= this.operations.length) {
+            this.selectedIndex = this.operations.length - 1;
+          }
+          this._notify();
+        }
+      }
+
+      // Undo last operation
+      undo() {
+        if (this.operations.length > 0) {
+          const op = this.operations.pop();
+          this.undoStack.push({ action: 'add', op });
+          this.selectedIndex = Math.min(this.selectedIndex, this.operations.length - 1);
+          this._notify();
+          return true;
+        }
+        return false;
+      }
+
+      // Redo last undone operation
+      redo() {
+        if (this.undoStack.length > 0) {
+          const item = this.undoStack.pop();
+          if (item.action === 'add') {
+            this.operations.push(item.op);
+            this.selectedIndex = this.operations.length - 1;
+          } else if (item.action === 'remove') {
+            this.operations.splice(item.index, 0, item.op);
+            this.selectedIndex = item.index;
+          }
+          this._notify();
+          return true;
+        }
+        return false;
+      }
+
+      // Select an operation
+      select(index) {
+        this.selectedIndex = index;
+        this._notify();
+      }
+
+      // Clear all operations
+      clear() {
+        this.undoStack = [];
+        this.operations = [];
+        this.selectedIndex = -1;
+        this._notify();
+      }
+
+      // Get selected operation
+      getSelected() {
+        return this.selectedIndex >= 0 ? this.operations[this.selectedIndex] : null;
+      }
+
+      // Generate JSON scene from operations
+      toScene() {
+        if (this.operations.length === 0) {
+          // Return a default sphere
+          return {
+            version: "1.0",
+            root: {
+              type: "sphere",
+              params: { r: 0.5, color: [0.5, 0.5, 0.6] }
+            }
+          };
+        }
+
+        // Build scene from operations
+        // Start with first operation as base, apply subsequent ops
+        const buildPrimitive = (op) => {
+          const base = {
+            type: op.primitive,
+            transform: {
+              translate: op.position,
+              scale: [op.scale, op.scale, op.scale]
+            },
+            params: { ...op.params }
+          };
+
+          // Add color
+          base.params.color = op.color;
+
+          // Add primitive-specific params
+          switch (op.primitive) {
+            case 'sphere':
+              base.params.r = op.params.r || 0.5;
+              break;
+            case 'box':
+              base.params.size = op.params.size || [0.5, 0.5, 0.5];
+              break;
+            case 'cylinder':
+              base.params.h = op.params.h || 1.0;
+              base.params.r = op.params.r || 0.3;
+              break;
+            case 'torus':
+              base.params.R = op.params.R || 0.5;
+              base.params.r = op.params.r || 0.15;
+              break;
+            case 'capsule':
+              base.params.h = op.params.h || 0.8;
+              base.params.r = op.params.r || 0.25;
+              break;
+          }
+
+          // Wrap in displace node if noise is applied
+          if (op.noise > 0) {
+            return {
+              type: 'displace',
+              amount: op.noise,      // Displacement strength
+              scale: 3.0,            // Noise frequency
+              octaves: 4,            // Noise detail
+              noiseType: 'fbm',      // Fractal brownian motion
+              child: base
+            };
+          }
+
+          return base;
+        };
+
+        // Build tree from operations
+        let root = buildPrimitive(this.operations[0]);
+
+        for (let i = 1; i < this.operations.length; i++) {
+          const op = this.operations[i];
+          const prim = buildPrimitive(op);
+
+          if (op.type === 'subtract') {
+            root = {
+              type: 'subtract',
+              children: [root, prim]
+            };
+          } else {
+            // Union (optionally smooth)
+            if (op.smoothK > 0) {
+              root = {
+                type: 'smoothUnion',
+                params: { k: op.smoothK },
+                children: [root, prim]
+              };
+            } else {
+              root = {
+                type: 'union',
+                children: [root, prim]
+              };
+            }
+          }
+        }
+
+        return { version: "1.0", root };
+      }
+
+      _notify() {
+        if (this.onChange) this.onChange();
+      }
+    }
+
+    // =========================================================================
+    // Main Application
+    // =========================================================================
+    class XRSculptor {
+      constructor() {
+        this.canvas = document.getElementById('canvas');
+        this.raymarcher = new SimpleRaymarcher(this.canvas);
+        this.operations = new SDFOperationsList();
+
+        // Current tool state
+        this.tool = {
+          mode: 'union',        // 'union' or 'subtract'
+          primitive: 'sphere',  // Current primitive type
+          action: 'place'       // 'place', 'move', 'scale', 'noise'
+        };
+
+        // Current placement preview
+        this.preview = {
+          active: false,
+          position: [0, 0, 0]
+        };
+
+        // Camera interaction
+        this.isDragging = false;
+        this.lastMouse = { x: 0, y: 0 };
+
+        // XR state
+        this.xrSession = null;
+        this.xrRefSpace = null;
+        this.xrSupported = false;
+        this.controllers = [];
+
+        // FPS tracking
+        this.frameCount = 0;
+        this.lastFpsUpdate = performance.now();
+        this.fps = 0;
+
+        this.init();
+      }
+
+      async init() {
+        log('Initializing XR Sculptor...', 'success');
+
+        // Set up operations callback
+        this.operations.onChange = () => {
+          this.updateScene();
+          this.updateOpsUI();
+        };
+
+        // Initialize with a starter shape
+        this.operations.add({
+          type: 'union',
+          primitive: 'sphere',
+          position: [0, 0, 0],
+          scale: 1.0,
+          color: [0.6, 0.4, 0.8],
+          params: { r: 0.5 }
+        });
+
+        // Set up UI
+        this.setupUI();
+        this.setupMouse();
+        this.setupKeyboard();
+
+        // Check XR support
+        await this.checkXRSupport();
+
+        // Start render loop
+        this.animate();
+
+        log('Ready! Click to place shapes, drag to orbit.', 'success');
+      }
+
+      setupUI() {
+        // Tool mode buttons
+        document.getElementById('tool-add').addEventListener('click', () => this.setMode('union'));
+        document.getElementById('tool-sub').addEventListener('click', () => this.setMode('subtract'));
+
+        // Primitive buttons
+        const primButtons = ['sphere', 'box', 'cylinder', 'torus', 'capsule'];
+        primButtons.forEach(prim => {
+          const btn = document.getElementById('prim-' + prim);
+          if (btn) {
+            btn.addEventListener('click', () => this.setPrimitive(prim));
+          }
+        });
+
+        // Action buttons
+        document.getElementById('tool-move')?.addEventListener('click', () => this.setAction('move'));
+        document.getElementById('tool-scale')?.addEventListener('click', () => this.setAction('scale'));
+        document.getElementById('tool-noise')?.addEventListener('click', () => this.setAction('noise'));
+
+        // Header buttons
+        document.getElementById('btn-undo').addEventListener('click', () => this.operations.undo());
+        document.getElementById('btn-redo').addEventListener('click', () => this.operations.redo());
+        document.getElementById('btn-clear').addEventListener('click', () => {
+          if (confirm('Clear all operations?')) this.operations.clear();
+        });
+        document.getElementById('btn-log').addEventListener('click', () => {
+          document.getElementById('log-panel').classList.toggle('visible');
+        });
+
+        // XR button
+        document.getElementById('xr-button').addEventListener('click', () => this.toggleXR());
+
+        // Property inputs
+        ['x', 'y', 'z', 'scale', 'noise'].forEach(prop => {
+          const input = document.getElementById('prop-' + prop);
+          if (input) {
+            input.addEventListener('change', () => this.updateSelectedProperty(prop, parseFloat(input.value)));
+          }
+        });
+
+        document.getElementById('prop-color')?.addEventListener('change', (e) => {
+          const hex = e.target.value;
+          const r = parseInt(hex.slice(1, 3), 16) / 255;
+          const g = parseInt(hex.slice(3, 5), 16) / 255;
+          const b = parseInt(hex.slice(5, 7), 16) / 255;
+          this.updateSelectedProperty('color', [r, g, b]);
+        });
+      }
+
+      setupMouse() {
+        this.canvas.addEventListener('mousedown', (e) => {
+          this.isDragging = true;
+          this.lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        this.canvas.addEventListener('mousemove', (e) => {
+          if (this.isDragging) {
+            const dx = e.clientX - this.lastMouse.x;
+            const dy = e.clientY - this.lastMouse.y;
+            this.raymarcher.camera.theta += dx * 0.01;
+            this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1,
+              this.raymarcher.camera.phi + dy * 0.01));
+            this.lastMouse = { x: e.clientX, y: e.clientY };
+          }
+        });
+
+        this.canvas.addEventListener('mouseup', () => { this.isDragging = false; });
+        this.canvas.addEventListener('mouseleave', () => { this.isDragging = false; });
+
+        this.canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          this.raymarcher.camera.distance *= (1 + e.deltaY * 0.001);
+          this.raymarcher.camera.distance = Math.max(1, Math.min(20, this.raymarcher.camera.distance));
+        }, { passive: false });
+
+        // Click to place
+        this.canvas.addEventListener('click', (e) => {
+          if (this.isDragging) return;
+          // Calculate placement position based on click
+          // For now, place at camera target with slight offset
+          const cam = this.raymarcher.camera;
+          const pos = [
+            cam.target[0] + (Math.random() - 0.5) * 0.5,
+            cam.target[1] + (Math.random() - 0.5) * 0.5,
+            cam.target[2] + (Math.random() - 0.5) * 0.5
+          ];
+          this.placeShape(pos);
+        });
+
+        // Touch support
+        let touchStart = null;
+        this.canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+        });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          if (e.touches.length === 1 && touchStart) {
+            const dx = e.touches[0].clientX - touchStart.x;
+            const dy = e.touches[0].clientY - touchStart.y;
+            this.raymarcher.camera.theta += dx * 0.01;
+            this.raymarcher.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1,
+              this.raymarcher.camera.phi + dy * 0.01));
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          } else if (e.touches.length === 2) {
+            // Pinch zoom
+            const dist = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+            if (this.lastPinchDist) {
+              const delta = this.lastPinchDist - dist;
+              this.raymarcher.camera.distance *= (1 + delta * 0.005);
+              this.raymarcher.camera.distance = Math.max(1, Math.min(20, this.raymarcher.camera.distance));
+            }
+            this.lastPinchDist = dist;
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', () => {
+          touchStart = null;
+          this.lastPinchDist = null;
+        });
+      }
+
+      setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'z') {
+              e.preventDefault();
+              this.operations.undo();
+            } else if (e.key === 'y') {
+              e.preventDefault();
+              this.operations.redo();
+            }
+          }
+
+          // Number keys for primitives
+          const primMap = { '1': 'sphere', '2': 'box', '3': 'cylinder', '4': 'torus', '5': 'capsule' };
+          if (primMap[e.key]) {
+            this.setPrimitive(primMap[e.key]);
+          }
+
+          // +/- for mode
+          if (e.key === '=' || e.key === '+') this.setMode('union');
+          if (e.key === '-') this.setMode('subtract');
+
+          // Delete selected
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            const sel = this.operations.selectedIndex;
+            if (sel >= 0) {
+              this.operations.remove(sel);
+            }
+          }
+        });
+      }
+
+      setMode(mode) {
+        this.tool.mode = mode;
+        document.getElementById('tool-add').classList.toggle('active', mode === 'union');
+        document.getElementById('tool-sub').classList.toggle('active', mode === 'subtract');
+        log(`Mode: ${mode}`);
+      }
+
+      setPrimitive(prim) {
+        this.tool.primitive = prim;
+        ['sphere', 'box', 'cylinder', 'torus', 'capsule'].forEach(p => {
+          const btn = document.getElementById('prim-' + p);
+          if (btn) btn.classList.toggle('active', p === prim);
+        });
+        log(`Primitive: ${prim}`);
+      }
+
+      setAction(action) {
+        this.tool.action = action;
+        log(`Action: ${action}`);
+      }
+
+      placeShape(position) {
+        // Get default color based on mode
+        const color = this.tool.mode === 'subtract'
+          ? [0.9, 0.3, 0.3]
+          : [0.3 + Math.random() * 0.5, 0.3 + Math.random() * 0.5, 0.5 + Math.random() * 0.4];
+
+        this.operations.add({
+          type: this.tool.mode,
+          primitive: this.tool.primitive,
+          position: position,
+          scale: 0.5 + Math.random() * 0.3,
+          color: color,
+          params: this.getDefaultParams(this.tool.primitive),
+          noise: 0,
+          smoothK: this.tool.mode === 'union' ? 0.1 : 0
+        });
+
+        log(`Placed ${this.tool.primitive} at [${position.map(p => p.toFixed(2)).join(', ')}]`);
+      }
+
+      getDefaultParams(primitive) {
+        switch (primitive) {
+          case 'sphere': return { r: 0.5 };
+          case 'box': return { size: [0.4, 0.4, 0.4] };
+          case 'cylinder': return { h: 0.8, r: 0.25 };
+          case 'torus': return { R: 0.4, r: 0.12 };
+          case 'capsule': return { h: 0.6, r: 0.2 };
+          default: return {};
+        }
+      }
+
+      updateSelectedProperty(prop, value) {
+        const sel = this.operations.getSelected();
+        if (!sel) return;
+
+        const changes = {};
+        if (prop === 'x') {
+          changes.position = [value, sel.position[1], sel.position[2]];
+        } else if (prop === 'y') {
+          changes.position = [sel.position[0], value, sel.position[2]];
+        } else if (prop === 'z') {
+          changes.position = [sel.position[0], sel.position[1], value];
+        } else if (prop === 'scale') {
+          changes.scale = value;
+        } else if (prop === 'noise') {
+          changes.noise = value;
+        } else if (prop === 'color') {
+          changes.color = value;
+        }
+
+        this.operations.update(this.operations.selectedIndex, changes);
+      }
+
+      updateScene() {
+        try {
+          const scene = this.operations.toScene();
+          const processed = parseJson(scene);
+          const glsl = generateGlslFromJson(processed);
+          this.raymarcher.updateScene(glsl);
+        } catch (e) {
+          log('Scene update error: ' + e.message, 'error');
+          console.error(e);
+        }
+      }
+
+      updateOpsUI() {
+        const list = document.getElementById('ops-list');
+        const countEl = document.getElementById('ops-count');
+        const propsPanel = document.getElementById('props-panel');
+
+        // Update count
+        countEl.textContent = `${this.operations.operations.length} ops`;
+
+        // Rebuild list
+        list.innerHTML = '';
+        this.operations.operations.forEach((op, i) => {
+          const item = document.createElement('div');
+          item.className = 'op-item' + (i === this.operations.selectedIndex ? ' selected' : '');
+          item.innerHTML = `
+            <div class="op-icon ${op.type === 'subtract' ? 'sub' : 'add'}">
+              ${op.type === 'subtract' ? '-' : '+'}
+            </div>
+            <div class="op-info">
+              <div class="op-name">${op.primitive}</div>
+              <div class="op-detail">[${op.position.map(p => p.toFixed(1)).join(', ')}] s=${op.scale.toFixed(2)}</div>
+            </div>
+            <div class="op-actions">
+              <button class="op-btn delete" data-index="${i}" title="Delete">x</button>
+            </div>
+          `;
+          item.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('op-btn')) {
+              this.operations.select(i);
+            }
+          });
+          list.appendChild(item);
+        });
+
+        // Delete button handlers
+        list.querySelectorAll('.op-btn.delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.operations.remove(parseInt(btn.dataset.index));
+          });
+        });
+
+        // Update properties panel
+        const sel = this.operations.getSelected();
+        if (sel) {
+          propsPanel.style.display = 'block';
+          document.getElementById('prop-x').value = sel.position[0].toFixed(2);
+          document.getElementById('prop-y').value = sel.position[1].toFixed(2);
+          document.getElementById('prop-z').value = sel.position[2].toFixed(2);
+          document.getElementById('prop-scale').value = sel.scale.toFixed(2);
+          document.getElementById('prop-noise').value = sel.noise.toFixed(2);
+
+          // Color to hex
+          const r = Math.round(sel.color[0] * 255).toString(16).padStart(2, '0');
+          const g = Math.round(sel.color[1] * 255).toString(16).padStart(2, '0');
+          const b = Math.round(sel.color[2] * 255).toString(16).padStart(2, '0');
+          document.getElementById('prop-color').value = '#' + r + g + b;
+        } else {
+          propsPanel.style.display = 'none';
+        }
+      }
+
+      // =========================================================================
+      // WebXR Support
+      // =========================================================================
+
+      async checkXRSupport() {
+        const statusDot = document.getElementById('status-xr');
+        const statusText = document.getElementById('status-xr-text');
+        const xrButton = document.getElementById('xr-button');
+
+        if (!navigator.xr) {
+          statusDot.classList.add('error');
+          statusText.textContent = 'WebXR not available';
+          log('WebXR API not available in this browser', 'error');
+          return;
+        }
+
+        try {
+          // Check for immersive-vr support
+          const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+
+          // Also check for immersive-ar
+          let arSupported = false;
+          try {
+            arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+          } catch (e) { /* AR not supported */ }
+
+          if (vrSupported || arSupported) {
+            this.xrSupported = true;
+            statusDot.classList.remove('error', 'warn');
+            statusText.textContent = vrSupported ? 'VR Ready' : 'AR Ready';
+            xrButton.disabled = false;
+            xrButton.textContent = vrSupported ? 'Enter VR' : 'Enter AR';
+            log(`WebXR supported: VR=${vrSupported}, AR=${arSupported}`, 'success');
+          } else {
+            statusDot.classList.add('warn');
+            statusText.textContent = 'No XR device';
+            log('No immersive XR sessions supported');
+          }
+        } catch (e) {
+          statusDot.classList.add('error');
+          statusText.textContent = 'XR check failed';
+          log('WebXR check failed: ' + e.message, 'error');
+        }
+      }
+
+      async toggleXR() {
+        if (this.xrSession) {
+          await this.endXR();
+        } else {
+          await this.startXR();
+        }
+      }
+
+      async startXR() {
+        if (!navigator.xr) {
+          log('WebXR not supported', 'error');
+          return;
+        }
+
+        try {
+          log('Requesting XR session...');
+
+          // Request immersive VR session
+          this.xrSession = await navigator.xr.requestSession('immersive-vr', {
+            requiredFeatures: ['local-floor'],
+            optionalFeatures: ['bounded-floor', 'hand-tracking']
+          });
+
+          // Set up WebGL layer
+          const gl = this.raymarcher.gl;
+          await gl.makeXRCompatible();
+
+          const glLayer = new XRWebGLLayer(this.xrSession, gl, {
+            alpha: true,
+            antialias: true,
+            depth: true
+          });
+
+          await this.xrSession.updateRenderState({
+            baseLayer: glLayer,
+            depthNear: 0.1,
+            depthFar: 100.0
+          });
+
+          // Get reference space
+          this.xrRefSpace = await this.xrSession.requestReferenceSpace('local-floor');
+
+          // Handle session end
+          this.xrSession.addEventListener('end', () => {
+            log('XR session ended');
+            this.xrSession = null;
+            this.xrRefSpace = null;
+            document.body.classList.remove('in-xr');
+            document.getElementById('xr-button').textContent = 'Enter VR';
+            document.getElementById('xr-button').classList.remove('active');
+          });
+
+          // Set up input sources (controllers)
+          this.xrSession.addEventListener('inputsourceschange', (e) => {
+            this.updateControllers(e);
+          });
+
+          // Enter XR mode
+          document.body.classList.add('in-xr');
+          document.getElementById('xr-button').textContent = 'Exit VR';
+          document.getElementById('xr-button').classList.add('active');
+
+          log('Entered XR mode!', 'success');
+
+          // Start XR render loop
+          this.xrSession.requestAnimationFrame((t, f) => this.xrAnimate(t, f));
+
+        } catch (e) {
+          log('Failed to start XR: ' + e.message, 'error');
+          console.error(e);
+        }
+      }
+
+      async endXR() {
+        if (this.xrSession) {
+          await this.xrSession.end();
+        }
+      }
+
+      updateControllers(event) {
+        // Track controller input sources for interaction
+        log(`Controllers changed: +${event.added.length} -${event.removed.length}`);
+
+        for (const source of event.added) {
+          if (source.targetRayMode === 'tracked-pointer') {
+            log(`Controller added: ${source.handedness}`);
+          }
+        }
+      }
+
+      xrAnimate(time, frame) {
+        if (!this.xrSession) return;
+
+        // Request next frame
+        this.xrSession.requestAnimationFrame((t, f) => this.xrAnimate(t, f));
+
+        const gl = this.raymarcher.gl;
+        const glLayer = this.xrSession.renderState.baseLayer;
+        const pose = frame.getViewerPose(this.xrRefSpace);
+
+        if (!pose) return;
+
+        // Bind XR framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
+
+        // Process each view (one per eye in VR)
+        for (const view of pose.views) {
+          const viewport = glLayer.getViewport(view);
+          gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+          // Update camera from XR pose
+          const p = view.transform.position;
+          const cameraPos = [p.x, p.y, p.z];
+
+          // Get view direction from the transform
+          const m = view.transform.matrix;
+          const forward = [-m[8], -m[9], -m[10]];
+          const target = [
+            cameraPos[0] + forward[0],
+            cameraPos[1] + forward[1],
+            cameraPos[2] + forward[2]
+          ];
+
+          // Override raymarcher camera for this view
+          this.raymarcher.camera.target = target;
+          this.raymarcher.camera.distance = 0.001; // Very close for direct view
+
+          // Temporarily set camera position directly
+          const origGetCameraPosition = this.raymarcher.getCameraPosition.bind(this.raymarcher);
+          this.raymarcher.getCameraPosition = () => cameraPos;
+
+          // Render
+          this.raymarcher.render();
+
+          // Restore
+          this.raymarcher.getCameraPosition = origGetCameraPosition;
+        }
+
+        // Process controller input for sculpting
+        this.processXRInput(frame);
+      }
+
+      processXRInput(frame) {
+        // Handle controller input for placing/sculpting shapes
+        for (const source of this.xrSession.inputSources) {
+          if (source.targetRayMode !== 'tracked-pointer') continue;
+
+          const targetRayPose = frame.getPose(source.targetRaySpace, this.xrRefSpace);
+          if (!targetRayPose) continue;
+
+          // Check for trigger press
+          if (source.gamepad) {
+            const trigger = source.gamepad.buttons[0];
+            if (trigger && trigger.pressed) {
+              const pos = targetRayPose.transform.position;
+
+              // Place shape at controller position (with debounce)
+              if (!this._lastTriggerTime || Date.now() - this._lastTriggerTime > 500) {
+                this._lastTriggerTime = Date.now();
+
+                // Right hand = add, left hand = subtract
+                const mode = source.handedness === 'right' ? 'union' : 'subtract';
+                const prevMode = this.tool.mode;
+                this.tool.mode = mode;
+
+                this.placeShape([pos.x, pos.y, pos.z]);
+
+                this.tool.mode = prevMode;
+              }
+            }
+
+            // Grip button for undo
+            const grip = source.gamepad.buttons[1];
+            if (grip && grip.pressed) {
+              if (!this._lastGripTime || Date.now() - this._lastGripTime > 500) {
+                this._lastGripTime = Date.now();
+                this.operations.undo();
+              }
+            }
+          }
+        }
+      }
+
+      // =========================================================================
+      // Animation Loop
+      // =========================================================================
+
+      animate() {
+        if (!this.xrSession) {
+          // Regular (non-XR) render loop
+          requestAnimationFrame(() => this.animate());
+          this.raymarcher.render();
+
+          // Update FPS
+          this.frameCount++;
+          const now = performance.now();
+          if (now - this.lastFpsUpdate > 1000) {
+            this.fps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+            document.getElementById('fps-display').textContent = `${this.fps} FPS`;
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // Initialize
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      window.sculptor = new XRSculptor();
+    });
+  </script>
+</body>
+</html>
