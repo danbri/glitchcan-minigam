@@ -143,6 +143,7 @@ button.choice {
     opacity: 0;
     transform: translateX(-20px);
     position: relative;
+    pointer-events: none; /* Disabled during animation */
 }
 button.choice::before {
     content: '▶ ';
@@ -157,6 +158,7 @@ button.choice:nth-child(4) { animation-delay: 0.4s; }
     0% { opacity: 0; transform: translateX(-20px); }
     100% { opacity: 1; transform: translateX(0); }
 }
+button.choice.ready { pointer-events: auto; }
 
 /* Accessible hover: blue→orange with underline, not red/green */
 button.choice:hover {
@@ -2059,18 +2061,22 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             const btn = document.createElement('button');
             btn.className = 'choice';
             btn.textContent = `${index + 1}. ${choice.text}`;
+
+            // Enable clicks only after animation completes (prevents mis-clicks during slide-in)
+            btn.addEventListener('animationend', () => {
+                btn.classList.add('ready');
+            }, { once: true });
+
             btn.addEventListener('click', (e) => {
+                // Prevent double-fires (touch devices fire both touchend and click)
+                if (btn.dataset.clicked === 'true') return;
+                btn.dataset.clicked = 'true';
+
                 log(`Choice button ${index} clicked`, 'debug');
                 // Visual feedback - flash the button
                 btn.style.boxShadow = '0 0 20px var(--zx-yellow)';
                 setTimeout(() => btn.style.boxShadow = '', 200);
                 selectChoice(index);
-            });
-            // Also add touch support
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                log(`Choice button ${index} touched`, 'debug');
-                btn.click();
             });
             choicesContainer.appendChild(btn);
         });
