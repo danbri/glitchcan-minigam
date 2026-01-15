@@ -67,7 +67,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     flex: 1; overflow-y: auto; padding: 1em;
     background: rgba(0,20,0,0.5); border: 2px solid var(--zx-green);
     margin-bottom: 1em;
-    scroll-behavior: smooth;
+    /* scroll-behavior: smooth removed - causes jitter with repeated scrollTop updates */
 }
 
 /* Text animation styles */
@@ -448,6 +448,16 @@ button.choice {
     overflow-x: auto;
 }
 
+/* FINKs tab */
+#finks-content { padding: 1em; overflow-y: auto; }
+#local-finks a {
+    color: var(--zx-cyan); text-decoration: none; padding: 0.2em 0.4em;
+    border-radius: 3px; transition: all 0.15s ease;
+}
+#local-finks a:hover {
+    background: var(--zx-cyan); color: #000; text-decoration: none;
+}
+
 /* Ensure page fits viewport */
 html { height: 100%; overflow: hidden; }
 body { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
@@ -488,6 +498,7 @@ main { flex: 1; min-height: 0; overflow: hidden; }
         <button class="active" data-tab="logs">📋 Logs</button>
         <button data-tab="swimlanes">🏊 Swimlanes</button>
         <button data-tab="state">📊 State</button>
+        <button data-tab="finks">📂 FINKs</button>
         <button id="copyLogsBtn">📋 Copy</button>
         <button id="closeDevPanel" style="margin-left:auto;">✕ Close</button>
     </div>
@@ -530,6 +541,37 @@ main { flex: 1; min-height: 0; overflow: hidden; }
     <!-- State Tab -->
     <div id="state-content" class="dev-tab-content">
         <pre id="state-display">Loading...</pre>
+    </div>
+
+    <!-- FINKs Tab -->
+    <div id="finks-content" class="dev-tab-content">
+        <div style="display:flex; gap:2em; flex-wrap:wrap;">
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">📁 This Repo</h4>
+                <div id="local-finks" style="display:flex; flex-direction:column; gap:0.3em; font-size:12px;">
+                    <a href="#" data-fink="bagend.fink.js">🏠 Bag End</a>
+                    <a href="#" data-fink="hampstead.fink.js">🎮 Hampstead</a>
+                    <a href="#" data-fink="mudslidemines.fink.js">⛏️ Mudslide Mines</a>
+                    <a href="#" data-fink="riverbend.fink.js">🏞️ Riverbend</a>
+                    <a href="#" data-fink="shane-manor.fink.js">🏚️ Shane Manor</a>
+                    <a href="#" data-fink="../cozyverse/maple-hollow.fink.js">🍁 Maple Hollow</a>
+                    <a href="#" data-fink="dev-worldpools.fink.js">🌊 World Pools (dev)</a>
+                    <a href="#" data-fink="hamfink2026-ch2.fink.js">📖 Chapter 2</a>
+                    <a href="#" data-fink="tml-2025-langlearn.fink.js">🗣️ Language Learning</a>
+                    <a href="#" data-fink="../toc.fink.js">📑 TOC (inklet)</a>
+                </div>
+            </div>
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-mag);">🌐 External URL</h4>
+                <div style="display:flex; gap:0.5em;">
+                    <input type="text" id="external-fink-url" placeholder="https://example.com/story.fink.js" style="flex:1; min-width:200px; padding:0.3em; font-size:12px; background:#111; color:#fff; border:1px solid var(--zx-mag);">
+                    <button id="load-external-fink" style="padding:0.3em 0.6em; font-size:12px;">Load</button>
+                </div>
+                <div style="margin-top:0.5em; font-size:10px; color:#888;">
+                    Paste any .fink.js URL to load external stories
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -583,6 +625,7 @@ The only way out is through the locked passage ahead. You'll need to collect gem
 
 + [Look around carefully] -> look_around
 + [Call out into the darkness] -> call_out
++ [Dev: Skip to World Pools] -> dev_pools
 
 === look_around ===
 {cavern_explored:
@@ -1031,12 +1074,18 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         if (path.startsWith('http://') || path.startsWith('https://')) {
             return path;
         }
-        // Resolve relative to basehref or current page
-        const base = currentBasehref || window.location.href;
+        // Resolve relative to: BASEHREF > current story URL > HTML page
+        let base;
+        if (currentBasehref) {
+            // BASEHREF is itself relative to story location
+            base = new URL(currentBasehref, currentLoadingFinkUrl || window.location.href).href;
+        } else {
+            base = currentLoadingFinkUrl || window.location.href;
+        }
         try {
             return new URL(path, base).href;
         } catch (e) {
-            log(`Media URL resolution failed: ${e.message}`, 'error');
+            log(`Media URL resolution failed for "${path}" with base "${base}": ${e.message}`, 'error');
             return path;
         }
     }
@@ -1055,8 +1104,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         img.onload = () => {
             chunk.classList.remove('loading');
-            requestAnimationFrame(() => chunk.classList.add('visible'));
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            requestAnimationFrame(() => {
+                chunk.classList.add('visible');
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            });
         };
         img.onerror = () => {
             chunk.classList.remove('loading');
@@ -1075,7 +1126,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        storyOutput.scrollTop = storyOutput.scrollHeight;
+        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
 
     function displayVideo(videoPath, caption = '') {
@@ -1092,8 +1143,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         video.playsInline = true;
 
         video.onloadedmetadata = () => {
-            requestAnimationFrame(() => chunk.classList.add('visible'));
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            requestAnimationFrame(() => {
+                chunk.classList.add('visible');
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            });
         };
         video.onerror = () => {
             chunk.classList.add('error');
@@ -1111,7 +1164,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        storyOutput.scrollTop = storyOutput.scrollHeight;
+        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
 
     function playAudio(audioPath, trackName = '') {
@@ -1181,22 +1234,20 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         // Scroll helper - ensures new content is fully visible
         const scrollToBottom = () => {
-            storyOutput.scrollTop = storyOutput.scrollHeight;
+            // Use scrollIntoView on the chunk for reliable scrolling
+            chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
         };
 
         // Immediate scroll to show new content appearing
-        scrollToBottom();
+        requestAnimationFrame(scrollToBottom);
 
         // For word-by-word animation, scroll again after words have appeared
-        // Total time = (wordCount * WORD_DELAY_MS) + animation duration (400ms)
         if (!hasLinks) {
             const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
             const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
-            // Scroll periodically during animation to keep up with appearing words
-            const scrollInterval = setInterval(scrollToBottom, 100);
+            // Single scroll at the end of animation - no interval jitter
             setTimeout(() => {
-                clearInterval(scrollInterval);
-                scrollToBottom(); // Final scroll after animation completes
+                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, totalAnimTime);
         }
     }
@@ -1449,10 +1500,13 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         log(`Using JSONP-like sandbox injection technique`, 'fink');
         setStatus(`Loading ${url}...`);
 
-        // Resolve relative URL
+        // Resolve relative URL - use current story URL as base if available
         let resolvedUrl;
         try {
-            resolvedUrl = new URL(url, window.location.href).href;
+            // If we have a current story loaded, resolve relative to IT, not the HTML page
+            const baseUrl = currentLoadingFinkUrl || window.location.href;
+            resolvedUrl = new URL(url, baseUrl).href;
+            log(`Resolving "${url}" relative to "${baseUrl}"`, 'debug');
         } catch (e) {
             log(`FINK URL resolution failed: ${e.message}`, 'error');
             swimEvent('net', '❌', 'URL Resolution Failed', e.message);
@@ -1536,6 +1590,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         log(`Content: ${finkContent.length} chars, ${finkContent.split('\\n').length} lines`, 'fink');
         log(`oooOO blocks captured: ${dataArray.length} (using first only)`, 'debug');
         setStatus('Chapter loaded!');
+
+        // Reset BASEHREF for new story (will be set by BASEHREF tag if present)
+        currentBasehref = '';
 
         swimEvent('net', '✅', 'Content Received', `${finkContent.length} chars`);
         swimEvent('fink', '📜', 'Parsing FINK', `${finkContent.split('\\n').length} lines`);
@@ -1848,6 +1905,42 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }).catch(err => {
             log(`Failed to copy: ${err}`, 'error');
         });
+    });
+
+    // FINK quick-load links
+    document.querySelectorAll('#local-finks a[data-fink]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const finkPath = link.dataset.fink;
+            // Resolve relative to inklet/ folder (go up from demos/)
+            const resolvedPath = finkPath.startsWith('../') ? finkPath : `../${finkPath}`;
+            log(`Quick-loading FINK: ${resolvedPath}`, 'fink');
+            storyOutput.innerHTML = ''; // Clear story
+            choicesContainer.innerHTML = '';
+            currentLoadingFinkUrl = null; // Reset so path resolves from HTML
+            loadFinkFile(resolvedPath);
+            devPanel.classList.remove('visible'); // Hide dev panel
+        });
+    });
+
+    // External FINK URL loader
+    const externalFinkInput = document.getElementById('external-fink-url');
+    const loadExternalFinkBtn = document.getElementById('load-external-fink');
+    loadExternalFinkBtn.addEventListener('click', () => {
+        const url = externalFinkInput.value.trim();
+        if (!url) {
+            log('Please enter a FINK URL', 'warn');
+            return;
+        }
+        log(`Loading external FINK: ${url}`, 'fink');
+        storyOutput.innerHTML = '';
+        choicesContainer.innerHTML = '';
+        currentLoadingFinkUrl = null;
+        loadFinkFile(url);
+        devPanel.classList.remove('visible');
+    });
+    externalFinkInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadExternalFinkBtn.click();
     });
 
     // State display update function
