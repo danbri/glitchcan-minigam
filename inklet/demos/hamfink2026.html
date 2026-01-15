@@ -874,8 +874,26 @@ Source files:
             chunk.classList.add('settled');
         }, 5000);
 
-        // Smooth scroll to new content
-        chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // Scroll helper - ensures new content is fully visible
+        const scrollToBottom = () => {
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+
+        // Immediate scroll to show new content appearing
+        scrollToBottom();
+
+        // For word-by-word animation, scroll again after words have appeared
+        // Total time = (wordCount * WORD_DELAY_MS) + animation duration (400ms)
+        if (!hasLinks) {
+            const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
+            const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
+            // Scroll periodically during animation to keep up with appearing words
+            const scrollInterval = setInterval(scrollToBottom, 100);
+            setTimeout(() => {
+                clearInterval(scrollInterval);
+                scrollToBottom(); // Final scroll after animation completes
+            }, totalAnimTime);
+        }
     }
 
     // --- Ink Story Engine ---
