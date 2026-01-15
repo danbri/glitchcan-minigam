@@ -25,19 +25,21 @@ href="https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/hamfink
 
 ### BUG-002: Chapter 2 re-entry ends game confusingly
 **Severity:** High
-**File:** `inklet/demos/hamfink2026.html`
+**File:** `inklet/demos/hamfink2026.html`, `hamfink2026-ch2.fink.js`
 **Reported:** 2026-01-15
+**Status:** FIXED
 
 Crossing into Chapter 2, returning, then re-entering Chapter 2 ends the game in a confusing state.
 
-**Steps to reproduce:**
-1. Play through to Chapter 2 portal
-2. Enter Chapter 2
-3. Return to main story
-4. Re-enter Chapter 2
-5. Game ends or becomes stuck
+**Root cause found:** Chapter 2's `back_to_chapter1` knot had:
+```ink
+# FINK: hamfink2026.html
+```
+This tried to load the full HTML page as a FINK file, but the sandbox expects `.fink.js` files with `oooOO` template literals. The HTML file doesn't have that format, causing failure.
 
-**Likely cause:** State not properly reset between chapter transitions, or story stack not correctly managed.
+**Fix:**
+1. Added `# RESTART` tag handling in engine - triggers page reload
+2. Changed Chapter 2 to use `# RESTART` instead of trying to load HTML as FINK
 
 ---
 

@@ -848,6 +848,12 @@ Source files:
 
             // Process tags
             for (const tag of tags) {
+                if (tag === 'RESTART') {
+                    log('RESTART tag detected - reloading demo', 'warn');
+                    swimEvent('ink', '🔄', 'RESTART', 'Returning to beginning');
+                    setTimeout(() => window.location.reload(), 500);
+                    return;
+                }
                 if (tag.startsWith('MINIGAME:')) {
                     shouldStartMinigame = true;
                     const type = tag.replace('MINIGAME:', '').trim();
