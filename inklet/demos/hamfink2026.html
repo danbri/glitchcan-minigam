@@ -811,9 +811,48 @@ Loading next chapter...
 # CLASS: info
 This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
++ [🎵 FOLEY Sound Tour] -> foley_tour
 + [View source on GitHub] -> github_links
 + [Return to ending] -> victory
 + [Dev: World Between Worlds] -> dev_pools
+
+=== foley_tour ===
+# CLASS: info
+# FOLEY: stop
+The FOLEY tag system creates layered procedural ambient audio.
+
+Syntax: \# FOLEY: type(param:value, ...)
+
+Sound types: wind, water, fire, machinery, rumble
+
++ [🌊 Riverbend (water + wind)] -> load_riverbend
++ [🔥 Test Fire + Machinery] -> test_fire_machinery
++ [🌬️ Test Wind + Rumble] -> test_wind_rumble
++ [⏹️ Stop All Sounds] -> stop_all_foley
++ [Back] -> how_it_works
+
+=== load_riverbend ===
+# CLASS: info
+Loading Riverbend with atmospheric foley...
+# FINK: ../riverbend.fink.js
+-> END
+
+=== test_fire_machinery ===
+# FOLEY: fire(vol:0.7, crackle:0.8, pan:-0.3)
+# FOLEY: machinery(vol:0.4, throb:1.5, pan:0.4)
+Fire crackling to your left... machinery throbbing to your right.
++ [Stop and try another] -> foley_tour
+
+=== test_wind_rumble ===
+# FOLEY: wind(vol:0.6, gust:0.7)
+# FOLEY: rumble(vol:0.3, pitch:0.6)
+Howling wind with deep ominous rumble beneath.
++ [Stop and try another] -> foley_tour
+
+=== stop_all_foley ===
+# FOLEY: stop
+Silence.
++ [Back to FOLEY tour] -> foley_tour
 
 === dev_pools ===
 # CLASS: info
