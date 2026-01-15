@@ -437,6 +437,20 @@ button.choice {
     background: var(--zx-cyan); color: #000; text-decoration: none;
 }
 
+/* Audio tab */
+#audio-content { padding: 1em; overflow-y: auto; }
+.synth-btn {
+    padding: 0.4em 0.8em; font-size: 12px; cursor: pointer;
+    background: #224; border: 1px solid var(--zx-cyan); border-radius: 4px;
+    color: var(--zx-cyan); transition: all 0.15s ease;
+}
+.synth-btn:hover {
+    background: var(--zx-cyan); color: #000;
+}
+.synth-btn:active {
+    transform: scale(0.95);
+}
+
 /* Ensure page fits viewport */
 html { height: 100%; overflow: hidden; }
 body { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
@@ -476,6 +490,7 @@ main { flex: 1; min-height: 0; overflow: hidden; }
         <button data-tab="swimlanes">🏊 Swimlanes</button>
         <button data-tab="state">📊 State</button>
         <button data-tab="finks">📂 FINKs</button>
+        <button data-tab="audio">🔊 Audio</button>
         <button id="copyLogsBtn">📋 Copy</button>
         <button id="closeDevPanel" style="margin-left:auto;">✕ Close</button>
     </div>
@@ -546,6 +561,30 @@ main { flex: 1; min-height: 0; overflow: hidden; }
                 </div>
                 <div style="margin-top:0.5em; font-size:10px; color:#888;">
                     Paste any .fink.js URL to load external stories
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Tab -->
+    <div id="audio-content" class="dev-tab-content">
+        <div style="display:flex; flex-direction:column; gap:1em;">
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">🎵 Synthesized Ambience (WebAudio)</h4>
+                <p style="font-size:11px; color:#888; margin:0 0 0.5em;">Test audio without external files. Each plays for 30 seconds.</p>
+                <div style="display:flex; gap:0.5em; flex-wrap:wrap;">
+                    <button class="synth-btn" data-sound="water">💧 Water Trickling</button>
+                    <button class="synth-btn" data-sound="wind">🌬️ Wind</button>
+                    <button class="synth-btn" data-sound="rumble">🌋 Ominous Rumble</button>
+                    <button class="synth-btn" data-sound="chimes">🎐 Wind Chimes</button>
+                    <button id="stopSynthBtn" style="background:#522;">⏹️ Stop</button>
+                </div>
+            </div>
+            <div>
+                <h4 style="margin:0 0 0.5em; color:var(--zx-green);">🎧 Audio Status</h4>
+                <div id="audio-status" style="font-size:12px; color:#8f8;">
+                    AudioContext: <span id="audio-ctx-state">--</span><br>
+                    Currently playing: <span id="audio-current">None</span>
                 </div>
             </div>
         </div>
@@ -933,6 +972,272 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                 const indicator = document.getElementById('audio-indicator');
                 if (indicator) indicator.classList.remove('playing');
             }
+        }
+    };
+
+    // --- Sound Synthesizer (WebAudio ambient sounds) ---
+    const SoundSynth = {
+        context: null,
+        activeNodes: [],
+        masterGain: null,
+
+        async init() {
+            if (!this.context) {
+                this.context = AudioManager.context || new (window.AudioContext || window.webkitAudioContext)();
+                AudioManager.context = this.context; // Share context
+                this.masterGain = this.context.createGain();
+                this.masterGain.gain.value = 0.5;
+                this.masterGain.connect(this.context.destination);
+            }
+            if (this.context.state === 'suspended') {
+                await this.context.resume();
+            }
+            return true;
+        },
+
+        stop() {
+            this.activeNodes.forEach(node => {
+                try {
+                    if (node.stop) node.stop();
+                    if (node.disconnect) node.disconnect();
+                } catch(e) {}
+            });
+            this.activeNodes = [];
+            log('SoundSynth: Stopped all sounds', 'debug');
+        },
+
+        // Water trickling: filtered noise bursts with varying rates
+        async playWater(duration = 30) {
+            await this.init();
+            this.stop();
+            log('SoundSynth: Playing water trickling', 'info');
+            const ctx = this.context;
+
+            // Create noise buffer
+            const bufferSize = ctx.sampleRate * 2;
+            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            // Main water layer
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            // Bandpass filter for water character
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 2000;
+            filter.Q.value = 1.5;
+
+            // LFO to modulate filter for "trickling"
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.value = 3;
+            lfoGain.gain.value = 800;
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+
+            // Volume envelope
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime + duration - 1);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain);
+
+            lfo.start();
+            noise.start();
+            noise.stop(ctx.currentTime + duration);
+            lfo.stop(ctx.currentTime + duration);
+
+            this.activeNodes.push(noise, lfo, filter, gain);
+            swimEvent('game', '🎵', 'Synth', 'Water trickling');
+        },
+
+        // Wind: low-pass filtered noise with slow modulation
+        async playWind(duration = 30) {
+            await this.init();
+            this.stop();
+            log('SoundSynth: Playing wind', 'info');
+            const ctx = this.context;
+
+            const bufferSize = ctx.sampleRate * 2;
+            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            // Low-pass for wind whoosh
+            const lowpass = ctx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 400;
+            lowpass.Q.value = 0.5;
+
+            // Slow LFO for gusts
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.15; // Very slow
+            lfoGain.gain.value = 300;
+            lfo.connect(lfoGain);
+            lfoGain.connect(lowpass.frequency);
+
+            // Volume modulation for gusts
+            const volumeLfo = ctx.createOscillator();
+            const volumeLfoGain = ctx.createGain();
+            volumeLfo.type = 'sine';
+            volumeLfo.frequency.value = 0.08;
+            volumeLfoGain.gain.value = 0.15;
+            volumeLfo.connect(volumeLfoGain);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 1);
+            volumeLfoGain.connect(gain.gain);
+
+            noise.connect(lowpass);
+            lowpass.connect(gain);
+            gain.connect(this.masterGain);
+
+            lfo.start();
+            volumeLfo.start();
+            noise.start();
+            noise.stop(ctx.currentTime + duration);
+            lfo.stop(ctx.currentTime + duration);
+            volumeLfo.stop(ctx.currentTime + duration);
+
+            this.activeNodes.push(noise, lfo, volumeLfo, lowpass, gain);
+            swimEvent('game', '🎵', 'Synth', 'Wind');
+        },
+
+        // Low ominous rumble: very low frequency with subtle noise
+        async playRumble(duration = 30) {
+            await this.init();
+            this.stop();
+            log('SoundSynth: Playing ominous rumble', 'info');
+            const ctx = this.context;
+
+            // Sub-bass oscillator
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.value = 40;
+
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = 45; // Slight detuning for movement
+
+            // Slow pitch modulation
+            const pitchLfo = ctx.createOscillator();
+            const pitchGain = ctx.createGain();
+            pitchLfo.frequency.value = 0.1;
+            pitchGain.gain.value = 5;
+            pitchLfo.connect(pitchGain);
+            pitchGain.connect(osc1.frequency);
+            pitchGain.connect(osc2.frequency);
+
+            // Add filtered noise layer
+            const bufferSize = ctx.sampleRate * 2;
+            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            const lowpass = ctx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 80;
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.value = 0.1;
+
+            // Master volume
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 2);
+            gain.gain.setValueAtTime(0.5, ctx.currentTime + duration - 2);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            noise.connect(lowpass);
+            lowpass.connect(noiseGain);
+            noiseGain.connect(gain);
+            gain.connect(this.masterGain);
+
+            pitchLfo.start();
+            osc1.start();
+            osc2.start();
+            noise.start();
+
+            osc1.stop(ctx.currentTime + duration);
+            osc2.stop(ctx.currentTime + duration);
+            noise.stop(ctx.currentTime + duration);
+            pitchLfo.stop(ctx.currentTime + duration);
+
+            this.activeNodes.push(osc1, osc2, noise, pitchLfo, gain);
+            swimEvent('game', '🎵', 'Synth', 'Ominous rumble');
+        },
+
+        // Wind chimes: random high-pitched tones with decay
+        async playChimes(duration = 30) {
+            await this.init();
+            this.stop();
+            log('SoundSynth: Playing wind chimes', 'info');
+            const ctx = this.context;
+
+            // Pentatonic frequencies for pleasant chimes
+            const notes = [523, 587, 659, 784, 880, 1047, 1175, 1319];
+            const masterGain = ctx.createGain();
+            masterGain.gain.value = 0.4;
+            masterGain.connect(this.masterGain);
+            this.activeNodes.push(masterGain);
+
+            const playChime = () => {
+                const freq = notes[Math.floor(Math.random() * notes.length)];
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq * (0.98 + Math.random() * 0.04); // Slight detune
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2);
+
+                osc.connect(gain);
+                gain.connect(masterGain);
+                osc.start();
+                osc.stop(ctx.currentTime + 2);
+            };
+
+            // Play random chimes
+            let chimesPlayed = 0;
+            const scheduleChime = () => {
+                if (chimesPlayed++ > duration * 2) return;
+                playChime();
+                const nextDelay = 300 + Math.random() * 1500;
+                setTimeout(scheduleChime, nextDelay);
+            };
+            scheduleChime();
+
+            // Auto-stop after duration
+            setTimeout(() => {
+                masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+            }, (duration - 1) * 1000);
+
+            swimEvent('game', '🎵', 'Synth', 'Wind chimes');
         }
     };
 
@@ -2053,6 +2358,51 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     externalFinkInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') loadExternalFinkBtn.click();
     });
+
+    // Synth sound buttons
+    document.querySelectorAll('.synth-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const sound = btn.dataset.sound;
+            const audioCurrentEl = document.getElementById('audio-current');
+            const audioCtxStateEl = document.getElementById('audio-ctx-state');
+
+            switch(sound) {
+                case 'water': await SoundSynth.playWater(30); break;
+                case 'wind': await SoundSynth.playWind(30); break;
+                case 'rumble': await SoundSynth.playRumble(30); break;
+                case 'chimes': await SoundSynth.playChimes(30); break;
+            }
+
+            if (audioCurrentEl) audioCurrentEl.textContent = btn.textContent;
+            if (audioCtxStateEl && SoundSynth.context) {
+                audioCtxStateEl.textContent = SoundSynth.context.state;
+            }
+        });
+    });
+
+    // Stop synth button
+    const stopSynthBtn = document.getElementById('stopSynthBtn');
+    if (stopSynthBtn) {
+        stopSynthBtn.addEventListener('click', () => {
+            SoundSynth.stop();
+            const audioCurrentEl = document.getElementById('audio-current');
+            if (audioCurrentEl) audioCurrentEl.textContent = 'None';
+        });
+    }
+
+    // Update audio status when switching to Audio tab
+    const origTabSwitch = devTabs[0]?.parentNode; // Get dev-tabs container
+    if (origTabSwitch) {
+        origTabSwitch.addEventListener('click', (e) => {
+            if (e.target.dataset?.tab === 'audio') {
+                const audioCtxStateEl = document.getElementById('audio-ctx-state');
+                if (audioCtxStateEl) {
+                    const ctx = SoundSynth.context || AudioManager.context;
+                    audioCtxStateEl.textContent = ctx ? ctx.state : 'Not initialized';
+                }
+            }
+        });
+    }
 
     // State display update function
     function updateStateDisplay() {
