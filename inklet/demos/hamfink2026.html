@@ -1020,16 +1020,25 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     function displayChoices() {
         choicesContainer.innerHTML = '';
 
-        if (!story || story.currentChoices.length === 0) {
+        if (!story) {
+            log('No story object - cannot display choices', 'error');
+            return;
+        }
+
+        if (!story.currentChoices || story.currentChoices.length === 0) {
             log('No choices available (story end or waiting)');
             return;
         }
 
+        log(`Creating ${story.currentChoices.length} choice buttons...`, 'debug');
         story.currentChoices.forEach((choice, index) => {
             const btn = document.createElement('button');
             btn.className = 'choice';
             btn.textContent = `${index + 1}. ${choice.text}`;
-            btn.addEventListener('click', () => selectChoice(index));
+            btn.addEventListener('click', () => {
+                log(`Choice button ${index} clicked`, 'debug');
+                selectChoice(index);
+            });
             choicesContainer.appendChild(btn);
         });
 
@@ -1037,12 +1046,29 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     function selectChoice(index) {
-        const choiceText = story.currentChoices[index].text;
-        log(`Selected choice ${index}: ${choiceText}`);
-        // Semantic swimlane event for player choice
-        swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
-        story.ChooseChoiceIndex(index);
-        continueStory();
+        try {
+            if (!story) {
+                log('ERROR: story is null/undefined in selectChoice', 'error');
+                return;
+            }
+            if (!story.currentChoices || story.currentChoices.length === 0) {
+                log('ERROR: no choices available in story', 'error');
+                return;
+            }
+            if (index >= story.currentChoices.length) {
+                log(`ERROR: choice index ${index} out of bounds (${story.currentChoices.length} choices)`, 'error');
+                return;
+            }
+            const choiceText = story.currentChoices[index].text;
+            log(`Selected choice ${index}: ${choiceText}`);
+            // Semantic swimlane event for player choice
+            swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
+            story.ChooseChoiceIndex(index);
+            continueStory();
+        } catch (e) {
+            log(`ERROR in selectChoice: ${e.message}`, 'error');
+            console.error('selectChoice error:', e);
+        }
     }
 
     // --- FINK External Loading ---
