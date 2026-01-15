@@ -546,9 +546,9 @@ main { flex: 1; min-height: 0; overflow: hidden; }
                     <a href="#" data-fink="mudslidemines.fink.js">⛏️ Mudslide Mines</a>
                     <a href="#" data-fink="riverbend.fink.js">🏞️ Riverbend</a>
                     <a href="#" data-fink="shane-manor.fink.js">🏚️ Shane Manor</a>
-                    <a href="#" data-fink="../cozyverse/maple-hollow.fink.js">🍁 Maple Hollow</a>
-                    <a href="#" data-fink="dev-worldpools.fink.js">🌊 World Pools (dev)</a>
-                    <a href="#" data-fink="hamfink2026-ch2.fink.js">📖 Chapter 2</a>
+                    <a href="#" data-fink="../../cozyverse/maple-hollow.fink.js">🍁 Maple Hollow</a>
+                    <a href="#" data-fink="./dev-worldpools.fink.js">🌊 World Pools (dev)</a>
+                    <a href="#" data-fink="./hamfink2026-ch2.fink.js">📖 Chapter 2</a>
                     <a href="#" data-fink="tml-2025-langlearn.fink.js">🗣️ Language Learning</a>
                     <a href="#" data-fink="../toc.fink.js">📑 TOC (inklet)</a>
                 </div>
@@ -2328,8 +2328,10 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const finkPath = link.dataset.fink;
-            // Resolve relative to inklet/ folder (go up from demos/)
-            const resolvedPath = finkPath.startsWith('../') ? finkPath : `../${finkPath}`;
+            // Resolve paths: ./ = in demos/, ../ = explicit relative, else = in inklet/
+            const resolvedPath = (finkPath.startsWith('./') || finkPath.startsWith('../'))
+                ? finkPath
+                : `../${finkPath}`;
             log(`Quick-loading FINK: ${resolvedPath}`, 'fink');
             storyOutput.innerHTML = ''; // Clear story
             choicesContainer.innerHTML = '';
