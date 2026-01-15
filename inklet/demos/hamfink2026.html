@@ -762,8 +762,9 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
             return;
         }
 
-        const finkContent = dataArray.join('\n');
-        log(`FINK content loaded: ${finkContent.length} chars`);
+        // Use only the first oooOO block (avoid duplicates if script runs twice)
+        const finkContent = dataArray[0];
+        log(`FINK content loaded: ${finkContent.length} chars (${dataArray.length} block(s))`);
         setStatus('Chapter loaded!');
 
         // Store current state
