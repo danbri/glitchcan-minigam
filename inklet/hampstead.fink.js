@@ -261,7 +261,7 @@ Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
 === victory ===
 #BG:#041
 #CLASS:success
-# HAMPSTEAD ACHIEVED #
+*** HAMPSTEAD ACHIEVED ***
 
 Final Score: {score}/8 — you truly embody Hampstead!
 
@@ -418,7 +418,7 @@ You clutch twelve mega diamonds. The portal flickers, unstable.
 === woods_between_worlds ===
 #BG:#030
 #CLASS:info
-# THE WOODS BETWEEN WORLDS #
+*** THE WOODS BETWEEN WORLDS ***
 
 You tumble through into endless twilight forest. Trees stretch impossibly tall, their bark shifting through colors that don't exist.
 
