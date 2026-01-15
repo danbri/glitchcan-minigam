@@ -192,11 +192,18 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 
 /* Debug panel */
 #debug-panel {
-    max-height: 150px; overflow-y: auto; padding: 0.5em;
-    background: rgba(0,0,50,0.5); border-top: 2px solid var(--zx-blue);
-    font-size: 10px; color: #888; display: none;
+    max-height: 30vh; overflow-y: auto; padding: 0.5em;
+    background: rgba(0,0,50,0.8); border-top: 2px solid var(--zx-blue);
+    font-size: 11px; color: #aaa; display: none;
+    font-family: 'Courier New', monospace;
 }
 #debug-panel.visible { display: block; }
+#debug-panel div { white-space: pre-wrap; word-break: break-word; }
+
+/* Ensure page fits viewport */
+html { height: 100%; overflow: hidden; }
+body { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+main { flex: 1; min-height: 0; overflow: hidden; }
 
 /* Hidden sandbox iframe */
 #fink-sandbox { display: none; }
@@ -218,6 +225,7 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
     <button id="restartBtn">Restart</button>
     <button id="viewToggle">View: Story</button>
     <button id="debugToggle">Debug</button>
+    <button id="copyLogsBtn" style="display:none;">📋 Copy Logs</button>
     <div id="statusDisplay">Ready</div>
 </header>
 
@@ -699,8 +707,18 @@ Source files:
 
         // Handle FINK loading
         if (pendingFinkUrl && !shouldStartMinigame) {
-            setTimeout(() => loadFinkFile(pendingFinkUrl), 500);
+            // Validate URL before loading
+            if (!pendingFinkUrl || pendingFinkUrl === 'null' || pendingFinkUrl === 'undefined') {
+                log(`Invalid FINK URL: "${pendingFinkUrl}"`, 'error');
+                pendingFinkUrl = null;
+                displayChoices();
+                return;
+            }
+            // Capture URL before clearing (setTimeout closure bug fix!)
+            const urlToLoad = pendingFinkUrl;
             pendingFinkUrl = null;
+            log(`Scheduling FINK load: ${urlToLoad}`, 'fink');
+            setTimeout(() => loadFinkFile(urlToLoad), 500);
             return;
         }
 
@@ -741,12 +759,28 @@ Source files:
 
     // --- FINK External Loading ---
     function loadFinkFile(url) {
+        // Validate URL before proceeding
+        if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') {
+            log(`FINK load aborted: invalid URL "${url}"`, 'error');
+            setStatus('Invalid FINK URL');
+            displayChoices();
+            return;
+        }
+
         log(`FINK load requested: ${url}`, 'fink');
         log(`Using JSONP-like sandbox injection technique`, 'fink');
         setStatus(`Loading ${url}...`);
 
         // Resolve relative URL
-        const resolvedUrl = new URL(url, window.location.href).href;
+        let resolvedUrl;
+        try {
+            resolvedUrl = new URL(url, window.location.href).href;
+        } catch (e) {
+            log(`FINK URL resolution failed: ${e.message}`, 'error');
+            setStatus('URL error');
+            displayChoices();
+            return;
+        }
         log(`Resolved to absolute URL: ${resolvedUrl}`, 'net');
         log(`Cross-origin safe: sandbox iframe isolates execution`, 'net');
 
@@ -1042,8 +1076,24 @@ Source files:
         initStory();
     });
 
+    const copyLogsBtn = document.getElementById('copyLogsBtn');
+
     debugToggleBtn.addEventListener('click', () => {
-        debugPanel.classList.toggle('visible');
+        const isVisible = debugPanel.classList.toggle('visible');
+        copyLogsBtn.style.display = isVisible ? 'inline-block' : 'none';
+    });
+
+    copyLogsBtn.addEventListener('click', () => {
+        const logText = Array.from(debugPanel.querySelectorAll('div'))
+            .map(div => div.textContent)
+            .join('\n');
+        navigator.clipboard.writeText(logText).then(() => {
+            const originalText = copyLogsBtn.textContent;
+            copyLogsBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyLogsBtn.textContent = originalText; }, 1500);
+        }).catch(err => {
+            log(`Failed to copy: ${err}`, 'error');
+        });
     });
 
     // --- Initialize ---
