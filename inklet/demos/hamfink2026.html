@@ -827,6 +827,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     let totalGemsSpawned = 0;
     let pendingFinkUrl = null;
     let currentLoadingFinkUrl = null;  // Track URL for namespace derivation
+    let currentLoadedFinkUrl = null;   // Track currently loaded FINK (for restart)
     let currentBasehref = '';  // Base path for media resolution
 
     // --- Audio Manager (WebAudio with crossfade) ---
@@ -1649,6 +1650,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         // Reset BASEHREF for new story (will be set by BASEHREF tag if present)
         currentBasehref = '';
 
+        // Track this FINK as currently loaded (for restart functionality)
+        currentLoadedFinkUrl = currentLoadingFinkUrl;
+
         swimEvent('net', '✅', 'Content Received', `${finkContent.length} chars`);
         swimEvent('fink', '📜', 'Parsing FINK', `${finkContent.split('\\n').length} lines`);
 
@@ -1881,34 +1885,74 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     // --- Event Listeners ---
     returnToStoryBtn.addEventListener('click', endMinigame);
 
-    // Home button - back to main story start
+    // Home button - shows confirmation before nuking state
     homeBtn.addEventListener('click', () => {
-        log('Home button - returning to main story');
-        storyOutput.innerHTML = '';
+        log('Home button pressed - showing confirmation');
+        // Show inline confirmation choices
         choicesContainer.innerHTML = '';
-        minigameActive = false;
-        decisionCount = 0;
-        currentLoadingFinkUrl = null;
-        currentBasehref = '';
-        clearInterval(gemSpawnTimer);
-        switchView('narrative');
-        initStory();  // Reload embedded story
+
+        const warning = document.createElement('div');
+        warning.className = 'text-chunk visible';
+        warning.innerHTML = '<span style="color:var(--zx-yellow)">⚠ Go home? This will lose your current progress.</span>';
+        storyOutput.appendChild(warning);
+        scrollToBottom();
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'choice';
+        confirmBtn.textContent = 'Yes, return to main menu';
+        confirmBtn.addEventListener('click', () => {
+            log('Home confirmed - returning to main story');
+            storyOutput.innerHTML = '';
+            choicesContainer.innerHTML = '';
+            minigameActive = false;
+            decisionCount = 0;
+            currentLoadingFinkUrl = null;
+            currentLoadedFinkUrl = null;
+            currentBasehref = '';
+            clearInterval(gemSpawnTimer);
+            switchView('narrative');
+            initStory();
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'choice';
+        cancelBtn.textContent = 'No, continue playing';
+        cancelBtn.addEventListener('click', () => {
+            warning.remove();
+            choicesContainer.innerHTML = '';
+            displayChoices();  // Restore original choices
+        });
+
+        choicesContainer.appendChild(confirmBtn);
+        choicesContainer.appendChild(cancelBtn);
     });
 
+    // Restart button - restart current episode/chapter
     restartBtn.addEventListener('click', () => {
-        log('Restarting story...');
+        log('Restarting current episode...');
         storyOutput.innerHTML = '';
         choicesContainer.innerHTML = '';
         minigameActive = false;
         minigameMode = 'normal';
         decisionCount = 0;
-        currentLoadingFinkUrl = null;  // Reset URL context
-        currentBasehref = '';
-        pendingFinkUrl = null;  // Cancel any pending FINK load
+        pendingFinkUrl = null;
         clearInterval(gemSpawnTimer);
         gameContainer.classList.remove('mega-mode');
         switchView('narrative');
-        initStory();
+
+        if (currentLoadedFinkUrl) {
+            // Restart the current FINK
+            log(`Restarting FINK: ${currentLoadedFinkUrl}`, 'fink');
+            const urlToReload = currentLoadedFinkUrl;
+            currentLoadingFinkUrl = null;  // Reset so it resolves from page
+            currentBasehref = '';
+            loadFinkFile(urlToReload);
+        } else {
+            // No FINK loaded, restart embedded story
+            currentLoadingFinkUrl = null;
+            currentBasehref = '';
+            initStory();
+        }
     });
 
     // --- Dev Panel Event Listeners ---
