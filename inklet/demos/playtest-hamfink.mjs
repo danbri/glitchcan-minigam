@@ -54,13 +54,24 @@ async function main() {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  const browser = await chromium.launch({
+  // Use system proxy if available
+  const proxyUrl = process.env.HTTP_PROXY || process.env.http_proxy;
+  const launchOptions = {
     headless: true,
     executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
     args: ['--headless=new', '--no-sandbox']
-  });
+  };
 
-  const page = await browser.newPage();
+  const browser = await chromium.launch(launchOptions);
+
+  // Create context with proxy if available
+  const contextOptions = { };
+  if (proxyUrl) {
+    console.log(`   Using proxy: ${proxyUrl.slice(0, 50)}...`);
+    contextOptions.proxy = { server: proxyUrl };
+  }
+  const context = await browser.newContext(contextOptions);
+  const page = await context.newPage();
   await page.setViewportSize({ width: 414, height: 896 }); // iPhone 11 Pro Max
 
   // Capture all console messages
