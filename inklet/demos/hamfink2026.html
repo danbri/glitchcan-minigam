@@ -1088,6 +1088,18 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
     }
 
+    // --- Debounced Scroll to Bottom ---
+    // Single scroll strategy to prevent multiple scroll calls fighting
+    let scrollTimeout = null;
+    function scrollToBottom() {
+        // Cancel any pending scroll
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        // Debounce: wait 50ms for more content, then scroll once
+        scrollTimeout = setTimeout(() => {
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        }, 50);
+    }
+
     // --- Media Display Functions ---
     function displayImage(imagePath, caption = '') {
         const resolvedUrl = resolveMediaUrl(imagePath);
@@ -1102,10 +1114,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         img.onload = () => {
             chunk.classList.remove('loading');
-            requestAnimationFrame(() => {
-                chunk.classList.add('visible');
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            });
+            chunk.classList.add('visible');
+            scrollToBottom();
         };
         img.onerror = () => {
             chunk.classList.remove('loading');
@@ -1124,7 +1134,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
+        scrollToBottom();
     }
 
     function displayVideo(videoPath, caption = '') {
@@ -1141,10 +1151,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         video.playsInline = true;
 
         video.onloadedmetadata = () => {
-            requestAnimationFrame(() => {
-                chunk.classList.add('visible');
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            });
+            chunk.classList.add('visible');
+            scrollToBottom();
         };
         video.onerror = () => {
             chunk.classList.add('error');
@@ -1162,7 +1170,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         storyOutput.appendChild(chunk);
-        chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
+        scrollToBottom();
     }
 
     function playAudio(audioPath, trackName = '') {
@@ -1224,30 +1232,14 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             chunk.classList.add('visible');
         });
 
-        // Remove latest highlight after a delay (5s for better visibility)
+        // Remove latest highlight after a delay (3s)
         setTimeout(() => {
             chunk.classList.remove('latest');
             chunk.classList.add('settled');
-        }, 5000);
+        }, 3000);
 
-        // Scroll helper - ensures new content is fully visible
-        const scrollToBottom = () => {
-            // Use scrollIntoView on the chunk for reliable scrolling
-            chunk.scrollIntoView({ behavior: 'instant', block: 'end' });
-        };
-
-        // Immediate scroll to show new content appearing
-        requestAnimationFrame(scrollToBottom);
-
-        // For word-by-word animation, scroll again after words have appeared
-        if (!hasLinks) {
-            const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
-            const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
-            // Single scroll at the end of animation - no interval jitter
-            setTimeout(() => {
-                chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }, totalAnimTime);
-        }
+        // Single debounced scroll - no fighting
+        scrollToBottom();
     }
 
     // --- Ink Story Engine ---
