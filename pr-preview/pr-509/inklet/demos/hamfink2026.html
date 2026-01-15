@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINK 2-Engine Demo: Ink + Minigame</title>
+<script src="https://cdn.jsdelivr.net/npm/inkjs/dist/ink-full.min.js"></script>
+<script src="fink-namespace-preprocessor.js"></script>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+:root {
+    --zx-blue: #0050e0; --zx-red: #d80000; --zx-mag: #d000d0;
+    --zx-green: #00c000; --zx-cyan: #00c0c0; --zx-yellow: #ffff00;
+    --zx-white: #f6f6f6;
+}
+* { box-sizing: border-box; }
+html, body {
+    height: 100vh; margin: 0; background: #000 radial-gradient(#111 2px, #000 2px);
+    background-size: 4px 4px; display: flex; flex-direction: column;
+    font: 14px/1.5 "Press Start 2P", Courier, monospace; color: var(--zx-white);
+}
+
+/* Accessibility: respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+header {
+    padding: .5em 1em; background: #000; border-bottom: 4px solid var(--zx-blue);
+    display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
+}
+header h1 { font-size: 14px; margin: 0; color: var(--zx-cyan); }
+header button {
+    font-family: inherit; font-size: 12px; padding: .5em 1em;
+    border: none; cursor: pointer;
+    min-height: 44px; /* Touch-friendly minimum */
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+header button:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+header button:active { transform: scale(0.96); }
+#restartBtn { background: var(--zx-cyan); color: #000; }
+#viewToggle { background: var(--zx-mag); color: #fff; }
+/* Accessible hover: brightness change + underline, not color swap */
+header button:hover { filter: brightness(1.3); text-decoration: underline; }
+#statusDisplay {
+    margin-left: auto; font-size: 10px; color: var(--zx-yellow);
+    padding: 0.2em 0.5em; border: 1px dashed var(--zx-yellow);
+}
+
+/* Main container */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* View switching */
+.view { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+.view.active { display: flex; }
+
+/* Narrative View */
+#narrative-view { padding: 1em; }
+#story-output {
+    flex: 1; overflow-y: auto; padding: 1em;
+    background: rgba(0,20,0,0.5); border: 2px solid var(--zx-green);
+    margin-bottom: 1em;
+    scroll-behavior: smooth;
+}
+
+/* Text animation styles */
+#story-output .text-chunk {
+    margin: 0.5em 0;
+    animation: chunkAppear 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    filter: blur(4px);
+}
+
+#story-output .text-chunk.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+}
+
+/* Latest chunk gets a glowing lozenge effect - MORE PROMINENT */
+#story-output .text-chunk.latest {
+    background: linear-gradient(90deg, rgba(0,255,255,0.25) 0%, rgba(0,255,0,0.15) 50%, rgba(0,255,255,0.25) 100%);
+    border-left: 4px solid var(--zx-cyan);
+    padding: 0.6em 1em;
+    border-radius: 0 12px 12px 0;
+    box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.15), 0 2px 10px rgba(0,0,0,0.3);
+    animation: lozengeGlow 1.5s ease-in-out infinite, chunkAppear 0.6s ease-out forwards;
+    position: relative;
+}
+
+/* Pulsing dot indicator for latest content */
+#story-output .text-chunk.latest::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: var(--zx-cyan);
+    border-radius: 50%;
+    animation: dotPulse 1s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+    50% { transform: translateY(-50%) scale(1.5); opacity: 0.6; }
+}
+
+/* Word-by-word reveal animation */
+#story-output .text-chunk .word {
+    display: inline-block;
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(5px) scale(0.9);
+    animation: wordReveal 0.4s ease-out forwards;
+}
+
+@keyframes wordReveal {
+    0% { opacity: 0; filter: blur(8px); transform: translateY(5px) scale(0.9); }
+    60% { opacity: 1; filter: blur(2px); transform: translateY(-2px) scale(1.02); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+}
+
+@keyframes chunkAppear {
+    0% { opacity: 0; transform: translateY(10px) scale(0.95); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes lozengeGlow {
+    0%, 100% {
+        box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.15), 0 2px 10px rgba(0,0,0,0.3);
+        border-left-color: var(--zx-cyan);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(0,255,255,0.7), inset 0 0 40px rgba(0,255,255,0.25), 0 4px 15px rgba(0,0,0,0.4);
+        border-left-color: var(--zx-green);
+    }
+}
+
+/* Remove latest class after animation settles */
+#story-output .text-chunk.settled {
+    background: transparent;
+    border-left: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+}
+
+#choices { display: flex; flex-direction: column; gap: 0.5em; }
+button.choice {
+    padding: .8em; text-align: left; background: #024; color: #0ff;
+    border: 2px solid var(--zx-cyan); font-family: inherit; font-size: 14px; cursor: pointer;
+    animation: choiceAppear 0.4s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-20px);
+    position: relative;
+}
+button.choice::before {
+    content: '▶ ';
+    opacity: 0.6;
+}
+button.choice:nth-child(1) { animation-delay: 0.1s; }
+button.choice:nth-child(2) { animation-delay: 0.2s; }
+button.choice:nth-child(3) { animation-delay: 0.3s; }
+button.choice:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes choiceAppear {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Accessible hover: blue→orange with underline, not red/green */
+button.choice:hover {
+    background: #630; color: #fff; border-color: var(--zx-yellow);
+    text-decoration: underline;
+}
+button.choice:hover::before {
+    content: '▶▶ ';
+    opacity: 1;
+}
+button.choice:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+button.choice:active { transform: scale(0.98); }
+button.choice {
+    min-height: 48px; /* Touch-friendly */
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+/* Special styles for story content - ACCESSIBLE (not red/green dependent) */
+.success { color: var(--zx-cyan); text-shadow: 0 0 10px var(--zx-cyan); }
+.success::before { content: '✓ '; }
+.danger { color: #f90; } /* Orange, not red */
+.danger::before { content: '⚠ '; }
+.info { color: var(--zx-cyan); }
+.code { font-size: 10px; background: #111; padding: 0.5em; border: 1px solid var(--zx-blue); }
+.mega { color: var(--zx-yellow); font-size: 1.2em; text-shadow: 0 0 20px var(--zx-yellow); }
+
+/* Player decision marker - shows what the user chose */
+.player-decision {
+    color: var(--zx-yellow);
+    font-style: italic;
+    border-left: 3px solid var(--zx-yellow);
+    padding-left: 0.8em;
+    margin: 0.5em 0;
+    opacity: 0.9;
+}
+.player-decision::before {
+    content: '→ You: ';
+    font-style: normal;
+    opacity: 0.7;
+}
+
+/* Text since last decision gets subtle grouping */
+.text-chunk.since-decision {
+    border-left: 2px solid rgba(0,255,255,0.3);
+    padding-left: 0.5em;
+    margin-left: 0.2em;
+}
+
+/* Media elements in story timeline */
+.media-chunk {
+    margin: 1em 0;
+    animation: mediaAppear 0.5s ease-out forwards;
+    opacity: 0;
+    transform: scale(0.95);
+}
+.media-chunk.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+@keyframes mediaAppear {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+.media-chunk img {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid var(--zx-cyan);
+    border-radius: 4px;
+    display: block;
+}
+.media-chunk video {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid var(--zx-mag);
+    border-radius: 4px;
+    display: block;
+}
+.media-chunk .media-caption {
+    font-size: 10px;
+    color: var(--zx-cyan);
+    opacity: 0.7;
+    margin-top: 0.3em;
+}
+.media-chunk.loading {
+    min-height: 100px;
+    background: rgba(0,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.media-chunk.loading::after {
+    content: '⏳ Loading...';
+    color: var(--zx-cyan);
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+.media-chunk.error {
+    color: #f90;
+    padding: 1em;
+    border: 1px dashed #f90;
+}
+
+/* Audio indicator (non-visual, but shows in UI) */
+#audio-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid var(--zx-mag);
+    padding: 0.5em 1em;
+    font-size: 10px;
+    color: var(--zx-mag);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+#audio-indicator.playing {
+    opacity: 1;
+}
+
+/* Stats bar */
+#stats-bar {
+    padding: 0.5em 1em; background: #111; border-top: 2px solid var(--zx-blue);
+    display: flex; gap: 2em; font-size: 12px; flex-wrap: wrap;
+}
+.stat { display: flex; align-items: center; gap: 0.5em; }
+.stat-icon { font-size: 1.5em; }
+.stat-value { color: var(--zx-yellow); }
+.stat-value.mega { color: var(--zx-mag); text-shadow: 0 0 10px var(--zx-mag); }
+
+/* Minigame View */
+#minigame-view { padding: 1em; align-items: center; justify-content: center; }
+#game-container {
+    width: 100%; max-width: 400px; aspect-ratio: 1;
+    background: #111; border: 4px solid var(--zx-mag);
+    position: relative; overflow: hidden;
+}
+#game-container.mega-mode {
+    border-color: var(--zx-yellow);
+    box-shadow: 0 0 30px var(--zx-yellow), inset 0 0 50px rgba(255,255,0,0.1);
+}
+.gem {
+    position: absolute; font-size: 2em; cursor: pointer;
+    transition: transform 0.1s; user-select: none;
+    animation: gemPulse 1s ease-in-out infinite;
+}
+.gem.mega-gem {
+    font-size: 3em;
+    animation: megaGemPulse 0.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px gold);
+}
+.gem:hover { transform: scale(1.3); }
+.gem.collected { animation: gemCollect 0.3s ease-out forwards; pointer-events: none; }
+@keyframes gemPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes megaGemPulse { 0%, 100% { transform: scale(1) rotate(-5deg); } 50% { transform: scale(1.2) rotate(5deg); } }
+@keyframes gemCollect { to { transform: scale(2); opacity: 0; } }
+
+#minigame-instructions {
+    margin-top: 1em; text-align: center; color: var(--zx-cyan); font-size: 12px;
+}
+#minigame-score {
+    font-size: 1.5em; color: var(--zx-yellow); margin-top: 0.5em;
+}
+#returnToStory {
+    margin-top: 1em; padding: 1em 2em; font-family: inherit; font-size: 14px;
+    background: var(--zx-green); color: #000; border: none; cursor: pointer;
+    min-height: 48px; min-width: 200px;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+#returnToStory:hover { background: var(--zx-cyan); }
+#returnToStory:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+#returnToStory:active { transform: scale(0.96); }
+
+/* Mobile responsive improvements */
+@media (max-width: 600px) {
+    header h1 { font-size: 11px; }
+    header { padding: 0.4em 0.6em; gap: 0.5em; }
+    #story-output { padding: 0.6em; font-size: 12px; }
+    #choices { gap: 0.4em; }
+    button.choice { padding: 0.6em; font-size: 12px; }
+    #stats-bar { gap: 1em; font-size: 10px; padding: 0.4em 0.6em; }
+    .stat-icon { font-size: 1.2em; }
+    #game-container { max-width: 100%; }
+}
+
+/* Developer Panel - Top of page tabbed interface */
+#dev-panel {
+    display: none; flex-direction: column;
+    background: rgba(0,0,30,0.95); border-bottom: 3px solid var(--zx-mag);
+    max-height: 50vh; overflow: hidden;
+}
+#dev-panel.visible { display: flex; }
+
+/* Tab bar */
+#dev-tabs {
+    display: flex; gap: 0; background: #111; border-bottom: 1px solid #333;
+}
+#dev-tabs button {
+    padding: 0.5em 1em; background: #222; color: #888; border: none;
+    font-family: inherit; font-size: 10px; cursor: pointer;
+    border-right: 1px solid #333;
+}
+#dev-tabs button.active { background: var(--zx-mag); color: #fff; }
+#dev-tabs button:hover { background: #444; }
+#dev-tabs button:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: -2px;
+}
+#dev-tabs button { transition: background 0.15s ease; }
+
+/* Tab content panels */
+.dev-tab-content { display: none; flex: 1; overflow: hidden; }
+.dev-tab-content.active { display: flex; flex-direction: column; }
+
+/* Logs tab */
+#logs-content { padding: 0.5em; }
+#log-filters { display: flex; gap: 0.5em; padding: 0.5em; background: #1a1a2e; flex-wrap: wrap; }
+#log-filters label { font-size: 9px; color: #aaa; cursor: pointer; }
+#log-filters input { margin-right: 3px; }
+#log-output {
+    flex: 1; overflow-y: auto; padding: 0.5em;
+    font-family: 'Courier New', monospace; font-size: 11px;
+}
+#log-output div { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+
+/* Swimlanes tab - vertical parallel columns */
+#swimlanes-content { flex-direction: row; }
+.swimlane {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 1px solid #333; overflow: hidden;
+}
+.swimlane:last-child { border-right: none; }
+.swimlane-header {
+    padding: 0.5em; background: #1a1a2e; font-size: 10px;
+    text-align: center; border-bottom: 1px solid #333;
+}
+.swimlane-header.ink { color: var(--zx-cyan); }
+.swimlane-header.fink { color: var(--zx-mag); }
+.swimlane-header.game { color: var(--zx-green); }
+.swimlane-header.net { color: var(--zx-yellow); }
+.swimlane-body {
+    flex: 1; overflow-y: auto; padding: 0.3em;
+    font-size: 9px; font-family: 'Courier New', monospace;
+}
+.swimlane-event {
+    padding: 0.3em; margin-bottom: 0.3em; border-radius: 3px;
+    background: rgba(255,255,255,0.05);
+}
+
+/* State tab */
+#state-content { padding: 0.5em; overflow-y: auto; }
+#state-content pre {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    background: #1a1a2e; padding: 0.5em; border-radius: 4px;
+    overflow-x: auto;
+}
+
+/* Ensure page fits viewport */
+html { height: 100%; overflow: hidden; }
+body { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+main { flex: 1; min-height: 0; overflow: hidden; }
+
+/* Hidden sandbox iframe */
+#fink-sandbox { display: none; }
+
+/* Links in story */
+#story-output a {
+    color: var(--zx-cyan); text-decoration: underline;
+    transition: color 0.15s ease;
+}
+#story-output a:hover { color: var(--zx-yellow); }
+#story-output a:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+
+/* Settings button in header */
+#settingsBtn { background: #333; color: #aaa; font-size: 16px; padding: 0.3em 0.6em; }
+#settingsBtn:hover { background: var(--zx-mag); color: #fff; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>FINK 2-Engine Demo</h1>
+    <button id="restartBtn">Restart</button>
+    <button id="viewToggle">View: Story</button>
+    <button id="settingsBtn">⚙️</button>
+    <div id="statusDisplay">Ready</div>
+</header>
+
+<!-- Developer Panel (top of page, tabbed) -->
+<div id="dev-panel">
+    <div id="dev-tabs">
+        <button class="active" data-tab="logs">📋 Logs</button>
+        <button data-tab="swimlanes">🏊 Swimlanes</button>
+        <button data-tab="state">📊 State</button>
+        <button id="copyLogsBtn">📋 Copy</button>
+        <button id="closeDevPanel" style="margin-left:auto;">✕ Close</button>
+    </div>
+
+    <!-- Logs Tab -->
+    <div id="logs-content" class="dev-tab-content active">
+        <div id="log-filters">
+            <label><input type="checkbox" data-filter="error" checked> ❌ Error</label>
+            <label><input type="checkbox" data-filter="warn" checked> ⚠️ Warn</label>
+            <label><input type="checkbox" data-filter="info" checked> ℹ️ Info</label>
+            <label><input type="checkbox" data-filter="fink" checked> 📜 FINK</label>
+            <label><input type="checkbox" data-filter="ink" checked> 🖋️ Ink</label>
+            <label><input type="checkbox" data-filter="game" checked> 🎮 Game</label>
+            <label><input type="checkbox" data-filter="net" checked> 🌐 Net</label>
+            <label><input type="checkbox" data-filter="debug"> 🔧 Debug</label>
+        </div>
+        <div id="log-output"></div>
+    </div>
+
+    <!-- Swimlanes Tab -->
+    <div id="swimlanes-content" class="dev-tab-content">
+        <div class="swimlane">
+            <div class="swimlane-header ink">🖋️ INK</div>
+            <div class="swimlane-body" id="swim-ink"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header fink">📜 FINK</div>
+            <div class="swimlane-body" id="swim-fink"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header game">🎮 GAME</div>
+            <div class="swimlane-body" id="swim-game"></div>
+        </div>
+        <div class="swimlane">
+            <div class="swimlane-header net">🌐 NET</div>
+            <div class="swimlane-body" id="swim-net"></div>
+        </div>
+    </div>
+
+    <!-- State Tab -->
+    <div id="state-content" class="dev-tab-content">
+        <pre id="state-display">Loading...</pre>
+    </div>
+</div>
+
+<main>
+    <!-- Narrative View -->
+    <div id="narrative-view" class="view active">
+        <div id="story-output"></div>
+        <div id="choices"></div>
+    </div>
+
+    <!-- Minigame View -->
+    <div id="minigame-view" class="view">
+        <div id="game-container"></div>
+        <div id="minigame-instructions">Click the gems to collect them!</div>
+        <div id="minigame-score">Collected: <span id="gems-collected">0</span></div>
+        <button id="returnToStory">Return to Story</button>
+    </div>
+
+    <!-- Stats Bar (always visible) -->
+    <div id="stats-bar">
+        <div class="stat"><span class="stat-icon">💎</span> Diamonds: <span class="stat-value" id="stat-diamonds">0</span></div>
+        <div class="stat"><span class="stat-icon">👑</span> Mega: <span class="stat-value mega" id="stat-mega">0</span></div>
+        <div class="stat"><span class="stat-icon">🗝️</span> Keys: <span class="stat-value" id="stat-keys">0</span></div>
+        <div class="stat"><span class="stat-icon">⭐</span> Score: <span class="stat-value" id="stat-score">0</span></div>
+    </div>
+</main>
+
+<!-- Hidden sandbox for FINK loading -->
+<iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
+
+<script id="ink-story" type="text/ink">
+// FINK 2-Engine Demo Story
+// Demonstrates Ink variables updated by minigame
+
+VAR diamonds = 0
+VAR mega_diamonds = 0
+VAR keys = 0
+VAR score = 0
+VAR minigame_played = false
+VAR cavern_explored = false
+VAR tried_passage = false
+
+-> intro
+
+=== intro ===
+You awaken in a shimmering underground cavern. Crystals gleam in the darkness, casting prismatic light across damp stone walls.
+
+Your pockets are empty. No gems, no keys, nothing.
+
+The only way out is through the locked passage ahead. You'll need to collect gems to escape.
+
++ [Look around carefully] -> look_around
++ [Call out into the darkness] -> call_out
+
+=== look_around ===
+{cavern_explored:
+    You've already surveyed the cavern. The gem-studded alcove beckons - your only hope of escape.
+    -> cavern_choices
+}
+
+~cavern_explored = true
+Your eyes adjust to the gloom. You spot:
+- A narrow passage with a heavy iron door - LOCKED
+- An alcove filled with glittering gems
+- Strange symbols carved into the floor
+
+-> cavern_choices
+
+=== cavern_choices ===
++ [Enter the gem alcove] -> gem_alcove
++ [Examine the symbols] -> examine_symbols
++ [Try the narrow passage] -> narrow_passage
+
+=== call_out ===
+"Hello?" Your voice echoes endlessly.
+
+Something stirs in the darkness. Perhaps silence would have been wiser.
+
++ [Hide behind a boulder] -> hide
++ [Stand your ground] -> stand_ground
+
+=== hide ===
+You duck behind a large boulder, heart pounding.
+
+The stirring fades. Whatever it was has moved on... for now.
+
+-> look_around
+
+=== stand_ground ===
+You plant your feet firmly. A bat swoops past your head and disappears into the darkness.
+
+Just a bat. You exhale with relief.
+
+-> look_around
+
+=== gem_alcove ===
+The alcove sparkles with countless gems embedded in the walls!
+
+{diamonds > 0:
+    Your pouch holds {diamonds} diamond{diamonds > 1:s}.
+}
+{diamonds < 5:
+    You need at least 5 diamonds to unlock the crystal door.
+}
+
++ [Mine for gems!] -> start_minigame
++ {diamonds >= 5} [Use 5 diamonds to unlock the crystal door] -> crystal_door
++ [Return to the main cavern] -> cavern_choices
+
+=== start_minigame ===
+# MINIGAME: gems
+You focus your attention on the gem-studded walls...
+
+[The minigame will start - collect as many gems as you can!]
+
+-> gem_alcove_return
+
+=== gem_alcove_return ===
+{minigame_played:
+    {diamonds > 0:
+        # CLASS: success
+        Excellent work! You now have {diamonds} diamond{diamonds > 1:s} in your pouch.
+        ~score = score + diamonds
+    - else:
+        # CLASS: danger
+        You didn't manage to collect any gems. Try again - you NEED them to escape!
+    }
+}
+
+-> gem_alcove
+
+=== crystal_door ===
+{diamonds < 5:
+    # CLASS: danger
+    The crystal door requires 5 diamonds to open. You only have {diamonds}.
+    -> gem_alcove
+}
+
+You press 5 diamonds into the door's receptacles. They glow brilliantly!
+
+~diamonds = diamonds - 5
+~keys = keys + 1
+
+# CLASS: success
+The door slides open, revealing a golden key floating in mid-air!
+
+You take the key. It feels warm in your hand.
+
++ [Take the key and head for the exit!] -> narrow_passage
+
+=== examine_symbols ===
+The symbols appear to be an ancient counting system.
+
+{diamonds > 0:
+    Curiously, the number {diamonds} seems highlighted.
+}
+
+The inscription reads: "Five gems open the crystal gate. Beyond lies the key to freedom."
+
+{diamonds < 5:
+    # CLASS: info
+    You definitely need to collect more gems from the alcove.
+}
+
++ [Understood.] -> cavern_choices
+
+=== narrow_passage ===
+{keys < 1:
+    ~tried_passage = true
+    The passage ends at a locked iron door. The lock looks complex.
+
+    # CLASS: danger
+    You need a key! The crystal door in the gem alcove might hold one...
+
+    + [Return to the cavern] -> cavern_choices
+}
+
+Your golden key fits the lock perfectly!
+
+~keys = keys - 1
+~score = score + 100
+
+# CLASS: success
+The door swings open to reveal daylight streaming in from above!
+
+-> victory
+
+=== victory ===
+# CLASS: success
+You climb toward the light and emerge onto a hillside overlooking a peaceful valley.
+
+ESCAPED! Final Score: {score} points
+
+{mega_diamonds > 0:
+    # CLASS: mega
+    MEGA DIAMOND BONUS: {mega_diamonds * 1000} points!
+    ~score = score + (mega_diamonds * 1000)
+}
+
+But wait... in the distance, you see a shimmering portal leading to deeper caverns. Legends speak of MEGA DIAMONDS worth 1000x more!
+
++ [Enter the Mega Diamond Dimension!] -> load_chapter2
++ [View how this demo works] -> how_it_works
++ [Play again?] -> restart
+
+=== load_chapter2 ===
+# FINK: hamfink2026-ch2.fink.js
+# CLASS: mega
+You step through the portal into a realm of pure crystalline energy...
+
+-> external_loading
+
+=== external_loading ===
+Loading next chapter...
+
+-> victory
+
+=== how_it_works ===
+# CLASS: info
+This is a 2-engine demo: Ink storytelling + JavaScript minigames.
+
++ [View source on GitHub] -> github_links
++ [Return to ending] -> victory
++ [Dev: World Between Worlds] -> dev_pools
+
+=== dev_pools ===
+# CLASS: info
+Teleporting to the World Between Worlds...
+# FINK: dev-worldpools.fink.js
+-> END
+
+=== github_links ===
+# CLASS: code
+Source files in the inklet/demos folder:
+- Main demo (HTML with embedded Ink)
+- Chapter 2 (external FINK file)
+
+View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/demos
+
++ [Back to ending] -> victory
++ [Play again?] -> restart
+
+=== restart ===
+~diamonds = 0
+~mega_diamonds = 0
+~keys = 0
+~score = 0
+~minigame_played = false
+~cavern_explored = false
+~tried_passage = false
+
+-> intro
+
+</script>
+
+<script>
+(function() {
+    'use strict';
+
+    // --- Configuration ---
+    const GEM_SPAWN_COUNT = 8;
+    const GEM_SPAWN_INTERVAL = 1500;
+    const MAX_GEMS_PER_ROUND = 15;
+    const GEM_EMOJIS = ['💎', '💠', '🔷', '🔹'];
+    const MEGA_GEM_EMOJIS = ['👑', '💛', '🌟', '✨'];
+
+    // --- State ---
+    let story = null;
+    let currentView = 'narrative';
+    let minigameActive = false;
+    let minigameMode = 'normal'; // 'normal' or 'mega'
+    let gemsCollectedThisRound = 0;
+    let gemSpawnTimer = null;
+    let totalGemsSpawned = 0;
+    let pendingFinkUrl = null;
+    let currentLoadingFinkUrl = null;  // Track URL for namespace derivation
+    let currentBasehref = '';  // Base path for media resolution
+
+    // --- Audio Manager (WebAudio with crossfade) ---
+    const AudioManager = {
+        context: null,
+        currentSource: null,
+        currentGain: null,
+        nextSource: null,
+        nextGain: null,
+        currentTrack: null,
+        fadeDuration: 2.0, // seconds
+
+        init() {
+            if (!this.context) {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return this.context.state === 'running' || this.context.resume();
+        },
+
+        async play(url, trackName = '') {
+            try {
+                await this.init();
+                log(`Audio: Loading ${url}`, 'debug');
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+
+                // Crossfade from current to new
+                if (this.currentSource) {
+                    this.fadeOut(this.currentGain);
+                }
+
+                // Create new source
+                const source = this.context.createBufferSource();
+                const gain = this.context.createGain();
+                source.buffer = audioBuffer;
+                source.loop = true;
+                source.connect(gain);
+                gain.connect(this.context.destination);
+
+                // Fade in
+                gain.gain.setValueAtTime(0, this.context.currentTime);
+                gain.gain.linearRampToValueAtTime(1, this.context.currentTime + this.fadeDuration);
+
+                source.start();
+                this.currentSource = source;
+                this.currentGain = gain;
+                this.currentTrack = trackName || url.split('/').pop();
+
+                // Update indicator
+                const indicator = document.getElementById('audio-indicator');
+                const trackNameEl = document.getElementById('audio-track-name');
+                if (indicator && trackNameEl) {
+                    trackNameEl.textContent = this.currentTrack;
+                    indicator.classList.add('playing');
+                }
+
+                log(`Audio: Playing ${this.currentTrack}`, 'info');
+                swimEvent('game', '🎵', 'Audio', this.currentTrack);
+            } catch (e) {
+                log(`Audio error: ${e.message}`, 'error');
+            }
+        },
+
+        fadeOut(gainNode) {
+            if (gainNode) {
+                gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + this.fadeDuration);
+                setTimeout(() => {
+                    try { this.currentSource?.stop(); } catch(e) {}
+                }, this.fadeDuration * 1000);
+            }
+        },
+
+        stop() {
+            if (this.currentSource) {
+                this.fadeOut(this.currentGain);
+                this.currentSource = null;
+                this.currentGain = null;
+                this.currentTrack = null;
+                const indicator = document.getElementById('audio-indicator');
+                if (indicator) indicator.classList.remove('playing');
+            }
+        }
+    };
+
+    // --- DOM Elements ---
+    const storyOutput = document.getElementById('story-output');
+    const choicesContainer = document.getElementById('choices');
+    const narrativeView = document.getElementById('narrative-view');
+    const minigameView = document.getElementById('minigame-view');
+    const gameContainer = document.getElementById('game-container');
+    const gemsCollectedDisplay = document.getElementById('gems-collected');
+    const returnToStoryBtn = document.getElementById('returnToStory');
+    const viewToggleBtn = document.getElementById('viewToggle');
+    const restartBtn = document.getElementById('restartBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const finkSandbox = document.getElementById('fink-sandbox');
+    const minigameInstructions = document.getElementById('minigame-instructions');
+
+    // Dev panel elements
+    const devPanel = document.getElementById('dev-panel');
+    const logOutput = document.getElementById('log-output');
+    const stateDisplay = document.getElementById('state-display');
+
+    // Swimlane elements
+    const swimInk = document.getElementById('swim-ink');
+    const swimFink = document.getElementById('swim-fink');
+    const swimGame = document.getElementById('swim-game');
+    const swimNet = document.getElementById('swim-net');
+
+    // Stats display
+    const statDiamonds = document.getElementById('stat-diamonds');
+    const statMega = document.getElementById('stat-mega');
+    const statKeys = document.getElementById('stat-keys');
+    const statScore = document.getElementById('stat-score');
+
+    // --- Log Filtering State ---
+    const logFilters = { error: true, warn: true, info: true, fink: true, ink: true, game: true, net: true, debug: false };
+
+    // --- Debug Logging ---
+    // Verbosity levels: 0=errors, 1=important, 2=verbose, 3=debug
+    let verbosity = 2;
+
+    const LOG_LEVELS = {
+        error: { level: 0, color: '#f55', prefix: '❌', swim: null },
+        warn:  { level: 1, color: '#ff0', prefix: '⚠️', swim: null },
+        info:  { level: 1, color: '#8f8', prefix: 'ℹ️', swim: null },
+        fink:  { level: 2, color: '#f0f', prefix: '📜', swim: 'fink' },
+        ink:   { level: 2, color: '#0ff', prefix: '🖋️', swim: 'ink' },
+        net:   { level: 2, color: '#fa0', prefix: '🌐', swim: 'net' },
+        game:  { level: 2, color: '#0f0', prefix: '🎮', swim: 'game' },
+        debug: { level: 3, color: '#888', prefix: '🔧', swim: null }
+    };
+
+    function log(message, type = 'info') {
+        const config = LOG_LEVELS[type] || LOG_LEVELS.info;
+        if (config.level > verbosity) return;
+
+        const timestamp = new Date().toLocaleTimeString();
+
+        // Add to main log output
+        const entry = document.createElement('div');
+        entry.dataset.logType = type;
+        entry.textContent = `[${timestamp}] ${config.prefix} ${message}`;
+        entry.style.color = config.color;
+        entry.style.display = logFilters[type] ? 'block' : 'none';
+        logOutput.appendChild(entry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+
+        // Add to swimlane if applicable
+        if (config.swim) {
+            const swimTarget = { ink: swimInk, fink: swimFink, game: swimGame, net: swimNet }[config.swim];
+            if (swimTarget) {
+                const swimEntry = document.createElement('div');
+                swimEntry.className = 'swimlane-event';
+                swimEntry.style.borderLeft = `3px solid ${config.color}`;
+                swimEntry.textContent = `${timestamp.split(' ')[0]} ${message.slice(0, 60)}${message.length > 60 ? '...' : ''}`;
+                swimTarget.appendChild(swimEntry);
+                swimTarget.scrollTop = swimTarget.scrollHeight;
+            }
+        }
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // --- Swimlane Event Helpers (semantic entries) ---
+    function swimEvent(lane, icon, label, detail = '', highlight = false) {
+        const swimTargets = { ink: swimInk, fink: swimFink, game: swimGame, net: swimNet };
+        const swimTarget = swimTargets[lane];
+        if (!swimTarget) return;
+
+        const colors = { ink: '#0ff', fink: '#f0f', game: '#0f0', net: '#fa0' };
+        const entry = document.createElement('div');
+        entry.className = 'swimlane-event' + (highlight ? ' highlight' : '');
+        entry.style.borderLeft = `3px solid ${colors[lane]}`;
+        if (highlight) {
+            entry.style.background = 'rgba(255,255,255,0.15)';
+            entry.style.fontWeight = 'bold';
+        }
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        entry.innerHTML = `<span style="opacity:0.6">${time}</span> ${icon} <strong>${label}</strong>${detail ? '<br><span style="opacity:0.7;font-size:8px;margin-left:1em">' + detail + '</span>' : ''}`;
+        swimTarget.appendChild(entry);
+        swimTarget.scrollTop = swimTarget.scrollHeight;
+    }
+
+    function setVerbosity(level) {
+        verbosity = Math.max(0, Math.min(3, level));
+        log(`Verbosity set to ${verbosity} (0=errors, 1=important, 2=verbose, 3=debug)`, 'info');
+    }
+
+    function setStatus(text) {
+        statusDisplay.textContent = text;
+    }
+
+    // --- View Management ---
+    function switchView(viewName) {
+        currentView = viewName;
+        narrativeView.classList.toggle('active', viewName === 'narrative');
+        minigameView.classList.toggle('active', viewName === 'minigame');
+        viewToggleBtn.textContent = `View: ${viewName === 'narrative' ? 'Story' : 'Minigame'}`;
+        log(`Switched to ${viewName} view`);
+    }
+
+    // --- Stats Update ---
+    function updateStatsDisplay() {
+        if (!story) return;
+        try {
+            statDiamonds.textContent = story.variablesState['diamonds'] || 0;
+            statMega.textContent = story.variablesState['mega_diamonds'] || 0;
+            statKeys.textContent = story.variablesState['keys'] || 0;
+            statScore.textContent = story.variablesState['score'] || 0;
+        } catch (e) {
+            log(`Error updating stats: ${e.message}`, 'error');
+        }
+    }
+
+    // --- Media URL Resolution ---
+    function resolveMediaUrl(path) {
+        if (!path) return '';
+        // Absolute URL - use as-is
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            return path;
+        }
+        // Resolve relative to basehref or current page
+        const base = currentBasehref || window.location.href;
+        try {
+            return new URL(path, base).href;
+        } catch (e) {
+            log(`Media URL resolution failed: ${e.message}`, 'error');
+            return path;
+        }
+    }
+
+    // --- Media Display Functions ---
+    function displayImage(imagePath, caption = '') {
+        const resolvedUrl = resolveMediaUrl(imagePath);
+        log(`Displaying image: ${resolvedUrl}`, 'ink');
+        swimEvent('fink', '🖼️', 'Image', imagePath);
+
+        const chunk = document.createElement('div');
+        chunk.className = 'media-chunk since-decision loading';
+
+        const img = document.createElement('img');
+        img.alt = caption || imagePath;
+
+        img.onload = () => {
+            chunk.classList.remove('loading');
+            requestAnimationFrame(() => chunk.classList.add('visible'));
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+        img.onerror = () => {
+            chunk.classList.remove('loading');
+            chunk.classList.add('error');
+            chunk.textContent = `⚠ Image not found: ${imagePath}`;
+        };
+
+        img.src = resolvedUrl;
+        chunk.appendChild(img);
+
+        if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'media-caption';
+            cap.textContent = caption;
+            chunk.appendChild(cap);
+        }
+
+        storyOutput.appendChild(chunk);
+        storyOutput.scrollTop = storyOutput.scrollHeight;
+    }
+
+    function displayVideo(videoPath, caption = '') {
+        const resolvedUrl = resolveMediaUrl(videoPath);
+        log(`Displaying video: ${resolvedUrl}`, 'ink');
+        swimEvent('fink', '🎬', 'Video', videoPath);
+
+        const chunk = document.createElement('div');
+        chunk.className = 'media-chunk since-decision';
+
+        const video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+
+        video.onloadedmetadata = () => {
+            requestAnimationFrame(() => chunk.classList.add('visible'));
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+        video.onerror = () => {
+            chunk.classList.add('error');
+            chunk.textContent = `⚠ Video not found: ${videoPath}`;
+        };
+
+        video.src = resolvedUrl;
+        chunk.appendChild(video);
+
+        if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'media-caption';
+            cap.textContent = caption;
+            chunk.appendChild(cap);
+        }
+
+        storyOutput.appendChild(chunk);
+        storyOutput.scrollTop = storyOutput.scrollHeight;
+    }
+
+    function playAudio(audioPath, trackName = '') {
+        const resolvedUrl = resolveMediaUrl(audioPath);
+        AudioManager.play(resolvedUrl, trackName);
+    }
+
+    // --- Animated Text Display ---
+    const WORD_DELAY_MS = 30;  // Delay between each word appearing
+
+    function displayTextWithAnimation(text, cssClass = '') {
+        log(`Displaying text: "${text.slice(0, 50)}..."`, 'ink');
+
+        // Remove 'latest' class from previous chunks (but keep since-decision)
+        const previousLatest = storyOutput.querySelectorAll('.text-chunk.latest');
+        previousLatest.forEach(el => {
+            el.classList.remove('latest');
+            // Don't add 'settled' yet - keep the since-decision grouping
+        });
+
+        const chunk = document.createElement('div');
+        // Add 'since-decision' to group all text since player's last choice
+        chunk.className = `text-chunk latest since-decision ${cssClass}`.trim();
+
+        // Check if text contains linkifiable content
+        const linkPattern = /(https?:\/\/[^\s]+|hamfink2026[^\s]*\.(?:html|js))/g;
+        const hasLinks = linkPattern.test(text);
+        linkPattern.lastIndex = 0; // Reset regex state
+
+        if (hasLinks) {
+            // Text has links - process links but skip word animation
+            // (word animation breaks HTML anchor tags)
+            const processedText = text.replace(linkPattern, (match) => {
+                if (match.startsWith('http')) {
+                    return `<a href="${match}" target="_blank">${match}</a>`;
+                } else {
+                    const baseUrl = 'https://github.com/danbri/glitchcan-minigam/blob/main/inklet/demos/';
+                    return `<a href="${baseUrl}${match}" target="_blank">${match}</a>`;
+                }
+            });
+            chunk.innerHTML = processedText;
+        } else {
+            // No links - apply word-by-word animation
+            const words = text.split(/(\s+)/);  // Keep whitespace
+            let wordIndex = 0;
+            const wrappedHtml = words.map(word => {
+                if (word.trim() === '') return word;  // Keep whitespace as-is
+                const delay = wordIndex * WORD_DELAY_MS;
+                wordIndex++;
+                return `<span class="word" style="animation-delay: ${delay}ms">${word}</span>`;
+            }).join('');
+            chunk.innerHTML = wrappedHtml;
+        }
+
+        storyOutput.appendChild(chunk);
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            chunk.classList.add('visible');
+        });
+
+        // Remove latest highlight after a delay (5s for better visibility)
+        setTimeout(() => {
+            chunk.classList.remove('latest');
+            chunk.classList.add('settled');
+        }, 5000);
+
+        // Scroll helper - ensures new content is fully visible
+        const scrollToBottom = () => {
+            storyOutput.scrollTop = storyOutput.scrollHeight;
+        };
+
+        // Immediate scroll to show new content appearing
+        scrollToBottom();
+
+        // For word-by-word animation, scroll again after words have appeared
+        // Total time = (wordCount * WORD_DELAY_MS) + animation duration (400ms)
+        if (!hasLinks) {
+            const wordCount = text.split(/\s+/).filter(w => w.trim()).length;
+            const totalAnimTime = (wordCount * WORD_DELAY_MS) + 400;
+            // Scroll periodically during animation to keep up with appearing words
+            const scrollInterval = setInterval(scrollToBottom, 100);
+            setTimeout(() => {
+                clearInterval(scrollInterval);
+                scrollToBottom(); // Final scroll after animation completes
+            }, totalAnimTime);
+        }
+    }
+
+    // --- Ink Story Engine ---
+    function initStory(inkSource = null) {
+        const source = inkSource || document.getElementById('ink-story').textContent;
+        const isExternal = inkSource !== null;
+        try {
+            log('Compiling Ink story...');
+            log(`Source length: ${source.length} chars, ${source.split('\n').length} lines`);
+            swimEvent('ink', '⚙️', isExternal ? 'Compile FINK' : 'Compile INK', `${source.split('\n').length} lines`);
+
+            const compiler = new inkjs.Compiler(source);
+            story = compiler.Compile();
+
+            if (compiler.errors && compiler.errors.length > 0) {
+                throw new Error('Compilation errors: ' + compiler.errors.join('\n'));
+            }
+            log('Story compiled successfully');
+            setStatus('Story ready');
+            swimEvent('ink', '✅', 'Compiled OK', isExternal ? 'Chapter loaded' : 'Main story ready', true);
+            continueStory();
+        } catch (e) {
+            log(`Compilation error: ${e.message}`, 'error');
+            swimEvent('ink', '❌', 'Compile Failed', e.message.slice(0, 50));
+
+            // Debug: show problematic lines if error mentions line numbers
+            const lineMatch = e.message.match(/line (\d+)/g);
+            if (lineMatch) {
+                const lines = source.split('\n');
+                lineMatch.forEach(match => {
+                    const lineNum = parseInt(match.replace('line ', ''));
+                    log(`Line ${lineNum}: "${lines[lineNum - 1] || '(out of range)'}"`, 'error');
+                });
+            }
+
+            setStatus('Compile error!');
+            displayTextWithAnimation(`Error: ${e.message}`, 'danger');
+        }
+    }
+
+    function continueStory() {
+        if (!story) return;
+
+        let shouldStartMinigame = false;
+        let minigameType = 'normal';
+
+        while (story.canContinue) {
+            const text = story.Continue();
+            const tags = story.currentTags || [];
+
+            log(`Text: "${text.trim()}" | Tags: ${tags.join(', ') || 'none'}`);
+
+            let cssClass = '';
+
+            // Process tags
+            for (const tag of tags) {
+                if (tag === 'RESTART') {
+                    log('RESTART tag detected - reloading demo', 'warn');
+                    swimEvent('ink', '🔄', 'RESTART', 'Returning to beginning');
+                    setTimeout(() => window.location.reload(), 500);
+                    return;
+                }
+                if (tag.startsWith('MINIGAME:')) {
+                    shouldStartMinigame = true;
+                    const type = tag.replace('MINIGAME:', '').trim();
+                    minigameType = type === 'mega' ? 'mega' : 'normal';
+                    log(`Minigame tag detected! Type: ${minigameType}`, 'warn');
+                }
+                if (tag.startsWith('CLASS:')) {
+                    cssClass = tag.replace('CLASS:', '').trim();
+                }
+                if (tag.startsWith('FINK:')) {
+                    pendingFinkUrl = tag.replace('FINK:', '').trim();
+                    log(`FINK tag detected: ${pendingFinkUrl}`, 'warn');
+                }
+                if (tag.startsWith('IMAGE:')) {
+                    const imagePath = tag.replace('IMAGE:', '').trim();
+                    log(`IMAGE tag: ${imagePath}`, 'debug');
+                    displayImage(imagePath);
+                }
+                if (tag.startsWith('VIDEO:')) {
+                    const videoPath = tag.replace('VIDEO:', '').trim();
+                    log(`VIDEO tag: ${videoPath}`, 'debug');
+                    displayVideo(videoPath);
+                }
+                if (tag.startsWith('AUDIO:')) {
+                    const audioPath = tag.replace('AUDIO:', '').trim();
+                    log(`AUDIO tag: ${audioPath}`, 'debug');
+                    playAudio(audioPath);
+                }
+                if (tag.startsWith('BASEHREF:')) {
+                    currentBasehref = tag.replace('BASEHREF:', '').trim();
+                    log(`BASEHREF set to: ${currentBasehref}`, 'debug');
+                }
+                if (tag.startsWith('BG:')) {
+                    const bgColor = tag.replace('BG:', '').trim();
+                    document.body.style.backgroundColor = bgColor;
+                    log(`Background color: ${bgColor}`, 'debug');
+                }
+            }
+
+            // Display text with animation
+            if (text.trim()) {
+                displayTextWithAnimation(text.trim(), cssClass);
+            }
+
+            // CRITICAL: Break immediately when MINIGAME or FINK tag detected
+            // This prevents the story from advancing past the return point
+            // before the minigame/external load completes
+            if (shouldStartMinigame || pendingFinkUrl) {
+                log(`Breaking story loop for ${shouldStartMinigame ? 'minigame' : 'FINK load'}`, 'debug');
+                break;
+            }
+        }
+
+        // Update stats
+        updateStatsDisplay();
+
+        // Handle FINK loading
+        if (pendingFinkUrl && !shouldStartMinigame) {
+            // Validate URL before loading
+            if (!pendingFinkUrl || pendingFinkUrl === 'null' || pendingFinkUrl === 'undefined') {
+                log(`Invalid FINK URL: "${pendingFinkUrl}"`, 'error');
+                pendingFinkUrl = null;
+                displayChoices();
+                return;
+            }
+            // Capture URL before clearing (setTimeout closure bug fix!)
+            const urlToLoad = pendingFinkUrl;
+            pendingFinkUrl = null;
+            log(`Scheduling FINK load: ${urlToLoad}`, 'fink');
+            setTimeout(() => loadFinkFile(urlToLoad), 500);
+            return;
+        }
+
+        // Start minigame if triggered
+        if (shouldStartMinigame) {
+            setTimeout(() => startMinigame(minigameType), 800);
+            return;
+        }
+
+        // Display choices
+        displayChoices();
+    }
+
+    function displayChoices() {
+        choicesContainer.innerHTML = '';
+
+        if (!story) {
+            log('No story object - cannot display choices', 'error');
+            return;
+        }
+
+        if (!story.currentChoices || story.currentChoices.length === 0) {
+            log('No choices available (story end or waiting)');
+            return;
+        }
+
+        log(`Creating ${story.currentChoices.length} choice buttons...`, 'debug');
+        story.currentChoices.forEach((choice, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice';
+            btn.textContent = `${index + 1}. ${choice.text}`;
+            btn.addEventListener('click', (e) => {
+                log(`Choice button ${index} clicked`, 'debug');
+                // Visual feedback - flash the button
+                btn.style.boxShadow = '0 0 20px var(--zx-yellow)';
+                setTimeout(() => btn.style.boxShadow = '', 200);
+                selectChoice(index);
+            });
+            // Also add touch support
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                log(`Choice button ${index} touched`, 'debug');
+                btn.click();
+            });
+            choicesContainer.appendChild(btn);
+        });
+
+        log(`Displayed ${story.currentChoices.length} choices`);
+    }
+
+    function selectChoice(index) {
+        log(`selectChoice(${index}) called`, 'debug');
+        try {
+            if (!story) {
+                log('ERROR: story is null/undefined in selectChoice', 'error');
+                setStatus('Error: No story!');
+                return;
+            }
+            log(`story.canContinue=${story.canContinue}, story.currentChoices.length=${story.currentChoices?.length || 0}`, 'debug');
+
+            if (!story.currentChoices || story.currentChoices.length === 0) {
+                log('ERROR: no choices available in story', 'error');
+                setStatus('Error: No choices!');
+                return;
+            }
+            if (index >= story.currentChoices.length) {
+                log(`ERROR: choice index ${index} out of bounds (${story.currentChoices.length} choices)`, 'error');
+                setStatus('Error: Bad index!');
+                return;
+            }
+            const choiceText = story.currentChoices[index].text;
+            log(`Selected choice ${index}: ${choiceText}`);
+
+            // Display player's decision visually
+            displayPlayerDecision(choiceText);
+
+            // Mark all previous "since-decision" chunks as settled
+            const prevChunks = storyOutput.querySelectorAll('.text-chunk.since-decision');
+            prevChunks.forEach(el => el.classList.remove('since-decision'));
+
+            // Semantic swimlane event for player choice
+            swimEvent('ink', '👆', `Choice: ${choiceText.slice(0, 30)}`, `Option ${index + 1} of ${story.currentChoices.length}`, true);
+
+            log(`Calling story.ChooseChoiceIndex(${index})...`, 'debug');
+            story.ChooseChoiceIndex(index);
+            log(`Choice registered, calling continueStory()...`, 'debug');
+            continueStory();
+            log(`continueStory() completed`, 'debug');
+        } catch (e) {
+            log(`ERROR in selectChoice: ${e.message}`, 'error');
+            log(`Error stack: ${e.stack}`, 'error');
+            setStatus(`Error: ${e.message.slice(0, 30)}`);
+            console.error('selectChoice error:', e);
+        }
+    }
+
+    function displayPlayerDecision(text) {
+        const decision = document.createElement('div');
+        decision.className = 'text-chunk player-decision';
+        decision.textContent = text;
+        storyOutput.appendChild(decision);
+    }
+
+    // --- FINK External Loading ---
+    function loadFinkFile(url) {
+        // Validate URL before proceeding
+        if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') {
+            log(`FINK load aborted: invalid URL "${url}"`, 'error');
+            swimEvent('net', '❌', 'URL Invalid', url);
+            setStatus('Invalid FINK URL');
+            displayChoices();
+            return;
+        }
+
+        log(`FINK load requested: ${url}`, 'fink');
+        log(`Using JSONP-like sandbox injection technique`, 'fink');
+        setStatus(`Loading ${url}...`);
+
+        // Resolve relative URL
+        let resolvedUrl;
+        try {
+            resolvedUrl = new URL(url, window.location.href).href;
+        } catch (e) {
+            log(`FINK URL resolution failed: ${e.message}`, 'error');
+            swimEvent('net', '❌', 'URL Resolution Failed', e.message);
+            setStatus('URL error');
+            displayChoices();
+            return;
+        }
+        log(`Resolved to absolute URL: ${resolvedUrl}`, 'net');
+        log(`Cross-origin safe: sandbox iframe isolates execution`, 'net');
+
+        // Semantic swimlane events
+        swimEvent('fink', '📂', 'Loading Chapter', url, true);
+        swimEvent('net', '🌐', 'Fetch', resolvedUrl.split('/').pop());
+
+        // Track URL for namespace derivation in handleFinkLoaded
+        currentLoadingFinkUrl = resolvedUrl;
+
+        // Create sandbox content
+        const sandboxHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head><script>
+                window.finkData = [];
+                function oooOO(strings) {
+                    const content = (typeof strings === 'object' && strings.raw)
+                        ? strings.raw.join('')
+                        : String(strings);
+                    window.finkData.push(content);
+                    return content;
+                }
+                window.addEventListener('message', function(e) {
+                    if (e.data && e.data.type === 'load-script') {
+                        const script = document.createElement('script');
+                        script.onload = function() {
+                            parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
+                        };
+                        script.onerror = function() {
+                            parent.postMessage({ type: 'fink-error', error: 'Script load failed' }, '*');
+                        };
+                        script.src = e.data.url;
+                        document.body.appendChild(script);
+                    }
+                });
+                parent.postMessage({ type: 'sandbox-ready' }, '*');
+            <\/script></head>
+            <body></body>
+            </html>
+        `;
+
+        // Set up message listener
+        const messageHandler = function(e) {
+            if (e.data.type === 'sandbox-ready') {
+                finkSandbox.contentWindow.postMessage({ type: 'load-script', url: resolvedUrl }, '*');
+            } else if (e.data.type === 'fink-loaded') {
+                window.removeEventListener('message', messageHandler);
+                handleFinkLoaded(e.data.data);
+            } else if (e.data.type === 'fink-error') {
+                window.removeEventListener('message', messageHandler);
+                log(`FINK load error: ${e.data.error}`, 'error');
+                setStatus('FINK load failed');
+                displayTextWithAnimation(`Failed to load chapter: ${e.data.error}`, 'danger');
+                displayChoices();
+            }
+        };
+
+        window.addEventListener('message', messageHandler);
+        finkSandbox.srcdoc = sandboxHtml;
+    }
+
+    function handleFinkLoaded(dataArray) {
+        if (!dataArray || dataArray.length === 0) {
+            log('FINK loaded but no content found', 'error');
+            swimEvent('fink', '❌', 'Empty Content', 'No oooOO blocks found');
+            setStatus('FINK empty');
+            return;
+        }
+
+        // Use only the first oooOO block (avoid duplicates if script runs twice)
+        const finkContent = dataArray[0];
+        log(`FINK content received via oooOO template literal`, 'fink');
+        log(`Content: ${finkContent.length} chars, ${finkContent.split('\\n').length} lines`, 'fink');
+        log(`oooOO blocks captured: ${dataArray.length} (using first only)`, 'debug');
+        setStatus('Chapter loaded!');
+
+        swimEvent('net', '✅', 'Content Received', `${finkContent.length} chars`);
+        swimEvent('fink', '📜', 'Parsing FINK', `${finkContent.split('\\n').length} lines`);
+
+        // Store current state for IMPORT injection
+        const savedState = story ? {
+            diamonds: story.variablesState['diamonds'],
+            mega_diamonds: story.variablesState['mega_diamonds'],
+            keys: story.variablesState['keys'],
+            score: story.variablesState['score']
+        } : null;
+
+        if (savedState) {
+            log(`Captured parent state: diamonds=${savedState.diamonds}, mega=${savedState.mega_diamonds}, keys=${savedState.keys}, score=${savedState.score}`, 'ink');
+        }
+
+        // --- STRAWMAN: Namespace Preprocessor ---
+        // Use FinkNamespacePreprocessor if available, fallback to legacy VAR stripping
+        let processedContent = finkContent;
+        let nsResult = null;
+
+        if (typeof FinkNamespacePreprocessor !== 'undefined') {
+            log(`Namespace preprocessor v${FinkNamespacePreprocessor.VERSION}`, 'fink');
+            log(`Deriving namespace from SHA-256(${currentLoadingFinkUrl})`, 'fink');
+            nsResult = FinkNamespacePreprocessor.transform(
+                finkContent,
+                currentLoadingFinkUrl || 'unknown.fink.js',
+                { debug: true }
+            );
+            processedContent = nsResult.content;
+            log(`Namespace: ${nsResult.namespace} (8-char hash prefix)`, 'fink');
+            log(`IMPORT vars (canonical names): [${nsResult.imports.join(', ') || 'none'}]`, 'fink');
+            log(`EXPORT vars: [${nsResult.exports.join(', ') || 'none'}]`, 'fink');
+            log(`Transformed vars: ${Object.keys(nsResult.transformedVars).length} prefixed`, 'debug');
+
+            // Semantic swimlane events for namespace processing
+            swimEvent('fink', '🔧', `Namespace: ${nsResult.namespace}`, `SHA-256 prefix from URL`);
+            if (nsResult.imports.length > 0) {
+                swimEvent('fink', '📥', 'IMPORT', nsResult.imports.join(', '));
+            }
+            if (nsResult.exports.length > 0) {
+                swimEvent('fink', '📤', 'EXPORT', nsResult.exports.join(', '));
+            }
+        } else if (savedState) {
+            // Legacy fallback: Strip VAR declarations for variables we're carrying over
+            log('Preprocessor not loaded, using legacy VAR stripping', 'warn');
+            const varsToStrip = Object.keys(savedState);
+            log(`Stripping VAR declarations for: ${varsToStrip.join(', ')}`, 'fink');
+            varsToStrip.forEach(varName => {
+                const varPattern = new RegExp(`^\\s*VAR\\s+${varName}\\s*=.*$`, 'gm');
+                processedContent = processedContent.replace(varPattern, `// [IMPORTED: ${varName}]`);
+            });
+        }
+
+        // Clear output for new chapter
+        storyOutput.innerHTML = '';
+        choicesContainer.innerHTML = '';
+
+        // Compile and run the new story
+        log(`Compiling FINK content with inkjs...`, 'ink');
+        initStory(processedContent);
+
+        // Inject imported values from parent state
+        if (savedState && story) {
+            if (nsResult && nsResult.imports.length > 0) {
+                // Use preprocessor's import list
+                log(`Injecting ${nsResult.imports.length} imported values into story.variablesState`, 'ink');
+                FinkNamespacePreprocessor.injectImports(story, nsResult.imports, savedState);
+            } else {
+                // Legacy: restore all saved state
+                story.variablesState['diamonds'] = savedState.diamonds;
+                story.variablesState['mega_diamonds'] = savedState.mega_diamonds;
+                story.variablesState['keys'] = savedState.keys;
+                story.variablesState['score'] = savedState.score;
+            }
+            updateStatsDisplay();
+        }
+    }
+
+    // --- Minigame ---
+    function startMinigame(mode = 'normal') {
+        log(`Starting ${mode} gem minigame!`);
+        setStatus(`${mode === 'mega' ? 'MEGA ' : ''}Minigame active!`);
+        swimEvent('game', '🎮', `Minigame: ${mode.toUpperCase()}`, 'Gem collection started', true);
+
+        minigameActive = true;
+        minigameMode = mode;
+        gemsCollectedThisRound = 0;
+        totalGemsSpawned = 0;
+        gemsCollectedDisplay.textContent = '0';
+        gameContainer.innerHTML = '';
+
+        // Update UI for mega mode
+        gameContainer.classList.toggle('mega-mode', mode === 'mega');
+        minigameInstructions.textContent = mode === 'mega'
+            ? 'Catch the MEGA GEMS! Each worth 1000x!'
+            : 'Click the gems to collect them!';
+
+        switchView('minigame');
+
+        // Spawn initial gems
+        const spawnCount = mode === 'mega' ? 4 : GEM_SPAWN_COUNT;
+        for (let i = 0; i < spawnCount; i++) {
+            spawnGem();
+        }
+
+        // Continue spawning
+        const interval = mode === 'mega' ? 2000 : GEM_SPAWN_INTERVAL;
+        const maxGems = mode === 'mega' ? 10 : MAX_GEMS_PER_ROUND;
+
+        gemSpawnTimer = setInterval(() => {
+            if (totalGemsSpawned < maxGems) {
+                spawnGem();
+            } else {
+                clearInterval(gemSpawnTimer);
+            }
+        }, interval);
+    }
+
+    function spawnGem() {
+        if (!minigameActive) return;
+
+        totalGemsSpawned++;
+
+        const gem = document.createElement('div');
+        const isMega = minigameMode === 'mega';
+        gem.className = isMega ? 'gem mega-gem' : 'gem';
+
+        const emojis = isMega ? MEGA_GEM_EMOJIS : GEM_EMOJIS;
+        gem.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+        // Random position (with padding)
+        const padding = 10;
+        const size = isMega ? 60 : 40;
+        const maxX = gameContainer.clientWidth - size;
+        const maxY = gameContainer.clientHeight - size;
+        gem.style.left = (padding + Math.random() * (maxX - padding)) + 'px';
+        gem.style.top = (padding + Math.random() * (maxY - padding)) + 'px';
+
+        gem.addEventListener('click', () => collectGem(gem));
+
+        gameContainer.appendChild(gem);
+
+        // Auto-remove after a while if not collected
+        const timeout = isMega ? 3000 : 5000;
+        setTimeout(() => {
+            if (gem.parentNode && !gem.classList.contains('collected')) {
+                gem.remove();
+            }
+        }, timeout);
+    }
+
+    function collectGem(gemElement) {
+        if (!minigameActive || gemElement.classList.contains('collected')) return;
+
+        gemElement.classList.add('collected');
+        gemsCollectedThisRound++;
+        gemsCollectedDisplay.textContent = gemsCollectedThisRound;
+
+        // Play sound
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (minigameMode === 'mega') {
+                // Epic sound for mega gems
+                osc.frequency.value = 1200 + Math.random() * 400;
+                gain.gain.value = 0.15;
+                osc.start();
+                osc.stop(ctx.currentTime + 0.2);
+            } else {
+                osc.frequency.value = 800 + Math.random() * 400;
+                gain.gain.value = 0.1;
+                osc.start();
+                osc.stop(ctx.currentTime + 0.1);
+            }
+        } catch (e) { /* Audio not available */ }
+
+        setTimeout(() => gemElement.remove(), 300);
+
+        log(`Collected ${minigameMode === 'mega' ? 'MEGA ' : ''}gem! Total: ${gemsCollectedThisRound}`);
+    }
+
+    function endMinigame() {
+        log(`Minigame ended. Mode: ${minigameMode}, Collected: ${gemsCollectedThisRound}`);
+        setStatus('Returning to story...');
+
+        swimEvent('game', '🏁', 'Minigame Complete', `Collected: ${gemsCollectedThisRound}`, true);
+
+        minigameActive = false;
+        clearInterval(gemSpawnTimer);
+        gameContainer.classList.remove('mega-mode');
+
+        // UPDATE INK VARIABLES WITH MINIGAME RESULTS!
+        // Wrap in try-catch to ensure view switches even if variable update fails
+        // (e.g., in Chapter 2 where minigame_played doesn't exist)
+        if (story) {
+            try {
+                if (minigameMode === 'mega') {
+                    const oldMega = story.variablesState['mega_diamonds'] || 0;
+                    story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
+                    log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
+                } else {
+                    const oldDiamonds = story.variablesState['diamonds'] || 0;
+                    story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
+                    log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
+                }
+                // Only set minigame_played if it exists in this story (may not in external chapters)
+                if (story.variablesState['minigame_played'] !== undefined) {
+                    story.variablesState['minigame_played'] = true;
+                }
+            } catch (e) {
+                log(`Warning: Variable update failed in endMinigame: ${e.message}`, 'error');
+                swimEvent('ink', '⚠️', 'VAR Error', e.message.slice(0, 30));
+            }
+        }
+
+        // Switch back to narrative (must run even if variable update failed)
+        switchView('narrative');
+        updateStatsDisplay();
+
+        // Continue the story
+        continueStory();
+    }
+
+    // --- Event Listeners ---
+    returnToStoryBtn.addEventListener('click', endMinigame);
+
+    viewToggleBtn.addEventListener('click', () => {
+        if (!minigameActive) {
+            switchView(currentView === 'narrative' ? 'minigame' : 'narrative');
+        }
+    });
+
+    restartBtn.addEventListener('click', () => {
+        log('Restarting story...');
+        storyOutput.innerHTML = '';
+        choicesContainer.innerHTML = '';
+        minigameActive = false;
+        minigameMode = 'normal';
+        clearInterval(gemSpawnTimer);
+        gameContainer.classList.remove('mega-mode');
+        switchView('narrative');
+        initStory();
+    });
+
+    // --- Dev Panel Event Listeners ---
+    const copyLogsBtn = document.getElementById('copyLogsBtn');
+    const closeDevPanelBtn = document.getElementById('closeDevPanel');
+    const devTabs = document.querySelectorAll('#dev-tabs button[data-tab]');
+    const devTabContents = document.querySelectorAll('.dev-tab-content');
+    const logFilterCheckboxes = document.querySelectorAll('#log-filters input[type="checkbox"]');
+
+    // Settings button toggles dev panel
+    settingsBtn.addEventListener('click', () => {
+        devPanel.classList.toggle('visible');
+        updateStateDisplay();
+    });
+
+    // Close button hides dev panel
+    closeDevPanelBtn.addEventListener('click', () => {
+        devPanel.classList.remove('visible');
+    });
+
+    // Tab switching
+    devTabs.forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+            const tabName = tabBtn.dataset.tab;
+            // Update active tab button
+            devTabs.forEach(t => t.classList.remove('active'));
+            tabBtn.classList.add('active');
+            // Show corresponding content
+            devTabContents.forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-content`);
+            });
+            // Update state display when switching to state tab
+            if (tabName === 'state') {
+                updateStateDisplay();
+            }
+        });
+    });
+
+    // Log filter checkboxes
+    logFilterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const filterType = checkbox.dataset.filter;
+            logFilters[filterType] = checkbox.checked;
+            // Update visibility of existing log entries
+            logOutput.querySelectorAll(`div[data-log-type="${filterType}"]`).forEach(entry => {
+                entry.style.display = checkbox.checked ? 'block' : 'none';
+            });
+        });
+    });
+
+    // Copy logs button
+    copyLogsBtn.addEventListener('click', () => {
+        const logText = Array.from(logOutput.querySelectorAll('div'))
+            .filter(div => div.style.display !== 'none')
+            .map(div => div.textContent)
+            .join('\n');
+        navigator.clipboard.writeText(logText).then(() => {
+            const originalText = copyLogsBtn.textContent;
+            copyLogsBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyLogsBtn.textContent = originalText; }, 1500);
+        }).catch(err => {
+            log(`Failed to copy: ${err}`, 'error');
+        });
+    });
+
+    // State display update function
+    function updateStateDisplay() {
+        if (!story) {
+            stateDisplay.textContent = 'No story loaded';
+            return;
+        }
+        const state = {
+            'Story Variables': {
+                diamonds: story.variablesState['diamonds'],
+                mega_diamonds: story.variablesState['mega_diamonds'],
+                keys: story.variablesState['keys'],
+                score: story.variablesState['score'],
+                minigame_played: story.variablesState['minigame_played'],
+                cavern_explored: story.variablesState['cavern_explored'],
+                tried_passage: story.variablesState['tried_passage']
+            },
+            'Engine State': {
+                currentView,
+                minigameActive,
+                minigameMode,
+                pendingFinkUrl,
+                currentLoadingFinkUrl,
+                canContinue: story.canContinue,
+                choiceCount: story.currentChoices?.length || 0
+            }
+        };
+        stateDisplay.textContent = JSON.stringify(state, null, 2);
+    }
+
+    // --- Initialize ---
+    log('FINK 2-Engine Demo initializing...');
+    swimEvent('ink', '🚀', 'Demo Start', 'FINK 2-Engine Demo', true);
+    initStory();
+
+})();
+</script>
+
+<div id="audio-indicator">🎵 <span id="audio-track-name"></span></div>
+</body>
+</html>
