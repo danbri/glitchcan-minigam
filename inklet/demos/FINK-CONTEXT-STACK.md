@@ -137,6 +137,63 @@ function popContext() {
 }
 ```
 
+## ACCESS_TIER: Content Trust Levels
+
+For communally assembled narratives, different content sources have different trust levels. Higher-tier content (core team) shouldn't be corrupted by less-policed userspace contributions.
+
+### Tier Definitions (2026 Initial Structure)
+
+| Tier | Who | YOINK Rights | Can Modify Parent | Notes |
+|------|-----|--------------|-------------------|-------|
+| 0 | teamgc only | Full | Yes - defines global scope | Core mechanics, TOC, trust anchors |
+| 1 | insiders, sponsors, early adopters | Limited EXPORT | Via declared contract only | Vetted content, minigame integration |
+| 2 | userspace (less policed) | None | No | Fully sandboxed, dream-within-dream |
+
+### Usage
+
+```ink
+// From a Tier 0 story, loading userspace content safely:
+# FINK: user-contributed-adventure.fink.js
+# PUSH
+# ACCESS_TIER: 2
+# INJECT: player_name           // Read-only for the loaded content
+# YOINK: none                   // Nothing flows back up
+```
+
+```ink
+// From Tier 0, loading vetted Tier 1 content:
+# FINK: sponsor-episode.fink.js
+# PUSH
+# ACCESS_TIER: 1
+# INJECT: player_name, base_score
+# YOINK: episode_score, unlocked_badge    // Declared exports only
+```
+
+### Protection Model
+
+When Tier 0 content loads Tier 2 content:
+- The loaded content runs in an isolated "dream" context
+- It can receive INJECTed values but cannot modify them in parent
+- When it POPs, no state flows back (YOINK: none enforced)
+- Parent "reality" remains uncorrupted regardless of what happens in the dream
+
+This allows open contribution without risking the integrity of core narrative state.
+
+### Enforcement
+
+- Tier checks happen at FINK load time
+- Lower-tier content cannot escalate its own tier
+- YOINK declarations are validated against ACCESS_TIER
+- Tier 2 attempting YOINK results in silent no-op (logged, not error)
+
+### Future Considerations
+
+As infrastructure stabilizes, more granular tiers may emerge:
+- Content moderation workflows
+- Reputation-based tier assignment
+- Per-variable trust levels
+- Audit trails for state changes across tier boundaries
+
 ## Open Questions
 
 1. **What happens on POP with no parent?** → Return to TOC? End session?
@@ -148,6 +205,10 @@ function popContext() {
 4. **Minigame integration** → Does `# MINIGAME:` implicitly PUSH?
 
 5. **Error recovery** → If child FINK fails to compile, how to recover?
+
+6. **ACCESS_TIER inheritance** → Does a Tier 1 loading another file inherit Tier 1, or drop to Tier 2?
+
+7. **Cross-domain trust** → How to handle FINK URLs from different origins?
 
 ## Implementation Status
 
