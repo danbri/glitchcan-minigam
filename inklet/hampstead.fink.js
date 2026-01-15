@@ -1,6 +1,6 @@
 oooOO`
 
-# BASEHREF: media/
+# BASEHREF: ../media/
 # IMPORT: diamonds, mega_diamonds
 
 // --- Variables ---
