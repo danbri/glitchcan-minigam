@@ -5,6 +5,8 @@ oooOO`
 
 // --- Variables ---
 VAR score = 0
+VAR diamonds = 0
+VAR mega_diamonds = 0
 VAR jeans_worn = false
 VAR tie_worn = false
 VAR giro_collected = false
@@ -14,7 +16,7 @@ VAR penguin_taken = false
 VAR playwright_card = false
 VAR key_2cv = false
 VAR mortgage_signed = false
-VAR debug_message = "" // <<<< NEW: Debug variable
+VAR debug_message = ""
 VAR diamond_disposed = false
 VAR met_artist = false
 
@@ -259,7 +261,7 @@ Champagne corks pop; Pippa and Tarquin drift in. #CLASS:flash
 === victory ===
 #BG:#041
 #CLASS:success
-# HAMPSTEAD ACHIEVED #
+*** HAMPSTEAD ACHIEVED ***
 
 Final Score: {score}/8 — you truly embody Hampstead!
 
@@ -416,7 +418,7 @@ You clutch twelve mega diamonds. The portal flickers, unstable.
 === woods_between_worlds ===
 #BG:#030
 #CLASS:info
-# THE WOODS BETWEEN WORLDS #
+*** THE WOODS BETWEEN WORLDS ***
 
 You tumble through into endless twilight forest. Trees stretch impossibly tall, their bark shifting through colors that don't exist.
 
