@@ -860,12 +860,33 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         nextGain: null,
         currentTrack: null,
         fadeDuration: 2.0, // seconds
+        unlocked: false,
 
-        init() {
+        // Pre-init: create context early (will be suspended until user interaction)
+        preInit() {
             if (!this.context) {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
+                log(`Audio: Context created (state: ${this.context.state})`, 'debug');
             }
-            return this.context.state === 'running' || this.context.resume();
+        },
+
+        // Unlock on user interaction
+        async unlock() {
+            if (this.unlocked) return;
+            this.preInit();
+            if (this.context.state === 'suspended') {
+                await this.context.resume();
+                log(`Audio: Context unlocked (state: ${this.context.state})`, 'debug');
+            }
+            this.unlocked = true;
+        },
+
+        async init() {
+            this.preInit();
+            if (this.context.state === 'suspended') {
+                await this.context.resume();
+            }
+            return this.context.state === 'running';
         },
 
         async play(url, trackName = '') {
@@ -1975,6 +1996,19 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     // --- Initialize ---
     log('FINK 2-Engine Demo initializing...');
     swimEvent('ink', '🚀', 'Demo Start', 'FINK 2-Engine Demo', true);
+
+    // Pre-init audio context (creates in suspended state)
+    AudioManager.preInit();
+
+    // Unlock audio on first user interaction (click/touch anywhere)
+    const unlockAudio = () => {
+        AudioManager.unlock();
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+
     initStory();
 
 })();
