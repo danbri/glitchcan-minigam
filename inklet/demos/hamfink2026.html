@@ -1324,22 +1324,32 @@ Source files:
         gameContainer.classList.remove('mega-mode');
 
         // UPDATE INK VARIABLES WITH MINIGAME RESULTS!
+        // Wrap in try-catch to ensure view switches even if variable update fails
+        // (e.g., in Chapter 2 where minigame_played doesn't exist)
         if (story) {
-            if (minigameMode === 'mega') {
-                const oldMega = story.variablesState['mega_diamonds'] || 0;
-                story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
-                log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
-                swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
-            } else {
-                const oldDiamonds = story.variablesState['diamonds'] || 0;
-                story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
-                log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
-                swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
+            try {
+                if (minigameMode === 'mega') {
+                    const oldMega = story.variablesState['mega_diamonds'] || 0;
+                    story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
+                    log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
+                } else {
+                    const oldDiamonds = story.variablesState['diamonds'] || 0;
+                    story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
+                    log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
+                }
+                // Only set minigame_played if it exists in this story (may not in external chapters)
+                if (story.variablesState['minigame_played'] !== undefined) {
+                    story.variablesState['minigame_played'] = true;
+                }
+            } catch (e) {
+                log(`Warning: Variable update failed in endMinigame: ${e.message}`, 'error');
+                swimEvent('ink', '⚠️', 'VAR Error', e.message.slice(0, 30));
             }
-            story.variablesState['minigame_played'] = true;
         }
 
-        // Switch back to narrative
+        // Switch back to narrative (must run even if variable update failed)
         switchView('narrative');
         updateStatsDisplay();
 

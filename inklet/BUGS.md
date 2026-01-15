@@ -95,6 +95,11 @@ When minigame ended and updated `mega_diamonds` to 7, the story was already past
 
 **Fix:** Break out of the story loop immediately when MINIGAME or FINK tag is detected, preserving story position for when the external action completes.
 
+**Additional fix (Chapter 2 specific):** The `endMinigame()` function tried to set `minigame_played = true` unconditionally, but this variable doesn't exist in Chapter 2 (which only IMPORTs diamonds, mega_diamonds, keys, score). This caused an uncaught error that stopped execution before `switchView('narrative')` ran. Fixed by:
+1. Wrapping variable updates in try-catch
+2. Only setting `minigame_played` if it exists in current story
+3. Ensuring view switch always runs even if variable update fails
+
 ---
 
 ### BUG-006: External links need warning UI before leaving game
