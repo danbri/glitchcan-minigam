@@ -860,12 +860,33 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         nextGain: null,
         currentTrack: null,
         fadeDuration: 2.0, // seconds
+        unlocked: false,
 
-        init() {
+        // Pre-init: create context early (will be suspended until user interaction)
+        preInit() {
             if (!this.context) {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
+                log(`Audio: Context created (state: ${this.context.state})`, 'debug');
             }
-            return this.context.state === 'running' || this.context.resume();
+        },
+
+        // Unlock on user interaction
+        async unlock() {
+            if (this.unlocked) return;
+            this.preInit();
+            if (this.context.state === 'suspended') {
+                await this.context.resume();
+                log(`Audio: Context unlocked (state: ${this.context.state})`, 'debug');
+            }
+            this.unlocked = true;
+        },
+
+        async init() {
+            this.preInit();
+            if (this.context.state === 'suspended') {
+                await this.context.resume();
+            }
+            return this.context.state === 'running';
         },
 
         async play(url, trackName = '') {
@@ -1270,6 +1291,23 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             log('Story compiled successfully');
             setStatus('Story ready');
             swimEvent('ink', '✅', 'Compiled OK', isExternal ? 'Chapter loaded' : 'Main story ready', true);
+
+            // Process global tags (story-level tags before any knot)
+            if (story.globalTags && story.globalTags.length > 0) {
+                log(`Processing ${story.globalTags.length} global tags`, 'debug');
+                for (const tag of story.globalTags) {
+                    if (tag.startsWith('BASEHREF:')) {
+                        currentBasehref = tag.replace('BASEHREF:', '').trim();
+                        log(`Global BASEHREF set to: ${currentBasehref}`, 'debug');
+                    }
+                    if (tag.startsWith('AUDIO:')) {
+                        const audioPath = tag.replace('AUDIO:', '').trim();
+                        log(`Global AUDIO tag: ${audioPath}`, 'debug');
+                        playAudio(audioPath);
+                    }
+                }
+            }
+
             continueStory();
         } catch (e) {
             log(`Compilation error: ${e.message}`, 'error');
@@ -1975,6 +2013,19 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     // --- Initialize ---
     log('FINK 2-Engine Demo initializing...');
     swimEvent('ink', '🚀', 'Demo Start', 'FINK 2-Engine Demo', true);
+
+    // Pre-init audio context (creates in suspended state)
+    AudioManager.preInit();
+
+    // Unlock audio on first user interaction (click/touch anywhere)
+    const unlockAudio = () => {
+        AudioManager.unlock();
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+
     initStory();
 
 })();
