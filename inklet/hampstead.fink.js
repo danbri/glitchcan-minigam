@@ -5,6 +5,8 @@ oooOO`
 
 // --- Variables ---
 VAR score = 0
+VAR diamonds = 0
+VAR mega_diamonds = 0
 VAR jeans_worn = false
 VAR tie_worn = false
 VAR giro_collected = false
@@ -14,7 +16,7 @@ VAR penguin_taken = false
 VAR playwright_card = false
 VAR key_2cv = false
 VAR mortgage_signed = false
-VAR debug_message = "" // <<<< NEW: Debug variable
+VAR debug_message = ""
 VAR diamond_disposed = false
 VAR met_artist = false
 
