@@ -107,6 +107,10 @@ Fluorescent lights buzz; forms flutter.
         -> postoffice
 }
 
+{ giro_collected:
+    + Go to Post Office window -> postoffice
+}
+
 + Return to street -> street
 
 === postoffice ===
