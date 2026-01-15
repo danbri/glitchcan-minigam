@@ -424,35 +424,16 @@ Loading next chapter...
 
 === how_it_works ===
 # CLASS: info
---- HOW THIS 2-ENGINE DEMO WORKS ---
+This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
-This demo shows Ink (narrative) + JavaScript (minigame) integration:
-
-1. The story is written in Ink with variables:
-   VAR diamonds = 0
-
-2. A # MINIGAME: tag triggers the JavaScript gem collector
-
-3. When you return, JavaScript updates Ink:
-   story.variablesState['diamonds'] = collected;
-
-4. Ink text responds to the new values:
-   "You have {diamonds} diamonds"
-
-+ [View source code on GitHub] -> github_links
++ [View source on GitHub] -> github_links
 + [Return to ending] -> victory
 
 === github_links ===
 # CLASS: code
-SOURCE CODE:
-
-Story + Engine:
-hamfink2026.html
-
-Chapter 2 (FINK):
-hamfink2026-ch2.fink.js
-
-The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approach - the same technique that powers the full FINK player.
+Source files:
+- hamfink2026.html (this demo)
+- hamfink2026-ch2.fink.js (Chapter 2)
 
 + [Back to ending] -> victory
 + [Play again?] -> restart
@@ -598,6 +579,8 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
         const source = inkSource || document.getElementById('ink-story').textContent;
         try {
             log('Compiling Ink story...');
+            log(`Source length: ${source.length} chars, ${source.split('\n').length} lines`);
+
             const compiler = new inkjs.Compiler(source);
             story = compiler.Compile();
 
@@ -609,6 +592,17 @@ The # FINK: tag loads external .fink.js files using a JSONP-like sandbox approac
             continueStory();
         } catch (e) {
             log(`Compilation error: ${e.message}`, 'error');
+
+            // Debug: show problematic lines if error mentions line numbers
+            const lineMatch = e.message.match(/line (\d+)/g);
+            if (lineMatch) {
+                const lines = source.split('\n');
+                lineMatch.forEach(match => {
+                    const lineNum = parseInt(match.replace('line ', ''));
+                    log(`Line ${lineNum}: "${lines[lineNum - 1] || '(out of range)'}"`, 'error');
+                });
+            }
+
             setStatus('Compile error!');
             displayTextWithAnimation(`Error: ${e.message}`, 'danger');
         }
