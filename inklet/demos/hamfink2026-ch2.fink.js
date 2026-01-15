@@ -373,8 +373,8 @@ The Wood Between the Worlds connects to:
 + [Back to ending] -> chapter2_end
 
 === back_to_chapter1 ===
-# FINK: hamfink2026.html
-Returning to the main story...
+# RESTART
+Returning to the beginning...
 
--> chapter2_end
+-> END
 `

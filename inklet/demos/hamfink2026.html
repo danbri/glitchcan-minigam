@@ -19,6 +19,16 @@ html, body {
     background-size: 4px 4px; display: flex; flex-direction: column;
     font: 14px/1.5 "Press Start 2P", Courier, monospace; color: var(--zx-white);
 }
+
+/* Accessibility: respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 header {
     padding: .5em 1em; background: #000; border-bottom: 4px solid var(--zx-blue);
     display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
@@ -27,7 +37,14 @@ header h1 { font-size: 14px; margin: 0; color: var(--zx-cyan); }
 header button {
     font-family: inherit; font-size: 12px; padding: .5em 1em;
     border: none; cursor: pointer;
+    min-height: 44px; /* Touch-friendly minimum */
+    transition: background 0.15s ease, transform 0.1s ease;
 }
+header button:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+header button:active { transform: scale(0.96); }
 #restartBtn { background: var(--zx-green); color: #000; }
 #viewToggle { background: var(--zx-mag); color: #fff; }
 header button:hover { background: var(--zx-red); color: #fff; }
@@ -49,6 +66,7 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     flex: 1; overflow-y: auto; padding: 1em;
     background: rgba(0,20,0,0.5); border: 2px solid var(--zx-green);
     margin-bottom: 1em;
+    scroll-behavior: smooth;
 }
 
 /* Text animation styles */
@@ -66,14 +84,34 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     filter: blur(0);
 }
 
-/* Latest chunk gets a glowing lozenge effect */
+/* Latest chunk gets a glowing lozenge effect - MORE PROMINENT */
 #story-output .text-chunk.latest {
-    background: linear-gradient(90deg, rgba(0,255,255,0.15) 0%, rgba(0,255,0,0.1) 50%, rgba(0,255,255,0.15) 100%);
-    border-left: 3px solid var(--zx-cyan);
-    padding: 0.5em 0.8em;
-    border-radius: 0 8px 8px 0;
-    box-shadow: 0 0 15px rgba(0,255,255,0.3), inset 0 0 20px rgba(0,255,255,0.1);
-    animation: lozengeGlow 2s ease-in-out infinite, chunkAppear 0.6s ease-out forwards;
+    background: linear-gradient(90deg, rgba(0,255,255,0.25) 0%, rgba(0,255,0,0.15) 50%, rgba(0,255,255,0.25) 100%);
+    border-left: 4px solid var(--zx-cyan);
+    padding: 0.6em 1em;
+    border-radius: 0 12px 12px 0;
+    box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.15), 0 2px 10px rgba(0,0,0,0.3);
+    animation: lozengeGlow 1.5s ease-in-out infinite, chunkAppear 0.6s ease-out forwards;
+    position: relative;
+}
+
+/* Pulsing dot indicator for latest content */
+#story-output .text-chunk.latest::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: var(--zx-cyan);
+    border-radius: 50%;
+    animation: dotPulse 1s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+    50% { transform: translateY(-50%) scale(1.5); opacity: 0.6; }
 }
 
 /* Word-by-word reveal animation */
@@ -97,8 +135,14 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 }
 
 @keyframes lozengeGlow {
-    0%, 100% { box-shadow: 0 0 15px rgba(0,255,255,0.3), inset 0 0 20px rgba(0,255,255,0.1); }
-    50% { box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.2); }
+    0%, 100% {
+        box-shadow: 0 0 25px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.15), 0 2px 10px rgba(0,0,0,0.3);
+        border-left-color: var(--zx-cyan);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(0,255,255,0.7), inset 0 0 40px rgba(0,255,255,0.25), 0 4px 15px rgba(0,0,0,0.4);
+        border-left-color: var(--zx-green);
+    }
 }
 
 /* Remove latest class after animation settles */
@@ -133,6 +177,15 @@ button.choice:nth-child(4) { animation-delay: 0.4s; }
 }
 
 button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(--zx-red); }
+button.choice:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+button.choice:active { transform: scale(0.98); }
+button.choice {
+    min-height: 48px; /* Touch-friendly */
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
 
 /* Special styles for story content */
 .success { color: var(--zx-green); text-shadow: 0 0 10px var(--zx-green); }
@@ -187,8 +240,27 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 #returnToStory {
     margin-top: 1em; padding: 1em 2em; font-family: inherit; font-size: 14px;
     background: var(--zx-green); color: #000; border: none; cursor: pointer;
+    min-height: 48px; min-width: 200px;
+    transition: background 0.15s ease, transform 0.1s ease;
 }
 #returnToStory:hover { background: var(--zx-cyan); }
+#returnToStory:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+#returnToStory:active { transform: scale(0.96); }
+
+/* Mobile responsive improvements */
+@media (max-width: 600px) {
+    header h1 { font-size: 11px; }
+    header { padding: 0.4em 0.6em; gap: 0.5em; }
+    #story-output { padding: 0.6em; font-size: 12px; }
+    #choices { gap: 0.4em; }
+    button.choice { padding: 0.6em; font-size: 12px; }
+    #stats-bar { gap: 1em; font-size: 10px; padding: 0.4em 0.6em; }
+    .stat-icon { font-size: 1.2em; }
+    #game-container { max-width: 100%; }
+}
 
 /* Developer Panel - Top of page tabbed interface */
 #dev-panel {
@@ -209,6 +281,11 @@ button.choice:hover { background: var(--zx-red); color: #fff; border-color: var(
 }
 #dev-tabs button.active { background: var(--zx-mag); color: #fff; }
 #dev-tabs button:hover { background: #444; }
+#dev-tabs button:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: -2px;
+}
+#dev-tabs button { transition: background 0.15s ease; }
 
 /* Tab content panels */
 .dev-tab-content { display: none; flex: 1; overflow: hidden; }
@@ -266,8 +343,15 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 #fink-sandbox { display: none; }
 
 /* Links in story */
-#story-output a { color: var(--zx-cyan); text-decoration: underline; }
+#story-output a {
+    color: var(--zx-cyan); text-decoration: underline;
+    transition: color 0.15s ease;
+}
 #story-output a:hover { color: var(--zx-yellow); }
+#story-output a:focus-visible {
+    outline: 2px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
 
 /* Settings button in header */
 #settingsBtn { background: #333; color: #aaa; font-size: 16px; padding: 0.3em 0.6em; }
@@ -784,14 +868,14 @@ Source files:
             chunk.classList.add('visible');
         });
 
-        // Remove latest highlight after a delay
+        // Remove latest highlight after a delay (5s for better visibility)
         setTimeout(() => {
             chunk.classList.remove('latest');
             chunk.classList.add('settled');
-        }, 3000);
+        }, 5000);
 
-        // Auto-scroll
-        storyOutput.scrollTop = storyOutput.scrollHeight;
+        // Smooth scroll to new content
+        chunk.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
     // --- Ink Story Engine ---
@@ -848,6 +932,12 @@ Source files:
 
             // Process tags
             for (const tag of tags) {
+                if (tag === 'RESTART') {
+                    log('RESTART tag detected - reloading demo', 'warn');
+                    swimEvent('ink', '🔄', 'RESTART', 'Returning to beginning');
+                    setTimeout(() => window.location.reload(), 500);
+                    return;
+                }
                 if (tag.startsWith('MINIGAME:')) {
                     shouldStartMinigame = true;
                     const type = tag.replace('MINIGAME:', '').trim();
@@ -1234,22 +1324,32 @@ Source files:
         gameContainer.classList.remove('mega-mode');
 
         // UPDATE INK VARIABLES WITH MINIGAME RESULTS!
+        // Wrap in try-catch to ensure view switches even if variable update fails
+        // (e.g., in Chapter 2 where minigame_played doesn't exist)
         if (story) {
-            if (minigameMode === 'mega') {
-                const oldMega = story.variablesState['mega_diamonds'] || 0;
-                story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
-                log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
-                swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
-            } else {
-                const oldDiamonds = story.variablesState['diamonds'] || 0;
-                story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
-                log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
-                swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
+            try {
+                if (minigameMode === 'mega') {
+                    const oldMega = story.variablesState['mega_diamonds'] || 0;
+                    story.variablesState['mega_diamonds'] = oldMega + gemsCollectedThisRound;
+                    log(`Updated Ink: mega_diamonds ${oldMega} -> ${story.variablesState['mega_diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `mega_diamonds: ${oldMega} → ${story.variablesState['mega_diamonds']}`);
+                } else {
+                    const oldDiamonds = story.variablesState['diamonds'] || 0;
+                    story.variablesState['diamonds'] = oldDiamonds + gemsCollectedThisRound;
+                    log(`Updated Ink: diamonds ${oldDiamonds} -> ${story.variablesState['diamonds']}`, 'warn');
+                    swimEvent('ink', '💎', 'VAR Update', `diamonds: ${oldDiamonds} → ${story.variablesState['diamonds']}`);
+                }
+                // Only set minigame_played if it exists in this story (may not in external chapters)
+                if (story.variablesState['minigame_played'] !== undefined) {
+                    story.variablesState['minigame_played'] = true;
+                }
+            } catch (e) {
+                log(`Warning: Variable update failed in endMinigame: ${e.message}`, 'error');
+                swimEvent('ink', '⚠️', 'VAR Error', e.message.slice(0, 30));
             }
-            story.variablesState['minigame_played'] = true;
         }
 
-        // Switch back to narrative
+        // Switch back to narrative (must run even if variable update failed)
         switchView('narrative');
         updateStatsDisplay();
 
