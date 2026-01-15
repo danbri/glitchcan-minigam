@@ -602,6 +602,9 @@ main { flex: 1; min-height: 0; overflow: hidden; }
     <!-- Minigame View -->
     <div id="minigame-view" class="view">
         <div id="game-container"></div>
+        <div id="chess-container" style="display:none; width:100%; height:100%;">
+            <iframe id="chess-iframe" src="" style="width:100%; height:100%; border:none;"></iframe>
+        </div>
         <div id="minigame-instructions">Click the gems to collect them!</div>
         <div id="minigame-score">Collected: <span id="gems-collected">0</span></div>
         <button id="returnToStory">Return to Story</button>
@@ -812,9 +815,40 @@ Loading next chapter...
 This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
 + [🎵 FOLEY Sound Tour] -> foley_tour
++ [🎮 Minigame Tour] -> minigame_tour
 + [View source on GitHub] -> github_links
 + [Return to ending] -> victory
 + [Dev: World Between Worlds] -> dev_pools
+
+=== minigame_tour ===
+# CLASS: info
+Minigames can be embedded in stories via tags or links.
+
+Available minigames:
+- 💎 Gem Collector (this demo's built-in)
+- ♕ Mamikon Mini-Chess (queen vs king puzzle)
+
++ [♕ Play Mini-Chess (new tab)] -> minichess_link
++ [💎 Play Gem Collector] -> gems_demo
++ [Back] -> how_it_works
+
+=== minichess_link ===
+# CLASS: info
+Mamikon Mini-Chess: Force the black king onto the skull square (💀).
+
+Queen moves first. The king tries to escape or capture. There's a forced win!
+
+<a href="../../thumbwar/minichess.html" target="_blank">♕ Open Mini-Chess</a>
+
++ [Back to tour] -> minigame_tour
+
+=== gems_demo ===
+# CLASS: info
+Collect gems before they fade! 💎
+
+# MINIGAME: normal
+
+-> minigame_tour
 
 === foley_tour ===
 # CLASS: info
@@ -1521,6 +1555,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     const settingsBtn = document.getElementById('settingsBtn');
     const finkSandbox = document.getElementById('fink-sandbox');
     const minigameInstructions = document.getElementById('minigame-instructions');
+    const chessContainer = document.getElementById('chess-container');
+    const chessIframe = document.getElementById('chess-iframe');
 
     // Dev panel elements
     const devPanel = document.getElementById('dev-panel');
@@ -1913,8 +1949,14 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                 }
                 if (tag.startsWith('MINIGAME:')) {
                     shouldStartMinigame = true;
-                    const type = tag.replace('MINIGAME:', '').trim();
-                    minigameType = type === 'mega' ? 'mega' : 'normal';
+                    const type = tag.replace('MINIGAME:', '').trim().toLowerCase();
+                    if (type === 'chess') {
+                        minigameType = 'chess';
+                    } else if (type === 'mega') {
+                        minigameType = 'mega';
+                    } else {
+                        minigameType = 'normal';
+                    }
                     log(`Minigame tag detected! Type: ${minigameType}`, 'warn');
                 }
                 if (tag.startsWith('CLASS:')) {
@@ -2329,16 +2371,42 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
     // --- Minigame ---
     function startMinigame(mode = 'normal') {
-        log(`Starting ${mode} gem minigame!`);
+        log(`Starting ${mode} minigame!`);
+        minigameActive = true;
+        minigameMode = mode;
+
+        // Chess mode - embedded iframe
+        if (mode === 'chess') {
+            setStatus('Chess Challenge active!');
+            swimEvent('game', '♕', 'Minigame: CHESS', 'Mini-chess puzzle started', true);
+
+            // Hide gem elements, show chess
+            gameContainer.style.display = 'none';
+            minigameInstructions.style.display = 'none';
+            document.getElementById('minigame-score').style.display = 'none';
+            chessContainer.style.display = 'flex';
+
+            // Load minichess in iframe
+            chessIframe.src = '../../thumbwar/minichess.html';
+
+            switchView('minigame');
+            return;
+        }
+
+        // Gem modes (normal/mega)
         setStatus(`${mode === 'mega' ? 'MEGA ' : ''}Minigame active!`);
         swimEvent('game', '🎮', `Minigame: ${mode.toUpperCase()}`, 'Gem collection started', true);
 
-        minigameActive = true;
-        minigameMode = mode;
         gemsCollectedThisRound = 0;
         totalGemsSpawned = 0;
         gemsCollectedDisplay.textContent = '0';
         gameContainer.innerHTML = '';
+
+        // Show gem elements, hide chess
+        gameContainer.style.display = '';
+        minigameInstructions.style.display = '';
+        document.getElementById('minigame-score').style.display = '';
+        chessContainer.style.display = 'none';
 
         // Update UI for mega mode
         gameContainer.classList.toggle('mega-mode', mode === 'mega');
@@ -2480,6 +2548,44 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
     // --- Event Listeners ---
     returnToStoryBtn.addEventListener('click', endMinigame);
+
+    // Listen for postMessage from embedded minichess iframe
+    window.addEventListener('message', (e) => {
+        // Only handle minichess messages when chess minigame is active
+        if (!minigameActive || minigameMode !== 'chess') return;
+
+        if (e.data && (e.data.type === 'minichess-complete' || e.data.type === 'minichess-return')) {
+            const won = e.data.won || false;
+            log(`Chess minigame ended. Won: ${won}`, 'info');
+            swimEvent('game', won ? '🏆' : '♟️', 'Chess Complete', won ? 'Victory!' : 'Game over');
+
+            // Set story variable for chess skill
+            if (story) {
+                try {
+                    // Try to set chess_won variable if it exists
+                    if (story.variablesState['chess_won'] !== undefined) {
+                        story.variablesState['chess_won'] = won;
+                    }
+                    if (story.variablesState['chess_game_completed'] !== undefined) {
+                        story.variablesState['chess_game_completed'] = true;
+                    }
+                } catch (err) {
+                    log(`Warning: Could not set chess variables: ${err.message}`, 'error');
+                }
+            }
+
+            // Reset UI: hide chess, show gem elements for next time
+            chessContainer.style.display = 'none';
+            chessIframe.src = '';
+            gameContainer.style.display = '';
+            minigameInstructions.style.display = '';
+            document.getElementById('minigame-score').style.display = '';
+
+            minigameActive = false;
+            switchView('narrative');
+            continueStory();
+        }
+    });
 
     // Home button - shows confirmation before nuking state
     homeBtn.addEventListener('click', () => {
