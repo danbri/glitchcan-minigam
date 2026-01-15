@@ -225,6 +225,19 @@
       ]
     },
     {
+      "id": "math",
+      "title": "📐 Math",
+      "description": "Interactive mathematical concepts",
+      "scenes": [
+        {
+          "path": "math/conic-sections.json",
+          "title": "Conic Sections",
+          "subtitle": "Slice a cone to reveal circles, ellipses, parabolas, hyperbolas",
+          "isAnimated": false
+        }
+      ]
+    },
+    {
       "id": "anim",
       "title": "5. Animation",
       "description": "Time-based motion",
