@@ -6,6 +6,7 @@ VAR player_reputation = 50
 VAR investigation_style = ""
 VAR time_pressure = 3
 VAR chess_game_completed = false
+VAR chess_won = false
 VAR primary_suspect = ""
 
 # BASEHREF: media/shane/
@@ -184,19 +185,57 @@ ANDRÉ-LOUIS: Someone definitely entered through this window. But why leave such
 
 ANDRÉ-LOUIS: *concentrating deeply* Let me work through this position...
 
-You sit at the chess board, feeling the weight of the investigation. The position is complex - a queen sacrifice that should lead to mate in three moves, but only if played perfectly.
+You sit at the chess board, feeling the weight of the investigation. The position is complex - a queen sacrifice that should lead to checkmate, but only if played perfectly.
 
-<a href="../thumbwar/minichess.html" target="_blank">♕ Play Mamikon Mini-Chess</a>
+# MINIGAME: chess
 
-*After completing the chess puzzle...*
+-> chess_aftermath
 
-{chess_game_completed:
-    ANDRÉ-LOUIS: Extraordinary! This isn't just any game - it's the infamous Pemberton Gambit that won the county championship. But here's the crucial detail: the winning move requires accepting the queen sacrifice. Whoever was playing black refused to take the queen. They knew it was a trap.
-    
-    This changes everything. The killer understood chess deeply enough to recognize a master's trap. That narrows our suspects significantly.
+=== chess_aftermath ===
+
+{chess_won:
+    ~ player_reputation += 5
+    ANDRÉ-LOUIS: *standing back with satisfaction* Extraordinary! I solved the Pemberton Gambit.
+
+    Your chess mastery reveals something the casual observer would miss: this isn't just any game - it's the infamous Pemberton Gambit that won the county championship. But here's the crucial detail: the winning move requires accepting the queen sacrifice. Whoever was playing black refused to take the queen.
+
+    # CLASS: success
+    CRITICAL INSIGHT: The killer understood chess deeply enough to recognize a master's trap. This narrows our suspects significantly. Only someone who studied Lord Pemberton's games would recognize that sacrifice.
+
+    You notice fresh fingerprints on the black king - prints that don't match Lord Pemberton's pattern. Someone else moved that piece recently, and they were nervous. The prints are smudged, hurried.
+
+    + [This proves Charles knew his uncle's style]
+        ~ primary_suspect = "charles"
+        -> charles_chess_evidence
+    + [Victoria must have learned chess from him]
+        ~ primary_suspect = "victoria"
+        -> victoria_chess_evidence
+    + [Continue examining the scene] -> chess_realization
+- else:
+    ANDRÉ-LOUIS: *frowning at the board* This position is devilishly complex. I can see it's a masterful game, but I couldn't quite solve the puzzle.
+
+    Still, examining the board reveals something important: two different players were here, and one of them was clearly agitated. The black pieces have been moved hastily, without the precision of a true chess player.
+
+    -> chess_realization
 }
 
--> chess_realization
+=== charles_chess_evidence ===
+Your chess victory unlocks a crucial deduction: Charles Pemberton has studied his uncle's tournament games obsessively.
+
+ANDRÉ-LOUIS: Only someone who analyzed Lord Pemberton's championship matches would recognize this trap. Charles was desperate to prove himself his uncle's equal at the board... and perhaps at everything else.
+
+The fingerprints on the black king tell a story of panic. Charles knew the game was lost the moment his uncle played that queen sacrifice.
+
+-> deduction
+
+=== victoria_chess_evidence ===
+Your chess mastery reveals an alternative theory: Victoria was Lord Pemberton's chess student for years.
+
+ANDRÉ-LOUIS: She would know this gambit intimately. Perhaps she sat across from him that final night, not as pupil but as adversary. The student challenging the master.
+
+But why would she play so poorly? Unless... she was distracted. Or unless the game was never meant to be finished.
+
+-> deduction
 
 === chess_forensics ===
 ~ primary_suspect = "charles"
