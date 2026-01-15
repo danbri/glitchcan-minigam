@@ -186,9 +186,7 @@ ANDRÉ-LOUIS: *concentrating deeply* Let me work through this position...
 
 You sit at the chess board, feeling the weight of the investigation. The position is complex - a queen sacrifice that should lead to mate in three moves, but only if played perfectly.
 
-# MENU Play Chess Minigame
-# MENU URL codepen io danbri pen azOvvGX
-# MENU DESC Opens Mamikon Mini Chess in new tab
+<a href="../thumbwar/minichess.html" target="_blank">♕ Play Mamikon Mini-Chess</a>
 
 *After completing the chess puzzle...*
 
