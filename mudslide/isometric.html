@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mudslide Manor - Isometric Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #room-name {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-size: 24px;
+            text-shadow: 0 0 10px #ffd700, 0 0 20px #ff8c00;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        #lives {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ff4444;
+            font-size: 18px;
+            text-shadow: 0 0 10px #ff4444;
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #44ff44;
+            font-size: 18px;
+            text-shadow: 0 0 10px #44ff44;
+        }
+
+        #items {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .item-slot {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #4444ff;
+            background: rgba(0, 0, 50, 0.5);
+            box-shadow: 0 0 10px #4444ff;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: #888;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-size: 32px;
+            text-shadow: 0 0 20px #ffd700;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #title-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2a 50%, #0a0a1a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #title-screen h1 {
+            font-size: 48px;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00, 0 0 60px #ff4400;
+            margin-bottom: 20px;
+            letter-spacing: 8px;
+        }
+
+        #title-screen h2 {
+            font-size: 18px;
+            color: #88aaff;
+            text-shadow: 0 0 10px #88aaff;
+            margin-bottom: 60px;
+            letter-spacing: 4px;
+        }
+
+        #start-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            background: transparent;
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            cursor: pointer;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+
+        #start-btn:hover {
+            background: #ffd700;
+            color: #0a0a0f;
+            box-shadow: 0 0 30px #ffd700;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading">LOADING...</div>
+
+        <div id="title-screen" class="hidden">
+            <h1>MUDSLIDE MANOR</h1>
+            <h2>An Isometric Adventure</h2>
+            <button id="start-btn">PRESS TO START</button>
+        </div>
+
+        <div id="ui-overlay" class="hidden">
+            <div id="room-name">The Grand Hall</div>
+            <div id="lives">LIVES: ❤️❤️❤️</div>
+            <div id="score">SCORE: 0</div>
+            <div id="items">
+                <div class="item-slot"></div>
+                <div class="item-slot"></div>
+                <div class="item-slot"></div>
+            </div>
+            <div id="instructions">
+                ARROW KEYS / WASD: Move<br>
+                SPACE: Jump / Interact
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+        // ============================================
+        // GAME STATE
+        // ============================================
+        const gameState = {
+            lives: 3,
+            score: 0,
+            currentRoom: 'hall',
+            items: [],
+            playerPos: { x: 0, y: 0, z: 0 },
+            playerVelocity: { x: 0, y: 0, z: 0 },
+            isJumping: false,
+            keys: {},
+            started: false
+        };
+
+        // ============================================
+        // ROOM DEFINITIONS
+        // ============================================
+        const rooms = {
+            hall: {
+                name: "The Grand Hall",
+                width: 8,
+                depth: 8,
+                walls: [
+                    { x: 0, z: -4, w: 8, d: 1 },
+                    { x: 0, z: 4, w: 8, d: 1 },
+                    { x: -4, z: 0, w: 1, d: 8 },
+                    { x: 4, z: 0, w: 1, d: 6 }
+                ],
+                blocks: [
+                    { x: -2, y: 0.5, z: -2, size: 1 },
+                    { x: 2, y: 0.5, z: 2, size: 1 },
+                    { x: 0, y: 0.5, z: 0, size: 0.8, type: 'pedestal' }
+                ],
+                enemies: [
+                    { type: 'guardian', x: 2, z: -2, patrol: 'circle' }
+                ],
+                items: [
+                    { type: 'key', x: 0, y: 1.2, z: 0, color: 0xffd700 }
+                ],
+                exits: [
+                    { x: 4, z: 3, toRoom: 'dungeon', spawnX: -3, spawnZ: 0 }
+                ],
+                ambientColor: 0x334455,
+                lightColor: 0xffeedd
+            },
+            dungeon: {
+                name: "The Dark Dungeon",
+                width: 10,
+                depth: 6,
+                walls: [
+                    { x: 0, z: -3, w: 10, d: 1 },
+                    { x: 0, z: 3, w: 10, d: 1 },
+                    { x: -5, z: 0, w: 1, d: 6 },
+                    { x: 5, z: 0, w: 1, d: 4 }
+                ],
+                blocks: [
+                    { x: -3, y: 0.5, z: 0, size: 1 },
+                    { x: -3, y: 1.5, z: 0, size: 1 },
+                    { x: 0, y: 0.5, z: -1, size: 1.2 },
+                    { x: 3, y: 0.5, z: 1, size: 0.8 }
+                ],
+                enemies: [
+                    { type: 'spider', x: 1, z: 0, patrol: 'horizontal' },
+                    { type: 'spider', x: -2, z: 1, patrol: 'vertical' }
+                ],
+                items: [
+                    { type: 'gem', x: 3, y: 1, z: 1, color: 0xff4488 }
+                ],
+                exits: [
+                    { x: -4, z: 0, toRoom: 'hall', spawnX: 3, spawnZ: 3 },
+                    { x: 5, z: 2, toRoom: 'tower', spawnX: -3, spawnZ: 0 }
+                ],
+                ambientColor: 0x221133,
+                lightColor: 0x8866ff
+            },
+            tower: {
+                name: "The Wizard's Tower",
+                width: 6,
+                depth: 6,
+                walls: [
+                    { x: 0, z: -3, w: 6, d: 1 },
+                    { x: 0, z: 3, w: 6, d: 1 },
+                    { x: -3, z: 0, w: 1, d: 4 },
+                    { x: 3, z: 0, w: 1, d: 6 }
+                ],
+                blocks: [
+                    // Spiral staircase
+                    { x: -1, y: 0.3, z: -1, size: 0.8 },
+                    { x: 0, y: 0.6, z: -1, size: 0.8 },
+                    { x: 1, y: 0.9, z: -1, size: 0.8 },
+                    { x: 1, y: 1.2, z: 0, size: 0.8 },
+                    { x: 1, y: 1.5, z: 1, size: 0.8 },
+                    { x: 0, y: 1.8, z: 1, size: 0.8, type: 'magic' }
+                ],
+                enemies: [
+                    { type: 'ghost', x: 0, z: 0, patrol: 'float' }
+                ],
+                items: [
+                    { type: 'scroll', x: 0, y: 2.3, z: 1, color: 0x44ffff }
+                ],
+                exits: [
+                    { x: -3, z: 0, toRoom: 'dungeon', spawnX: 4, spawnZ: 2 }
+                ],
+                ambientColor: 0x112244,
+                lightColor: 0x44ddff
+            }
+        };
+
+        // ============================================
+        // THREE.JS SETUP
+        // ============================================
+        let scene, camera, renderer, composer;
+        let player, playerMixer;
+        let roomGroup;
+        let enemies = [];
+        let collectibles = [];
+        let clock = new THREE.Clock();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.05);
+
+            // Isometric Camera (orthographic for true isometric look)
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 12;
+            camera = new THREE.OrthographicCamera(
+                -frustumSize * aspect / 2,
+                frustumSize * aspect / 2,
+                frustumSize / 2,
+                -frustumSize / 2,
+                0.1,
+                100
+            );
+
+            // Classic isometric angle (35.264° from horizontal, 45° rotation)
+            const isoAngle = Math.atan(1 / Math.sqrt(2)); // ~35.264 degrees
+            camera.position.set(15, 15, 15);
+            camera.lookAt(0, 0, 0);
+            camera.zoom = 1.2;
+            camera.updateProjectionMatrix();
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Post-processing
+            composer = new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene, camera));
+
+            const bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.5,  // strength
+                0.4,  // radius
+                0.85  // threshold
+            );
+            composer.addPass(bloomPass);
+
+            // CRT/Retro shader effect
+            const retroShader = {
+                uniforms: {
+                    tDiffuse: { value: null },
+                    time: { value: 0 },
+                    scanlineIntensity: { value: 0.1 },
+                    vignetteIntensity: { value: 0.3 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D tDiffuse;
+                    uniform float time;
+                    uniform float scanlineIntensity;
+                    uniform float vignetteIntensity;
+                    varying vec2 vUv;
+
+                    void main() {
+                        vec4 color = texture2D(tDiffuse, vUv);
+
+                        // Subtle scanlines
+                        float scanline = sin(vUv.y * 400.0) * scanlineIntensity;
+                        color.rgb -= scanline;
+
+                        // Vignette
+                        float dist = distance(vUv, vec2(0.5));
+                        color.rgb *= 1.0 - dist * vignetteIntensity;
+
+                        // Slight chromatic aberration
+                        float aberration = 0.002;
+                        color.r = texture2D(tDiffuse, vUv + vec2(aberration, 0.0)).r;
+                        color.b = texture2D(tDiffuse, vUv - vec2(aberration, 0.0)).b;
+
+                        gl_FragColor = color;
+                    }
+                `
+            };
+            const retroPass = new ShaderPass(retroShader);
+            composer.addPass(retroPass);
+
+            // Create room container
+            roomGroup = new THREE.Group();
+            scene.add(roomGroup);
+
+            // Create player
+            createPlayer();
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', (e) => gameState.keys[e.code] = true);
+            window.addEventListener('keyup', (e) => gameState.keys[e.code] = false);
+
+            // Hide loading, show title
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('title-screen').classList.remove('hidden');
+
+            // Start button
+            document.getElementById('start-btn').addEventListener('click', startGame);
+
+            // Start animation loop
+            animate();
+        }
+
+        function startGame() {
+            document.getElementById('title-screen').classList.add('hidden');
+            document.getElementById('ui-overlay').classList.remove('hidden');
+            gameState.started = true;
+            loadRoom('hall');
+        }
+
+        // ============================================
+        // PLAYER
+        // ============================================
+        function createPlayer() {
+            player = new THREE.Group();
+
+            // Knight Lore style character - geometric shapes
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x4488ff,
+                metalness: 0.3,
+                roughness: 0.7,
+                emissive: 0x112244,
+                emissiveIntensity: 0.2
+            });
+
+            // Body (box)
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.6, 0.3),
+                bodyMat
+            );
+            body.position.y = 0.5;
+            body.castShadow = true;
+            player.add(body);
+
+            // Head (sphere)
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2, 8, 6),
+                new THREE.MeshStandardMaterial({
+                    color: 0xffccaa,
+                    roughness: 0.8
+                })
+            );
+            head.position.y = 1.0;
+            head.castShadow = true;
+            player.add(head);
+
+            // Legs
+            const legMat = new THREE.MeshStandardMaterial({
+                color: 0x333366,
+                roughness: 0.8
+            });
+
+            const leftLeg = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.3, 0.15),
+                legMat
+            );
+            leftLeg.position.set(-0.12, 0.15, 0);
+            leftLeg.castShadow = true;
+            player.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.3, 0.15),
+                legMat
+            );
+            rightLeg.position.set(0.12, 0.15, 0);
+            rightLeg.castShadow = true;
+            player.add(rightLeg);
+
+            // Arms
+            const leftArm = new THREE.Mesh(
+                new THREE.BoxGeometry(0.12, 0.4, 0.12),
+                bodyMat
+            );
+            leftArm.position.set(-0.35, 0.55, 0);
+            leftArm.castShadow = true;
+            player.add(leftArm);
+
+            const rightArm = new THREE.Mesh(
+                new THREE.BoxGeometry(0.12, 0.4, 0.12),
+                bodyMat
+            );
+            rightArm.position.set(0.35, 0.55, 0);
+            rightArm.castShadow = true;
+            player.add(rightArm);
+
+            // Glowing eyes
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const leftEye = new THREE.Mesh(
+                new THREE.SphereGeometry(0.03, 4, 4),
+                eyeMat
+            );
+            leftEye.position.set(-0.07, 1.02, 0.15);
+            player.add(leftEye);
+
+            const rightEye = new THREE.Mesh(
+                new THREE.SphereGeometry(0.03, 4, 4),
+                eyeMat
+            );
+            rightEye.position.set(0.07, 1.02, 0.15);
+            player.add(rightEye);
+
+            player.position.set(0, 0, 0);
+            scene.add(player);
+        }
+
+        // ============================================
+        // ROOM LOADING
+        // ============================================
+        function loadRoom(roomId) {
+            const room = rooms[roomId];
+            if (!room) return;
+
+            gameState.currentRoom = roomId;
+
+            // Clear previous room
+            while (roomGroup.children.length > 0) {
+                roomGroup.remove(roomGroup.children[0]);
+            }
+            enemies = [];
+            collectibles = [];
+
+            // Update UI
+            document.getElementById('room-name').textContent = room.name;
+
+            // Update lighting
+            scene.background = new THREE.Color(room.ambientColor).multiplyScalar(0.3);
+
+            // Remove old lights
+            scene.children = scene.children.filter(child =>
+                !(child instanceof THREE.Light) || child === scene.children[0]
+            );
+
+            // Ambient light
+            const ambient = new THREE.AmbientLight(room.ambientColor, 0.4);
+            scene.add(ambient);
+
+            // Main directional light (sun-like)
+            const mainLight = new THREE.DirectionalLight(room.lightColor, 1.2);
+            mainLight.position.set(10, 20, 10);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -15;
+            mainLight.shadow.camera.right = 15;
+            mainLight.shadow.camera.top = 15;
+            mainLight.shadow.camera.bottom = -15;
+            mainLight.shadow.bias = -0.0001;
+            scene.add(mainLight);
+
+            // Rim light for depth
+            const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+            rimLight.position.set(-10, 5, -10);
+            scene.add(rimLight);
+
+            // Floor
+            createFloor(room);
+
+            // Walls
+            room.walls.forEach(wall => createWall(wall, room));
+
+            // Blocks/platforms
+            room.blocks.forEach(block => createBlock(block, room));
+
+            // Enemies
+            room.enemies.forEach(enemy => createEnemy(enemy, room));
+
+            // Collectible items
+            room.items.forEach(item => createItem(item, room));
+
+            // Exit markers
+            room.exits.forEach(exit => createExit(exit, room));
+        }
+
+        function createFloor(room) {
+            // Checkered floor pattern
+            const floorGroup = new THREE.Group();
+
+            const darkMat = new THREE.MeshStandardMaterial({
+                color: 0x222233,
+                metalness: 0.1,
+                roughness: 0.9
+            });
+
+            const lightMat = new THREE.MeshStandardMaterial({
+                color: 0x333344,
+                metalness: 0.1,
+                roughness: 0.9
+            });
+
+            for (let x = -room.width / 2; x < room.width / 2; x++) {
+                for (let z = -room.depth / 2; z < room.depth / 2; z++) {
+                    const tile = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.98, 0.1, 0.98),
+                        (x + z) % 2 === 0 ? darkMat : lightMat
+                    );
+                    tile.position.set(x + 0.5, -0.05, z + 0.5);
+                    tile.receiveShadow = true;
+                    floorGroup.add(tile);
+                }
+            }
+
+            roomGroup.add(floorGroup);
+        }
+
+        function createWall(wallDef, room) {
+            // Stone wall with texture-like appearance
+            const wallMat = new THREE.MeshStandardMaterial({
+                color: 0x556677,
+                metalness: 0.0,
+                roughness: 0.95
+            });
+
+            const brickMat = new THREE.MeshStandardMaterial({
+                color: 0x445566,
+                metalness: 0.0,
+                roughness: 0.9
+            });
+
+            // Create brick pattern
+            const wallGroup = new THREE.Group();
+            const brickHeight = 0.4;
+            const wallHeight = 3;
+
+            for (let y = 0; y < wallHeight; y += brickHeight) {
+                const offset = (Math.floor(y / brickHeight) % 2) * 0.5;
+
+                if (wallDef.w > wallDef.d) {
+                    // Horizontal wall
+                    for (let x = -wallDef.w / 2; x < wallDef.w / 2; x += 1) {
+                        const brick = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.95, brickHeight - 0.02, wallDef.d - 0.02),
+                            y % (brickHeight * 2) < brickHeight ? wallMat : brickMat
+                        );
+                        brick.position.set(
+                            wallDef.x + x + 0.5 + offset,
+                            y + brickHeight / 2,
+                            wallDef.z
+                        );
+                        brick.castShadow = true;
+                        brick.receiveShadow = true;
+                        wallGroup.add(brick);
+                    }
+                } else {
+                    // Vertical wall
+                    for (let z = -wallDef.d / 2; z < wallDef.d / 2; z += 1) {
+                        const brick = new THREE.Mesh(
+                            new THREE.BoxGeometry(wallDef.w - 0.02, brickHeight - 0.02, 0.95),
+                            y % (brickHeight * 2) < brickHeight ? wallMat : brickMat
+                        );
+                        brick.position.set(
+                            wallDef.x,
+                            y + brickHeight / 2,
+                            wallDef.z + z + 0.5 + offset
+                        );
+                        brick.castShadow = true;
+                        brick.receiveShadow = true;
+                        wallGroup.add(brick);
+                    }
+                }
+            }
+
+            roomGroup.add(wallGroup);
+        }
+
+        function createBlock(blockDef, room) {
+            let geometry, material;
+
+            if (blockDef.type === 'pedestal') {
+                // Ornate pedestal
+                material = new THREE.MeshStandardMaterial({
+                    color: 0x887766,
+                    metalness: 0.4,
+                    roughness: 0.6
+                });
+
+                const pedestal = new THREE.Group();
+
+                // Base
+                const base = new THREE.Mesh(
+                    new THREE.BoxGeometry(blockDef.size * 1.2, 0.2, blockDef.size * 1.2),
+                    material
+                );
+                base.position.y = 0.1;
+                pedestal.add(base);
+
+                // Column
+                const column = new THREE.Mesh(
+                    new THREE.CylinderGeometry(blockDef.size * 0.3, blockDef.size * 0.4, 0.6, 8),
+                    material
+                );
+                column.position.y = 0.5;
+                pedestal.add(column);
+
+                // Top
+                const top = new THREE.Mesh(
+                    new THREE.BoxGeometry(blockDef.size * 1.1, 0.15, blockDef.size * 1.1),
+                    material
+                );
+                top.position.y = 0.85;
+                pedestal.add(top);
+
+                pedestal.position.set(blockDef.x, 0, blockDef.z);
+                pedestal.castShadow = true;
+                pedestal.receiveShadow = true;
+                roomGroup.add(pedestal);
+                return;
+            }
+
+            if (blockDef.type === 'magic') {
+                // Glowing magic block
+                material = new THREE.MeshStandardMaterial({
+                    color: 0x8844ff,
+                    metalness: 0.5,
+                    roughness: 0.3,
+                    emissive: 0x4422aa,
+                    emissiveIntensity: 0.5
+                });
+            } else {
+                // Regular stone block
+                material = new THREE.MeshStandardMaterial({
+                    color: 0x667788,
+                    metalness: 0.1,
+                    roughness: 0.85
+                });
+            }
+
+            geometry = new THREE.BoxGeometry(blockDef.size, blockDef.size, blockDef.size);
+            const block = new THREE.Mesh(geometry, material);
+            block.position.set(blockDef.x, blockDef.y, blockDef.z);
+            block.castShadow = true;
+            block.receiveShadow = true;
+
+            // Add collision data
+            block.userData.isBlock = true;
+            block.userData.bounds = {
+                minX: blockDef.x - blockDef.size / 2,
+                maxX: blockDef.x + blockDef.size / 2,
+                minY: blockDef.y - blockDef.size / 2,
+                maxY: blockDef.y + blockDef.size / 2,
+                minZ: blockDef.z - blockDef.size / 2,
+                maxZ: blockDef.z + blockDef.size / 2
+            };
+
+            roomGroup.add(block);
+        }
+
+        function createEnemy(enemyDef, room) {
+            const enemy = new THREE.Group();
+
+            if (enemyDef.type === 'guardian') {
+                // Knight Lore style guardian - geometric knight
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: 0xaa4444,
+                    metalness: 0.6,
+                    roughness: 0.4,
+                    emissive: 0x331111,
+                    emissiveIntensity: 0.3
+                });
+
+                // Body
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.6, 0.8, 0.4),
+                    bodyMat
+                );
+                body.position.y = 0.6;
+                body.castShadow = true;
+                enemy.add(body);
+
+                // Head (helmet)
+                const head = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.25, 0.4, 4),
+                    bodyMat
+                );
+                head.position.y = 1.2;
+                head.rotation.y = Math.PI / 4;
+                head.castShadow = true;
+                enemy.add(head);
+
+                // Glowing visor
+                const visor = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.08, 0.1),
+                    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+                );
+                visor.position.set(0, 1.05, 0.2);
+                enemy.add(visor);
+
+                // Shield
+                const shield = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.1, 0.5, 0.4),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x666666,
+                        metalness: 0.8,
+                        roughness: 0.3
+                    })
+                );
+                shield.position.set(-0.4, 0.5, 0);
+                shield.castShadow = true;
+                enemy.add(shield);
+
+            } else if (enemyDef.type === 'spider') {
+                // Ant Attack style spider
+                const spiderMat = new THREE.MeshStandardMaterial({
+                    color: 0x222222,
+                    metalness: 0.3,
+                    roughness: 0.7
+                });
+
+                // Body segments
+                const abdomen = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.25, 8, 6),
+                    spiderMat
+                );
+                abdomen.position.set(0, 0.3, -0.2);
+                abdomen.scale.set(1, 0.8, 1.2);
+                abdomen.castShadow = true;
+                enemy.add(abdomen);
+
+                const thorax = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.18, 8, 6),
+                    spiderMat
+                );
+                thorax.position.set(0, 0.3, 0.1);
+                thorax.castShadow = true;
+                enemy.add(thorax);
+
+                // Eyes (multiple, glowing)
+                for (let i = 0; i < 4; i++) {
+                    const eye = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.04, 4, 4),
+                        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+                    );
+                    eye.position.set(
+                        (i % 2 === 0 ? -0.08 : 0.08),
+                        0.35 + (i < 2 ? 0.05 : 0),
+                        0.22
+                    );
+                    enemy.add(eye);
+                }
+
+                // Legs
+                for (let i = 0; i < 8; i++) {
+                    const side = i < 4 ? -1 : 1;
+                    const index = i % 4;
+
+                    const leg = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.02, 0.015, 0.4, 4),
+                        spiderMat
+                    );
+                    leg.position.set(
+                        side * 0.25,
+                        0.15,
+                        -0.1 + index * 0.12
+                    );
+                    leg.rotation.z = side * Math.PI / 3;
+                    leg.castShadow = true;
+                    enemy.add(leg);
+                }
+
+            } else if (enemyDef.type === 'ghost') {
+                // Floating ghost
+                const ghostMat = new THREE.MeshStandardMaterial({
+                    color: 0xaaccff,
+                    metalness: 0.0,
+                    roughness: 0.5,
+                    transparent: true,
+                    opacity: 0.7,
+                    emissive: 0x4466aa,
+                    emissiveIntensity: 0.5
+                });
+
+                const body = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.4, 1, 8),
+                    ghostMat
+                );
+                body.position.y = 0.8;
+                body.rotation.x = Math.PI;
+                enemy.add(body);
+
+                // Face
+                const eyeLeft = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.08, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0x000000 })
+                );
+                eyeLeft.position.set(-0.12, 1.1, 0.25);
+                enemy.add(eyeLeft);
+
+                const eyeRight = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.08, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0x000000 })
+                );
+                eyeRight.position.set(0.12, 1.1, 0.25);
+                enemy.add(eyeRight);
+
+                const mouth = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.1, 0.03, 4, 8, Math.PI),
+                    new THREE.MeshBasicMaterial({ color: 0x000000 })
+                );
+                mouth.position.set(0, 0.9, 0.3);
+                mouth.rotation.x = Math.PI;
+                enemy.add(mouth);
+            }
+
+            enemy.position.set(enemyDef.x, 0, enemyDef.z);
+            enemy.userData = {
+                type: enemyDef.type,
+                patrol: enemyDef.patrol,
+                startX: enemyDef.x,
+                startZ: enemyDef.z,
+                phase: Math.random() * Math.PI * 2,
+                speed: 1 + Math.random() * 0.5
+            };
+
+            enemies.push(enemy);
+            roomGroup.add(enemy);
+        }
+
+        function createItem(itemDef, room) {
+            const item = new THREE.Group();
+
+            const glowMat = new THREE.MeshStandardMaterial({
+                color: itemDef.color,
+                metalness: 0.8,
+                roughness: 0.2,
+                emissive: itemDef.color,
+                emissiveIntensity: 0.5
+            });
+
+            if (itemDef.type === 'key') {
+                // Golden key
+                const ring = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.12, 0.03, 8, 16),
+                    glowMat
+                );
+                ring.rotation.x = Math.PI / 2;
+                item.add(ring);
+
+                const shaft = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.04, 0.3, 0.04),
+                    glowMat
+                );
+                shaft.position.y = -0.15;
+                item.add(shaft);
+
+                const bit1 = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.08, 0.04, 0.04),
+                    glowMat
+                );
+                bit1.position.set(0.04, -0.28, 0);
+                item.add(bit1);
+
+                const bit2 = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.06, 0.04, 0.04),
+                    glowMat
+                );
+                bit2.position.set(0.03, -0.22, 0);
+                item.add(bit2);
+
+            } else if (itemDef.type === 'gem') {
+                // Octahedral gem
+                const gem = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.15, 0),
+                    glowMat
+                );
+                item.add(gem);
+
+            } else if (itemDef.type === 'scroll') {
+                // Magic scroll
+                const scroll = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8),
+                    glowMat
+                );
+                scroll.rotation.z = Math.PI / 2;
+                item.add(scroll);
+
+                // End caps
+                const cap1 = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8),
+                    glowMat
+                );
+                cap1.rotation.z = Math.PI / 2;
+                cap1.position.x = -0.15;
+                item.add(cap1);
+
+                const cap2 = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8),
+                    glowMat
+                );
+                cap2.rotation.z = Math.PI / 2;
+                cap2.position.x = 0.15;
+                item.add(cap2);
+            }
+
+            // Point light for glow effect
+            const light = new THREE.PointLight(itemDef.color, 0.5, 3);
+            light.position.y = 0.2;
+            item.add(light);
+
+            item.position.set(itemDef.x, itemDef.y, itemDef.z);
+            item.userData = {
+                type: itemDef.type,
+                collected: false
+            };
+
+            collectibles.push(item);
+            roomGroup.add(item);
+        }
+
+        function createExit(exitDef, room) {
+            // Glowing exit portal
+            const exitGroup = new THREE.Group();
+
+            const portalMat = new THREE.MeshStandardMaterial({
+                color: 0x44ff44,
+                metalness: 0.5,
+                roughness: 0.3,
+                emissive: 0x22aa22,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            // Archway
+            const arch = new THREE.Mesh(
+                new THREE.TorusGeometry(0.6, 0.1, 8, 16, Math.PI),
+                portalMat
+            );
+            arch.position.y = 1.2;
+            arch.rotation.x = Math.PI / 2;
+            exitGroup.add(arch);
+
+            // Side pillars
+            const pillar1 = new THREE.Mesh(
+                new THREE.BoxGeometry(0.2, 1.2, 0.2),
+                portalMat
+            );
+            pillar1.position.set(-0.5, 0.6, 0);
+            exitGroup.add(pillar1);
+
+            const pillar2 = new THREE.Mesh(
+                new THREE.BoxGeometry(0.2, 1.2, 0.2),
+                portalMat
+            );
+            pillar2.position.set(0.5, 0.6, 0);
+            exitGroup.add(pillar2);
+
+            // Portal glow
+            const portalLight = new THREE.PointLight(0x44ff44, 1, 5);
+            portalLight.position.y = 1;
+            exitGroup.add(portalLight);
+
+            exitGroup.position.set(exitDef.x, 0, exitDef.z);
+            exitGroup.userData = {
+                toRoom: exitDef.toRoom,
+                spawnX: exitDef.spawnX,
+                spawnZ: exitDef.spawnZ
+            };
+            exitGroup.userData.isExit = true;
+
+            roomGroup.add(exitGroup);
+        }
+
+        // ============================================
+        // GAME LOOP
+        // ============================================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            if (gameState.started) {
+                updatePlayer(delta, time);
+                updateEnemies(delta, time);
+                updateCollectibles(delta, time);
+                checkCollisions();
+            }
+
+            // Update retro shader time
+            const retroPass = composer.passes.find(p => p.uniforms && p.uniforms.time);
+            if (retroPass) {
+                retroPass.uniforms.time.value = time;
+            }
+
+            composer.render();
+        }
+
+        function updatePlayer(delta, time) {
+            const speed = 4;
+            const jumpForce = 8;
+            const gravity = 20;
+
+            // Input handling - isometric movement
+            let moveX = 0;
+            let moveZ = 0;
+
+            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) {
+                moveX -= 1;
+                moveZ -= 1;
+            }
+            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) {
+                moveX += 1;
+                moveZ += 1;
+            }
+            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) {
+                moveX -= 1;
+                moveZ += 1;
+            }
+            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) {
+                moveX += 1;
+                moveZ -= 1;
+            }
+
+            // Normalize diagonal movement
+            if (moveX !== 0 || moveZ !== 0) {
+                const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                moveX /= len;
+                moveZ /= len;
+
+                // Rotate player to face movement direction
+                player.rotation.y = Math.atan2(moveX, moveZ);
+            }
+
+            // Apply movement
+            gameState.playerVelocity.x = moveX * speed;
+            gameState.playerVelocity.z = moveZ * speed;
+
+            // Jumping
+            if ((gameState.keys['Space'] || gameState.keys['KeyX']) && !gameState.isJumping) {
+                gameState.playerVelocity.y = jumpForce;
+                gameState.isJumping = true;
+            }
+
+            // Apply gravity
+            gameState.playerVelocity.y -= gravity * delta;
+
+            // Update position
+            player.position.x += gameState.playerVelocity.x * delta;
+            player.position.y += gameState.playerVelocity.y * delta;
+            player.position.z += gameState.playerVelocity.z * delta;
+
+            // Ground collision
+            if (player.position.y < 0) {
+                player.position.y = 0;
+                gameState.playerVelocity.y = 0;
+                gameState.isJumping = false;
+            }
+
+            // Room bounds
+            const room = rooms[gameState.currentRoom];
+            const margin = 0.5;
+            player.position.x = Math.max(-room.width / 2 + margin,
+                Math.min(room.width / 2 - margin, player.position.x));
+            player.position.z = Math.max(-room.depth / 2 + margin,
+                Math.min(room.depth / 2 - margin, player.position.z));
+
+            // Walking animation
+            if (moveX !== 0 || moveZ !== 0) {
+                const bobSpeed = 12;
+                const bobAmount = 0.05;
+                player.children.forEach((child, i) => {
+                    if (i > 0) { // Skip body for different animation
+                        child.position.y += Math.sin(time * bobSpeed + i) * bobAmount * delta * 10;
+                    }
+                });
+            }
+
+            // Check exit triggers
+            checkExits();
+        }
+
+        function updateEnemies(delta, time) {
+            enemies.forEach(enemy => {
+                const data = enemy.userData;
+                const patrolRadius = 2;
+                const speed = data.speed;
+
+                if (data.patrol === 'circle') {
+                    enemy.position.x = data.startX + Math.cos(time * speed + data.phase) * patrolRadius;
+                    enemy.position.z = data.startZ + Math.sin(time * speed + data.phase) * patrolRadius;
+                    enemy.rotation.y = time * speed + data.phase + Math.PI / 2;
+
+                } else if (data.patrol === 'horizontal') {
+                    enemy.position.x = data.startX + Math.sin(time * speed + data.phase) * patrolRadius;
+                    enemy.rotation.y = Math.sin(time * speed + data.phase) > 0 ? 0 : Math.PI;
+
+                } else if (data.patrol === 'vertical') {
+                    enemy.position.z = data.startZ + Math.sin(time * speed + data.phase) * patrolRadius;
+                    enemy.rotation.y = Math.sin(time * speed + data.phase) > 0 ? Math.PI / 2 : -Math.PI / 2;
+
+                } else if (data.patrol === 'float') {
+                    enemy.position.y = 0.5 + Math.sin(time * 2 + data.phase) * 0.3;
+                    enemy.rotation.y = time * 0.5;
+                }
+
+                // Spider leg animation
+                if (data.type === 'spider') {
+                    enemy.children.forEach((child, i) => {
+                        if (child.geometry && child.geometry.type === 'CylinderGeometry') {
+                            child.rotation.x = Math.sin(time * 8 + i * 0.5) * 0.3;
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateCollectibles(delta, time) {
+            collectibles.forEach(item => {
+                if (!item.userData.collected) {
+                    // Floating animation
+                    item.position.y = item.userData.originalY || item.position.y;
+                    if (!item.userData.originalY) {
+                        item.userData.originalY = item.position.y;
+                    }
+                    item.position.y = item.userData.originalY + Math.sin(time * 3) * 0.1;
+
+                    // Rotation
+                    item.rotation.y = time * 2;
+                }
+            });
+        }
+
+        function checkCollisions() {
+            // Enemy collision
+            enemies.forEach(enemy => {
+                const dx = player.position.x - enemy.position.x;
+                const dz = player.position.z - enemy.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < 0.6) {
+                    // Hit by enemy
+                    hitPlayer();
+                }
+            });
+
+            // Item collection
+            collectibles.forEach(item => {
+                if (!item.userData.collected) {
+                    const dx = player.position.x - item.position.x;
+                    const dy = player.position.y - item.position.y;
+                    const dz = player.position.z - item.position.z;
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (dist < 0.5) {
+                        collectItem(item);
+                    }
+                }
+            });
+        }
+
+        function checkExits() {
+            roomGroup.children.forEach(child => {
+                if (child.userData.isExit) {
+                    const dx = player.position.x - child.position.x;
+                    const dz = player.position.z - child.position.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < 0.8) {
+                        // Transition to new room
+                        const exitData = child.userData;
+                        loadRoom(exitData.toRoom);
+                        player.position.set(exitData.spawnX, 0, exitData.spawnZ);
+                    }
+                }
+            });
+        }
+
+        function hitPlayer() {
+            gameState.lives--;
+            updateUI();
+
+            // Flash effect
+            player.children.forEach(child => {
+                if (child.material) {
+                    const originalColor = child.material.color.getHex();
+                    child.material.color.setHex(0xff0000);
+                    setTimeout(() => {
+                        child.material.color.setHex(originalColor);
+                    }, 200);
+                }
+            });
+
+            // Knockback
+            gameState.playerVelocity.x = -gameState.playerVelocity.x * 2;
+            gameState.playerVelocity.z = -gameState.playerVelocity.z * 2;
+            gameState.playerVelocity.y = 5;
+
+            // Reset position if out of lives
+            if (gameState.lives <= 0) {
+                gameState.lives = 3;
+                gameState.score = Math.max(0, gameState.score - 100);
+                loadRoom('hall');
+                player.position.set(0, 0, 0);
+            }
+
+            updateUI();
+        }
+
+        function collectItem(item) {
+            item.userData.collected = true;
+            item.visible = false;
+
+            gameState.score += 50;
+            gameState.items.push(item.userData.type);
+
+            updateUI();
+        }
+
+        function updateUI() {
+            const hearts = '❤️'.repeat(gameState.lives);
+            document.getElementById('lives').textContent = `LIVES: ${hearts}`;
+            document.getElementById('score').textContent = `SCORE: ${gameState.score}`;
+
+            // Update item slots
+            const slots = document.querySelectorAll('.item-slot');
+            gameState.items.slice(-3).forEach((item, i) => {
+                if (slots[i]) {
+                    const symbols = {
+                        key: '🔑',
+                        gem: '💎',
+                        scroll: '📜'
+                    };
+                    slots[i].textContent = symbols[item] || '?';
+                    slots[i].style.fontSize = '24px';
+                    slots[i].style.display = 'flex';
+                    slots[i].style.alignItems = 'center';
+                    slots[i].style.justifyContent = 'center';
+                }
+            });
+        }
+
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 12;
+
+            camera.left = -frustumSize * aspect / 2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = -frustumSize / 2;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
