@@ -1,6 +1,6 @@
 oooOO`
 
-# BASEHREF: ../media/
+# BASEHREF: media/
 # IMPORT: diamonds, mega_diamonds
 
 // --- Variables ---
@@ -136,7 +136,7 @@ Queues coil like serpents.
 === giro_fraud_video ===
 #BG:#200
 # CLASS: danger
-# BASEHREF: ../media/
+# BASEHREF: media/
 The clerk's eyes narrow. "You've already cashed this one, haven't you?"
 
 Before you can protest, a TV on the wall flickers to life...
