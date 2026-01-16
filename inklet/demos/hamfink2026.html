@@ -2653,10 +2653,13 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'choice';
         confirmBtn.textContent = 'Yes, return to main menu';
+        // Enable after animation (with fallback timeout)
         confirmBtn.addEventListener('animationend', () => confirmBtn.classList.add('ready'), { once: true });
+        setTimeout(() => confirmBtn.classList.add('ready'), 600);
         confirmBtn.addEventListener('click', () => {
             if (!confirmBtn.classList.contains('ready')) return;
             log('Home confirmed - returning to main story');
+            SoundSynth.stop(); // Stop all FOLEY sounds
             storyOutput.innerHTML = '';
             choicesContainer.innerHTML = '';
             minigameActive = false;
@@ -2672,7 +2675,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'choice';
         cancelBtn.textContent = 'No, continue playing';
+        // Enable after animation (with fallback timeout)
         cancelBtn.addEventListener('animationend', () => cancelBtn.classList.add('ready'), { once: true });
+        setTimeout(() => cancelBtn.classList.add('ready'), 700);
         cancelBtn.addEventListener('click', () => {
             if (!cancelBtn.classList.contains('ready')) return;
             warning.remove();
