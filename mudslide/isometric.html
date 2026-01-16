@@ -4,904 +4,1014 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="format-detection" content="telephone=no">
     <title>Mudslide Manor</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+        body { background: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, sans-serif; position: fixed; inset: 0; touch-action: none; }
+        #game-container { width: 100%; height: 100%; position: relative; touch-action: none; }
+        canvas { display: block; touch-action: none; }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) 12px; }
+        #top-bar { display: flex; justify-content: space-between; align-items: center; }
+        #lives { font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        #room-name { color: #fff; font-size: 16px; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+        #gems { color: #0ff; font-size: 20px; font-weight: bold; text-shadow: 0 0 10px #0ff; }
 
-        body {
-            background: #1a1a2e;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            position: fixed;
-            inset: 0;
-            touch-action: none;
-        }
+        #items-bar { position: absolute; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+        .item-slot { width: 44px; height: 44px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; backdrop-filter: blur(8px); }
 
-        #game-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            touch-action: none;
-        }
+        #hint { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 14px; text-align: center; transition: opacity 0.5s; }
+        #hint.hidden { opacity: 0; }
 
-        canvas {
-            display: block;
-            touch-action: none;
-        }
-
-        /* Clean minimal UI */
-        #ui-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
-        }
-
-        #top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #lives {
-            font-size: clamp(20px, 5vw, 28px);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-        }
-
-        #room-name {
-            color: #fff;
-            font-size: clamp(14px, 3.5vw, 20px);
-            font-weight: 600;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            letter-spacing: 1px;
-        }
-
-        #score {
-            color: #90EE90;
-            font-size: clamp(16px, 4vw, 22px);
-            font-weight: bold;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-        }
-
-        #items {
-            position: absolute;
-            top: max(50px, calc(env(safe-area-inset-top) + 40px));
-            right: max(12px, env(safe-area-inset-right));
-            display: flex;
-            gap: 8px;
-        }
-
-        .item-slot {
-            width: clamp(40px, 10vw, 50px);
-            height: clamp(40px, 10vw, 50px);
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(20px, 5vw, 26px);
-            backdrop-filter: blur(4px);
-        }
-
-        /* Touch hint */
-        #touch-hint {
-            position: absolute;
-            bottom: max(20px, env(safe-area-inset-bottom));
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255,255,255,0.6);
-            font-size: 14px;
-            text-align: center;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        }
-
-        #touch-hint.hidden {
-            opacity: 0;
-        }
-
-        /* Touch indicator */
-        #touch-indicator {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            border: 3px solid rgba(255,215,0,0.6);
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.5);
-            transition: opacity 0.15s, transform 0.15s;
-        }
-
-        #touch-indicator.active {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        /* Loading & Title */
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffd700;
-            font-size: clamp(24px, 8vw, 36px);
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        #title-screen {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            padding: 20px;
-            text-align: center;
-        }
-
-        #title-screen h1 {
-            font-size: clamp(32px, 12vw, 64px);
-            color: #ffd700;
-            text-shadow: 0 4px 20px rgba(255,215,0,0.5);
-            margin-bottom: 8px;
-        }
-
-        #title-screen h2 {
-            font-size: clamp(14px, 4vw, 20px);
-            color: #88aaff;
-            margin-bottom: 50px;
-            font-weight: normal;
-        }
-
-        #start-btn {
-            min-width: 220px;
-            min-height: 64px;
-            padding: 20px 60px;
-            font-size: clamp(20px, 5vw, 26px);
-            font-weight: bold;
-            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-            border: none;
-            border-radius: 32px;
-            color: #1a1a2e;
-            cursor: pointer;
-            box-shadow: 0 8px 30px rgba(255,215,0,0.4);
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            transition: transform 0.1s;
-        }
-
-        #start-btn:active {
-            transform: scale(0.95);
-        }
+        #title { position: absolute; inset: 0; background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #title h1 { font-size: clamp(36px, 14vw, 72px); color: #ffd700; text-shadow: 0 0 30px #ffd700, 0 0 60px #ff8c00; margin-bottom: 8px; }
+        #title h2 { font-size: clamp(14px, 4vw, 22px); color: #88f; margin-bottom: 50px; font-weight: 300; }
+        #play-btn { padding: 20px 60px; font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; border-radius: 50px; color: #1a1a2e; box-shadow: 0 8px 40px rgba(255,215,0,0.5); touch-action: manipulation; }
+        #play-btn:active { transform: scale(0.95); }
 
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="loading">LOADING...</div>
-
-        <div id="title-screen" class="hidden">
-            <h1>MUDSLIDE MANOR</h1>
-            <h2>An Isometric Adventure</h2>
-            <button id="start-btn">TAP TO PLAY</button>
-        </div>
-
-        <div id="ui-overlay" class="hidden">
-            <div id="top-bar">
-                <div id="lives">❤️❤️❤️</div>
-                <div id="room-name">The Grand Hall</div>
-                <div id="score">0</div>
-            </div>
-            <div id="items">
-                <div class="item-slot"></div>
-                <div class="item-slot"></div>
-                <div class="item-slot"></div>
-            </div>
-            <div id="touch-hint">Touch & drag to move · Double-tap to jump</div>
-        </div>
-
-        <div id="touch-indicator"></div>
+<div id="game-container">
+    <div id="title">
+        <h1>MUDSLIDE MANOR</h1>
+        <h2>A Mysterious Adventure</h2>
+        <button id="play-btn">PLAY</button>
     </div>
+    <div id="ui" class="hidden">
+        <div id="top-bar">
+            <div id="lives">❤️❤️❤️</div>
+            <div id="room-name">The Entrance</div>
+            <div id="gems">💎 0</div>
+        </div>
+        <div id="items-bar">
+            <div class="item-slot"></div>
+            <div class="item-slot"></div>
+            <div class="item-slot"></div>
+            <div class="item-slot"></div>
+        </div>
+        <div id="hint">Tap where you want to go · Double-tap to jump</div>
+    </div>
+</div>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ═══════════════════════════════════════════════════════════════
+// GAME CONFIG
+// ═══════════════════════════════════════════════════════════════
+const G = {
+    lives: 3, gems: 0, room: 0, items: [], started: false,
+    vel: new THREE.Vector3(), jumping: false, grounded: true,
+    target: null, // tap-to-move target
+    camTarget: new THREE.Vector3(),
+    invincible: 0
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 10 MYSTERIOUS ROOMS
+// ═══════════════════════════════════════════════════════════════
+const ROOMS = [
+    { name: "The Overgrown Entrance", w: 10, h: 10, floor: 0x3d5c3d, wall: 0x6b4423, sky: 0x4a7c59, fog: 0x2d4a2d,
+      features: ['vines', 'moss'], gems: [{x:-2,z:2},{x:2,z:-2},{x:0,z:3}], rings: [{x:-3,z:0}],
+      enemies: [{type:'snake',x:2,z:0}], exits: [{x:5,z:0,to:1}] },
+
+    { name: "Crystal Cavern", w: 12, h: 8, floor: 0x2a3a4a, wall: 0x1a2a3a, sky: 0x0a1a2a, fog: 0x152535,
+      features: ['crystals', 'glow'], gems: [{x:-4,z:2},{x:3,z:-2},{x:0,z:0},{x:-2,z:-1}], emeralds: [{x:4,z:1}],
+      enemies: [{type:'bat',x:0,z:2},{type:'bat',x:-3,z:-1}], exits: [{x:-6,z:0,to:0},{x:6,z:0,to:2}] },
+
+    { name: "The Throne Room", w: 14, h: 10, floor: 0x4a3a3a, wall: 0x8b4513, sky: 0x2a1a1a, fog: 0x1a0a0a,
+      features: ['throne', 'torches'], gems: [{x:-5,z:3},{x:5,z:3},{x:0,z:-3}], coins: [{x:-2,z:0},{x:2,z:0}],
+      enemies: [{type:'guard',x:0,z:2}], exits: [{x:-7,z:0,to:1},{x:7,z:0,to:3}] },
+
+    { name: "Poison Garden", w: 10, h: 12, floor: 0x2a4a2a, wall: 0x3a2a1a, sky: 0x3a5a3a, fog: 0x1a3a1a,
+      features: ['vines', 'flowers', 'glow'], gems: [{x:-3,z:4},{x:3,z:-4},{x:0,z:0}], emeralds: [{x:-2,z:-3},{x:2,z:3}],
+      enemies: [{type:'snake',x:-2,z:2},{type:'snake',x:2,z:-2}], exits: [{x:0,z:-6,to:2},{x:0,z:6,to:4}] },
+
+    { name: "The Flooded Crypt", w: 12, h: 10, floor: 0x1a3a4a, wall: 0x2a4a5a, sky: 0x0a2a3a, fog: 0x0a1a2a,
+      features: ['water', 'glow'], gems: [{x:-4,z:-3},{x:4,z:3},{x:-2,z:2},{x:2,z:-2}], rings: [{x:0,z:0}],
+      enemies: [{type:'ghost',x:3,z:0}], exits: [{x:0,z:-5,to:3},{x:6,z:0,to:5}] },
+
+    { name: "Lava Bridge", w: 8, h: 14, floor: 0x3a2a1a, wall: 0x4a3a2a, sky: 0x4a1a0a, fog: 0x2a0a00,
+      features: ['lava', 'bridge'], gems: [{x:0,z:-5},{x:0,z:0},{x:0,z:5}], coins: [{x:-2,z:-3},{x:2,z:3}],
+      enemies: [{type:'fireball',x:0,z:-2},{type:'fireball',x:0,z:2}], exits: [{x:-4,z:0,to:4},{x:4,z:0,to:6}] },
+
+    { name: "The Library", w: 12, h: 12, floor: 0x4a3a2a, wall: 0x3a2a1a, sky: 0x2a2a3a, fog: 0x1a1a2a,
+      features: ['books', 'candles'], gems: [{x:-4,z:-4},{x:4,z:4},{x:-4,z:4},{x:4,z:-4}], scrolls: [{x:0,z:0}],
+      enemies: [{type:'ghost',x:-2,z:0},{type:'ghost',x:2,z:0}], exits: [{x:-6,z:0,to:5},{x:6,z:0,to:7}] },
+
+    { name: "Spider's Lair", w: 10, h: 10, floor: 0x1a1a2a, wall: 0x2a2a3a, sky: 0x0a0a1a, fog: 0x050510,
+      features: ['webs', 'glow'], gems: [{x:-3,z:-3},{x:3,z:3},{x:-3,z:3},{x:3,z:-3},{x:0,z:0}],
+      enemies: [{type:'spider',x:-2,z:0},{type:'spider',x:2,z:0},{type:'spider',x:0,z:2}], exits: [{x:-5,z:0,to:6},{x:5,z:0,to:8}] },
+
+    { name: "The Observatory", w: 12, h: 12, floor: 0x2a2a4a, wall: 0x3a3a5a, sky: 0x0a0a2a, fog: 0x050515,
+      features: ['stars', 'telescope'], gems: [{x:-4,z:0},{x:4,z:0},{x:0,z:-4},{x:0,z:4}], emeralds: [{x:0,z:0}],
+      enemies: [{type:'bat',x:-3,z:-3},{type:'bat',x:3,z:3}], exits: [{x:0,z:-6,to:7},{x:0,z:6,to:9}] },
+
+    { name: "The Treasure Vault", w: 14, h: 14, floor: 0x5a4a1a, wall: 0x6a5a2a, sky: 0x4a3a0a, fog: 0x2a1a00,
+      features: ['gold', 'glow'], gems: [{x:-5,z:-5},{x:5,z:5},{x:-5,z:5},{x:5,z:-5},{x:0,z:0},{x:-3,z:0},{x:3,z:0},{x:0,z:-3},{x:0,z:3}],
+      emeralds: [{x:-2,z:-2},{x:2,z:2}], rings: [{x:0,z:0}], coins: [{x:-4,z:0},{x:4,z:0},{x:0,z:-4},{x:0,z:4}],
+      enemies: [{type:'guard',x:-3,z:-3},{type:'guard',x:3,z:3}], exits: [{x:0,z:-7,to:8}] }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════════
+let scene, camera, renderer, clock;
+let player, roomGroup, particleSystem;
+let enemies = [], collectibles = [], decorations = [];
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function init() {
+    clock = new THREE.Clock();
+    scene = new THREE.Scene();
+
+    // Smooth camera
+    const aspect = window.innerWidth / window.innerHeight;
+    camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+    camera.position.set(0, 12, 12);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('game-container').appendChild(renderer.domElement);
+
+    roomGroup = new THREE.Group();
+    scene.add(roomGroup);
+
+    createPlayer();
+    createParticles();
+    setupControls();
+
+    document.getElementById('play-btn').onclick = startGame;
+    window.onresize = onResize;
+
+    animate();
+}
+
+function startGame() {
+    if (G.started) return;
+    G.started = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('ui').classList.remove('hidden');
+    loadRoom(0);
+    setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    if (navigator.vibrate) navigator.vibrate(30);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYER - Cute adventurer
+// ═══════════════════════════════════════════════════════════════
+function createPlayer() {
+    player = new THREE.Group();
+
+    // Body
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x44aaff });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 0.4, 8, 16), bodyMat);
+    body.position.y = 0.55;
+    body.castShadow = true;
+    player.add(body);
+
+    // Head
+    const headMat = new THREE.MeshLambertMaterial({ color: 0xffddcc });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), headMat);
+    head.position.y = 1.1;
+    head.castShadow = true;
+    player.add(head);
+
+    // Hair
+    const hairMat = new THREE.MeshLambertMaterial({ color: 0x553322 });
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+    hair.position.y = 1.2;
+    player.add(hair);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+    [-0.1, 0.1].forEach(x => {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+        eye.position.set(x, 1.15, 0.22);
+        player.add(eye);
+        // Eye shine
+        const shine = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        shine.position.set(x + 0.02, 1.17, 0.25);
+        player.add(shine);
+    });
+
+    // Backpack
+    const packMat = new THREE.MeshLambertMaterial({ color: 0x886644 });
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.2), packMat);
+    pack.position.set(0, 0.6, -0.2);
+    pack.castShadow = true;
+    player.add(pack);
+
+    scene.add(player);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PARTICLES - Floating magical dust
+// ═══════════════════════════════════════════════════════════════
+function createParticles() {
+    const geo = new THREE.BufferGeometry();
+    const count = 200;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 20;
+        positions[i * 3 + 1] = Math.random() * 5;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+
+        const c = new THREE.Color().setHSL(Math.random() * 0.2 + 0.5, 0.8, 0.6);
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+    }
+
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const mat = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, transparent: true, opacity: 0.6 });
+    particleSystem = new THREE.Points(geo, mat);
+    scene.add(particleSystem);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROOM LOADING
+// ═══════════════════════════════════════════════════════════════
+function loadRoom(idx) {
+    const room = ROOMS[idx];
+    G.room = idx;
+
+    // Clear
+    while (roomGroup.children.length) roomGroup.remove(roomGroup.children[0]);
+    enemies = [];
+    collectibles = [];
+    decorations = [];
+
+    document.getElementById('room-name').textContent = room.name;
+
+    // Sky & fog
+    scene.background = new THREE.Color(room.sky);
+    scene.fog = new THREE.FogExp2(room.fog, 0.04);
+
+    // Lights
+    scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    const sun = new THREE.DirectionalLight(0xffffee, 1.2);
+    sun.position.set(8, 15, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 50;
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -15;
+    sun.shadow.camera.right = sun.shadow.camera.top = 15;
+    scene.add(sun);
+
+    // Floor
+    createFloor(room);
+
+    // Walls
+    createWalls(room);
+
+    // Features
+    createFeatures(room);
+
+    // Collectibles
+    (room.gems || []).forEach(p => createCollectible('gem', p.x, p.z, 0x00ffff));
+    (room.emeralds || []).forEach(p => createCollectible('emerald', p.x, p.z, 0x00ff44));
+    (room.rings || []).forEach(p => createCollectible('ring', p.x, p.z, 0xffdd00));
+    (room.coins || []).forEach(p => createCollectible('coin', p.x, p.z, 0xffcc00));
+    (room.scrolls || []).forEach(p => createCollectible('scroll', p.x, p.z, 0xffeecc));
+
+    // Enemies
+    (room.enemies || []).forEach(e => createEnemy(e));
+
+    // Exits
+    (room.exits || []).forEach(e => createExit(e));
+
+    // Player spawn
+    if (!player.parent) scene.add(player);
+    player.position.set(0, 0, 0);
+    G.camTarget.set(0, 0, 0);
+}
+
+function createFloor(room) {
+    const mat1 = new THREE.MeshLambertMaterial({ color: room.floor });
+    const mat2 = new THREE.MeshLambertMaterial({ color: new THREE.Color(room.floor).multiplyScalar(0.9) });
+
+    for (let x = -room.w / 2; x < room.w / 2; x++) {
+        for (let z = -room.h / 2; z < room.h / 2; z++) {
+            const tile = new THREE.Mesh(
+                new THREE.BoxGeometry(0.98, 0.2, 0.98),
+                (x + z) % 2 === 0 ? mat1 : mat2
+            );
+            tile.position.set(x + 0.5, -0.1, z + 0.5);
+            tile.receiveShadow = true;
+            tile.userData.floor = true;
+            roomGroup.add(tile);
         }
     }
-    </script>
+}
 
-    <script type="module">
-        import * as THREE from 'three';
+function createWalls(room) {
+    const mat = new THREE.MeshLambertMaterial({ color: room.wall });
+    const h = 2.5;
 
-        // ============================================
-        // SETUP
-        // ============================================
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    // Four walls with gaps for exits
+    const exits = ROOMS[G.room].exits || [];
 
-        const gameState = {
-            lives: 3,
-            score: 0,
-            currentRoom: 'hall',
-            items: [],
-            playerVelocity: { x: 0, y: 0, z: 0 },
-            isJumping: false,
-            keys: {},
-            started: false,
-            touchInput: { x: 0, z: 0 },
-            touchActive: false
-        };
+    [[-room.w/2 - 0.5, 0, 0, 1, room.h], [room.w/2 + 0.5, 0, 0, 1, room.h],
+     [0, 0, -room.h/2 - 0.5, room.w, 1], [0, 0, room.h/2 + 0.5, room.w, 1]].forEach(([x, y, z, w, d]) => {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        wall.position.set(x, h/2, z);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        roomGroup.add(wall);
+    });
+}
 
-        // ============================================
-        // ROOMS - Brighter colors!
-        // ============================================
-        const rooms = {
-            hall: {
-                name: "The Grand Hall",
-                width: 8, depth: 8,
-                walls: [
-                    { x: 0, z: -4, w: 8, d: 1 },
-                    { x: 0, z: 4, w: 8, d: 1 },
-                    { x: -4, z: 0, w: 1, d: 8 },
-                    { x: 4, z: 0, w: 1, d: 6 }
-                ],
-                blocks: [
-                    { x: -2, y: 0.5, z: -2, size: 1 },
-                    { x: 2, y: 0.5, z: 2, size: 1 },
-                    { x: 0, y: 0.5, z: 0, size: 0.8, type: 'pedestal' }
-                ],
-                enemies: [{ type: 'guardian', x: 2, z: -2, patrol: 'circle' }],
-                items: [{ type: 'key', x: 0, y: 1.2, z: 0, color: 0xffd700 }],
-                exits: [{ x: 4, z: 3, toRoom: 'dungeon', spawnX: -3, spawnZ: 0 }],
-                floorColor: 0x4a6741,
-                floorColor2: 0x5c7a52,
-                wallColor: 0x8B7355,
-                ambient: 0xffffff,
-                light: 0xfffaf0,
-                bgColor: 0x87CEEB
-            },
-            dungeon: {
-                name: "The Dark Dungeon",
-                width: 10, depth: 6,
-                walls: [
-                    { x: 0, z: -3, w: 10, d: 1 },
-                    { x: 0, z: 3, w: 10, d: 1 },
-                    { x: -5, z: 0, w: 1, d: 6 },
-                    { x: 5, z: 0, w: 1, d: 4 }
-                ],
-                blocks: [
-                    { x: -3, y: 0.5, z: 0, size: 1 },
-                    { x: -3, y: 1.5, z: 0, size: 1 },
-                    { x: 0, y: 0.5, z: -1, size: 1.2 },
-                    { x: 3, y: 0.5, z: 1, size: 0.8 }
-                ],
-                enemies: [
-                    { type: 'spider', x: 1, z: 0, patrol: 'horizontal' },
-                    { type: 'spider', x: -2, z: 1, patrol: 'vertical' }
-                ],
-                items: [{ type: 'gem', x: 3, y: 1, z: 1, color: 0xff69b4 }],
-                exits: [
-                    { x: -4, z: 0, toRoom: 'hall', spawnX: 3, spawnZ: 3 },
-                    { x: 5, z: 2, toRoom: 'tower', spawnX: -2, spawnZ: 0 }
-                ],
-                floorColor: 0x4a4a5a,
-                floorColor2: 0x5a5a6a,
-                wallColor: 0x6a5a7a,
-                ambient: 0xddeeff,
-                light: 0xaabbff,
-                bgColor: 0x2a2a4a
-            },
-            tower: {
-                name: "Wizard's Tower",
-                width: 6, depth: 6,
-                walls: [
-                    { x: 0, z: -3, w: 6, d: 1 },
-                    { x: 0, z: 3, w: 6, d: 1 },
-                    { x: -3, z: 0, w: 1, d: 4 },
-                    { x: 3, z: 0, w: 1, d: 6 }
-                ],
-                blocks: [
-                    { x: -1, y: 0.3, z: -1, size: 0.8 },
-                    { x: 0, y: 0.6, z: -1, size: 0.8 },
-                    { x: 1, y: 0.9, z: -1, size: 0.8 },
-                    { x: 1, y: 1.2, z: 0, size: 0.8 },
-                    { x: 1, y: 1.5, z: 1, size: 0.8 },
-                    { x: 0, y: 1.8, z: 1, size: 0.8, type: 'magic' }
-                ],
-                enemies: [{ type: 'ghost', x: 0, z: 0, patrol: 'float' }],
-                items: [{ type: 'scroll', x: 0, y: 2.3, z: 1, color: 0x00ffff }],
-                exits: [{ x: -3, z: 0, toRoom: 'dungeon', spawnX: 4, spawnZ: 2 }],
-                floorColor: 0x4a5a8a,
-                floorColor2: 0x5a6a9a,
-                wallColor: 0x7a8aaa,
-                ambient: 0xeeeeff,
-                light: 0xaaddff,
-                bgColor: 0x3a4a6a
-            }
-        };
+function createFeatures(room) {
+    const features = room.features || [];
 
-        // ============================================
-        // THREE.JS
-        // ============================================
-        let scene, camera, renderer;
-        let player, roomGroup;
-        let enemies = [], collectibles = [];
-        let clock = new THREE.Clock();
-
-        function init() {
-            scene = new THREE.Scene();
-
-            // Bright sky background
-            scene.background = new THREE.Color(0x87CEEB);
-
-            // Isometric camera
-            const aspect = window.innerWidth / window.innerHeight;
-            const size = isMobile ? 9 : 11;
-            camera = new THREE.OrthographicCamera(
-                -size * aspect / 2, size * aspect / 2,
-                size / 2, -size / 2, 0.1, 100
+    if (features.includes('vines')) {
+        for (let i = 0; i < 8; i++) {
+            const vine = createVine();
+            vine.position.set(
+                (Math.random() - 0.5) * room.w * 0.8,
+                0,
+                (Math.random() - 0.5) * room.h * 0.8
             );
-            camera.position.set(12, 12, 12);
-            camera.lookAt(0, 0, 0);
-
-            // Renderer - no post processing, just clean bright render
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.outputColorSpace = THREE.SRGBColorSpace;
-            document.getElementById('game-container').appendChild(renderer.domElement);
-
-            roomGroup = new THREE.Group();
-            scene.add(roomGroup);
-
-            createPlayer();
-            setupInput();
-
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('title-screen').classList.remove('hidden');
-
-            const startBtn = document.getElementById('start-btn');
-            const startGame = () => {
-                if (gameState.started) return;
-                document.getElementById('title-screen').classList.add('hidden');
-                document.getElementById('ui-overlay').classList.remove('hidden');
-                gameState.started = true;
-                loadRoom('hall');
-                if (navigator.vibrate) navigator.vibrate(30);
-                // Hide hint after 5 seconds
-                setTimeout(() => {
-                    document.getElementById('touch-hint').classList.add('hidden');
-                }, 5000);
-            };
-            startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
-            startBtn.addEventListener('click', startGame);
-
-            window.addEventListener('resize', onResize);
-            animate();
+            roomGroup.add(vine);
+            decorations.push(vine);
         }
+    }
 
-        // ============================================
-        // TOUCH CONTROLS - Direct screen touch
-        // ============================================
-        function setupInput() {
-            const container = document.getElementById('game-container');
-            const indicator = document.getElementById('touch-indicator');
-            let touchId = null;
-            let lastTap = 0;
+    if (features.includes('crystals')) {
+        for (let i = 0; i < 6; i++) {
+            const crystal = createCrystal();
+            crystal.position.set(
+                (Math.random() - 0.5) * room.w * 0.7,
+                0,
+                (Math.random() - 0.5) * room.h * 0.7
+            );
+            roomGroup.add(crystal);
+            decorations.push(crystal);
+        }
+    }
 
-            // Touch start
-            container.addEventListener('touchstart', (e) => {
-                if (!gameState.started) return;
-                e.preventDefault();
+    if (features.includes('glow')) {
+        for (let i = 0; i < 5; i++) {
+            const light = new THREE.PointLight(
+                new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
+                0.8, 6
+            );
+            light.position.set(
+                (Math.random() - 0.5) * room.w * 0.6,
+                1.5,
+                (Math.random() - 0.5) * room.h * 0.6
+            );
+            roomGroup.add(light);
 
-                const touch = e.changedTouches[0];
-                touchId = touch.identifier;
+            // Glowing orb
+            const orb = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 8, 8),
+                new THREE.MeshBasicMaterial({ color: light.color })
+            );
+            orb.position.copy(light.position);
+            roomGroup.add(orb);
+            decorations.push({ orb, light, phase: Math.random() * Math.PI * 2 });
+        }
+    }
 
-                // Double tap detection for jump
-                const now = Date.now();
-                if (now - lastTap < 300) {
-                    if (!gameState.isJumping) {
-                        gameState.playerVelocity.y = 8;
-                        gameState.isJumping = true;
-                        if (navigator.vibrate) navigator.vibrate(15);
-                    }
-                }
-                lastTap = now;
+    if (features.includes('torches')) {
+        [[-room.w/2 + 1, -room.h/2 + 1], [room.w/2 - 1, -room.h/2 + 1],
+         [-room.w/2 + 1, room.h/2 - 1], [room.w/2 - 1, room.h/2 - 1]].forEach(([x, z]) => {
+            const torch = createTorch();
+            torch.position.set(x, 0, z);
+            roomGroup.add(torch);
+            decorations.push(torch);
+        });
+    }
 
-                // Show indicator and start movement
-                indicator.style.left = touch.clientX + 'px';
-                indicator.style.top = touch.clientY + 'px';
-                indicator.classList.add('active');
+    if (features.includes('webs')) {
+        for (let i = 0; i < 4; i++) {
+            const web = createWeb();
+            web.position.set(
+                (Math.random() - 0.5) * room.w * 0.7,
+                1 + Math.random(),
+                (Math.random() - 0.5) * room.h * 0.7
+            );
+            roomGroup.add(web);
+        }
+    }
 
-                updateTouchMovement(touch);
-                gameState.touchActive = true;
-            }, { passive: false });
+    if (features.includes('water')) {
+        const water = new THREE.Mesh(
+            new THREE.PlaneGeometry(room.w * 0.8, room.h * 0.8),
+            new THREE.MeshLambertMaterial({ color: 0x2288aa, transparent: true, opacity: 0.6 })
+        );
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = -0.05;
+        roomGroup.add(water);
+        decorations.push({ water, phase: 0 });
+    }
+}
 
-            // Touch move
-            container.addEventListener('touchmove', (e) => {
-                if (!gameState.started || !gameState.touchActive) return;
-                e.preventDefault();
+function createVine() {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color: 0x228833 });
 
-                const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
-                if (touch) {
-                    indicator.style.left = touch.clientX + 'px';
-                    indicator.style.top = touch.clientY + 'px';
-                    updateTouchMovement(touch);
-                }
-            }, { passive: false });
+    for (let i = 0; i < 3; i++) {
+        const height = 1 + Math.random() * 1.5;
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, height, 6), mat);
+        stem.position.set((Math.random() - 0.5) * 0.3, height / 2, (Math.random() - 0.5) * 0.3);
+        stem.rotation.set(Math.random() * 0.3, 0, Math.random() * 0.3);
+        group.add(stem);
 
-            // Touch end
-            const endTouch = () => {
-                gameState.touchActive = false;
-                gameState.touchInput.x = 0;
-                gameState.touchInput.z = 0;
-                indicator.classList.remove('active');
-                touchId = null;
-            };
-            container.addEventListener('touchend', endTouch, { passive: false });
-            container.addEventListener('touchcancel', endTouch, { passive: false });
+        // Leaves
+        for (let j = 0; j < 4; j++) {
+            const leaf = new THREE.Mesh(
+                new THREE.SphereGeometry(0.12, 6, 4),
+                new THREE.MeshLambertMaterial({ color: 0x33aa44 })
+            );
+            leaf.scale.set(1, 0.3, 0.7);
+            leaf.position.set(
+                stem.position.x + (Math.random() - 0.5) * 0.3,
+                0.3 + j * 0.35,
+                stem.position.z + (Math.random() - 0.5) * 0.3
+            );
+            group.add(leaf);
+        }
+    }
+    return group;
+}
 
-            function updateTouchMovement(touch) {
-                // Convert screen position to movement direction
-                // Touch position relative to screen center
-                const cx = window.innerWidth / 2;
-                const cy = window.innerHeight / 2;
-                const dx = (touch.clientX - cx) / (window.innerWidth / 3);
-                const dy = (touch.clientY - cy) / (window.innerHeight / 3);
+function createCrystal() {
+    const group = new THREE.Group();
+    const colors = [0x88ddff, 0xaa88ff, 0xff88dd, 0x88ffaa];
 
-                // Clamp
-                const clampedX = Math.max(-1, Math.min(1, dx));
-                const clampedY = Math.max(-1, Math.min(1, dy));
+    for (let i = 0; i < 3; i++) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const mat = new THREE.MeshLambertMaterial({ color, emissive: color, emissiveIntensity: 0.3 });
+        const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.15 + Math.random() * 0.1, 0.5 + Math.random() * 0.5, 6), mat);
+        crystal.position.set((Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.3, (Math.random() - 0.5) * 0.4);
+        crystal.rotation.set(Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3);
+        group.add(crystal);
+    }
+    return group;
+}
 
-                // Convert to isometric movement
-                gameState.touchInput.x = (clampedY - clampedX) * 0.707;
-                gameState.touchInput.z = (clampedY + clampedX) * 0.707;
+function createTorch() {
+    const group = new THREE.Group();
+
+    // Bracket
+    const bracket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.8, 0.1),
+        new THREE.MeshLambertMaterial({ color: 0x444444 })
+    );
+    bracket.position.y = 0.4;
+    group.add(bracket);
+
+    // Flame
+    const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.3, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff6600 })
+    );
+    flame.position.y = 0.95;
+    group.add(flame);
+
+    // Light
+    const light = new THREE.PointLight(0xff6633, 1, 5);
+    light.position.y = 1;
+    group.add(light);
+
+    group.userData.flame = flame;
+    group.userData.light = light;
+    group.userData.phase = Math.random() * Math.PI * 2;
+
+    return group;
+}
+
+function createWeb() {
+    const geo = new THREE.RingGeometry(0.1, 0.8, 8, 3);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const web = new THREE.Mesh(geo, mat);
+    web.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+    web.rotation.z = Math.random() * Math.PI;
+    return web;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COLLECTIBLES
+// ═══════════════════════════════════════════════════════════════
+function createCollectible(type, x, z, color) {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color, emissive: color, emissiveIntensity: 0.4 });
+
+    let mesh;
+    if (type === 'gem') {
+        mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), mat);
+    } else if (type === 'emerald') {
+        mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), mat);
+        mesh.scale.y = 1.5;
+    } else if (type === 'ring') {
+        mesh = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 8, 24), mat);
+        mesh.rotation.x = Math.PI / 2;
+    } else if (type === 'coin') {
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.05, 16), mat);
+        mesh.rotation.x = Math.PI / 2;
+    } else if (type === 'scroll') {
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8), mat);
+        mesh.rotation.z = Math.PI / 2;
+    }
+
+    mesh.position.y = 0.5;
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    // Glow
+    const glow = new THREE.PointLight(color, 0.5, 2);
+    glow.position.y = 0.5;
+    group.add(glow);
+
+    group.position.set(x, 0, z);
+    group.userData = { type, value: type === 'emerald' ? 3 : type === 'ring' ? 5 : 1, phase: Math.random() * Math.PI * 2 };
+
+    collectibles.push(group);
+    roomGroup.add(group);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENEMIES
+// ═══════════════════════════════════════════════════════════════
+function createEnemy(e) {
+    const group = new THREE.Group();
+
+    if (e.type === 'snake') {
+        const mat = new THREE.MeshLambertMaterial({ color: 0x44aa44 });
+        // Body segments
+        for (let i = 0; i < 5; i++) {
+            const seg = new THREE.Mesh(new THREE.SphereGeometry(0.15 - i * 0.02, 8, 6), mat);
+            seg.position.z = -i * 0.2;
+            seg.position.y = 0.15;
+            group.add(seg);
+        }
+        // Eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        [-0.08, 0.08].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+            eye.position.set(x, 0.22, 0.1);
+            group.add(eye);
+        });
+        group.userData = { type: 'snake', speed: 1.5, phase: Math.random() * Math.PI * 2, pattern: 'slither' };
+
+    } else if (e.type === 'bat') {
+        const mat = new THREE.MeshLambertMaterial({ color: 0x333344 });
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), mat);
+        body.scale.set(1, 0.8, 1.2);
+        group.add(body);
+        // Wings
+        [-1, 1].forEach(side => {
+            const wing = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.3), mat);
+            wing.position.set(side * 0.35, 0, 0);
+            wing.rotation.y = side * 0.3;
+            group.add(wing);
+        });
+        // Eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        [-0.08, 0.08].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), eyeMat);
+            eye.position.set(x, 0.05, 0.15);
+            group.add(eye);
+        });
+        group.userData = { type: 'bat', speed: 2, phase: Math.random() * Math.PI * 2, pattern: 'swoop' };
+        group.position.y = 1.5;
+
+    } else if (e.type === 'spider') {
+        const mat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), mat);
+        body.position.y = 0.3;
+        group.add(body);
+        // Legs
+        for (let i = 0; i < 8; i++) {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.01, 0.4, 4), mat);
+            leg.position.set(Math.cos(i * Math.PI / 4) * 0.2, 0.15, Math.sin(i * Math.PI / 4) * 0.2);
+            leg.rotation.z = Math.cos(i * Math.PI / 4) * 0.8;
+            leg.rotation.x = Math.sin(i * Math.PI / 4) * 0.8;
+            group.add(leg);
+        }
+        // Eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        for (let i = 0; i < 4; i++) {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), eyeMat);
+            eye.position.set((i % 2 === 0 ? -0.08 : 0.08), 0.35 + (i < 2 ? 0.05 : 0), 0.2);
+            group.add(eye);
+        }
+        group.userData = { type: 'spider', speed: 1.2, phase: Math.random() * Math.PI * 2, pattern: 'crawl' };
+
+    } else if (e.type === 'ghost') {
+        const mat = new THREE.MeshLambertMaterial({ color: 0xaaccff, transparent: true, opacity: 0.7 });
+        const body = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1, 8), mat);
+        body.rotation.x = Math.PI;
+        body.position.y = 0.8;
+        group.add(body);
+        // Eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000033 });
+        [-0.1, 0.1].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeMat);
+            eye.position.set(x, 1, 0.2);
+            group.add(eye);
+        });
+        group.userData = { type: 'ghost', speed: 0.8, phase: Math.random() * Math.PI * 2, pattern: 'float' };
+
+    } else if (e.type === 'guard') {
+        const mat = new THREE.MeshLambertMaterial({ color: 0x884422 });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.4), mat);
+        body.position.y = 0.6;
+        body.castShadow = true;
+        group.add(body);
+        const head = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.4, 4), mat);
+        head.position.y = 1.2;
+        head.rotation.y = Math.PI / 4;
+        group.add(head);
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.1), new THREE.MeshBasicMaterial({ color: 0xff3300 }));
+        visor.position.set(0, 1.05, 0.2);
+        group.add(visor);
+        group.userData = { type: 'guard', speed: 1, phase: Math.random() * Math.PI * 2, pattern: 'patrol' };
+
+    } else if (e.type === 'fireball') {
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff4400 });
+        const core = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 12), mat);
+        group.add(core);
+        const light = new THREE.PointLight(0xff4400, 1, 3);
+        group.add(light);
+        group.userData = { type: 'fireball', speed: 2.5, phase: Math.random() * Math.PI * 2, pattern: 'bounce' };
+        group.position.y = 0.5;
+    }
+
+    group.position.set(e.x, group.position.y, e.z);
+    group.userData.startX = e.x;
+    group.userData.startZ = e.z;
+    group.userData.startY = group.position.y;
+
+    enemies.push(group);
+    roomGroup.add(group);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXITS
+// ═══════════════════════════════════════════════════════════════
+function createExit(e) {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color: 0x44ff88, emissive: 0x22aa44, emissiveIntensity: 0.5 });
+
+    // Arch
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.1, 8, 24, Math.PI), mat);
+    arch.position.y = 1.4;
+    arch.rotation.x = Math.PI / 2;
+    group.add(arch);
+
+    // Pillars
+    [-0.6, 0.6].forEach(x => {
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 1.4, 8), mat);
+        pillar.position.set(x, 0.7, 0);
+        pillar.castShadow = true;
+        group.add(pillar);
+    });
+
+    // Glow
+    const light = new THREE.PointLight(0x44ff88, 1, 4);
+    light.position.y = 1;
+    group.add(light);
+
+    group.position.set(e.x, 0, e.z);
+    group.userData = { isExit: true, to: e.to };
+
+    roomGroup.add(group);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTROLS - Tap to move, double tap to jump
+// ═══════════════════════════════════════════════════════════════
+function setupControls() {
+    const canvas = renderer.domElement;
+    let lastTap = 0;
+
+    canvas.addEventListener('touchstart', e => {
+        if (!G.started) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const now = Date.now();
+
+        // Double tap = jump
+        if (now - lastTap < 300) {
+            if (G.grounded) {
+                G.vel.y = 10;
+                G.jumping = true;
+                G.grounded = false;
+                if (navigator.vibrate) navigator.vibrate(15);
             }
-
-            // Keyboard
-            window.addEventListener('keydown', (e) => {
-                gameState.keys[e.code] = true;
-                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-                    e.preventDefault();
-                }
-            });
-            window.addEventListener('keyup', (e) => gameState.keys[e.code] = false);
+        } else {
+            // Single tap = set target
+            setMoveTarget(touch.clientX, touch.clientY);
         }
+        lastTap = now;
+    }, { passive: false });
 
-        // ============================================
-        // PLAYER - Bright colorful character
-        // ============================================
-        function createPlayer() {
-            player = new THREE.Group();
+    canvas.addEventListener('touchmove', e => {
+        if (!G.started) return;
+        e.preventDefault();
+        setMoveTarget(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
 
-            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x4488ff });
-            const skinMat = new THREE.MeshLambertMaterial({ color: 0xffddbb });
-            const legMat = new THREE.MeshLambertMaterial({ color: 0x2255aa });
+    canvas.addEventListener('touchend', () => {
+        G.target = null;
+    });
 
-            // Body
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.35), bodyMat);
-            body.position.y = 0.5;
-            body.castShadow = true;
-            player.add(body);
-
-            // Head
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), skinMat);
-            head.position.y = 1.02;
-            head.castShadow = true;
-            player.add(head);
-
-            // Eyes
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
-            [-0.08, 0.08].forEach(x => {
-                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
-                eye.position.set(x, 1.05, 0.17);
-                player.add(eye);
-            });
-
-            // Legs
-            [-0.12, 0.12].forEach(x => {
-                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.3, 0.16), legMat);
-                leg.position.set(x, 0.15, 0);
-                leg.castShadow = true;
-                player.add(leg);
-            });
-
-            // Arms
-            [-0.33, 0.33].forEach(x => {
-                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.35, 0.14), bodyMat);
-                arm.position.set(x, 0.5, 0);
-                arm.castShadow = true;
-                player.add(arm);
-            });
-
-            scene.add(player);
+    // Keyboard
+    window.addEventListener('keydown', e => {
+        if (e.code === 'Space' && G.grounded) {
+            G.vel.y = 10;
+            G.jumping = true;
+            G.grounded = false;
         }
+    });
+}
 
-        // ============================================
-        // ROOM LOADING - Bright and clear
-        // ============================================
-        function loadRoom(roomId) {
-            const room = rooms[roomId];
-            if (!room) return;
+function setMoveTarget(screenX, screenY) {
+    pointer.x = (screenX / window.innerWidth) * 2 - 1;
+    pointer.y = -(screenY / window.innerHeight) * 2 + 1;
 
-            gameState.currentRoom = roomId;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(roomGroup.children.filter(c => c.userData.floor));
 
-            while (roomGroup.children.length) roomGroup.remove(roomGroup.children[0]);
-            enemies = [];
-            collectibles = [];
+    if (hits.length > 0) {
+        G.target = hits[0].point.clone();
+        G.target.y = 0;
+    }
+}
 
-            document.getElementById('room-name').textContent = room.name;
+// ═══════════════════════════════════════════════════════════════
+// GAME LOOP
+// ═══════════════════════════════════════════════════════════════
+function animate() {
+    requestAnimationFrame(animate);
 
-            // Bright background
-            scene.background = new THREE.Color(room.bgColor);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    const time = clock.getElapsedTime();
 
-            // Remove old lights
-            scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
+    if (G.started) {
+        updatePlayer(dt, time);
+        updateCamera(dt);
+        updateEnemies(dt, time);
+        updateCollectibles(time);
+        updateDecorations(time);
+        updateParticles(time);
+        checkCollisions();
+    }
 
-            // Strong ambient light - no dark areas!
-            const ambient = new THREE.AmbientLight(room.ambient, 0.8);
-            scene.add(ambient);
+    renderer.render(scene, camera);
+}
 
-            // Bright directional light
-            const sun = new THREE.DirectionalLight(room.light, 1.5);
-            sun.position.set(8, 15, 8);
-            sun.castShadow = true;
-            sun.shadow.mapSize.width = 1024;
-            sun.shadow.mapSize.height = 1024;
-            sun.shadow.camera.near = 1;
-            sun.shadow.camera.far = 40;
-            sun.shadow.camera.left = -12;
-            sun.shadow.camera.right = 12;
-            sun.shadow.camera.top = 12;
-            sun.shadow.camera.bottom = -12;
-            sun.shadow.bias = -0.001;
-            scene.add(sun);
+function updatePlayer(dt, time) {
+    const speed = 5;
+    const gravity = 25;
 
-            // Fill light from opposite side
-            const fill = new THREE.DirectionalLight(0xffffff, 0.4);
-            fill.position.set(-5, 8, -5);
-            scene.add(fill);
+    // Move toward target
+    if (G.target) {
+        const dir = G.target.clone().sub(player.position);
+        dir.y = 0;
+        const dist = dir.length();
 
-            createFloor(room);
-            room.walls.forEach(w => createWall(w, room));
-            room.blocks.forEach(b => createBlock(b, room));
-            room.enemies.forEach(e => createEnemy(e, room));
-            room.items.forEach(i => createItem(i, room));
-            room.exits.forEach(e => createExit(e, room));
+        if (dist > 0.2) {
+            dir.normalize();
+            player.position.x += dir.x * speed * dt;
+            player.position.z += dir.z * speed * dt;
+            player.rotation.y = Math.atan2(dir.x, dir.z);
+
+            // Bob animation
+            player.children[0].position.y = 0.55 + Math.sin(time * 12) * 0.03;
         }
+    }
 
-        function createFloor(room) {
-            const g = new THREE.Group();
-            const mat1 = new THREE.MeshLambertMaterial({ color: room.floorColor });
-            const mat2 = new THREE.MeshLambertMaterial({ color: room.floorColor2 });
+    // Keyboard movement
+    let kx = 0, kz = 0;
+    if (keys['ArrowUp'] || keys['KeyW']) { kx -= 1; kz -= 1; }
+    if (keys['ArrowDown'] || keys['KeyS']) { kx += 1; kz += 1; }
+    if (keys['ArrowLeft'] || keys['KeyA']) { kx -= 1; kz += 1; }
+    if (keys['ArrowRight'] || keys['KeyD']) { kx += 1; kz -= 1; }
 
-            for (let x = -room.width/2; x < room.width/2; x++) {
-                for (let z = -room.depth/2; z < room.depth/2; z++) {
-                    const tile = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.98, 0.15, 0.98),
-                        (x + z) % 2 === 0 ? mat1 : mat2
-                    );
-                    tile.position.set(x + 0.5, -0.075, z + 0.5);
-                    tile.receiveShadow = true;
-                    g.add(tile);
-                }
+    if (kx || kz) {
+        const len = Math.sqrt(kx * kx + kz * kz);
+        player.position.x += (kx / len) * speed * dt;
+        player.position.z += (kz / len) * speed * dt;
+        player.rotation.y = Math.atan2(kx, kz);
+        player.children[0].position.y = 0.55 + Math.sin(time * 12) * 0.03;
+    }
+
+    // Gravity
+    G.vel.y -= gravity * dt;
+    player.position.y += G.vel.y * dt;
+
+    if (player.position.y <= 0) {
+        player.position.y = 0;
+        G.vel.y = 0;
+        G.grounded = true;
+        G.jumping = false;
+    }
+
+    // Room bounds
+    const room = ROOMS[G.room];
+    player.position.x = Math.max(-room.w / 2 + 0.5, Math.min(room.w / 2 - 0.5, player.position.x));
+    player.position.z = Math.max(-room.h / 2 + 0.5, Math.min(room.h / 2 - 0.5, player.position.z));
+
+    // Invincibility timer
+    if (G.invincible > 0) {
+        G.invincible -= dt;
+        player.visible = Math.floor(time * 20) % 2 === 0;
+    } else {
+        player.visible = true;
+    }
+}
+
+const keys = {};
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+function updateCamera(dt) {
+    // Smooth follow
+    G.camTarget.lerp(player.position, 0.08);
+
+    camera.position.x = G.camTarget.x + 10;
+    camera.position.y = G.camTarget.y + 12;
+    camera.position.z = G.camTarget.z + 10;
+    camera.lookAt(G.camTarget.x, G.camTarget.y, G.camTarget.z);
+}
+
+function updateEnemies(dt, time) {
+    enemies.forEach(e => {
+        const d = e.userData;
+        const r = 2.5;
+
+        if (d.pattern === 'slither') {
+            e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+            e.position.z = d.startZ + Math.cos(time * d.speed * 0.7 + d.phase) * r * 0.5;
+            e.rotation.y = Math.atan2(
+                Math.cos(time * d.speed + d.phase),
+                -Math.sin(time * d.speed * 0.7 + d.phase) * 0.5
+            );
+        } else if (d.pattern === 'swoop') {
+            e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+            e.position.y = d.startY + Math.sin(time * d.speed * 2 + d.phase) * 0.5;
+            e.position.z = d.startZ + Math.cos(time * d.speed + d.phase) * r;
+            // Wing flap
+            e.children[1].rotation.z = Math.sin(time * 15) * 0.5 - 0.3;
+            e.children[2].rotation.z = -Math.sin(time * 15) * 0.5 + 0.3;
+        } else if (d.pattern === 'crawl') {
+            e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+            e.position.z = d.startZ + Math.cos(time * d.speed + d.phase) * r;
+            e.rotation.y = time * d.speed + d.phase + Math.PI / 2;
+        } else if (d.pattern === 'float') {
+            e.position.y = d.startY + Math.sin(time * 2 + d.phase) * 0.5;
+            e.position.x = d.startX + Math.sin(time * d.speed * 0.5 + d.phase) * r * 0.5;
+            e.rotation.y = time * 0.5;
+        } else if (d.pattern === 'patrol') {
+            e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+            e.rotation.y = Math.sin(time * d.speed + d.phase) > 0 ? 0 : Math.PI;
+        } else if (d.pattern === 'bounce') {
+            e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+            e.position.y = d.startY + Math.abs(Math.sin(time * 4 + d.phase)) * 1.5;
+            e.position.z = d.startZ + Math.cos(time * d.speed * 0.8 + d.phase) * r;
+        }
+    });
+}
+
+function updateCollectibles(time) {
+    collectibles.forEach(c => {
+        if (!c.visible) return;
+        c.children[0].position.y = 0.5 + Math.sin(time * 3 + c.userData.phase) * 0.15;
+        c.children[0].rotation.y = time * 2;
+    });
+}
+
+function updateDecorations(time) {
+    decorations.forEach(d => {
+        if (d.userData?.flame) {
+            // Torch flicker
+            const f = d.userData.flame;
+            const l = d.userData.light;
+            const scale = 0.9 + Math.sin(time * 20 + d.userData.phase) * 0.1 + Math.random() * 0.1;
+            f.scale.set(scale, scale, scale);
+            l.intensity = 0.8 + Math.sin(time * 15 + d.userData.phase) * 0.2;
+        } else if (d.orb) {
+            // Floating orb
+            d.orb.position.y = 1.5 + Math.sin(time * 2 + d.phase) * 0.3;
+            d.light.position.copy(d.orb.position);
+        } else if (d.water) {
+            // Water ripple (subtle position change)
+            d.water.position.y = -0.05 + Math.sin(time + d.phase) * 0.02;
+        }
+    });
+}
+
+function updateParticles(time) {
+    const pos = particleSystem.geometry.attributes.position.array;
+    for (let i = 0; i < pos.length; i += 3) {
+        pos[i + 1] += 0.01;
+        if (pos[i + 1] > 5) pos[i + 1] = 0;
+        pos[i] += Math.sin(time + i) * 0.002;
+    }
+    particleSystem.geometry.attributes.position.needsUpdate = true;
+    particleSystem.position.copy(player.position);
+}
+
+function checkCollisions() {
+    // Enemies
+    if (G.invincible <= 0) {
+        enemies.forEach(e => {
+            const dx = player.position.x - e.position.x;
+            const dy = player.position.y - e.position.y;
+            const dz = player.position.z - e.position.z;
+            if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 0.6) {
+                hitPlayer();
             }
-            roomGroup.add(g);
-        }
+        });
+    }
 
-        function createWall(w, room) {
-            const mat1 = new THREE.MeshLambertMaterial({ color: room.wallColor });
-            const mat2 = new THREE.MeshLambertMaterial({ color: new THREE.Color(room.wallColor).multiplyScalar(0.85) });
-            const g = new THREE.Group();
-            const bh = 0.5;
-
-            for (let y = 0; y < 2.5; y += bh) {
-                const off = (Math.floor(y / bh) % 2) * 0.5;
-                const mat = y % (bh * 2) < bh ? mat1 : mat2;
-
-                if (w.w > w.d) {
-                    for (let x = -w.w/2; x < w.w/2; x++) {
-                        const brick = new THREE.Mesh(new THREE.BoxGeometry(0.95, bh - 0.03, w.d - 0.03), mat);
-                        brick.position.set(w.x + x + 0.5 + off, y + bh/2, w.z);
-                        brick.castShadow = true;
-                        brick.receiveShadow = true;
-                        g.add(brick);
-                    }
-                } else {
-                    for (let z = -w.d/2; z < w.d/2; z++) {
-                        const brick = new THREE.Mesh(new THREE.BoxGeometry(w.w - 0.03, bh - 0.03, 0.95), mat);
-                        brick.position.set(w.x, y + bh/2, w.z + z + 0.5 + off);
-                        brick.castShadow = true;
-                        brick.receiveShadow = true;
-                        g.add(brick);
-                    }
-                }
-            }
-            roomGroup.add(g);
-        }
-
-        function createBlock(b, room) {
-            if (b.type === 'pedestal') {
-                const mat = new THREE.MeshLambertMaterial({ color: 0xccaa88 });
-                const g = new THREE.Group();
-                g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(b.size*1.2, 0.2, b.size*1.2), mat), {position: new THREE.Vector3(0, 0.1, 0)}));
-                g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(b.size*0.3, b.size*0.4, 0.6, 8), mat), {position: new THREE.Vector3(0, 0.5, 0)}));
-                g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(b.size*1.1, 0.15, b.size*1.1), mat), {position: new THREE.Vector3(0, 0.85, 0)}));
-                g.position.set(b.x, 0, b.z);
-                g.children.forEach(c => { c.castShadow = true; c.receiveShadow = true; });
-                roomGroup.add(g);
-                return;
-            }
-
-            const mat = b.type === 'magic'
-                ? new THREE.MeshLambertMaterial({ color: 0xaa77ff, emissive: 0x6644aa, emissiveIntensity: 0.3 })
-                : new THREE.MeshLambertMaterial({ color: 0x88899a });
-
-            const block = new THREE.Mesh(new THREE.BoxGeometry(b.size, b.size, b.size), mat);
-            block.position.set(b.x, b.y, b.z);
-            block.castShadow = true;
-            block.receiveShadow = true;
-            roomGroup.add(block);
-        }
-
-        function createEnemy(e, room) {
-            const enemy = new THREE.Group();
-
-            if (e.type === 'guardian') {
-                const mat = new THREE.MeshLambertMaterial({ color: 0xcc4444 });
-                enemy.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), mat), {position: new THREE.Vector3(0, 0.6, 0), castShadow: true}));
-                enemy.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.45, 4), mat), {position: new THREE.Vector3(0, 1.22, 0), castShadow: true}));
-                enemy.children[1].rotation.y = Math.PI/4;
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.12), new THREE.MeshBasicMaterial({ color: 0xff3333 }));
-                visor.position.set(0, 1.05, 0.22);
-                enemy.add(visor);
-            } else if (e.type === 'spider') {
-                const mat = new THREE.MeshLambertMaterial({ color: 0x333333 });
-                enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), mat), {position: new THREE.Vector3(0, 0.3, -0.15), castShadow: true}));
-                enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), mat), {position: new THREE.Vector3(0, 0.3, 0.12), castShadow: true}));
-                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x44ff44 });
-                [[-0.06, 0.38], [0.06, 0.38], [-0.04, 0.32], [0.04, 0.32]].forEach(([x, y]) => {
-                    enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), eyeMat), {position: new THREE.Vector3(x, y, 0.25)}));
-                });
-            } else if (e.type === 'ghost') {
-                const mat = new THREE.MeshLambertMaterial({ color: 0xccddff, transparent: true, opacity: 0.8 });
-                enemy.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(0.4, 1, 8), mat), {position: new THREE.Vector3(0, 0.8, 0), castShadow: true}));
-                enemy.children[0].rotation.x = Math.PI;
-                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x333366 });
-                [-0.12, 0.12].forEach(x => enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeMat), {position: new THREE.Vector3(x, 1.1, 0.25)})));
-            }
-
-            enemy.position.set(e.x, 0, e.z);
-            enemy.userData = { type: e.type, patrol: e.patrol, startX: e.x, startZ: e.z, phase: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() * 0.4 };
-            enemies.push(enemy);
-            roomGroup.add(enemy);
-        }
-
-        function createItem(i, room) {
-            const item = new THREE.Group();
-            const mat = new THREE.MeshLambertMaterial({ color: i.color, emissive: i.color, emissiveIntensity: 0.4 });
-
-            if (i.type === 'key') {
-                item.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 16), mat), {rotation: new THREE.Euler(Math.PI/2, 0, 0)}));
-                item.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.32, 0.05), mat), {position: new THREE.Vector3(0, -0.16, 0)}));
-            } else if (i.type === 'gem') {
-                item.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), mat));
-            } else if (i.type === 'scroll') {
-                item.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.35, 8), mat), {rotation: new THREE.Euler(0, 0, Math.PI/2)}));
-            }
-
-            item.position.set(i.x, i.y, i.z);
-            item.userData = { type: i.type, collected: false };
-            collectibles.push(item);
-            roomGroup.add(item);
-        }
-
-        function createExit(e, room) {
-            const g = new THREE.Group();
-            const mat = new THREE.MeshLambertMaterial({ color: 0x66ff66, emissive: 0x33aa33, emissiveIntensity: 0.5 });
-
-            g.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.12, 8, 16, Math.PI), mat), {position: new THREE.Vector3(0, 1.2, 0), rotation: new THREE.Euler(Math.PI/2, 0, 0)}));
-            [-0.5, 0.5].forEach(x => g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), mat), {position: new THREE.Vector3(x, 0.6, 0), castShadow: true})));
-
-            g.position.set(e.x, 0, e.z);
-            g.userData = { toRoom: e.toRoom, spawnX: e.spawnX, spawnZ: e.spawnZ, isExit: true };
-            roomGroup.add(g);
-        }
-
-        // ============================================
-        // GAME LOOP
-        // ============================================
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.1);
-            const time = clock.getElapsedTime();
-
-            if (gameState.started) {
-                updatePlayer(delta, time);
-                updateEnemies(time);
-                updateCollectibles(time);
-                checkCollisions();
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        function updatePlayer(delta, time) {
-            let mx = gameState.touchInput.x;
-            let mz = gameState.touchInput.z;
-
-            // Keyboard
-            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) { mx -= 1; mz -= 1; }
-            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) { mx += 1; mz += 1; }
-            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) { mx -= 1; mz += 1; }
-            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) { mx += 1; mz -= 1; }
-
-            const len = Math.sqrt(mx*mx + mz*mz);
-            if (len > 1) { mx /= len; mz /= len; }
-            if (len > 0.1) player.rotation.y = Math.atan2(mx, mz);
-
-            // Keyboard jump
-            if ((gameState.keys['Space'] || gameState.keys['KeyX']) && !gameState.isJumping) {
-                gameState.playerVelocity.y = 8;
-                gameState.isJumping = true;
-            }
-
-            gameState.playerVelocity.y -= 22 * delta;
-            player.position.x += mx * 4.5 * delta;
-            player.position.y += gameState.playerVelocity.y * delta;
-            player.position.z += mz * 4.5 * delta;
-
-            if (player.position.y < 0) {
-                player.position.y = 0;
-                gameState.playerVelocity.y = 0;
-                gameState.isJumping = false;
-            }
-
-            // Bounds
-            const room = rooms[gameState.currentRoom];
-            player.position.x = Math.max(-room.width/2 + 0.5, Math.min(room.width/2 - 0.5, player.position.x));
-            player.position.z = Math.max(-room.depth/2 + 0.5, Math.min(room.depth/2 - 0.5, player.position.z));
-
-            // Check exits
-            roomGroup.children.forEach(c => {
-                if (c.userData.isExit) {
-                    const dx = player.position.x - c.position.x;
-                    const dz = player.position.z - c.position.z;
-                    if (Math.sqrt(dx*dx + dz*dz) < 0.8) {
-                        if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
-                        loadRoom(c.userData.toRoom);
-                        player.position.set(c.userData.spawnX, 0, c.userData.spawnZ);
-                    }
-                }
-            });
-        }
-
-        function updateEnemies(time) {
-            enemies.forEach(e => {
-                const d = e.userData;
-                const r = 2;
-                if (d.patrol === 'circle') {
-                    e.position.x = d.startX + Math.cos(time * d.speed + d.phase) * r;
-                    e.position.z = d.startZ + Math.sin(time * d.speed + d.phase) * r;
-                    e.rotation.y = time * d.speed + d.phase + Math.PI/2;
-                } else if (d.patrol === 'horizontal') {
-                    e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
-                } else if (d.patrol === 'vertical') {
-                    e.position.z = d.startZ + Math.sin(time * d.speed + d.phase) * r;
-                } else if (d.patrol === 'float') {
-                    e.position.y = 0.5 + Math.sin(time * 2 + d.phase) * 0.4;
-                    e.rotation.y = time * 0.5;
-                }
-            });
-        }
-
-        function updateCollectibles(time) {
-            collectibles.forEach(i => {
-                if (!i.userData.collected) {
-                    if (!i.userData.oy) i.userData.oy = i.position.y;
-                    i.position.y = i.userData.oy + Math.sin(time * 3) * 0.12;
-                    i.rotation.y = time * 2;
-                }
-            });
-        }
-
-        function checkCollisions() {
-            enemies.forEach(e => {
-                const dx = player.position.x - e.position.x;
-                const dz = player.position.z - e.position.z;
-                if (Math.sqrt(dx*dx + dz*dz) < 0.55) hitPlayer();
-            });
-
-            collectibles.forEach(i => {
-                if (!i.userData.collected) {
-                    const dx = player.position.x - i.position.x;
-                    const dy = player.position.y - i.position.y;
-                    const dz = player.position.z - i.position.z;
-                    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 0.5) {
-                        i.userData.collected = true;
-                        i.visible = false;
-                        gameState.score += 50;
-                        gameState.items.push(i.userData.type);
-                        if (navigator.vibrate) navigator.vibrate(20);
-                        updateUI();
-                    }
-                }
-            });
-        }
-
-        function hitPlayer() {
-            gameState.lives--;
-            if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-
-            player.children.forEach(c => {
-                if (c.material && c.material.color) {
-                    const orig = c.material.color.getHex();
-                    c.material.color.setHex(0xff0000);
-                    setTimeout(() => c.material.color.setHex(orig), 180);
-                }
-            });
-
-            gameState.playerVelocity.y = 5;
-
-            if (gameState.lives <= 0) {
-                gameState.lives = 3;
-                gameState.score = Math.max(0, gameState.score - 100);
-                loadRoom('hall');
-                player.position.set(0, 0, 0);
-            }
+    // Collectibles
+    collectibles.forEach(c => {
+        if (!c.visible) return;
+        const dx = player.position.x - c.position.x;
+        const dy = player.position.y - c.position.y;
+        const dz = player.position.z - c.position.z;
+        if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 0.6) {
+            c.visible = false;
+            G.gems += c.userData.value;
+            G.items.push(c.userData.type);
             updateUI();
+            if (navigator.vibrate) navigator.vibrate(20);
         }
+    });
 
-        function updateUI() {
-            document.getElementById('lives').textContent = '❤️'.repeat(gameState.lives);
-            document.getElementById('score').textContent = gameState.score;
-            const slots = document.querySelectorAll('.item-slot');
-            const sym = { key: '🔑', gem: '💎', scroll: '📜' };
-            gameState.items.slice(-3).forEach((it, i) => { if (slots[i]) slots[i].textContent = sym[it] || '?'; });
+    // Exits
+    roomGroup.children.forEach(c => {
+        if (c.userData.isExit) {
+            const dx = player.position.x - c.position.x;
+            const dz = player.position.z - c.position.z;
+            if (Math.sqrt(dx * dx + dz * dz) < 1) {
+                loadRoom(c.userData.to);
+                if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+            }
         }
+    });
+}
 
-        function onResize() {
-            const aspect = window.innerWidth / window.innerHeight;
-            const size = isMobile ? 9 : 11;
-            camera.left = -size * aspect / 2;
-            camera.right = size * aspect / 2;
-            camera.top = size / 2;
-            camera.bottom = -size / 2;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+function hitPlayer() {
+    G.lives--;
+    G.invincible = 2;
+    G.vel.y = 6;
+    updateUI();
+    if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
 
-        init();
-    </script>
+    if (G.lives <= 0) {
+        G.lives = 3;
+        G.gems = Math.max(0, G.gems - 10);
+        loadRoom(0);
+        updateUI();
+    }
+}
+
+function updateUI() {
+    document.getElementById('lives').textContent = '❤️'.repeat(G.lives);
+    document.getElementById('gems').textContent = '💎 ' + G.gems;
+
+    const slots = document.querySelectorAll('.item-slot');
+    const icons = { gem: '💎', emerald: '💚', ring: '💍', coin: '🪙', scroll: '📜' };
+    G.items.slice(-4).forEach((item, i) => {
+        if (slots[i]) slots[i].textContent = icons[item] || '?';
+    });
+}
+
+function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+init();
+</script>
 </body>
 </html>
