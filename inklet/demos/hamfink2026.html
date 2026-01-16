@@ -647,7 +647,7 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 </main>
 
 <!-- Hidden sandbox for FINK loading -->
-<iframe id="fink-sandbox" sandbox="allow-scripts allow-same-origin"></iframe>
+<iframe id="fink-sandbox" sandbox="allow-scripts"></iframe>
 
 <script id="ink-story" type="text/ink">
 // FINK 2-Engine Demo Story
@@ -2338,7 +2338,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     let currentFinkLoadId = 0;
     let currentFinkMessageHandler = null;
 
-    function loadFinkFile(url) {
+    // Security: Fetch content in parent, send to sandbox for execution (no allow-same-origin needed)
+    async function loadFinkFile(url) {
         // Abort any previous pending load
         if (currentFinkMessageHandler) {
             window.removeEventListener('message', currentFinkMessageHandler);
@@ -2359,7 +2360,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
 
         log(`FINK load requested: ${url} (load #${thisLoadId})`, 'fink');
-        log(`Using JSONP-like sandbox injection technique`, 'fink');
+        log(`Using fetch-first sandbox technique (secure)`, 'fink');
         setStatus(`Loading ${url}...`);
 
         // Resolve relative URL - use current story URL as base if available
@@ -2377,7 +2378,6 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             return;
         }
         log(`Resolved to absolute URL: ${resolvedUrl}`, 'net');
-        log(`Cross-origin safe: sandbox iframe isolates execution`, 'net');
 
         // Semantic swimlane events
         swimEvent('fink', '📂', 'Loading Chapter', url, true);
@@ -2386,7 +2386,27 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         // Track URL for namespace derivation in handleFinkLoaded
         currentLoadingFinkUrl = resolvedUrl;
 
-        // Create sandbox content
+        // Step 1: Fetch script content in parent (has same-origin access)
+        let scriptContent;
+        try {
+            log(`Fetching FINK content from: ${resolvedUrl}`, 'net');
+            const response = await fetch(resolvedUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            scriptContent = await response.text();
+            log(`Fetched ${scriptContent.length} chars`, 'net');
+        } catch (fetchError) {
+            log(`Fetch failed: ${fetchError.message}`, 'error');
+            swimEvent('net', '❌', 'Fetch Failed', fetchError.message);
+            setStatus('FINK fetch failed');
+            displayTextWithAnimation(`Failed to fetch chapter: ${fetchError.message}`, 'danger');
+            displayChoices();
+            return;
+        }
+
+        // Step 2: Send content to sandbox for safe execution
+        // Sandbox executes content sent via postMessage (no script.src needed)
         const sandboxHtml = `
             <!DOCTYPE html>
             <html>
@@ -2400,16 +2420,13 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                     return content;
                 }
                 window.addEventListener('message', function(e) {
-                    if (e.data && e.data.type === 'load-script') {
-                        const script = document.createElement('script');
-                        script.onload = function() {
+                    if (e.data && e.data.type === 'exec-script') {
+                        try {
+                            (new Function(e.data.content))();
                             parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
-                        };
-                        script.onerror = function() {
-                            parent.postMessage({ type: 'fink-error', error: 'Script load failed' }, '*');
-                        };
-                        script.src = e.data.url;
-                        document.body.appendChild(script);
+                        } catch (err) {
+                            parent.postMessage({ type: 'fink-error', error: 'Execution error: ' + err.message }, '*');
+                        }
                     }
                 });
                 parent.postMessage({ type: 'sandbox-ready' }, '*');
@@ -2428,8 +2445,8 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             }
 
             if (e.data.type === 'sandbox-ready') {
-                log(`Sandbox ready, requesting script load`, 'debug');
-                finkSandbox.contentWindow.postMessage({ type: 'load-script', url: resolvedUrl }, '*');
+                log(`Sandbox ready, sending script content`, 'debug');
+                finkSandbox.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
             } else if (e.data.type === 'fink-loaded') {
                 clearTimeout(loadTimeout);
                 window.removeEventListener('message', messageHandler);
