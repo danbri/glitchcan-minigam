@@ -1,28 +1,28 @@
 # FINK Crawl Report
 
-Generated: 2026-01-16T17:40:17.805Z
+Generated: 2026-01-16T17:56:36.528Z
 
 **Source:** local
 **Start:** `inklet/toc.fink.js`
+**Graph URI:** `https://fink.ink/crawl/2026-01-16T17-56-36-528Z`
 
 ## Summary
 
-| Total | OK | Failed |
-|-------|----|---------|
-| 9 | 9 | 0 |
+| Total | OK | Failed | N-Quads |
+|-------|----|---------|---------|
+| 9 | 9 | 0 | 2693 |
 
 ## Related Documentation
 
-- [Hampstead Story Graph Analysis](./hampstead-story-graph-analysis.md) - Design analysis of hub structure and cross-episode links
-- [3D Map Ideas](./3dmap-idea.md) - Visual/spatial representation concepts
+- [Hampstead Story Graph Analysis](./hampstead-story-graph-analysis.md)
+- [3D Map Ideas](./3dmap-idea.md)
+- [Episode Ring Visualization](./fink-ring-viz.html)
 
 ## toc.fink.js
 
 **Knots:** 17 | **Choices:** 28 | **Islands:** 14
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `episodes_menu`
 - `minigames_menu`
@@ -56,7 +56,7 @@ riverbend_selected -> load_bagend
 maple_hollow_selected -> load_bagend
 ukrainian_selected -> load_bagend
 shane_manor_selected -> load_bagend
-experiments_selected -> help_menu
+experiments_selected -> help_menu [has sticky]
 external_story -> main_menu
 ```
 
@@ -65,8 +65,6 @@ external_story -> main_menu
 **Knots:** 16 | **Choices:** 36 | **Islands:** 11
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `Kitchen`
 - `Green_Dragon`
@@ -104,8 +102,6 @@ Talk_To_Gandalf -> Bag_End
 
 ### Islands (External Entry Points)
 
-These knots have no incoming edges - likely cross-episode links:
-
 - `Kitchen`
 - `Green_Dragon`
 - `Troll_Clearing_Dawn`
@@ -141,8 +137,6 @@ Talk_To_Gandalf -> Bag_End
 **Knots:** 37 | **Choices:** 83 | **Islands:** 30
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `intro`
 - `wardrobe`
@@ -184,7 +178,7 @@ wardrobe -> bedsit
 street -> jobcentre, oxfam, pub, gallery_pass
 jobcentre -> street
 postoffice -> street
-giro_fraud_video -> fraud_aftermath
+giro_fraud_video -> fraud_aftermath [has sticky]
 street_shameful -> jobcentre, oxfam, pub, gallery_pass
 oxfam -> street
 pub -> street
@@ -198,7 +192,7 @@ diamond_pub_attempt -> jobcentre, oxfam, pub, gallery_pass
 diamond_gallery_exhibit -> diamond_opening
 diamond_opening -> one_week_later
 one_week_later -> artist_confrontation
-world_between_worlds -> world_rest
+world_between_worlds -> world_rest [has sticky]
 world_rest -> world_end
 ```
 
@@ -207,8 +201,6 @@ world_rest -> world_end
 **Knots:** 12 | **Choices:** 23 | **Islands:** 3
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `Waterfall_Base`
 - `Hidden_Shrine`
@@ -236,8 +228,6 @@ Ancient_Vault -> Far_Shore
 **Knots:** 16 | **Choices:** 17 | **Islands:** 15
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `settle_in`
 - `peaceful_life`
@@ -279,8 +269,6 @@ use_atm -> join_guardians, keep_secret
 
 ### Islands (External Entry Points)
 
-These knots have no incoming edges - likely cross-episode links:
-
 - `spot_jake`
 - `walk_together`
 - `go_to_bakery`
@@ -306,8 +294,6 @@ lights_of_rising -> ending_hope, train_arrives
 **Knots:** 35 | **Choices:** 98 | **Islands:** 34
 
 ### Islands (External Entry Points)
-
-These knots have no incoming edges - likely cross-episode links:
 
 - `bread_question`
 - `correct_bread`
@@ -384,8 +370,6 @@ case_practice_sausage -> sausage_wrong_nominative, sausage_correct, sausage_wron
 
 ### Islands (External Entry Points)
 
-These knots have no incoming edges - likely cross-episode links:
-
 - `test_chess_position`
 - `test_character_confrontation`
 - `test_multiple_endings`
@@ -427,9 +411,9 @@ These knots have no incoming edges - likely cross-episode links:
 test_chess_position -> chess_minigame, chess_forensics, chess_records
 test_character_confrontation -> conspiracy_theory, outside_theory
 test_multiple_endings -> conspiracy_theory, outside_theory
-crime_scene -> examine_safe, examine_chess, examine_footprints
+crime_scene -> examine_safe, examine_chess, examine_footprints [has sticky]
 examine_safe -> conspiracy_theory, outside_theory
-examine_chess -> chess_minigame, chess_forensics, chess_records
+examine_chess -> chess_minigame, chess_forensics, chess_records [has sticky]
 examine_footprints -> conspiracy_theory, outside_theory
 chess_minigame -> accuse_charles, conspiracy_theory, outside_theory
 chess_aftermath -> conspiracy_theory, outside_theory
