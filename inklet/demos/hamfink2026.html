@@ -1684,7 +1684,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     const homeBtn = document.getElementById('homeBtn');
     const restartBtn = document.getElementById('restartBtn');
     const settingsBtn = document.getElementById('settingsBtn');
-    const finkSandbox = document.getElementById('fink-sandbox');
+    // finkSandbox now created dynamically in loadFinkFile()
     const minigameInstructions = document.getElementById('minigame-instructions');
     const chessContainer = document.getElementById('chess-container');
     const chessIframe = document.getElementById('chess-iframe');
@@ -2405,8 +2405,16 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             return;
         }
 
-        // Step 2: Send content to sandbox for safe execution
-        // Sandbox executes content sent via postMessage (no script.src needed)
+        // Step 2: Create fresh sandbox iframe (more reliable than reusing srcdoc)
+        const oldSandbox = document.getElementById('fink-sandbox');
+        if (oldSandbox) oldSandbox.remove();
+
+        const sandbox = document.createElement('iframe');
+        sandbox.id = 'fink-sandbox';
+        sandbox.setAttribute('sandbox', 'allow-scripts');
+        sandbox.style.display = 'none';
+
+        // Sandbox HTML that executes content sent via postMessage
         const sandboxHtml = `
             <!DOCTYPE html>
             <html>
@@ -2446,7 +2454,7 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
             if (e.data.type === 'sandbox-ready') {
                 log(`Sandbox ready, sending script content`, 'debug');
-                finkSandbox.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
+                sandbox.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
             } else if (e.data.type === 'fink-loaded') {
                 clearTimeout(loadTimeout);
                 window.removeEventListener('message', messageHandler);
@@ -2478,11 +2486,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             }
         }, 10000);
 
-        // Reset sandbox by setting new srcdoc
-        finkSandbox.srcdoc = '';
-        requestAnimationFrame(() => {
-            finkSandbox.srcdoc = sandboxHtml;
-        });
+        // Set srcdoc and append to start the sandbox
+        sandbox.srcdoc = sandboxHtml;
+        document.body.appendChild(sandbox);
     }
 
     function handleFinkLoaded(dataArray) {
