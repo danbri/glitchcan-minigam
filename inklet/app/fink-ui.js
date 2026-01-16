@@ -259,11 +259,6 @@ window.FinkUI = {
             }
         });
 
-        // Handle VIDEO tag - show YouTube embed
-        if (videoToShow) {
-            this.updateVideo(videoToShow);
-        }
-        
         // Store both processed (for backwards compatibility) and raw BASEHREF
         if (newBasePath) {
             FinkPlayer.mediaBasePath = newBasePath; // Processed (with trailing slash)
@@ -272,11 +267,18 @@ window.FinkUI = {
             FinkUtils.debugLog('Raw BASEHREF stored: ' + FinkPlayer.rawBasehref);
         }
         
+        // Use the newBasePath from current processing, or fall back to stored mediaBasePath
+        const currentRawBasehref = newBasePath ? newBasePath.replace(/\/$/, '') :
+                                 (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+
+        if (videoToShow) {
+            FinkUtils.debugLog('Showing video from INK tags: ' + videoToShow);
+            FinkUtils.debugLog('Using BASEHREF for video: "' + (currentRawBasehref || 'none') + '"');
+            this.updateVideo(videoToShow, currentRawBasehref);
+        }
+
         if (imageToShow) {
             FinkUtils.debugLog('Showing image from INK tags: ' + imageToShow);
-            // Use the newBasePath from current processing, or fall back to stored mediaBasePath
-            const currentRawBasehref = newBasePath ? newBasePath.replace(/\/$/, '') : 
-                                     (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
             FinkUtils.debugLog('Using BASEHREF for image: "' + (currentRawBasehref || 'none') + '"');
             this.updateImage(imageToShow, currentRawBasehref);
         } else {
@@ -310,19 +312,22 @@ window.FinkUI = {
         img.src = actualImagePath;
     },
 
-    // Video handling for YouTube embeds
-    // Note: Embeds may not work for non-logged-in users - always show fallback link
-    updateVideo(videoId) {
-        if (!videoId) return;
+    // Video handling - supports both local mp4 files and YouTube embeds
+    updateVideo(videoPath, rawBasehref) {
+        if (!videoPath) return;
 
-        FinkUtils.debugLog('updateVideo called with: "' + videoId + '"');
+        FinkUtils.debugLog('updateVideo called with: "' + videoPath + '", rawBasehref: "' + (rawBasehref || 'none') + '"');
+
+        // Detect if this is a local file or YouTube
+        const isLocalFile = videoPath.endsWith('.mp4') || videoPath.endsWith('.webm') || videoPath.endsWith('.mov');
+        const isYouTube = !isLocalFile && (videoPath.length === 11 || videoPath.includes('youtube') || videoPath.includes('youtu.be'));
 
         // Create or get video container
         let videoContainer = document.getElementById('video-container');
         if (!videoContainer) {
             videoContainer = document.createElement('div');
             videoContainer.id = 'video-container';
-            videoContainer.style.cssText = 'position:relative;width:100%;padding-bottom:56.25%;background:#000;margin-bottom:1rem;border-radius:8px;overflow:hidden;';
+            videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;background:#000;margin:1rem auto;border-radius:8px;overflow:hidden;';
             // Insert before image container or at start of content
             const imageContainer = this.elements.imageContainer;
             if (imageContainer && imageContainer.parentNode) {
@@ -330,35 +335,49 @@ window.FinkUI = {
             }
         }
 
-        // Create or update iframe
-        let iframe = videoContainer.querySelector('iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
+        // Clear previous content
+        videoContainer.innerHTML = '';
+
+        if (isLocalFile) {
+            // Handle local video file with layered media resolution
+            const actualVideoPath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, videoPath);
+            FinkUtils.debugLog('Resolved local video path: ' + actualVideoPath);
+
+            const video = document.createElement('video');
+            video.controls = true;
+            video.preload = 'metadata';
+            video.playsInline = true;
+            video.style.cssText = 'width:100%;display:block;border-radius:8px;';
+            video.src = actualVideoPath;
+
+            video.onerror = () => {
+                FinkUtils.debugLog('Video failed to load: ' + actualVideoPath);
+                videoContainer.innerHTML = '<p style="color:#f66;padding:1rem;text-align:center;">Video failed to load</p>';
+            };
+
+            videoContainer.appendChild(video);
+        } else if (isYouTube) {
+            // Handle YouTube embed
+            videoContainer.style.paddingBottom = '56.25%'; // 16:9 aspect ratio
+
+            const iframe = document.createElement('iframe');
             iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
             iframe.allowFullscreen = true;
             iframe.title = 'Story video';
+            iframe.src = `https://youtube.com/embed/${videoPath}?autoplay=1`;
             videoContainer.appendChild(iframe);
-        }
 
-        const embedUrl = `https://youtube.com/embed/${videoId}?autoplay=1`;
-        if (iframe.src !== embedUrl) {
-            iframe.src = embedUrl;
-            FinkUtils.debugLog('Video iframe src set to: ' + embedUrl);
-        }
-
-        // Create or update fallback link (embed may not work for non-logged-in users)
-        let fallbackLink = videoContainer.querySelector('.video-fallback');
-        if (!fallbackLink) {
-            fallbackLink = document.createElement('a');
+            // Fallback link
+            const fallbackLink = document.createElement('a');
             fallbackLink.className = 'video-fallback';
             fallbackLink.target = '_blank';
             fallbackLink.rel = 'noopener noreferrer';
             fallbackLink.style.cssText = 'position:absolute;bottom:8px;right:8px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;text-decoration:none;border-radius:4px;font-size:12px;z-index:10;';
             fallbackLink.innerHTML = '▶ Open on YouTube';
+            fallbackLink.href = `https://youtube.com/watch?v=${videoPath}`;
             videoContainer.appendChild(fallbackLink);
         }
-        fallbackLink.href = `https://youtube.com/watch?v=${videoId}`;
 
         // Hide image when showing video
         if (this.elements.storyImage) {
