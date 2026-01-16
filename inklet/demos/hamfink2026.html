@@ -513,13 +513,13 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 <!-- Developer Panel (top of page, tabbed) -->
 <div id="dev-panel">
     <div id="dev-tabs">
-        <button class="active" data-tab="logs">📋Log</button>
-        <button data-tab="swimlanes">🏊Swim</button>
-        <button data-tab="state">📊Cfg</button>
-        <button data-tab="finks">📂Fink</button>
-        <button data-tab="audio">🔊Snd</button>
-        <button id="copyLogsBtn">📋</button>
-        <button id="closeDevPanel" style="margin-left:auto;">✕</button>
+        <button class="active" data-tab="logs" title="Logs">📋</button>
+        <button data-tab="swimlanes" title="Swimlanes">🏊</button>
+        <button data-tab="state" title="Config">📊</button>
+        <button data-tab="finks" title="FINK files">📂</button>
+        <button data-tab="audio" title="Audio">🔊</button>
+        <button id="copyLogsBtn" title="Copy logs">📄</button>
+        <button id="closeDevPanel" title="Close" style="margin-left:auto;">✕</button>
     </div>
 
     <!-- Logs Tab -->
@@ -1012,11 +1012,17 @@ Developer tools for testing and debugging.
 <h4>📊 Story Variables</h4>
 <div id="var-list">Loading...</div>
 <h4>⚡ Quick Actions</h4>
-<button onclick="window.godmodeSetVar('diamonds', 99)">💎 99 Diamonds</button>
-<button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12 Mega</button>
-<button onclick="window.godmodeSetVar('keys', 5)">🔑 5 Keys</button>
-<button onclick="window.godmodeSetVar('score', 10000)">🏆 10000 Score</button>
-<button onclick="window.godmodeRefresh()">🔄 Refresh</button>
+<button onclick="window.godmodeSetVar('diamonds', 99)">💎 99</button>
+<button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12</button>
+<button onclick="window.godmodeSetVar('keys', 5)">🔑 5</button>
+<button onclick="window.godmodeSetVar('score', 10000)">🏆 10k</button>
+<button onclick="window.godmodeRefresh()">🔄</button>
+<h4>🔧 Dev Panel Tabs</h4>
+<button onclick="window.openDevTab('logs')">📋 Logs</button>
+<button onclick="window.openDevTab('swimlanes')">🏊 Swim</button>
+<button onclick="window.openDevTab('state')">📊 Config</button>
+<button onclick="window.openDevTab('finks')">📂 FINK</button>
+<button onclick="window.openDevTab('audio')">🔊 Audio</button>
 </div>
 
 + [🌌 World Between Worlds] -> dev_pools
@@ -3138,6 +3144,31 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         }
     });
     godmodeObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Open dev panel to specific tab from Ink UI
+    window.openDevTab = function(tabName) {
+        const devPanel = document.getElementById('dev-panel');
+        const devTabs = document.querySelectorAll('#dev-tabs button[data-tab]');
+        const devTabContents = document.querySelectorAll('.dev-tab-content');
+
+        // Show dev panel
+        devPanel.classList.add('visible');
+
+        // Activate the requested tab
+        devTabs.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        devTabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `${tabName}-content`);
+        });
+
+        // Special handling for state tab - update display
+        if (tabName === 'state') {
+            updateStateDisplay();
+        }
+
+        log(`Dev panel: Opened ${tabName} tab`, 'debug');
+    };
 
     initStory();
 
