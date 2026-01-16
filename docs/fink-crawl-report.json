@@ -1,5 +1,7 @@
 {
-  "timestamp": "2026-01-16T16:56:32.321Z",
+  "timestamp": "2026-01-16T17:40:17.805Z",
+  "source": "local",
+  "startFile": "inklet/toc.fink.js",
   "files": [
     {
       "file": "inklet/toc.fink.js",
@@ -41,9 +43,7 @@
         },
         "hobbit_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
@@ -55,9 +55,7 @@
         },
         "bagend2_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
@@ -69,41 +67,31 @@
         },
         "hampstead_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
         "mudslidemines_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
         "riverbend_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
         "maple_hollow_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
         "ukrainian_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
@@ -113,9 +101,7 @@
         },
         "shane_manor_selected": {
           "targets": [
-            "load_bagend",
-            "load_bagend2",
-            "external_story"
+            "load_bagend"
           ],
           "choices": 1
         },
@@ -141,6 +127,22 @@
         "../../cozyverse/maple-hollow.fink.js",
         "../tml-2025-langlearn.fink.js",
         "../shane-manor.fink.js"
+      ],
+      "islands": [
+        "episodes_menu",
+        "minigames_menu",
+        "hobbit_selected",
+        "bagend2_selected",
+        "load_bagend2",
+        "hampstead_selected",
+        "mudslidemines_selected",
+        "riverbend_selected",
+        "maple_hollow_selected",
+        "ukrainian_selected",
+        "dev_guide_selected",
+        "shane_manor_selected",
+        "experiments_selected",
+        "external_story"
       ]
     },
     {
@@ -190,8 +192,7 @@
           "targets": [
             "Hobbiton_Village",
             "Troll_Cave",
-            "Troll_Clearing",
-            "return_to_trolls"
+            "Troll_Clearing"
           ],
           "choices": 3
         },
@@ -217,7 +218,6 @@
         "Troll_Cave_Explored": {
           "targets": [
             "Troll_Clearing",
-            "return_to_trolls",
             "Victorious_Return"
           ],
           "choices": 2
@@ -254,7 +254,20 @@
           "choices": 3
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "Kitchen",
+        "Green_Dragon",
+        "Troll_Clearing_Dawn",
+        "Troll_Cave",
+        "Troll_Cave_Explored",
+        "return_to_trolls",
+        "Victorious_Return",
+        "The_Adventure_Begins",
+        "Peaceful_Retirement",
+        "Talk_To_Gandalf",
+        "Talk_To_Thorin"
+      ]
     },
     {
       "file": "inklet/bagend2.fink.js",
@@ -303,8 +316,7 @@
           "targets": [
             "Hobbiton_Village",
             "Troll_Cave",
-            "Troll_Clearing",
-            "return_to_trolls"
+            "Troll_Clearing"
           ],
           "choices": 4
         },
@@ -329,8 +341,7 @@
         },
         "Troll_Cave_Explored": {
           "targets": [
-            "Troll_Clearing",
-            "return_to_trolls"
+            "Troll_Clearing"
           ],
           "choices": 1
         },
@@ -366,7 +377,20 @@
           "choices": 3
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "Kitchen",
+        "Green_Dragon",
+        "Troll_Clearing_Dawn",
+        "Troll_Cave",
+        "Troll_Cave_Explored",
+        "return_to_trolls",
+        "Victorious_Return",
+        "The_Adventure_Begins",
+        "Peaceful_Retirement",
+        "Talk_To_Gandalf",
+        "Talk_To_Thorin"
+      ]
     },
     {
       "file": "inklet/hampstead.fink.js",
@@ -381,19 +405,12 @@
           "choices": 1
         },
         "intro": {
-          "targets": [
-            "bedsit"
-          ],
+          "targets": [],
           "choices": 2
         },
         "bedsit": {
           "targets": [
-            "wardrobe",
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "wardrobe"
           ],
           "choices": 2
         },
@@ -408,31 +425,19 @@
             "jobcentre",
             "oxfam",
             "pub",
-            "gallery_pass",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "gallery_pass"
           ],
           "choices": 5
         },
         "jobcentre": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 2
         },
         "postoffice": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 1
         },
@@ -451,63 +456,38 @@
             "jobcentre",
             "oxfam",
             "pub",
-            "gallery_pass",
-            "street",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "gallery_pass"
           ],
           "choices": 5
         },
         "oxfam": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 3
         },
         "pub": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 3
         },
         "gallery_pass": {
           "targets": [
-            "mansion_tip",
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 3
         },
         "mansion_tip": {
           "targets": [
             "mansion",
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 2
         },
         "mansion": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 1
         },
@@ -516,21 +496,13 @@
             "jobcentre",
             "oxfam",
             "pub",
-            "gallery_pass",
-            "street",
-            "street_shameful",
-            "housewarming",
-            "diamond_pub_attempt"
+            "gallery_pass"
           ],
           "choices": 5
         },
         "estate": {
           "targets": [
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming",
-            "diamond_pub_attempt"
+            "street"
           ],
           "choices": 2
         },
@@ -539,11 +511,7 @@
             "jobcentre",
             "oxfam",
             "pub",
-            "gallery_pass",
-            "street",
-            "street_shameful",
-            "car",
-            "diamond_pub_attempt"
+            "gallery_pass"
           ],
           "choices": 5
         },
@@ -568,11 +536,7 @@
             "jobcentre",
             "oxfam",
             "pub",
-            "gallery_pass",
-            "street",
-            "street_shameful",
-            "car",
-            "housewarming"
+            "gallery_pass"
           ],
           "choices": 5
         },
@@ -603,9 +567,7 @@
           "choices": 1
         },
         "artist_reveal": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 1
         },
         "world_between_worlds": {
@@ -615,38 +577,27 @@
           "choices": 7
         },
         "pool_bagend": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 2
         },
         "pool_mines": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 2
         },
         "pool_manor": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 2
         },
         "pool_maple": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 2
         },
         "pool_riverbend": {
-          "targets": [
-            "world_between_worlds"
-          ],
+          "targets": [],
           "choices": 2
         },
         "world_rest": {
           "targets": [
-            "world_between_worlds",
             "world_end"
           ],
           "choices": 2
@@ -656,7 +607,39 @@
           "choices": 1
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "intro",
+        "wardrobe",
+        "postoffice",
+        "giro_fraud_video",
+        "fraud_aftermath",
+        "street_shameful",
+        "mansion_tip",
+        "mansion",
+        "car",
+        "estate",
+        "housewarming",
+        "fraud_ending",
+        "victory",
+        "diamond_pawn",
+        "jail",
+        "diamond_pub_attempt",
+        "diamond_gallery_exhibit",
+        "diamond_opening",
+        "one_week_later",
+        "artist_confrontation",
+        "artist_challenge",
+        "artist_reveal",
+        "world_between_worlds",
+        "pool_bagend",
+        "pool_mines",
+        "pool_manor",
+        "pool_maple",
+        "pool_riverbend",
+        "world_rest",
+        "world_end"
+      ]
     },
     {
       "file": "inklet/mudslidemines.fink.js",
@@ -747,7 +730,12 @@
           "choices": 2
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "Waterfall_Base",
+        "Hidden_Shrine",
+        "Ancient_Vault"
+      ]
     },
     {
       "file": "inklet/riverbend.fink.js",
@@ -850,7 +838,24 @@
           "choices": 0
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "settle_in",
+        "peaceful_life",
+        "follow_whispers",
+        "eavesdrop",
+        "mill_direct",
+        "main_door",
+        "enter_mill",
+        "search_mill",
+        "metal_door",
+        "look_for_clues",
+        "roman_numerals",
+        "correct_code",
+        "use_atm",
+        "join_guardians",
+        "keep_secret"
+      ]
     },
     {
       "file": "cozyverse/maple-hollow.fink.js",
@@ -867,9 +872,7 @@
           "choices": 2
         },
         "walk_together": {
-          "targets": [
-            "song_returns"
-          ],
+          "targets": [],
           "choices": 3
         },
         "go_to_bakery": {
@@ -918,7 +921,21 @@
           "choices": 1
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "spot_jake",
+        "walk_together",
+        "go_to_bakery",
+        "stranger_kindness",
+        "lily_ambush",
+        "festival_prep",
+        "song_returns",
+        "flour_disaster",
+        "ask_about_jake",
+        "lights_of_rising",
+        "ending_love",
+        "ending_hope"
+      ]
     },
     {
       "file": "inklet/tml-2025-langlearn.fink.js",
@@ -937,8 +954,7 @@
             "correct_bread",
             "wrong_bread_1",
             "wrong_bread_2",
-            "wrong_bread_3",
-            "dairy_question"
+            "wrong_bread_3"
           ],
           "choices": 4
         },
@@ -947,9 +963,7 @@
             "dairy_correct_milk",
             "dairy_correct_cheese",
             "dairy_wrong_borscht",
-            "dairy_wrong_bread",
-            "match_question",
-            "match_borscht"
+            "dairy_wrong_bread"
           ],
           "choices": 4
         },
@@ -958,9 +972,7 @@
             "dairy_correct_milk",
             "dairy_correct_cheese",
             "dairy_wrong_borscht",
-            "dairy_wrong_bread",
-            "match_question",
-            "match_borscht"
+            "dairy_wrong_bread"
           ],
           "choices": 4
         },
@@ -969,9 +981,7 @@
             "dairy_correct_milk",
             "dairy_correct_cheese",
             "dairy_wrong_borscht",
-            "dairy_wrong_bread",
-            "match_question",
-            "match_borscht"
+            "dairy_wrong_bread"
           ],
           "choices": 4
         },
@@ -980,9 +990,7 @@
             "dairy_correct_milk",
             "dairy_correct_cheese",
             "dairy_wrong_borscht",
-            "dairy_wrong_bread",
-            "match_question",
-            "match_borscht"
+            "dairy_wrong_bread"
           ],
           "choices": 4
         },
@@ -991,9 +999,7 @@
             "dairy_correct_milk",
             "dairy_correct_cheese",
             "dairy_wrong_borscht",
-            "dairy_wrong_bread",
-            "match_question",
-            "match_borscht"
+            "dairy_wrong_bread"
           ],
           "choices": 4
         },
@@ -1087,40 +1093,35 @@
         "grammar_case_example": {
           "targets": [
             "case_bread_correct",
-            "case_bread_wrong",
-            "case_practice_cheese"
+            "case_bread_wrong"
           ],
           "choices": 5
         },
         "case_practice_bread": {
           "targets": [
             "case_bread_correct",
-            "case_bread_wrong",
-            "case_practice_cheese"
+            "case_bread_wrong"
           ],
           "choices": 3
         },
         "case_bread_correct": {
           "targets": [
             "case_cheese_correct",
-            "case_cheese_wrong",
-            "case_practice_sausage"
+            "case_cheese_wrong"
           ],
           "choices": 3
         },
         "case_bread_wrong": {
           "targets": [
             "case_cheese_correct",
-            "case_cheese_wrong",
-            "case_practice_sausage"
+            "case_cheese_wrong"
           ],
           "choices": 3
         },
         "case_practice_cheese": {
           "targets": [
             "case_cheese_correct",
-            "case_cheese_wrong",
-            "case_practice_sausage"
+            "case_cheese_wrong"
           ],
           "choices": 3
         },
@@ -1173,7 +1174,43 @@
           "choices": 0
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "bread_question",
+        "correct_bread",
+        "wrong_bread_1",
+        "wrong_bread_2",
+        "wrong_bread_3",
+        "dairy_question",
+        "dairy_correct_milk",
+        "dairy_correct_cheese",
+        "dairy_wrong_borscht",
+        "dairy_wrong_bread",
+        "match_question",
+        "match_borscht",
+        "match_varenyky",
+        "match_sausage",
+        "fruit_question",
+        "fruit_correct",
+        "fruit_wrong_cheese",
+        "fruit_wrong_bread",
+        "fruit_wrong_milk",
+        "grammar_intro",
+        "grammar_case_example",
+        "case_practice_bread",
+        "case_bread_correct",
+        "case_bread_wrong",
+        "case_practice_cheese",
+        "case_cheese_correct",
+        "case_cheese_wrong",
+        "case_practice_sausage",
+        "sausage_correct",
+        "sausage_wrong_nominative",
+        "sausage_wrong_instrumental",
+        "grammar_review",
+        "tutorial_complete",
+        "end"
+      ]
     },
     {
       "file": "inklet/shane-manor.fink.js",
@@ -1379,12 +1416,52 @@
           "choices": 0
         }
       },
-      "linkedFinks": []
+      "linkedFinks": [],
+      "islands": [
+        "test_chess_position",
+        "test_character_confrontation",
+        "test_multiple_endings",
+        "meet_butler",
+        "investigation_choice",
+        "crime_scene",
+        "examine_safe",
+        "examine_chess",
+        "examine_footprints",
+        "chess_minigame",
+        "chess_aftermath",
+        "charles_chess_evidence",
+        "victoria_chess_evidence",
+        "chess_forensics",
+        "chess_records",
+        "chess_realization",
+        "interview_mary",
+        "gather_household",
+        "household_confrontation",
+        "deduction",
+        "accuse_charles",
+        "outside_theory",
+        "time_up",
+        "resolution",
+        "accuse_victoria",
+        "accuse_mrs_pemberton",
+        "accuse_ashford",
+        "conspiracy_theory",
+        "resolution_charles",
+        "resolution_victoria",
+        "resolution_mrs_pemberton",
+        "resolution_ashford",
+        "resolution_conspiracy",
+        "partial_resolution"
+      ]
     }
   ],
   "summary": {
     "total": 9,
     "compiled": 9,
     "failed": 0
-  }
+  },
+  "designDocs": [
+    "docs/hampstead-story-graph-analysis.md",
+    "docs/3dmap-idea.md"
+  ]
 }
