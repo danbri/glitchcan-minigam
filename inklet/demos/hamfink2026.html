@@ -2653,7 +2653,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'choice';
         confirmBtn.textContent = 'Yes, return to main menu';
+        confirmBtn.addEventListener('animationend', () => confirmBtn.classList.add('ready'), { once: true });
         confirmBtn.addEventListener('click', () => {
+            if (!confirmBtn.classList.contains('ready')) return;
             log('Home confirmed - returning to main story');
             storyOutput.innerHTML = '';
             choicesContainer.innerHTML = '';
@@ -2670,7 +2672,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'choice';
         cancelBtn.textContent = 'No, continue playing';
+        cancelBtn.addEventListener('animationend', () => cancelBtn.classList.add('ready'), { once: true });
         cancelBtn.addEventListener('click', () => {
+            if (!cancelBtn.classList.contains('ready')) return;
             warning.remove();
             choicesContainer.innerHTML = '';
             displayChoices();  // Restore original choices
