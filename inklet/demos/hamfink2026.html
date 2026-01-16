@@ -299,6 +299,31 @@ button.choice {
 .stat-value { color: var(--zx-yellow); }
 .stat-value.mega { color: var(--zx-mag); text-shadow: 0 0 10px var(--zx-mag); }
 
+/* Godmode panel */
+.godmode-panel {
+    background: #1a1a2e; border: 2px solid var(--zx-cyan); border-radius: 8px;
+    padding: 1em; margin: 1em 0; font-family: monospace; font-size: 12px;
+}
+.godmode-panel h4 { margin: 0.5em 0; color: var(--zx-cyan); }
+.godmode-panel button {
+    background: #333; color: var(--zx-yellow); border: 1px solid var(--zx-yellow);
+    padding: 0.5em 1em; margin: 0.25em; cursor: pointer; border-radius: 4px;
+    font-size: 11px;
+}
+.godmode-panel button:hover { background: var(--zx-yellow); color: #000; }
+#var-list {
+    background: #0a0a15; padding: 0.5em; border-radius: 4px;
+    max-height: 200px; overflow-y: auto; margin-bottom: 1em;
+}
+.var-row { display: flex; justify-content: space-between; padding: 0.25em 0; border-bottom: 1px solid #333; }
+.var-name { color: var(--zx-cyan); }
+.var-value { color: var(--zx-yellow); cursor: pointer; }
+.var-value:hover { text-decoration: underline; }
+.var-input {
+    background: #222; color: var(--zx-yellow); border: 1px solid var(--zx-mag);
+    padding: 0.2em 0.5em; width: 60px; font-family: monospace;
+}
+
 /* Minigame View */
 #minigame-view { padding: 1em; align-items: center; justify-content: center; }
 #game-container {
@@ -488,13 +513,13 @@ main { flex: 1; min-height: 0; overflow: hidden; }
 <!-- Developer Panel (top of page, tabbed) -->
 <div id="dev-panel">
     <div id="dev-tabs">
-        <button class="active" data-tab="logs">📋Log</button>
-        <button data-tab="swimlanes">🏊Swim</button>
-        <button data-tab="state">📊Cfg</button>
-        <button data-tab="finks">📂Fink</button>
-        <button data-tab="audio">🔊Snd</button>
-        <button id="copyLogsBtn">📋</button>
-        <button id="closeDevPanel" style="margin-left:auto;">✕</button>
+        <button class="active" data-tab="logs" title="Logs">📋</button>
+        <button data-tab="swimlanes" title="Swimlanes">🏊</button>
+        <button data-tab="state" title="Config">📊</button>
+        <button data-tab="finks" title="FINK files">📂</button>
+        <button data-tab="audio" title="Audio">🔊</button>
+        <button id="copyLogsBtn" title="Copy logs">📄</button>
+        <button id="closeDevPanel" title="Close" style="margin-left:auto;">✕</button>
     </div>
 
     <!-- Logs Tab -->
@@ -647,6 +672,7 @@ The only way out is through the locked passage ahead. You'll need to collect gem
 
 + [Look around carefully] -> look_around
 + [Call out into the darkness] -> call_out
++ [Dev: How it works / Tours] -> how_it_works
 + [Dev: Skip to World Pools] -> dev_pools
 
 === look_around ===
@@ -819,9 +845,11 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 + [🎵 FOLEY Sound Tour] -> foley_tour
 + [🎮 Minigame Tour] -> minigame_tour
 + [🎬 Video Tour] -> video_tour
++ [🗺️ Adventures Tour] -> adventures_tour
++ [🔧 Dev Tools / Godmode] -> dev_tools
 + [View source on GitHub] -> github_links
++ [Return to start] -> intro
 + [Return to ending] -> victory
-+ [Dev: World Between Worlds] -> dev_pools
 
 === video_tour ===
 # CLASS: info
@@ -934,6 +962,71 @@ Howling wind with deep ominous rumble beneath.
 # FOLEY: stop
 Silence.
 + [Back to FOLEY tour] -> foley_tour
+
+=== adventures_tour ===
+# CLASS: info
+External FINK adventures demonstrate variables, conditionals, and branching stories.
+
++ [🏚️ Shane Manor Mystery (chess + detective)] -> load_shane_manor
++ [🚇 Hampstead Adventure (fraud storyline)] -> load_hampstead_full
++ [⛏️ Mudslide Mines (exploration)] -> load_mudslide
++ [🏠 Bagend (Tolkien tribute)] -> load_bagend
++ [🌊 Riverbend (atmospheric)] -> load_riverbend_adventure
++ [Back] -> how_it_works
+
+=== load_shane_manor ===
+# CLASS: info
+Loading Shane Manor Mystery...
+# FINK: ../shane-manor.fink.js
+-> END
+
+=== load_hampstead_full ===
+# CLASS: info
+Loading Hampstead Adventure...
+# FINK: ../hampstead.fink.js
+-> END
+
+=== load_mudslide ===
+# CLASS: info
+Loading Mudslide Mines...
+# FINK: ../mudslidemines.fink.js
+-> END
+
+=== load_bagend ===
+# CLASS: info
+Loading Bagend...
+# FINK: ../bagend.fink.js
+-> END
+
+=== load_riverbend_adventure ===
+# CLASS: info
+Loading Riverbend...
+# FINK: ../riverbend.fink.js
+-> END
+
+=== dev_tools ===
+# CLASS: code
+Developer tools for testing and debugging.
+
+<div id="godmode-panel" class="godmode-panel">
+<h4>📊 Story Variables</h4>
+<div id="var-list">Loading...</div>
+<h4>⚡ Quick Actions</h4>
+<button onclick="window.godmodeSetVar('diamonds', 99)">💎 99</button>
+<button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12</button>
+<button onclick="window.godmodeSetVar('keys', 5)">🔑 5</button>
+<button onclick="window.godmodeSetVar('score', 10000)">🏆 10k</button>
+<button onclick="window.godmodeRefresh()">🔄</button>
+<h4>🔧 Dev Panel Tabs</h4>
+<button onclick="window.openDevTab('logs')">📋 Logs</button>
+<button onclick="window.openDevTab('swimlanes')">🏊 Swim</button>
+<button onclick="window.openDevTab('state')">📊 Config</button>
+<button onclick="window.openDevTab('finks')">📂 FINK</button>
+<button onclick="window.openDevTab('audio')">🔊 Audio</button>
+</div>
+
++ [🌌 World Between Worlds] -> dev_pools
++ [Back] -> how_it_works
 
 === dev_pools ===
 # CLASS: info
@@ -1709,13 +1802,64 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     // --- Stats Update ---
+    // Track current namespace for namespaced variable lookups
+    let currentNamespace = null;
+
     function updateStatsDisplay() {
         if (!story) return;
         try {
-            statDiamonds.textContent = story.variablesState['diamonds'] || 0;
-            statMega.textContent = story.variablesState['mega_diamonds'] || 0;
-            statKeys.textContent = story.variablesState['keys'] || 0;
-            statScore.textContent = story.variablesState['score'] || 0;
+            // Helper to find variable value - checks canonical and namespaced versions
+            function findVar(name) {
+                // First try canonical name (for IMPORT vars and embedded story)
+                let val = story.variablesState[name];
+                if (val !== undefined && val !== null) return val;
+
+                // If we have a known namespace from FINK loading, try that
+                if (currentNamespace) {
+                    const nsName = currentNamespace + '_' + name;
+                    val = story.variablesState[nsName];
+                    if (val !== undefined && val !== null) return val;
+                }
+
+                // Look for any namespaced versions (e.g., "abc12345_mega_diamonds")
+                // Use inkjs's $ iterator if available, fallback to Object.keys
+                const suffix = '_' + name;
+                let foundKey = null;
+
+                if (story.variablesState.$ && typeof story.variablesState.$ === 'function') {
+                    // inkjs iterator method
+                    story.variablesState.$((varName, value) => {
+                        if (varName.endsWith(suffix)) {
+                            foundKey = varName;
+                            return true; // stop iteration
+                        }
+                        return false;
+                    });
+                } else {
+                    // Fallback to Object.keys
+                    const keys = Object.keys(story.variablesState || {});
+                    foundKey = keys.find(k => k.endsWith(suffix));
+                }
+
+                if (foundKey) {
+                    log(`Stats: Found namespaced var ${foundKey} for ${name}`, 'debug');
+                    return story.variablesState[foundKey];
+                }
+                return 0;
+            }
+
+            const diamonds = findVar('diamonds');
+            const mega = findVar('mega_diamonds');
+            const keys = findVar('keys');
+            const score = findVar('score');
+
+            statDiamonds.textContent = diamonds;
+            statMega.textContent = mega;
+            statKeys.textContent = keys;
+            statScore.textContent = score;
+
+            // Debug logging to help diagnose display issues
+            log(`Stats update: diamonds=${diamonds} mega=${mega} keys=${keys} score=${score}`, 'debug');
         } catch (e) {
             log(`Error updating stats: ${e.message}`, 'error');
         }
@@ -1916,6 +2060,12 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     function initStory(inkSource = null) {
         const source = inkSource || document.getElementById('ink-story').textContent;
         const isExternal = inkSource !== null;
+
+        // Reset namespace when returning to embedded story
+        if (!isExternal) {
+            currentNamespace = null;
+        }
+
         try {
             log('Compiling Ink story...');
             log(`Source length: ${source.length} chars, ${source.split('\n').length} lines`);
@@ -2376,6 +2526,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             log(`EXPORT vars: [${nsResult.exports.join(', ') || 'none'}]`, 'fink');
             log(`Transformed vars: ${Object.keys(nsResult.transformedVars).length} prefixed`, 'debug');
 
+            // Store namespace for stats display lookups
+            currentNamespace = nsResult.namespace;
+
             // Semantic swimlane events for namespace processing
             swimEvent('fink', '🔧', `Namespace: ${nsResult.namespace}`, `SHA-256 prefix from URL`);
             if (nsResult.imports.length > 0) {
@@ -2653,10 +2806,13 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'choice';
         confirmBtn.textContent = 'Yes, return to main menu';
+        // Enable after animation (with fallback timeout)
         confirmBtn.addEventListener('animationend', () => confirmBtn.classList.add('ready'), { once: true });
+        setTimeout(() => confirmBtn.classList.add('ready'), 600);
         confirmBtn.addEventListener('click', () => {
             if (!confirmBtn.classList.contains('ready')) return;
             log('Home confirmed - returning to main story');
+            SoundSynth.stop(); // Stop all FOLEY sounds
             storyOutput.innerHTML = '';
             choicesContainer.innerHTML = '';
             minigameActive = false;
@@ -2672,7 +2828,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'choice';
         cancelBtn.textContent = 'No, continue playing';
+        // Enable after animation (with fallback timeout)
         cancelBtn.addEventListener('animationend', () => cancelBtn.classList.add('ready'), { once: true });
+        setTimeout(() => cancelBtn.classList.add('ready'), 700);
         cancelBtn.addEventListener('click', () => {
             if (!cancelBtn.classList.contains('ready')) return;
             warning.remove();
@@ -2906,6 +3064,111 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     };
     document.addEventListener('click', unlockAudio, { once: true });
     document.addEventListener('touchstart', unlockAudio, { once: true });
+
+    // --- Godmode / Dev Tools ---
+    // Expose functions globally for onclick handlers in Ink content
+    window.godmodeRefresh = function() {
+        const varList = document.getElementById('var-list');
+        if (!varList || !story) {
+            if (varList) varList.innerHTML = '<em>No story loaded</em>';
+            return;
+        }
+
+        // Collect all variables from story
+        const vars = {};
+        const knownVars = ['diamonds', 'mega_diamonds', 'keys', 'score', 'minigame_played',
+                          'cavern_explored', 'tried_passage', 'fraud_caught', 'chess_won',
+                          'giro_collected', 'giro_cashed'];
+
+        // First check known vars
+        for (const name of knownVars) {
+            const val = story.variablesState[name];
+            if (val !== undefined) vars[name] = val;
+        }
+
+        // Also try to enumerate any additional vars using inkjs iterator
+        if (story.variablesState.$ && typeof story.variablesState.$ === 'function') {
+            story.variablesState.$((name, value) => {
+                if (!vars.hasOwnProperty(name)) vars[name] = value;
+            });
+        }
+
+        // Build HTML
+        let html = '';
+        for (const [name, value] of Object.entries(vars)) {
+            const displayVal = typeof value === 'boolean' ? (value ? 'true' : 'false') : value;
+            html += `<div class="var-row">
+                <span class="var-name">${name}</span>
+                <span class="var-value" onclick="window.godmodeEditVar('${name}', ${JSON.stringify(value)})">${displayVal}</span>
+            </div>`;
+        }
+        varList.innerHTML = html || '<em>No variables found</em>';
+        log(`Godmode: Refreshed ${Object.keys(vars).length} variables`, 'debug');
+    };
+
+    window.godmodeSetVar = function(name, value) {
+        if (!story) {
+            log('Godmode: No story loaded', 'warn');
+            return;
+        }
+        try {
+            story.variablesState[name] = value;
+            updateStatsDisplay();
+            window.godmodeRefresh();
+            log(`Godmode: Set ${name} = ${value}`, 'warn');
+            swimEvent('game', '🔧', 'Godmode', `${name} = ${value}`);
+        } catch (e) {
+            log(`Godmode: Error setting ${name}: ${e.message}`, 'error');
+        }
+    };
+
+    window.godmodeEditVar = function(name, currentValue) {
+        const newValue = prompt(`Edit ${name}:`, currentValue);
+        if (newValue === null) return;
+
+        // Try to parse as number or boolean
+        let parsed;
+        if (newValue === 'true') parsed = true;
+        else if (newValue === 'false') parsed = false;
+        else if (!isNaN(Number(newValue))) parsed = Number(newValue);
+        else parsed = newValue;
+
+        window.godmodeSetVar(name, parsed);
+    };
+
+    // Auto-refresh godmode panel when it appears in the story
+    const godmodeObserver = new MutationObserver(() => {
+        const panel = document.getElementById('godmode-panel');
+        if (panel && panel.offsetParent !== null) {
+            window.godmodeRefresh();
+        }
+    });
+    godmodeObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Open dev panel to specific tab from Ink UI
+    window.openDevTab = function(tabName) {
+        const devPanel = document.getElementById('dev-panel');
+        const devTabs = document.querySelectorAll('#dev-tabs button[data-tab]');
+        const devTabContents = document.querySelectorAll('.dev-tab-content');
+
+        // Show dev panel
+        devPanel.classList.add('visible');
+
+        // Activate the requested tab
+        devTabs.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        devTabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `${tabName}-content`);
+        });
+
+        // Special handling for state tab - update display
+        if (tabName === 'state') {
+            updateStateDisplay();
+        }
+
+        log(`Dev panel: Opened ${tabName} tab`, 'debug');
+    };
 
     initStory();
 
