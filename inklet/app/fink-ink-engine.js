@@ -223,13 +223,22 @@ window.FinkInkEngine = {
             FinkUI.showStatus('Error: No external story specified');
             return;
         }
-        
+
         FinkUtils.debugLog('Loading external FINK file: ' + this.lastSeenFinkTag);
         FinkUI.showStatus('Loading ' + this.lastSeenFinkTag + '...', true);
-        
-        FinkSandbox.loadViaSandbox(new URL(this.lastSeenFinkTag, window.location.href).href)
+
+        // Resolve relative to CURRENT story URL, not app location
+        const baseUrl = FinkPlayer.currentStoryUrl || window.location.href;
+        const resolvedUrl = new URL(this.lastSeenFinkTag, baseUrl).href;
+        FinkUtils.debugLog('Resolving FINK URL relative to: ' + baseUrl);
+        FinkUtils.debugLog('Resolved URL: ' + resolvedUrl);
+
+        FinkSandbox.loadViaSandbox(resolvedUrl)
             .then((content) => {
                 FinkUtils.debugLog('External FINK loaded successfully');
+                // Update currentStoryUrl so BASEHREF resolves correctly
+                FinkPlayer.currentStoryUrl = resolvedUrl;
+                FinkUtils.debugLog('Updated currentStoryUrl to: ' + resolvedUrl);
                 this.compileAndRunStory(content);
             })
             .catch(error => {

@@ -339,8 +339,9 @@ window.FinkUI = {
         videoContainer.innerHTML = '';
 
         if (isLocalFile) {
-            // Handle local video file with layered media resolution
-            const actualVideoPath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, videoPath);
+            // Resolve video relative to story file (not BASEHREF - that's for images)
+            const storyBase = FinkPlayer.currentStoryUrl ? new URL('.', FinkPlayer.currentStoryUrl).href : window.location.href;
+            const actualVideoPath = new URL(videoPath, storyBase).href;
             FinkUtils.debugLog('Resolved local video path: ' + actualVideoPath);
 
             const video = document.createElement('video');
