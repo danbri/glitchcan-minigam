@@ -299,6 +299,31 @@ button.choice {
 .stat-value { color: var(--zx-yellow); }
 .stat-value.mega { color: var(--zx-mag); text-shadow: 0 0 10px var(--zx-mag); }
 
+/* Godmode panel */
+.godmode-panel {
+    background: #1a1a2e; border: 2px solid var(--zx-cyan); border-radius: 8px;
+    padding: 1em; margin: 1em 0; font-family: monospace; font-size: 12px;
+}
+.godmode-panel h4 { margin: 0.5em 0; color: var(--zx-cyan); }
+.godmode-panel button {
+    background: #333; color: var(--zx-yellow); border: 1px solid var(--zx-yellow);
+    padding: 0.5em 1em; margin: 0.25em; cursor: pointer; border-radius: 4px;
+    font-size: 11px;
+}
+.godmode-panel button:hover { background: var(--zx-yellow); color: #000; }
+#var-list {
+    background: #0a0a15; padding: 0.5em; border-radius: 4px;
+    max-height: 200px; overflow-y: auto; margin-bottom: 1em;
+}
+.var-row { display: flex; justify-content: space-between; padding: 0.25em 0; border-bottom: 1px solid #333; }
+.var-name { color: var(--zx-cyan); }
+.var-value { color: var(--zx-yellow); cursor: pointer; }
+.var-value:hover { text-decoration: underline; }
+.var-input {
+    background: #222; color: var(--zx-yellow); border: 1px solid var(--zx-mag);
+    padding: 0.2em 0.5em; width: 60px; font-family: monospace;
+}
+
 /* Minigame View */
 #minigame-view { padding: 1em; align-items: center; justify-content: center; }
 #game-container {
@@ -820,10 +845,11 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 + [🎵 FOLEY Sound Tour] -> foley_tour
 + [🎮 Minigame Tour] -> minigame_tour
 + [🎬 Video Tour] -> video_tour
++ [🗺️ Adventures Tour] -> adventures_tour
++ [🔧 Dev Tools / Godmode] -> dev_tools
 + [View source on GitHub] -> github_links
 + [Return to start] -> intro
 + [Return to ending] -> victory
-+ [Dev: World Between Worlds] -> dev_pools
 
 === video_tour ===
 # CLASS: info
@@ -936,6 +962,65 @@ Howling wind with deep ominous rumble beneath.
 # FOLEY: stop
 Silence.
 + [Back to FOLEY tour] -> foley_tour
+
+=== adventures_tour ===
+# CLASS: info
+External FINK adventures demonstrate variables, conditionals, and branching stories.
+
++ [🏚️ Shane Manor Mystery (chess + detective)] -> load_shane_manor
++ [🚇 Hampstead Adventure (fraud storyline)] -> load_hampstead_full
++ [⛏️ Mudslide Mines (exploration)] -> load_mudslide
++ [🏠 Bagend (Tolkien tribute)] -> load_bagend
++ [🌊 Riverbend (atmospheric)] -> load_riverbend_adventure
++ [Back] -> how_it_works
+
+=== load_shane_manor ===
+# CLASS: info
+Loading Shane Manor Mystery...
+# FINK: ../shane-manor.fink.js
+-> END
+
+=== load_hampstead_full ===
+# CLASS: info
+Loading Hampstead Adventure...
+# FINK: ../hampstead.fink.js
+-> END
+
+=== load_mudslide ===
+# CLASS: info
+Loading Mudslide Mines...
+# FINK: ../mudslidemines.fink.js
+-> END
+
+=== load_bagend ===
+# CLASS: info
+Loading Bagend...
+# FINK: ../bagend.fink.js
+-> END
+
+=== load_riverbend_adventure ===
+# CLASS: info
+Loading Riverbend...
+# FINK: ../riverbend.fink.js
+-> END
+
+=== dev_tools ===
+# CLASS: code
+Developer tools for testing and debugging.
+
+<div id="godmode-panel" class="godmode-panel">
+<h4>📊 Story Variables</h4>
+<div id="var-list">Loading...</div>
+<h4>⚡ Quick Actions</h4>
+<button onclick="window.godmodeSetVar('diamonds', 99)">💎 99 Diamonds</button>
+<button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12 Mega</button>
+<button onclick="window.godmodeSetVar('keys', 5)">🔑 5 Keys</button>
+<button onclick="window.godmodeSetVar('score', 10000)">🏆 10000 Score</button>
+<button onclick="window.godmodeRefresh()">🔄 Refresh</button>
+</div>
+
++ [🌌 World Between Worlds] -> dev_pools
++ [Back] -> how_it_works
 
 === dev_pools ===
 # CLASS: info
@@ -2973,6 +3058,86 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     };
     document.addEventListener('click', unlockAudio, { once: true });
     document.addEventListener('touchstart', unlockAudio, { once: true });
+
+    // --- Godmode / Dev Tools ---
+    // Expose functions globally for onclick handlers in Ink content
+    window.godmodeRefresh = function() {
+        const varList = document.getElementById('var-list');
+        if (!varList || !story) {
+            if (varList) varList.innerHTML = '<em>No story loaded</em>';
+            return;
+        }
+
+        // Collect all variables from story
+        const vars = {};
+        const knownVars = ['diamonds', 'mega_diamonds', 'keys', 'score', 'minigame_played',
+                          'cavern_explored', 'tried_passage', 'fraud_caught', 'chess_won',
+                          'giro_collected', 'giro_cashed'];
+
+        // First check known vars
+        for (const name of knownVars) {
+            const val = story.variablesState[name];
+            if (val !== undefined) vars[name] = val;
+        }
+
+        // Also try to enumerate any additional vars using inkjs iterator
+        if (story.variablesState.$ && typeof story.variablesState.$ === 'function') {
+            story.variablesState.$((name, value) => {
+                if (!vars.hasOwnProperty(name)) vars[name] = value;
+            });
+        }
+
+        // Build HTML
+        let html = '';
+        for (const [name, value] of Object.entries(vars)) {
+            const displayVal = typeof value === 'boolean' ? (value ? 'true' : 'false') : value;
+            html += `<div class="var-row">
+                <span class="var-name">${name}</span>
+                <span class="var-value" onclick="window.godmodeEditVar('${name}', ${JSON.stringify(value)})">${displayVal}</span>
+            </div>`;
+        }
+        varList.innerHTML = html || '<em>No variables found</em>';
+        log(`Godmode: Refreshed ${Object.keys(vars).length} variables`, 'debug');
+    };
+
+    window.godmodeSetVar = function(name, value) {
+        if (!story) {
+            log('Godmode: No story loaded', 'warn');
+            return;
+        }
+        try {
+            story.variablesState[name] = value;
+            updateStatsDisplay();
+            window.godmodeRefresh();
+            log(`Godmode: Set ${name} = ${value}`, 'warn');
+            swimEvent('game', '🔧', 'Godmode', `${name} = ${value}`);
+        } catch (e) {
+            log(`Godmode: Error setting ${name}: ${e.message}`, 'error');
+        }
+    };
+
+    window.godmodeEditVar = function(name, currentValue) {
+        const newValue = prompt(`Edit ${name}:`, currentValue);
+        if (newValue === null) return;
+
+        // Try to parse as number or boolean
+        let parsed;
+        if (newValue === 'true') parsed = true;
+        else if (newValue === 'false') parsed = false;
+        else if (!isNaN(Number(newValue))) parsed = Number(newValue);
+        else parsed = newValue;
+
+        window.godmodeSetVar(name, parsed);
+    };
+
+    // Auto-refresh godmode panel when it appears in the story
+    const godmodeObserver = new MutationObserver(() => {
+        const panel = document.getElementById('godmode-panel');
+        if (panel && panel.offsetParent !== null) {
+            window.godmodeRefresh();
+        }
+    });
+    godmodeObserver.observe(document.body, { childList: true, subtree: true });
 
     initStory();
 
