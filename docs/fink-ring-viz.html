@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FINK Episode Ring Visualization</title>
+    <title>FINK Episode Rings - Stacked Visualization</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -25,54 +25,64 @@
         .subtitle {
             font-size: 12px;
             color: #666;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 0.2em;
         }
-        .controls {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .controls select, .controls button {
-            padding: 8px 16px;
-            background: #1a1a2e;
-            border: 1px solid #333;
-            color: #ccc;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .controls select:hover, .controls button:hover {
-            border-color: #4ecca3;
-        }
-        .controls button.active {
-            background: #4ecca3;
-            color: #000;
-        }
-        .container {
+        .stack-container {
             position: relative;
-            width: min(800px, 95vw);
-            height: min(800px, 95vw);
+            width: 900px;
+            height: 700px;
+            perspective: 1200px;
         }
-        svg {
+        .ring-layer {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            transition: transform 0.5s ease, opacity 0.3s ease;
+            cursor: pointer;
+        }
+        .ring-layer svg {
             width: 100%;
             height: 100%;
         }
+        .ring-layer.active {
+            z-index: 100;
+        }
+        .ring-layer.dimmed {
+            opacity: 0.3;
+        }
+        .ring-layer:hover:not(.active) {
+            opacity: 0.8;
+        }
+        .episode-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            white-space: nowrap;
+            transition: color 0.3s;
+        }
+        .ring-layer.active .episode-label {
+            color: #4ecca3;
+            font-weight: 500;
+        }
         .legend {
             display: flex;
-            gap: 20px;
-            margin-top: 15px;
+            gap: 24px;
+            margin-top: 20px;
             flex-wrap: wrap;
             justify-content: center;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
+            gap: 8px;
+            font-size: 12px;
         }
         .legend-dot {
             width: 10px;
@@ -83,84 +93,68 @@
         .legend-dot.entry { background: #ffc857; }
         .legend-dot.exit { background: #e94560; }
         .legend-dot.normal { background: #7b68ee; }
-        .legend-line {
-            width: 24px;
-            height: 3px;
-            border-radius: 2px;
+        .legend-dot.cross {
+            background: linear-gradient(135deg, #ffc857 50%, #e94560 50%);
+            animation: pulse 2s ease-in-out infinite;
         }
-        .legend-line.repeatable { background: rgba(78, 204, 163, 0.6); }
-        .legend-line.sticky { background: rgba(233, 69, 96, 0.6); stroke-dasharray: 4 2; }
-        .info-panel {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(26, 26, 46, 0.95);
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 15px;
-            min-width: 250px;
-            max-width: 350px;
-            display: none;
-            z-index: 100;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
         }
-        .info-panel.visible { display: block; }
-        .info-panel h3 {
-            color: #4ecca3;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        .info-panel p {
-            font-size: 12px;
-            margin: 5px 0;
-            color: #aaa;
-        }
-        .info-panel .tag {
-            display: inline-block;
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin: 2px;
-            font-size: 10px;
-        }
-        .info-panel .close {
-            position: absolute;
-            top: 8px;
-            right: 10px;
-            cursor: pointer;
-            color: #666;
+        .info {
+            margin-top: 20px;
+            max-width: 700px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #888;
         }
         .node-label {
             font-size: 9px;
-            fill: #888;
+            fill: #555;
             pointer-events: none;
-            transition: fill 0.2s;
+            transition: fill 0.3s, font-size 0.3s;
         }
         .node-label.highlight {
-            fill: #fff;
+            fill: #999;
             font-weight: 500;
+        }
+        .node-label.selected {
+            fill: #fff;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .node-label.connected {
+            fill: #bbb;
             font-size: 10px;
         }
-        .chord {
-            fill: none;
-            stroke-width: 1.5;
-            transition: stroke-opacity 0.2s, stroke-width 0.2s;
-            cursor: pointer;
+        .node-label.cross-highlight {
+            fill: #ffc857;
+            font-size: 11px;
+            font-weight: 600;
+            animation: glow 1.5s ease-in-out infinite;
         }
-        .chord:hover {
-            stroke-width: 3;
-        }
-        .chord.dimmed {
-            stroke-opacity: 0.1 !important;
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 2px #ffc857); }
+            50% { filter: drop-shadow(0 0 8px #ffc857); }
         }
         .arc {
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .arc:hover {
-            opacity: 0.8;
+            transition: opacity 0.3s, filter 0.3s;
         }
         .arc.dimmed {
-            opacity: 0.2;
+            opacity: 0.15;
+        }
+        .arc.selected {
+            filter: brightness(1.3) drop-shadow(0 0 8px currentColor);
+        }
+        .arc.cross-highlight {
+            filter: brightness(1.5) drop-shadow(0 0 12px #ffc857);
+            animation: arcPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes arcPulse {
+            0%, 100% { filter: brightness(1.3) drop-shadow(0 0 6px #ffc857); }
+            50% { filter: brightness(1.6) drop-shadow(0 0 15px #ffc857); }
         }
         .cylinder-hint {
             position: absolute;
@@ -171,96 +165,178 @@
             pointer-events: none;
         }
         .cylinder-hint .episode-name {
-            font-size: 16px;
+            font-size: 14px;
             color: #4ecca3;
             letter-spacing: 0.15em;
         }
         .cylinder-hint .stats {
-            font-size: 11px;
-            color: #555;
+            font-size: 9px;
+            color: #444;
             margin-top: 4px;
         }
         .external-ring {
             fill: none;
-            stroke: rgba(255, 200, 87, 0.1);
+            stroke: rgba(255, 200, 87, 0.12);
             stroke-width: 15;
             stroke-dasharray: 2 6;
         }
-        .search-box {
-            padding: 8px 12px;
+        .flow-path {
+            fill: none;
+            stroke-linecap: round;
+            opacity: 0.35;
+            transition: opacity 0.3s, stroke-width 0.3s;
+        }
+        .flow-path.dimmed {
+            opacity: 0.03;
+        }
+        .flow-path.active {
+            opacity: 0.9;
+            stroke-width: 4px;
+        }
+        .click-hint {
+            font-size: 11px;
+            color: #555;
+            margin-top: 12px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .controls button {
+            padding: 8px 16px;
             background: #1a1a2e;
             border: 1px solid #333;
             color: #ccc;
             border-radius: 4px;
-            width: 150px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
         }
-        .search-box:focus {
-            outline: none;
+        .controls button:hover {
             border-color: #4ecca3;
+        }
+        .controls button.active {
+            background: #4ecca3;
+            color: #000;
+            border-color: #4ecca3;
+        }
+        .cross-episode-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 200, 87, 0.15);
+            border: 1px solid rgba(255, 200, 87, 0.3);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ffc857;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .cross-episode-hint.visible {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
     </style>
 </head>
 <body>
-    <h1>FINK EPISODE RING</h1>
-    <div class="subtitle">Interactive story graph visualization</div>
+    <h1>FINK EPISODE RINGS</h1>
+    <div class="subtitle">Cross-episode narrative visualization</div>
 
     <div class="controls">
-        <select id="episode-select">
-            <option value="hampstead">Hampstead</option>
-            <option value="bagend">Bag End</option>
-            <option value="mudslidemines">Mudslide Mines</option>
-            <option value="riverbend">Riverbend</option>
-            <option value="toc">Table of Contents</option>
-        </select>
-        <input type="text" class="search-box" id="search" placeholder="Search knots...">
-        <button id="btn-all">Show All</button>
-        <button id="btn-hubs">Hubs Only</button>
-        <button id="btn-islands">Islands</button>
+        <button id="btn-stack" class="active">Stacked View</button>
+        <button id="btn-flat">Flat View</button>
+        <button id="btn-focus">Focus Mode</button>
     </div>
 
-    <div class="container">
-        <svg id="ring" viewBox="0 0 800 800"></svg>
-        <div class="cylinder-hint">
-            <div class="episode-name" id="current-episode">HAMPSTEAD</div>
-            <div class="stats" id="stats">Loading...</div>
-        </div>
+    <div class="stack-container" id="stack-container">
+        <!-- Rings inserted by JS -->
     </div>
 
     <div class="legend">
-        <div class="legend-item"><div class="legend-dot hub"></div> Hub (high connectivity)</div>
+        <div class="legend-item"><div class="legend-dot hub"></div> Hub</div>
         <div class="legend-item"><div class="legend-dot entry"></div> External entry</div>
-        <div class="legend-item"><div class="legend-dot exit"></div> Exit / ending</div>
+        <div class="legend-item"><div class="legend-dot exit"></div> Exit</div>
         <div class="legend-item"><div class="legend-dot normal"></div> Standard</div>
-        <div class="legend-item"><div class="legend-line repeatable"></div> Repeatable (+)</div>
-        <div class="legend-item"><div class="legend-line sticky" style="background: repeating-linear-gradient(90deg, rgba(233,69,96,0.6) 0 3px, transparent 3px 6px);"></div> One-time (*)</div>
+        <div class="legend-item"><div class="legend-dot cross"></div> Cross-episode link</div>
     </div>
 
-    <div class="info-panel" id="info-panel">
-        <span class="close" onclick="hideInfoPanel()">&times;</span>
-        <h3 id="info-title">Knot Name</h3>
-        <p id="info-type">Type: Hub</p>
-        <p id="info-connections">Connections: 5 in, 3 out</p>
-        <p id="info-choices">Choices: 3 (2 repeatable, 1 sticky)</p>
-        <div id="info-tags"></div>
+    <div class="click-hint">Click a knot to highlight connections. Islands & exits highlight linked episodes.</div>
+
+    <div class="info">
+        Episodes stack as rings on a shared cylinder. Dead ends (exits) and mystery starts (islands)
+        in one episode connect to entry points in others. Click external entries or exits to see
+        cross-episode narrative seams shimmer across the stack.
+    </div>
+
+    <div class="cross-episode-hint" id="cross-hint">
+        <span id="cross-hint-text"></span>
     </div>
 
     <script>
-    // Episode data - loaded from JSON report
-    const episodes = {
+    // Episode definitions with cross-episode links
+    const episodeConfig = {
         hampstead: {
             name: 'HAMPSTEAD',
-            edges: [],
-            nodes: {},
-            externalEntries: new Set(),
-            exits: new Set(['world_end', 'fraud_ending', 'victory', 'jail'])
+            color: '#4ecca3',
+            // Knots that link TO other episodes
+            exitsTo: {
+                'pool_bagend': 'bagend',
+                'pool_mines': 'mudslidemines',
+                'pool_manor': 'shane-manor',
+                'pool_maple': 'maple-hollow',
+                'pool_riverbend': 'riverbend'
+            },
+            // Knots that can be entered FROM other episodes
+            entriesFrom: {
+                'world_between_worlds': ['bagend', 'mudslidemines', 'shane-manor', 'maple-hollow', 'riverbend']
+            }
         },
-        bagend: { name: 'BAG END', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
-        mudslidemines: { name: 'MUDSLIDE MINES', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
-        riverbend: { name: 'RIVERBEND', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
-        toc: { name: 'TABLE OF CONTENTS', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() }
+        bagend: {
+            name: 'BAG END',
+            color: '#7b68ee',
+            exitsTo: {},
+            entriesFrom: {}
+        },
+        mudslidemines: {
+            name: 'MUDSLIDE MINES',
+            color: '#f472b6',
+            exitsTo: {},
+            entriesFrom: {}
+        },
+        riverbend: {
+            name: 'RIVERBEND',
+            color: '#60a5fa',
+            exitsTo: {},
+            entriesFrom: {}
+        },
+        'shane-manor': {
+            name: 'SHANE MANOR',
+            color: '#fbbf24',
+            exitsTo: {},
+            entriesFrom: {}
+        }
     };
 
-    // Load data from JSON report
+    const episodes = {};
+    let activeEpisode = 'hampstead';
+    let selectedNode = null;
+    let viewMode = 'stack';
+
+    // Flow colors
+    const flowColors = {
+        mainLoop: { stroke: "#4ecca3", glow: "#4ecca3" },
+        external: { stroke: "#ffc857", glow: "#ffd700" },
+        linear: { stroke: "#a78bfa", glow: "#c4b5fd" },
+        ending: { stroke: "#f472b6", glow: "#ec4899" }
+    };
+
+    // Load data from JSON
     async function loadData() {
         try {
             const response = await fetch('./fink-crawl-report.json');
@@ -268,158 +344,153 @@
 
             for (const file of data.files) {
                 const basename = file.file.split('/').pop().replace('.fink.js', '');
-                let episodeKey = basename;
-                if (basename === 'toc') episodeKey = 'toc';
-                else if (basename === 'bagend') episodeKey = 'bagend';
-                else if (basename.includes('hampstead')) episodeKey = 'hampstead';
-                else if (basename.includes('mudslide')) episodeKey = 'mudslidemines';
-                else if (basename.includes('riverbend')) episodeKey = 'riverbend';
+                let key = basename;
+                if (basename === 'hampstead') key = 'hampstead';
+                else if (basename === 'bagend') key = 'bagend';
+                else if (basename === 'mudslidemines') key = 'mudslidemines';
+                else if (basename === 'riverbend') key = 'riverbend';
+                else if (basename === 'shane-manor') key = 'shane-manor';
                 else continue;
 
-                const episode = episodes[episodeKey];
-                if (!episode) continue;
+                if (!episodeConfig[key]) continue;
 
-                episode.nodes = {};
-                episode.edges = [];
+                episodes[key] = {
+                    ...episodeConfig[key],
+                    nodes: {},
+                    edges: [],
+                    nodeOrder: [],
+                    externalEntries: new Set(file.islands || []),
+                    exits: new Set()
+                };
 
+                // Build edges and nodes from graph
                 for (const [knot, knotData] of Object.entries(file.graph)) {
-                    episode.nodes[knot] = {
-                        choices: knotData.choices,
-                        tags: knotData.tags || [],
-                        choiceDetails: knotData.choiceDetails || []
-                    };
+                    episodes[key].nodes[knot] = knotData;
+                    if (!episodes[key].nodeOrder.includes(knot)) {
+                        episodes[key].nodeOrder.push(knot);
+                    }
 
                     for (const target of knotData.targets) {
-                        const choiceInfo = knotData.choiceDetails?.find(c => true) || { repeatable: true };
-                        episode.edges.push({
+                        episodes[key].edges.push({
                             from: knot,
                             to: target,
-                            repeatable: choiceInfo.repeatable !== false
+                            repeatable: true
                         });
+                        if (!episodes[key].nodeOrder.includes(target)) {
+                            episodes[key].nodeOrder.push(target);
+                        }
                     }
-                }
 
-                // Mark islands
-                if (file.islands) {
-                    for (const island of file.islands) {
-                        episode.externalEntries.add(island);
+                    // Mark exits (knots with no outgoing edges that aren't external entries)
+                    if (knotData.targets.length === 0 && !episodes[key].externalEntries.has(knot)) {
+                        episodes[key].exits.add(knot);
                     }
                 }
             }
 
-            renderEpisode('hampstead');
+            renderStack();
         } catch (err) {
             console.error('Failed to load data:', err);
-            // Use fallback hardcoded data for Hampstead
             loadFallbackData();
         }
     }
 
     function loadFallbackData() {
-        episodes.hampstead.edges = [
-            {from: "splash", to: "intro", repeatable: true},
-            {from: "intro", to: "bedsit", repeatable: true},
-            {from: "bedsit", to: "wardrobe", repeatable: true},
-            {from: "bedsit", to: "street", repeatable: true},
-            {from: "wardrobe", to: "bedsit", repeatable: true},
-            {from: "street", to: "jobcentre", repeatable: true},
-            {from: "street", to: "oxfam", repeatable: true},
-            {from: "street", to: "pub", repeatable: true},
-            {from: "street", to: "gallery_pass", repeatable: true},
-            {from: "street", to: "street", repeatable: true},
-            {from: "jobcentre", to: "street", repeatable: true},
-            {from: "jobcentre", to: "postoffice", repeatable: false},
-            {from: "postoffice", to: "street", repeatable: true},
-            {from: "postoffice", to: "giro_fraud_video", repeatable: false},
-            {from: "giro_fraud_video", to: "fraud_aftermath", repeatable: true},
-            {from: "oxfam", to: "street", repeatable: true},
-            {from: "pub", to: "street", repeatable: true},
-            {from: "gallery_pass", to: "mansion_tip", repeatable: true},
-            {from: "gallery_pass", to: "street", repeatable: true},
-            {from: "mansion_tip", to: "mansion", repeatable: true},
-            {from: "mansion", to: "car", repeatable: true},
-            {from: "car", to: "street", repeatable: true},
-            {from: "housewarming", to: "street", repeatable: true},
-            {from: "diamond_gallery_exhibit", to: "diamond_opening", repeatable: false},
-            {from: "diamond_opening", to: "one_week_later", repeatable: true},
-            {from: "one_week_later", to: "artist_confrontation", repeatable: true},
-            {from: "artist_reveal", to: "world_between_worlds", repeatable: true},
-            {from: "world_between_worlds", to: "world_rest", repeatable: true},
-            {from: "pool_bagend", to: "world_between_worlds", repeatable: true},
-            {from: "pool_mines", to: "world_between_worlds", repeatable: true},
-            {from: "pool_manor", to: "world_between_worlds", repeatable: true},
-            {from: "pool_maple", to: "world_between_worlds", repeatable: true},
-            {from: "pool_riverbend", to: "world_between_worlds", repeatable: true},
-            {from: "world_rest", to: "world_end", repeatable: true}
-        ];
-
-        episodes.hampstead.externalEntries = new Set([
-            "postoffice", "giro_fraud_video", "estate",
-            "artist_confrontation", "artist_challenge",
-            "pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend",
-            "diamond_gallery_exhibit"
-        ]);
-
-        renderEpisode('hampstead');
+        // Fallback Hampstead data
+        episodes.hampstead = {
+            ...episodeConfig.hampstead,
+            edges: [
+                {from: "splash", to: "intro"}, {from: "intro", to: "bedsit"},
+                {from: "bedsit", to: "wardrobe"}, {from: "bedsit", to: "street"},
+                {from: "wardrobe", to: "bedsit"}, {from: "street", to: "jobcentre"},
+                {from: "street", to: "oxfam"}, {from: "street", to: "pub"},
+                {from: "street", to: "gallery_pass"}, {from: "jobcentre", to: "street"},
+                {from: "oxfam", to: "street"}, {from: "pub", to: "street"},
+                {from: "gallery_pass", to: "mansion_tip"}, {from: "mansion_tip", to: "mansion"},
+                {from: "world_between_worlds", to: "world_rest"}, {from: "world_rest", to: "world_end"},
+                {from: "pool_bagend", to: "world_between_worlds"},
+                {from: "pool_mines", to: "world_between_worlds"}
+            ],
+            nodeOrder: ["splash", "intro", "bedsit", "wardrobe", "street", "jobcentre",
+                       "oxfam", "pub", "gallery_pass", "mansion_tip", "mansion",
+                       "pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend",
+                       "world_between_worlds", "world_rest", "world_end"],
+            nodes: {},
+            externalEntries: new Set(["pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend"]),
+            exits: new Set(["world_end"])
+        };
+        renderStack();
     }
 
-    let currentEpisode = 'hampstead';
-    let selectedNode = null;
-    let filterMode = 'all';
-
-    function renderEpisode(episodeKey) {
-        currentEpisode = episodeKey;
+    function createRingSVG(episodeKey, size = 600) {
         const episode = episodes[episodeKey];
-        const svg = document.getElementById('ring');
-        svg.innerHTML = '';
+        if (!episode || !episode.nodeOrder.length) return null;
 
-        document.getElementById('current-episode').textContent = episode.name;
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
 
-        // Collect all nodes from edges
-        const nodeSet = new Set();
-        episode.edges.forEach(e => {
-            nodeSet.add(e.from);
-            nodeSet.add(e.to);
+        const cx = size / 2, cy = size / 2;
+        const outerRadius = size * 0.42;
+        const innerRadius = size * 0.34;
+
+        // Defs
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        Object.entries(flowColors).forEach(([type, colors]) => {
+            const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+            gradient.setAttribute("id", `flow-${episodeKey}-${type}`);
+            gradient.innerHTML = `
+                <stop offset="0%" stop-color="${colors.stroke}" stop-opacity="0.2">
+                    <animate attributeName="offset" values="-1;1" dur="2s" repeatCount="indefinite"/>
+                </stop>
+                <stop offset="30%" stop-color="${colors.glow}" stop-opacity="0.8">
+                    <animate attributeName="offset" values="-0.7;1.3" dur="2s" repeatCount="indefinite"/>
+                </stop>
+                <stop offset="60%" stop-color="${colors.stroke}" stop-opacity="0.2">
+                    <animate attributeName="offset" values="-0.4;1.6" dur="2s" repeatCount="indefinite"/>
+                </stop>
+            `;
+            defs.appendChild(gradient);
+
+            const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+            marker.setAttribute("id", `arrow-${episodeKey}-${type}`);
+            marker.setAttribute("viewBox", "0 0 10 10");
+            marker.setAttribute("refX", "5");
+            marker.setAttribute("refY", "5");
+            marker.setAttribute("markerWidth", "3");
+            marker.setAttribute("markerHeight", "3");
+            marker.setAttribute("orient", "auto-start-reverse");
+            marker.innerHTML = `<path d="M 0 0 L 10 5 L 0 10 z" fill="${colors.glow}" opacity="0.7"/>`;
+            defs.appendChild(marker);
         });
-        const nodeOrder = [...nodeSet].sort();
+        svg.appendChild(defs);
+
+        // External ring
+        const extRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        extRing.setAttribute("cx", cx);
+        extRing.setAttribute("cy", cy);
+        extRing.setAttribute("r", outerRadius + 15);
+        extRing.classList.add("external-ring");
+        svg.appendChild(extRing);
 
         // Calculate connectivity
         const connectivity = {};
-        const inbound = {};
-        const outbound = {};
         episode.edges.forEach(({from, to}) => {
             connectivity[from] = (connectivity[from] || 0) + 1;
             connectivity[to] = (connectivity[to] || 0) + 1;
-            outbound[from] = (outbound[from] || 0) + 1;
-            inbound[to] = (inbound[to] || 0) + 1;
         });
 
-        const isHub = (n) => connectivity[n] >= 8;
+        const isHub = (n) => (connectivity[n] || 0) >= 6;
 
-        document.getElementById('stats').textContent =
-            `${nodeOrder.length} knots | ${episode.edges.length} edges`;
-
-        const width = 800, height = 800;
-        const cx = width / 2, cy = height / 2;
-        const outerRadius = 320;
-        const innerRadius = 260;
-
-        // External ring
-        const externalRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        externalRing.setAttribute("cx", cx);
-        externalRing.setAttribute("cy", cy);
-        externalRing.setAttribute("r", outerRadius + 25);
-        externalRing.classList.add("external-ring");
-        svg.appendChild(externalRing);
-
-        // Calculate arc positions
-        const totalWeight = nodeOrder.reduce((sum, n) => sum + Math.max(2, connectivity[n] || 2), 0);
-        const padding = 0.015;
+        // Calculate arcs
+        const nodeOrder = episode.nodeOrder;
+        const n = nodeOrder.length;
+        const totalWeight = nodeOrder.reduce((sum, node) => sum + Math.max(2, connectivity[node] || 2), 0);
+        const padding = 0.02;
         let currentAngle = -Math.PI / 2;
 
-        const arcs = nodeOrder.map((node) => {
+        const arcs = nodeOrder.map(node => {
             const weight = Math.max(2, connectivity[node] || 2);
-            const arcLength = (weight / totalWeight) * (2 * Math.PI - padding * nodeOrder.length);
+            const arcLength = (weight / totalWeight) * (2 * Math.PI - padding * n);
             const startAngle = currentAngle;
             const endAngle = currentAngle + arcLength;
             currentAngle = endAngle + padding;
@@ -434,56 +505,48 @@
             y: cy + r * Math.sin(angle)
         });
 
-        // Draw ribbons
-        const ribbonGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        ribbonGroup.id = 'ribbons';
-        svg.appendChild(ribbonGroup);
-
-        episode.edges.forEach(({from, to, repeatable}) => {
+        // Flow paths
+        const flowGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        flowGroup.classList.add("flows");
+        episode.edges.forEach(({from, to}) => {
             const fromArc = arcs[nodeIndex[from]];
             const toArc = arcs[nodeIndex[to]];
             if (!fromArc || !toArc || from === to) return;
 
-            const p1 = polarToCart(fromArc.midAngle, innerRadius);
-            const p2 = polarToCart(toArc.midAngle, innerRadius);
+            let flowType = "linear";
+            if (episode.externalEntries.has(from)) flowType = "external";
+            else if (episode.exits.has(to)) flowType = "ending";
+            else if (episode.edges.some(e => e.from === to && e.to === from)) flowType = "mainLoop";
 
-            let color = repeatable ? "rgba(78, 204, 163, 0.4)" : "rgba(233, 69, 96, 0.5)";
-            if (episode.externalEntries.has(from) || episode.externalEntries.has(to)) {
-                color = "rgba(255, 200, 87, 0.35)";
-            }
+            const p1 = polarToCart(fromArc.midAngle, innerRadius - 3);
+            const p2 = polarToCart(toArc.midAngle, innerRadius - 3);
+            const ctrl = polarToCart((fromArc.midAngle + toArc.midAngle) / 2, innerRadius * 0.3);
 
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            const ctrl = polarToCart((fromArc.midAngle + toArc.midAngle) / 2, innerRadius * 0.35);
             path.setAttribute("d", `M ${p1.x} ${p1.y} Q ${ctrl.x} ${ctrl.y} ${p2.x} ${p2.y}`);
-            path.setAttribute("stroke", color);
-            path.setAttribute("data-from", from);
-            path.setAttribute("data-to", to);
-            path.classList.add("chord");
-
-            if (!repeatable) {
-                path.setAttribute("stroke-dasharray", "4 3");
-            }
-
-            path.addEventListener('mouseenter', () => highlightEdge(from, to));
-            path.addEventListener('mouseleave', clearHighlight);
-
-            ribbonGroup.appendChild(path);
+            path.setAttribute("stroke", `url(#flow-${episodeKey}-${flowType})`);
+            path.setAttribute("stroke-width", "1.5");
+            path.setAttribute("marker-end", `url(#arrow-${episodeKey}-${flowType})`);
+            path.classList.add("flow-path");
+            path.dataset.from = from;
+            path.dataset.to = to;
+            flowGroup.appendChild(path);
         });
+        svg.appendChild(flowGroup);
 
-        // Draw arcs
+        // Arc segments
         const arcGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        arcGroup.id = 'arcs';
-        svg.appendChild(arcGroup);
-
+        arcGroup.classList.add("arcs");
         arcs.forEach(({ node, startAngle, endAngle, midAngle }) => {
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             g.classList.add("arc");
-            g.setAttribute("data-node", node);
+            g.dataset.node = node;
+            g.dataset.episode = episodeKey;
 
             let color = "#7b68ee";
             if (episode.exits.has(node)) color = "#e94560";
             else if (episode.externalEntries.has(node)) color = "#ffc857";
-            else if (isHub(node)) color = "#4ecca3";
+            else if (isHub(node)) color = episode.color || "#4ecca3";
 
             const startOuter = polarToCart(startAngle, outerRadius);
             const endOuter = polarToCart(endAngle, outerRadius);
@@ -491,19 +554,19 @@
             const endInner = polarToCart(endAngle, innerRadius);
             const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
 
-            const arc = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            arc.setAttribute("d", `
+            const arcPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            arcPath.setAttribute("d", `
                 M ${startOuter.x} ${startOuter.y}
                 A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}
                 L ${endInner.x} ${endInner.y}
                 A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y}
                 Z
             `);
-            arc.setAttribute("fill", color);
-            g.appendChild(arc);
+            arcPath.setAttribute("fill", color);
+            g.appendChild(arcPath);
 
             // Label
-            const labelRadius = outerRadius + 12;
+            const labelRadius = outerRadius + 10;
             const labelPos = polarToCart(midAngle, labelRadius);
             const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
             label.setAttribute("x", labelPos.x);
@@ -520,129 +583,223 @@
             }
             label.setAttribute("transform", `rotate(${rotation}, ${labelPos.x}, ${labelPos.y})`);
             label.setAttribute("dominant-baseline", "middle");
-            label.textContent = node.replace(/_/g, " ");
+            label.textContent = node.replace(/_/g, " ").substring(0, 15);
             g.appendChild(label);
 
-            g.addEventListener('click', () => showNodeInfo(node, {
-                type: episode.exits.has(node) ? 'Exit' :
-                      episode.externalEntries.has(node) ? 'External Entry' :
-                      isHub(node) ? 'Hub' : 'Standard',
-                inbound: inbound[node] || 0,
-                outbound: outbound[node] || 0,
-                connectivity: connectivity[node] || 0,
-                data: episode.nodes[node]
-            }));
-
-            g.addEventListener('mouseenter', () => highlightNode(node));
-            g.addEventListener('mouseleave', clearHighlight);
+            g.addEventListener("click", (e) => {
+                e.stopPropagation();
+                handleNodeClick(episodeKey, node);
+            });
 
             arcGroup.appendChild(g);
         });
+        svg.appendChild(arcGroup);
+
+        // Center label
+        const centerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        centerText.setAttribute("x", cx);
+        centerText.setAttribute("y", cy);
+        centerText.setAttribute("text-anchor", "middle");
+        centerText.setAttribute("dominant-baseline", "middle");
+        centerText.setAttribute("fill", episode.color || "#4ecca3");
+        centerText.setAttribute("font-size", "12");
+        centerText.setAttribute("letter-spacing", "0.1em");
+        centerText.textContent = episode.name;
+        svg.appendChild(centerText);
+
+        return svg;
     }
 
-    function highlightNode(node) {
-        document.querySelectorAll('.arc').forEach(a => {
-            if (a.dataset.node !== node) a.classList.add('dimmed');
+    function renderStack() {
+        const container = document.getElementById('stack-container');
+        container.innerHTML = '';
+
+        const episodeKeys = Object.keys(episodes).filter(k => episodes[k].nodeOrder?.length > 0);
+        const count = episodeKeys.length;
+
+        episodeKeys.forEach((key, i) => {
+            const layer = document.createElement('div');
+            layer.className = 'ring-layer';
+            layer.dataset.episode = key;
+
+            const svg = createRingSVG(key);
+            if (svg) layer.appendChild(svg);
+
+            const label = document.createElement('div');
+            label.className = 'episode-label';
+            label.textContent = episodes[key].name;
+            layer.appendChild(label);
+
+            container.appendChild(layer);
         });
-        document.querySelectorAll('.chord').forEach(c => {
-            if (c.dataset.from !== node && c.dataset.to !== node) c.classList.add('dimmed');
+
+        updateLayout();
+    }
+
+    function updateLayout() {
+        const layers = document.querySelectorAll('.ring-layer');
+        const episodeKeys = Array.from(layers).map(l => l.dataset.episode);
+        const count = episodeKeys.length;
+
+        layers.forEach((layer, i) => {
+            const key = layer.dataset.episode;
+            const isActive = key === activeEpisode;
+
+            layer.classList.toggle('active', isActive);
+            layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
+
+            if (viewMode === 'stack') {
+                const offset = (i - episodeKeys.indexOf(activeEpisode)) * 30;
+                const scale = isActive ? 1 : 0.85 - Math.abs(i - episodeKeys.indexOf(activeEpisode)) * 0.05;
+                const zOffset = isActive ? 0 : -100 - Math.abs(i - episodeKeys.indexOf(activeEpisode)) * 50;
+                layer.style.transform = `translateX(${150 + offset}px) translateY(${50 + i * 20}px) translateZ(${zOffset}px) scale(${scale})`;
+                layer.style.zIndex = isActive ? 100 : 50 - Math.abs(i - episodeKeys.indexOf(activeEpisode));
+            } else if (viewMode === 'flat') {
+                const cols = Math.ceil(Math.sqrt(count));
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                layer.style.transform = `translateX(${col * 320}px) translateY(${row * 320}px) scale(0.5)`;
+                layer.style.zIndex = isActive ? 100 : 50;
+            } else if (viewMode === 'focus') {
+                if (isActive) {
+                    layer.style.transform = 'translateX(150px) translateY(50px) scale(1)';
+                    layer.style.zIndex = 100;
+                } else {
+                    layer.style.transform = 'translateX(150px) translateY(50px) scale(0.8)';
+                    layer.style.zIndex = 10;
+                }
+            }
         });
     }
 
-    function highlightEdge(from, to) {
-        document.querySelectorAll('.arc').forEach(a => {
-            if (a.dataset.node !== from && a.dataset.node !== to) a.classList.add('dimmed');
-        });
-        document.querySelectorAll('.chord').forEach(c => {
-            if (c.dataset.from !== from || c.dataset.to !== to) c.classList.add('dimmed');
-        });
+    function handleNodeClick(episodeKey, node) {
+        if (activeEpisode !== episodeKey) {
+            activeEpisode = episodeKey;
+            selectedNode = node;
+            updateLayout();
+        } else if (selectedNode === node) {
+            clearSelection();
+            selectedNode = null;
+        } else {
+            selectedNode = node;
+        }
+        highlightNode(episodeKey, node);
     }
 
-    function clearHighlight() {
-        document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
+    function clearSelection() {
+        document.querySelectorAll('.arc').forEach(el => {
+            el.classList.remove('dimmed', 'selected', 'cross-highlight');
+        });
+        document.querySelectorAll('.node-label').forEach(el => {
+            el.classList.remove('selected', 'connected', 'cross-highlight');
+        });
+        document.querySelectorAll('.flow-path').forEach(el => {
+            el.classList.remove('dimmed', 'active');
+        });
+        document.getElementById('cross-hint').classList.remove('visible');
     }
 
-    function showNodeInfo(node, info) {
-        const panel = document.getElementById('info-panel');
-        document.getElementById('info-title').textContent = node.replace(/_/g, ' ');
-        document.getElementById('info-type').textContent = `Type: ${info.type}`;
-        document.getElementById('info-connections').textContent =
-            `Connections: ${info.inbound} in, ${info.outbound} out`;
+    function highlightNode(episodeKey, node) {
+        clearSelection();
 
-        const nodeData = info.data || {};
-        const choices = nodeData.choiceDetails || [];
-        const repeatable = choices.filter(c => c.repeatable !== false).length;
-        const sticky = choices.filter(c => c.sticky).length;
-        document.getElementById('info-choices').textContent =
-            `Choices: ${nodeData.choices || 0} (${repeatable} repeatable, ${sticky} one-time)`;
+        const episode = episodes[episodeKey];
+        const connectedNodes = new Set([node]);
 
-        const tagsDiv = document.getElementById('info-tags');
-        tagsDiv.innerHTML = '';
-        if (nodeData.tags && nodeData.tags.length) {
-            nodeData.tags.forEach(tag => {
-                const span = document.createElement('span');
-                span.className = 'tag';
-                span.textContent = `${tag.type}: ${tag.value}`;
-                tagsDiv.appendChild(span);
+        // Find connected nodes in same episode
+        episode.edges.forEach(({from, to}) => {
+            if (from === node || to === node) {
+                connectedNodes.add(from);
+                connectedNodes.add(to);
+            }
+        });
+
+        // Highlight in current episode
+        document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`).forEach(el => {
+            const n = el.dataset.node;
+            if (n === node) {
+                el.classList.add('selected');
+            } else if (!connectedNodes.has(n)) {
+                el.classList.add('dimmed');
+            }
+        });
+
+        document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .flow-path`).forEach(el => {
+            if (el.dataset.from === node || el.dataset.to === node) {
+                el.classList.add('active');
+            } else {
+                el.classList.add('dimmed');
+            }
+        });
+
+        // Check for cross-episode links
+        const crossLinks = [];
+        if (episode.exitsTo && episode.exitsTo[node]) {
+            crossLinks.push({ type: 'exit', target: episode.exitsTo[node], node });
+        }
+        if (episode.entriesFrom && episode.entriesFrom[node]) {
+            episode.entriesFrom[node].forEach(source => {
+                crossLinks.push({ type: 'entry', source, node });
             });
         }
 
-        panel.classList.add('visible');
-    }
+        // Highlight cross-episode connections
+        if (crossLinks.length > 0) {
+            crossLinks.forEach(link => {
+                const targetEpisode = link.target || link.source;
+                if (episodes[targetEpisode]) {
+                    // Highlight the world_between_worlds or equivalent entry point
+                    document.querySelectorAll(`.ring-layer[data-episode="${targetEpisode}"] .arc`).forEach(el => {
+                        if (episode.externalEntries.has(el.dataset.node) ||
+                            el.dataset.node === 'world_between_worlds' ||
+                            el.dataset.node.startsWith('pool_')) {
+                            el.classList.add('cross-highlight');
+                            el.querySelector('.node-label')?.classList.add('cross-highlight');
+                        }
+                    });
+                }
+            });
 
-    function hideInfoPanel() {
-        document.getElementById('info-panel').classList.remove('visible');
+            // Show hint
+            const hint = document.getElementById('cross-hint');
+            const hintText = document.getElementById('cross-hint-text');
+            hintText.textContent = `"${node.replace(/_/g, ' ')}" connects to ${crossLinks.map(l => l.target || l.source).join(', ')}`;
+            hint.classList.add('visible');
+        }
     }
 
     // Event listeners
-    document.getElementById('episode-select').addEventListener('change', (e) => {
-        renderEpisode(e.target.value);
-    });
-
-    document.getElementById('search').addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.arc').forEach(a => {
-            const node = a.dataset.node;
-            if (query && !node.toLowerCase().includes(query)) {
-                a.classList.add('dimmed');
-            } else {
-                a.classList.remove('dimmed');
-            }
-        });
-    });
-
-    document.getElementById('btn-all').addEventListener('click', () => {
-        filterMode = 'all';
+    document.getElementById('btn-stack').addEventListener('click', () => {
+        viewMode = 'stack';
         document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-all').classList.add('active');
-        clearHighlight();
+        document.getElementById('btn-stack').classList.add('active');
+        updateLayout();
     });
 
-    document.getElementById('btn-hubs').addEventListener('click', () => {
-        filterMode = 'hubs';
+    document.getElementById('btn-flat').addEventListener('click', () => {
+        viewMode = 'flat';
         document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-hubs').classList.add('active');
-        document.querySelectorAll('.arc').forEach(a => {
-            const label = a.querySelector('.node-label');
-            if (!label || !label.classList.contains('highlight')) {
-                a.classList.add('dimmed');
-            }
-        });
+        document.getElementById('btn-flat').classList.add('active');
+        updateLayout();
     });
 
-    document.getElementById('btn-islands').addEventListener('click', () => {
-        filterMode = 'islands';
+    document.getElementById('btn-focus').addEventListener('click', () => {
+        viewMode = 'focus';
         document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-islands').classList.add('active');
-        const episode = episodes[currentEpisode];
-        document.querySelectorAll('.arc').forEach(a => {
-            if (!episode.externalEntries.has(a.dataset.node)) {
-                a.classList.add('dimmed');
-            }
-        });
+        document.getElementById('btn-focus').classList.add('active');
+        updateLayout();
     });
 
-    // Load data on start
+    document.getElementById('stack-container').addEventListener('click', (e) => {
+        const layer = e.target.closest('.ring-layer');
+        if (layer && !e.target.closest('.arc')) {
+            activeEpisode = layer.dataset.episode;
+            clearSelection();
+            selectedNode = null;
+            updateLayout();
+        }
+    });
+
+    // Initialize
     loadData();
     </script>
 </body>
