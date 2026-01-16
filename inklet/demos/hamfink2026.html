@@ -1006,24 +1006,10 @@ Loading Riverbend...
 
 === dev_tools ===
 # CLASS: code
+# GODMODE: show
 Developer tools for testing and debugging.
 
-<div id="godmode-panel" class="godmode-panel">
-<h4>📊 Story Variables</h4>
-<div id="var-list">Loading...</div>
-<h4>⚡ Quick Actions</h4>
-<button onclick="window.godmodeSetVar('diamonds', 99)">💎 99</button>
-<button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12</button>
-<button onclick="window.godmodeSetVar('keys', 5)">🔑 5</button>
-<button onclick="window.godmodeSetVar('score', 10000)">🏆 10k</button>
-<button onclick="window.godmodeRefresh()">🔄</button>
-<h4>🔧 Dev Panel Tabs</h4>
-<button onclick="window.openDevTab('logs')">📋 Logs</button>
-<button onclick="window.openDevTab('swimlanes')">🏊 Swim</button>
-<button onclick="window.openDevTab('state')">📊 Config</button>
-<button onclick="window.openDevTab('finks')">📂 FINK</button>
-<button onclick="window.openDevTab('audio')">🔊 Audio</button>
-</div>
+Godmode panel appears above. Click variable values to edit them.
 
 + [🌌 World Between Worlds] -> dev_pools
 + [Back] -> how_it_works
@@ -2192,6 +2178,12 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
                     document.body.style.backgroundColor = bgColor;
                     log(`Background color: ${bgColor}`, 'debug');
                 }
+                if (tag.startsWith('GODMODE:')) {
+                    const action = tag.replace('GODMODE:', '').trim().toLowerCase();
+                    if (action === 'show') {
+                        showGodmodePanel();
+                    }
+                }
             }
 
             // Display text with animation
@@ -3169,6 +3161,32 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
         log(`Dev panel: Opened ${tabName} tab`, 'debug');
     };
+
+    // Show godmode panel in story output (called via GODMODE: show tag)
+    function showGodmodePanel() {
+        const panel = document.createElement('div');
+        panel.id = 'godmode-panel';
+        panel.className = 'godmode-panel';
+        panel.innerHTML = `
+            <h4 style="margin:0.5em 0;color:var(--zx-cyan);">📊 Story Variables</h4>
+            <div id="var-list">Loading...</div>
+            <h4 style="margin:0.5em 0;color:var(--zx-cyan);">⚡ Quick Actions</h4>
+            <button onclick="window.godmodeSetVar('diamonds', 99)">💎 99</button>
+            <button onclick="window.godmodeSetVar('mega_diamonds', 12)">👑 12</button>
+            <button onclick="window.godmodeSetVar('keys', 5)">🔑 5</button>
+            <button onclick="window.godmodeSetVar('score', 10000)">🏆 10k</button>
+            <button onclick="window.godmodeRefresh()">🔄</button>
+            <h4 style="margin:0.5em 0;color:var(--zx-cyan);">🔧 Dev Panel Tabs</h4>
+            <button onclick="window.openDevTab('logs')">📋 Logs</button>
+            <button onclick="window.openDevTab('swimlanes')">🏊 Swim</button>
+            <button onclick="window.openDevTab('state')">📊 Config</button>
+            <button onclick="window.openDevTab('finks')">📂 FINK</button>
+            <button onclick="window.openDevTab('audio')">🔊 Audio</button>
+        `;
+        storyOutput.appendChild(panel);
+        window.godmodeRefresh();
+        log('Godmode panel displayed', 'debug');
+    }
 
     initStory();
 
