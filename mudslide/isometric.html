@@ -2,29 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Mobile-first viewport with iOS safe area support -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- iOS webapp meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <!-- Prevent phone number detection -->
     <meta name="format-detection" content="telephone=no">
     <title>Mudslide Manor</title>
     <style>
-        /* ============================================
-           MOBILE-FIRST BASE STYLES
-           ============================================ */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* Prevent text selection on touch */
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
-            /* Prevent callout on long-press */
             -webkit-touch-callout: none;
         }
 
@@ -32,22 +22,14 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            /* Prevent pull-to-refresh and overscroll */
             overscroll-behavior: none;
-            /* iOS safe areas */
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         body {
-            background: #0a0a0f;
+            background: #1a1a2e;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            /* Prevent elastic scrolling on iOS */
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            /* Disable touch actions on body */
+            inset: 0;
             touch-action: none;
         }
 
@@ -55,217 +37,106 @@
             width: 100%;
             height: 100%;
             position: relative;
-            /* Prevent any default touch behaviors */
             touch-action: none;
         }
 
         canvas {
             display: block;
-            width: 100% !important;
-            height: 100% !important;
             touch-action: none;
         }
 
-        /* ============================================
-           UI OVERLAY - MOBILE OPTIMIZED
-           ============================================ */
+        /* Clean minimal UI */
         #ui-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
             pointer-events: none;
-            /* iOS safe area padding */
-            padding-top: max(10px, env(safe-area-inset-top));
-            padding-left: max(10px, env(safe-area-inset-left));
-            padding-right: max(10px, env(safe-area-inset-right));
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
         }
 
-        #room-name {
-            position: absolute;
-            top: max(8px, env(safe-area-inset-top));
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffd700;
-            font-size: clamp(14px, 4vw, 24px);
-            font-weight: bold;
-            text-shadow: 0 0 10px #ffd700, 0 2px 4px rgba(0,0,0,0.8);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            white-space: nowrap;
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         #lives {
-            position: absolute;
-            top: max(8px, env(safe-area-inset-top));
-            left: max(10px, env(safe-area-inset-left));
-            color: #ff4444;
-            font-size: clamp(16px, 4vw, 20px);
-            text-shadow: 0 0 8px #ff4444, 0 2px 4px rgba(0,0,0,0.8);
+            font-size: clamp(20px, 5vw, 28px);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        #room-name {
+            color: #fff;
+            font-size: clamp(14px, 3.5vw, 20px);
+            font-weight: 600;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
         }
 
         #score {
-            position: absolute;
-            top: max(8px, env(safe-area-inset-top));
-            right: max(10px, env(safe-area-inset-right));
-            color: #44ff44;
-            font-size: clamp(14px, 3.5vw, 18px);
-            text-shadow: 0 0 8px #44ff44, 0 2px 4px rgba(0,0,0,0.8);
+            color: #90EE90;
+            font-size: clamp(16px, 4vw, 22px);
+            font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
         }
 
         #items {
             position: absolute;
-            top: max(40px, calc(env(safe-area-inset-top) + 32px));
-            right: max(10px, env(safe-area-inset-right));
+            top: max(50px, calc(env(safe-area-inset-top) + 40px));
+            right: max(12px, env(safe-area-inset-right));
             display: flex;
-            gap: 6px;
+            gap: 8px;
         }
 
         .item-slot {
-            width: clamp(36px, 10vw, 50px);
-            height: clamp(36px, 10vw, 50px);
-            border: 2px solid rgba(68, 68, 255, 0.6);
-            background: rgba(0, 0, 50, 0.4);
-            border-radius: 8px;
+            width: clamp(40px, 10vw, 50px);
+            height: clamp(40px, 10vw, 50px);
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(18px, 5vw, 24px);
+            font-size: clamp(20px, 5vw, 26px);
+            backdrop-filter: blur(4px);
         }
 
-        /* ============================================
-           TOUCH CONTROLS - MOBILE FIRST
-           ============================================ */
-        #touch-controls {
+        /* Touch hint */
+        #touch-hint {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 50%;
-            pointer-events: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-        }
-
-        /* Virtual Joystick */
-        #joystick-zone {
-            width: clamp(120px, 35vw, 180px);
-            height: clamp(120px, 35vw, 180px);
-            position: relative;
-            pointer-events: auto;
-            touch-action: none;
-        }
-
-        #joystick-base {
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            position: relative;
-        }
-
-        #joystick-stick {
-            width: 50%;
-            height: 50%;
-            background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,140,0,0.6) 100%);
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
+            bottom: max(20px, env(safe-area-inset-bottom));
             left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px rgba(255,215,0,0.5);
-            transition: box-shadow 0.1s;
-        }
-
-        #joystick-stick.active {
-            box-shadow: 0 0 30px rgba(255,215,0,0.8);
-        }
-
-        /* Directional indicators on joystick */
-        .joystick-direction {
-            position: absolute;
-            color: rgba(255,255,255,0.3);
-            font-size: 20px;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            text-align: center;
             pointer-events: none;
-        }
-        .joystick-direction.up { top: 8px; left: 50%; transform: translateX(-50%); }
-        .joystick-direction.down { bottom: 8px; left: 50%; transform: translateX(-50%); }
-        .joystick-direction.left { left: 8px; top: 50%; transform: translateY(-50%); }
-        .joystick-direction.right { right: 8px; top: 50%; transform: translateY(-50%); }
-
-        /* Action Buttons */
-        #action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            pointer-events: auto;
-            touch-action: none;
+            transition: opacity 0.5s;
         }
 
-        .action-btn {
-            width: clamp(70px, 20vw, 100px);
-            height: clamp(70px, 20vw, 100px);
+        #touch-hint.hidden {
+            opacity: 0;
+        }
+
+        /* Touch indicator */
+        #touch-indicator {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255,215,0,0.6);
             border-radius: 50%;
-            border: 3px solid rgba(255,255,255,0.4);
-            background: radial-gradient(circle, rgba(68,136,255,0.6) 0%, rgba(34,68,170,0.4) 100%);
-            color: white;
-            font-size: clamp(24px, 7vw, 36px);
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 20px rgba(68,136,255,0.4), inset 0 -4px 10px rgba(0,0,0,0.3);
-            transition: transform 0.1s, box-shadow 0.1s;
-            cursor: pointer;
-            /* Ensure touch works */
-            touch-action: manipulation;
+            pointer-events: none;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: opacity 0.15s, transform 0.15s;
         }
 
-        .action-btn:active, .action-btn.pressed {
-            transform: scale(0.9);
-            box-shadow: 0 0 30px rgba(68,136,255,0.8), inset 0 2px 10px rgba(0,0,0,0.5);
+        #touch-indicator.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
         }
 
-        #jump-btn {
-            background: radial-gradient(circle, rgba(255,68,68,0.7) 0%, rgba(170,34,34,0.5) 100%);
-            box-shadow: 0 0 20px rgba(255,68,68,0.4), inset 0 -4px 10px rgba(0,0,0,0.3);
-        }
-
-        #jump-btn:active, #jump-btn.pressed {
-            box-shadow: 0 0 30px rgba(255,68,68,0.8), inset 0 2px 10px rgba(0,0,0,0.5);
-        }
-
-        /* Desktop hint (hidden on mobile) */
-        #desktop-hint {
-            display: none;
-        }
-
-        @media (hover: hover) and (pointer: fine) {
-            /* Desktop/mouse devices */
-            #touch-controls {
-                opacity: 0.3;
-            }
-            #desktop-hint {
-                display: block;
-                position: absolute;
-                bottom: max(20px, env(safe-area-inset-bottom));
-                left: 50%;
-                transform: translateX(-50%);
-                color: rgba(255,255,255,0.5);
-                font-size: 12px;
-                text-align: center;
-            }
-        }
-
-        /* ============================================
-           LOADING & TITLE SCREENS
-           ============================================ */
+        /* Loading & Title */
         #loading {
             position: absolute;
             top: 50%;
@@ -273,7 +144,6 @@
             transform: translate(-50%, -50%);
             color: #ffd700;
             font-size: clamp(24px, 8vw, 36px);
-            text-shadow: 0 0 20px #ffd700;
             animation: pulse 1s infinite;
         }
 
@@ -284,11 +154,8 @@
 
         #title-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2a 50%, #0a0a1a 100%);
+            inset: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -299,128 +166,41 @@
         }
 
         #title-screen h1 {
-            font-size: clamp(28px, 10vw, 56px);
+            font-size: clamp(32px, 12vw, 64px);
             color: #ffd700;
-            text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00;
-            margin-bottom: 10px;
-            letter-spacing: clamp(2px, 1vw, 8px);
+            text-shadow: 0 4px 20px rgba(255,215,0,0.5);
+            margin-bottom: 8px;
         }
 
         #title-screen h2 {
             font-size: clamp(14px, 4vw, 20px);
             color: #88aaff;
-            text-shadow: 0 0 10px #88aaff;
-            margin-bottom: 40px;
-            letter-spacing: 2px;
+            margin-bottom: 50px;
+            font-weight: normal;
         }
 
         #start-btn {
-            /* Large touch target - minimum 48px per accessibility guidelines */
-            min-width: 200px;
-            min-height: 60px;
-            padding: 18px 50px;
-            font-size: clamp(18px, 5vw, 24px);
-            font-family: inherit;
+            min-width: 220px;
+            min-height: 64px;
+            padding: 20px 60px;
+            font-size: clamp(20px, 5vw, 26px);
             font-weight: bold;
-            background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
             border: none;
-            border-radius: 30px;
-            color: #1a0a2a;
+            border-radius: 32px;
+            color: #1a1a2e;
             cursor: pointer;
-            letter-spacing: 2px;
-            box-shadow: 0 4px 20px rgba(255,215,0,0.5), 0 8px 40px rgba(255,140,0,0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-            /* Touch optimization */
+            box-shadow: 0 8px 30px rgba(255,215,0,0.4);
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
         }
 
         #start-btn:active {
             transform: scale(0.95);
-            box-shadow: 0 2px 10px rgba(255,215,0,0.5);
         }
 
-        .hidden {
-            display: none !important;
-        }
-
-        /* ============================================
-           ORIENTATION HINT (Portrait warning)
-           ============================================ */
-        #orientation-hint {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-            padding: 40px;
-        }
-
-        #orientation-hint .icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-            animation: rotate-hint 1.5s ease-in-out infinite;
-        }
-
-        @keyframes rotate-hint {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(90deg); }
-        }
-
-        #orientation-hint p {
-            font-size: 18px;
-            opacity: 0.8;
-        }
-
-        /* Show orientation hint in portrait on small screens */
-        @media (max-width: 600px) and (orientation: portrait) {
-            #orientation-hint {
-                display: flex;
-            }
-        }
-
-        /* ============================================
-           FULLSCREEN BUTTON
-           ============================================ */
-        #fullscreen-btn {
-            position: absolute;
-            top: max(8px, env(safe-area-inset-top));
-            left: 50%;
-            transform: translateX(calc(-50% + 100px));
-            width: 36px;
-            height: 36px;
-            background: rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            color: white;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            pointer-events: auto;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        #fullscreen-btn:active {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* Hide fullscreen on iOS (not supported) */
-        @supports (-webkit-touch-callout: none) {
-            #fullscreen-btn {
-                display: none;
-            }
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -430,44 +210,24 @@
         <div id="title-screen" class="hidden">
             <h1>MUDSLIDE MANOR</h1>
             <h2>An Isometric Adventure</h2>
-            <button id="start-btn">TAP TO START</button>
+            <button id="start-btn">TAP TO PLAY</button>
         </div>
 
         <div id="ui-overlay" class="hidden">
-            <div id="room-name">The Grand Hall</div>
-            <div id="lives">❤️❤️❤️</div>
-            <div id="score">0</div>
-            <button id="fullscreen-btn">⛶</button>
+            <div id="top-bar">
+                <div id="lives">❤️❤️❤️</div>
+                <div id="room-name">The Grand Hall</div>
+                <div id="score">0</div>
+            </div>
             <div id="items">
                 <div class="item-slot"></div>
                 <div class="item-slot"></div>
                 <div class="item-slot"></div>
             </div>
-
-            <!-- Touch Controls -->
-            <div id="touch-controls">
-                <div id="joystick-zone">
-                    <div id="joystick-base">
-                        <div class="joystick-direction up">▲</div>
-                        <div class="joystick-direction down">▼</div>
-                        <div class="joystick-direction left">◀</div>
-                        <div class="joystick-direction right">▶</div>
-                        <div id="joystick-stick"></div>
-                    </div>
-                </div>
-                <div id="action-buttons">
-                    <button class="action-btn" id="jump-btn">↑</button>
-                </div>
-            </div>
-
-            <div id="desktop-hint">WASD or Arrow Keys to move, Space to jump</div>
+            <div id="touch-hint">Touch & drag to move · Double-tap to jump</div>
         </div>
 
-        <!-- Orientation hint for portrait mode -->
-        <div id="orientation-hint">
-            <div class="icon">📱</div>
-            <p>Please rotate your device<br>for the best experience</p>
-        </div>
+        <div id="touch-indicator"></div>
     </div>
 
     <script type="importmap">
@@ -481,44 +241,32 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
         // ============================================
-        // MOBILE DETECTION & PERFORMANCE
+        // SETUP
         // ============================================
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // ============================================
-        // GAME STATE
-        // ============================================
         const gameState = {
             lives: 3,
             score: 0,
             currentRoom: 'hall',
             items: [],
-            playerPos: { x: 0, y: 0, z: 0 },
             playerVelocity: { x: 0, y: 0, z: 0 },
             isJumping: false,
             keys: {},
             started: false,
-            // Touch input state
             touchInput: { x: 0, z: 0 },
-            jumpPressed: false
+            touchActive: false
         };
 
         // ============================================
-        // ROOM DEFINITIONS
+        // ROOMS - Brighter colors!
         // ============================================
         const rooms = {
             hall: {
                 name: "The Grand Hall",
-                width: 8,
-                depth: 8,
+                width: 8, depth: 8,
                 walls: [
                     { x: 0, z: -4, w: 8, d: 1 },
                     { x: 0, z: 4, w: 8, d: 1 },
@@ -530,22 +278,19 @@
                     { x: 2, y: 0.5, z: 2, size: 1 },
                     { x: 0, y: 0.5, z: 0, size: 0.8, type: 'pedestal' }
                 ],
-                enemies: [
-                    { type: 'guardian', x: 2, z: -2, patrol: 'circle' }
-                ],
-                items: [
-                    { type: 'key', x: 0, y: 1.2, z: 0, color: 0xffd700 }
-                ],
-                exits: [
-                    { x: 4, z: 3, toRoom: 'dungeon', spawnX: -3, spawnZ: 0 }
-                ],
-                ambientColor: 0x334455,
-                lightColor: 0xffeedd
+                enemies: [{ type: 'guardian', x: 2, z: -2, patrol: 'circle' }],
+                items: [{ type: 'key', x: 0, y: 1.2, z: 0, color: 0xffd700 }],
+                exits: [{ x: 4, z: 3, toRoom: 'dungeon', spawnX: -3, spawnZ: 0 }],
+                floorColor: 0x4a6741,
+                floorColor2: 0x5c7a52,
+                wallColor: 0x8B7355,
+                ambient: 0xffffff,
+                light: 0xfffaf0,
+                bgColor: 0x87CEEB
             },
             dungeon: {
                 name: "The Dark Dungeon",
-                width: 10,
-                depth: 6,
+                width: 10, depth: 6,
                 walls: [
                     { x: 0, z: -3, w: 10, d: 1 },
                     { x: 0, z: 3, w: 10, d: 1 },
@@ -562,20 +307,21 @@
                     { type: 'spider', x: 1, z: 0, patrol: 'horizontal' },
                     { type: 'spider', x: -2, z: 1, patrol: 'vertical' }
                 ],
-                items: [
-                    { type: 'gem', x: 3, y: 1, z: 1, color: 0xff4488 }
-                ],
+                items: [{ type: 'gem', x: 3, y: 1, z: 1, color: 0xff69b4 }],
                 exits: [
                     { x: -4, z: 0, toRoom: 'hall', spawnX: 3, spawnZ: 3 },
-                    { x: 5, z: 2, toRoom: 'tower', spawnX: -3, spawnZ: 0 }
+                    { x: 5, z: 2, toRoom: 'tower', spawnX: -2, spawnZ: 0 }
                 ],
-                ambientColor: 0x221133,
-                lightColor: 0x8866ff
+                floorColor: 0x4a4a5a,
+                floorColor2: 0x5a5a6a,
+                wallColor: 0x6a5a7a,
+                ambient: 0xddeeff,
+                light: 0xaabbff,
+                bgColor: 0x2a2a4a
             },
             tower: {
-                name: "The Wizard's Tower",
-                width: 6,
-                depth: 6,
+                name: "Wizard's Tower",
+                width: 6, depth: 6,
                 walls: [
                     { x: 0, z: -3, w: 6, d: 1 },
                     { x: 0, z: 3, w: 6, d: 1 },
@@ -590,322 +336,219 @@
                     { x: 1, y: 1.5, z: 1, size: 0.8 },
                     { x: 0, y: 1.8, z: 1, size: 0.8, type: 'magic' }
                 ],
-                enemies: [
-                    { type: 'ghost', x: 0, z: 0, patrol: 'float' }
-                ],
-                items: [
-                    { type: 'scroll', x: 0, y: 2.3, z: 1, color: 0x44ffff }
-                ],
-                exits: [
-                    { x: -3, z: 0, toRoom: 'dungeon', spawnX: 4, spawnZ: 2 }
-                ],
-                ambientColor: 0x112244,
-                lightColor: 0x44ddff
+                enemies: [{ type: 'ghost', x: 0, z: 0, patrol: 'float' }],
+                items: [{ type: 'scroll', x: 0, y: 2.3, z: 1, color: 0x00ffff }],
+                exits: [{ x: -3, z: 0, toRoom: 'dungeon', spawnX: 4, spawnZ: 2 }],
+                floorColor: 0x4a5a8a,
+                floorColor2: 0x5a6a9a,
+                wallColor: 0x7a8aaa,
+                ambient: 0xeeeeff,
+                light: 0xaaddff,
+                bgColor: 0x3a4a6a
             }
         };
 
         // ============================================
-        // THREE.JS SETUP
+        // THREE.JS
         // ============================================
-        let scene, camera, renderer, composer;
-        let player;
-        let roomGroup;
-        let enemies = [];
-        let collectibles = [];
+        let scene, camera, renderer;
+        let player, roomGroup;
+        let enemies = [], collectibles = [];
         let clock = new THREE.Clock();
 
         function init() {
-            // Scene
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x0a0a1a, isMobile ? 0.03 : 0.05);
 
-            // Isometric Camera
+            // Bright sky background
+            scene.background = new THREE.Color(0x87CEEB);
+
+            // Isometric camera
             const aspect = window.innerWidth / window.innerHeight;
-            const frustumSize = isMobile ? 10 : 12;
+            const size = isMobile ? 9 : 11;
             camera = new THREE.OrthographicCamera(
-                -frustumSize * aspect / 2,
-                frustumSize * aspect / 2,
-                frustumSize / 2,
-                -frustumSize / 2,
-                0.1,
-                100
+                -size * aspect / 2, size * aspect / 2,
+                size / 2, -size / 2, 0.1, 100
             );
-
-            camera.position.set(15, 15, 15);
+            camera.position.set(12, 12, 12);
             camera.lookAt(0, 0, 0);
-            camera.zoom = isMobile ? 1.0 : 1.2;
-            camera.updateProjectionMatrix();
 
-            // Renderer - mobile optimized
-            renderer = new THREE.WebGLRenderer({
-                antialias: !isMobile, // Disable AA on mobile for performance
-                powerPreference: 'high-performance',
-                alpha: false
-            });
+            // Renderer - no post processing, just clean bright render
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(pixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.2;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Post-processing (lighter on mobile)
-            composer = new EffectComposer(renderer);
-            composer.addPass(new RenderPass(scene, camera));
-
-            if (!isMobile) {
-                const bloomPass = new UnrealBloomPass(
-                    new THREE.Vector2(window.innerWidth, window.innerHeight),
-                    0.4, 0.4, 0.85
-                );
-                composer.addPass(bloomPass);
-            }
-
-            // Lighter retro shader
-            const retroShader = {
-                uniforms: {
-                    tDiffuse: { value: null },
-                    vignetteIntensity: { value: isMobile ? 0.2 : 0.3 }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform sampler2D tDiffuse;
-                    uniform float vignetteIntensity;
-                    varying vec2 vUv;
-
-                    void main() {
-                        vec4 color = texture2D(tDiffuse, vUv);
-                        float dist = distance(vUv, vec2(0.5));
-                        color.rgb *= 1.0 - dist * vignetteIntensity;
-                        gl_FragColor = color;
-                    }
-                `
-            };
-            composer.addPass(new ShaderPass(retroShader));
-
-            // Create room container
             roomGroup = new THREE.Group();
             scene.add(roomGroup);
 
-            // Create player
             createPlayer();
+            setupInput();
 
-            // Event listeners
-            window.addEventListener('resize', onWindowResize);
-            window.addEventListener('keydown', (e) => {
-                gameState.keys[e.code] = true;
-                e.preventDefault();
-            });
-            window.addEventListener('keyup', (e) => {
-                gameState.keys[e.code] = false;
-            });
-
-            // Setup touch controls
-            setupTouchControls();
-
-            // Fullscreen button
-            document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
-
-            // Hide loading, show title
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('title-screen').classList.remove('hidden');
 
-            // Start button - handle both touch and click
             const startBtn = document.getElementById('start-btn');
-            startBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                startGame();
-            });
+            const startGame = () => {
+                if (gameState.started) return;
+                document.getElementById('title-screen').classList.add('hidden');
+                document.getElementById('ui-overlay').classList.remove('hidden');
+                gameState.started = true;
+                loadRoom('hall');
+                if (navigator.vibrate) navigator.vibrate(30);
+                // Hide hint after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('touch-hint').classList.add('hidden');
+                }, 5000);
+            };
+            startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
             startBtn.addEventListener('click', startGame);
 
-            // Start animation loop
+            window.addEventListener('resize', onResize);
             animate();
         }
 
         // ============================================
-        // TOUCH CONTROLS
+        // TOUCH CONTROLS - Direct screen touch
         // ============================================
-        function setupTouchControls() {
-            const joystickZone = document.getElementById('joystick-zone');
-            const joystickStick = document.getElementById('joystick-stick');
-            const jumpBtn = document.getElementById('jump-btn');
+        function setupInput() {
+            const container = document.getElementById('game-container');
+            const indicator = document.getElementById('touch-indicator');
+            let touchId = null;
+            let lastTap = 0;
 
-            let joystickActive = false;
-            let joystickCenter = { x: 0, y: 0 };
-            let joystickTouchId = null;
-
-            // Joystick touch handling
-            joystickZone.addEventListener('touchstart', (e) => {
+            // Touch start
+            container.addEventListener('touchstart', (e) => {
+                if (!gameState.started) return;
                 e.preventDefault();
-                const touch = e.touches[0];
-                const rect = joystickZone.getBoundingClientRect();
-                joystickCenter.x = rect.left + rect.width / 2;
-                joystickCenter.y = rect.top + rect.height / 2;
-                joystickTouchId = touch.identifier;
-                joystickActive = true;
-                joystickStick.classList.add('active');
-                handleJoystickMove(touch);
+
+                const touch = e.changedTouches[0];
+                touchId = touch.identifier;
+
+                // Double tap detection for jump
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    if (!gameState.isJumping) {
+                        gameState.playerVelocity.y = 8;
+                        gameState.isJumping = true;
+                        if (navigator.vibrate) navigator.vibrate(15);
+                    }
+                }
+                lastTap = now;
+
+                // Show indicator and start movement
+                indicator.style.left = touch.clientX + 'px';
+                indicator.style.top = touch.clientY + 'px';
+                indicator.classList.add('active');
+
+                updateTouchMovement(touch);
+                gameState.touchActive = true;
             }, { passive: false });
 
-            joystickZone.addEventListener('touchmove', (e) => {
+            // Touch move
+            container.addEventListener('touchmove', (e) => {
+                if (!gameState.started || !gameState.touchActive) return;
                 e.preventDefault();
-                if (!joystickActive) return;
-                const touch = Array.from(e.touches).find(t => t.identifier === joystickTouchId);
-                if (touch) handleJoystickMove(touch);
-            }, { passive: false });
 
-            const endJoystick = () => {
-                joystickActive = false;
-                joystickTouchId = null;
-                joystickStick.classList.remove('active');
-                joystickStick.style.transform = 'translate(-50%, -50%)';
-                gameState.touchInput.x = 0;
-                gameState.touchInput.z = 0;
-            };
-
-            joystickZone.addEventListener('touchend', endJoystick, { passive: false });
-            joystickZone.addEventListener('touchcancel', endJoystick, { passive: false });
-
-            function handleJoystickMove(touch) {
-                const dx = touch.clientX - joystickCenter.x;
-                const dy = touch.clientY - joystickCenter.y;
-
-                const rect = joystickZone.getBoundingClientRect();
-                const maxDist = rect.width / 3;
-
-                const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
-                const angle = Math.atan2(dy, dx);
-
-                const stickX = Math.cos(angle) * dist;
-                const stickY = Math.sin(angle) * dist;
-
-                joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
-
-                // Convert to isometric movement
-                const normalizedX = stickX / maxDist;
-                const normalizedY = stickY / maxDist;
-
-                // Isometric conversion: screen Y affects both X and Z, screen X affects X and -Z
-                gameState.touchInput.x = (normalizedY - normalizedX) * 0.707;
-                gameState.touchInput.z = (normalizedY + normalizedX) * 0.707;
-            }
-
-            // Jump button
-            jumpBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                jumpBtn.classList.add('pressed');
-                gameState.jumpPressed = true;
-            }, { passive: false });
-
-            jumpBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                jumpBtn.classList.remove('pressed');
-                gameState.jumpPressed = false;
-            }, { passive: false });
-
-            jumpBtn.addEventListener('touchcancel', () => {
-                jumpBtn.classList.remove('pressed');
-                gameState.jumpPressed = false;
-            }, { passive: false });
-
-            // Prevent default touch behaviors on game container
-            document.getElementById('game-container').addEventListener('touchmove', (e) => {
-                if (e.target.tagName !== 'BUTTON') {
-                    e.preventDefault();
+                const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
+                if (touch) {
+                    indicator.style.left = touch.clientX + 'px';
+                    indicator.style.top = touch.clientY + 'px';
+                    updateTouchMovement(touch);
                 }
             }, { passive: false });
-        }
 
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen?.() ||
-                document.documentElement.webkitRequestFullscreen?.();
-            } else {
-                document.exitFullscreen?.() ||
-                document.webkitExitFullscreen?.();
+            // Touch end
+            const endTouch = () => {
+                gameState.touchActive = false;
+                gameState.touchInput.x = 0;
+                gameState.touchInput.z = 0;
+                indicator.classList.remove('active');
+                touchId = null;
+            };
+            container.addEventListener('touchend', endTouch, { passive: false });
+            container.addEventListener('touchcancel', endTouch, { passive: false });
+
+            function updateTouchMovement(touch) {
+                // Convert screen position to movement direction
+                // Touch position relative to screen center
+                const cx = window.innerWidth / 2;
+                const cy = window.innerHeight / 2;
+                const dx = (touch.clientX - cx) / (window.innerWidth / 3);
+                const dy = (touch.clientY - cy) / (window.innerHeight / 3);
+
+                // Clamp
+                const clampedX = Math.max(-1, Math.min(1, dx));
+                const clampedY = Math.max(-1, Math.min(1, dy));
+
+                // Convert to isometric movement
+                gameState.touchInput.x = (clampedY - clampedX) * 0.707;
+                gameState.touchInput.z = (clampedY + clampedX) * 0.707;
             }
-        }
 
-        function startGame() {
-            if (gameState.started) return;
-            document.getElementById('title-screen').classList.add('hidden');
-            document.getElementById('ui-overlay').classList.remove('hidden');
-            gameState.started = true;
-            loadRoom('hall');
-
-            // Vibrate on game start (mobile feedback)
-            if (navigator.vibrate) navigator.vibrate(50);
+            // Keyboard
+            window.addEventListener('keydown', (e) => {
+                gameState.keys[e.code] = true;
+                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                    e.preventDefault();
+                }
+            });
+            window.addEventListener('keyup', (e) => gameState.keys[e.code] = false);
         }
 
         // ============================================
-        // PLAYER
+        // PLAYER - Bright colorful character
         // ============================================
         function createPlayer() {
             player = new THREE.Group();
 
-            const bodyMat = new THREE.MeshStandardMaterial({
-                color: 0x4488ff,
-                metalness: 0.3,
-                roughness: 0.7,
-                emissive: 0x112244,
-                emissiveIntensity: 0.2
-            });
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x4488ff });
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xffddbb });
+            const legMat = new THREE.MeshLambertMaterial({ color: 0x2255aa });
 
             // Body
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.6, 0.3),
-                bodyMat
-            );
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.35), bodyMat);
             body.position.y = 0.5;
             body.castShadow = true;
             player.add(body);
 
             // Head
-            const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.2, 8, 6),
-                new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.8 })
-            );
-            head.position.y = 1.0;
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), skinMat);
+            head.position.y = 1.02;
             head.castShadow = true;
             player.add(head);
 
+            // Eyes
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+            [-0.08, 0.08].forEach(x => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+                eye.position.set(x, 1.05, 0.17);
+                player.add(eye);
+            });
+
             // Legs
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x333366, roughness: 0.8 });
             [-0.12, 0.12].forEach(x => {
-                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), legMat);
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.3, 0.16), legMat);
                 leg.position.set(x, 0.15, 0);
                 leg.castShadow = true;
                 player.add(leg);
             });
 
             // Arms
-            [-0.35, 0.35].forEach(x => {
-                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), bodyMat);
-                arm.position.set(x, 0.55, 0);
+            [-0.33, 0.33].forEach(x => {
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.35, 0.14), bodyMat);
+                arm.position.set(x, 0.5, 0);
                 arm.castShadow = true;
                 player.add(arm);
-            });
-
-            // Eyes
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            [-0.07, 0.07].forEach(x => {
-                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), eyeMat);
-                eye.position.set(x, 1.02, 0.15);
-                player.add(eye);
             });
 
             scene.add(player);
         }
 
         // ============================================
-        // ROOM LOADING
+        // ROOM LOADING - Bright and clear
         // ============================================
         function loadRoom(roomId) {
             const room = rooms[roomId];
@@ -913,296 +556,186 @@
 
             gameState.currentRoom = roomId;
 
-            while (roomGroup.children.length > 0) {
-                roomGroup.remove(roomGroup.children[0]);
-            }
+            while (roomGroup.children.length) roomGroup.remove(roomGroup.children[0]);
             enemies = [];
             collectibles = [];
 
             document.getElementById('room-name').textContent = room.name;
-            scene.background = new THREE.Color(room.ambientColor).multiplyScalar(0.3);
+
+            // Bright background
+            scene.background = new THREE.Color(room.bgColor);
 
             // Remove old lights
-            scene.children = scene.children.filter(child => !(child instanceof THREE.Light));
+            scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
 
-            // Lighting
-            scene.add(new THREE.AmbientLight(room.ambientColor, 0.5));
+            // Strong ambient light - no dark areas!
+            const ambient = new THREE.AmbientLight(room.ambient, 0.8);
+            scene.add(ambient);
 
-            const mainLight = new THREE.DirectionalLight(room.lightColor, 1.2);
-            mainLight.position.set(10, 20, 10);
-            mainLight.castShadow = true;
-            mainLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
-            mainLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
-            mainLight.shadow.camera.near = 0.5;
-            mainLight.shadow.camera.far = 50;
-            mainLight.shadow.camera.left = -15;
-            mainLight.shadow.camera.right = 15;
-            mainLight.shadow.camera.top = 15;
-            mainLight.shadow.camera.bottom = -15;
-            scene.add(mainLight);
+            // Bright directional light
+            const sun = new THREE.DirectionalLight(room.light, 1.5);
+            sun.position.set(8, 15, 8);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 1024;
+            sun.shadow.mapSize.height = 1024;
+            sun.shadow.camera.near = 1;
+            sun.shadow.camera.far = 40;
+            sun.shadow.camera.left = -12;
+            sun.shadow.camera.right = 12;
+            sun.shadow.camera.top = 12;
+            sun.shadow.camera.bottom = -12;
+            sun.shadow.bias = -0.001;
+            scene.add(sun);
 
-            scene.add(new THREE.DirectionalLight(0x4488ff, 0.3).translateX(-10).translateY(5).translateZ(-10));
+            // Fill light from opposite side
+            const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+            fill.position.set(-5, 8, -5);
+            scene.add(fill);
 
             createFloor(room);
-            room.walls.forEach(wall => createWall(wall, room));
-            room.blocks.forEach(block => createBlock(block, room));
-            room.enemies.forEach(enemy => createEnemy(enemy, room));
-            room.items.forEach(item => createItem(item, room));
-            room.exits.forEach(exit => createExit(exit, room));
+            room.walls.forEach(w => createWall(w, room));
+            room.blocks.forEach(b => createBlock(b, room));
+            room.enemies.forEach(e => createEnemy(e, room));
+            room.items.forEach(i => createItem(i, room));
+            room.exits.forEach(e => createExit(e, room));
         }
 
         function createFloor(room) {
-            const floorGroup = new THREE.Group();
-            const darkMat = new THREE.MeshStandardMaterial({ color: 0x222233, metalness: 0.1, roughness: 0.9 });
-            const lightMat = new THREE.MeshStandardMaterial({ color: 0x333344, metalness: 0.1, roughness: 0.9 });
+            const g = new THREE.Group();
+            const mat1 = new THREE.MeshLambertMaterial({ color: room.floorColor });
+            const mat2 = new THREE.MeshLambertMaterial({ color: room.floorColor2 });
 
-            for (let x = -room.width / 2; x < room.width / 2; x++) {
-                for (let z = -room.depth / 2; z < room.depth / 2; z++) {
+            for (let x = -room.width/2; x < room.width/2; x++) {
+                for (let z = -room.depth/2; z < room.depth/2; z++) {
                     const tile = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.98, 0.1, 0.98),
-                        (x + z) % 2 === 0 ? darkMat : lightMat
+                        new THREE.BoxGeometry(0.98, 0.15, 0.98),
+                        (x + z) % 2 === 0 ? mat1 : mat2
                     );
-                    tile.position.set(x + 0.5, -0.05, z + 0.5);
+                    tile.position.set(x + 0.5, -0.075, z + 0.5);
                     tile.receiveShadow = true;
-                    floorGroup.add(tile);
+                    g.add(tile);
                 }
             }
-            roomGroup.add(floorGroup);
+            roomGroup.add(g);
         }
 
-        function createWall(wallDef, room) {
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.95 });
-            const brickMat = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.9 });
-            const wallGroup = new THREE.Group();
-            const brickHeight = 0.4;
-            const wallHeight = 3;
+        function createWall(w, room) {
+            const mat1 = new THREE.MeshLambertMaterial({ color: room.wallColor });
+            const mat2 = new THREE.MeshLambertMaterial({ color: new THREE.Color(room.wallColor).multiplyScalar(0.85) });
+            const g = new THREE.Group();
+            const bh = 0.5;
 
-            for (let y = 0; y < wallHeight; y += brickHeight) {
-                const offset = (Math.floor(y / brickHeight) % 2) * 0.5;
-                const mat = y % (brickHeight * 2) < brickHeight ? wallMat : brickMat;
+            for (let y = 0; y < 2.5; y += bh) {
+                const off = (Math.floor(y / bh) % 2) * 0.5;
+                const mat = y % (bh * 2) < bh ? mat1 : mat2;
 
-                if (wallDef.w > wallDef.d) {
-                    for (let x = -wallDef.w / 2; x < wallDef.w / 2; x += 1) {
-                        const brick = new THREE.Mesh(
-                            new THREE.BoxGeometry(0.95, brickHeight - 0.02, wallDef.d - 0.02),
-                            mat
-                        );
-                        brick.position.set(wallDef.x + x + 0.5 + offset, y + brickHeight / 2, wallDef.z);
+                if (w.w > w.d) {
+                    for (let x = -w.w/2; x < w.w/2; x++) {
+                        const brick = new THREE.Mesh(new THREE.BoxGeometry(0.95, bh - 0.03, w.d - 0.03), mat);
+                        brick.position.set(w.x + x + 0.5 + off, y + bh/2, w.z);
                         brick.castShadow = true;
                         brick.receiveShadow = true;
-                        wallGroup.add(brick);
+                        g.add(brick);
                     }
                 } else {
-                    for (let z = -wallDef.d / 2; z < wallDef.d / 2; z += 1) {
-                        const brick = new THREE.Mesh(
-                            new THREE.BoxGeometry(wallDef.w - 0.02, brickHeight - 0.02, 0.95),
-                            mat
-                        );
-                        brick.position.set(wallDef.x, y + brickHeight / 2, wallDef.z + z + 0.5 + offset);
+                    for (let z = -w.d/2; z < w.d/2; z++) {
+                        const brick = new THREE.Mesh(new THREE.BoxGeometry(w.w - 0.03, bh - 0.03, 0.95), mat);
+                        brick.position.set(w.x, y + bh/2, w.z + z + 0.5 + off);
                         brick.castShadow = true;
                         brick.receiveShadow = true;
-                        wallGroup.add(brick);
+                        g.add(brick);
                     }
                 }
             }
-            roomGroup.add(wallGroup);
+            roomGroup.add(g);
         }
 
-        function createBlock(blockDef, room) {
-            if (blockDef.type === 'pedestal') {
-                const mat = new THREE.MeshStandardMaterial({ color: 0x887766, metalness: 0.4, roughness: 0.6 });
-                const pedestal = new THREE.Group();
-
-                const base = new THREE.Mesh(new THREE.BoxGeometry(blockDef.size * 1.2, 0.2, blockDef.size * 1.2), mat);
-                base.position.y = 0.1;
-                pedestal.add(base);
-
-                const column = new THREE.Mesh(new THREE.CylinderGeometry(blockDef.size * 0.3, blockDef.size * 0.4, 0.6, 8), mat);
-                column.position.y = 0.5;
-                pedestal.add(column);
-
-                const top = new THREE.Mesh(new THREE.BoxGeometry(blockDef.size * 1.1, 0.15, blockDef.size * 1.1), mat);
-                top.position.y = 0.85;
-                pedestal.add(top);
-
-                pedestal.position.set(blockDef.x, 0, blockDef.z);
-                roomGroup.add(pedestal);
+        function createBlock(b, room) {
+            if (b.type === 'pedestal') {
+                const mat = new THREE.MeshLambertMaterial({ color: 0xccaa88 });
+                const g = new THREE.Group();
+                g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(b.size*1.2, 0.2, b.size*1.2), mat), {position: new THREE.Vector3(0, 0.1, 0)}));
+                g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(b.size*0.3, b.size*0.4, 0.6, 8), mat), {position: new THREE.Vector3(0, 0.5, 0)}));
+                g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(b.size*1.1, 0.15, b.size*1.1), mat), {position: new THREE.Vector3(0, 0.85, 0)}));
+                g.position.set(b.x, 0, b.z);
+                g.children.forEach(c => { c.castShadow = true; c.receiveShadow = true; });
+                roomGroup.add(g);
                 return;
             }
 
-            const mat = blockDef.type === 'magic'
-                ? new THREE.MeshStandardMaterial({ color: 0x8844ff, metalness: 0.5, roughness: 0.3, emissive: 0x4422aa, emissiveIntensity: 0.5 })
-                : new THREE.MeshStandardMaterial({ color: 0x667788, metalness: 0.1, roughness: 0.85 });
+            const mat = b.type === 'magic'
+                ? new THREE.MeshLambertMaterial({ color: 0xaa77ff, emissive: 0x6644aa, emissiveIntensity: 0.3 })
+                : new THREE.MeshLambertMaterial({ color: 0x88899a });
 
-            const block = new THREE.Mesh(new THREE.BoxGeometry(blockDef.size, blockDef.size, blockDef.size), mat);
-            block.position.set(blockDef.x, blockDef.y, blockDef.z);
+            const block = new THREE.Mesh(new THREE.BoxGeometry(b.size, b.size, b.size), mat);
+            block.position.set(b.x, b.y, b.z);
             block.castShadow = true;
             block.receiveShadow = true;
             roomGroup.add(block);
         }
 
-        function createEnemy(enemyDef, room) {
+        function createEnemy(e, room) {
             const enemy = new THREE.Group();
 
-            if (enemyDef.type === 'guardian') {
-                const bodyMat = new THREE.MeshStandardMaterial({
-                    color: 0xaa4444, metalness: 0.6, roughness: 0.4,
-                    emissive: 0x331111, emissiveIntensity: 0.3
-                });
-
-                const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), bodyMat);
-                body.position.y = 0.6;
-                body.castShadow = true;
-                enemy.add(body);
-
-                const head = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.4, 4), bodyMat);
-                head.position.y = 1.2;
-                head.rotation.y = Math.PI / 4;
-                enemy.add(head);
-
-                const visor = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.3, 0.08, 0.1),
-                    new THREE.MeshBasicMaterial({ color: 0xff0000 })
-                );
-                visor.position.set(0, 1.05, 0.2);
+            if (e.type === 'guardian') {
+                const mat = new THREE.MeshLambertMaterial({ color: 0xcc4444 });
+                enemy.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), mat), {position: new THREE.Vector3(0, 0.6, 0), castShadow: true}));
+                enemy.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.45, 4), mat), {position: new THREE.Vector3(0, 1.22, 0), castShadow: true}));
+                enemy.children[1].rotation.y = Math.PI/4;
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.12), new THREE.MeshBasicMaterial({ color: 0xff3333 }));
+                visor.position.set(0, 1.05, 0.22);
                 enemy.add(visor);
-
-            } else if (enemyDef.type === 'spider') {
-                const spiderMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.3, roughness: 0.7 });
-
-                const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), spiderMat);
-                abdomen.position.set(0, 0.3, -0.2);
-                abdomen.scale.set(1, 0.8, 1.2);
-                enemy.add(abdomen);
-
-                const thorax = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), spiderMat);
-                thorax.position.set(0, 0.3, 0.1);
-                enemy.add(thorax);
-
-                for (let i = 0; i < 4; i++) {
-                    const eye = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.04, 4, 4),
-                        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-                    );
-                    eye.position.set((i % 2 === 0 ? -0.08 : 0.08), 0.35 + (i < 2 ? 0.05 : 0), 0.22);
-                    enemy.add(eye);
-                }
-
-                for (let i = 0; i < 8; i++) {
-                    const side = i < 4 ? -1 : 1;
-                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.015, 0.4, 4), spiderMat);
-                    leg.position.set(side * 0.25, 0.15, -0.1 + (i % 4) * 0.12);
-                    leg.rotation.z = side * Math.PI / 3;
-                    enemy.add(leg);
-                }
-
-            } else if (enemyDef.type === 'ghost') {
-                const ghostMat = new THREE.MeshStandardMaterial({
-                    color: 0xaaccff, transparent: true, opacity: 0.7,
-                    emissive: 0x4466aa, emissiveIntensity: 0.5
+            } else if (e.type === 'spider') {
+                const mat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), mat), {position: new THREE.Vector3(0, 0.3, -0.15), castShadow: true}));
+                enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), mat), {position: new THREE.Vector3(0, 0.3, 0.12), castShadow: true}));
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x44ff44 });
+                [[-0.06, 0.38], [0.06, 0.38], [-0.04, 0.32], [0.04, 0.32]].forEach(([x, y]) => {
+                    enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), eyeMat), {position: new THREE.Vector3(x, y, 0.25)}));
                 });
-
-                const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1, 8), ghostMat);
-                body.position.y = 0.8;
-                body.rotation.x = Math.PI;
-                enemy.add(body);
-
-                [-0.12, 0.12].forEach(x => {
-                    const eye = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.08, 6, 6),
-                        new THREE.MeshBasicMaterial({ color: 0x000000 })
-                    );
-                    eye.position.set(x, 1.1, 0.25);
-                    enemy.add(eye);
-                });
+            } else if (e.type === 'ghost') {
+                const mat = new THREE.MeshLambertMaterial({ color: 0xccddff, transparent: true, opacity: 0.8 });
+                enemy.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(0.4, 1, 8), mat), {position: new THREE.Vector3(0, 0.8, 0), castShadow: true}));
+                enemy.children[0].rotation.x = Math.PI;
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x333366 });
+                [-0.12, 0.12].forEach(x => enemy.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeMat), {position: new THREE.Vector3(x, 1.1, 0.25)})));
             }
 
-            enemy.position.set(enemyDef.x, 0, enemyDef.z);
-            enemy.userData = {
-                type: enemyDef.type,
-                patrol: enemyDef.patrol,
-                startX: enemyDef.x,
-                startZ: enemyDef.z,
-                phase: Math.random() * Math.PI * 2,
-                speed: 1 + Math.random() * 0.5
-            };
-
+            enemy.position.set(e.x, 0, e.z);
+            enemy.userData = { type: e.type, patrol: e.patrol, startX: e.x, startZ: e.z, phase: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() * 0.4 };
             enemies.push(enemy);
             roomGroup.add(enemy);
         }
 
-        function createItem(itemDef, room) {
+        function createItem(i, room) {
             const item = new THREE.Group();
-            const glowMat = new THREE.MeshStandardMaterial({
-                color: itemDef.color, metalness: 0.8, roughness: 0.2,
-                emissive: itemDef.color, emissiveIntensity: 0.5
-            });
+            const mat = new THREE.MeshLambertMaterial({ color: i.color, emissive: i.color, emissiveIntensity: 0.4 });
 
-            if (itemDef.type === 'key') {
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 8, 16), glowMat);
-                ring.rotation.x = Math.PI / 2;
-                item.add(ring);
-
-                const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.04), glowMat);
-                shaft.position.y = -0.15;
-                item.add(shaft);
-
-            } else if (itemDef.type === 'gem') {
-                item.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), glowMat));
-
-            } else if (itemDef.type === 'scroll') {
-                const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8), glowMat);
-                scroll.rotation.z = Math.PI / 2;
-                item.add(scroll);
+            if (i.type === 'key') {
+                item.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 16), mat), {rotation: new THREE.Euler(Math.PI/2, 0, 0)}));
+                item.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.32, 0.05), mat), {position: new THREE.Vector3(0, -0.16, 0)}));
+            } else if (i.type === 'gem') {
+                item.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), mat));
+            } else if (i.type === 'scroll') {
+                item.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.35, 8), mat), {rotation: new THREE.Euler(0, 0, Math.PI/2)}));
             }
 
-            if (!isMobile) {
-                const light = new THREE.PointLight(itemDef.color, 0.5, 3);
-                light.position.y = 0.2;
-                item.add(light);
-            }
-
-            item.position.set(itemDef.x, itemDef.y, itemDef.z);
-            item.userData = { type: itemDef.type, collected: false };
-
+            item.position.set(i.x, i.y, i.z);
+            item.userData = { type: i.type, collected: false };
             collectibles.push(item);
             roomGroup.add(item);
         }
 
-        function createExit(exitDef, room) {
-            const exitGroup = new THREE.Group();
-            const portalMat = new THREE.MeshStandardMaterial({
-                color: 0x44ff44, metalness: 0.5, roughness: 0.3,
-                emissive: 0x22aa22, emissiveIntensity: 0.5,
-                transparent: true, opacity: 0.8
-            });
+        function createExit(e, room) {
+            const g = new THREE.Group();
+            const mat = new THREE.MeshLambertMaterial({ color: 0x66ff66, emissive: 0x33aa33, emissiveIntensity: 0.5 });
 
-            const arch = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.1, 8, 16, Math.PI), portalMat);
-            arch.position.y = 1.2;
-            arch.rotation.x = Math.PI / 2;
-            exitGroup.add(arch);
+            g.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.12, 8, 16, Math.PI), mat), {position: new THREE.Vector3(0, 1.2, 0), rotation: new THREE.Euler(Math.PI/2, 0, 0)}));
+            [-0.5, 0.5].forEach(x => g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), mat), {position: new THREE.Vector3(x, 0.6, 0), castShadow: true})));
 
-            [-0.5, 0.5].forEach(x => {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.2), portalMat);
-                pillar.position.set(x, 0.6, 0);
-                exitGroup.add(pillar);
-            });
-
-            if (!isMobile) {
-                const light = new THREE.PointLight(0x44ff44, 1, 5);
-                light.position.y = 1;
-                exitGroup.add(light);
-            }
-
-            exitGroup.position.set(exitDef.x, 0, exitDef.z);
-            exitGroup.userData = {
-                toRoom: exitDef.toRoom,
-                spawnX: exitDef.spawnX,
-                spawnZ: exitDef.spawnZ,
-                isExit: true
-            };
-
-            roomGroup.add(exitGroup);
+            g.position.set(e.x, 0, e.z);
+            g.userData = { toRoom: e.toRoom, spawnX: e.spawnX, spawnZ: e.spawnZ, isExit: true };
+            roomGroup.add(g);
         }
 
         // ============================================
@@ -1210,61 +743,43 @@
         // ============================================
         function animate() {
             requestAnimationFrame(animate);
-
-            const delta = Math.min(clock.getDelta(), 0.1); // Cap delta for tab switches
+            const delta = Math.min(clock.getDelta(), 0.1);
             const time = clock.getElapsedTime();
 
             if (gameState.started) {
                 updatePlayer(delta, time);
-                updateEnemies(delta, time);
-                updateCollectibles(delta, time);
+                updateEnemies(time);
+                updateCollectibles(time);
                 checkCollisions();
             }
 
-            composer.render();
+            renderer.render(scene, camera);
         }
 
         function updatePlayer(delta, time) {
-            const speed = 4;
-            const jumpForce = 8;
-            const gravity = 20;
+            let mx = gameState.touchInput.x;
+            let mz = gameState.touchInput.z;
 
-            // Combine keyboard and touch input
-            let moveX = gameState.touchInput.x;
-            let moveZ = gameState.touchInput.z;
+            // Keyboard
+            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) { mx -= 1; mz -= 1; }
+            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) { mx += 1; mz += 1; }
+            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) { mx -= 1; mz += 1; }
+            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) { mx += 1; mz -= 1; }
 
-            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) { moveX -= 1; moveZ -= 1; }
-            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) { moveX += 1; moveZ += 1; }
-            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) { moveX -= 1; moveZ += 1; }
-            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) { moveX += 1; moveZ -= 1; }
+            const len = Math.sqrt(mx*mx + mz*mz);
+            if (len > 1) { mx /= len; mz /= len; }
+            if (len > 0.1) player.rotation.y = Math.atan2(mx, mz);
 
-            // Normalize
-            const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-            if (len > 1) {
-                moveX /= len;
-                moveZ /= len;
-            }
-
-            if (len > 0.1) {
-                player.rotation.y = Math.atan2(moveX, moveZ);
-            }
-
-            gameState.playerVelocity.x = moveX * speed;
-            gameState.playerVelocity.z = moveZ * speed;
-
-            // Jumping
-            const jumpInput = gameState.jumpPressed || gameState.keys['Space'] || gameState.keys['KeyX'];
-            if (jumpInput && !gameState.isJumping) {
-                gameState.playerVelocity.y = jumpForce;
+            // Keyboard jump
+            if ((gameState.keys['Space'] || gameState.keys['KeyX']) && !gameState.isJumping) {
+                gameState.playerVelocity.y = 8;
                 gameState.isJumping = true;
-                if (navigator.vibrate) navigator.vibrate(20);
             }
 
-            gameState.playerVelocity.y -= gravity * delta;
-
-            player.position.x += gameState.playerVelocity.x * delta;
+            gameState.playerVelocity.y -= 22 * delta;
+            player.position.x += mx * 4.5 * delta;
             player.position.y += gameState.playerVelocity.y * delta;
-            player.position.z += gameState.playerVelocity.z * delta;
+            player.position.z += mz * 4.5 * delta;
 
             if (player.position.y < 0) {
                 player.position.y = 0;
@@ -1272,74 +787,73 @@
                 gameState.isJumping = false;
             }
 
+            // Bounds
             const room = rooms[gameState.currentRoom];
-            const margin = 0.5;
-            player.position.x = Math.max(-room.width / 2 + margin, Math.min(room.width / 2 - margin, player.position.x));
-            player.position.z = Math.max(-room.depth / 2 + margin, Math.min(room.depth / 2 - margin, player.position.z));
+            player.position.x = Math.max(-room.width/2 + 0.5, Math.min(room.width/2 - 0.5, player.position.x));
+            player.position.z = Math.max(-room.depth/2 + 0.5, Math.min(room.depth/2 - 0.5, player.position.z));
 
-            checkExits();
-        }
-
-        function updateEnemies(delta, time) {
-            enemies.forEach(enemy => {
-                const data = enemy.userData;
-                const patrolRadius = 2;
-
-                if (data.patrol === 'circle') {
-                    enemy.position.x = data.startX + Math.cos(time * data.speed + data.phase) * patrolRadius;
-                    enemy.position.z = data.startZ + Math.sin(time * data.speed + data.phase) * patrolRadius;
-                    enemy.rotation.y = time * data.speed + data.phase + Math.PI / 2;
-                } else if (data.patrol === 'horizontal') {
-                    enemy.position.x = data.startX + Math.sin(time * data.speed + data.phase) * patrolRadius;
-                } else if (data.patrol === 'vertical') {
-                    enemy.position.z = data.startZ + Math.sin(time * data.speed + data.phase) * patrolRadius;
-                } else if (data.patrol === 'float') {
-                    enemy.position.y = 0.5 + Math.sin(time * 2 + data.phase) * 0.3;
-                    enemy.rotation.y = time * 0.5;
-                }
-            });
-        }
-
-        function updateCollectibles(delta, time) {
-            collectibles.forEach(item => {
-                if (!item.userData.collected) {
-                    if (!item.userData.originalY) item.userData.originalY = item.position.y;
-                    item.position.y = item.userData.originalY + Math.sin(time * 3) * 0.1;
-                    item.rotation.y = time * 2;
-                }
-            });
-        }
-
-        function checkCollisions() {
-            enemies.forEach(enemy => {
-                const dx = player.position.x - enemy.position.x;
-                const dz = player.position.z - enemy.position.z;
-                if (Math.sqrt(dx * dx + dz * dz) < 0.6) {
-                    hitPlayer();
-                }
-            });
-
-            collectibles.forEach(item => {
-                if (!item.userData.collected) {
-                    const dx = player.position.x - item.position.x;
-                    const dy = player.position.y - item.position.y;
-                    const dz = player.position.z - item.position.z;
-                    if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 0.5) {
-                        collectItem(item);
+            // Check exits
+            roomGroup.children.forEach(c => {
+                if (c.userData.isExit) {
+                    const dx = player.position.x - c.position.x;
+                    const dz = player.position.z - c.position.z;
+                    if (Math.sqrt(dx*dx + dz*dz) < 0.8) {
+                        if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+                        loadRoom(c.userData.toRoom);
+                        player.position.set(c.userData.spawnX, 0, c.userData.spawnZ);
                     }
                 }
             });
         }
 
-        function checkExits() {
-            roomGroup.children.forEach(child => {
-                if (child.userData.isExit) {
-                    const dx = player.position.x - child.position.x;
-                    const dz = player.position.z - child.position.z;
-                    if (Math.sqrt(dx * dx + dz * dz) < 0.8) {
-                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                        loadRoom(child.userData.toRoom);
-                        player.position.set(child.userData.spawnX, 0, child.userData.spawnZ);
+        function updateEnemies(time) {
+            enemies.forEach(e => {
+                const d = e.userData;
+                const r = 2;
+                if (d.patrol === 'circle') {
+                    e.position.x = d.startX + Math.cos(time * d.speed + d.phase) * r;
+                    e.position.z = d.startZ + Math.sin(time * d.speed + d.phase) * r;
+                    e.rotation.y = time * d.speed + d.phase + Math.PI/2;
+                } else if (d.patrol === 'horizontal') {
+                    e.position.x = d.startX + Math.sin(time * d.speed + d.phase) * r;
+                } else if (d.patrol === 'vertical') {
+                    e.position.z = d.startZ + Math.sin(time * d.speed + d.phase) * r;
+                } else if (d.patrol === 'float') {
+                    e.position.y = 0.5 + Math.sin(time * 2 + d.phase) * 0.4;
+                    e.rotation.y = time * 0.5;
+                }
+            });
+        }
+
+        function updateCollectibles(time) {
+            collectibles.forEach(i => {
+                if (!i.userData.collected) {
+                    if (!i.userData.oy) i.userData.oy = i.position.y;
+                    i.position.y = i.userData.oy + Math.sin(time * 3) * 0.12;
+                    i.rotation.y = time * 2;
+                }
+            });
+        }
+
+        function checkCollisions() {
+            enemies.forEach(e => {
+                const dx = player.position.x - e.position.x;
+                const dz = player.position.z - e.position.z;
+                if (Math.sqrt(dx*dx + dz*dz) < 0.55) hitPlayer();
+            });
+
+            collectibles.forEach(i => {
+                if (!i.userData.collected) {
+                    const dx = player.position.x - i.position.x;
+                    const dy = player.position.y - i.position.y;
+                    const dz = player.position.z - i.position.z;
+                    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 0.5) {
+                        i.userData.collected = true;
+                        i.visible = false;
+                        gameState.score += 50;
+                        gameState.items.push(i.userData.type);
+                        if (navigator.vibrate) navigator.vibrate(20);
+                        updateUI();
                     }
                 }
             });
@@ -1347,20 +861,16 @@
 
         function hitPlayer() {
             gameState.lives--;
-            updateUI();
+            if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
 
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-            player.children.forEach(child => {
-                if (child.material) {
-                    const orig = child.material.color.getHex();
-                    child.material.color.setHex(0xff0000);
-                    setTimeout(() => child.material.color.setHex(orig), 200);
+            player.children.forEach(c => {
+                if (c.material && c.material.color) {
+                    const orig = c.material.color.getHex();
+                    c.material.color.setHex(0xff0000);
+                    setTimeout(() => c.material.color.setHex(orig), 180);
                 }
             });
 
-            gameState.playerVelocity.x = -gameState.playerVelocity.x * 2;
-            gameState.playerVelocity.z = -gameState.playerVelocity.z * 2;
             gameState.playerVelocity.y = 5;
 
             if (gameState.lives <= 0) {
@@ -1372,41 +882,25 @@
             updateUI();
         }
 
-        function collectItem(item) {
-            item.userData.collected = true;
-            item.visible = false;
-            gameState.score += 50;
-            gameState.items.push(item.userData.type);
-            if (navigator.vibrate) navigator.vibrate(30);
-            updateUI();
-        }
-
         function updateUI() {
             document.getElementById('lives').textContent = '❤️'.repeat(gameState.lives);
             document.getElementById('score').textContent = gameState.score;
-
             const slots = document.querySelectorAll('.item-slot');
-            const symbols = { key: '🔑', gem: '💎', scroll: '📜' };
-            gameState.items.slice(-3).forEach((item, i) => {
-                if (slots[i]) slots[i].textContent = symbols[item] || '?';
-            });
+            const sym = { key: '🔑', gem: '💎', scroll: '📜' };
+            gameState.items.slice(-3).forEach((it, i) => { if (slots[i]) slots[i].textContent = sym[it] || '?'; });
         }
 
-        function onWindowResize() {
+        function onResize() {
             const aspect = window.innerWidth / window.innerHeight;
-            const frustumSize = isMobile ? 10 : 12;
-
-            camera.left = -frustumSize * aspect / 2;
-            camera.right = frustumSize * aspect / 2;
-            camera.top = frustumSize / 2;
-            camera.bottom = -frustumSize / 2;
+            const size = isMobile ? 9 : 11;
+            camera.left = -size * aspect / 2;
+            camera.right = size * aspect / 2;
+            camera.top = size / 2;
+            camera.bottom = -size / 2;
             camera.updateProjectionMatrix();
-
             renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Start
         init();
     </script>
 </body>
