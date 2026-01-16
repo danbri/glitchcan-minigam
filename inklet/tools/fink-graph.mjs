@@ -262,11 +262,14 @@ const args = process.argv.slice(2);
 const jsonOutput = args.includes('--json');
 const filteredArgs = args.filter(a => !a.startsWith('--'));
 
+// Helper: log to stderr when JSON output mode (keeps stdout clean for JSON)
+const log = jsonOutput ? console.error.bind(console) : console.log.bind(console);
+
 try {
   if (args.includes('--scan')) {
-    console.log('🔍 Scanning for FINK/Ink files...\n');
+    log('🔍 Scanning for FINK/Ink files...\n');
     const files = await scanRepo();
-    console.log(`Found ${files.length} files\n`);
+    log(`Found ${files.length} files\n`);
 
     const results = [];
     let passed = 0, failed = 0;
@@ -280,8 +283,8 @@ try {
       } catch (e) {
         failed++;
         if (!jsonOutput) {
-          console.log(`\n❌ ${path.relative(projectRoot, file)}`);
-          console.log(`   Error: ${e.message}`);
+          log(`\n❌ ${path.relative(projectRoot, file)}`);
+          log(`   Error: ${e.message}`);
         } else {
           results.push({ filename: path.basename(file), error: e.message });
         }
@@ -289,9 +292,9 @@ try {
     }
 
     if (jsonOutput) {
-      console.log(JSON.stringify(results, null, 2));
+      process.stdout.write(JSON.stringify(results, null, 2) + '\n');
     } else {
-      console.log(`\n📊 Summary: ${passed} passed, ${failed} failed`);
+      log(`\n📊 Summary: ${passed} passed, ${failed} failed`);
     }
 
     process.exit(failed > 0 ? 1 : 0);
@@ -315,11 +318,11 @@ try {
     }
 
     if (jsonOutput) {
-      console.log(JSON.stringify(results, null, 2));
+      process.stdout.write(JSON.stringify(results, null, 2) + '\n');
     }
 
   } else {
-    console.log(`Usage:
+    log(`Usage:
   node fink-graph.mjs <file.fink.js|file.ink> [--json]
   node fink-graph.mjs --scan [--json]
 
