@@ -818,9 +818,54 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 
 + [🎵 FOLEY Sound Tour] -> foley_tour
 + [🎮 Minigame Tour] -> minigame_tour
++ [🎬 Video Tour] -> video_tour
 + [View source on GitHub] -> github_links
 + [Return to ending] -> victory
 + [Dev: World Between Worlds] -> dev_pools
+
+=== video_tour ===
+# CLASS: info
+Videos can be embedded in stories via the VIDEO tag.
+
+Available video scenes:
+- 🐤 Glitch Canary (used in Hampstead fraud warning)
+- 🔥 Burning Mill (Riverbend dramatic scene)
+- 🤖 Robot Mech animations
+
++ [🐤 Glitch Canary (fraud warning)] -> test_glitch_canary
++ [🔥 Burning Mill] -> test_burning_mill
++ [📺 Jump to Hampstead Giro Fraud] -> load_hampstead_fraud
++ [Back] -> how_it_works
+
+=== test_glitch_canary ===
+#BG:#113
+# CLASS: warning
+A TV on the wall flickers to life...
+
+# VIDEO: 9C2A6066-A174-4C64-A0B2-D0BE87B23792_2025-03-07T09-02-01_upscaled.mp4
+
+The surreal glitch effect disorients you.
+
++ [Back to tour] -> video_tour
+
+=== test_burning_mill ===
+#BG:#200
+# CLASS: danger
+Flames consume the old mill...
+
+# VIDEO: 5437e4f1_e62e_4211_a301_9306d1ca3c9c.mp4
+
+The heat is unbearable.
+
++ [Back to tour] -> video_tour
+
+=== load_hampstead_fraud ===
+# CLASS: info
+Loading Hampstead adventure at giro fraud scene...
+
+# FINK: ../hampstead.fink.js
+
+-> giro_fraud_video
 
 === minigame_tour ===
 # CLASS: info
@@ -2608,7 +2653,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'choice';
         confirmBtn.textContent = 'Yes, return to main menu';
+        confirmBtn.addEventListener('animationend', () => confirmBtn.classList.add('ready'), { once: true });
         confirmBtn.addEventListener('click', () => {
+            if (!confirmBtn.classList.contains('ready')) return;
             log('Home confirmed - returning to main story');
             storyOutput.innerHTML = '';
             choicesContainer.innerHTML = '';
@@ -2625,7 +2672,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'choice';
         cancelBtn.textContent = 'No, continue playing';
+        cancelBtn.addEventListener('animationend', () => cancelBtn.classList.add('ready'), { once: true });
         cancelBtn.addEventListener('click', () => {
+            if (!cancelBtn.classList.contains('ready')) return;
             warning.remove();
             choicesContainer.innerHTML = '';
             displayChoices();  // Restore original choices
