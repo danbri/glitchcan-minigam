@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINK Episode Ring Visualization</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #ccc;
+        }
+        h1 {
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            color: #eee;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .controls select, .controls button {
+            padding: 8px 16px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .controls select:hover, .controls button:hover {
+            border-color: #4ecca3;
+        }
+        .controls button.active {
+            background: #4ecca3;
+            color: #000;
+        }
+        .container {
+            position: relative;
+            width: min(800px, 95vw);
+            height: min(800px, 95vw);
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .legend-dot.hub { background: #4ecca3; }
+        .legend-dot.entry { background: #ffc857; }
+        .legend-dot.exit { background: #e94560; }
+        .legend-dot.normal { background: #7b68ee; }
+        .legend-line {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .legend-line.repeatable { background: rgba(78, 204, 163, 0.6); }
+        .legend-line.sticky { background: rgba(233, 69, 96, 0.6); stroke-dasharray: 4 2; }
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 250px;
+            max-width: 350px;
+            display: none;
+            z-index: 100;
+        }
+        .info-panel.visible { display: block; }
+        .info-panel h3 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .info-panel p {
+            font-size: 12px;
+            margin: 5px 0;
+            color: #aaa;
+        }
+        .info-panel .tag {
+            display: inline-block;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 2px;
+            font-size: 10px;
+        }
+        .info-panel .close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            cursor: pointer;
+            color: #666;
+        }
+        .node-label {
+            font-size: 9px;
+            fill: #888;
+            pointer-events: none;
+            transition: fill 0.2s;
+        }
+        .node-label.highlight {
+            fill: #fff;
+            font-weight: 500;
+            font-size: 10px;
+        }
+        .chord {
+            fill: none;
+            stroke-width: 1.5;
+            transition: stroke-opacity 0.2s, stroke-width 0.2s;
+            cursor: pointer;
+        }
+        .chord:hover {
+            stroke-width: 3;
+        }
+        .chord.dimmed {
+            stroke-opacity: 0.1 !important;
+        }
+        .arc {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .arc:hover {
+            opacity: 0.8;
+        }
+        .arc.dimmed {
+            opacity: 0.2;
+        }
+        .cylinder-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+        .cylinder-hint .episode-name {
+            font-size: 16px;
+            color: #4ecca3;
+            letter-spacing: 0.15em;
+        }
+        .cylinder-hint .stats {
+            font-size: 11px;
+            color: #555;
+            margin-top: 4px;
+        }
+        .external-ring {
+            fill: none;
+            stroke: rgba(255, 200, 87, 0.1);
+            stroke-width: 15;
+            stroke-dasharray: 2 6;
+        }
+        .search-box {
+            padding: 8px 12px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #ccc;
+            border-radius: 4px;
+            width: 150px;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #4ecca3;
+        }
+    </style>
+</head>
+<body>
+    <h1>FINK EPISODE RING</h1>
+    <div class="subtitle">Interactive story graph visualization</div>
+
+    <div class="controls">
+        <select id="episode-select">
+            <option value="hampstead">Hampstead</option>
+            <option value="bagend">Bag End</option>
+            <option value="mudslidemines">Mudslide Mines</option>
+            <option value="riverbend">Riverbend</option>
+            <option value="toc">Table of Contents</option>
+        </select>
+        <input type="text" class="search-box" id="search" placeholder="Search knots...">
+        <button id="btn-all">Show All</button>
+        <button id="btn-hubs">Hubs Only</button>
+        <button id="btn-islands">Islands</button>
+    </div>
+
+    <div class="container">
+        <svg id="ring" viewBox="0 0 800 800"></svg>
+        <div class="cylinder-hint">
+            <div class="episode-name" id="current-episode">HAMPSTEAD</div>
+            <div class="stats" id="stats">Loading...</div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot hub"></div> Hub (high connectivity)</div>
+        <div class="legend-item"><div class="legend-dot entry"></div> External entry</div>
+        <div class="legend-item"><div class="legend-dot exit"></div> Exit / ending</div>
+        <div class="legend-item"><div class="legend-dot normal"></div> Standard</div>
+        <div class="legend-item"><div class="legend-line repeatable"></div> Repeatable (+)</div>
+        <div class="legend-item"><div class="legend-line sticky" style="background: repeating-linear-gradient(90deg, rgba(233,69,96,0.6) 0 3px, transparent 3px 6px);"></div> One-time (*)</div>
+    </div>
+
+    <div class="info-panel" id="info-panel">
+        <span class="close" onclick="hideInfoPanel()">&times;</span>
+        <h3 id="info-title">Knot Name</h3>
+        <p id="info-type">Type: Hub</p>
+        <p id="info-connections">Connections: 5 in, 3 out</p>
+        <p id="info-choices">Choices: 3 (2 repeatable, 1 sticky)</p>
+        <div id="info-tags"></div>
+    </div>
+
+    <script>
+    // Episode data - loaded from JSON report
+    const episodes = {
+        hampstead: {
+            name: 'HAMPSTEAD',
+            edges: [],
+            nodes: {},
+            externalEntries: new Set(),
+            exits: new Set(['world_end', 'fraud_ending', 'victory', 'jail'])
+        },
+        bagend: { name: 'BAG END', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
+        mudslidemines: { name: 'MUDSLIDE MINES', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
+        riverbend: { name: 'RIVERBEND', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() },
+        toc: { name: 'TABLE OF CONTENTS', edges: [], nodes: {}, externalEntries: new Set(), exits: new Set() }
+    };
+
+    // Load data from JSON report
+    async function loadData() {
+        try {
+            const response = await fetch('./fink-crawl-report.json');
+            const data = await response.json();
+
+            for (const file of data.files) {
+                const basename = file.file.split('/').pop().replace('.fink.js', '');
+                let episodeKey = basename;
+                if (basename === 'toc') episodeKey = 'toc';
+                else if (basename === 'bagend') episodeKey = 'bagend';
+                else if (basename.includes('hampstead')) episodeKey = 'hampstead';
+                else if (basename.includes('mudslide')) episodeKey = 'mudslidemines';
+                else if (basename.includes('riverbend')) episodeKey = 'riverbend';
+                else continue;
+
+                const episode = episodes[episodeKey];
+                if (!episode) continue;
+
+                episode.nodes = {};
+                episode.edges = [];
+
+                for (const [knot, knotData] of Object.entries(file.graph)) {
+                    episode.nodes[knot] = {
+                        choices: knotData.choices,
+                        tags: knotData.tags || [],
+                        choiceDetails: knotData.choiceDetails || []
+                    };
+
+                    for (const target of knotData.targets) {
+                        const choiceInfo = knotData.choiceDetails?.find(c => true) || { repeatable: true };
+                        episode.edges.push({
+                            from: knot,
+                            to: target,
+                            repeatable: choiceInfo.repeatable !== false
+                        });
+                    }
+                }
+
+                // Mark islands
+                if (file.islands) {
+                    for (const island of file.islands) {
+                        episode.externalEntries.add(island);
+                    }
+                }
+            }
+
+            renderEpisode('hampstead');
+        } catch (err) {
+            console.error('Failed to load data:', err);
+            // Use fallback hardcoded data for Hampstead
+            loadFallbackData();
+        }
+    }
+
+    function loadFallbackData() {
+        episodes.hampstead.edges = [
+            {from: "splash", to: "intro", repeatable: true},
+            {from: "intro", to: "bedsit", repeatable: true},
+            {from: "bedsit", to: "wardrobe", repeatable: true},
+            {from: "bedsit", to: "street", repeatable: true},
+            {from: "wardrobe", to: "bedsit", repeatable: true},
+            {from: "street", to: "jobcentre", repeatable: true},
+            {from: "street", to: "oxfam", repeatable: true},
+            {from: "street", to: "pub", repeatable: true},
+            {from: "street", to: "gallery_pass", repeatable: true},
+            {from: "street", to: "street", repeatable: true},
+            {from: "jobcentre", to: "street", repeatable: true},
+            {from: "jobcentre", to: "postoffice", repeatable: false},
+            {from: "postoffice", to: "street", repeatable: true},
+            {from: "postoffice", to: "giro_fraud_video", repeatable: false},
+            {from: "giro_fraud_video", to: "fraud_aftermath", repeatable: true},
+            {from: "oxfam", to: "street", repeatable: true},
+            {from: "pub", to: "street", repeatable: true},
+            {from: "gallery_pass", to: "mansion_tip", repeatable: true},
+            {from: "gallery_pass", to: "street", repeatable: true},
+            {from: "mansion_tip", to: "mansion", repeatable: true},
+            {from: "mansion", to: "car", repeatable: true},
+            {from: "car", to: "street", repeatable: true},
+            {from: "housewarming", to: "street", repeatable: true},
+            {from: "diamond_gallery_exhibit", to: "diamond_opening", repeatable: false},
+            {from: "diamond_opening", to: "one_week_later", repeatable: true},
+            {from: "one_week_later", to: "artist_confrontation", repeatable: true},
+            {from: "artist_reveal", to: "world_between_worlds", repeatable: true},
+            {from: "world_between_worlds", to: "world_rest", repeatable: true},
+            {from: "pool_bagend", to: "world_between_worlds", repeatable: true},
+            {from: "pool_mines", to: "world_between_worlds", repeatable: true},
+            {from: "pool_manor", to: "world_between_worlds", repeatable: true},
+            {from: "pool_maple", to: "world_between_worlds", repeatable: true},
+            {from: "pool_riverbend", to: "world_between_worlds", repeatable: true},
+            {from: "world_rest", to: "world_end", repeatable: true}
+        ];
+
+        episodes.hampstead.externalEntries = new Set([
+            "postoffice", "giro_fraud_video", "estate",
+            "artist_confrontation", "artist_challenge",
+            "pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend",
+            "diamond_gallery_exhibit"
+        ]);
+
+        renderEpisode('hampstead');
+    }
+
+    let currentEpisode = 'hampstead';
+    let selectedNode = null;
+    let filterMode = 'all';
+
+    function renderEpisode(episodeKey) {
+        currentEpisode = episodeKey;
+        const episode = episodes[episodeKey];
+        const svg = document.getElementById('ring');
+        svg.innerHTML = '';
+
+        document.getElementById('current-episode').textContent = episode.name;
+
+        // Collect all nodes from edges
+        const nodeSet = new Set();
+        episode.edges.forEach(e => {
+            nodeSet.add(e.from);
+            nodeSet.add(e.to);
+        });
+        const nodeOrder = [...nodeSet].sort();
+
+        // Calculate connectivity
+        const connectivity = {};
+        const inbound = {};
+        const outbound = {};
+        episode.edges.forEach(({from, to}) => {
+            connectivity[from] = (connectivity[from] || 0) + 1;
+            connectivity[to] = (connectivity[to] || 0) + 1;
+            outbound[from] = (outbound[from] || 0) + 1;
+            inbound[to] = (inbound[to] || 0) + 1;
+        });
+
+        const isHub = (n) => connectivity[n] >= 8;
+
+        document.getElementById('stats').textContent =
+            `${nodeOrder.length} knots | ${episode.edges.length} edges`;
+
+        const width = 800, height = 800;
+        const cx = width / 2, cy = height / 2;
+        const outerRadius = 320;
+        const innerRadius = 260;
+
+        // External ring
+        const externalRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        externalRing.setAttribute("cx", cx);
+        externalRing.setAttribute("cy", cy);
+        externalRing.setAttribute("r", outerRadius + 25);
+        externalRing.classList.add("external-ring");
+        svg.appendChild(externalRing);
+
+        // Calculate arc positions
+        const totalWeight = nodeOrder.reduce((sum, n) => sum + Math.max(2, connectivity[n] || 2), 0);
+        const padding = 0.015;
+        let currentAngle = -Math.PI / 2;
+
+        const arcs = nodeOrder.map((node) => {
+            const weight = Math.max(2, connectivity[node] || 2);
+            const arcLength = (weight / totalWeight) * (2 * Math.PI - padding * nodeOrder.length);
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + arcLength;
+            currentAngle = endAngle + padding;
+            return { node, startAngle, endAngle, midAngle: (startAngle + endAngle) / 2 };
+        });
+
+        const nodeIndex = {};
+        arcs.forEach((a, i) => nodeIndex[a.node] = i);
+
+        const polarToCart = (angle, r) => ({
+            x: cx + r * Math.cos(angle),
+            y: cy + r * Math.sin(angle)
+        });
+
+        // Draw ribbons
+        const ribbonGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        ribbonGroup.id = 'ribbons';
+        svg.appendChild(ribbonGroup);
+
+        episode.edges.forEach(({from, to, repeatable}) => {
+            const fromArc = arcs[nodeIndex[from]];
+            const toArc = arcs[nodeIndex[to]];
+            if (!fromArc || !toArc || from === to) return;
+
+            const p1 = polarToCart(fromArc.midAngle, innerRadius);
+            const p2 = polarToCart(toArc.midAngle, innerRadius);
+
+            let color = repeatable ? "rgba(78, 204, 163, 0.4)" : "rgba(233, 69, 96, 0.5)";
+            if (episode.externalEntries.has(from) || episode.externalEntries.has(to)) {
+                color = "rgba(255, 200, 87, 0.35)";
+            }
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const ctrl = polarToCart((fromArc.midAngle + toArc.midAngle) / 2, innerRadius * 0.35);
+            path.setAttribute("d", `M ${p1.x} ${p1.y} Q ${ctrl.x} ${ctrl.y} ${p2.x} ${p2.y}`);
+            path.setAttribute("stroke", color);
+            path.setAttribute("data-from", from);
+            path.setAttribute("data-to", to);
+            path.classList.add("chord");
+
+            if (!repeatable) {
+                path.setAttribute("stroke-dasharray", "4 3");
+            }
+
+            path.addEventListener('mouseenter', () => highlightEdge(from, to));
+            path.addEventListener('mouseleave', clearHighlight);
+
+            ribbonGroup.appendChild(path);
+        });
+
+        // Draw arcs
+        const arcGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        arcGroup.id = 'arcs';
+        svg.appendChild(arcGroup);
+
+        arcs.forEach(({ node, startAngle, endAngle, midAngle }) => {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.classList.add("arc");
+            g.setAttribute("data-node", node);
+
+            let color = "#7b68ee";
+            if (episode.exits.has(node)) color = "#e94560";
+            else if (episode.externalEntries.has(node)) color = "#ffc857";
+            else if (isHub(node)) color = "#4ecca3";
+
+            const startOuter = polarToCart(startAngle, outerRadius);
+            const endOuter = polarToCart(endAngle, outerRadius);
+            const startInner = polarToCart(startAngle, innerRadius);
+            const endInner = polarToCart(endAngle, innerRadius);
+            const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+
+            const arc = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            arc.setAttribute("d", `
+                M ${startOuter.x} ${startOuter.y}
+                A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}
+                L ${endInner.x} ${endInner.y}
+                A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y}
+                Z
+            `);
+            arc.setAttribute("fill", color);
+            g.appendChild(arc);
+
+            // Label
+            const labelRadius = outerRadius + 12;
+            const labelPos = polarToCart(midAngle, labelRadius);
+            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", labelPos.x);
+            label.setAttribute("y", labelPos.y);
+            label.classList.add("node-label");
+            if (isHub(node) || episode.externalEntries.has(node)) label.classList.add("highlight");
+
+            let rotation = (midAngle * 180 / Math.PI) + 90;
+            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) {
+                rotation += 180;
+                label.setAttribute("text-anchor", "end");
+            } else {
+                label.setAttribute("text-anchor", "start");
+            }
+            label.setAttribute("transform", `rotate(${rotation}, ${labelPos.x}, ${labelPos.y})`);
+            label.setAttribute("dominant-baseline", "middle");
+            label.textContent = node.replace(/_/g, " ");
+            g.appendChild(label);
+
+            g.addEventListener('click', () => showNodeInfo(node, {
+                type: episode.exits.has(node) ? 'Exit' :
+                      episode.externalEntries.has(node) ? 'External Entry' :
+                      isHub(node) ? 'Hub' : 'Standard',
+                inbound: inbound[node] || 0,
+                outbound: outbound[node] || 0,
+                connectivity: connectivity[node] || 0,
+                data: episode.nodes[node]
+            }));
+
+            g.addEventListener('mouseenter', () => highlightNode(node));
+            g.addEventListener('mouseleave', clearHighlight);
+
+            arcGroup.appendChild(g);
+        });
+    }
+
+    function highlightNode(node) {
+        document.querySelectorAll('.arc').forEach(a => {
+            if (a.dataset.node !== node) a.classList.add('dimmed');
+        });
+        document.querySelectorAll('.chord').forEach(c => {
+            if (c.dataset.from !== node && c.dataset.to !== node) c.classList.add('dimmed');
+        });
+    }
+
+    function highlightEdge(from, to) {
+        document.querySelectorAll('.arc').forEach(a => {
+            if (a.dataset.node !== from && a.dataset.node !== to) a.classList.add('dimmed');
+        });
+        document.querySelectorAll('.chord').forEach(c => {
+            if (c.dataset.from !== from || c.dataset.to !== to) c.classList.add('dimmed');
+        });
+    }
+
+    function clearHighlight() {
+        document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
+    }
+
+    function showNodeInfo(node, info) {
+        const panel = document.getElementById('info-panel');
+        document.getElementById('info-title').textContent = node.replace(/_/g, ' ');
+        document.getElementById('info-type').textContent = `Type: ${info.type}`;
+        document.getElementById('info-connections').textContent =
+            `Connections: ${info.inbound} in, ${info.outbound} out`;
+
+        const nodeData = info.data || {};
+        const choices = nodeData.choiceDetails || [];
+        const repeatable = choices.filter(c => c.repeatable !== false).length;
+        const sticky = choices.filter(c => c.sticky).length;
+        document.getElementById('info-choices').textContent =
+            `Choices: ${nodeData.choices || 0} (${repeatable} repeatable, ${sticky} one-time)`;
+
+        const tagsDiv = document.getElementById('info-tags');
+        tagsDiv.innerHTML = '';
+        if (nodeData.tags && nodeData.tags.length) {
+            nodeData.tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'tag';
+                span.textContent = `${tag.type}: ${tag.value}`;
+                tagsDiv.appendChild(span);
+            });
+        }
+
+        panel.classList.add('visible');
+    }
+
+    function hideInfoPanel() {
+        document.getElementById('info-panel').classList.remove('visible');
+    }
+
+    // Event listeners
+    document.getElementById('episode-select').addEventListener('change', (e) => {
+        renderEpisode(e.target.value);
+    });
+
+    document.getElementById('search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.arc').forEach(a => {
+            const node = a.dataset.node;
+            if (query && !node.toLowerCase().includes(query)) {
+                a.classList.add('dimmed');
+            } else {
+                a.classList.remove('dimmed');
+            }
+        });
+    });
+
+    document.getElementById('btn-all').addEventListener('click', () => {
+        filterMode = 'all';
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-all').classList.add('active');
+        clearHighlight();
+    });
+
+    document.getElementById('btn-hubs').addEventListener('click', () => {
+        filterMode = 'hubs';
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-hubs').classList.add('active');
+        document.querySelectorAll('.arc').forEach(a => {
+            const label = a.querySelector('.node-label');
+            if (!label || !label.classList.contains('highlight')) {
+                a.classList.add('dimmed');
+            }
+        });
+    });
+
+    document.getElementById('btn-islands').addEventListener('click', () => {
+        filterMode = 'islands';
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-islands').classList.add('active');
+        const episode = episodes[currentEpisode];
+        document.querySelectorAll('.arc').forEach(a => {
+            if (!episode.externalEntries.has(a.dataset.node)) {
+                a.classList.add('dimmed');
+            }
+        });
+    });
+
+    // Load data on start
+    loadData();
+    </script>
+</body>
+</html>
