@@ -3150,15 +3150,6 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
         window.godmodeSetVar(name, parsed);
     };
 
-    // Auto-refresh godmode panel when it appears in the story
-    const godmodeObserver = new MutationObserver(() => {
-        const panel = document.getElementById('godmode-panel');
-        if (panel && panel.offsetParent !== null) {
-            window.godmodeRefresh();
-        }
-    });
-    godmodeObserver.observe(document.body, { childList: true, subtree: true });
-
     // Open dev panel to specific tab from Ink UI
     window.openDevTab = function(tabName) {
         const devPanel = document.getElementById('dev-panel');
