@@ -1709,13 +1709,64 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     }
 
     // --- Stats Update ---
+    // Track current namespace for namespaced variable lookups
+    let currentNamespace = null;
+
     function updateStatsDisplay() {
         if (!story) return;
         try {
-            statDiamonds.textContent = story.variablesState['diamonds'] || 0;
-            statMega.textContent = story.variablesState['mega_diamonds'] || 0;
-            statKeys.textContent = story.variablesState['keys'] || 0;
-            statScore.textContent = story.variablesState['score'] || 0;
+            // Helper to find variable value - checks canonical and namespaced versions
+            function findVar(name) {
+                // First try canonical name (for IMPORT vars and embedded story)
+                let val = story.variablesState[name];
+                if (val !== undefined && val !== null) return val;
+
+                // If we have a known namespace from FINK loading, try that
+                if (currentNamespace) {
+                    const nsName = currentNamespace + '_' + name;
+                    val = story.variablesState[nsName];
+                    if (val !== undefined && val !== null) return val;
+                }
+
+                // Look for any namespaced versions (e.g., "abc12345_mega_diamonds")
+                // Use inkjs's $ iterator if available, fallback to Object.keys
+                const suffix = '_' + name;
+                let foundKey = null;
+
+                if (story.variablesState.$ && typeof story.variablesState.$ === 'function') {
+                    // inkjs iterator method
+                    story.variablesState.$((varName, value) => {
+                        if (varName.endsWith(suffix)) {
+                            foundKey = varName;
+                            return true; // stop iteration
+                        }
+                        return false;
+                    });
+                } else {
+                    // Fallback to Object.keys
+                    const keys = Object.keys(story.variablesState || {});
+                    foundKey = keys.find(k => k.endsWith(suffix));
+                }
+
+                if (foundKey) {
+                    log(`Stats: Found namespaced var ${foundKey} for ${name}`, 'debug');
+                    return story.variablesState[foundKey];
+                }
+                return 0;
+            }
+
+            const diamonds = findVar('diamonds');
+            const mega = findVar('mega_diamonds');
+            const keys = findVar('keys');
+            const score = findVar('score');
+
+            statDiamonds.textContent = diamonds;
+            statMega.textContent = mega;
+            statKeys.textContent = keys;
+            statScore.textContent = score;
+
+            // Debug logging to help diagnose display issues
+            log(`Stats update: diamonds=${diamonds} mega=${mega} keys=${keys} score=${score}`, 'debug');
         } catch (e) {
             log(`Error updating stats: ${e.message}`, 'error');
         }
@@ -1916,6 +1967,12 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
     function initStory(inkSource = null) {
         const source = inkSource || document.getElementById('ink-story').textContent;
         const isExternal = inkSource !== null;
+
+        // Reset namespace when returning to embedded story
+        if (!isExternal) {
+            currentNamespace = null;
+        }
+
         try {
             log('Compiling Ink story...');
             log(`Source length: ${source.length} chars, ${source.split('\n').length} lines`);
@@ -2375,6 +2432,9 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
             log(`IMPORT vars (canonical names): [${nsResult.imports.join(', ') || 'none'}]`, 'fink');
             log(`EXPORT vars: [${nsResult.exports.join(', ') || 'none'}]`, 'fink');
             log(`Transformed vars: ${Object.keys(nsResult.transformedVars).length} prefixed`, 'debug');
+
+            // Store namespace for stats display lookups
+            currentNamespace = nsResult.namespace;
 
             // Semantic swimlane events for namespace processing
             swimEvent('fink', '🔧', `Namespace: ${nsResult.namespace}`, `SHA-256 prefix from URL`);
