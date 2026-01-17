@@ -32,16 +32,20 @@
         .stack-container {
             position: relative;
             width: 1100px;
-            height: 800px;
-            perspective: 1500px;
+            height: 900px;
+            perspective: 1200px;
+            perspective-origin: 50% 30%;
+            transform-style: preserve-3d;
         }
         .ring-layer {
             position: absolute;
             width: 600px;
             height: 600px;
-            transition: transform 0.5s ease, opacity 0.3s ease;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
             cursor: pointer;
             animation: ringShimmer 4s ease-in-out infinite;
+            transform-style: preserve-3d;
+            backface-visibility: visible;
         }
         @keyframes ringShimmer {
             0%, 100% { filter: brightness(1) drop-shadow(0 0 5px rgba(78, 204, 163, 0.2)); }
@@ -754,33 +758,52 @@
         layers.forEach((layer, i) => {
             const key = layer.dataset.episode;
             const isActive = key === activeEpisode;
-            const distFromActive = Math.abs(i - activeIndex);
+            const distFromActive = i - activeIndex;
+            const absDistFromActive = Math.abs(distFromActive);
 
             layer.classList.toggle('active', isActive);
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                // Spiral stack - each ring offset slightly
-                const offset = (i - activeIndex) * 25;
-                const scale = isActive ? 1 : 0.9 - distFromActive * 0.04;
-                const zOffset = isActive ? 0 : -80 - distFromActive * 40;
-                const yOffset = 100 + i * 15;
-                layer.style.transform = `translateX(${250 + offset}px) translateY(${yOffset}px) translateZ(${zOffset}px) scale(${scale})`;
-                layer.style.zIndex = isActive ? 100 : 50 - distFromActive;
+                // 3D cylinder stack - rings tilted and stacked in depth
+                const baseX = 250;
+                const baseY = 150;
+                const tiltAngle = 65; // Tilt to show as cylinder
+                const ringSpacing = 60; // Vertical spacing between rings
+                const zSpacing = 80; // Depth spacing
+
+                // Position based on distance from active
+                const yPos = baseY + distFromActive * ringSpacing;
+                const zPos = -absDistFromActive * zSpacing;
+                const scale = isActive ? 1 : Math.max(0.6, 0.95 - absDistFromActive * 0.08);
+                const opacity = isActive ? 1 : Math.max(0.4, 1 - absDistFromActive * 0.15);
+
+                layer.style.transform = `
+                    translateX(${baseX}px)
+                    translateY(${yPos}px)
+                    translateZ(${zPos}px)
+                    rotateX(${tiltAngle}deg)
+                    scale(${scale})
+                `;
+                layer.style.opacity = opacity;
+                layer.style.zIndex = isActive ? 100 : 50 - absDistFromActive;
             } else if (viewMode === 'flat') {
                 // Grid layout - 3 columns for 9 episodes
                 const cols = 3;
                 const row = Math.floor(i / cols);
                 const col = i % cols;
                 const cardSize = 350;
-                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) scale(0.55)`;
+                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) rotateX(0deg) scale(0.55)`;
+                layer.style.opacity = 1;
                 layer.style.zIndex = isActive ? 100 : 50;
             } else if (viewMode === 'focus') {
                 if (isActive) {
-                    layer.style.transform = 'translateX(250px) translateY(100px) scale(1)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(1)';
+                    layer.style.opacity = 1;
                     layer.style.zIndex = 100;
                 } else {
-                    layer.style.transform = 'translateX(250px) translateY(100px) scale(0.7)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(0.7)';
+                    layer.style.opacity = 0.2;
                     layer.style.zIndex = 10;
                 }
             }
