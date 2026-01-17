@@ -31,9 +31,9 @@
         }
         .stack-container {
             position: relative;
-            width: 900px;
-            height: 700px;
-            perspective: 1200px;
+            width: 1100px;
+            height: 800px;
+            perspective: 1500px;
         }
         .ring-layer {
             position: absolute;
@@ -246,7 +246,7 @@
 </head>
 <body>
     <h1>FINK EPISODE RINGS</h1>
-    <div class="subtitle">Cross-episode narrative visualization</div>
+    <div class="subtitle">Cross-episode narrative visualization • <span id="episode-count">Loading...</span></div>
 
     <div class="controls">
         <button id="btn-stack" class="active">Stacked View</button>
@@ -279,52 +279,24 @@
     </div>
 
     <script>
-    // Episode definitions with cross-episode links
-    const episodeConfig = {
-        hampstead: {
-            name: 'HAMPSTEAD',
-            color: '#4ecca3',
-            // Knots that link TO other episodes
-            exitsTo: {
-                'pool_bagend': 'bagend',
-                'pool_mines': 'mudslidemines',
-                'pool_manor': 'shane-manor',
-                'pool_maple': 'maple-hollow',
-                'pool_riverbend': 'riverbend'
-            },
-            // Knots that can be entered FROM other episodes
-            entriesFrom: {
-                'world_between_worlds': ['bagend', 'mudslidemines', 'shane-manor', 'maple-hollow', 'riverbend']
-            }
-        },
-        bagend: {
-            name: 'BAG END',
-            color: '#7b68ee',
-            exitsTo: {},
-            entriesFrom: {}
-        },
-        mudslidemines: {
-            name: 'MUDSLIDE MINES',
-            color: '#f472b6',
-            exitsTo: {},
-            entriesFrom: {}
-        },
-        riverbend: {
-            name: 'RIVERBEND',
-            color: '#60a5fa',
-            exitsTo: {},
-            entriesFrom: {}
-        },
-        'shane-manor': {
-            name: 'SHANE MANOR',
-            color: '#fbbf24',
-            exitsTo: {},
-            entriesFrom: {}
-        }
+    // Color palette for episodes
+    const colorPalette = [
+        '#4ecca3', '#7b68ee', '#f472b6', '#60a5fa', '#fbbf24',
+        '#a78bfa', '#34d399', '#fb7185', '#38bdf8', '#facc15'
+    ];
+
+    // Cross-episode link patterns to detect
+    const crossEpisodePatterns = {
+        'pool_bagend': 'bagend',
+        'pool_mines': 'mudslidemines',
+        'pool_manor': 'shane-manor',
+        'pool_maple': 'maple-hollow',
+        'pool_riverbend': 'riverbend',
+        'world_between_worlds': null  // Hub that connects all
     };
 
     const episodes = {};
-    let activeEpisode = 'hampstead';
+    let activeEpisode = null;
     let selectedNode = null;
     let viewMode = 'stack';
 
@@ -336,32 +308,38 @@
         ending: { stroke: "#f472b6", glow: "#ec4899" }
     };
 
-    // Load data from JSON
+    // Load data from JSON - ALL episodes
     async function loadData() {
         try {
             const response = await fetch('./fink-crawl-report.json');
             const data = await response.json();
 
+            let colorIndex = 0;
             for (const file of data.files) {
                 const basename = file.file.split('/').pop().replace('.fink.js', '');
-                let key = basename;
-                if (basename === 'hampstead') key = 'hampstead';
-                else if (basename === 'bagend') key = 'bagend';
-                else if (basename === 'mudslidemines') key = 'mudslidemines';
-                else if (basename === 'riverbend') key = 'riverbend';
-                else if (basename === 'shane-manor') key = 'shane-manor';
-                else continue;
+                const key = basename;
 
-                if (!episodeConfig[key]) continue;
+                // Skip if no graph data
+                if (!file.graph || Object.keys(file.graph).length === 0) continue;
+
+                // Generate display name from basename
+                const displayName = basename
+                    .replace(/-/g, ' ')
+                    .replace(/tml-2025-/, '')
+                    .toUpperCase();
 
                 episodes[key] = {
-                    ...episodeConfig[key],
+                    name: displayName,
+                    color: colorPalette[colorIndex % colorPalette.length],
                     nodes: {},
                     edges: [],
                     nodeOrder: [],
                     externalEntries: new Set(file.islands || []),
-                    exits: new Set()
+                    exits: new Set(),
+                    exitsTo: {},
+                    entriesFrom: {}
                 };
+                colorIndex++;
 
                 // Build edges and nodes from graph
                 for (const [knot, knotData] of Object.entries(file.graph)) {
@@ -374,20 +352,40 @@
                         episodes[key].edges.push({
                             from: knot,
                             to: target,
-                            repeatable: true
+                            repeatable: knotData.choiceDetails?.find(c =>
+                                target.includes(c.text?.toLowerCase().replace(/\s+/g, '_'))
+                            )?.repeatable ?? true
                         });
                         if (!episodes[key].nodeOrder.includes(target)) {
                             episodes[key].nodeOrder.push(target);
                         }
                     }
 
-                    // Mark exits (knots with no outgoing edges that aren't external entries)
-                    if (knotData.targets.length === 0 && !episodes[key].externalEntries.has(knot)) {
+                    // Mark exits (knots with no outgoing edges)
+                    if (knotData.targets.length === 0) {
                         episodes[key].exits.add(knot);
+                    }
+
+                    // Detect cross-episode links
+                    if (crossEpisodePatterns[knot]) {
+                        episodes[key].exitsTo[knot] = crossEpisodePatterns[knot];
+                    }
+                    if (knot === 'world_between_worlds') {
+                        // This is a hub that can be entered from other episodes
+                        episodes[key].entriesFrom[knot] = Object.values(crossEpisodePatterns).filter(Boolean);
                     }
                 }
             }
 
+            // Set first episode as active
+            const episodeKeys = Object.keys(episodes);
+            if (episodeKeys.length > 0) {
+                activeEpisode = episodeKeys.includes('hampstead') ? 'hampstead' : episodeKeys[0];
+            }
+
+            console.log(`Loaded ${episodeKeys.length} episodes:`, episodeKeys);
+            const totalKnots = Object.values(episodes).reduce((sum, ep) => sum + ep.nodeOrder.length, 0);
+            document.getElementById('episode-count').textContent = `${episodeKeys.length} episodes • ${totalKnots} knots`;
             renderStack();
         } catch (err) {
             console.error('Failed to load data:', err);
@@ -398,7 +396,18 @@
     function loadFallbackData() {
         // Fallback Hampstead data
         episodes.hampstead = {
-            ...episodeConfig.hampstead,
+            name: 'HAMPSTEAD',
+            color: '#4ecca3',
+            exitsTo: {
+                'pool_bagend': 'bagend',
+                'pool_mines': 'mudslidemines',
+                'pool_manor': 'shane-manor',
+                'pool_maple': 'maple-hollow',
+                'pool_riverbend': 'riverbend'
+            },
+            entriesFrom: {
+                'world_between_worlds': ['bagend', 'mudslidemines', 'shane-manor', 'maple-hollow', 'riverbend']
+            },
             edges: [
                 {from: "splash", to: "intro"}, {from: "intro", to: "bedsit"},
                 {from: "bedsit", to: "wardrobe"}, {from: "bedsit", to: "street"},
@@ -419,6 +428,7 @@
             externalEntries: new Set(["pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend"]),
             exits: new Set(["world_end"])
         };
+        activeEpisode = 'hampstead';
         renderStack();
     }
 
@@ -640,32 +650,38 @@
         const layers = document.querySelectorAll('.ring-layer');
         const episodeKeys = Array.from(layers).map(l => l.dataset.episode);
         const count = episodeKeys.length;
+        const activeIndex = episodeKeys.indexOf(activeEpisode);
 
         layers.forEach((layer, i) => {
             const key = layer.dataset.episode;
             const isActive = key === activeEpisode;
+            const distFromActive = Math.abs(i - activeIndex);
 
             layer.classList.toggle('active', isActive);
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                const offset = (i - episodeKeys.indexOf(activeEpisode)) * 30;
-                const scale = isActive ? 1 : 0.85 - Math.abs(i - episodeKeys.indexOf(activeEpisode)) * 0.05;
-                const zOffset = isActive ? 0 : -100 - Math.abs(i - episodeKeys.indexOf(activeEpisode)) * 50;
-                layer.style.transform = `translateX(${150 + offset}px) translateY(${50 + i * 20}px) translateZ(${zOffset}px) scale(${scale})`;
-                layer.style.zIndex = isActive ? 100 : 50 - Math.abs(i - episodeKeys.indexOf(activeEpisode));
+                // Spiral stack - each ring offset slightly
+                const offset = (i - activeIndex) * 25;
+                const scale = isActive ? 1 : 0.9 - distFromActive * 0.04;
+                const zOffset = isActive ? 0 : -80 - distFromActive * 40;
+                const yOffset = 100 + i * 15;
+                layer.style.transform = `translateX(${250 + offset}px) translateY(${yOffset}px) translateZ(${zOffset}px) scale(${scale})`;
+                layer.style.zIndex = isActive ? 100 : 50 - distFromActive;
             } else if (viewMode === 'flat') {
-                const cols = Math.ceil(Math.sqrt(count));
+                // Grid layout - 3 columns for 9 episodes
+                const cols = 3;
                 const row = Math.floor(i / cols);
                 const col = i % cols;
-                layer.style.transform = `translateX(${col * 320}px) translateY(${row * 320}px) scale(0.5)`;
+                const cardSize = 350;
+                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) scale(0.55)`;
                 layer.style.zIndex = isActive ? 100 : 50;
             } else if (viewMode === 'focus') {
                 if (isActive) {
-                    layer.style.transform = 'translateX(150px) translateY(50px) scale(1)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) scale(1)';
                     layer.style.zIndex = 100;
                 } else {
-                    layer.style.transform = 'translateX(150px) translateY(50px) scale(0.8)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) scale(0.7)';
                     layer.style.zIndex = 10;
                 }
             }
