@@ -25,7 +25,8 @@
         html, body {
             height: 100%;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: none;
+            overscroll-behavior: none;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
@@ -120,6 +121,8 @@
             position: relative;
             overflow: hidden;
             min-height: 0;
+            touch-action: none; /* Prevent all browser touch gestures */
+            overscroll-behavior: contain;
         }
         .stack-container {
             position: absolute;
@@ -155,22 +158,48 @@
             pointer-events: none;
         }
 
-        /* Episode label */
+        /* Episode label - large friendly letters with contrasting outlines */
         .episode-label {
             position: absolute;
-            bottom: -30px;
+            bottom: -50px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-dim);
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.15em;
             white-space: nowrap;
-            transition: color 0.3s;
+            opacity: 0;
+            transition: opacity 0.5s ease, color 0.3s, transform 0.3s;
+            /* Contrasting outline using text-shadow */
+            text-shadow:
+                -2px -2px 0 #000,
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                -3px  0   0 #000,
+                 3px  0   0 #000,
+                 0   -3px 0 #000,
+                 0    3px 0 #000,
+                 0    0  8px rgba(0,0,0,0.8);
+            pointer-events: none;
         }
         .ring-layer.active .episode-label {
             color: var(--accent);
+            opacity: 1;
+            transform: translateX(-50%) scale(1.1);
+            text-shadow:
+                -2px -2px 0 #000,
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                -3px  0   0 #000,
+                 3px  0   0 #000,
+                 0   -3px 0 #000,
+                 0    3px 0 #000,
+                 0    0  12px rgba(78, 204, 163, 0.6),
+                 0    0  24px rgba(78, 204, 163, 0.3);
         }
 
         /* Arc segments */
@@ -853,20 +882,16 @@
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                // Smooth continuous positioning
+                // Smooth continuous positioning - symmetric cylinder
                 const y = dist * 55;
                 const z = -absDist * 50 - (absDist * absDist * 5); // Quadratic depth for drama
                 const scale = Math.max(0.5, 1 - absDist * 0.12);
                 const op = Math.max(0.2, 1 - absDist * 0.2);
 
-                // Add slight rotation based on position for 3D feel
-                const rotY = dist * 3;
-
                 layer.style.transform = `
                     translateY(${y}px)
                     translateZ(${z}px)
                     rotateX(60deg)
-                    rotateY(${rotY}deg)
                     scale(${scale})
                 `;
                 layer.style.opacity = op;
@@ -1198,12 +1223,20 @@
             momentumRAF = null;
         }
 
-        // Disable CSS transitions during drag
+        // Stop idle animation completely during drag
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
+        // Reset container rotation to neutral
+        const container = document.getElementById('stack-container');
+        container.style.transform = '';
+        idleRotation = 0;
+
+        // Disable CSS transitions during drag for 60fps
         document.querySelectorAll('.ring-layer').forEach(l => {
             l.style.transition = 'none';
         });
-
-        resetIdleTimer();
     }
 
     function updateDrag(clientY) {
@@ -1290,6 +1323,8 @@
                 activeEpisode = keys[Math.max(0, Math.min(maxPos, target))];
                 updateLayout(false);
                 momentumRAF = null;
+                // Restart idle animation after settling
+                startIdleAnimation();
             } else {
                 momentumRAF = requestAnimationFrame(animate);
             }
@@ -1298,15 +1333,18 @@
         momentumRAF = requestAnimationFrame(animate);
     }
 
-    // Touch events
+    // Touch events - prevent browser scroll with passive: false
     vizContainer.addEventListener('touchstart', (e) => {
         if (e.target.closest('.arc')) return; // Don't interfere with node taps
         startDrag(e.touches[0].clientY);
     }, { passive: true });
 
     vizContainer.addEventListener('touchmove', (e) => {
-        updateDrag(e.touches[0].clientY);
-    }, { passive: true });
+        if (isDragging) {
+            e.preventDefault(); // Stop browser scroll
+            updateDrag(e.touches[0].clientY);
+        }
+    }, { passive: false });
 
     vizContainer.addEventListener('touchend', endDrag, { passive: true });
     vizContainer.addEventListener('touchcancel', endDrag, { passive: true });
