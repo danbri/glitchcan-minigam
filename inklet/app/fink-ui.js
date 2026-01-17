@@ -67,10 +67,10 @@ window.FinkUI = {
                 this.elements.appContainer.classList.remove('show-menu');
             });
         }
-        // Touch handling
-        document.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-        document.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-        document.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        // Touch handling - prevent browser gestures (back/forward swipe, pull-to-refresh)
+        document.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+        document.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+        document.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
         
         // Choice click handling - both mouse and touch
         document.addEventListener('click', (e) => {
@@ -465,26 +465,41 @@ window.FinkUI = {
     
     handleTouchStart(event) {
         if (this.animationInProgress || !event.touches[0]) return;
-        
+
         this.touchStartY = event.touches[0].clientY;
         this.touchStartX = event.touches[0].clientX;
         this.touchStartTime = Date.now();
-        
+
         const choice = document.elementFromPoint(this.touchStartX, this.touchStartY);
         const choiceEl = choice ? choice.closest('.choice') : null;
-        
+
         if (choiceEl) {
             this.choiceIndex = parseInt(choiceEl.dataset.index);
+            // Prevent browser gestures when touching choices
+            event.preventDefault();
         }
     },
-    
+
     handleTouchMove(event) {
+        // Prevent horizontal swipe navigation gestures
+        if (event.touches[0]) {
+            const touchX = event.touches[0].clientX;
+            const deltaX = Math.abs(touchX - this.touchStartX);
+            const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
+
+            // If horizontal movement is dominant, prevent browser back/forward gesture
+            if (deltaX > 10 && deltaX > deltaY) {
+                event.preventDefault();
+            }
+        }
+
         if (this.choiceIndex === -1 || !event.touches[0]) return;
-        
+
         const touchY = event.touches[0].clientY;
         const deltaY = this.touchStartY - touchY;
-        
+
         if (deltaY > 50) {
+            event.preventDefault();
             if (!this.expandingElement && !this.animationInProgress) {
                 const choiceEl = document.querySelector(`.choice[data-index="${this.choiceIndex}"]`);
                 if (choiceEl) {
@@ -493,17 +508,18 @@ window.FinkUI = {
             }
         }
     },
-    
+
     handleTouchEnd(event) {
         const touchDuration = Date.now() - this.touchStartTime;
-        
+
         if (touchDuration < 300 && this.choiceIndex !== -1 && !this.animationInProgress) {
             const choiceEl = document.querySelector(`.choice[data-index="${this.choiceIndex}"]`);
             if (choiceEl) {
+                event.preventDefault();
                 this.handleChoiceClick({currentTarget: choiceEl}, this.choiceIndex, choiceEl._callback);
             }
         }
-        
+
         this.choiceIndex = -1;
     }
 };
