@@ -2,229 +2,220 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FINK Episode Rings - Stacked Visualization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>FINK Episode Rings</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --accent: #4ecca3;
+            --accent-dim: rgba(78, 204, 163, 0.3);
+            --bg-dark: #0a0a12;
+            --bg-mid: #1a1a2e;
+            --text: #ccc;
+            --text-dim: #666;
+            --hub: #4ecca3;
+            --entry: #ffc857;
+            --exit: #e94560;
+            --normal: #7b68ee;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-mid) 100%);
+            color: var(--text);
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: #ccc;
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
         }
-        h1 {
-            font-weight: 300;
-            letter-spacing: 0.1em;
-            margin-bottom: 8px;
-            color: #eee;
+
+        /* Header - compact on mobile */
+        .header {
+            padding: 12px 16px;
+            text-align: center;
+            flex-shrink: 0;
         }
-        .subtitle {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: #fff;
+        }
+        .header .stats {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Search bar */
+        .search-container {
+            padding: 0 16px 12px;
+            flex-shrink: 0;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px; /* Prevents iOS zoom */
+            outline: none;
+            transition: all 0.2s;
+        }
+        .search-input:focus {
+            background: rgba(255,255,255,0.12);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+        .search-input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        /* Controls - horizontal scroll on mobile */
+        .controls {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+        .controls::-webkit-scrollbar { display: none; }
+        .controls button {
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .controls button:active {
+            transform: scale(0.95);
+        }
+        .controls button.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        /* Main visualization area */
+        .viz-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
         }
         .stack-container {
-            position: relative;
-            width: 1100px;
-            height: 900px;
-            perspective: 1200px;
-            perspective-origin: 50% 30%;
+            position: absolute;
+            inset: 0;
+            perspective: 1000px;
+            perspective-origin: 50% 40%;
             transform-style: preserve-3d;
         }
+
+        /* Ring layers */
         .ring-layer {
             position: absolute;
-            width: 600px;
-            height: 600px;
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+            left: 50%;
+            top: 50%;
+            width: min(90vw, 500px);
+            height: min(90vw, 500px);
+            margin-left: calc(min(90vw, 500px) / -2);
+            margin-top: calc(min(90vw, 500px) / -2);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
             cursor: pointer;
-            animation: ringShimmer 4s ease-in-out infinite;
             transform-style: preserve-3d;
-            backface-visibility: visible;
-        }
-        @keyframes ringShimmer {
-            0%, 100% { filter: brightness(1) drop-shadow(0 0 5px rgba(78, 204, 163, 0.2)); }
-            50% { filter: brightness(1.05) drop-shadow(0 0 15px rgba(78, 204, 163, 0.4)); }
-        }
-        .ring-layer.active {
-            z-index: 100;
-            animation: ringShimmerActive 2s ease-in-out infinite;
-        }
-        @keyframes ringShimmerActive {
-            0%, 100% { filter: brightness(1) drop-shadow(0 0 10px rgba(78, 204, 163, 0.4)); }
-            50% { filter: brightness(1.1) drop-shadow(0 0 25px rgba(78, 204, 163, 0.7)); }
         }
         .ring-layer svg {
             width: 100%;
             height: 100%;
+            overflow: visible;
+        }
+        .ring-layer.active {
+            z-index: 100;
         }
         .ring-layer.dimmed {
-            opacity: 0.3;
+            opacity: 0.25;
+            pointer-events: none;
         }
-        .ring-layer:hover:not(.active) {
-            opacity: 0.8;
-        }
+
+        /* Episode label */
         .episode-label {
             position: absolute;
-            bottom: -25px;
+            bottom: -30px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 11px;
-            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.12em;
             white-space: nowrap;
             transition: color 0.3s;
         }
         .ring-layer.active .episode-label {
-            color: #4ecca3;
-            font-weight: 500;
+            color: var(--accent);
         }
-        .legend {
-            display: flex;
-            gap: 24px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-        }
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-        .legend-dot.hub { background: #4ecca3; }
-        .legend-dot.entry { background: #ffc857; }
-        .legend-dot.exit { background: #e94560; }
-        .legend-dot.normal { background: #7b68ee; }
-        .legend-dot.cross {
-            background: linear-gradient(135deg, #ffc857 50%, #e94560 50%);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-        .info {
-            margin-top: 20px;
-            max-width: 700px;
-            text-align: center;
-            font-size: 13px;
-            line-height: 1.6;
-            color: #888;
-        }
-        .node-label {
-            font-size: 9px;
-            fill: #555;
-            pointer-events: none;
-            transition: fill 0.3s, font-size 0.3s;
-        }
-        .node-label.highlight {
-            fill: #999;
-            font-weight: 500;
-        }
-        .node-label.selected {
-            fill: #fff;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .node-label.connected {
-            fill: #bbb;
-            font-size: 10px;
-        }
-        .node-label.cross-highlight {
-            fill: #ffc857;
-            font-size: 11px;
-            font-weight: 600;
-            animation: glow 1.5s ease-in-out infinite;
-        }
-        @keyframes glow {
-            0%, 100% { filter: drop-shadow(0 0 2px #ffc857); }
-            50% { filter: drop-shadow(0 0 8px #ffc857); }
-        }
+
+        /* Arc segments */
         .arc {
             cursor: pointer;
-            transition: opacity 0.4s ease-out, filter 0.4s ease-out, transform 0.3s ease-out;
+            transition: opacity 0.3s, filter 0.3s, transform 0.2s;
             transform-origin: center;
         }
-        .arc:hover {
-            filter: brightness(1.2);
-        }
-        .arc.dimmed {
-            opacity: 0.12;
-            filter: saturate(0.3);
-        }
-        .arc.selected {
-            filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
-            transform: scale(1.05);
-            animation: selectedPulse 1.2s ease-in-out infinite;
-        }
-        @keyframes selectedPulse {
-            0%, 100% { filter: brightness(1.4) drop-shadow(0 0 12px currentColor); }
-            50% { filter: brightness(1.6) drop-shadow(0 0 20px currentColor); }
-        }
-        .arc.connected {
-            filter: brightness(1.15);
-            animation: connectedGlow 2s ease-in-out infinite;
-        }
-        @keyframes connectedGlow {
-            0%, 100% { filter: brightness(1.15); }
-            50% { filter: brightness(1.25) drop-shadow(0 0 6px currentColor); }
-        }
-        .arc.cross-highlight {
-            filter: brightness(1.5) drop-shadow(0 0 15px #ffc857);
-            animation: arcPulse 0.8s ease-in-out infinite;
+        .arc:active {
             transform: scale(1.08);
         }
-        @keyframes arcPulse {
-            0%, 100% { filter: brightness(1.4) drop-shadow(0 0 10px #ffc857); transform: scale(1.08); }
-            50% { filter: brightness(1.7) drop-shadow(0 0 25px #ffc857); transform: scale(1.12); }
+        .arc.dimmed {
+            opacity: 0.1;
         }
-        .cylinder-hint {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: none;
+        .arc.selected {
+            filter: brightness(1.4) drop-shadow(0 0 15px currentColor);
+            animation: pulse-selected 1s ease-in-out infinite;
         }
-        .cylinder-hint .episode-name {
-            font-size: 14px;
-            color: #4ecca3;
-            letter-spacing: 0.15em;
+        @keyframes pulse-selected {
+            0%, 100% { filter: brightness(1.4) drop-shadow(0 0 15px currentColor); }
+            50% { filter: brightness(1.6) drop-shadow(0 0 25px currentColor); }
         }
-        .cylinder-hint .stats {
-            font-size: 9px;
-            color: #444;
-            margin-top: 4px;
+        .arc.connected {
+            filter: brightness(1.2);
         }
-        .external-ring {
-            fill: none;
-            stroke: rgba(255, 200, 87, 0.12);
-            stroke-width: 15;
-            stroke-dasharray: 2 6;
+        .arc.cross-highlight {
+            filter: brightness(1.5) drop-shadow(0 0 20px var(--entry));
+            animation: pulse-cross 0.6s ease-in-out infinite;
         }
+        @keyframes pulse-cross {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Flow paths */
         .flow-path {
             fill: none;
             stroke-linecap: round;
-            opacity: 0.7;
-            stroke-width: 2.5px;
-            stroke-dasharray: 8 4;
-            animation: flowDash 1s linear infinite;
-            filter: drop-shadow(0 0 4px currentColor);
+            opacity: 0.6;
+            stroke-width: 2px;
+            stroke-dasharray: 6 4;
+            animation: dash-flow 0.8s linear infinite;
         }
-        @keyframes flowDash {
-            to { stroke-dashoffset: -12; }
+        @keyframes dash-flow {
+            to { stroke-dashoffset: -10; }
         }
         .flow-path.dimmed {
             opacity: 0.05;
@@ -232,178 +223,318 @@
         }
         .flow-path.active {
             opacity: 1;
-            stroke-width: 4px;
-            stroke-dasharray: 12 6;
-            animation: flowDash 0.5s linear infinite;
-            filter: drop-shadow(0 0 8px currentColor);
+            stroke-width: 3px;
         }
-        .click-hint {
-            font-size: 11px;
-            color: #555;
-            margin-top: 12px;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .controls button {
-            padding: 8px 16px;
-            background: #1a1a2e;
-            border: 1px solid #333;
-            color: #ccc;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
+
+        /* Node labels in SVG */
+        .node-label {
+            font-size: 8px;
+            fill: rgba(255,255,255,0.5);
+            pointer-events: none;
             transition: all 0.2s;
         }
-        .controls button:hover {
-            border-color: #4ecca3;
+        .node-label.highlight {
+            fill: rgba(255,255,255,0.8);
+            font-weight: 600;
         }
-        .controls button.active {
-            background: #4ecca3;
-            color: #000;
-            border-color: #4ecca3;
+
+        /* Tooltip - touch friendly */
+        .tooltip {
+            position: fixed;
+            left: 50%;
+            bottom: calc(80px + var(--safe-bottom));
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20, 20, 35, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 16px 20px;
+            max-width: calc(100vw - 32px);
+            width: 320px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
-        .advanced-panel {
-            display: none;
-            background: rgba(26, 26, 46, 0.95);
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin-bottom: 15px;
-            animation: slideDown 0.3s ease-out;
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
         }
-        .advanced-panel.visible {
+        .tooltip-header {
             display: flex;
-            gap: 30px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .tooltip-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .tooltip-type {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .tooltip-type.hub { background: var(--hub); color: #000; }
+        .tooltip-type.entry { background: var(--entry); color: #000; }
+        .tooltip-type.exit { background: var(--exit); color: #fff; }
+        .tooltip-type.normal { background: var(--normal); color: #fff; }
+        .tooltip-body {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.5;
+        }
+        .tooltip-tags {
+            display: flex;
             flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
         }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .tooltip-tag {
+            font-size: 10px;
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: rgba(255,255,255,0.6);
         }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .filter-group label {
+        .tooltip-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: #aaa;
+            justify-content: center;
+        }
+
+        /* Cross-episode beam */
+        .cross-beam {
+            position: absolute;
+            left: 50%;
+            width: 4px;
+            margin-left: -2px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                var(--entry) 20%,
+                var(--entry) 80%,
+                transparent 100%
+            );
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            filter: blur(2px);
+            box-shadow: 0 0 20px var(--entry), 0 0 40px var(--entry);
+        }
+        .cross-beam.visible {
+            opacity: 0.8;
+            animation: beam-pulse 1s ease-in-out infinite;
+        }
+        @keyframes beam-pulse {
+            0%, 100% { opacity: 0.8; filter: blur(2px); }
+            50% { opacity: 1; filter: blur(4px); }
+        }
+
+        /* Bottom nav / legend */
+        .bottom-bar {
+            padding: 12px 16px;
+            padding-bottom: calc(12px + var(--safe-bottom));
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .legend-dot.hub { background: var(--hub); }
+        .legend-dot.entry { background: var(--entry); }
+        .legend-dot.exit { background: var(--exit); }
+        .legend-dot.normal { background: var(--normal); }
+
+        /* Search results dropdown */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 35, 0.98);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+        .search-results.visible {
+            display: block;
+        }
+        .search-result {
+            padding: 14px 16px;
             cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
         }
-        .filter-group label:hover {
-            color: #4ecca3;
+        .search-result:last-child {
+            border-bottom: none;
         }
-        .filter-group input[type="checkbox"] {
-            accent-color: #4ecca3;
+        .search-result:active {
+            background: rgba(255,255,255,0.1);
         }
-        .filter-group input[type="range"] {
-            width: 100px;
-            accent-color: #4ecca3;
+        .search-result-title {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
         }
-        #min-conn-val {
-            color: #4ecca3;
-            min-width: 20px;
-            text-align: center;
+        .search-result-episode {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 2px;
         }
-        .cross-episode-hint {
-            position: fixed;
+
+        /* Swipe hint */
+        .swipe-hint {
+            position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 200, 87, 0.15);
-            border: 1px solid rgba(255, 200, 87, 0.3);
-            padding: 10px 20px;
-            border-radius: 8px;
             font-size: 12px;
-            color: #ffc857;
-            display: none;
-            animation: fadeIn 0.3s ease;
+            color: var(--text-dim);
+            opacity: 0.7;
+            pointer-events: none;
+            animation: fade-hint 3s ease-out forwards;
         }
-        .cross-episode-hint.visible {
-            display: block;
+        @keyframes fade-hint {
+            0%, 80% { opacity: 0.7; }
+            100% { opacity: 0; }
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Keyboard focus indicator */
+        .arc:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Desktop enhancements */
+        @media (min-width: 768px) {
+            .header h1 { font-size: 24px; }
+            .search-input { max-width: 400px; margin: 0 auto; display: block; }
+            .controls { justify-content: center; }
+            .ring-layer {
+                width: 550px;
+                height: 550px;
+                margin-left: -275px;
+                margin-top: -275px;
+            }
+            .tooltip {
+                bottom: 100px;
+                width: 380px;
+            }
+            .node-label { font-size: 9px; }
+        }
+
+        @media (min-width: 1024px) {
+            .ring-layer {
+                width: 600px;
+                height: 600px;
+                margin-left: -300px;
+                margin-top: -300px;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>FINK EPISODE RINGS</h1>
-    <div class="subtitle">Cross-episode narrative visualization • <span id="episode-count">Loading...</span></div>
+    <div class="header">
+        <h1>FINK RINGS</h1>
+        <div class="stats" id="stats">Loading...</div>
+    </div>
+
+    <div class="search-container" style="position: relative;">
+        <input type="text" class="search-input" id="search" placeholder="🔍 Search knots..." autocomplete="off" autocorrect="off" autocapitalize="off">
+        <div class="search-results" id="search-results"></div>
+    </div>
 
     <div class="controls">
-        <button id="btn-stack" class="active">Stacked View</button>
-        <button id="btn-flat">Flat View</button>
-        <button id="btn-focus">Focus Mode</button>
-        <button id="btn-advanced">⚙️ Filters</button>
+        <button id="btn-stack" class="active">Stack</button>
+        <button id="btn-flat">Grid</button>
+        <button id="btn-focus">Focus</button>
+        <button id="btn-prev">◀</button>
+        <button id="btn-next">▶</button>
     </div>
 
-    <div class="advanced-panel" id="advanced-panel">
-        <div class="filter-group">
-            <label><input type="checkbox" id="show-exits" checked> Show exits (dead ends)</label>
-            <label><input type="checkbox" id="show-entries" checked> Show entries (islands)</label>
-            <label><input type="checkbox" id="show-hubs" checked> Show hubs</label>
-            <label><input type="checkbox" id="show-flows" checked> Show flow paths</label>
+    <div class="viz-container">
+        <div class="stack-container" id="stack-container"></div>
+        <div class="cross-beam" id="cross-beam"></div>
+        <div class="swipe-hint" id="swipe-hint">Swipe up/down to browse episodes</div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <button class="tooltip-close" id="tooltip-close">×</button>
+        <div class="tooltip-header">
+            <span class="tooltip-title" id="tooltip-title">Knot Name</span>
+            <span class="tooltip-type" id="tooltip-type">Hub</span>
         </div>
-        <div class="filter-group">
-            <label>Min connections: <input type="range" id="min-connections" min="0" max="10" value="0"><span id="min-conn-val">0</span></label>
+        <div class="tooltip-body" id="tooltip-body">
+            Connections: 5 in, 3 out
         </div>
+        <div class="tooltip-tags" id="tooltip-tags"></div>
     </div>
 
-    <div class="stack-container" id="stack-container">
-        <!-- Rings inserted by JS -->
-    </div>
-
-    <div class="legend">
+    <div class="bottom-bar">
         <div class="legend-item"><div class="legend-dot hub"></div> Hub</div>
-        <div class="legend-item"><div class="legend-dot entry"></div> External entry</div>
+        <div class="legend-item"><div class="legend-dot entry"></div> Entry</div>
         <div class="legend-item"><div class="legend-dot exit"></div> Exit</div>
-        <div class="legend-item"><div class="legend-dot normal"></div> Standard</div>
-        <div class="legend-item"><div class="legend-dot cross"></div> Cross-episode link</div>
-    </div>
-
-    <div class="click-hint">Click a knot to highlight connections. Islands & exits highlight linked episodes.</div>
-
-    <div class="info">
-        Episodes stack as rings on a shared cylinder. Dead ends (exits) and mystery starts (islands)
-        in one episode connect to entry points in others. Click external entries or exits to see
-        cross-episode narrative seams shimmer across the stack.
-    </div>
-
-    <div class="cross-episode-hint" id="cross-hint">
-        <span id="cross-hint-text"></span>
+        <div class="legend-item"><div class="legend-dot normal"></div> Node</div>
     </div>
 
     <script>
-    // Color palette for episodes
+    // State
+    const episodes = {};
+    let activeEpisode = null;
+    let selectedNode = null;
+    let viewMode = 'stack';
+    let idleTimer = null;
+    let idleRotation = 0;
+
     const colorPalette = [
         '#4ecca3', '#7b68ee', '#f472b6', '#60a5fa', '#fbbf24',
         '#a78bfa', '#34d399', '#fb7185', '#38bdf8', '#facc15'
     ];
 
-    // Cross-episode link patterns to detect
-    const crossEpisodePatterns = {
-        'pool_bagend': 'bagend',
-        'pool_mines': 'mudslidemines',
-        'pool_manor': 'shane-manor',
-        'pool_maple': 'maple-hollow',
-        'pool_riverbend': 'riverbend',
-        'world_between_worlds': null  // Hub that connects all
-    };
-
-    const episodes = {};
-    let activeEpisode = null;
-    let selectedNode = null;
-    let viewMode = 'stack';
-
-    // Flow colors
     const flowColors = {
         mainLoop: { stroke: "#4ecca3", glow: "#4ecca3" },
         external: { stroke: "#ffc857", glow: "#ffd700" },
@@ -411,7 +542,16 @@
         ending: { stroke: "#f472b6", glow: "#ec4899" }
     };
 
-    // Load data from JSON - ALL episodes
+    const crossEpisodePatterns = {
+        'pool_bagend': 'bagend',
+        'pool_mines': 'mudslidemines',
+        'pool_manor': 'shane-manor',
+        'pool_maple': 'maple-hollow',
+        'pool_riverbend': 'riverbend',
+        'world_between_worlds': null
+    };
+
+    // Load data
     async function loadData() {
         try {
             const response = await fetch('./fink-crawl-report.json');
@@ -420,20 +560,13 @@
             let colorIndex = 0;
             for (const file of data.files) {
                 const basename = file.file.split('/').pop().replace('.fink.js', '');
-                const key = basename;
-
-                // Skip if no graph data
                 if (!file.graph || Object.keys(file.graph).length === 0) continue;
 
-                // Generate display name from basename
-                const displayName = basename
-                    .replace(/-/g, ' ')
-                    .replace(/tml-2025-/, '')
-                    .toUpperCase();
+                const displayName = basename.replace(/-/g, ' ').replace(/tml-2025-/, '').toUpperCase();
 
-                episodes[key] = {
+                episodes[basename] = {
                     name: displayName,
-                    color: colorPalette[colorIndex % colorPalette.length],
+                    color: colorPalette[colorIndex++ % colorPalette.length],
                     nodes: {},
                     edges: [],
                     nodeOrder: [],
@@ -442,283 +575,219 @@
                     exitsTo: {},
                     entriesFrom: {}
                 };
-                colorIndex++;
 
-                // Build edges and nodes from graph
                 for (const [knot, knotData] of Object.entries(file.graph)) {
-                    episodes[key].nodes[knot] = knotData;
-                    if (!episodes[key].nodeOrder.includes(knot)) {
-                        episodes[key].nodeOrder.push(knot);
+                    episodes[basename].nodes[knot] = knotData;
+                    if (!episodes[basename].nodeOrder.includes(knot)) {
+                        episodes[basename].nodeOrder.push(knot);
                     }
 
                     for (const target of knotData.targets) {
-                        episodes[key].edges.push({
+                        const choiceDetail = knotData.choiceDetails?.find(c =>
+                            target.toLowerCase().includes(c.text?.toLowerCase().replace(/\s+/g, '_').substring(0, 10) || '')
+                        );
+                        episodes[basename].edges.push({
                             from: knot,
                             to: target,
-                            repeatable: knotData.choiceDetails?.find(c =>
-                                target.includes(c.text?.toLowerCase().replace(/\s+/g, '_'))
-                            )?.repeatable ?? true
+                            repeatable: choiceDetail?.repeatable ?? true,
+                            sticky: choiceDetail?.sticky ?? false,
+                            text: choiceDetail?.text || ''
                         });
-                        if (!episodes[key].nodeOrder.includes(target)) {
-                            episodes[key].nodeOrder.push(target);
+                        if (!episodes[basename].nodeOrder.includes(target)) {
+                            episodes[basename].nodeOrder.push(target);
                         }
                     }
 
-                    // Mark exits (knots with no outgoing edges)
                     if (knotData.targets.length === 0) {
-                        episodes[key].exits.add(knot);
+                        episodes[basename].exits.add(knot);
                     }
 
-                    // Detect cross-episode links
                     if (crossEpisodePatterns[knot]) {
-                        episodes[key].exitsTo[knot] = crossEpisodePatterns[knot];
+                        episodes[basename].exitsTo[knot] = crossEpisodePatterns[knot];
                     }
                     if (knot === 'world_between_worlds') {
-                        // This is a hub that can be entered from other episodes
-                        episodes[key].entriesFrom[knot] = Object.values(crossEpisodePatterns).filter(Boolean);
+                        episodes[basename].entriesFrom[knot] = Object.values(crossEpisodePatterns).filter(Boolean);
                     }
                 }
             }
 
-            // Set first episode as active
-            const episodeKeys = Object.keys(episodes);
-            if (episodeKeys.length > 0) {
-                activeEpisode = episodeKeys.includes('hampstead') ? 'hampstead' : episodeKeys[0];
-            }
+            const keys = Object.keys(episodes);
+            activeEpisode = keys.includes('hampstead') ? 'hampstead' : keys[0];
 
-            console.log(`Loaded ${episodeKeys.length} episodes:`, episodeKeys);
-            const totalKnots = Object.values(episodes).reduce((sum, ep) => sum + ep.nodeOrder.length, 0);
-            document.getElementById('episode-count').textContent = `${episodeKeys.length} episodes • ${totalKnots} knots`;
+            const totalKnots = Object.values(episodes).reduce((s, e) => s + e.nodeOrder.length, 0);
+            document.getElementById('stats').textContent = `${keys.length} episodes • ${totalKnots} knots`;
+
             renderStack();
+            parseHash();
+            startIdleAnimation();
         } catch (err) {
-            console.error('Failed to load data:', err);
-            loadFallbackData();
+            console.error('Failed to load:', err);
+            document.getElementById('stats').textContent = 'Failed to load data';
         }
     }
 
-    function loadFallbackData() {
-        // Fallback Hampstead data
-        episodes.hampstead = {
-            name: 'HAMPSTEAD',
-            color: '#4ecca3',
-            exitsTo: {
-                'pool_bagend': 'bagend',
-                'pool_mines': 'mudslidemines',
-                'pool_manor': 'shane-manor',
-                'pool_maple': 'maple-hollow',
-                'pool_riverbend': 'riverbend'
-            },
-            entriesFrom: {
-                'world_between_worlds': ['bagend', 'mudslidemines', 'shane-manor', 'maple-hollow', 'riverbend']
-            },
-            edges: [
-                {from: "splash", to: "intro"}, {from: "intro", to: "bedsit"},
-                {from: "bedsit", to: "wardrobe"}, {from: "bedsit", to: "street"},
-                {from: "wardrobe", to: "bedsit"}, {from: "street", to: "jobcentre"},
-                {from: "street", to: "oxfam"}, {from: "street", to: "pub"},
-                {from: "street", to: "gallery_pass"}, {from: "jobcentre", to: "street"},
-                {from: "oxfam", to: "street"}, {from: "pub", to: "street"},
-                {from: "gallery_pass", to: "mansion_tip"}, {from: "mansion_tip", to: "mansion"},
-                {from: "world_between_worlds", to: "world_rest"}, {from: "world_rest", to: "world_end"},
-                {from: "pool_bagend", to: "world_between_worlds"},
-                {from: "pool_mines", to: "world_between_worlds"}
-            ],
-            nodeOrder: ["splash", "intro", "bedsit", "wardrobe", "street", "jobcentre",
-                       "oxfam", "pub", "gallery_pass", "mansion_tip", "mansion",
-                       "pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend",
-                       "world_between_worlds", "world_rest", "world_end"],
-            nodes: {},
-            externalEntries: new Set(["pool_bagend", "pool_mines", "pool_manor", "pool_maple", "pool_riverbend"]),
-            exits: new Set(["world_end"])
-        };
-        activeEpisode = 'hampstead';
-        renderStack();
-    }
-
-    function createRingSVG(episodeKey, size = 600) {
+    // Create ring SVG
+    function createRingSVG(episodeKey, size = 500) {
         const episode = episodes[episodeKey];
-        if (!episode || !episode.nodeOrder.length) return null;
+        if (!episode?.nodeOrder.length) return null;
 
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
 
         const cx = size / 2, cy = size / 2;
-        const outerRadius = size * 0.42;
-        const innerRadius = size * 0.34;
+        const outerR = size * 0.42;
+        const innerR = size * 0.34;
 
         // Defs
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         Object.entries(flowColors).forEach(([type, colors]) => {
-            const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-            gradient.setAttribute("id", `flow-${episodeKey}-${type}`);
-            gradient.innerHTML = `
-                <stop offset="0%" stop-color="${colors.stroke}" stop-opacity="0.2">
-                    <animate attributeName="offset" values="-1;1" dur="2s" repeatCount="indefinite"/>
-                </stop>
-                <stop offset="30%" stop-color="${colors.glow}" stop-opacity="0.8">
-                    <animate attributeName="offset" values="-0.7;1.3" dur="2s" repeatCount="indefinite"/>
-                </stop>
-                <stop offset="60%" stop-color="${colors.stroke}" stop-opacity="0.2">
-                    <animate attributeName="offset" values="-0.4;1.6" dur="2s" repeatCount="indefinite"/>
-                </stop>
-            `;
-            defs.appendChild(gradient);
-
             const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
             marker.setAttribute("id", `arrow-${episodeKey}-${type}`);
             marker.setAttribute("viewBox", "0 0 10 10");
             marker.setAttribute("refX", "9");
             marker.setAttribute("refY", "5");
-            marker.setAttribute("markerWidth", "6");
-            marker.setAttribute("markerHeight", "6");
+            marker.setAttribute("markerWidth", "5");
+            marker.setAttribute("markerHeight", "5");
             marker.setAttribute("orient", "auto");
             marker.innerHTML = `<path d="M 0 0 L 10 5 L 0 10 L 3 5 z" fill="${colors.glow}"/>`;
             defs.appendChild(marker);
         });
         svg.appendChild(defs);
 
-        // External ring
-        const extRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        extRing.setAttribute("cx", cx);
-        extRing.setAttribute("cy", cy);
-        extRing.setAttribute("r", outerRadius + 15);
-        extRing.classList.add("external-ring");
-        svg.appendChild(extRing);
-
         // Calculate connectivity
-        const connectivity = {};
+        const conn = {};
         episode.edges.forEach(({from, to}) => {
-            connectivity[from] = (connectivity[from] || 0) + 1;
-            connectivity[to] = (connectivity[to] || 0) + 1;
+            conn[from] = (conn[from] || 0) + 1;
+            conn[to] = (conn[to] || 0) + 1;
         });
 
-        const isHub = (n) => (connectivity[n] || 0) >= 6;
+        const isHub = n => (conn[n] || 0) >= 6;
 
         // Calculate arcs
-        const nodeOrder = episode.nodeOrder;
-        const n = nodeOrder.length;
-        const totalWeight = nodeOrder.reduce((sum, node) => sum + Math.max(2, connectivity[node] || 2), 0);
+        const nodes = episode.nodeOrder;
+        const totalWeight = nodes.reduce((s, n) => s + Math.max(2, conn[n] || 2), 0);
         const padding = 0.02;
-        let currentAngle = -Math.PI / 2;
+        let angle = -Math.PI / 2;
 
-        const arcs = nodeOrder.map(node => {
-            const weight = Math.max(2, connectivity[node] || 2);
-            const arcLength = (weight / totalWeight) * (2 * Math.PI - padding * n);
-            const startAngle = currentAngle;
-            const endAngle = currentAngle + arcLength;
-            currentAngle = endAngle + padding;
-            return { node, startAngle, endAngle, midAngle: (startAngle + endAngle) / 2 };
+        const arcs = nodes.map(node => {
+            const w = Math.max(2, conn[node] || 2);
+            const len = (w / totalWeight) * (2 * Math.PI - padding * nodes.length);
+            const start = angle;
+            const end = angle + len;
+            angle = end + padding;
+            return { node, start, end, mid: (start + end) / 2 };
         });
 
-        const nodeIndex = {};
-        arcs.forEach((a, i) => nodeIndex[a.node] = i);
+        const nodeIdx = {};
+        arcs.forEach((a, i) => nodeIdx[a.node] = i);
 
-        const polarToCart = (angle, r) => ({
-            x: cx + r * Math.cos(angle),
-            y: cy + r * Math.sin(angle)
-        });
+        const toCart = (a, r) => ({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
 
         // Flow paths
-        const flowGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        flowGroup.classList.add("flows");
-        episode.edges.forEach(({from, to}) => {
-            const fromArc = arcs[nodeIndex[from]];
-            const toArc = arcs[nodeIndex[to]];
-            if (!fromArc || !toArc || from === to) return;
+        const flowG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        episode.edges.forEach(({from, to, sticky}) => {
+            const fa = arcs[nodeIdx[from]], ta = arcs[nodeIdx[to]];
+            if (!fa || !ta || from === to) return;
 
-            let flowType = "linear";
-            if (episode.externalEntries.has(from)) flowType = "external";
-            else if (episode.exits.has(to)) flowType = "ending";
-            else if (episode.edges.some(e => e.from === to && e.to === from)) flowType = "mainLoop";
+            let type = "linear";
+            if (episode.externalEntries.has(from)) type = "external";
+            else if (episode.exits.has(to)) type = "ending";
+            else if (episode.edges.some(e => e.from === to && e.to === from)) type = "mainLoop";
 
-            const p1 = polarToCart(fromArc.midAngle, innerRadius - 3);
-            const p2 = polarToCart(toArc.midAngle, innerRadius - 3);
-            const ctrl = polarToCart((fromArc.midAngle + toArc.midAngle) / 2, innerRadius * 0.3);
+            const p1 = toCart(fa.mid, innerR - 5);
+            const p2 = toCart(ta.mid, innerR - 5);
+            const ctrl = toCart((fa.mid + ta.mid) / 2, innerR * 0.25);
 
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             path.setAttribute("d", `M ${p1.x} ${p1.y} Q ${ctrl.x} ${ctrl.y} ${p2.x} ${p2.y}`);
-            path.setAttribute("stroke", `url(#flow-${episodeKey}-${flowType})`);
-            path.setAttribute("stroke-width", "1.5");
-            path.setAttribute("marker-end", `url(#arrow-${episodeKey}-${flowType})`);
+            path.setAttribute("stroke", flowColors[type].glow);
+            path.setAttribute("marker-end", `url(#arrow-${episodeKey}-${type})`);
             path.classList.add("flow-path");
+            if (sticky) path.style.strokeDasharray = "2 6"; // Different pattern for sticky
             path.dataset.from = from;
             path.dataset.to = to;
-            flowGroup.appendChild(path);
+            flowG.appendChild(path);
         });
-        svg.appendChild(flowGroup);
+        svg.appendChild(flowG);
 
-        // Arc segments
-        const arcGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        arcGroup.classList.add("arcs");
-        arcs.forEach(({ node, startAngle, endAngle, midAngle }) => {
+        // Arcs
+        const arcG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        arcs.forEach(({ node, start, end, mid }) => {
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             g.classList.add("arc");
             g.dataset.node = node;
             g.dataset.episode = episodeKey;
+            g.setAttribute("tabindex", "0");
+            g.setAttribute("role", "button");
+            g.setAttribute("aria-label", node.replace(/_/g, ' '));
 
             let color = "#7b68ee";
             if (episode.exits.has(node)) color = "#e94560";
             else if (episode.externalEntries.has(node)) color = "#ffc857";
-            else if (isHub(node)) color = episode.color || "#4ecca3";
+            else if (isHub(node)) color = episode.color;
 
-            const startOuter = polarToCart(startAngle, outerRadius);
-            const endOuter = polarToCart(endAngle, outerRadius);
-            const startInner = polarToCart(startAngle, innerRadius);
-            const endInner = polarToCart(endAngle, innerRadius);
-            const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+            const so = toCart(start, outerR), eo = toCart(end, outerR);
+            const si = toCart(start, innerR), ei = toCart(end, innerR);
+            const large = end - start > Math.PI ? 1 : 0;
 
             const arcPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
             arcPath.setAttribute("d", `
-                M ${startOuter.x} ${startOuter.y}
-                A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}
-                L ${endInner.x} ${endInner.y}
-                A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y}
+                M ${so.x} ${so.y}
+                A ${outerR} ${outerR} 0 ${large} 1 ${eo.x} ${eo.y}
+                L ${ei.x} ${ei.y}
+                A ${innerR} ${innerR} 0 ${large} 0 ${si.x} ${si.y}
                 Z
             `);
             arcPath.setAttribute("fill", color);
             g.appendChild(arcPath);
 
             // Label
-            const labelRadius = outerRadius + 10;
-            const labelPos = polarToCart(midAngle, labelRadius);
+            const lp = toCart(mid, outerR + 12);
             const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            label.setAttribute("x", labelPos.x);
-            label.setAttribute("y", labelPos.y);
+            label.setAttribute("x", lp.x);
+            label.setAttribute("y", lp.y);
             label.classList.add("node-label");
             if (isHub(node) || episode.externalEntries.has(node)) label.classList.add("highlight");
 
-            let rotation = (midAngle * 180 / Math.PI) + 90;
-            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) {
-                rotation += 180;
+            let rot = (mid * 180 / Math.PI) + 90;
+            if (mid > Math.PI / 2 && mid < 3 * Math.PI / 2) {
+                rot += 180;
                 label.setAttribute("text-anchor", "end");
             } else {
                 label.setAttribute("text-anchor", "start");
             }
-            label.setAttribute("transform", `rotate(${rotation}, ${labelPos.x}, ${labelPos.y})`);
+            label.setAttribute("transform", `rotate(${rot}, ${lp.x}, ${lp.y})`);
             label.setAttribute("dominant-baseline", "middle");
-            label.textContent = node.replace(/_/g, " ").substring(0, 15);
+            label.textContent = node.replace(/_/g, " ").substring(0, 12);
             g.appendChild(label);
 
-            g.addEventListener("click", (e) => {
+            // Events
+            const handleSelect = (e) => {
                 e.stopPropagation();
                 handleNodeClick(episodeKey, node);
+            };
+            g.addEventListener("click", handleSelect);
+            g.addEventListener("touchend", handleSelect);
+            g.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") handleSelect(e);
             });
 
-            arcGroup.appendChild(g);
+            arcG.appendChild(g);
         });
-        svg.appendChild(arcGroup);
+        svg.appendChild(arcG);
 
-        // Center label
-        const centerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        centerText.setAttribute("x", cx);
-        centerText.setAttribute("y", cy);
-        centerText.setAttribute("text-anchor", "middle");
-        centerText.setAttribute("dominant-baseline", "middle");
-        centerText.setAttribute("fill", episode.color || "#4ecca3");
-        centerText.setAttribute("font-size", "12");
-        centerText.setAttribute("letter-spacing", "0.1em");
-        centerText.textContent = episode.name;
-        svg.appendChild(centerText);
+        // Center text
+        const center = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        center.setAttribute("x", cx);
+        center.setAttribute("y", cy);
+        center.setAttribute("text-anchor", "middle");
+        center.setAttribute("dominant-baseline", "middle");
+        center.setAttribute("fill", episode.color);
+        center.setAttribute("font-size", "11");
+        center.setAttribute("font-weight", "600");
+        center.setAttribute("letter-spacing", "0.08em");
+        center.textContent = episode.name;
+        svg.appendChild(center);
 
         return svg;
     }
@@ -727,13 +796,11 @@
         const container = document.getElementById('stack-container');
         container.innerHTML = '';
 
-        const episodeKeys = Object.keys(episodes).filter(k => episodes[k].nodeOrder?.length > 0);
-        const count = episodeKeys.length;
-
-        episodeKeys.forEach((key, i) => {
+        Object.keys(episodes).filter(k => episodes[k].nodeOrder?.length).forEach((key, i) => {
             const layer = document.createElement('div');
             layer.className = 'ring-layer';
             layer.dataset.episode = key;
+            layer.dataset.index = i;
 
             const svg = createRingSVG(key);
             if (svg) layer.appendChild(svg);
@@ -751,172 +818,374 @@
 
     function updateLayout() {
         const layers = document.querySelectorAll('.ring-layer');
-        const episodeKeys = Array.from(layers).map(l => l.dataset.episode);
-        const count = episodeKeys.length;
-        const activeIndex = episodeKeys.indexOf(activeEpisode);
+        const keys = Array.from(layers).map(l => l.dataset.episode);
+        const activeIdx = keys.indexOf(activeEpisode);
 
         layers.forEach((layer, i) => {
-            const key = layer.dataset.episode;
-            const isActive = key === activeEpisode;
-            const distFromActive = i - activeIndex;
-            const absDistFromActive = Math.abs(distFromActive);
+            const isActive = layer.dataset.episode === activeEpisode;
+            const dist = i - activeIdx;
+            const absDist = Math.abs(dist);
 
             layer.classList.toggle('active', isActive);
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                // 3D cylinder stack - rings tilted and stacked in depth
-                const baseX = 250;
-                const baseY = 150;
-                const tiltAngle = 65; // Tilt to show as cylinder
-                const ringSpacing = 60; // Vertical spacing between rings
-                const zSpacing = 80; // Depth spacing
-
-                // Position based on distance from active
-                const yPos = baseY + distFromActive * ringSpacing;
-                const zPos = -absDistFromActive * zSpacing;
-                const scale = isActive ? 1 : Math.max(0.6, 0.95 - absDistFromActive * 0.08);
-                const opacity = isActive ? 1 : Math.max(0.4, 1 - absDistFromActive * 0.15);
+                const y = dist * 50;
+                const z = -absDist * 60;
+                const scale = isActive ? 1 : Math.max(0.65, 0.92 - absDist * 0.08);
+                const op = isActive ? 1 : Math.max(0.35, 0.9 - absDist * 0.15);
 
                 layer.style.transform = `
-                    translateX(${baseX}px)
-                    translateY(${yPos}px)
-                    translateZ(${zPos}px)
-                    rotateX(${tiltAngle}deg)
+                    translateY(${y}px)
+                    translateZ(${z}px)
+                    rotateX(60deg)
                     scale(${scale})
                 `;
-                layer.style.opacity = opacity;
-                layer.style.zIndex = isActive ? 100 : 50 - absDistFromActive;
+                layer.style.opacity = op;
+                layer.style.zIndex = isActive ? 100 : 50 - absDist;
             } else if (viewMode === 'flat') {
-                // Grid layout - 3 columns for 9 episodes
-                const cols = 3;
+                const cols = Math.min(3, keys.length);
                 const row = Math.floor(i / cols);
                 const col = i % cols;
-                const cardSize = 350;
-                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) rotateX(0deg) scale(0.55)`;
+                const gap = 10;
+                const w = (100 - gap * (cols + 1)) / cols;
+                const h = 33;
+
+                layer.style.transform = `
+                    translateX(${col * (w + gap) + gap - 50 + w/2}vw)
+                    translateY(${row * (h + gap) - 50 + h/2}vh)
+                    rotateX(0deg)
+                    scale(0.45)
+                `;
                 layer.style.opacity = 1;
                 layer.style.zIndex = isActive ? 100 : 50;
             } else if (viewMode === 'focus') {
-                if (isActive) {
-                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(1)';
-                    layer.style.opacity = 1;
-                    layer.style.zIndex = 100;
-                } else {
-                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(0.7)';
-                    layer.style.opacity = 0.2;
-                    layer.style.zIndex = 10;
-                }
+                layer.style.transform = isActive
+                    ? 'translateY(0) translateZ(0) rotateX(0deg) scale(0.9)'
+                    : 'translateY(0) translateZ(-100px) rotateX(0deg) scale(0.6)';
+                layer.style.opacity = isActive ? 1 : 0.15;
+                layer.style.zIndex = isActive ? 100 : 10;
             }
         });
+
+        updateHash();
     }
 
     function handleNodeClick(episodeKey, node) {
+        resetIdleTimer();
+
         if (activeEpisode !== episodeKey) {
             activeEpisode = episodeKey;
-            selectedNode = node;
             updateLayout();
-        } else if (selectedNode === node) {
+        }
+
+        if (selectedNode === node) {
+            closeTooltip();
             clearSelection();
             selectedNode = null;
         } else {
             selectedNode = node;
+            highlightNode(episodeKey, node);
+            showTooltip(episodeKey, node);
         }
-        highlightNode(episodeKey, node);
     }
 
     function clearSelection() {
         document.querySelectorAll('.arc').forEach(el => {
             el.classList.remove('dimmed', 'selected', 'connected', 'cross-highlight');
         });
-        document.querySelectorAll('.node-label').forEach(el => {
-            el.classList.remove('selected', 'connected', 'cross-highlight');
-        });
         document.querySelectorAll('.flow-path').forEach(el => {
             el.classList.remove('dimmed', 'active');
         });
-        document.getElementById('cross-hint').classList.remove('visible');
+        document.getElementById('cross-beam').classList.remove('visible');
     }
 
     function highlightNode(episodeKey, node) {
         clearSelection();
 
-        const episode = episodes[episodeKey];
-        const connectedNodes = new Set([node]);
-
-        // Find connected nodes in same episode
-        episode.edges.forEach(({from, to}) => {
+        const ep = episodes[episodeKey];
+        const connected = new Set([node]);
+        ep.edges.forEach(({from, to}) => {
             if (from === node || to === node) {
-                connectedNodes.add(from);
-                connectedNodes.add(to);
+                connected.add(from);
+                connected.add(to);
             }
         });
 
-        // Highlight in current episode with staggered animation
+        // Staggered animation
         const arcs = document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`);
         arcs.forEach((el, i) => {
+            el.style.transitionDelay = `${i * 12}ms`;
             const n = el.dataset.node;
-            // Stagger the transitions for D3-like effect
-            el.style.transitionDelay = `${i * 15}ms`;
-
-            if (n === node) {
-                el.classList.add('selected');
-            } else if (connectedNodes.has(n)) {
-                el.classList.add('connected');
-            } else {
-                el.classList.add('dimmed');
-            }
+            if (n === node) el.classList.add('selected');
+            else if (connected.has(n)) el.classList.add('connected');
+            else el.classList.add('dimmed');
         });
+        setTimeout(() => arcs.forEach(el => el.style.transitionDelay = '0ms'), arcs.length * 12 + 300);
 
-        // Reset delays after animation
-        setTimeout(() => {
-            arcs.forEach(el => el.style.transitionDelay = '0ms');
-        }, arcs.length * 15 + 400);
-
+        // Flows
         document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .flow-path`).forEach(el => {
-            if (el.dataset.from === node || el.dataset.to === node) {
-                el.classList.add('active');
-            } else {
-                el.classList.add('dimmed');
-            }
+            if (el.dataset.from === node || el.dataset.to === node) el.classList.add('active');
+            else el.classList.add('dimmed');
         });
 
-        // Check for cross-episode links
-        const crossLinks = [];
-        if (episode.exitsTo && episode.exitsTo[node]) {
-            crossLinks.push({ type: 'exit', target: episode.exitsTo[node], node });
-        }
-        if (episode.entriesFrom && episode.entriesFrom[node]) {
-            episode.entriesFrom[node].forEach(source => {
-                crossLinks.push({ type: 'entry', source, node });
-            });
-        }
-
-        // Highlight cross-episode connections
-        if (crossLinks.length > 0) {
-            crossLinks.forEach(link => {
-                const targetEpisode = link.target || link.source;
-                if (episodes[targetEpisode]) {
-                    // Highlight the world_between_worlds or equivalent entry point
-                    document.querySelectorAll(`.ring-layer[data-episode="${targetEpisode}"] .arc`).forEach(el => {
-                        if (episode.externalEntries.has(el.dataset.node) ||
-                            el.dataset.node === 'world_between_worlds' ||
-                            el.dataset.node.startsWith('pool_')) {
-                            el.classList.add('cross-highlight');
-                            el.querySelector('.node-label')?.classList.add('cross-highlight');
-                        }
-                    });
-                }
-            });
-
-            // Show hint
-            const hint = document.getElementById('cross-hint');
-            const hintText = document.getElementById('cross-hint-text');
-            hintText.textContent = `"${node.replace(/_/g, ' ')}" connects to ${crossLinks.map(l => l.target || l.source).join(', ')}`;
-            hint.classList.add('visible');
+        // Cross-episode beam
+        if (ep.exitsTo[node]) {
+            showCrossBeam(episodeKey, ep.exitsTo[node]);
         }
     }
 
-    // Event listeners
+    function showCrossBeam(fromEp, toEp) {
+        const layers = Array.from(document.querySelectorAll('.ring-layer'));
+        const fromLayer = layers.find(l => l.dataset.episode === fromEp);
+        const toLayer = layers.find(l => l.dataset.episode === toEp);
+
+        if (!fromLayer || !toLayer) return;
+
+        const fromIdx = parseInt(fromLayer.dataset.index);
+        const toIdx = parseInt(toLayer.dataset.index);
+
+        // Highlight target
+        document.querySelectorAll(`.ring-layer[data-episode="${toEp}"] .arc`).forEach(el => {
+            if (el.dataset.node.startsWith('pool_') || el.dataset.node === 'world_between_worlds' ||
+                episodes[toEp].externalEntries.has(el.dataset.node)) {
+                el.classList.add('cross-highlight');
+            }
+        });
+
+        // Show beam
+        const beam = document.getElementById('cross-beam');
+        const container = document.querySelector('.stack-container');
+        const rect = container.getBoundingClientRect();
+
+        const startY = rect.height / 2 + (fromIdx - layers.findIndex(l => l.dataset.episode === activeEpisode)) * 50;
+        const endY = rect.height / 2 + (toIdx - layers.findIndex(l => l.dataset.episode === activeEpisode)) * 50;
+
+        beam.style.top = Math.min(startY, endY) + 'px';
+        beam.style.height = Math.abs(endY - startY) + 'px';
+        beam.classList.add('visible');
+    }
+
+    function showTooltip(episodeKey, node) {
+        const ep = episodes[episodeKey];
+        const nodeData = ep.nodes[node] || {};
+
+        const tooltip = document.getElementById('tooltip');
+        const title = document.getElementById('tooltip-title');
+        const type = document.getElementById('tooltip-type');
+        const body = document.getElementById('tooltip-body');
+        const tags = document.getElementById('tooltip-tags');
+
+        title.textContent = node.replace(/_/g, ' ');
+
+        // Determine type
+        const conn = {};
+        ep.edges.forEach(({from, to}) => {
+            conn[from] = (conn[from] || 0) + 1;
+            conn[to] = (conn[to] || 0) + 1;
+        });
+
+        let typeName = 'normal', typeClass = 'normal';
+        if (ep.exits.has(node)) { typeName = 'Exit'; typeClass = 'exit'; }
+        else if (ep.externalEntries.has(node)) { typeName = 'Entry'; typeClass = 'entry'; }
+        else if ((conn[node] || 0) >= 6) { typeName = 'Hub'; typeClass = 'hub'; }
+
+        type.textContent = typeName;
+        type.className = 'tooltip-type ' + typeClass;
+
+        // Body
+        const inCount = ep.edges.filter(e => e.to === node).length;
+        const outCount = ep.edges.filter(e => e.from === node).length;
+        const choices = nodeData.choiceDetails || [];
+
+        let bodyText = `${inCount} incoming • ${outCount} outgoing`;
+        if (choices.length) {
+            bodyText += `\n${choices.length} choices`;
+            const stickyCount = choices.filter(c => c.sticky).length;
+            if (stickyCount) bodyText += ` (${stickyCount} one-time)`;
+        }
+        body.textContent = bodyText;
+
+        // Tags
+        tags.innerHTML = '';
+        (nodeData.tags || []).forEach(tag => {
+            const span = document.createElement('span');
+            span.className = 'tooltip-tag';
+            span.textContent = `${tag.type}: ${tag.value.substring(0, 20)}`;
+            tags.appendChild(span);
+        });
+
+        if (ep.exitsTo[node]) {
+            const span = document.createElement('span');
+            span.className = 'tooltip-tag';
+            span.textContent = `→ ${ep.exitsTo[node]}`;
+            span.style.background = 'rgba(255, 200, 87, 0.2)';
+            span.style.color = '#ffc857';
+            tags.appendChild(span);
+        }
+
+        tooltip.classList.add('visible');
+    }
+
+    function closeTooltip() {
+        document.getElementById('tooltip').classList.remove('visible');
+    }
+
+    // Navigation
+    function navigateEpisode(delta) {
+        const keys = Object.keys(episodes);
+        const idx = keys.indexOf(activeEpisode);
+        const newIdx = (idx + delta + keys.length) % keys.length;
+        activeEpisode = keys[newIdx];
+        clearSelection();
+        closeTooltip();
+        selectedNode = null;
+        updateLayout();
+        resetIdleTimer();
+    }
+
+    // Search
+    const searchInput = document.getElementById('search');
+    const searchResults = document.getElementById('search-results');
+
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        searchResults.innerHTML = '';
+
+        if (q.length < 2) {
+            searchResults.classList.remove('visible');
+            return;
+        }
+
+        const results = [];
+        Object.entries(episodes).forEach(([epKey, ep]) => {
+            ep.nodeOrder.forEach(node => {
+                if (node.toLowerCase().includes(q)) {
+                    results.push({ node, episode: epKey, name: ep.name });
+                }
+            });
+        });
+
+        if (results.length === 0) {
+            searchResults.classList.remove('visible');
+            return;
+        }
+
+        results.slice(0, 10).forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'search-result';
+            div.innerHTML = `
+                <div class="search-result-title">${r.node.replace(/_/g, ' ')}</div>
+                <div class="search-result-episode">${r.name}</div>
+            `;
+            div.addEventListener('click', () => {
+                activeEpisode = r.episode;
+                updateLayout();
+                setTimeout(() => handleNodeClick(r.episode, r.node), 300);
+                searchInput.value = '';
+                searchResults.classList.remove('visible');
+                searchInput.blur();
+            });
+            searchResults.appendChild(div);
+        });
+
+        searchResults.classList.add('visible');
+    });
+
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => searchResults.classList.remove('visible'), 200);
+    });
+
+    // URL hash state
+    function updateHash() {
+        const hash = selectedNode
+            ? `#${activeEpisode}/${selectedNode}`
+            : `#${activeEpisode}`;
+        if (location.hash !== hash) {
+            history.replaceState(null, '', hash);
+        }
+    }
+
+    function parseHash() {
+        const hash = location.hash.slice(1);
+        if (!hash) return;
+
+        const [ep, node] = hash.split('/');
+        if (episodes[ep]) {
+            activeEpisode = ep;
+            updateLayout();
+            if (node && episodes[ep].nodeOrder.includes(node)) {
+                setTimeout(() => handleNodeClick(ep, node), 400);
+            }
+        }
+    }
+
+    window.addEventListener('hashchange', parseHash);
+
+    // Idle animation
+    function startIdleAnimation() {
+        resetIdleTimer();
+    }
+
+    function resetIdleTimer() {
+        if (idleTimer) clearInterval(idleTimer);
+        idleRotation = 0;
+
+        // Start subtle rotation after 10s idle
+        idleTimer = setInterval(() => {
+            if (viewMode !== 'stack') return;
+            idleRotation += 0.3;
+            const container = document.getElementById('stack-container');
+            container.style.transform = `rotateY(${Math.sin(idleRotation * 0.02) * 8}deg)`;
+        }, 50);
+    }
+
+    // Touch gestures
+    let touchStartY = 0;
+    const vizContainer = document.querySelector('.viz-container');
+
+    vizContainer.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+        resetIdleTimer();
+    }, { passive: true });
+
+    vizContainer.addEventListener('touchend', (e) => {
+        const deltaY = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(deltaY) > 50) {
+            navigateEpisode(deltaY > 0 ? 1 : -1);
+        }
+    }, { passive: true });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        resetIdleTimer();
+
+        if (e.target === searchInput) return;
+
+        switch(e.key) {
+            case 'ArrowUp':
+            case 'ArrowLeft':
+                e.preventDefault();
+                navigateEpisode(-1);
+                break;
+            case 'ArrowDown':
+            case 'ArrowRight':
+                e.preventDefault();
+                navigateEpisode(1);
+                break;
+            case 'Escape':
+                clearSelection();
+                closeTooltip();
+                selectedNode = null;
+                break;
+            case '/':
+                e.preventDefault();
+                searchInput.focus();
+                break;
+        }
+    });
+
+    // Button events
     document.getElementById('btn-stack').addEventListener('click', () => {
         viewMode = 'stack';
         document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
@@ -938,82 +1207,30 @@
         updateLayout();
     });
 
+    document.getElementById('btn-prev').addEventListener('click', () => navigateEpisode(-1));
+    document.getElementById('btn-next').addEventListener('click', () => navigateEpisode(1));
+
+    document.getElementById('tooltip-close').addEventListener('click', () => {
+        closeTooltip();
+        clearSelection();
+        selectedNode = null;
+    });
+
     document.getElementById('stack-container').addEventListener('click', (e) => {
         const layer = e.target.closest('.ring-layer');
         if (layer && !e.target.closest('.arc')) {
             activeEpisode = layer.dataset.episode;
             clearSelection();
+            closeTooltip();
             selectedNode = null;
             updateLayout();
         }
     });
 
-    // Advanced filter panel
-    document.getElementById('btn-advanced').addEventListener('click', () => {
-        const panel = document.getElementById('advanced-panel');
-        panel.classList.toggle('visible');
-    });
-
-    // Filter controls
-    const filters = {
-        showExits: true,
-        showEntries: true,
-        showHubs: true,
-        showFlows: true,
-        minConnections: 0
-    };
-
-    function applyFilters() {
-        // Apply to all episodes
-        Object.keys(episodes).forEach(episodeKey => {
-            const episode = episodes[episodeKey];
-            const connectivity = {};
-            episode.edges.forEach(({from, to}) => {
-                connectivity[from] = (connectivity[from] || 0) + 1;
-                connectivity[to] = (connectivity[to] || 0) + 1;
-            });
-
-            document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`).forEach(el => {
-                const node = el.dataset.node;
-                const conn = connectivity[node] || 0;
-                let visible = true;
-
-                if (!filters.showExits && episode.exits.has(node)) visible = false;
-                if (!filters.showEntries && episode.externalEntries.has(node)) visible = false;
-                if (!filters.showHubs && conn >= 6) visible = false;
-                if (conn < filters.minConnections) visible = false;
-
-                el.style.opacity = visible ? '' : '0.1';
-                el.style.pointerEvents = visible ? '' : 'none';
-            });
-
-            document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .flow-path`).forEach(el => {
-                el.style.display = filters.showFlows ? '' : 'none';
-            });
-        });
-    }
-
-    document.getElementById('show-exits').addEventListener('change', (e) => {
-        filters.showExits = e.target.checked;
-        applyFilters();
-    });
-    document.getElementById('show-entries').addEventListener('change', (e) => {
-        filters.showEntries = e.target.checked;
-        applyFilters();
-    });
-    document.getElementById('show-hubs').addEventListener('change', (e) => {
-        filters.showHubs = e.target.checked;
-        applyFilters();
-    });
-    document.getElementById('show-flows').addEventListener('change', (e) => {
-        filters.showFlows = e.target.checked;
-        applyFilters();
-    });
-    document.getElementById('min-connections').addEventListener('input', (e) => {
-        filters.minConnections = parseInt(e.target.value);
-        document.getElementById('min-conn-val').textContent = e.target.value;
-        applyFilters();
-    });
+    // Hide swipe hint after first interaction
+    vizContainer.addEventListener('touchstart', () => {
+        document.getElementById('swipe-hint').style.display = 'none';
+    }, { once: true });
 
     // Initialize
     loadData();
