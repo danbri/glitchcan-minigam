@@ -64,21 +64,104 @@ window.FinkPlayer = {
         this.loadFinkStory(FinkConfig.DEFAULT_FINK_FILE);
     },
     
-    // Restart current story (placeholder - needs implementation)
+    // Restart current story by resetting INK state
     restartStory() {
-        FinkUtils.debugLog('Restart story not yet implemented');
-        FinkUI.showStatus('Restart feature coming soon!');
+        FinkUtils.debugLog('Restarting current story...');
+
+        if (FinkInkEngine.story) {
+            try {
+                // Use inkjs ResetState to restart without recompiling
+                FinkInkEngine.story.ResetState();
+                FinkUI.clearStory();
+                FinkUI.clearChoices();
+                FinkInkEngine.continueStory();
+                FinkUtils.debugLog('Story restarted successfully');
+            } catch (error) {
+                FinkUtils.debugLog('Error restarting story: ' + error.message);
+                FinkUI.showStatus('Error restarting story');
+            }
+        } else if (this.currentStoryUrl) {
+            // No story instance, try reloading from URL
+            FinkUtils.debugLog('No story instance, reloading from URL');
+            this.loadFinkStory(this.currentStoryUrl);
+        } else {
+            FinkUI.showStatus('No story to restart');
+        }
     },
     
-    // Bookmark functionality (placeholder - needs implementation)  
+    // Bookmark functionality - saves story state to localStorage
     bookmarkCurrentKnot() {
-        FinkUtils.debugLog('Bookmark feature not yet implemented');
-        FinkUI.showStatus('Bookmark feature coming soon!');
+        FinkUtils.debugLog('Saving bookmark...');
+
+        if (!FinkInkEngine.story) {
+            FinkUI.showStatus('No story to bookmark');
+            return;
+        }
+
+        try {
+            const bookmark = {
+                storyUrl: this.currentStoryUrl,
+                storyState: FinkInkEngine.story.state.ToJson(),
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem('fink-bookmark', JSON.stringify(bookmark));
+            FinkUtils.debugLog('Bookmark saved for: ' + this.currentStoryUrl);
+            FinkUI.showStatus('Bookmark saved!');
+            setTimeout(() => FinkUI.hideStatus(), 1500);
+        } catch (error) {
+            FinkUtils.debugLog('Error saving bookmark: ' + error.message);
+            FinkUI.showStatus('Error saving bookmark');
+        }
     },
-    
+
     gotoBookmarkedKnot() {
-        FinkUtils.debugLog('Go to bookmark not yet implemented');
-        FinkUI.showStatus('Bookmark feature coming soon!');
+        FinkUtils.debugLog('Restoring bookmark...');
+
+        const savedBookmark = localStorage.getItem('fink-bookmark');
+        if (!savedBookmark) {
+            FinkUI.showStatus('No bookmark found');
+            return;
+        }
+
+        try {
+            const bookmark = JSON.parse(savedBookmark);
+
+            // Check if we need to load a different story first
+            if (bookmark.storyUrl !== this.currentStoryUrl) {
+                FinkUtils.debugLog('Loading bookmarked story: ' + bookmark.storyUrl);
+                FinkUI.showStatus('Loading bookmark...', true);
+
+                // Load the story first, then restore state
+                FinkSandbox.loadViaSandbox(bookmark.storyUrl).then(content => {
+                    this.currentStoryUrl = bookmark.storyUrl;
+                    FinkInkEngine.compileAndRunStory(content);
+
+                    // Wait for story to compile, then restore state
+                    setTimeout(() => {
+                        if (FinkInkEngine.story) {
+                            FinkInkEngine.story.state.LoadJson(bookmark.storyState);
+                            FinkUI.clearStory();
+                            FinkUI.clearChoices();
+                            FinkInkEngine.continueStory();
+                            FinkUtils.debugLog('Bookmark restored');
+                        }
+                    }, 100);
+                }).catch(error => {
+                    FinkUtils.debugLog('Error loading bookmark story: ' + error.message);
+                    FinkUI.showStatus('Error restoring bookmark');
+                });
+            } else if (FinkInkEngine.story) {
+                // Same story, just restore state
+                FinkInkEngine.story.state.LoadJson(bookmark.storyState);
+                FinkUI.clearStory();
+                FinkUI.clearChoices();
+                FinkInkEngine.continueStory();
+                FinkUtils.debugLog('Bookmark restored (same story)');
+            }
+        } catch (error) {
+            FinkUtils.debugLog('Error restoring bookmark: ' + error.message);
+            FinkUI.showStatus('Error restoring bookmark');
+        }
     }
 };
 
