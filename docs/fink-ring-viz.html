@@ -1521,22 +1521,49 @@
 
     window.addEventListener('hashchange', parseHash);
 
-    // Idle animation
+    // Idle animation state
+    let idleTimeoutId = null;
+    let idleAnimationActive = false;
+
     function startIdleAnimation() {
-        resetIdleTimer();
+        stopIdleAnimation();
+
+        // Actually wait 10 seconds before starting idle wobble
+        idleTimeoutId = setTimeout(() => {
+            if (isDragging || momentumRAF) return; // Don't start if user is interacting
+            idleAnimationActive = true;
+            idleRotation = 0;
+            idleTimer = setInterval(() => {
+                if (viewMode !== 'stack' || isDragging || momentumRAF) {
+                    stopIdleAnimation();
+                    return;
+                }
+                idleRotation += 0.15; // Slower, subtler
+                const container = document.getElementById('stack-container');
+                container.style.transform = `rotateY(${Math.sin(idleRotation * 0.015) * 5}deg)`;
+            }, 50);
+        }, 10000); // 10 second delay
+    }
+
+    function stopIdleAnimation() {
+        if (idleTimeoutId) {
+            clearTimeout(idleTimeoutId);
+            idleTimeoutId = null;
+        }
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
+        idleAnimationActive = false;
+        // Reset container transform
+        const container = document.getElementById('stack-container');
+        if (container) container.style.transform = '';
+        idleRotation = 0;
     }
 
     function resetIdleTimer() {
-        if (idleTimer) clearInterval(idleTimer);
-        idleRotation = 0;
-
-        // Start subtle rotation after 10s idle
-        idleTimer = setInterval(() => {
-            if (viewMode !== 'stack') return;
-            idleRotation += 0.3;
-            const container = document.getElementById('stack-container');
-            container.style.transform = `rotateY(${Math.sin(idleRotation * 0.02) * 8}deg)`;
-        }, 50);
+        stopIdleAnimation();
+        startIdleAnimation();
     }
 
     // Momentum carousel physics
@@ -1559,14 +1586,7 @@
         }
 
         // Stop idle animation completely during drag
-        if (idleTimer) {
-            clearInterval(idleTimer);
-            idleTimer = null;
-        }
-        // Reset container rotation to neutral
-        const container = document.getElementById('stack-container');
-        container.style.transform = '';
-        idleRotation = 0;
+        stopIdleAnimation();
 
         // Disable CSS transitions during drag for 60fps
         document.querySelectorAll('.ring-layer').forEach(l => {
@@ -1610,11 +1630,7 @@
         if (!isDragging) return;
         isDragging = false;
 
-        // Re-enable CSS transitions
-        document.querySelectorAll('.ring-layer').forEach(l => {
-            l.style.transition = '';
-        });
-
+        // Keep transitions disabled - momentum will re-enable when done
         // Start momentum animation
         startMomentum();
     }
@@ -1622,6 +1638,11 @@
     function startMomentum() {
         const keys = Object.keys(episodes);
         const maxPos = keys.length - 1;
+
+        // Ensure transitions are disabled during momentum
+        document.querySelectorAll('.ring-layer').forEach(l => {
+            l.style.transition = 'none';
+        });
 
         function animate() {
             // Apply friction
@@ -1656,6 +1677,12 @@
                 // Snap to final position
                 scrollPosition = target;
                 activeEpisode = keys[Math.max(0, Math.min(maxPos, target))];
+
+                // Re-enable CSS transitions
+                document.querySelectorAll('.ring-layer').forEach(l => {
+                    l.style.transition = '';
+                });
+
                 updateLayout(false);
                 momentumRAF = null;
                 // Restart idle animation after settling
@@ -1863,6 +1890,9 @@
         document.body.classList.add('immersive');
         document.getElementById('nav-pill').style.display = 'flex';
         document.getElementById('knowledge-card').style.display = 'flex';
+        // Auto-expand the knowledge card so the player is visible immediately
+        knowledgeCardExpanded = true;
+        document.getElementById('knowledge-card').classList.add('expanded');
         updateNavPillTitle();
         loadEpisodeStory(activeEpisode);
     }
