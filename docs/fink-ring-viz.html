@@ -25,7 +25,8 @@
         html, body {
             height: 100%;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: none;
+            overscroll-behavior: none;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
@@ -120,6 +121,8 @@
             position: relative;
             overflow: hidden;
             min-height: 0;
+            touch-action: none; /* Prevent all browser touch gestures */
+            overscroll-behavior: contain;
         }
         .stack-container {
             position: absolute;
@@ -153,24 +156,96 @@
         .ring-layer.dimmed {
             opacity: 0.25;
             pointer-events: none;
+            filter: blur(4px);
         }
 
-        /* Episode label */
+        /* Animated bokeh background for atmosphere */
+        .bokeh-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0.4;
+        }
+        .bokeh-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(20px);
+            animation: bokeh-float 20s ease-in-out infinite;
+        }
+        .bokeh-orb:nth-child(1) {
+            width: 120px; height: 120px;
+            background: rgba(78, 204, 163, 0.3);
+            top: 20%; left: 10%;
+            animation-delay: 0s;
+        }
+        .bokeh-orb:nth-child(2) {
+            width: 80px; height: 80px;
+            background: rgba(123, 104, 238, 0.25);
+            top: 60%; right: 15%;
+            animation-delay: -5s;
+        }
+        .bokeh-orb:nth-child(3) {
+            width: 150px; height: 150px;
+            background: rgba(255, 200, 87, 0.2);
+            bottom: 30%; left: 50%;
+            animation-delay: -10s;
+        }
+        .bokeh-orb:nth-child(4) {
+            width: 60px; height: 60px;
+            background: rgba(244, 114, 182, 0.25);
+            top: 40%; right: 30%;
+            animation-delay: -15s;
+        }
+        @keyframes bokeh-float {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+            25% { transform: translate(30px, -20px) scale(1.1); opacity: 0.5; }
+            50% { transform: translate(-20px, 30px) scale(0.9); opacity: 0.4; }
+            75% { transform: translate(10px, 10px) scale(1.05); opacity: 0.35; }
+        }
+
+        /* Episode label - large friendly letters with contrasting outlines */
         .episode-label {
             position: absolute;
-            bottom: -30px;
+            bottom: -50px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-dim);
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.15em;
             white-space: nowrap;
-            transition: color 0.3s;
+            opacity: 0;
+            transition: opacity 0.5s ease, color 0.3s, transform 0.3s;
+            /* Contrasting outline using text-shadow */
+            text-shadow:
+                -2px -2px 0 #000,
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                -3px  0   0 #000,
+                 3px  0   0 #000,
+                 0   -3px 0 #000,
+                 0    3px 0 #000,
+                 0    0  8px rgba(0,0,0,0.8);
+            pointer-events: none;
         }
         .ring-layer.active .episode-label {
             color: var(--accent);
+            opacity: 1;
+            transform: translateX(-50%) scale(1.1);
+            text-shadow:
+                -2px -2px 0 #000,
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                -3px  0   0 #000,
+                 3px  0   0 #000,
+                 0   -3px 0 #000,
+                 0    3px 0 #000,
+                 0    0  12px rgba(78, 204, 163, 0.6),
+                 0    0  24px rgba(78, 204, 163, 0.3);
         }
 
         /* Arc segments */
@@ -497,9 +572,15 @@
     </div>
 
     <div class="viz-container">
+        <div class="bokeh-layer" id="bokeh-layer">
+            <div class="bokeh-orb"></div>
+            <div class="bokeh-orb"></div>
+            <div class="bokeh-orb"></div>
+            <div class="bokeh-orb"></div>
+        </div>
         <div class="stack-container" id="stack-container"></div>
         <div class="cross-beam" id="cross-beam"></div>
-        <div class="swipe-hint" id="swipe-hint">Drag to spin • Flick for momentum</div>
+        <div class="swipe-hint" id="swipe-hint">Drag to spin • Flick for momentum • Pinch to focus</div>
     </div>
 
     <div class="tooltip" id="tooltip">
@@ -534,6 +615,11 @@
     let scrollPosition = 0;      // Continuous position (0 = first episode)
     let scrollVelocity = 0;      // Current velocity
     let isDragging = false;
+
+    // Pinch gesture state
+    let isPinching = false;
+    let initialPinchDistance = 0;
+    let pinchStartViewMode = null;
     let dragStartY = 0;
     let dragStartPosition = 0;
     let lastDragY = 0;
@@ -853,20 +939,16 @@
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                // Smooth continuous positioning
+                // Smooth continuous positioning - symmetric cylinder
                 const y = dist * 55;
                 const z = -absDist * 50 - (absDist * absDist * 5); // Quadratic depth for drama
                 const scale = Math.max(0.5, 1 - absDist * 0.12);
                 const op = Math.max(0.2, 1 - absDist * 0.2);
 
-                // Add slight rotation based on position for 3D feel
-                const rotY = dist * 3;
-
                 layer.style.transform = `
                     translateY(${y}px)
                     translateZ(${z}px)
                     rotateX(60deg)
-                    rotateY(${rotY}deg)
                     scale(${scale})
                 `;
                 layer.style.opacity = op;
@@ -1198,12 +1280,20 @@
             momentumRAF = null;
         }
 
-        // Disable CSS transitions during drag
+        // Stop idle animation completely during drag
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
+        // Reset container rotation to neutral
+        const container = document.getElementById('stack-container');
+        container.style.transform = '';
+        idleRotation = 0;
+
+        // Disable CSS transitions during drag for 60fps
         document.querySelectorAll('.ring-layer').forEach(l => {
             l.style.transition = 'none';
         });
-
-        resetIdleTimer();
     }
 
     function updateDrag(clientY) {
@@ -1290,6 +1380,8 @@
                 activeEpisode = keys[Math.max(0, Math.min(maxPos, target))];
                 updateLayout(false);
                 momentumRAF = null;
+                // Restart idle animation after settling
+                startIdleAnimation();
             } else {
                 momentumRAF = requestAnimationFrame(animate);
             }
@@ -1298,18 +1390,69 @@
         momentumRAF = requestAnimationFrame(animate);
     }
 
-    // Touch events
+    // Pinch gesture helpers
+    function getPinchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function switchViewMode(newMode) {
+        viewMode = newMode;
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + (newMode === 'flat' ? 'flat' : newMode)).classList.add('active');
+        updateLayout();
+    }
+
+    // Touch events - handle both scroll and pinch gestures
     vizContainer.addEventListener('touchstart', (e) => {
         if (e.target.closest('.arc')) return; // Don't interfere with node taps
-        startDrag(e.touches[0].clientY);
+
+        if (e.touches.length === 2) {
+            // Start pinch gesture
+            isPinching = true;
+            isDragging = false;
+            initialPinchDistance = getPinchDistance(e.touches);
+            pinchStartViewMode = viewMode;
+        } else if (e.touches.length === 1) {
+            startDrag(e.touches[0].clientY);
+        }
     }, { passive: true });
 
     vizContainer.addEventListener('touchmove', (e) => {
-        updateDrag(e.touches[0].clientY);
+        if (e.touches.length === 2 && isPinching) {
+            e.preventDefault();
+            const currentDistance = getPinchDistance(e.touches);
+            const pinchRatio = currentDistance / initialPinchDistance;
+
+            // Pinch out (spread) = Stack view, Pinch in = Focus view
+            if (pinchRatio > 1.3 && viewMode !== 'stack') {
+                switchViewMode('stack');
+                isPinching = false; // Done with gesture
+            } else if (pinchRatio < 0.7 && viewMode !== 'focus') {
+                switchViewMode('focus');
+                isPinching = false; // Done with gesture
+            }
+        } else if (isDragging && e.touches.length === 1) {
+            e.preventDefault(); // Stop browser scroll
+            updateDrag(e.touches[0].clientY);
+        }
+    }, { passive: false });
+
+    vizContainer.addEventListener('touchend', (e) => {
+        if (isPinching && e.touches.length < 2) {
+            isPinching = false;
+            initialPinchDistance = 0;
+        }
+        if (e.touches.length === 0) {
+            endDrag();
+        }
     }, { passive: true });
 
-    vizContainer.addEventListener('touchend', endDrag, { passive: true });
-    vizContainer.addEventListener('touchcancel', endDrag, { passive: true });
+    vizContainer.addEventListener('touchcancel', () => {
+        isPinching = false;
+        endDrag();
+    }, { passive: true });
 
     // Mouse events for desktop
     vizContainer.addEventListener('mousedown', (e) => {
