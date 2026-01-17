@@ -1,6 +1,10 @@
 oooOO`
 // HOBBO. Start the player at Bag End
 # BASEHREF: media/bagend/
+
+// Track troll status - "alive" or "stone"
+VAR troll_status = "alive"
+
 -> Bag_End
 
 
@@ -150,7 +154,7 @@ Your story as a burglar has only just begun...
 
 === Peaceful_Retirement ===
 
-IMAGE: hobbit_pantry.svg
+# IMAGE: hobbit_pantry.svg
 
 You decide that one adventure is quite enough for a respectable hobbit. You hide the troll treasure in your pantry and return to your quiet life of gardening and meals.
 
@@ -179,7 +183,9 @@ Gandalf looks at you with raised eyebrows. "We shall see..." He puffs thoughtful
     -> Bag_End
 
 === Talk_To_Thorin ===
-IMAGE: hobbit_pantry.svg
+
+# IMAGE: hobbit_pantry.svg
+
 "Hmm, burglar?" Thorin examines you skeptically. "You don't look like much of a thief to me."
 
 "I'm not a burglar!" you protest. "I'm a respectable hobbit!"
@@ -198,8 +204,5 @@ Thorin strokes his magnificent beard thoughtfully. "Perhaps... but Gandalf speak
     Thorin's eyes gleam. "The treasure of Erebor, stolen by the dragon Smaug. Gold beyond counting, and the Arkenstone - the Heart of the Mountain."
     Your own eyes widen despite yourself. That does sound rather exciting...
     -> Kitchen
-
-// Extra variables for tracking states
-VAR troll_status = "alive" // Changes to "stone" after dawn
 `
 
