@@ -32,22 +32,36 @@
         .stack-container {
             position: relative;
             width: 1100px;
-            height: 800px;
-            perspective: 1500px;
+            height: 900px;
+            perspective: 1200px;
+            perspective-origin: 50% 30%;
+            transform-style: preserve-3d;
         }
         .ring-layer {
             position: absolute;
             width: 600px;
             height: 600px;
-            transition: transform 0.5s ease, opacity 0.3s ease;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
             cursor: pointer;
+            animation: ringShimmer 4s ease-in-out infinite;
+            transform-style: preserve-3d;
+            backface-visibility: visible;
+        }
+        @keyframes ringShimmer {
+            0%, 100% { filter: brightness(1) drop-shadow(0 0 5px rgba(78, 204, 163, 0.2)); }
+            50% { filter: brightness(1.05) drop-shadow(0 0 15px rgba(78, 204, 163, 0.4)); }
+        }
+        .ring-layer.active {
+            z-index: 100;
+            animation: ringShimmerActive 2s ease-in-out infinite;
+        }
+        @keyframes ringShimmerActive {
+            0%, 100% { filter: brightness(1) drop-shadow(0 0 10px rgba(78, 204, 163, 0.4)); }
+            50% { filter: brightness(1.1) drop-shadow(0 0 25px rgba(78, 204, 163, 0.7)); }
         }
         .ring-layer svg {
             width: 100%;
             height: 100%;
-        }
-        .ring-layer.active {
-            z-index: 100;
         }
         .ring-layer.dimmed {
             opacity: 0.3;
@@ -140,21 +154,41 @@
         }
         .arc {
             cursor: pointer;
-            transition: opacity 0.3s, filter 0.3s;
+            transition: opacity 0.4s ease-out, filter 0.4s ease-out, transform 0.3s ease-out;
+            transform-origin: center;
+        }
+        .arc:hover {
+            filter: brightness(1.2);
         }
         .arc.dimmed {
-            opacity: 0.15;
+            opacity: 0.12;
+            filter: saturate(0.3);
         }
         .arc.selected {
-            filter: brightness(1.3) drop-shadow(0 0 8px currentColor);
+            filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
+            transform: scale(1.05);
+            animation: selectedPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes selectedPulse {
+            0%, 100% { filter: brightness(1.4) drop-shadow(0 0 12px currentColor); }
+            50% { filter: brightness(1.6) drop-shadow(0 0 20px currentColor); }
+        }
+        .arc.connected {
+            filter: brightness(1.15);
+            animation: connectedGlow 2s ease-in-out infinite;
+        }
+        @keyframes connectedGlow {
+            0%, 100% { filter: brightness(1.15); }
+            50% { filter: brightness(1.25) drop-shadow(0 0 6px currentColor); }
         }
         .arc.cross-highlight {
-            filter: brightness(1.5) drop-shadow(0 0 12px #ffc857);
-            animation: arcPulse 1.5s ease-in-out infinite;
+            filter: brightness(1.5) drop-shadow(0 0 15px #ffc857);
+            animation: arcPulse 0.8s ease-in-out infinite;
+            transform: scale(1.08);
         }
         @keyframes arcPulse {
-            0%, 100% { filter: brightness(1.3) drop-shadow(0 0 6px #ffc857); }
-            50% { filter: brightness(1.6) drop-shadow(0 0 15px #ffc857); }
+            0%, 100% { filter: brightness(1.4) drop-shadow(0 0 10px #ffc857); transform: scale(1.08); }
+            50% { filter: brightness(1.7) drop-shadow(0 0 25px #ffc857); transform: scale(1.12); }
         }
         .cylinder-hint {
             position: absolute;
@@ -183,15 +217,25 @@
         .flow-path {
             fill: none;
             stroke-linecap: round;
-            opacity: 0.35;
-            transition: opacity 0.3s, stroke-width 0.3s;
+            opacity: 0.7;
+            stroke-width: 2.5px;
+            stroke-dasharray: 8 4;
+            animation: flowDash 1s linear infinite;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+        @keyframes flowDash {
+            to { stroke-dashoffset: -12; }
         }
         .flow-path.dimmed {
-            opacity: 0.03;
+            opacity: 0.05;
+            animation: none;
         }
         .flow-path.active {
-            opacity: 0.9;
+            opacity: 1;
             stroke-width: 4px;
+            stroke-dasharray: 12 6;
+            animation: flowDash 0.5s linear infinite;
+            filter: drop-shadow(0 0 8px currentColor);
         }
         .click-hint {
             font-size: 11px;
@@ -220,6 +264,52 @@
             background: #4ecca3;
             color: #000;
             border-color: #4ecca3;
+        }
+        .advanced-panel {
+            display: none;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            animation: slideDown 0.3s ease-out;
+        }
+        .advanced-panel.visible {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #aaa;
+            cursor: pointer;
+        }
+        .filter-group label:hover {
+            color: #4ecca3;
+        }
+        .filter-group input[type="checkbox"] {
+            accent-color: #4ecca3;
+        }
+        .filter-group input[type="range"] {
+            width: 100px;
+            accent-color: #4ecca3;
+        }
+        #min-conn-val {
+            color: #4ecca3;
+            min-width: 20px;
+            text-align: center;
         }
         .cross-episode-hint {
             position: fixed;
@@ -252,6 +342,19 @@
         <button id="btn-stack" class="active">Stacked View</button>
         <button id="btn-flat">Flat View</button>
         <button id="btn-focus">Focus Mode</button>
+        <button id="btn-advanced">⚙️ Filters</button>
+    </div>
+
+    <div class="advanced-panel" id="advanced-panel">
+        <div class="filter-group">
+            <label><input type="checkbox" id="show-exits" checked> Show exits (dead ends)</label>
+            <label><input type="checkbox" id="show-entries" checked> Show entries (islands)</label>
+            <label><input type="checkbox" id="show-hubs" checked> Show hubs</label>
+            <label><input type="checkbox" id="show-flows" checked> Show flow paths</label>
+        </div>
+        <div class="filter-group">
+            <label>Min connections: <input type="range" id="min-connections" min="0" max="10" value="0"><span id="min-conn-val">0</span></label>
+        </div>
     </div>
 
     <div class="stack-container" id="stack-container">
@@ -464,12 +567,12 @@
             const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
             marker.setAttribute("id", `arrow-${episodeKey}-${type}`);
             marker.setAttribute("viewBox", "0 0 10 10");
-            marker.setAttribute("refX", "5");
+            marker.setAttribute("refX", "9");
             marker.setAttribute("refY", "5");
-            marker.setAttribute("markerWidth", "3");
-            marker.setAttribute("markerHeight", "3");
-            marker.setAttribute("orient", "auto-start-reverse");
-            marker.innerHTML = `<path d="M 0 0 L 10 5 L 0 10 z" fill="${colors.glow}" opacity="0.7"/>`;
+            marker.setAttribute("markerWidth", "6");
+            marker.setAttribute("markerHeight", "6");
+            marker.setAttribute("orient", "auto");
+            marker.innerHTML = `<path d="M 0 0 L 10 5 L 0 10 L 3 5 z" fill="${colors.glow}"/>`;
             defs.appendChild(marker);
         });
         svg.appendChild(defs);
@@ -655,33 +758,52 @@
         layers.forEach((layer, i) => {
             const key = layer.dataset.episode;
             const isActive = key === activeEpisode;
-            const distFromActive = Math.abs(i - activeIndex);
+            const distFromActive = i - activeIndex;
+            const absDistFromActive = Math.abs(distFromActive);
 
             layer.classList.toggle('active', isActive);
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                // Spiral stack - each ring offset slightly
-                const offset = (i - activeIndex) * 25;
-                const scale = isActive ? 1 : 0.9 - distFromActive * 0.04;
-                const zOffset = isActive ? 0 : -80 - distFromActive * 40;
-                const yOffset = 100 + i * 15;
-                layer.style.transform = `translateX(${250 + offset}px) translateY(${yOffset}px) translateZ(${zOffset}px) scale(${scale})`;
-                layer.style.zIndex = isActive ? 100 : 50 - distFromActive;
+                // 3D cylinder stack - rings tilted and stacked in depth
+                const baseX = 250;
+                const baseY = 150;
+                const tiltAngle = 65; // Tilt to show as cylinder
+                const ringSpacing = 60; // Vertical spacing between rings
+                const zSpacing = 80; // Depth spacing
+
+                // Position based on distance from active
+                const yPos = baseY + distFromActive * ringSpacing;
+                const zPos = -absDistFromActive * zSpacing;
+                const scale = isActive ? 1 : Math.max(0.6, 0.95 - absDistFromActive * 0.08);
+                const opacity = isActive ? 1 : Math.max(0.4, 1 - absDistFromActive * 0.15);
+
+                layer.style.transform = `
+                    translateX(${baseX}px)
+                    translateY(${yPos}px)
+                    translateZ(${zPos}px)
+                    rotateX(${tiltAngle}deg)
+                    scale(${scale})
+                `;
+                layer.style.opacity = opacity;
+                layer.style.zIndex = isActive ? 100 : 50 - absDistFromActive;
             } else if (viewMode === 'flat') {
                 // Grid layout - 3 columns for 9 episodes
                 const cols = 3;
                 const row = Math.floor(i / cols);
                 const col = i % cols;
                 const cardSize = 350;
-                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) scale(0.55)`;
+                layer.style.transform = `translateX(${col * cardSize}px) translateY(${row * cardSize}px) rotateX(0deg) scale(0.55)`;
+                layer.style.opacity = 1;
                 layer.style.zIndex = isActive ? 100 : 50;
             } else if (viewMode === 'focus') {
                 if (isActive) {
-                    layer.style.transform = 'translateX(250px) translateY(100px) scale(1)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(1)';
+                    layer.style.opacity = 1;
                     layer.style.zIndex = 100;
                 } else {
-                    layer.style.transform = 'translateX(250px) translateY(100px) scale(0.7)';
+                    layer.style.transform = 'translateX(250px) translateY(100px) rotateX(0deg) scale(0.7)';
+                    layer.style.opacity = 0.2;
                     layer.style.zIndex = 10;
                 }
             }
@@ -704,7 +826,7 @@
 
     function clearSelection() {
         document.querySelectorAll('.arc').forEach(el => {
-            el.classList.remove('dimmed', 'selected', 'cross-highlight');
+            el.classList.remove('dimmed', 'selected', 'connected', 'cross-highlight');
         });
         document.querySelectorAll('.node-label').forEach(el => {
             el.classList.remove('selected', 'connected', 'cross-highlight');
@@ -729,15 +851,26 @@
             }
         });
 
-        // Highlight in current episode
-        document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`).forEach(el => {
+        // Highlight in current episode with staggered animation
+        const arcs = document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`);
+        arcs.forEach((el, i) => {
             const n = el.dataset.node;
+            // Stagger the transitions for D3-like effect
+            el.style.transitionDelay = `${i * 15}ms`;
+
             if (n === node) {
                 el.classList.add('selected');
-            } else if (!connectedNodes.has(n)) {
+            } else if (connectedNodes.has(n)) {
+                el.classList.add('connected');
+            } else {
                 el.classList.add('dimmed');
             }
         });
+
+        // Reset delays after animation
+        setTimeout(() => {
+            arcs.forEach(el => el.style.transitionDelay = '0ms');
+        }, arcs.length * 15 + 400);
 
         document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .flow-path`).forEach(el => {
             if (el.dataset.from === node || el.dataset.to === node) {
@@ -813,6 +946,73 @@
             selectedNode = null;
             updateLayout();
         }
+    });
+
+    // Advanced filter panel
+    document.getElementById('btn-advanced').addEventListener('click', () => {
+        const panel = document.getElementById('advanced-panel');
+        panel.classList.toggle('visible');
+    });
+
+    // Filter controls
+    const filters = {
+        showExits: true,
+        showEntries: true,
+        showHubs: true,
+        showFlows: true,
+        minConnections: 0
+    };
+
+    function applyFilters() {
+        // Apply to all episodes
+        Object.keys(episodes).forEach(episodeKey => {
+            const episode = episodes[episodeKey];
+            const connectivity = {};
+            episode.edges.forEach(({from, to}) => {
+                connectivity[from] = (connectivity[from] || 0) + 1;
+                connectivity[to] = (connectivity[to] || 0) + 1;
+            });
+
+            document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .arc`).forEach(el => {
+                const node = el.dataset.node;
+                const conn = connectivity[node] || 0;
+                let visible = true;
+
+                if (!filters.showExits && episode.exits.has(node)) visible = false;
+                if (!filters.showEntries && episode.externalEntries.has(node)) visible = false;
+                if (!filters.showHubs && conn >= 6) visible = false;
+                if (conn < filters.minConnections) visible = false;
+
+                el.style.opacity = visible ? '' : '0.1';
+                el.style.pointerEvents = visible ? '' : 'none';
+            });
+
+            document.querySelectorAll(`.ring-layer[data-episode="${episodeKey}"] .flow-path`).forEach(el => {
+                el.style.display = filters.showFlows ? '' : 'none';
+            });
+        });
+    }
+
+    document.getElementById('show-exits').addEventListener('change', (e) => {
+        filters.showExits = e.target.checked;
+        applyFilters();
+    });
+    document.getElementById('show-entries').addEventListener('change', (e) => {
+        filters.showEntries = e.target.checked;
+        applyFilters();
+    });
+    document.getElementById('show-hubs').addEventListener('change', (e) => {
+        filters.showHubs = e.target.checked;
+        applyFilters();
+    });
+    document.getElementById('show-flows').addEventListener('change', (e) => {
+        filters.showFlows = e.target.checked;
+        applyFilters();
+    });
+    document.getElementById('min-connections').addEventListener('input', (e) => {
+        filters.minConnections = parseInt(e.target.value);
+        document.getElementById('min-conn-val').textContent = e.target.value;
+        applyFilters();
     });
 
     // Initialize
