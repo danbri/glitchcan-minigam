@@ -226,7 +226,57 @@ window.FinkUI = {
     clearChoices() {
         this.elements.choicesContainer.innerHTML = '';
     },
-    
+
+    // Populate dynamic menu from MENU: tags
+    populateDynamicMenu(menuItems) {
+        const dynamicSection = document.getElementById('dynamic-menu-section');
+        if (!dynamicSection) return;
+
+        // Clear existing dynamic items (keep the header)
+        const header = dynamicSection.querySelector('.dropdown-header');
+        dynamicSection.innerHTML = '';
+        if (header) dynamicSection.appendChild(header);
+
+        if (!menuItems || menuItems.length === 0) {
+            dynamicSection.style.display = 'none';
+            return;
+        }
+
+        // Add header if it was removed
+        if (!dynamicSection.querySelector('.dropdown-header')) {
+            const newHeader = document.createElement('div');
+            newHeader.className = 'dropdown-header';
+            newHeader.textContent = 'Navigation';
+            dynamicSection.appendChild(newHeader);
+        }
+
+        // Add menu items
+        menuItems.forEach(item => {
+            const button = document.createElement('button');
+            button.className = 'dropdown-item';
+            button.textContent = item.label;
+            button.addEventListener('click', () => {
+                FinkUtils.debugLog('Menu item clicked: ' + item.label + ' -> ' + item.target);
+                // Navigate to the target knot
+                if (FinkInkEngine.story) {
+                    try {
+                        FinkInkEngine.story.ChoosePathString(item.target);
+                        FinkUI.clearStory();
+                        FinkUI.clearChoices();
+                        FinkInkEngine.continueStory();
+                    } catch (error) {
+                        FinkUtils.debugLog('Error navigating to ' + item.target + ': ' + error.message);
+                        FinkUI.showStatus('Navigation error');
+                    }
+                }
+            });
+            dynamicSection.appendChild(button);
+        });
+
+        dynamicSection.style.display = 'block';
+        FinkUtils.debugLog('Populated dynamic menu with ' + menuItems.length + ' items');
+    },
+
     // Image and media handling
     updateImageFromINKTags(story) {
         if (!story) return;

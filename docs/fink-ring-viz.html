@@ -1849,10 +1849,13 @@
     const episodeFinkFiles = {
         'hampstead': '../inklet/hampstead.fink.js',
         'bagend': '../inklet/bagend.fink.js',
+        'bagend2': '../inklet/bagend2.fink.js',
         'mudslidemines': '../inklet/mudslidemines.fink.js',
         'riverbend': '../inklet/riverbend.fink.js',
         'shane-manor': '../inklet/shane-manor.fink.js',
-        'tml-2025-langlearn': '../inklet/tml-2025-langlearn.fink.js'
+        'tml-2025-langlearn': '../inklet/tml-2025-langlearn.fink.js',
+        'maple-hollow': '../cozyverse/maple-hollow.fink.js',
+        'toc': '../inklet/toc.fink.js'
     };
 
     function enterImmersiveMode() {
@@ -1897,6 +1900,99 @@
         document.getElementById('knowledge-card').classList.remove('expanded');
     }
 
+    // Load FINK content via secure sandbox iframe (no regex hackparsing!)
+    function loadFinkViaSandbox(url) {
+        return new Promise(async (resolve, reject) => {
+            // Step 1: Fetch script content in parent (has same-origin access)
+            let scriptContent;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                scriptContent = await response.text();
+            } catch (fetchError) {
+                reject(new Error('Failed to fetch FINK file: ' + fetchError.message));
+                return;
+            }
+
+            // Step 2: Send content to sandbox for safe execution
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('sandbox', 'allow-scripts');
+            iframe.style.display = 'none';
+
+            const timeoutId = setTimeout(() => {
+                window.removeEventListener('message', messageHandler);
+                iframe.remove();
+                reject(new Error('Sandbox timeout'));
+            }, 10000);
+
+            const messageHandler = (event) => {
+                if (event.source !== iframe.contentWindow) return;
+                const data = event.data;
+                if (!data || !data.type) return;
+
+                switch (data.type) {
+                    case 'sandbox-ready':
+                        iframe.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
+                        break;
+
+                    case 'fink-loaded':
+                        clearTimeout(timeoutId);
+                        window.removeEventListener('message', messageHandler);
+                        iframe.remove();
+                        if (data.data && data.data.length > 0) {
+                            const uniqueData = [...new Set(data.data)];
+                            resolve(uniqueData.join('\n'));
+                        } else {
+                            reject(new Error('No FINK content found in file'));
+                        }
+                        break;
+
+                    case 'fink-error':
+                        clearTimeout(timeoutId);
+                        window.removeEventListener('message', messageHandler);
+                        iframe.remove();
+                        reject(new Error(data.error || 'Unknown error in sandbox'));
+                        break;
+                }
+            };
+
+            window.addEventListener('message', messageHandler);
+
+            // Sandbox HTML that provides oooOO function and executes content
+            const sandboxHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head><body><script>
+window.finkData = [];
+function oooOO(strings) {
+    try {
+        const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
+            ? strings.raw.join('')
+            : String(strings);
+        window.finkData.push(content);
+        return content;
+    } catch (e) { return ''; }
+}
+setTimeout(() => parent.postMessage({ type: 'sandbox-ready' }, '*'), 50);
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'exec-script') {
+        try {
+            (new Function(event.data.content))();
+            const dataStrings = window.finkData.map(item => typeof item === 'string' ? item : String(item))
+                .filter(item => item && item.trim().length > 0);
+            parent.postMessage({ type: 'fink-loaded', data: dataStrings }, '*');
+        } catch (e) {
+            parent.postMessage({ type: 'fink-error', error: e.message }, '*');
+        }
+    }
+});
+<\/script></body></html>`;
+
+            iframe.srcdoc = sandboxHtml;
+            document.body.appendChild(iframe);
+        });
+    }
+
     // Load FINK story for an episode
     async function loadEpisodeStory(episodeKey) {
         const finkPath = episodeFinkFiles[episodeKey];
@@ -1917,17 +2013,8 @@
         document.getElementById('knowledge-choices').innerHTML = '';
 
         try {
-            // Fetch the FINK file
-            const response = await fetch(finkPath);
-            const finkContent = await response.text();
-
-            // Extract INK content from the oooOO template literal
-            const inkMatch = finkContent.match(/oooOO\s*`([\s\S]*?)`/);
-            if (!inkMatch) {
-                throw new Error('Could not extract INK content from FINK file');
-            }
-
-            const inkContent = inkMatch[1];
+            // Load FINK via secure sandbox (proper oooOO execution, no regex!)
+            const inkContent = await loadFinkViaSandbox(finkPath);
 
             // Compile with inkjs
             const story = new inkjs.Compiler(inkContent).Compile();
