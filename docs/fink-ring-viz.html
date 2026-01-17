@@ -499,7 +499,7 @@
     <div class="viz-container">
         <div class="stack-container" id="stack-container"></div>
         <div class="cross-beam" id="cross-beam"></div>
-        <div class="swipe-hint" id="swipe-hint">Swipe up/down to browse episodes</div>
+        <div class="swipe-hint" id="swipe-hint">Drag to spin • Flick for momentum</div>
     </div>
 
     <div class="tooltip" id="tooltip">
@@ -529,6 +529,23 @@
     let viewMode = 'stack';
     let idleTimer = null;
     let idleRotation = 0;
+
+    // Carousel physics state
+    let scrollPosition = 0;      // Continuous position (0 = first episode)
+    let scrollVelocity = 0;      // Current velocity
+    let isDragging = false;
+    let dragStartY = 0;
+    let dragStartPosition = 0;
+    let lastDragY = 0;
+    let lastDragTime = 0;
+    let momentumRAF = null;
+
+    // Physics constants
+    const DRAG_SENSITIVITY = 0.008;  // How much drag moves the carousel
+    const FRICTION = 0.92;           // Velocity decay per frame
+    const SNAP_STRENGTH = 0.15;      // How strongly it snaps to nearest
+    const MIN_VELOCITY = 0.001;      // Stop threshold
+    const VELOCITY_SCALE = 0.3;      // Scale touch velocity to scroll velocity
 
     const colorPalette = [
         '#4ecca3', '#7b68ee', '#f472b6', '#60a5fa', '#fbbf24',
@@ -613,6 +630,8 @@
 
             const keys = Object.keys(episodes);
             activeEpisode = keys.includes('hampstead') ? 'hampstead' : keys[0];
+            // Initialize scroll position to match active episode
+            scrollPosition = keys.indexOf(activeEpisode);
 
             const totalKnots = Object.values(episodes).reduce((s, e) => s + e.nodeOrder.length, 0);
             document.getElementById('stats').textContent = `${keys.length} episodes • ${totalKnots} knots`;
@@ -816,33 +835,43 @@
         updateLayout();
     }
 
-    function updateLayout() {
+    function updateLayout(useScrollPosition = false) {
         const layers = document.querySelectorAll('.ring-layer');
         const keys = Array.from(layers).map(l => l.dataset.episode);
         const activeIdx = keys.indexOf(activeEpisode);
 
+        // Use continuous scroll position for smooth animation, or snap to active
+        const centerPos = useScrollPosition ? scrollPosition : activeIdx;
+
         layers.forEach((layer, i) => {
             const isActive = layer.dataset.episode === activeEpisode;
-            const dist = i - activeIdx;
+            // Continuous distance from center for smooth scrolling
+            const dist = i - centerPos;
             const absDist = Math.abs(dist);
 
-            layer.classList.toggle('active', isActive);
+            layer.classList.toggle('active', isActive && !isDragging);
             layer.classList.toggle('dimmed', !isActive && viewMode === 'focus');
 
             if (viewMode === 'stack') {
-                const y = dist * 50;
-                const z = -absDist * 60;
-                const scale = isActive ? 1 : Math.max(0.65, 0.92 - absDist * 0.08);
-                const op = isActive ? 1 : Math.max(0.35, 0.9 - absDist * 0.15);
+                // Smooth continuous positioning
+                const y = dist * 55;
+                const z = -absDist * 50 - (absDist * absDist * 5); // Quadratic depth for drama
+                const scale = Math.max(0.5, 1 - absDist * 0.12);
+                const op = Math.max(0.2, 1 - absDist * 0.2);
+
+                // Add slight rotation based on position for 3D feel
+                const rotY = dist * 3;
 
                 layer.style.transform = `
                     translateY(${y}px)
                     translateZ(${z}px)
                     rotateX(60deg)
+                    rotateY(${rotY}deg)
                     scale(${scale})
                 `;
                 layer.style.opacity = op;
-                layer.style.zIndex = isActive ? 100 : 50 - absDist;
+                // Z-index based on distance from center
+                layer.style.zIndex = Math.round(100 - absDist * 10);
             } else if (viewMode === 'flat') {
                 const cols = Math.min(3, keys.length);
                 const row = Math.floor(i / cols);
@@ -855,20 +884,23 @@
                     translateX(${col * (w + gap) + gap - 50 + w/2}vw)
                     translateY(${row * (h + gap) - 50 + h/2}vh)
                     rotateX(0deg)
+                    rotateY(0deg)
                     scale(0.45)
                 `;
                 layer.style.opacity = 1;
                 layer.style.zIndex = isActive ? 100 : 50;
             } else if (viewMode === 'focus') {
                 layer.style.transform = isActive
-                    ? 'translateY(0) translateZ(0) rotateX(0deg) scale(0.9)'
-                    : 'translateY(0) translateZ(-100px) rotateX(0deg) scale(0.6)';
+                    ? 'translateY(0) translateZ(0) rotateX(0deg) rotateY(0deg) scale(0.9)'
+                    : 'translateY(0) translateZ(-100px) rotateX(0deg) rotateY(0deg) scale(0.6)';
                 layer.style.opacity = isActive ? 1 : 0.15;
                 layer.style.zIndex = isActive ? 100 : 10;
             }
         });
 
-        updateHash();
+        if (!useScrollPosition) {
+            updateHash();
+        }
     }
 
     function handleNodeClick(episodeKey, node) {
@@ -1035,12 +1067,17 @@
     function navigateEpisode(delta) {
         const keys = Object.keys(episodes);
         const idx = keys.indexOf(activeEpisode);
-        const newIdx = (idx + delta + keys.length) % keys.length;
-        activeEpisode = keys[newIdx];
+        const newIdx = Math.max(0, Math.min(keys.length - 1, idx + delta));
+
+        // Use momentum physics for smooth navigation
+        scrollVelocity = delta * 0.8; // Give it a push
+        if (!momentumRAF) {
+            startMomentum();
+        }
+
         clearSelection();
         closeTooltip();
         selectedNode = null;
-        updateLayout();
         resetIdleTimer();
     }
 
@@ -1113,6 +1150,8 @@
         const [ep, node] = hash.split('/');
         if (episodes[ep]) {
             activeEpisode = ep;
+            const keys = Object.keys(episodes);
+            scrollPosition = keys.indexOf(ep);
             updateLayout();
             if (node && episodes[ep].nodeOrder.includes(node)) {
                 setTimeout(() => handleNodeClick(ep, node), 400);
@@ -1140,21 +1179,166 @@
         }, 50);
     }
 
-    // Touch gestures
-    let touchStartY = 0;
+    // Momentum carousel physics
     const vizContainer = document.querySelector('.viz-container');
 
-    vizContainer.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
+    function startDrag(clientY) {
+        if (viewMode !== 'stack') return;
+
+        isDragging = true;
+        dragStartY = clientY;
+        dragStartPosition = scrollPosition;
+        lastDragY = clientY;
+        lastDragTime = performance.now();
+        scrollVelocity = 0;
+
+        // Stop any ongoing momentum
+        if (momentumRAF) {
+            cancelAnimationFrame(momentumRAF);
+            momentumRAF = null;
+        }
+
+        // Disable CSS transitions during drag
+        document.querySelectorAll('.ring-layer').forEach(l => {
+            l.style.transition = 'none';
+        });
+
         resetIdleTimer();
+    }
+
+    function updateDrag(clientY) {
+        if (!isDragging || viewMode !== 'stack') return;
+
+        const now = performance.now();
+        const deltaY = lastDragY - clientY;
+        const deltaTime = now - lastDragTime;
+
+        // Calculate velocity (pixels per ms)
+        if (deltaTime > 0) {
+            const instantVelocity = deltaY / deltaTime;
+            // Smooth velocity with exponential moving average
+            scrollVelocity = scrollVelocity * 0.7 + instantVelocity * VELOCITY_SCALE * 0.3;
+        }
+
+        // Update position
+        const totalDelta = dragStartY - clientY;
+        const keys = Object.keys(episodes);
+        scrollPosition = dragStartPosition + totalDelta * DRAG_SENSITIVITY;
+
+        // Rubber band at edges
+        if (scrollPosition < 0) {
+            scrollPosition = scrollPosition * 0.3;
+        } else if (scrollPosition > keys.length - 1) {
+            scrollPosition = keys.length - 1 + (scrollPosition - (keys.length - 1)) * 0.3;
+        }
+
+        lastDragY = clientY;
+        lastDragTime = now;
+
+        updateLayout(true);
+    }
+
+    function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // Re-enable CSS transitions
+        document.querySelectorAll('.ring-layer').forEach(l => {
+            l.style.transition = '';
+        });
+
+        // Start momentum animation
+        startMomentum();
+    }
+
+    function startMomentum() {
+        const keys = Object.keys(episodes);
+        const maxPos = keys.length - 1;
+
+        function animate() {
+            // Apply friction
+            scrollVelocity *= FRICTION;
+
+            // Calculate target (nearest integer position)
+            const target = Math.round(scrollPosition);
+
+            // Add snap force toward target
+            const snapForce = (target - scrollPosition) * SNAP_STRENGTH;
+            scrollVelocity += snapForce * 0.1;
+
+            // Update position
+            scrollPosition += scrollVelocity;
+
+            // Hard clamp at edges with bounce
+            if (scrollPosition < 0) {
+                scrollPosition = 0;
+                scrollVelocity = Math.abs(scrollVelocity) * 0.3;
+            } else if (scrollPosition > maxPos) {
+                scrollPosition = maxPos;
+                scrollVelocity = -Math.abs(scrollVelocity) * 0.3;
+            }
+
+            updateLayout(true);
+
+            // Check if we should stop
+            const atRest = Math.abs(scrollVelocity) < MIN_VELOCITY &&
+                          Math.abs(scrollPosition - target) < 0.01;
+
+            if (atRest) {
+                // Snap to final position
+                scrollPosition = target;
+                activeEpisode = keys[Math.max(0, Math.min(maxPos, target))];
+                updateLayout(false);
+                momentumRAF = null;
+            } else {
+                momentumRAF = requestAnimationFrame(animate);
+            }
+        }
+
+        momentumRAF = requestAnimationFrame(animate);
+    }
+
+    // Touch events
+    vizContainer.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.arc')) return; // Don't interfere with node taps
+        startDrag(e.touches[0].clientY);
     }, { passive: true });
 
-    vizContainer.addEventListener('touchend', (e) => {
-        const deltaY = touchStartY - e.changedTouches[0].clientY;
-        if (Math.abs(deltaY) > 50) {
-            navigateEpisode(deltaY > 0 ? 1 : -1);
-        }
+    vizContainer.addEventListener('touchmove', (e) => {
+        updateDrag(e.touches[0].clientY);
     }, { passive: true });
+
+    vizContainer.addEventListener('touchend', endDrag, { passive: true });
+    vizContainer.addEventListener('touchcancel', endDrag, { passive: true });
+
+    // Mouse events for desktop
+    vizContainer.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.arc')) return;
+        startDrag(e.clientY);
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            updateDrag(e.clientY);
+        }
+    });
+
+    document.addEventListener('mouseup', endDrag);
+
+    // Wheel support
+    vizContainer.addEventListener('wheel', (e) => {
+        if (viewMode !== 'stack') return;
+        e.preventDefault();
+
+        scrollVelocity += e.deltaY * 0.002;
+
+        if (!momentumRAF) {
+            startMomentum();
+        }
+
+        resetIdleTimer();
+    }, { passive: false });
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
