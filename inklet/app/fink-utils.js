@@ -31,12 +31,43 @@ window.FinkUtils = {
         if (!this.debugConsole) {
             this.debugConsole = document.getElementById('debug-console');
         }
-        
+
+        const toggleBtn = document.getElementById('debug-toggle');
+
         if (this.debugConsole) {
             this.debugConsole.classList.toggle('active');
+            if (toggleBtn) {
+                toggleBtn.classList.toggle('active', this.debugConsole.classList.contains('active'));
+            }
             if (this.debugConsole.classList.contains('active')) {
                 this.updateDebugDisplay();
             }
+        }
+    },
+
+    copyDebugLog() {
+        const logText = this.debugMessages.join('\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(logText).then(() => {
+                this.debugLog('Debug log copied to clipboard');
+            }).catch(err => {
+                this.debugLog('Failed to copy: ' + err.message);
+            });
+        } else {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = logText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                this.debugLog('Debug log copied to clipboard');
+            } catch (err) {
+                this.debugLog('Failed to copy: ' + err.message);
+            }
+            document.body.removeChild(textarea);
         }
     },
     
