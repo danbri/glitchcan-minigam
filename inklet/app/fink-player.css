@@ -30,6 +30,8 @@ body, html {
     color: var(--text);
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 .app-container {
@@ -38,6 +40,8 @@ body, html {
     height: 100vh;
     position: relative;
     overflow: hidden;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior: contain;
 }
 
 .title-bar {
