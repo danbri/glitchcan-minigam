@@ -107,12 +107,17 @@ window.FinkInkEngine = {
                 }
                 
                 if (this.currentStoryTags.basehref) {
-                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ? 
-                                               this.currentStoryTags.basehref : 
+                    FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ?
+                                               this.currentStoryTags.basehref :
                                                this.currentStoryTags.basehref + '/';
                     FinkUtils.debugLog('Using BASEHREF from story: ' + FinkPlayer.mediaBasePath);
                 }
-                
+
+                // Populate dynamic menu from MENU: tags
+                if (this.currentStoryTags.menu && this.currentStoryTags.menu.length > 0) {
+                    FinkUI.populateDynamicMenu(this.currentStoryTags.menu);
+                }
+
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
                 this.continueStory();
