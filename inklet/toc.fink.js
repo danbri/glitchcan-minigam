@@ -71,6 +71,7 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 
 === load_bagend ===
 # FINK: bagend.fink.js
+Loading Bag End...
 -> external_story
 
 
@@ -87,6 +88,7 @@ The improved Hobbit adventure with proper inventory tracking, conversation gatin
 
 === load_bagend2 ===
 # FINK: bagend2.fink.js
+Loading Bag End v2...
 -> external_story
 
 === diamond_cave_selected ===
@@ -101,6 +103,7 @@ Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and esca
 
 === load_diamond_cave ===
 # FINK: demos/diamond-cave.fink.js
+Loading Diamond Cave...
 -> external_story
 
 
@@ -116,6 +119,7 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 
 === load_hampstead ===
 # FINK: hampstead.fink.js
+Loading Hampstead...
 -> external_story
 
 === mudslidemines_selected ===
@@ -128,6 +132,7 @@ Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer
 
 === load_mudslidemines ===
 # FINK: mudslidemines.fink.js
+Loading Mudslide Mines...
 -> external_story
 
 === riverbend_selected ===
@@ -142,6 +147,7 @@ Discover the secrets of a chocolate-box-perfect village where greed and jealousy
 
 === load_riverbend ===
 # FINK: riverbend.fink.js
+Loading Riverbend...
 -> external_story
 
 === maple_hollow_selected ===
@@ -156,6 +162,7 @@ A cozy interactive romance with YouTube mood clips. Return to a snow-covered hom
 
 === load_maple_hollow ===
 # FINK: ../../cozyverse/maple-hollow.fink.js
+Loading Maple Hollow...
 -> external_story
 
 === ukrainian_selected ===
@@ -170,6 +177,7 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons an
 
 === load_ukrainian ===
 # FINK: tml-2025-langlearn.fink.js
+Loading Ukrainian...
 -> external_story
 
 === dev_guide_selected ===
@@ -192,6 +200,7 @@ A test story for debugging and demonstrating FINK functionality. This is primari
 
 === load_shane_manor ===
 # FINK: shane-manor.fink.js
+Loading Shane Manor...
 -> external_story
 
 === experiments_selected ===

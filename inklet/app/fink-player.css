@@ -29,7 +29,7 @@ body, html {
     background-color: var(--background);
     color: var(--text);
     overflow: hidden;
-    touch-action: none;
+    /* Removed touch-action: none - was blocking all touch scrolling */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
 }
@@ -40,7 +40,7 @@ body, html {
     height: 100vh;
     position: relative;
     overflow: hidden;
-    touch-action: pan-y pinch-zoom;
+    touch-action: manipulation;
     overscroll-behavior: contain;
 }
 
@@ -103,6 +103,8 @@ body, html {
     min-width: 200px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
@@ -352,6 +354,8 @@ body, html {
     padding: 20px 24px;
     max-height: 40vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     z-index: 3;
     background: linear-gradient(to top, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85), transparent);
     transition: all 0.3s ease;
