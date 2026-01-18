@@ -47,12 +47,15 @@ window.FinkSandbox = {
                     return;
                 }
 
-                if (event.source !== iframe.contentWindow) {
+                // NOTE: Removed strict event.source check - sandboxed iframes have
+                // restricted contentWindow comparison. Use type-based filtering instead.
+                const data = event.data;
+                if (!data || !data.type) {
                     return;
                 }
 
-                const data = event.data;
-                if (!data || !data.type) {
+                // Only process our known message types
+                if (!['sandbox-ready', 'fink-loaded', 'fink-error'].includes(data.type)) {
                     return;
                 }
 
@@ -68,8 +71,8 @@ window.FinkSandbox = {
                         FinkUtils.debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
                         clearTimeout(this.sandboxTimeout);
                         if (data.data && data.data.length > 0) {
-                            const uniqueData = [...new Set(data.data)];
-                            const finkContent = uniqueData.join('\n');
+                            // Use only the first oooOO block (matches working hamfink2026 behavior)
+                            const finkContent = data.data[0];
                             FinkUtils.debugLog('FINK story loaded: ' + finkContent.length + ' characters');
                             resolve(finkContent);
                         } else {
@@ -112,9 +115,8 @@ function oooOO(strings) {
     }
 }
 
-setTimeout(function() {
-    parent.postMessage({ type: 'sandbox-ready' }, '*');
-}, 100);
+// Post sandbox-ready immediately (no delay - matches working hamfink2026)
+parent.postMessage({ type: 'sandbox-ready' }, '*');
 
 window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'exec-script') {
