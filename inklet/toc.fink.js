@@ -60,6 +60,7 @@ This is where things might be documented, eventually.
 + [Experiments] -> experiments_selected
 
 === hobbit_selected ===
+# FINK: bagend.fink.js
 
 Bag End
 
@@ -67,16 +68,10 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 
 # IMAGE: coverart/bagend_splash_imag_9453.jpeg
 
-+ [enter Bag End] -> load_bagend
-
-=== load_bagend ===
-# FINK: bagend.fink.js
-Loading Bag End...
--> external_story
-
-
++ [enter Bag End] -> external_story
 
 === bagend2_selected ===
+# FINK: bagend2.fink.js
 
 Bag End v2 (Enhanced)
 
@@ -84,14 +79,10 @@ The improved Hobbit adventure with proper inventory tracking, conversation gatin
 
 # IMAGE: coverart/bagend_splash_imag_9453.jpeg
 
-+ [enter Bag End v2] -> load_bagend2
-
-=== load_bagend2 ===
-# FINK: bagend2.fink.js
-Loading Bag End v2...
--> external_story
++ [enter Bag End v2] -> external_story
 
 === diamond_cave_selected ===
+# FINK: demos/diamond-cave.fink.js
 
 Diamond Cave
 
@@ -99,15 +90,10 @@ Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and esca
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
-+ [enter Diamond Cave] -> load_diamond_cave
-
-=== load_diamond_cave ===
-# FINK: demos/diamond-cave.fink.js
-Loading Diamond Cave...
--> external_story
-
++ [enter Diamond Cave] -> external_story
 
 === hampstead_selected ===
+# FINK: hampstead.fink.js
 
 Hampstead
 
@@ -115,27 +101,19 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 
 # IMAGE: coverart/hamstead_img_9432.jpeg
 
-+ [enter Hampstead] -> load_hampstead
-
-=== load_hampstead ===
-# FINK: hampstead.fink.js
-Loading Hampstead...
--> external_story
++ [enter Hampstead] -> external_story
 
 === mudslidemines_selected ===
+# FINK: mudslidemines.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
 Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only.
 
-+ [enter Mudslide Mines] -> load_mudslidemines
-
-=== load_mudslidemines ===
-# FINK: mudslidemines.fink.js
-Loading Mudslide Mines...
--> external_story
++ [enter Mudslide Mines] -> external_story
 
 === riverbend_selected ===
+# FINK: riverbend.fink.js
 
 # IMAGE: riverbend/village_overview.png
 
@@ -143,14 +121,10 @@ Riverbend - Village Mystery
 
 Discover the secrets of a chocolate-box-perfect village where greed and jealousy bind neighbours together in a conspiracy of silence.
 
-+ [Enter Riverbend] -> load_riverbend
-
-=== load_riverbend ===
-# FINK: riverbend.fink.js
-Loading Riverbend...
--> external_story
++ [Enter Riverbend] -> external_story
 
 === maple_hollow_selected ===
+# FINK: ../../cozyverse/maple-hollow.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
@@ -158,14 +132,10 @@ Maple Hollow: Aslan Rising
 
 A cozy interactive romance with YouTube mood clips. Return to a snow-covered hometown, reconnect with old flames, and find your way home. Warmth points track your journey.
 
-+ [Enter Maple Hollow] -> load_maple_hollow
-
-=== load_maple_hollow ===
-# FINK: ../../cozyverse/maple-hollow.fink.js
-Loading Maple Hollow...
--> external_story
++ [Enter Maple Hollow] -> external_story
 
 === ukrainian_selected ===
+# FINK: tml-2025-langlearn.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
@@ -173,12 +143,7 @@ Ukrainian Language Learning
 
 Learn Ukrainian food vocabulary and basic grammar through interactive lessons and practice exercises. Proof of concept.
 
-+ [Enter Language demo] -> load_ukrainian
-
-=== load_ukrainian ===
-# FINK: tml-2025-langlearn.fink.js
-Loading Ukrainian...
--> external_story
++ [Enter Language demo] -> external_story
 
 === dev_guide_selected ===
 
@@ -189,6 +154,7 @@ FINK Developer Guide
 Does not exist.
 
 === shane_manor_selected ===
+# FINK: shane-manor.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
@@ -196,12 +162,7 @@ Shane Manor Mystery
 
 A test story for debugging and demonstrating FINK functionality. This is primarily for development testing.
 
-+ [Enter Shane Manor] -> load_shane_manor
-
-=== load_shane_manor ===
-# FINK: shane-manor.fink.js
-Loading Shane Manor...
--> external_story
++ [Enter Shane Manor] -> external_story
 
 === experiments_selected ===
 
