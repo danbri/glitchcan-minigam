@@ -104,30 +104,21 @@ window.FinkSandbox = {
 window.finkData = [];
 
 function oooOO(strings) {
-    try {
-        const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
-            ? strings.raw.join('')
-            : String(strings);
-        window.finkData.push(content);
-        return content;
-    } catch (e) {
-        return '';
-    }
+    const content = (typeof strings === 'object' && strings.raw)
+        ? strings.raw.join('')
+        : String(strings);
+    window.finkData.push(content);
+    return content;
 }
 
 // Set up message listener FIRST (before posting sandbox-ready)
-window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'exec-script') {
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'exec-script') {
         try {
-            (new Function(event.data.content))();
-            const dataStrings = window.finkData.map(function(item) {
-                return typeof item === 'string' ? item : String(item);
-            }).filter(function(item) {
-                return item && item.trim().length > 0;
-            });
-            parent.postMessage({ type: 'fink-loaded', data: dataStrings }, '*');
-        } catch (e) {
-            parent.postMessage({ type: 'fink-error', error: 'Execution error: ' + e.message }, '*');
+            (new Function(e.data.content))();
+            parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
+        } catch (err) {
+            parent.postMessage({ type: 'fink-error', error: 'Execution error: ' + err.message }, '*');
         }
     }
 });
