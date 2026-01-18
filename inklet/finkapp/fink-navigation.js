@@ -210,6 +210,26 @@ window.FinkNavigation = {
         return this.knotIdMap.get(fragmentId) || null;
     },
 
+    // Get FINK file path from URL hash (for direct linking to .fink.js files)
+    // Supports: #story=bagend.fink.js or #bagend.fink.js patterns
+    getFinkFromHash() {
+        const hash = window.location.hash.slice(1);
+        if (!hash) return null;
+
+        // Check for explicit story= parameter
+        const storyMatch = hash.match(/story=([^&]+)/);
+        if (storyMatch) {
+            return decodeURIComponent(storyMatch[1]);
+        }
+
+        // Check if hash is directly a .fink.js path
+        if (hash.endsWith('.fink.js')) {
+            return decodeURIComponent(hash);
+        }
+
+        return null;
+    },
+
     // Get navigation entries (modern Navigation API)
     getNavigationEntries() {
         if (this.usingNavigationAPI && navigation.entries) {

@@ -33,6 +33,14 @@ window.FinkSandbox = {
 
             this.activeSandbox = iframe;
 
+            // Start initial timeout for sandbox setup (in case sandbox-ready never arrives)
+            let initialTimeout = setTimeout(() => {
+                FinkUtils.debugLog('Sandbox setup timeout - sandbox-ready never received');
+                this.cleanupSandbox();
+                window.removeEventListener('message', messageHandler);
+                reject(new Error('Sandbox setup timeout - iframe may have failed to initialize'));
+            }, 5000);
+
             const messageHandler = (event) => {
                 // Filter out extension messages
                 if (event.data && event.data.source === 'react-devtools-content-script') {
@@ -51,6 +59,7 @@ window.FinkSandbox = {
                 switch (data.type) {
                     case 'sandbox-ready':
                         FinkUtils.debugLog('Sandbox ready, sending script content');
+                        clearTimeout(initialTimeout);  // Clear initial timeout
                         this.startSandboxTimeout(reject);
                         iframe.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
                         break;
