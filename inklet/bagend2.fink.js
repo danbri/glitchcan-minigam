@@ -211,6 +211,11 @@ Sometimes, on clear evenings, you look toward the mountains and wonder what migh
 
 # IMAGE: gandalf_at_door.svg
 "My dear Bilbo," says Gandalf, "I am looking for someone to share in an adventure."
+
+"No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today."
+
+Gandalf looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door.
+
 + {not talked_to_gandalf} [Ask about the mark on the door]
     "Oh, that's just a burglar mark," Gandalf says casually. "It means this is a good house to burgle."
     "BURGLE?!" you splutter. "I'll have you know this is a respectable household!"
