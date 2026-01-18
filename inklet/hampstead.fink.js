@@ -136,12 +136,11 @@ Queues coil like serpents.
 === giro_fraud_video ===
 #BG:#200
 # CLASS: danger
-# BASEHREF: media/
 The clerk's eyes narrow. "You've already cashed this one, haven't you?"
 
 Before you can protest, a TV on the wall flickers to life...
 
-# VIDEO: d94a6357-1549-44a1-9173-ce2a9a51d556.mp4
+# VIDEO: ../media/d94a6357-1549-44a1-9173-ce2a9a51d556.mp4
 
 *ATTENTION: Benefits fraud is a serious offence. This interaction has been logged.*
 
