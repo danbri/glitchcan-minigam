@@ -87,8 +87,20 @@ window.FinkNavigation = {
         if (!story || !story.mainContentContainer || !story.mainContentContainer.namedContent) {
             return [];
         }
-        return Object.keys(story.mainContentContainer.namedContent)
-            .filter(name => this.isPublicKnot(name));
+
+        const namedContent = story.mainContentContainer.namedContent;
+        let knotNames;
+
+        // inkjs 2.x uses Map for namedContent, older versions use plain object
+        if (namedContent instanceof Map) {
+            knotNames = Array.from(namedContent.keys());
+        } else if (typeof namedContent === 'object') {
+            knotNames = Object.keys(namedContent);
+        } else {
+            return [];
+        }
+
+        return knotNames.filter(name => this.isPublicKnot(name));
     },
 
     // Build the knot ID map for a loaded story
