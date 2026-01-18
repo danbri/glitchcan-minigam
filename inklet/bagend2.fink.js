@@ -210,9 +210,7 @@ The cool water envelops you. For a moment you cannot breathe, cannot think—
 
 Then you surface in a place between all places.
 
-# FINK: hampstead.fink.js
-Loading external story...
-
+# FINK: world-between-worlds.fink.js
 -> END
 
 == Peaceful_Retirement ==
