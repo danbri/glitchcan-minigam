@@ -512,6 +512,7 @@ window.FinkUI = {
     touchStartX: 0,
     choiceIndex: -1,
     touchStartTime: 0,
+    touchInScrollable: false,
     
     handleTouchStart(event) {
         if (this.animationInProgress || !event.touches[0]) return;
@@ -520,25 +521,37 @@ window.FinkUI = {
         this.touchStartX = event.touches[0].clientX;
         this.touchStartTime = Date.now();
 
-        const choice = document.elementFromPoint(this.touchStartX, this.touchStartY);
-        const choiceEl = choice ? choice.closest('.choice') : null;
+        const touchTarget = document.elementFromPoint(this.touchStartX, this.touchStartY);
+
+        // Check if touch is in a scrollable area (story content or dropdown)
+        const scrollableArea = touchTarget ? touchTarget.closest('.story-content, .story-dropdown, #story') : null;
+        this.touchInScrollable = !!scrollableArea;
+
+        const choiceEl = touchTarget ? touchTarget.closest('.choice') : null;
 
         if (choiceEl) {
             this.choiceIndex = parseInt(choiceEl.dataset.index);
             // Prevent browser gestures when touching choices
             event.preventDefault();
+        } else {
+            this.choiceIndex = -1;
         }
     },
 
     handleTouchMove(event) {
-        // Prevent horizontal swipe navigation gestures
+        // Allow natural scrolling in scrollable areas
+        if (this.touchInScrollable) {
+            return; // Let the browser handle scroll
+        }
+
+        // Prevent horizontal swipe navigation gestures (browser back/forward)
         if (event.touches[0]) {
             const touchX = event.touches[0].clientX;
             const deltaX = Math.abs(touchX - this.touchStartX);
             const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
 
-            // If horizontal movement is dominant, prevent browser back/forward gesture
-            if (deltaX > 10 && deltaX > deltaY) {
+            // Only prevent if horizontal movement is dominant and significant
+            if (deltaX > 30 && deltaX > deltaY * 2) {
                 event.preventDefault();
             }
         }
@@ -571,5 +584,6 @@ window.FinkUI = {
         }
 
         this.choiceIndex = -1;
+        this.touchInScrollable = false;
     }
 };

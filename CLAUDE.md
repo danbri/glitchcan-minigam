@@ -25,6 +25,35 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 **EXCEPTION:** Only if User explicitly demands hackparsing for specific use case
 **REMINDER:** We spent an entire evening until 2am purging hackparsing - NEVER AGAIN
 
+## 🚨 CRITICAL RULE: DO NOT CASUALLY MODIFY SANDBOX CODE 🚨
+**THE FINK SANDBOX IS SECURITY-CRITICAL INFRASTRUCTURE**
+
+**INCIDENT REPORT (January 2026):**
+Bagend2 loading got stuck at "Loading..." because sandbox code was "casually" modified:
+- **The bug:** `fink-sandbox.js` line ~49: `uniqueData.join('\\n')` instead of `uniqueData.join('\n')`
+- **What went wrong:** `'\\n'` is an escaped backslash-n (literal 2-char string "\n"), NOT an actual newline character
+- **The effect:** INK content blocks joined with literal "\n" text instead of newlines, breaking INK syntax structure
+- **The symptom:** Stories stuck on "Loading..." - silent failure, no error message
+- **Time wasted:** Debugging session to find a one-character difference
+
+**THE ACTUAL CORRECT CODE:**
+```javascript
+// CORRECT - actual newline character
+const finkContent = uniqueData.join('\n');
+
+// WRONG - literal backslash-n string, breaks INK parsing
+const finkContent = uniqueData.join('\\n');
+```
+
+**RULES FOR SANDBOX CODE:**
+1. **NEVER modify sandbox/iframe code without explicit user request**
+2. **NEVER "clean up" or "improve" string handling in content extraction**
+3. **TEST LOADING after ANY change** - even "harmless" refactors can break everything
+4. **Character literals matter:** `'\n'` is NOT the same as `'\\n'`
+5. **When in doubt, DON'T TOUCH IT**
+
+**WHY THIS EXISTS:** The sandbox uses precise JavaScript string handling to extract FINK content. What looks like "cleanup" can silently corrupt the content structure, causing failures that are extremely hard to diagnose.
+
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.
 
