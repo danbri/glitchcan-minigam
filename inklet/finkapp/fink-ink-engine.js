@@ -287,7 +287,9 @@ window.FinkInkEngine = {
 
         if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', this.lastSeenFinkTag);
 
-        FinkSandbox.loadViaSandbox(resolvedUrl)
+        // 500ms delay before loading (matches working hamfink2026 timing)
+        setTimeout(() => {
+            FinkSandbox.loadViaSandbox(resolvedUrl)
             .then((content) => {
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
@@ -299,6 +301,7 @@ window.FinkInkEngine = {
                 FinkUI.showStatus('Error loading external story: ' + error.message);
                 if (window.swimEvent) swimEvent('net', '❌', 'Load Failed', error.message);
             });
+        }, 500);
     },
 
     // Extract story-level tags from compiled INK Story
