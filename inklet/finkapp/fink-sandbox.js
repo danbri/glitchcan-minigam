@@ -115,9 +115,7 @@ function oooOO(strings) {
     }
 }
 
-// Post sandbox-ready immediately (no delay - matches working hamfink2026)
-parent.postMessage({ type: 'sandbox-ready' }, '*');
-
+// Set up message listener FIRST (before posting sandbox-ready)
 window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'exec-script') {
         try {
@@ -133,6 +131,9 @@ window.addEventListener('message', function(event) {
         }
     }
 });
+
+// Post sandbox-ready AFTER listener is set up (matches working hamfink2026)
+parent.postMessage({ type: 'sandbox-ready' }, '*');
 </script>
 </body>
 </html>`;
