@@ -63,9 +63,9 @@ window.FinkSandbox = {
                         FinkUtils.debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
                         clearTimeout(this.sandboxTimeout);
                         if (data.data && data.data.length > 0) {
-                            // Remove duplicates and join
+                            // Remove duplicates and join with actual newline
                             const uniqueData = [...new Set(data.data)];
-                            const finkContent = uniqueData.join('\\n');
+                            const finkContent = uniqueData.join('\n');
                             FinkUtils.debugLog('FINK story loaded: ' + finkContent.length + ' characters');
                             FinkUtils.debugLog('Original data blocks: ' + data.data.length + ', unique blocks: ' + uniqueData.length);
                             resolve(finkContent);
