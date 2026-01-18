@@ -1,0 +1,83 @@
+/* FINK Theme - Base theme variables and resets */
+/* This file contains ONLY neutral theme definitions */
+
+:root {
+    /* ZX Spectrum colors */
+    --zx-blue: #0050e0;
+    --zx-red: #d80000;
+    --zx-mag: #d000d0;
+    --zx-green: #00c000;
+    --zx-cyan: #00c0c0;
+    --zx-yellow: #ffff00;
+    --zx-white: #f6f6f6;
+    --zx-black: #000;
+
+    /* FOAF pastel colors for decision blocks */
+    --foaf-pink: rgba(255,200,210,0.15);
+    --foaf-blue: rgba(200,220,255,0.15);
+    --foaf-green: rgba(200,255,210,0.15);
+    --foaf-yellow: rgba(255,245,200,0.15);
+
+    /* Typography */
+    --font-primary: "Press Start 2P", Courier, monospace;
+    --font-mono: 'Courier New', monospace;
+    --font-size-base: 14px;
+    --font-size-small: 12px;
+    --font-size-tiny: 10px;
+
+    /* Transitions */
+    --transition-fast: 0.1s ease;
+    --transition-normal: 0.15s ease;
+    --transition-slow: 0.3s ease;
+
+    /* Borders */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+
+    /* Layout */
+    --touch-target-min: 48px;
+}
+
+/* Accessibility: respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Reset */
+* { box-sizing: border-box; }
+
+html, body {
+    height: 100vh;
+    margin: 0;
+    background: var(--zx-black) radial-gradient(#111 2px, #000 2px);
+    background-size: 4px 4px;
+    font: var(--font-size-base)/1.5 var(--font-primary);
+    color: var(--zx-white);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+    outline: 3px solid var(--zx-yellow);
+    outline-offset: 2px;
+}
+
+/* Hidden utility */
+.hidden { display: none !important; }
+
+/* Sandbox iframe */
+#fink-sandbox { display: none; }
+
+/* Base link styling */
+a {
+    color: var(--zx-cyan);
+    text-decoration: underline;
+    transition: color var(--transition-normal);
+}
+a:hover { color: var(--zx-yellow); }

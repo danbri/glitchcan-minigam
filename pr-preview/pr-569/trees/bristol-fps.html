@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bristol BigTrak</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#000;color:#0f0;font:11px 'Orbitron',monospace;overflow:hidden}
+#c{position:relative;width:100vw;height:100vh}
+.ui{position:absolute;background:rgba(0,0,0,0.8);border:2px solid #0f0;padding:10px;backdrop-filter:blur(10px)}
+#hud{top:10px;left:10px}
+#vc{top:10px;right:10px;display:flex;gap:5px}
+.vb{width:50px;height:50px;border:2px solid #0f0;background:rgba(0,0,0,0.8);color:#0f0;font-size:10px;cursor:pointer}
+.vb.on{background:rgba(0,255,0,0.3);box-shadow:0 0 20px #0f0}
+#zc{top:10px;left:50%;transform:translateX(-50%)}
+#tc{bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+.cb{width:60px;height:60px;border:2px solid #0f0;background:rgba(0,0,0,0.8);color:#0f0;font-size:24px;cursor:pointer}
+.cb:active{background:rgba(0,255,0,0.3)}
+#mm{bottom:20px;right:20px;width:200px;height:200px}
+#al{top:80px;right:10px;font-size:14px}
+#ld{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+#ds{position:absolute;bottom:10px;left:10px;font-size:10px;color:#666}
+</style>
+</head>
+<body>
+<div id="c">
+<div id="ld">🚚 LOADING BRISTOL...</div>
+<div id="hud" class="ui">
+<b>BIGTRAK</b><br>
+SPD:<span id="s">0</span> HDG:<span id="h">N</span><br>
+POS:<span id="p">0,0</span> FPS:<span id="f">0</span>
+</div>
+<div id="al" class="ui"><b>AREA:</b> <span id="ca">Bristol</span></div>
+<div id="zc" class="ui">Zoom:<input type="range" id="zs" min="50" max="2000" value="300"></div>
+<div id="vc">
+<button class="vb on" data-v="f">FOLLOW</button>
+<button class="vb" data-v="p">FPV</button>
+<button class="vb" data-v="m">MAP</button>
+</div>
+<canvas id="mm" class="ui"></canvas>
+<div id="tc">
+<button class="cb" id="l">◀</button>
+<button class="cb" id="u">▲</button>
+<button class="cb" id="d">▼</button>
+<button class="cb" id="r">▶</button>
+</div>
+<div id="ds">Data:<span id="st">Loading...</span></div>
+</div>
+<script>
+let S,C,R,M,T,B,V='f',CD=300,CP=new THREE.Vector3(),CL=new THREE.Vector3(),CT=0,
+FC=0,LF=0,K={},TC={},MD={r:[],w:[],p:[],rl:[],s:[]},
+TS={p:new THREE.Vector3(),r:0,v:0,av:0,ms:50,a:100,ts:2},
+BC={lat:51.4545,lng:-2.5879},BB={n:51.4945,s:51.4145,e:-2.5279,w:-2.6479},
+SF=1e5,LS=Math.cos(BC.lat*Math.PI/180),
+LOD={r:800,w:1000,p:600,rl:700},MR={r:50,w:20,p:30},
+AR=[
+{n:"Clifton",x:-300,z:-200,r:200},
+{n:"Redland",x:-100,z:-300,r:150},
+{n:"Montpelier",x:100,z:-200,r:100},
+{n:"St Pauls",x:150,z:-100,r:100},
+{n:"City Centre",x:0,z:0,r:150},
+{n:"Harbourside",x:-50,z:100,r:100},
+{n:"Temple Meads",x:200,z:150,r:100},
+{n:"Redcliffe",x:150,z:100,r:100},
+{n:"Bedminster",x:-100,z:200,r:150},
+{n:"Southville",x:-200,z:150,r:100}
+];
+
+async function I(){
+sS();cT();sC();sM();
+cBE();A();
+lOD();
+}
+
+function sS(){
+S=new THREE.Scene();
+S.fog=new THREE.Fog(0,200,2500);
+C=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,3000);
+R=new THREE.WebGLRenderer({antialias:!1,powerPreference:‘high-performance’});
+R.setSize(innerWidth,innerHeight);
+R.setPixelRatio(Math.min(devicePixelRatio,1.5));
+document.getElementById(‘c’).appendChild(R.domElement);
+S.add(new THREE.AmbientLight(0x404040));
+S.add(new THREE.GridHelper(2000,20,0x004400,0x002200));
+}
+
+function cT(){
+T=new THREE.Group();
+const g1=new THREE.BoxGeometry(15,5,20),e1=new THREE.EdgesGeometry(g1);
+B=new THREE.LineSegments(e1,new THREE.LineBasicMaterial({color:0x0f0}));
+T.add(B);
+const g2=new THREE.BoxGeometry(8,3,8),e2=new THREE.EdgesGeometry(g2);
+const t=new THREE.LineSegments(e2,new THREE.LineBasicMaterial({color:0x0f0}));
+t.position.y=4;T.add(t);
+const g3=new THREE.BoxGeometry(2,2,10),e3=new THREE.EdgesGeometry(g3);
+const c=new THREE.LineSegments(e3,new THREE.LineBasicMaterial({color:0x0f0}));
+c.position.set(0,4,10);T.add(c);
+[-8,8].forEach(x=>{
+const g=new THREE.BoxGeometry(3,2,20),e=new THREE.EdgesGeometry(g);
+const tr=new THREE.LineSegments(e,new THREE.LineBasicMaterial({color:0x0f0}));
+tr.position.set(x,-2,0);T.add(tr);
+});
+T.position.y=3;S.add(T);
+}
+
+function cBE(){
+AR.forEach(a=>{
+const cv=document.createElement(‘canvas’);
+cv.width=256;cv.height=64;
+const cx=cv.getContext(‘2d’);
+cx.fillStyle=’#0f0’;cx.font=‘bold 36px Orbitron’;
+cx.textAlign=‘center’;cx.fillText(a.n.toUpperCase(),128,45);
+const tx=new THREE.CanvasTexture(cv);
+const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,opacity:0.8}));
+sp.position.set(a.x,50,a.z);sp.scale.set(100,25,1);
+S.add(sp);
+});
+document.getElementById(‘ld’).style.display=‘none’;
+}
+
+async function lOD(){
+document.getElementById(‘st’).textContent=‘Fetching…’;
+try{
+const ch=localStorage.getItem(‘boc’);
+if(ch){
+const{d,t}=JSON.parse(ch);
+if(Date.now()-t<864e5){pOD(d);document.getElementById(‘st’).textContent=‘Cached’;return;}
+}
+const q=`[out:json][timeout:25];( way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${BB.s},${BB.w},${BB.n},${BB.e}); way["waterway"](${BB.s},${BB.w},${BB.n},${BB.e}); way["natural"="water"](${BB.s},${BB.w},${BB.n},${BB.e}); way["leisure"="park"](${BB.s},${BB.w},${BB.n},${BB.e}); way["railway"](${BB.s},${BB.w},${BB.n},${BB.e}); node["railway"="station"](${BB.s},${BB.w},${BB.n},${BB.e}); );out geom;`;
+const r=await fetch(‘https://overpass-api.de/api/interpreter’,{method:‘POST’,body:q});
+if(!r.ok)throw Error(‘Fetch failed’);
+const d=await r.json();
+pOD(d);
+try{localStorage.setItem(‘boc’,JSON.stringify({d,t:Date.now()}));}catch{}
+document.getElementById(‘st’).textContent=‘Loaded’;
+}catch(e){
+document.getElementById(‘st’).textContent=‘Fallback’;
+fD();
+}
+}
+
+function pOD(d){
+d.elements.forEach(e=>{
+if(e.type===‘way’&&e.geometry){
+const cs=e.geometry.map(n=>({
+x:(n.lon-BC.lng)*SF*LS,
+z:-(n.lat-BC.lat)*SF
+}));
+if(e.tags?.highway){
+const m=cRM(cs,e.tags);
+if(m){m.visible=!1;S.add(m);MD.r.push(m);}
+}else if(e.tags?.waterway||e.tags?.natural===‘water’){
+const m=cWM(cs);
+if(m){m.visible=!1;S.add(m);MD.w.push(m);}
+}else if(e.tags?.leisure===‘park’){
+const m=cPM(cs,e.tags);
+if(m){m.visible=!1;S.add(m);MD.p.push(m);}
+}else if(e.tags?.railway){
+const m=cRLM(cs);
+if(m){m.visible=!1;S.add(m);MD.rl.push(m);}
+}
+}else if(e.type===‘node’&&e.tags?.railway===‘station’){
+const x=(e.lon-BC.lng)*SF*LS,z=-(e.lat-BC.lat)*SF;
+cSM(x,z,e.tags.name||‘Station’);
+}
+});
+}
+
+function cRM(cs,t){
+if(cs.length<2)return;
+const ps=cs.map(c=>new THREE.Vector3(c.x,0.5,c.z));
+const g=new THREE.BufferGeometry().setFromPoints(ps);
+g.computeBoundingSphere();
+let cl=0x006600,lw=1;
+switch(t.highway){
+case’motorway’:case’trunk’:cl=0x0099ff;lw=3;break;
+case’primary’:cl=0x00cc00;lw=2;break;
+case’secondary’:cl=0x009900;break;
+}
+const m=new THREE.Line(g,new THREE.LineBasicMaterial({color:cl,linewidth:lw}));
+m.userData={t:‘road’,n:t.name||t.highway};
+return m;
+}
+
+function cWM(cs){
+if(cs.length<3)return;
+const ps=cs.map(c=>new THREE.Vector3(c.x,0.1,c.z));
+const g=new THREE.BufferGeometry().setFromPoints(ps);
+g.computeBoundingSphere();
+const m=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color:0x0066ff,linewidth:2}));
+m.userData={t:‘water’};
+return m;
+}
+
+function cPM(cs,t){
+if(cs.length<3)return;
+const ps=cs.map(c=>new THREE.Vector3(c.x,0.2,c.z));
+const g=new THREE.BufferGeometry().setFromPoints(ps);
+g.computeBoundingSphere();
+const mt=new THREE.LineDashedMaterial({color:0x00ff00,linewidth:1,dashSize:5,gapSize:5});
+const m=new THREE.LineLoop(g,mt);
+m.computeLineDistances();
+m.userData={t:‘park’,n:t.name||‘Park’};
+return m;
+}
+
+function cRLM(cs){
+if(cs.length<2)return;
+const ps=cs.map(c=>new THREE.Vector3(c.x,0.3,c.z));
+const g=new THREE.BufferGeometry().setFromPoints(ps);
+g.computeBoundingSphere();
+const mt=new THREE.LineDashedMaterial({color:0xffff00,linewidth:2,dashSize:10,gapSize:5});
+const m=new THREE.Line(g,mt);
+m.computeLineDistances();
+m.userData={t:‘railway’};
+return m;
+}
+
+function cSM(x,z,n){
+const g=new THREE.BoxGeometry(20,30,20),e=new THREE.EdgesGeometry(g);
+const m=new THREE.LineSegments(e,new THREE.LineBasicMaterial({color:0xffff00}));
+m.position.set(x,15,z);
+m.userData={t:‘station’,n};
+S.add(m);MD.s.push(m);
+}
+
+function fD(){
+[{cs:[[-500,0],[500,0]],n:“M32”},
+{cs:[[0,-500],[0,500]],n:“A4”},
+{cs:[[-300,-200],[0,0]],n:“Park Street”}].forEach(r=>{
+const m=cRM(r.cs.map(p=>({x:p[0],z:p[1]})),{highway:‘primary’,name:r.n});
+if(m){S.add(m);MD.r.push(m);}
+});
+}
+
+function sC(){
+document.addEventListener(‘keydown’,e=>K[e.key]=1);
+document.addEventListener(‘keyup’,e=>K[e.key]=0);
+[‘l’,‘u’,‘d’,‘r’].forEach(id=>{
+const b=document.getElementById(id);
+[‘mousedown’,‘touchstart’].forEach(ev=>b.addEventListener(ev,e=>{e.preventDefault();TC[id]=1;}));
+[‘mouseup’,‘touchend’].forEach(ev=>b.addEventListener(ev,e=>{e.preventDefault();TC[id]=0;}));
+});
+document.querySelectorAll(’.vb’).forEach(b=>{
+b.addEventListener(‘click’,()=>{
+document.querySelectorAll(’.vb’).forEach(x=>x.classList.remove(‘on’));
+b.classList.add(‘on’);V=b.dataset.v;CT=0;
+});
+});
+document.getElementById(‘zs’).addEventListener(‘input’,e=>CD=parseFloat(e.target.value));
+addEventListener(‘resize’,()=>{
+C.aspect=innerWidth/innerHeight;
+C.updateProjectionMatrix();
+R.setSize(innerWidth,innerHeight);
+});
+}
+
+function sM(){
+const c=document.getElementById(‘mm’),x=c.getContext(‘2d’);
+c.width=c.height=200;M={c,x};
+}
+
+function uT(dt){
+const f=K.ArrowUp||K.w||TC.u,
+b=K.ArrowDown||K.s||TC.d,
+l=K.ArrowLeft||K.a||TC.l,
+r=K.ArrowRight||K.d||TC.r;
+if(f)TS.v=Math.min(TS.v+TS.a*dt,TS.ms);
+else if(b)TS.v=Math.max(TS.v-TS.a*dt,-TS.ms/2);
+else TS.v*=0.9;
+if(l)TS.av=TS.ts;
+else if(r)TS.av=-TS.ts;
+else TS.av*=0.8;
+TS.r+=TS.av*dt;
+TS.p.x+=Math.sin(TS.r)*TS.v*dt;
+TS.p.z+=Math.cos(TS.r)*TS.v*dt;
+T.position.x=TS.p.x;
+T.position.z=TS.p.z;
+T.rotation.y=TS.r;
+document.getElementById(‘s’).textContent=Math.abs(TS.v).toFixed(1);
+document.getElementById(‘h’).textContent=gH(TS.r);
+document.getElementById(‘p’).textContent=`${TS.p.x.toFixed(0)},${TS.p.z.toFixed(0)}`;
+const ca=AR.find(a=>Math.sqrt(Math.pow(a.x-TS.p.x,2)+Math.pow(a.z-TS.p.z,2))<a.r);
+document.getElementById(‘ca’).textContent=ca?ca.n:‘Bristol’;
+}
+
+function gH(r){
+const d=(r*180/Math.PI+360)%360;
+if(d<22.5||d>=337.5)return’N’;
+if(d<67.5)return’NE’;
+if(d<112.5)return’E’;
+if(d<157.5)return’SE’;
+if(d<202.5)return’S’;
+if(d<247.5)return’SW’;
+if(d<292.5)return’W’;
+return’NW’;
+}
+
+function uC(dt){
+CT=Math.min(CT+dt*2,1);
+let np,nl;
+switch(V){
+case’f’:
+np=new THREE.Vector3(
+T.position.x-Math.sin(TS.r)*CD*0.3,
+30+CD*0.1,
+T.position.z-Math.cos(TS.r)*CD*0.3
+);
+nl=T.position.clone();
+break;
+case’p’:
+np=new THREE.Vector3(
+T.position.x+Math.sin(TS.r)*5,
+T.position.y+8,
+T.position.z+Math.cos(TS.r)*5
+);
+nl=new THREE.Vector3(
+T.position.x+Math.sin(TS.r)*100,
+T.position.y,
+T.position.z+Math.cos(TS.r)*100
+);
+break;
+case’m’:
+np=new THREE.Vector3(T.position.x,Math.max(100,CD),T.position.z+CD*0.2);
+nl=T.position.clone();
+break;
+}
+C.position.lerp(np,CT);
+CL.lerp(nl,CT);
+C.lookAt(CL);
+}
+
+function pL(){
+const p=C.position;
+let rc=0;
+MD.r.forEach(m=>{
+if(!m.geometry.boundingSphere)return;
+const d=p.distanceTo(m.geometry.boundingSphere.center);
+const s=d<LOD.r&&rc<MR.r;
+if(s&&!m.visible){m.visible=1;rc++;}
+else if(!s&&m.visible)m.visible=0;
+});
+let wc=0;
+MD.w.forEach(m=>{
+if(!m.geometry.boundingSphere)return;
+const d=p.distanceTo(m.geometry.boundingSphere.center);
+const s=d<LOD.w&&wc<MR.w;
+if(s&&!m.visible){m.visible=1;wc++;}
+else if(!s&&m.visible)m.visible=0;
+});
+let pc=0;
+MD.p.forEach(m=>{
+if(!m.geometry.boundingSphere)return;
+const d=p.distanceTo(m.geometry.boundingSphere.center);
+const s=d<LOD.p&&pc<MR.p;
+if(s&&!m.visible){m.visible=1;pc++;}
+else if(!s&&m.visible)m.visible=0;
+});
+}
+
+function uM(){
+const{c,x}=M;
+x.fillStyle=‘rgba(0,0,0,0.8)’;
+x.fillRect(0,0,200,200);
+x.strokeStyle=’#004400’;
+x.lineWidth=1;
+for(let i=0;i<=10;i++){
+x.beginPath();
+x.moveTo(i*20,0);x.lineTo(i*20,200);
+x.moveTo(0,i*20);x.lineTo(200,i*20);
+x.stroke();
+}
+const tx=100+TS.p.x/10,tz=100+TS.p.z/10;
+x.save();
+x.translate(tx,tz);
+x.rotate(-TS.r);
+x.strokeStyle=’#0f0’;
+x.lineWidth=2;
+x.strokeRect(-5,-8,10,16);
+x.beginPath();
+x.moveTo(0,-8);x.lineTo(0,-15);
+x.stroke();
+x.restore();
+x.fillStyle=’#ff0’;
+AR.forEach(a=>{
+const ax=100+a.x/10,az=100+a.z/10;
+x.fillRect(ax-2,az-2,4,4);
+});
+}
+
+let lt=0;
+function A(t=0){
+requestAnimationFrame(A);
+const dt=Math.min((t-lt)/1000,0.1);
+lt=t;
+uT(dt);
+uC(dt);
+pL();
+uM();
+R.render(S,C);
+FC++;
+if(t-LF>=1000){
+document.getElementById(‘f’).textContent=FC;
+FC=0;LF=t;
+}
+}
+
+I();
+</script>
+
+</body>
+</html>

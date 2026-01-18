@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fat CTRNN Simulation</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.8.0/dist/tf.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+    #console {
+      width: 400px;
+      height: 200px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 20px auto;
+      text-align: left;
+      background-color: #ffffff;
+    }
+    canvas {
+      border: 1px solid #000000;
+      display: block;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    h1 {
+      color: #333333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fat CTRNN Simulation</h1>
+  <canvas id="worldCanvas" width="400" height="600"></canvas>
+  <div id="console"></div>
+  <script>
+    (function () {
+      const tf = window.tf;
+
+      const debugConsole = document.getElementById('console');
+      function logToConsole(message) {
+        debugConsole.innerHTML += `${message}<br>`;
+        debugConsole.scrollTop = debugConsole.scrollHeight;
+      }
+
+      function createFatCTRNN(numAgents, neuronsPerAgent) {
+        const totalNeurons = numAgents * neuronsPerAgent;
+
+        const weightsBuffer = tf.buffer([totalNeurons, totalNeurons]);
+        const biases = tf.zeros([totalNeurons]);
+        const states = tf.zeros([totalNeurons]);
+        const gains = tf.ones([totalNeurons]);
+        const taus = tf.ones([totalNeurons]);
+
+        for (let i = 0; i < numAgents; i++) {
+          for (let j = 0; j < neuronsPerAgent; j++) {
+            for (let k = 0; k < neuronsPerAgent; k++) {
+              const globalRow = i * neuronsPerAgent + j;
+              const globalCol = i * neuronsPerAgent + k;
+              weightsBuffer.set(Math.random() * 2 - 1, globalRow, globalCol);
+            }
+          }
+        }
+
+        return {
+          weights: weightsBuffer.toTensor(),
+          biases,
+          states,
+          gains,
+          taus,
+          numAgents,
+          neuronsPerAgent,
+        };
+      }
+
+      function updateFatCTRNN(ctrnn, inputs) {
+        return tf.tidy(() => {
+          // Concatenate inputs
+          const reshapedInputs = tf.concat(inputs, 0);
+          // Dispose input tensors after concatenation
+          inputs.forEach(t => t.dispose());
+
+          // Compute outputs
+          const outputs = tf.sigmoid(ctrnn.states.add(ctrnn.biases).mul(ctrnn.gains));
+
+          // Ensure outputs are 2D for matMul
+          const outputs2D = outputs.reshape([outputs.shape[0], 1]); // [10, 1]
+
+          // Perform matrix multiplication
+          const matMulResult = tf.matMul(ctrnn.weights, outputs2D); // [10, 1]
+
+          // Squeeze to get back to [10]
+          const matMulSqueezed = matMulResult.squeeze(); // [10]
+
+          // Compute yPrime
+          const yPrime = reshapedInputs.sub(ctrnn.states).add(matMulSqueezed);
+
+          // Compute delta
+          const delta = yPrime.div(ctrnn.taus);
+
+          // Update states
+          const newStates = ctrnn.states.add(delta);
+
+          // Dispose intermediate tensors (excluding 'outputs' which is returned)
+          outputs2D.dispose();
+          matMulResult.dispose();
+          matMulSqueezed.dispose();
+          yPrime.dispose();
+          delta.dispose();
+
+          return { newStates, outputs };
+        });
+      }
+
+      function packInputs(agents, neuronsPerAgent) {
+        const inputs = [];
+        for (const agent of agents) {
+          const agentInputs = [
+            agent.sensor1,
+            agent.sensor2,
+          ];
+          inputs.push(tf.tensor(agentInputs, [neuronsPerAgent]));
+        }
+        return inputs;
+      }
+
+      function unpackOutputs(outputs, numAgents, neuronsPerAgent) {
+        const agentOutputs = [];
+        for (let i = 0; i < numAgents; i++) {
+          const start = i * neuronsPerAgent;
+          const sliced = outputs.slice([start], [neuronsPerAgent]);
+          agentOutputs.push(sliced.arraySync());
+          sliced.dispose();
+        }
+        // Dispose the outputs tensor after slicing
+        outputs.dispose();
+        return agentOutputs;
+      }
+
+      class Agent {
+        constructor(id, x, y) {
+          this.id = id;
+          this.x = x;
+          this.y = y;
+          this.energy = 100;
+          this.size = 5;
+          this.color = "blue";
+          this.orientation = Math.random() * 2 * Math.PI;
+          this.speed = 0;
+          this.sensor1 = 1;
+          this.sensor2 = 0;
+          this.acceleration = 0;
+          this.turnRate = 0;
+        }
+
+        updateFromOutput(outputValues) {
+          this.acceleration = outputValues[0];
+          this.turnRate = outputValues[1];
+        }
+
+        move() {
+          this.orientation += this.turnRate;
+          this.speed = Math.min(2, Math.max(0, this.speed + this.acceleration));
+          this.x += Math.cos(this.orientation) * this.speed;
+          this.y += Math.sin(this.orientation) * this.speed;
+          this.x = (this.x + 400) % 400;
+          this.y = (this.y + 600) % 600;
+          this.energy -= 0.1;
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.orientation);
+          ctx.beginPath();
+          ctx.moveTo(this.size, 0);
+          ctx.lineTo(-this.size, -this.size / 2);
+          ctx.lineTo(-this.size, this.size / 2);
+          ctx.closePath();
+          ctx.fillStyle = this.energy > 0 ? this.color : "gray";
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      class Hostile {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.orientation = Math.random() * 2 * Math.PI;
+          this.speed = 1.5;
+          this.size = 5;
+          this.color = "red";
+        }
+
+        update(world) {
+          const nearestAgent = world.getNearestAgent(this);
+          if (nearestAgent) {
+            const dx = nearestAgent.x - this.x;
+            const dy = nearestAgent.y - this.y;
+            const angleToAgent = Math.atan2(dy, dx);
+            const angleDiff = angleToAgent - this.orientation;
+            this.orientation += Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)) * 0.1;
+          }
+          this.x += Math.cos(this.orientation) * this.speed;
+          this.y += Math.sin(this.orientation) * this.speed;
+          this.x = (this.x + 400) % 400;
+          this.y = (this.y + 600) % 600;
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.orientation);
+          ctx.beginPath();
+          ctx.moveTo(this.size, 0);
+          ctx.lineTo(-this.size, -this.size / 2);
+          ctx.lineTo(-this.size, this.size / 2);
+          ctx.closePath();
+          ctx.fillStyle = this.color;
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      class World {
+        constructor() {
+          this.agents = [];
+          this.food = [];
+          this.hostiles = [];
+          this.updateCounter = 0;
+        }
+
+        addAgent(agent) {
+          this.agents.push(agent);
+        }
+
+        addHostile(hostile) {
+          this.hostiles.push(hostile);
+        }
+
+        addFood(x, y) {
+          this.food.push({ x, y, size: 3 });
+        }
+
+        getNearestFood(agent) {
+          let nearestFood = null;
+          let nearestDistance = Infinity;
+          for (const f of this.food) {
+            const distance = Math.sqrt((agent.x - f.x) ** 2 + (agent.y - f.y) ** 2);
+            if (distance < nearestDistance) {
+              nearestFood = f;
+              nearestDistance = distance;
+            }
+          }
+          return nearestFood ? { food: nearestFood, distance: nearestDistance } : null;
+        }
+
+        getNearestAgent(hostile) {
+          let nearestAgent = null;
+          let nearestDistance = Infinity;
+          for (const agent of this.agents) {
+            const distance = Math.sqrt((hostile.x - agent.x) ** 2 + (hostile.y - agent.y) ** 2);
+            if (distance < nearestDistance) {
+              nearestAgent = agent;
+              nearestDistance = distance;
+            }
+          }
+          return nearestAgent;
+        }
+
+        update() {
+          // Log every 10 updates to prevent flooding
+          if (this.updateCounter % 10 === 0) {
+            logToConsole(`World update #${this.updateCounter}`);
+          }
+
+          const inputs = packInputs(this.agents, 2);
+          const { newStates, outputs } = updateFatCTRNN(this.ctrnn, inputs);
+
+          // Dispose of the old states tensor to prevent memory leaks
+          if (this.ctrnn.states) {
+            this.ctrnn.states.dispose();
+          }
+          this.ctrnn.states = newStates;
+
+          const agentOutputs = unpackOutputs(outputs, this.agents.length, 2);
+          this.agents.forEach((agent, i) => agent.updateFromOutput(agentOutputs[i]));
+
+          for (const agent of this.agents) agent.move();
+          for (const hostile of this.hostiles) hostile.update(this);
+
+          this.updateCounter++;
+          if (this.updateCounter % 100 === 0) {
+            this.addFood(Math.random() * 400, Math.random() * 600);
+            logToConsole("Food respawned");
+          }
+        }
+
+        draw(ctx) {
+          ctx.clearRect(0, 0, 400, 600);
+
+          for (const f of this.food) {
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, f.size, 0, 2 * Math.PI);
+            ctx.fillStyle = "green";
+            ctx.fill();
+          }
+
+          for (const agent of this.agents) agent.draw(ctx);
+          for (const hostile of this.hostiles) hostile.draw(ctx);
+        }
+      }
+
+      const world = new World();
+      const numAgents = 50;
+      const neuronsPerAgent = 2;
+
+      world.ctrnn = createFatCTRNN(numAgents, neuronsPerAgent);
+
+      for (let i = 0; i < numAgents; i++) {
+        const x = Math.random() * 400;
+        const y = Math.random() * 600;
+        world.addAgent(new Agent(i, x, y));
+      }
+
+      for (let i = 0; i < 2; i++) {
+        const x = Math.random() * 400;
+        const y = Math.random() * 600;
+        world.addHostile(new Hostile(x, y));
+      }
+
+      for (let i = 0; i < 10; i++) {
+        world.addFood(Math.random() * 400, Math.random() * 600);
+      }
+
+      const canvas = document.getElementById("worldCanvas");
+      const ctx = canvas.getContext("2d");
+
+      function mainLoop() {
+        try {
+          world.update();
+          world.draw(ctx);
+          requestAnimationFrame(mainLoop);
+        } catch (error) {
+          console.error("An error occurred:", error);
+          logToConsole(`Error: ${error.message}`);
+        }
+      }
+
+      mainLoop();
+    })();
+  </script>
+</body>
+</html>
