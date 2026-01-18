@@ -150,6 +150,20 @@ With Gandalf's guidance and the treasure map as your guide, you set off toward g
 
 Your story as a burglar has only just begun...
 
+Nearby, a pool shimmers like molten emerald. A fox eyes a pair of ducklings greedily. The water seems to reflect a different sky...
+
++ [Dive into the pool] -> portal_dive
++ [Continue on the road] -> END
+
+=== portal_dive ===
+# BG:#020
+The cool water envelops you. For a moment you cannot breathe, cannot think—
+
+Then you surface in a place between all places.
+
+# FINK: hampstead.fink.js
+Loading external story...
+
 -> END
 
 === Peaceful_Retirement ===
