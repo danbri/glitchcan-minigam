@@ -19,4 +19,13 @@ Thumbs.db
 playwright-report/
 test-results/
 test-results.json
+coverage/
 tmp/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
