@@ -29,6 +29,8 @@ Enter the Finkiverse. Everything isn't here yet.
 Choose your adventure! Each episode is half-finished in a different way.
 
 + [Bagend] -> hobbit_selected
++ [Bagend v2 (enhanced)] -> bagend2_selected
++ [Diamond Cave] -> diamond_cave_selected
 + [Hampstead] -> hampstead_selected
 + [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
@@ -41,7 +43,6 @@ Choose your adventure! Each episode is half-finished in a different way.
 Minigames and experiments, eventually for integration into story-based episodes.
 
 + [Ukrainian Language] -> ukrainian_selected
-+ [Bagend bleeding edge] -> bagend2_selected
 
 
 === help_menu ===
@@ -76,16 +77,30 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 
 === bagend2_selected ===
 
-Bag End 2 (bagend2.fink.js)
+Bag End v2 (Enhanced)
 
-Extra half-baked version.
+The improved Hobbit adventure with proper inventory tracking, conversation gating, and state management. Same story as the original, but with polished game mechanics.
 
 # IMAGE: coverart/bagend_splash_imag_9453.jpeg
 
-+ [enter Bag End v2 / alpha etc] -> load_bagend2
++ [enter Bag End v2] -> load_bagend2
 
 === load_bagend2 ===
 # FINK: bagend2.fink.js
+-> external_story
+
+=== diamond_cave_selected ===
+
+Diamond Cave
+
+Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and escape! Features minigame integration and multi-chapter story progression.
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
++ [enter Diamond Cave] -> load_diamond_cave
+
+=== load_diamond_cave ===
+# FINK: demos/diamond-cave.fink.js
 -> external_story
 
 
