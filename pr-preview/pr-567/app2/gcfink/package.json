@@ -1,0 +1,16 @@
+{
+  "name": "gcfink",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Glitchcanary FINK/INK core utilities: FINK extraction, INK compile glue, utils",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "keywords": ["ink", "inkjs", "fink", "interactive-fiction"],
+  "license": "MIT",
+  "scripts": {
+    "test": "node ./test/run.js"
+  }
+}
+
