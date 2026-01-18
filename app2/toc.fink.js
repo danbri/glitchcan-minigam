@@ -9,7 +9,7 @@ VAR has_blue_key = false
 # MENU: 🏠 Main Menu -> main_menu
 # MENU: 🎮 Minigame Demos -> minigame_demos
 
-# BASEHREF: ../inklet/media/
+# BASEHREF: /glitchcan-minigam/inklet/media/
 
 -> main_menu
 
@@ -162,27 +162,27 @@ Interactive fiction stories powered by real INK engine:
 + [🏠 Back to Main] -> main_menu
 
 === load_hampstead ===
-# FINK: ../inklet/hampstead.fink.js
+# FINK: /glitchcan-minigam/inklet/hampstead.fink.js
 -> external_story
 
 === load_bagend ===
-# FINK: ../inklet/bagend.fink.js
+# FINK: /glitchcan-minigam/inklet/bagend.fink.js
 -> external_story
 
 === load_shane_manor ===
-# FINK: ../inklet/shane-manor.fink.js
+# FINK: /glitchcan-minigam/inklet/shane-manor.fink.js
 -> external_story
 
 === load_mudslidemines ===
-# FINK: ../inklet/mudslidemines.fink.js
+# FINK: /glitchcan-minigam/inklet/mudslidemines.fink.js
 -> external_story
 
 === load_riverbend ===
-# FINK: ../inklet/riverbend.fink.js
+# FINK: /glitchcan-minigam/inklet/riverbend.fink.js
 -> external_story
 
 === load_ukrainian ===
-# FINK: ../inklet/tml-2025-langlearn.fink.js
+# FINK: /glitchcan-minigam/inklet/tml-2025-langlearn.fink.js
 -> external_story
 
 === help ===
