@@ -183,6 +183,7 @@ TOTAL SCORE: {score} points
 }
 
 + [Enter the Wood Between the Worlds] -> wood_between_worlds
++ [🎓 Chapter 3: The Auto-Icon Incident] -> load_chapter3
 + [View source code info] -> source_info
 + [Return to Chapter 1] -> back_to_chapter1
 
@@ -371,6 +372,15 @@ The Wood Between the Worlds connects to:
 - ../hampstead.fink.js (80s London - via mugging!)
 
 + [Back to ending] -> chapter2_end
+
+=== load_chapter3 ===
+# CLASS: info
+Loading Chapter 3: The Auto-Icon Incident...
+
+A strange portal opens, leading to UCL's engineering basement at 2:47 AM...
+
+# FINK: hamfink2026-ch3.fink.js
+-> END
 
 === back_to_chapter1 ===
 # RESTART
