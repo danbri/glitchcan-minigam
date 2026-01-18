@@ -35,12 +35,21 @@ window.FinkInkEngine = {
 
     // Try INK compilation
     tryInkCompilation(finkContent) {
+        // Verify INK library loaded from CDN
         if (typeof inkjs === 'undefined') {
-            FinkUtils.debugLog('INK library not available');
+            FinkUtils.debugLog('ERROR: inkjs library not available');
+            FinkUtils.debugLog('CDN script may have failed to load from jsdelivr');
+            console.error('[FINK] inkjs library not found. Check network tab for CDN errors.');
             return false;
         }
 
-        FinkUtils.debugLog('Attempting INK compilation...');
+        if (!inkjs.Compiler) {
+            FinkUtils.debugLog('ERROR: inkjs.Compiler class missing');
+            console.error('[FINK] inkjs loaded but Compiler unavailable - wrong version?');
+            return false;
+        }
+
+        FinkUtils.debugLog('inkjs library verified, attempting compilation...');
 
         try {
             const compiler = new inkjs.Compiler(finkContent);
