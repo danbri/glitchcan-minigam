@@ -5,6 +5,11 @@ on:
     branches:
       - master
 
+# Prevent race conditions with pr-preview workflow
+concurrency:
+  group: gh-pages-deployment
+  cancel-in-progress: false
+
 permissions:
   contents: write
 

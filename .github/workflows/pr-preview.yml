@@ -8,7 +8,10 @@ permissions:
   contents: write
   pull-requests: write
 
-concurrency: preview-${{ github.ref }}
+# Shared with pages.yml to prevent gh-pages race conditions
+concurrency:
+  group: gh-pages-deployment
+  cancel-in-progress: false
 
 jobs:
   preview:
