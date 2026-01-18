@@ -69,7 +69,7 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 + [enter Bag End] -> load_bagend
 
 === load_bagend ===
-# FINK: ../bagend.fink.js
+# FINK: bagend.fink.js
 -> external_story
 
 
@@ -85,14 +85,11 @@ Extra half-baked version.
 + [enter Bag End v2 / alpha etc] -> load_bagend2
 
 === load_bagend2 ===
-# FINK: ../bagend2.fink.js
+# FINK: bagend2.fink.js
 -> external_story
 
 
 === hampstead_selected ===
-
-
-# FINK: ../hampstead.fink.js
 
 Hampstead
 
@@ -100,49 +97,65 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 
 # IMAGE: coverart/hamstead_img_9432.jpeg
 
-+ [enter Hampstead] -> external_story
++ [enter Hampstead] -> load_hampstead
+
+=== load_hampstead ===
+# FINK: hampstead.fink.js
+-> external_story
 
 === mudslidemines_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: ../mudslidemines.fink.js
 
 Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only.
 
-+ [enter Mudslide Mines] -> external_story
++ [enter Mudslide Mines] -> load_mudslidemines
+
+=== load_mudslidemines ===
+# FINK: mudslidemines.fink.js
+-> external_story
 
 === riverbend_selected ===
 
 # IMAGE: riverbend/village_overview.png
-# FINK: ../riverbend.fink.js
 
 Riverbend - Village Mystery
 
 Discover the secrets of a chocolate-box-perfect village where greed and jealousy bind neighbours together in a conspiracy of silence.
 
-+ [Enter Riverbend] -> external_story
++ [Enter Riverbend] -> load_riverbend
+
+=== load_riverbend ===
+# FINK: riverbend.fink.js
+-> external_story
 
 === maple_hollow_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: ../../cozyverse/maple-hollow.fink.js
 
 Maple Hollow: Aslan Rising
 
 A cozy interactive romance with YouTube mood clips. Return to a snow-covered hometown, reconnect with old flames, and find your way home. Warmth points track your journey.
 
-+ [Enter Maple Hollow] -> external_story
++ [Enter Maple Hollow] -> load_maple_hollow
+
+=== load_maple_hollow ===
+# FINK: ../../cozyverse/maple-hollow.fink.js
+-> external_story
 
 === ukrainian_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: ../tml-2025-langlearn.fink.js
 
 Ukrainian Language Learning
 
 Learn Ukrainian food vocabulary and basic grammar through interactive lessons and practice exercises. Proof of concept.
 
-+ [Enter Language demo] -> external_story
++ [Enter Language demo] -> load_ukrainian
+
+=== load_ukrainian ===
+# FINK: tml-2025-langlearn.fink.js
+-> external_story
 
 === dev_guide_selected ===
 
@@ -155,13 +168,16 @@ Does not exist.
 === shane_manor_selected ===
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
-# FINK: ../shane-manor.fink.js
 
 Shane Manor Mystery
 
 A test story for debugging and demonstrating FINK functionality. This is primarily for development testing.
 
-+ [Enter Shane Manor] -> external_story
++ [Enter Shane Manor] -> load_shane_manor
+
+=== load_shane_manor ===
+# FINK: shane-manor.fink.js
+-> external_story
 
 === experiments_selected ===
 
