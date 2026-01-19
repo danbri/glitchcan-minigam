@@ -50,6 +50,16 @@ window.FinkUI = {
             settingsBtn.addEventListener('click', () => FinkDevPanel.toggle());
         }
 
+        // Click-to-dismiss on status overlay (for error messages)
+        if (this.elements.statusOverlay) {
+            this.elements.statusOverlay.addEventListener('click', () => {
+                // Only dismiss if dismissable (showing an error, not loading)
+                if (this.elements.statusOverlay.classList.contains('dismissable')) {
+                    this.hideStatus();
+                }
+            });
+        }
+
         // Unlock audio on first interaction
         ['click', 'touchstart'].forEach(event => {
             document.addEventListener(event, () => {
@@ -366,6 +376,8 @@ window.FinkUI = {
         }
         if (this.elements.statusOverlay) {
             this.elements.statusOverlay.classList.add('active');
+            // Add dismissable class when showing error (no loader)
+            this.elements.statusOverlay.classList.toggle('dismissable', !showLoader);
             const spinner = this.elements.statusOverlay.querySelector('.status-spinner');
             if (spinner) {
                 spinner.style.display = showLoader ? 'inline-block' : 'none';
@@ -376,6 +388,7 @@ window.FinkUI = {
     hideStatus() {
         if (this.elements.statusOverlay) {
             this.elements.statusOverlay.classList.remove('active');
+            this.elements.statusOverlay.classList.remove('dismissable');
         }
     },
 

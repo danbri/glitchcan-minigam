@@ -3,6 +3,7 @@
 window.FinkSandbox = {
     activeSandbox: null,
     sandboxTimeout: null,
+    activeMessageHandler: null,
 
     // Load FINK file via sandbox iframe
     async loadViaSandbox(url) {
@@ -36,8 +37,7 @@ window.FinkSandbox = {
             // Start initial timeout for sandbox setup (in case sandbox-ready never arrives)
             let initialTimeout = setTimeout(() => {
                 FinkUtils.debugLog('Sandbox setup timeout - sandbox-ready never received');
-                this.cleanupSandbox();
-                window.removeEventListener('message', messageHandler);
+                this.cleanupSandbox();  // Also removes message handler
                 reject(new Error('Sandbox setup timeout - iframe may have failed to initialize'));
             }, 5000);
 
@@ -79,7 +79,6 @@ window.FinkSandbox = {
                             reject(new Error('No FINK content found in file'));
                         }
                         this.cleanupSandbox();
-                        window.removeEventListener('message', messageHandler);
                         break;
 
                     case 'fink-error':
@@ -87,12 +86,13 @@ window.FinkSandbox = {
                         const errorMsg = data.error || 'Unknown error in sandbox';
                         FinkUtils.debugLog('Sandbox error: ' + errorMsg);
                         this.cleanupSandbox();
-                        window.removeEventListener('message', messageHandler);
                         reject(new Error(errorMsg));
                         break;
                 }
             };
 
+            // Store handler reference for cleanup
+            this.activeMessageHandler = messageHandler;
             window.addEventListener('message', messageHandler);
 
             // Sandbox HTML with oooOO template literal handler
@@ -153,6 +153,10 @@ parent.postMessage({ type: 'sandbox-ready' }, '*');
         if (this.sandboxTimeout) {
             clearTimeout(this.sandboxTimeout);
             this.sandboxTimeout = null;
+        }
+        if (this.activeMessageHandler) {
+            window.removeEventListener('message', this.activeMessageHandler);
+            this.activeMessageHandler = null;
         }
         if (this.activeSandbox) {
             this.activeSandbox.remove();
