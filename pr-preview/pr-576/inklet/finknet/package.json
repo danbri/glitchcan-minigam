@@ -1,0 +1,39 @@
+{
+  "name": "finknet",
+  "version": "0.1.0",
+  "description": "Secure JSONP-like loader for tagged template literal content",
+  "main": "index.js",
+  "module": "index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.cjs",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "echo \"See test page in parent directory\""
+  },
+  "keywords": [
+    "jsonp",
+    "template-literals",
+    "sandbox",
+    "content-loader",
+    "iframe",
+    "secure",
+    "ink",
+    "interactive-fiction"
+  ],
+  "author": "danbri",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danbri/glitchcan-minigam"
+  },
+  "homepage": "https://github.com/danbri/glitchcan-minigam/tree/main/inklet/finknet"
+}

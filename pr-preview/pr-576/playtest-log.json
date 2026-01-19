@@ -1,0 +1,579 @@
+{
+  "startTime": "2026-01-15T22:00:48.908Z",
+  "url": "http://localhost:8080/inklet/demos/hamfink2026.html",
+  "steps": [
+    {
+      "step": 1,
+      "timestamp": "2026-01-15T22:00:51.695Z",
+      "storyPreview": "rkness, casting prismatic light across damp stone walls.\nYour pockets are empty. No gems, no keys, nothing.\nThe only way out is through the locked passage ahead. You'll need to collect gems to escape.",
+      "choiceCount": 3,
+      "choices": [
+        "1. Look around carefully",
+        "2. Call out into the darkness",
+        "3. Dev: Skip to World Pools"
+      ]
+    },
+    {
+      "step": 2,
+      "timestamp": "2026-01-15T22:00:53.293Z",
+      "storyPreview": "s to escape.\nLook around carefully\nYour eyes adjust to the gloom. You spot:\nA narrow passage with a heavy iron door - LOCKED\nAn alcove filled with glittering gems\nStrange symbols carved into the floor",
+      "choiceCount": 3,
+      "choices": [
+        "1. Enter the gem alcove",
+        "2. Examine the symbols",
+        "3. Try the narrow passage"
+      ]
+    },
+    {
+      "step": 3,
+      "timestamp": "2026-01-15T22:00:54.828Z",
+      "storyPreview": "The symbols appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.",
+      "choiceCount": 1,
+      "choices": [
+        "1. Understood."
+      ]
+    },
+    {
+      "step": 4,
+      "timestamp": "2026-01-15T22:00:56.352Z",
+      "storyPreview": "appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.\nUnderstood.",
+      "choiceCount": 3,
+      "choices": [
+        "1. Enter the gem alcove",
+        "2. Examine the symbols",
+        "3. Try the narrow passage"
+      ]
+    },
+    {
+      "step": 5,
+      "timestamp": "2026-01-15T22:00:57.892Z",
+      "storyPreview": "The symbols appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.",
+      "choiceCount": 1,
+      "choices": [
+        "1. Understood."
+      ]
+    },
+    {
+      "step": 6,
+      "timestamp": "2026-01-15T22:00:59.423Z",
+      "storyPreview": "appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.\nUnderstood.",
+      "choiceCount": 3,
+      "choices": [
+        "1. Enter the gem alcove",
+        "2. Examine the symbols",
+        "3. Try the narrow passage"
+      ]
+    },
+    {
+      "step": 7,
+      "timestamp": "2026-01-15T22:01:00.965Z",
+      "storyPreview": "The symbols appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.",
+      "choiceCount": 1,
+      "choices": [
+        "1. Understood."
+      ]
+    },
+    {
+      "step": 8,
+      "timestamp": "2026-01-15T22:01:02.486Z",
+      "storyPreview": "appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.\nUnderstood.",
+      "choiceCount": 3,
+      "choices": [
+        "1. Enter the gem alcove",
+        "2. Examine the symbols",
+        "3. Try the narrow passage"
+      ]
+    },
+    {
+      "step": 9,
+      "timestamp": "2026-01-15T22:01:04.023Z",
+      "storyPreview": "The symbols appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.",
+      "choiceCount": 1,
+      "choices": [
+        "1. Understood."
+      ]
+    },
+    {
+      "step": 10,
+      "timestamp": "2026-01-15T22:01:05.554Z",
+      "storyPreview": "appear to be an ancient counting system.\nThe inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\nYou definitely need to collect more gems from the alcove.\nUnderstood.",
+      "choiceCount": 3,
+      "choices": [
+        "1. Enter the gem alcove",
+        "2. Examine the symbols",
+        "3. Try the narrow passage"
+      ]
+    },
+    {
+      "step": 11,
+      "timestamp": "2026-01-15T22:01:07.091Z",
+      "storyPreview": "tely need to collect more gems from the alcove.\nUnderstood.\nEnter the gem alcove\nThe alcove sparkles with countless gems embedded in the walls!\nYou need at least 5 diamonds to unlock the crystal door.",
+      "choiceCount": 2,
+      "choices": [
+        "1. Mine for gems!",
+        "2. Return to the main cavern"
+      ]
+    },
+    {
+      "step": 12,
+      "timestamp": "2026-01-15T22:01:08.619Z",
+      "storyPreview": "r the gem alcoveThe alcove sparkles with countless gems embedded in the walls!You need at least 5 diamonds to unlock the crystal door.Mine for gems!You focus your attention on the gem-studded walls...",
+      "choiceCount": 0,
+      "choices": []
+    }
+  ],
+  "consoleMessages": [
+    {
+      "time": "2026-01-15T22:00:49.494Z",
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "time": "2026-01-15T22:00:49.571Z",
+      "type": "log",
+      "text": "[INFO] FINK 2-Engine Demo initializing..."
+    },
+    {
+      "time": "2026-01-15T22:00:49.576Z",
+      "type": "log",
+      "text": "[INFO] Compiling Ink story..."
+    },
+    {
+      "time": "2026-01-15T22:00:49.576Z",
+      "type": "log",
+      "text": "[INFO] Source length: 7298 chars, 295 lines"
+    },
+    {
+      "time": "2026-01-15T22:00:49.659Z",
+      "type": "log",
+      "text": "[INFO] Story compiled successfully"
+    },
+    {
+      "time": "2026-01-15T22:00:49.661Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You awaken in a shimmering underground cavern. Crystals gleam in the darkness, casting prismatic light across damp stone walls.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:49.662Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You awaken in a shimmering underground cavern. Cry...\""
+    },
+    {
+      "time": "2026-01-15T22:00:49.665Z",
+      "type": "log",
+      "text": "[INFO] Text: \"Your pockets are empty. No gems, no keys, nothing.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:49.665Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"Your pockets are empty. No gems, no keys, nothing....\""
+    },
+    {
+      "time": "2026-01-15T22:00:49.668Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The only way out is through the locked passage ahead. You'll need to collect gems to escape.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:49.669Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The only way out is through the locked passage ahe...\""
+    },
+    {
+      "time": "2026-01-15T22:00:49.671Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:51.766Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Look around carefully"
+    },
+    {
+      "time": "2026-01-15T22:00:51.772Z",
+      "type": "log",
+      "text": "[INFO] Text: \"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:51.772Z",
+      "type": "log",
+      "text": "[INFO] Text: \"Your eyes adjust to the gloom. You spot:\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:51.772Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"Your eyes adjust to the gloom. You spot:...\""
+    },
+    {
+      "time": "2026-01-15T22:00:51.773Z",
+      "type": "log",
+      "text": "[INFO] Text: \"A narrow passage with a heavy iron door - LOCKED\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:51.773Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"A narrow passage with a heavy iron door - LOCKED...\""
+    },
+    {
+      "time": "2026-01-15T22:00:51.774Z",
+      "type": "log",
+      "text": "[INFO] Text: \"An alcove filled with glittering gems\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:51.775Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"An alcove filled with glittering gems...\""
+    },
+    {
+      "time": "2026-01-15T22:00:51.777Z",
+      "type": "log",
+      "text": "[INFO] Text: \"Strange symbols carved into the floor\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:51.777Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"Strange symbols carved into the floor...\""
+    },
+    {
+      "time": "2026-01-15T22:00:51.778Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:53.313Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 1: Examine the symbols"
+    },
+    {
+      "time": "2026-01-15T22:00:53.315Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The symbols appear to be an ancient counting system.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:53.315Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The symbols appear to be an ancient counting syste...\""
+    },
+    {
+      "time": "2026-01-15T22:00:53.316Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:53.317Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The inscription reads: \"Five gems open the crystal...\""
+    },
+    {
+      "time": "2026-01-15T22:00:53.318Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You definitely need to collect more gems from the alcove.\" | Tags: CLASS: info"
+    },
+    {
+      "time": "2026-01-15T22:00:53.318Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You definitely need to collect more gems from the ...\""
+    },
+    {
+      "time": "2026-01-15T22:00:53.320Z",
+      "type": "log",
+      "text": "[INFO] Displayed 1 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:54.845Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Understood."
+    },
+    {
+      "time": "2026-01-15T22:00:54.846Z",
+      "type": "log",
+      "text": "[INFO] Text: \"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:54.847Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:56.379Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 1: Examine the symbols"
+    },
+    {
+      "time": "2026-01-15T22:00:56.380Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The symbols appear to be an ancient counting system.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:56.380Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The symbols appear to be an ancient counting syste...\""
+    },
+    {
+      "time": "2026-01-15T22:00:56.381Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:56.382Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The inscription reads: \"Five gems open the crystal...\""
+    },
+    {
+      "time": "2026-01-15T22:00:56.383Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You definitely need to collect more gems from the alcove.\" | Tags: CLASS: info"
+    },
+    {
+      "time": "2026-01-15T22:00:56.383Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You definitely need to collect more gems from the ...\""
+    },
+    {
+      "time": "2026-01-15T22:00:56.384Z",
+      "type": "log",
+      "text": "[INFO] Displayed 1 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:57.912Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Understood."
+    },
+    {
+      "time": "2026-01-15T22:00:57.913Z",
+      "type": "log",
+      "text": "[INFO] Text: \"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:57.915Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:00:59.446Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 1: Examine the symbols"
+    },
+    {
+      "time": "2026-01-15T22:00:59.447Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The symbols appear to be an ancient counting system.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:59.448Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The symbols appear to be an ancient counting syste...\""
+    },
+    {
+      "time": "2026-01-15T22:00:59.449Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:00:59.449Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The inscription reads: \"Five gems open the crystal...\""
+    },
+    {
+      "time": "2026-01-15T22:00:59.450Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You definitely need to collect more gems from the alcove.\" | Tags: CLASS: info"
+    },
+    {
+      "time": "2026-01-15T22:00:59.451Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You definitely need to collect more gems from the ...\""
+    },
+    {
+      "time": "2026-01-15T22:00:59.453Z",
+      "type": "log",
+      "text": "[INFO] Displayed 1 choices"
+    },
+    {
+      "time": "2026-01-15T22:01:00.978Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Understood."
+    },
+    {
+      "time": "2026-01-15T22:01:00.979Z",
+      "type": "log",
+      "text": "[INFO] Text: \"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:00.980Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:01:02.512Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 1: Examine the symbols"
+    },
+    {
+      "time": "2026-01-15T22:01:02.513Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The symbols appear to be an ancient counting system.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:02.513Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The symbols appear to be an ancient counting syste...\""
+    },
+    {
+      "time": "2026-01-15T22:01:02.514Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The inscription reads: \"Five gems open the crystal gate. Beyond lies the key to freedom.\"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:02.514Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The inscription reads: \"Five gems open the crystal...\""
+    },
+    {
+      "time": "2026-01-15T22:01:02.515Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You definitely need to collect more gems from the alcove.\" | Tags: CLASS: info"
+    },
+    {
+      "time": "2026-01-15T22:01:02.515Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You definitely need to collect more gems from the ...\""
+    },
+    {
+      "time": "2026-01-15T22:01:02.517Z",
+      "type": "log",
+      "text": "[INFO] Displayed 1 choices"
+    },
+    {
+      "time": "2026-01-15T22:01:04.045Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Understood."
+    },
+    {
+      "time": "2026-01-15T22:01:04.046Z",
+      "type": "log",
+      "text": "[INFO] Text: \"\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:04.047Z",
+      "type": "log",
+      "text": "[INFO] Displayed 3 choices"
+    },
+    {
+      "time": "2026-01-15T22:01:05.579Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Enter the gem alcove"
+    },
+    {
+      "time": "2026-01-15T22:01:05.581Z",
+      "type": "log",
+      "text": "[INFO] Text: \"The alcove sparkles with countless gems embedded in the walls!\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:05.581Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"The alcove sparkles with countless gems embedded i...\""
+    },
+    {
+      "time": "2026-01-15T22:01:05.582Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You need at least 5 diamonds to unlock the crystal door.\" | Tags: none"
+    },
+    {
+      "time": "2026-01-15T22:01:05.582Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You need at least 5 diamonds to unlock the crystal...\""
+    },
+    {
+      "time": "2026-01-15T22:01:05.584Z",
+      "type": "log",
+      "text": "[INFO] Displayed 2 choices"
+    },
+    {
+      "time": "2026-01-15T22:01:07.111Z",
+      "type": "log",
+      "text": "[INFO] Selected choice 0: Mine for gems!"
+    },
+    {
+      "time": "2026-01-15T22:01:07.112Z",
+      "type": "log",
+      "text": "[INFO] Text: \"You focus your attention on the gem-studded walls...\" | Tags: MINIGAME: gems"
+    },
+    {
+      "time": "2026-01-15T22:01:07.112Z",
+      "type": "log",
+      "text": "[WARN] Minigame tag detected! Type: normal"
+    },
+    {
+      "time": "2026-01-15T22:01:07.112Z",
+      "type": "log",
+      "text": "[INK] Displaying text: \"You focus your attention on the gem-studded walls....\""
+    },
+    {
+      "time": "2026-01-15T22:01:07.915Z",
+      "type": "log",
+      "text": "[INFO] Starting normal minigame!"
+    },
+    {
+      "time": "2026-01-15T22:01:07.920Z",
+      "type": "log",
+      "text": "[INFO] Switched to minigame view"
+    }
+  ],
+  "errors": [
+    {
+      "time": "2026-01-15T22:00:49.494Z",
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    }
+  ],
+  "uniqueTexts": [],
+  "choicesMade": [
+    {
+      "step": 1,
+      "choice": "1. Look around carefully"
+    },
+    {
+      "step": 2,
+      "choice": "2. Examine the symbols"
+    },
+    {
+      "step": 3,
+      "choice": "1. Understood."
+    },
+    {
+      "step": 4,
+      "choice": "2. Examine the symbols"
+    },
+    {
+      "step": 5,
+      "choice": "1. Understood."
+    },
+    {
+      "step": 6,
+      "choice": "2. Examine the symbols"
+    },
+    {
+      "step": 7,
+      "choice": "1. Understood."
+    },
+    {
+      "step": 8,
+      "choice": "2. Examine the symbols"
+    },
+    {
+      "step": 9,
+      "choice": "1. Understood."
+    },
+    {
+      "step": 10,
+      "choice": "1. Enter the gem alcove"
+    },
+    {
+      "step": 11,
+      "choice": "1. Mine for gems!"
+    }
+  ],
+  "uxObservations": [],
+  "finalState": {},
+  "endTime": "2026-01-15T22:01:08.623Z"
+}
