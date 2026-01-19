@@ -66,6 +66,16 @@
             opacity: 1;
             visibility: visible;
         }
+        #status-overlay.dismissable {
+            cursor: pointer;
+        }
+        #status-overlay.dismissable #status-text::after {
+            content: ' (tap to dismiss)';
+            font-size: 10px;
+            opacity: 0.6;
+            display: block;
+            margin-top: 0.5em;
+        }
         #status-text {
             color: var(--zx-cyan);
             font-family: var(--zx-font);

@@ -34,7 +34,7 @@
 .fink-header .settings-btn:hover { background: var(--zx-mag); color: #fff; }
 
 /* --- Main Layout --- */
-.fink-main {
+main {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -42,21 +42,23 @@
 }
 
 /* --- View Switching --- */
-.fink-view {
+.view {
     flex: 1;
     display: none;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.fink-view.active { display: flex; }
+.view.active { display: flex; }
 
 /* --- Narrative View --- */
-.narrative-view { padding: 1em; }
+#narrative-view { padding: 1em; }
 
-.story-output {
+#story-output {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 1em;
     background: rgba(0,20,0,0.5);
     border: 2px solid var(--zx-green);
@@ -64,7 +66,7 @@
 }
 
 /* Text animation styles */
-.story-output .text-chunk {
+#story-output .text-chunk {
     margin: 0.5em 0;
     animation: chunkAppear 0.6s ease-out forwards;
     opacity: 0;
@@ -72,14 +74,14 @@
     filter: blur(4px);
 }
 
-.story-output .text-chunk.visible {
+#story-output .text-chunk.visible {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
 }
 
 /* Word-by-word reveal animation */
-.story-output .text-chunk .word {
+#story-output .text-chunk .word {
     display: inline-block;
     opacity: 0;
     filter: blur(8px);
@@ -99,12 +101,12 @@
 }
 
 /* Latest chunk styling */
-.story-output .text-chunk.latest {
+#story-output .text-chunk.latest {
     padding: 0.4em 0.6em;
     border-radius: var(--border-radius-sm);
 }
 
-.story-output .text-chunk.settled {
+#story-output .text-chunk.settled {
     background: transparent;
     border-left: none;
     padding: 0;
@@ -280,17 +282,17 @@
 .audio-indicator.playing { opacity: 1; }
 
 /* --- Links in Story --- */
-.story-output a {
+#story-output a {
     color: var(--zx-cyan);
     text-decoration: underline;
     transition: color var(--transition-normal);
 }
-.story-output a:hover { color: var(--zx-yellow); }
+#story-output a:hover { color: var(--zx-yellow); }
 
 /* --- Mobile Responsive --- */
 @media (max-width: 600px) {
     .fink-header { padding: 0.4em 0.6em; gap: 0.5em; }
-    .story-output { padding: 0.6em; font-size: var(--font-size-small); }
+    #story-output { padding: 0.6em; font-size: var(--font-size-small); }
     .choices-container { gap: 0.4em; }
     .choice-btn { padding: 0.6em; font-size: var(--font-size-small); }
 }
