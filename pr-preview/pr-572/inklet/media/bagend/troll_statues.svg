@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dawnSky" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFE4B5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0" />
+    </radialGradient>
+    <linearGradient id="stoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#C0C0C0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#808080;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Bright dawn sky -->
+  <rect width="400" height="150" fill="url(#dawnSky)"/>
+  
+  <!-- Sun -->
+  <circle cx="350" cy="50" r="30" fill="#FFD700"/>
+  <circle cx="350" cy="50" r="40" fill="url(#sunGlow)"/>
+  
+  <!-- Sun rays -->
+  <path d="M 320 20 L 300 10 M 330 15 L 315 5 M 340 10 L 330 0" stroke="#FFD700" stroke-width="3" opacity="0.6"/>
+  <path d="M 380 20 L 400 10 M 370 15 L 385 5 M 360 10 L 370 0" stroke="#FFD700" stroke-width="3" opacity="0.6"/>
+  <path d="M 380 70 L 400 80 M 375 60 L 390 50 M 385 80 L 400 90" stroke="#FFD700" stroke-width="3" opacity="0.6"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="150" width="400" height="150" fill="#32CD32"/>
+  
+  <!-- Clearing -->
+  <ellipse cx="200" cy="200" rx="180" ry="80" fill="#90EE90"/>
+  
+  <!-- Cold fire pit (ashes) -->
+  <ellipse cx="200" cy="220" rx="25" ry="15" fill="#696969"/>
+  <ellipse cx="200" cy="215" rx="20" ry="10" fill="#2F4F4F"/>
+  
+  <!-- Scattered ash and charcoal -->
+  <circle cx="195" cy="212" r="3" fill="#1F1F1F"/>
+  <circle cx="205" cy="218" r="2" fill="#1F1F1F"/>
+  <circle cx="188" cy="220" r="2" fill="#1F1F1F"/>
+  
+  <!-- Troll Statue 1 (Tom) - horrified pose -->
+  <ellipse cx="150" cy="200" rx="20" ry="25" fill="url(#stoneGrad)"/>
+  <circle cx="150" cy="175" r="18" fill="url(#stoneGrad)"/>
+  <!-- Horrified expression -->
+  <circle cx="145" cy="170" r="4" fill="#000000"/>
+  <circle cx="155" cy="170" r="4" fill="#000000"/>
+  <ellipse cx="150" cy="180" rx="6" ry="8" fill="#000000"/> <!-- open mouth in shock -->
+  <!-- Arms raised in terror -->
+  <ellipse cx="125" cy="170" rx="8" ry="15" fill="url(#stoneGrad)" transform="rotate(-30 125 170)"/>
+  <ellipse cx="175" cy="170" rx="8" ry="15" fill="url(#stoneGrad)" transform="rotate(30 175 170)"/>
+  <!-- Legs -->
+  <ellipse cx="140" cy="235" rx="8" ry="20" fill="url(#stoneGrad)"/>
+  <ellipse cx="160" cy="235" rx="8" ry="20" fill="url(#stoneGrad)"/>
+  
+  <!-- Troll Statue 2 (Bert) - pointing at sunrise -->
+  <ellipse cx="250" cy="195" rx="22" ry="28" fill="url(#stoneGrad)"/>
+  <circle cx="250" cy="168" r="20" fill="url(#stoneGrad)"/>
+  <!-- Shocked expression -->
+  <circle cx="243" cy="162" r="4" fill="#000000"/>
+  <circle cx="257" cy="162" r="4" fill="#000000"/>
+  <ellipse cx="250" cy="175" rx="8" ry="6" fill="#000000"/>
+  <!-- One arm pointing at sun -->
+  <ellipse cx="275" cy="165" rx="9" ry="16" fill="url(#stoneGrad)" transform="rotate(-45 275 165)"/>
+  <!-- Other arm covering eyes -->
+  <ellipse cx="225" cy="155" rx="9" ry="16" fill="url(#stoneGrad)" transform="rotate(45 225 155)"/>
+  <!-- Legs -->
+  <ellipse cx="235" cy="240" rx="9" ry="22" fill="url(#stoneGrad)"/>
+  <ellipse cx="265" cy="240" rx="9" ry="22" fill="url(#stoneGrad)"/>
+  
+  <!-- Troll Statue 3 (Bill) - crouching/cowering -->
+  <ellipse cx="200" cy="170" rx="18" ry="20" fill="url(#stoneGrad)"/>
+  <circle cx="200" cy="150" r="16" fill="url(#stoneGrad)"/>
+  <!-- Fear expression -->
+  <circle cx="195" cy="145" r="3" fill="#000000"/>
+  <circle cx="205" cy="145" r="3" fill="#000000"/>
+  <ellipse cx="200" cy="155" rx="5" ry="7" fill="#000000"/>
+  <!-- Arms covering head -->
+  <ellipse cx="185" cy="140" rx="7" ry="14" fill="url(#stoneGrad)" transform="rotate(20 185 140)"/>
+  <ellipse cx="215" cy="140" rx="7" ry="14" fill="url(#stoneGrad)" transform="rotate(-20 215 140)"/>
+  <!-- Crouched legs -->
+  <ellipse cx="190" cy="185" rx="8" ry="12" fill="url(#stoneGrad)"/>
+  <ellipse cx="210" cy="185" rx="8" ry="12" fill="url(#stoneGrad)"/>
+  
+  <!-- Gleaming sword and key near largest troll -->
+  <rect x="270" y="235" width="15" height="3" fill="#C0C0C0"/>
+  <rect x="277" y="225" width="1" height="15" fill="#8B4513"/>
+  <ellipse cx="278" cy="223" rx="3" ry="2" fill="#FFD700"/>
+  
+  <!-- Key -->
+  <rect x="290" y="240" width="8" height="2" fill="#FFD700"/>
+  <circle cx="298" cy="241" r="3" fill="#FFD700" fill-opacity="0" stroke="#FFD700" stroke-width="1"/>
+  <rect x="295" y="239" width="2" height="1" fill="#FFD700"/>
+  <rect x="295" y="242" width="2" height="1" fill="#FFD700"/>
+  
+  <!-- Sparkle effects on treasures -->
+  <path d="M 275 230 L 277 232 L 279 230 L 277 228 Z" fill="#FFD700" opacity="0.8"/>
+  <path d="M 285 235 L 287 237 L 289 235 L 287 233 Z" fill="#FFD700" opacity="0.6"/>
+  <path d="M 292 238 L 294 240 L 296 238 L 294 236 Z" fill="#FFD700" opacity="0.7"/>
+  
+  <!-- Morning birds -->
+  <path d="M 100 80 Q 95 75 100 70 Q 105 75 100 80" fill="#000000"/>
+  <path d="M 120 70 Q 115 65 120 60 Q 125 65 120 70" fill="#000000"/>
+  <path d="M 300 90 Q 295 85 300 80 Q 305 85 300 90" fill="#000000"/>
+  
+  <!-- Peaceful flowers now that evil is gone -->
+  <circle cx="110" cy="240" r="3" fill="#FF69B4"/>
+  <circle cx="130" cy="245" r="3" fill="#FFD700"/>
+  <circle cx="320" cy="250" r="3" fill="#9370DB"/>
+  <circle cx="340" cy="245" r="3" fill="#FF6347"/>
+  
+  <!-- Morning shadows -->
+  <ellipse cx="150" cy="255" rx="20" ry="8" fill="#000000" opacity="0.2"/>
+  <ellipse cx="250" cy="265" rx="22" ry="10" fill="#000000" opacity="0.2"/>
+  <ellipse cx="200" cy="195" rx="18" ry="6" fill="#000000" opacity="0.2"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="monospace" font-size="14" fill="#8B4513" font-weight="bold">TROLLS TURNED TO STONE</text>
+</svg>

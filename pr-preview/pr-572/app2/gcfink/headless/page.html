@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gcfink headless runner</title>
+  <!-- inkjs compiler/engine (CDN); if offline this page will not compile stories -->
+  <script src="https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js"></script>
+</head>
+<body>
+<script>
+  (function(){
+    function extractFink(jsSource) {
+      const captured = [];
+      function oooOO(strings) {
+        try {
+          const content = (strings && strings.raw && Array.isArray(strings.raw)) ? strings.raw.join('') : String(strings || '');
+          captured.push(content);
+          return content;
+        } catch (e) { return ''; }
+      }
+      try {
+        // Evaluate FINK JS in this minimal scope
+        (0, eval)(jsSource);
+      } catch (e) {
+        // ignore; we only care about captured content
+      }
+      const uniq = [];
+      const seen = new Set();
+      for (const s of captured) { if (!seen.has(s)) { seen.add(s); uniq.push(s); } }
+      return uniq.join('\n');
+    }
+
+    function compileInk(inkSource) {
+      if (!window.inkjs || !window.inkjs.Compiler) {
+        throw new Error('inkjs not available in headless page');
+      }
+      const story = new window.inkjs.Compiler(inkSource).Compile();
+      return story;
+    }
+
+    async function summarizeStory(story) {
+      const lines = [];
+      while (story.canContinue) {
+        lines.push(story.Continue());
+      }
+      const choices = (story.currentChoices || []).map(c => c.text);
+      const tags = story.currentTags || [];
+      return { lines, choices, tagsCount: tags.length };
+    }
+
+    window.gcfinkRunner = {
+      runFinkSource(jsSource) {
+        const ink = extractFink(jsSource);
+        const story = compileInk(ink);
+        return summarizeStory(story).then(r => ({ ink, ...r }));
+      },
+      extractFink(jsSource) { return extractFink(jsSource); },
+      runInk(inkSource) {
+        const story = compileInk(inkSource);
+        return summarizeStory(story);
+      }
+    };
+  })();
+</script>
+</body>
+</html>
+
