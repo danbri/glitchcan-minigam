@@ -116,9 +116,9 @@ window.FinkInkEngine = {
                 FinkUI.populateDynamicMenu(this.currentStoryTags.menu);
             }
 
-            // Build navigation map
+            // Build navigation map (with FINK content for graph edges and PUBLIC tags)
             if (window.FinkNavigation) {
-                FinkNavigation.buildKnotIdMap(this.story, FinkPlayer.currentStoryUrl);
+                FinkNavigation.buildKnotIdMap(this.story, FinkPlayer.currentStoryUrl, finkContent);
             }
 
             FinkUI.clearStory();
@@ -148,6 +148,11 @@ window.FinkInkEngine = {
                 FinkUtils.debugLog('Making choice: ' + choiceIndex);
                 this.story.ChooseChoiceIndex(choiceIndex);
                 if (window.swimEvent) swimEvent('ink', '👆', 'Choice', `Index: ${choiceIndex}`);
+
+                // Clear fink_respawn flag after first choice
+                if (window.FinkNavigation) {
+                    FinkNavigation.clearRespawnFlag();
+                }
             }
 
             FinkUI.clearChoices();
