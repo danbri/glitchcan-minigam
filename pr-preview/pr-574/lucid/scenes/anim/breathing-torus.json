@@ -1,0 +1,60 @@
+{
+  "title": "Breathing Torus",
+  "subtitle": "Animated ring with parametric controls",
+  "version": "2.0",
+  "notes": "Torus with breathing animation on minor radius. Adjust breath rate, size, and color.",
+
+  "params": {
+    "majorRadius": {
+      "value": 1.2,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 2.5,
+      "description": "Ring major radius"
+    },
+    "minorRadius": {
+      "value": 0.25,
+      "type": "scalar",
+      "min": 0.1,
+      "max": 0.6,
+      "description": "Ring tube radius (base)"
+    },
+    "breathAmount": {
+      "value": 0.10,
+      "type": "scalar",
+      "min": 0.02,
+      "max": 0.25,
+      "description": "Breath amplitude"
+    },
+    "breathSpeed": {
+      "value": 2.0,
+      "type": "scalar",
+      "min": 0.5,
+      "max": 6.0,
+      "description": "Breath frequency"
+    },
+    "torusColor": {
+      "value": [0.9, 0.4, 0.6],
+      "type": "color3",
+      "description": "Torus color"
+    }
+  },
+
+  "root": {
+    "type": "torus",
+    "params": {
+      "major": { "var": "majorRadius" },
+      "minor": {
+        "expr": "add",
+        "args": [
+          { "var": "minorRadius" },
+          { "expr": "mul", "args": [
+            { "var": "breathAmount" },
+            { "expr": "sin", "args": [{ "expr": "mul", "args": [{ "var": "time" }, { "var": "breathSpeed" }] }] }
+          ]}
+        ]
+      },
+      "color": { "var": "torusColor" }
+    }
+  }
+}

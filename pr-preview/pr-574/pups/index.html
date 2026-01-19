@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="screen-orientation" content="portrait">
+<title>Puppy Pop!</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+html {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  background: linear-gradient(135deg,
+    hsl(var(--bg-hue1), 80%, 92%) 0%,
+    hsl(var(--bg-hue2), 70%, 94%) 50%,
+    hsl(var(--bg-hue3), 75%, 93%) 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  --bg-hue1: 340;
+  --bg-hue2: 40;
+  --bg-hue3: 210;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#game {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.puppy {
+  position: absolute;
+  cursor: pointer;
+  transform-origin: center center;
+  z-index: 1;
+  will-change: transform, left, top;
+}
+
+.puppy.dragging {
+  z-index: 100;
+  cursor: grabbing;
+}
+
+.puppy.splitting {
+  animation: split-pop 0.25s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes split-pop {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0; transform: scale(0); }
+}
+
+.puppy.fading-out {
+  animation: fade-out 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fade-out {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.3); }
+}
+
+.puppy.spawning {
+  animation: spawn-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes spawn-in {
+  0% { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+#settings-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  background: rgba(156, 39, 176, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
+  touch-action: manipulation;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+#settings-btn:hover {
+  background: rgba(156, 39, 176, 1);
+  border-color: white;
+}
+
+#settings-btn:active {
+  transform: scale(0.92);
+}
+
+/* ============ EMOJI CAROUSEL ============ */
+#carousel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#carousel-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#carousel-title {
+  color: white;
+  font-size: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+#carousel-container {
+  width: 100%;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+#carousel-container:active {
+  cursor: grabbing;
+}
+
+#carousel-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-item {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  margin-top: -50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  font-size: 70px;
+  cursor: pointer;
+  will-change: transform, opacity, filter;
+}
+
+.carousel-item.active {
+  /* Active styling handled in JS */
+}
+
+#carousel-indicator {
+  margin-top: 2rem;
+  display: flex;
+  gap: 8px;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.indicator-dot.active {
+  background: white;
+  transform: scale(1.3);
+}
+
+#carousel-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+
+#carousel-close:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+#carousel-close:active {
+  transform: scale(0.9);
+}
+
+#carousel-hint {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.9rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin-top: 1.5rem;
+}
+
+#audio-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  width: 48px;
+  height: 48px;
+  background: rgba(76, 175, 80, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
+  touch-action: manipulation;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+#audio-btn:hover {
+  background: rgba(76, 175, 80, 1);
+  border-color: white;
+}
+
+#audio-btn:active {
+  transform: scale(0.92);
+}
+
+#audio-btn.muted {
+  background: rgba(244, 67, 54, 0.85);
+}
+
+#audio-btn.muted:hover {
+  background: rgba(244, 67, 54, 1);
+}
+
+/* Prevent pull-to-refresh */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbars */
+::-webkit-scrollbar {
+  display: none;
+}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<button id="settings-btn" aria-label="Choose emoji">🐶</button>
+<button id="audio-btn" aria-label="Toggle audio">♪</button>
+
+<!-- Emoji Carousel Overlay -->
+<div id="carousel-overlay">
+  <button id="carousel-close" aria-label="Close">✕</button>
+  <div id="carousel-title">Choose Your Critter</div>
+  <div id="carousel-container">
+    <div id="carousel-track"></div>
+  </div>
+  <div id="carousel-indicator"></div>
+  <div id="carousel-hint">Swipe or tap to select</div>
+</div>
+
+<script>
+// ============ AUDIO ENGINE - Joyful Uplifting Music ============
+class ShepardAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.isPlaying = false;
+    this.isMuted = false;
+    this.shepardOscs = [];
+    this.chordIndex = 0;
+    this.beatCount = 0;
+    this.intervalId = null;
+    this.animationId = null;
+
+    // Emotionally uplifting progression: I - V - vi - IV (the "happy" progression)
+    // In D major for brightness: D - A - Bm - G, with major 7ths for warmth
+    this.chordRoots = [587.33, 440.00, 493.88, 392.00]; // D5 - A4 - B4 - G4
+    this.chordTypes = ['maj7', 'maj', 'min', 'maj7']; // Chord qualities
+    this.tempo = 132; // BPM - uplifting but not frantic
+    this.beatDuration = 60 / this.tempo;
+
+    // Shepard tone octave layers - warm and enveloping
+    this.shepardBaseFreqs = [146.83, 293.66, 587.33, 1174.66]; // D notes for harmony
+    this.shepardSpeed = 0.008; // Gentle rise
+    this.shepardPhase = 0;
+  }
+
+  async init() {
+    if (this.ctx && this.isPlaying) return true;
+
+    try {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+      }
+
+      if (!this.masterGain) {
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.5;
+        this.masterGain.connect(this.ctx.destination);
+
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.value = -18;
+        this.compressor.knee.value = 20;
+        this.compressor.ratio.value = 6;
+        this.compressor.connect(this.masterGain);
+      }
+
+      this.isPlaying = true;
+      this.isMuted = false;
+      this.startContinuousShepard();
+      this.startMusic();
+      return true;
+    } catch (e) {
+      console.error('Audio init failed:', e);
+      return false;
+    }
+  }
+
+  // Continuous Shepard tones - warm pad sound
+  startContinuousShepard() {
+    this.shepardOscs = this.shepardBaseFreqs.map((baseFreq, i) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = baseFreq;
+
+      // Add slight vibrato for warmth
+      const vibrato = this.ctx.createOscillator();
+      vibrato.type = 'sine';
+      vibrato.frequency.value = 4 + i * 0.5; // Slight variation per layer
+      const vibratoGain = this.ctx.createGain();
+      vibratoGain.gain.value = 2; // Subtle pitch wobble
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+      vibrato.start();
+
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1200;
+      filter.Q.value = 0.5;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.compressor);
+      osc.start();
+
+      return { osc, gain, baseFreq, index: i, vibrato };
+    });
+
+    // Animate Shepard tones
+    const animateShepard = () => {
+      if (!this.isPlaying || this.isMuted) {
+        this.animationId = requestAnimationFrame(animateShepard);
+        return;
+      }
+
+      this.shepardPhase += this.shepardSpeed;
+      if (this.shepardPhase >= 1) this.shepardPhase = 0;
+
+      const centerFreq = 400; // Warmer center frequency
+
+      this.shepardOscs.forEach((layer, i) => {
+        const risingFactor = Math.pow(2, this.shepardPhase);
+        let freq = layer.baseFreq * risingFactor;
+
+        layer.osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
+
+        // Softer gaussian envelope for pad-like feel
+        const logFreq = Math.log2(freq);
+        const logCenter = Math.log2(centerFreq);
+        const distance = Math.abs(logFreq - logCenter);
+        const amp = Math.exp(-distance * distance * 0.3) * 0.04;
+
+        layer.gain.gain.setTargetAtTime(amp, this.ctx.currentTime, 0.15);
+      });
+
+      this.animationId = requestAnimationFrame(animateShepard);
+    };
+
+    animateShepard();
+  }
+
+  // Cheerful bell-like synth for melody
+  playArpNote(freq, time, duration) {
+    if (this.isMuted) return;
+
+    // Main tone - bright triangle
+    const osc = this.ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+
+    // Harmonics for sparkle
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = freq * 2; // Octave up
+
+    const osc3 = this.ctx.createOscillator();
+    osc3.type = 'sine';
+    osc3.frequency.value = freq * 3; // Fifth above octave
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 3000;
+    filter.Q.value = 1;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    osc3.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    // Bouncy envelope - quick attack, sustain, gentle release
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.1, time + 0.015);
+    gain.gain.setValueAtTime(0.08, time + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.9);
+
+    // Bright filter sweep
+    filter.frequency.setValueAtTime(5000, time);
+    filter.frequency.exponentialRampToValueAtTime(1500, time + duration * 0.3);
+
+    osc.start(time);
+    osc2.start(time);
+    osc3.start(time);
+    osc.stop(time + duration);
+    osc2.stop(time + duration);
+    osc3.stop(time + duration);
+  }
+
+  // Warm bouncy bass
+  playBass(freq, time, duration) {
+    if (this.isMuted) return;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq / 2;
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.value = freq / 2;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 600;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+
+    // Bouncy envelope
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.12, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.08, time + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.8);
+
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + duration);
+    osc2.stop(time + duration);
+  }
+
+  // Soft clicky percussion
+  playClick(time, accent = false) {
+    if (this.isMuted) return;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = accent ? 1800 : 1400;
+
+    const gain = this.ctx.createGain();
+    const vol = accent ? 0.06 : 0.03;
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+
+    osc.connect(gain);
+    gain.connect(this.compressor);
+
+    osc.start(time);
+    osc.stop(time + 0.05);
+  }
+
+  // Sparkle effect - brighter and more magical
+  createShimmer() {
+    if (!this.ctx || this.isMuted) return;
+
+    const baseFreq = 2000 + Math.random() * 1500;
+    const now = this.ctx.currentTime;
+
+    // Major chord sparkle
+    const intervals = [1, 1.25, 1.5, 2, 2.5, 3];
+
+    for (let i = 0; i < intervals.length; i++) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = baseFreq * intervals[i];
+
+      const gain = this.ctx.createGain();
+      const delay = i * 0.02;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.025 / (i + 1), now + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.compressor);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.6);
+    }
+  }
+
+  playBeat() {
+    if (!this.isPlaying || this.isMuted) return;
+
+    const now = this.ctx.currentTime;
+    const root = this.chordRoots[this.chordIndex];
+    const chordType = this.chordTypes[this.chordIndex];
+    const beat = this.beatCount % 8;
+
+    // Warm bass on 1 and 5
+    if (beat === 0 || beat === 4) {
+      this.playBass(root, now, this.beatDuration * 1.5);
+    }
+
+    // Build chord notes based on type (major 7th for extra warmth)
+    let arpNotes;
+    if (chordType === 'maj7') {
+      arpNotes = [root, root * 1.25, root * 1.5, root * 1.875, root * 2]; // 1 3 5 7 8
+    } else if (chordType === 'min') {
+      arpNotes = [root, root * 1.2, root * 1.5, root * 2]; // 1 b3 5 8
+    } else {
+      arpNotes = [root, root * 1.25, root * 1.5, root * 2]; // 1 3 5 8
+    }
+
+    // Uplifting arpeggio pattern - rising then gently falling
+    const arpPattern = [0, 1, 2, 3, 4 % arpNotes.length, 3, 2, 1];
+    const noteIndex = arpPattern[beat];
+    this.playArpNote(arpNotes[noteIndex], now, this.beatDuration * 0.7);
+
+    // Add harmony note on some beats for richness
+    if (beat === 0 || beat === 4) {
+      this.playArpNote(arpNotes[2], now + 0.02, this.beatDuration * 0.5); // 5th harmony
+    }
+
+    // Gentle percussion
+    this.playClick(now, beat === 0);
+    if (beat % 2 === 0) {
+      this.playClick(now + this.beatDuration * 0.5, false);
+    }
+
+    // Sparkles for magic - more frequent
+    if (beat === 2 || beat === 6) {
+      this.createShimmer();
+    }
+
+    this.beatCount++;
+    if (this.beatCount % 8 === 0) {
+      this.chordIndex = (this.chordIndex + 1) % this.chordRoots.length;
+    }
+  }
+
+  startMusic() {
+    this.playBeat();
+    this.intervalId = setInterval(() => this.playBeat(), this.beatDuration * 1000);
+  }
+
+  toggle() {
+    this.isMuted = !this.isMuted;
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(
+        this.isMuted ? 0 : 0.5,
+        this.ctx.currentTime,
+        0.1
+      );
+    }
+    return !this.isMuted;
+  }
+
+  stop() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    this.shepardOscs.forEach(layer => {
+      layer.osc.stop();
+      if (layer.vibrato) layer.vibrato.stop();
+    });
+    this.shepardOscs = [];
+    this.isPlaying = false;
+  }
+}
+
+const audioEngine = new ShepardAudioEngine();
+
+// ============ EMOJI CAROUSEL ============
+const EMOJI_OPTIONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🐻', '🐼', '🐨', '🐯', '🐮', '🐷', '🐸', '🐵', '🦊', '🐻‍❄️'];
+let currentEmojiIndex = 0;
+let currentEmoji = EMOJI_OPTIONS[0];
+
+class EmojiCarousel {
+  constructor() {
+    this.overlay = document.getElementById('carousel-overlay');
+    this.track = document.getElementById('carousel-track');
+    this.indicator = document.getElementById('carousel-indicator');
+    this.closeBtn = document.getElementById('carousel-close');
+    this.settingsBtn = document.getElementById('settings-btn');
+
+    this.currentIndex = 0;
+    this.itemWidth = 100;
+    this.position = 0; // Continuous position for physics
+    this.velocity = 0;
+    this.isDragging = false;
+    this.startX = 0;
+    this.startPosition = 0;
+    this.lastX = 0;
+    this.lastTime = 0;
+    this.animationId = null;
+    this.isAnimating = false;
+
+    // Physics constants
+    this.friction = 0.92;
+    this.snapStrength = 0.15;
+    this.minVelocity = 0.1;
+
+    // Selection animation state
+    this.isSelecting = false;
+    this.selectionHue = 0;
+
+    this.buildCarousel();
+    this.setupEvents();
+  }
+
+  buildCarousel() {
+    this.track.innerHTML = '';
+    EMOJI_OPTIONS.forEach((emoji, i) => {
+      const item = document.createElement('div');
+      item.className = 'carousel-item';
+      item.textContent = emoji;
+      item.dataset.index = i;
+      this.track.appendChild(item);
+    });
+
+    this.indicator.innerHTML = '';
+    EMOJI_OPTIONS.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'indicator-dot' + (i === this.currentIndex ? ' active' : '');
+      dot.dataset.index = i;
+      this.indicator.appendChild(dot);
+    });
+  }
+
+  setupEvents() {
+    this.settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.open();
+    });
+    this.settingsBtn.addEventListener('touchend', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.open();
+    }, { passive: false });
+
+    this.closeBtn.addEventListener('click', () => this.close());
+    this.closeBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.close();
+    }, { passive: false });
+
+    this.overlay.addEventListener('click', (e) => {
+      if (e.target === this.overlay) this.close();
+    });
+
+    const container = document.getElementById('carousel-container');
+    container.addEventListener('pointerdown', (e) => this.dragStart(e));
+    container.addEventListener('pointermove', (e) => this.drag(e));
+    container.addEventListener('pointerup', (e) => this.dragEnd(e));
+    container.addEventListener('pointercancel', (e) => this.dragEnd(e));
+
+    container.addEventListener('touchstart', (e) => this.dragStart(e), { passive: false });
+    container.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
+    container.addEventListener('touchend', (e) => this.dragEnd(e), { passive: false });
+
+    this.track.addEventListener('click', (e) => {
+      if (this.isDragging || Math.abs(this.velocity) > 1) return;
+      const item = e.target.closest('.carousel-item');
+      if (item) {
+        const index = parseInt(item.dataset.index);
+        this.animateToIndex(index);
+        setTimeout(() => this.selectCurrent(), 300);
+      }
+    });
+
+    this.indicator.addEventListener('click', (e) => {
+      const dot = e.target.closest('.indicator-dot');
+      if (dot) {
+        const index = parseInt(dot.dataset.index);
+        this.animateToIndex(index);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!this.overlay.classList.contains('visible')) return;
+      if (e.key === 'ArrowLeft') this.animateToIndex(this.wrapIndex(this.currentIndex - 1));
+      else if (e.key === 'ArrowRight') this.animateToIndex(this.wrapIndex(this.currentIndex + 1));
+      else if (e.key === 'Enter') this.selectCurrent();
+      else if (e.key === 'Escape') this.close();
+    });
+  }
+
+  wrapIndex(index) {
+    const len = EMOJI_OPTIONS.length;
+    return ((index % len) + len) % len;
+  }
+
+  wrapPosition(pos) {
+    const totalWidth = EMOJI_OPTIONS.length * this.itemWidth;
+    return ((pos % totalWidth) + totalWidth) % totalWidth;
+  }
+
+  dragStart(e) {
+    if (e.target.closest('#carousel-close')) return;
+    this.isDragging = true;
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    this.startX = x;
+    this.lastX = x;
+    this.startPosition = this.position;
+    this.lastTime = Date.now();
+    this.velocity = 0;
+
+    if (e.type.includes('pointer') && e.pointerId !== undefined) {
+      try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+    }
+  }
+
+  drag(e) {
+    if (!this.isDragging) return;
+    e.preventDefault();
+
+    const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const now = Date.now();
+    const dt = now - this.lastTime;
+
+    if (dt > 0) {
+      this.velocity = (this.lastX - x) / dt * 16;
+    }
+
+    this.position = this.startPosition + (this.startX - x);
+    this.lastX = x;
+    this.lastTime = now;
+
+    this.render();
+  }
+
+  dragEnd(e) {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+
+    if (e && e.type.includes('pointer') && e.pointerId !== undefined) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+
+    // Start physics animation
+    this.startPhysicsAnimation();
+  }
+
+  startPhysicsAnimation() {
+    this.isAnimating = true;
+
+    const animate = () => {
+      if (!this.isAnimating) return;
+
+      // Apply friction
+      this.velocity *= this.friction;
+
+      // Apply velocity
+      this.position += this.velocity;
+
+      // When velocity is low, snap to nearest
+      if (Math.abs(this.velocity) < this.minVelocity) {
+        const targetIndex = Math.round(this.position / this.itemWidth);
+        const targetPosition = targetIndex * this.itemWidth;
+        const diff = targetPosition - this.position;
+
+        if (Math.abs(diff) < 0.5) {
+          this.position = targetPosition;
+          this.currentIndex = this.wrapIndex(targetIndex);
+          this.updateIndicator();
+          this.isAnimating = false;
+          this.render();
+          return;
+        }
+
+        // Snap towards target
+        this.position += diff * this.snapStrength;
+        this.velocity = 0;
+      }
+
+      this.currentIndex = this.wrapIndex(Math.round(this.position / this.itemWidth));
+      this.updateIndicator();
+      this.render();
+
+      this.animationId = requestAnimationFrame(animate);
+    };
+
+    this.animationId = requestAnimationFrame(animate);
+  }
+
+  animateToIndex(targetIndex) {
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    const currentWrapped = this.wrapIndex(Math.round(this.position / this.itemWidth));
+    let diff = targetIndex - currentWrapped;
+    const len = EMOJI_OPTIONS.length;
+
+    // Find shortest path (wrapping)
+    if (diff > len / 2) diff -= len;
+    if (diff < -len / 2) diff += len;
+
+    const targetPosition = this.position + diff * this.itemWidth;
+
+    this.isAnimating = true;
+    const startPosition = this.position;
+    const startTime = Date.now();
+    const duration = 300;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease out cubic
+
+      this.position = startPosition + (targetPosition - startPosition) * eased;
+      this.currentIndex = this.wrapIndex(Math.round(this.position / this.itemWidth));
+      this.updateIndicator();
+      this.render();
+
+      if (progress < 1) {
+        this.animationId = requestAnimationFrame(animate);
+      } else {
+        this.isAnimating = false;
+        this.position = targetPosition;
+      }
+    };
+
+    this.animationId = requestAnimationFrame(animate);
+  }
+
+  render(selectionMode = false) {
+    const containerWidth = document.getElementById('carousel-container').offsetWidth;
+    const center = containerWidth / 2;
+    const items = this.track.querySelectorAll('.carousel-item');
+    const len = EMOJI_OPTIONS.length;
+    const totalWidth = len * this.itemWidth;
+
+    items.forEach((item, i) => {
+      // Calculate wrapped position for infinite scroll
+      let itemPos = i * this.itemWidth - this.position;
+
+      // Wrap items to create infinite effect
+      while (itemPos < -this.itemWidth * 1.5) itemPos += totalWidth;
+      while (itemPos > totalWidth - this.itemWidth * 1.5) itemPos -= totalWidth;
+
+      const itemCenter = itemPos + this.itemWidth / 2;
+      const distFromCenter = itemCenter - center + this.itemWidth / 2;
+      const normalizedDist = Math.abs(distFromCenter) / (containerWidth / 2);
+      const isSelected = this.wrapIndex(Math.round(this.position / this.itemWidth)) === i;
+
+      // Dramatic fisheye: center = 2.5x, edges = 0.4x
+      const scale = Math.max(0.4, 2.5 - normalizedDist * 2.1);
+
+      // In selection mode, fade out non-selected items
+      let opacity = Math.max(0.2, 1 - normalizedDist * 0.8);
+      if (selectionMode && !isSelected) {
+        opacity = 0.1;
+      }
+
+      // Stronger colorization: more sepia and saturation for pale emoji
+      const hueShift = selectionMode && isSelected ? this.selectionHue : ((i * 47) % 360);
+
+      // Build filter with optional selection border effect
+      let filter = `sepia(0.5) saturate(2) hue-rotate(${hueShift}deg) brightness(1.1)`;
+      if (selectionMode && isSelected) {
+        // Rainbow shimmer with thick black outline via multiple drop-shadows
+        filter += ` drop-shadow(0 0 2px black) drop-shadow(0 0 2px black) drop-shadow(0 0 3px black)`;
+        filter += ` drop-shadow(0 0 15px hsl(${this.selectionHue}, 100%, 60%))`;
+      } else {
+        filter += ` drop-shadow(0 ${scale * 4}px ${scale * 8}px rgba(0,0,0,0.3))`;
+      }
+
+      item.style.transform = `translateX(${itemPos}px) scale(${scale})`;
+      item.style.opacity = opacity;
+      item.style.filter = filter;
+      item.style.zIndex = Math.round((1 - normalizedDist) * 100);
+
+      item.classList.toggle('active', isSelected);
+    });
+  }
+
+  updateIndicator() {
+    const dots = this.indicator.querySelectorAll('.indicator-dot');
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.currentIndex);
+    });
+  }
+
+  selectCurrent() {
+    if (this.isSelecting) return;
+    this.isSelecting = true;
+
+    currentEmojiIndex = this.currentIndex;
+    currentEmoji = EMOJI_OPTIONS[this.currentIndex];
+
+    // Start rainbow shimmer animation
+    this.selectionHue = 0;
+    const shimmerDuration = 800;
+    const startTime = Date.now();
+
+    // Play celebratory shimmer
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    const animateSelection = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / shimmerDuration;
+
+      if (progress < 1) {
+        // Rainbow cycle: go through full spectrum
+        this.selectionHue = (progress * 720) % 360;
+        this.render(true); // Selection mode
+        requestAnimationFrame(animateSelection);
+      } else {
+        // Animation complete - update everything and close
+        this.settingsBtn.textContent = currentEmoji;
+
+        puppies.forEach(p => {
+          if (p.element) p.element.textContent = currentEmoji;
+        });
+
+        this.isSelecting = false;
+        this.close();
+      }
+    };
+
+    // Animate to center first, then start shimmer
+    this.animateToIndex(this.currentIndex);
+    setTimeout(() => animateSelection(), 150);
+  }
+
+  open() {
+    this.currentIndex = currentEmojiIndex;
+    this.position = this.currentIndex * this.itemWidth;
+    this.velocity = 0;
+    this.overlay.classList.add('visible');
+    this.render();
+  }
+
+  close() {
+    this.overlay.classList.remove('visible');
+    this.isAnimating = false;
+    if (this.animationId) cancelAnimationFrame(this.animationId);
+  }
+}
+
+let emojiCarousel;
+
+// ============ GAME ENGINE ============
+const game = document.getElementById('game');
+const puppies = [];
+
+const MIN_SIZE = 24;
+const MAX_PUPPIES = 25;
+const BASE_GROWTH_RATE = 0.15;
+const SPLIT_SIZE_RATIO = 0.5;
+
+const FRICTION = 0.98;
+const BOUNCE_DAMPING = 0.5;
+const COLLISION_PUSH = 0.2;
+const TAP_THRESHOLD = 180;
+const DRAG_DISTANCE_THRESHOLD = 8;
+
+// Overcrowding thresholds
+const CROWDING_THRESHOLD = 0.35;  // 35% screen coverage triggers slowdown
+const CRITICAL_CROWDING = 0.50;   // 50% coverage triggers culling
+const CULL_CHECK_INTERVAL = 60;   // Check every 60 frames
+let frameCount = 0;
+let currentGrowthRate = BASE_GROWTH_RATE;
+
+function calculateCrowding() {
+  const screenArea = window.innerWidth * window.innerHeight;
+  let totalPuppyArea = 0;
+
+  for (const p of puppies) {
+    if (p.splitting) continue;
+    const r = p.getRadius();
+    totalPuppyArea += Math.PI * r * r;
+  }
+
+  return totalPuppyArea / screenArea;
+}
+
+function cullLargestPuppy() {
+  // Find the largest non-dragging, non-splitting puppy
+  let largest = null;
+  let largestSize = 0;
+
+  for (const p of puppies) {
+    if (p.splitting || p.isDragging || p.fadingOut) continue;
+    if (p.size > largestSize) {
+      largestSize = p.size;
+      largest = p;
+    }
+  }
+
+  if (largest && largestSize > MIN_SIZE * 2) {
+    largest.fadingOut = true;
+    largest.element.classList.add('fading-out');
+
+    // Play a soft shimmer when culling
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    setTimeout(() => {
+      const idx = puppies.indexOf(largest);
+      if (idx > -1) puppies.splice(idx, 1);
+      largest.element.remove();
+    }, 600);
+
+    return true;
+  }
+  return false;
+}
+
+class Puppy {
+  constructor(x, y, vx = 0, vy = 0, size = MIN_SIZE) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.size = Math.max(MIN_SIZE, size);
+
+    this.scaleVariation = 0.8 + Math.random() * 0.4;
+    this.rotation = (Math.random() - 0.5) * 20;
+
+    const colorChance = Math.random();
+    if (colorChance < 0.7) {
+      this.hueRotate = (Math.random() - 0.5) * 50;
+    } else if (colorChance < 0.9) {
+      this.hueRotate = 280 + Math.random() * 40;
+    } else {
+      this.hueRotate = Math.random() * 360;
+    }
+
+    this.saturate = 0.85 + Math.random() * 0.4;
+    this.brightness = 0.95 + Math.random() * 0.15;
+
+    this.element = document.createElement('div');
+    this.element.className = 'puppy spawning';
+    this.element.textContent = currentEmoji;
+    this.element.style.lineHeight = '1';
+
+    game.appendChild(this.element);
+
+    this.pointerDown = false;
+    this.pointerStartTime = 0;
+    this.pointerStartX = 0;
+    this.pointerStartY = 0;
+    this.isDragging = false;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.lastMoveX = 0;
+    this.lastMoveY = 0;
+    this.lastMoveTime = 0;
+
+    this.posHistory = [];
+    this.historyMax = 30;
+
+    this.setupEvents();
+
+    setTimeout(() => this.element.classList.remove('spawning'), 350);
+
+    this.updatePosition();
+  }
+
+  buildFilter(isDragging) {
+    const shadow = isDragging
+      ? 'drop-shadow(4px 8px 12px rgba(0,0,0,0.3))'
+      : 'drop-shadow(2px 4px 6px rgba(0,0,0,0.15))';
+    // sepia(0.5) adds stronger color to grayscale emoji, saturate(2) makes all emoji more vibrant
+    return `sepia(0.5) saturate(${this.saturate * 1.5}) hue-rotate(${this.hueRotate}deg) brightness(${this.brightness}) ${shadow}`;
+  }
+
+  setupEvents() {
+    const onPointerDown = (e) => {
+      if (this.splitting) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      this.pointerDown = true;
+      this.pointerStartTime = Date.now();
+
+      const point = e.touches ? e.touches[0] : e;
+      this.pointerStartX = point.clientX;
+      this.pointerStartY = point.clientY;
+      this.dragOffsetX = point.clientX - this.x;
+      this.dragOffsetY = point.clientY - this.y;
+      this.lastMoveX = point.clientX;
+      this.lastMoveY = point.clientY;
+      this.lastMoveTime = Date.now();
+
+      if (e.pointerId !== undefined) {
+        this.element.setPointerCapture(e.pointerId);
+      }
+    };
+
+    const onPointerMove = (e) => {
+      if (!this.pointerDown || this.splitting) return;
+      e.preventDefault();
+
+      const point = e.touches ? e.touches[0] : e;
+      const dx = point.clientX - this.pointerStartX;
+      const dy = point.clientY - this.pointerStartY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_DISTANCE_THRESHOLD) {
+        if (!this.isDragging) {
+          this.isDragging = true;
+          this.element.classList.add('dragging');
+          this.element.style.filter = this.buildFilter(true);
+          this.vx = 0;
+          this.vy = 0;
+        }
+
+        const now = Date.now();
+        const dt = now - this.lastMoveTime;
+        if (dt > 0) {
+          this.throwVx = (point.clientX - this.lastMoveX) / dt * 16;
+          this.throwVy = (point.clientY - this.lastMoveY) / dt * 16;
+        }
+        this.lastMoveX = point.clientX;
+        this.lastMoveY = point.clientY;
+        this.lastMoveTime = now;
+
+        this.x = point.clientX - this.dragOffsetX;
+        this.y = point.clientY - this.dragOffsetY;
+        this.updatePosition();
+      }
+    };
+
+    const onPointerUp = (e) => {
+      if (!this.pointerDown) return;
+      e.preventDefault();
+
+      const elapsed = Date.now() - this.pointerStartTime;
+
+      if (this.isDragging) {
+        this.vx = Math.max(-20, Math.min(20, this.throwVx || 0));
+        this.vy = Math.max(-20, Math.min(20, this.throwVy || 0));
+        this.element.classList.remove('dragging');
+        this.element.style.filter = this.buildFilter(false);
+      } else if (elapsed < TAP_THRESHOLD) {
+        this.split();
+      }
+
+      this.pointerDown = false;
+      this.isDragging = false;
+
+      if (e.pointerId !== undefined) {
+        this.element.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    const onPointerCancel = (e) => {
+      this.pointerDown = false;
+      this.isDragging = false;
+      this.element.classList.remove('dragging');
+      this.element.style.filter = this.buildFilter(false);
+      if (e.pointerId !== undefined) {
+        this.element.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    this.element.addEventListener('pointerdown', onPointerDown);
+    this.element.addEventListener('pointermove', onPointerMove);
+    this.element.addEventListener('pointerup', onPointerUp);
+    this.element.addEventListener('pointercancel', onPointerCancel);
+
+    this.element.addEventListener('touchstart', onPointerDown, { passive: false });
+    this.element.addEventListener('touchmove', onPointerMove, { passive: false });
+    this.element.addEventListener('touchend', onPointerUp, { passive: false });
+    this.element.addEventListener('touchcancel', onPointerCancel);
+  }
+
+  updatePosition() {
+    const displaySize = this.size * this.scaleVariation;
+    this.element.style.left = `${this.x - displaySize / 2}px`;
+    this.element.style.top = `${this.y - displaySize / 2}px`;
+    this.element.style.fontSize = `${this.size}px`;
+    this.element.style.transform = `scale(${this.scaleVariation}) rotate(${this.rotation}deg)`;
+    this.element.style.filter = this.buildFilter(this.isDragging);
+  }
+
+  split() {
+    if (this.splitting) return;
+    this.splitting = true;
+    this.element.classList.add('splitting');
+
+    // Play shimmer sound on pop
+    if (audioEngine.isPlaying && !audioEngine.isMuted) {
+      audioEngine.createShimmer();
+    }
+
+    const angle1 = Math.random() * Math.PI * 2;
+    const angle2 = angle1 + Math.PI + (Math.random() - 0.5) * 0.5;
+    const speed = 5 + Math.random() * 4;
+
+    setTimeout(() => {
+      const idx = puppies.indexOf(this);
+      if (idx > -1) puppies.splice(idx, 1);
+      this.element.remove();
+
+      if (puppies.length >= MAX_PUPPIES) return;
+
+      const newSize = Math.max(MIN_SIZE, this.size * SPLIT_SIZE_RATIO);
+      const spawnCount = Math.min(2, MAX_PUPPIES - puppies.length);
+
+      if (spawnCount >= 1) {
+        puppies.push(
+          new Puppy(
+            this.x + Math.cos(angle1) * 20,
+            this.y + Math.sin(angle1) * 20,
+            Math.cos(angle1) * speed + this.vx * 0.3,
+            Math.sin(angle1) * speed + this.vy * 0.3,
+            newSize
+          )
+        );
+      }
+      if (spawnCount >= 2) {
+        puppies.push(
+          new Puppy(
+            this.x + Math.cos(angle2) * 20,
+            this.y + Math.sin(angle2) * 20,
+            Math.cos(angle2) * speed + this.vx * 0.3,
+            Math.sin(angle2) * speed + this.vy * 0.3,
+            newSize
+          )
+        );
+      }
+    }, 250);
+  }
+
+  getRadius() {
+    return (this.size * this.scaleVariation) / 2;
+  }
+
+  update() {
+    if (this.splitting || this.fadingOut) return;
+
+    this.size += currentGrowthRate;
+
+    if (this.isDragging) {
+      this.posHistory.length = 0;
+      this.updatePosition();
+      return;
+    }
+
+    this.vx *= FRICTION;
+    this.vy *= FRICTION;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const r = this.getRadius();
+
+    if (this.x - r < 0) {
+      this.x = r;
+      this.vx = Math.abs(this.vx) * BOUNCE_DAMPING;
+    } else if (this.x + r > w) {
+      this.x = w - r;
+      this.vx = -Math.abs(this.vx) * BOUNCE_DAMPING;
+    }
+
+    if (this.y - r < 0) {
+      this.y = r;
+      this.vy = Math.abs(this.vy) * BOUNCE_DAMPING;
+    } else if (this.y + r > h) {
+      this.y = h - r;
+      this.vy = -Math.abs(this.vy) * BOUNCE_DAMPING;
+    }
+
+    this.posHistory.push(this.x + this.y * 10000);
+    if (this.posHistory.length > this.historyMax) this.posHistory.shift();
+
+    if (this.posHistory.length === this.historyMax) {
+      const sorted = [...this.posHistory].sort((a, b) => a - b);
+      const mid = this.historyMax / 2;
+      const lo = sorted.slice(0, mid);
+      const hi = sorted.slice(mid);
+
+      const avgLo = lo.reduce((a, b) => a + b, 0) / mid;
+      const avgHi = hi.reduce((a, b) => a + b, 0) / mid;
+      const varLo = lo.reduce((a, v) => a + (v - avgLo) ** 2, 0) / mid;
+      const varHi = hi.reduce((a, v) => a + (v - avgHi) ** 2, 0) / mid;
+
+      const gap = avgHi - avgLo;
+      const avgVar = (varLo + varHi) / 2;
+
+      if (avgVar < 50 && gap > 0.5 && gap < 500) {
+        this.vx *= 0.3;
+        this.vy *= 0.3;
+        this.posHistory.length = 0;
+      }
+    }
+
+    this.updatePosition();
+  }
+}
+
+// Track collision pairs to detect stuck oscillations
+const collisionPairs = new Map();
+
+function checkCollisions() {
+  const currentPairs = new Set();
+
+  for (let i = 0; i < puppies.length; i++) {
+    for (let j = i + 1; j < puppies.length; j++) {
+      const a = puppies[i];
+      const b = puppies[j];
+
+      if (a.splitting || b.splitting || a.fadingOut || b.fadingOut) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minDist = a.getRadius() + b.getRadius();
+
+      if (dist < minDist && dist > 0.1) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = minDist - dist;
+
+        const aMovable = !a.isDragging;
+        const bMovable = !b.isDragging;
+
+        // Track this collision pair
+        const pairKey = `${i}-${j}`;
+        currentPairs.add(pairKey);
+
+        const pairData = collisionPairs.get(pairKey) || { count: 0, lastTime: 0 };
+        const now = Date.now();
+
+        if (now - pairData.lastTime < 100) {
+          pairData.count++;
+        } else {
+          pairData.count = 1;
+        }
+        pairData.lastTime = now;
+        collisionPairs.set(pairKey, pairData);
+
+        // If stuck oscillating, apply strong separation and damping
+        if (pairData.count > 8) {
+          const separationForce = 0.8;
+          const randomAngle = (Math.random() - 0.5) * 0.5;
+          const sepX = nx * Math.cos(randomAngle) - ny * Math.sin(randomAngle);
+          const sepY = nx * Math.sin(randomAngle) + ny * Math.cos(randomAngle);
+
+          if (aMovable) {
+            a.x -= sepX * (overlap + 2);
+            a.y -= sepY * (overlap + 2);
+            a.vx = -sepX * separationForce;
+            a.vy = -sepY * separationForce;
+          }
+          if (bMovable) {
+            b.x += sepX * (overlap + 2);
+            b.y += sepY * (overlap + 2);
+            b.vx = sepX * separationForce;
+            b.vy = sepY * separationForce;
+          }
+          pairData.count = 0;
+          continue;
+        }
+
+        // Normal collision response
+        if (aMovable && bMovable) {
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+        } else if (aMovable) {
+          a.x -= nx * overlap;
+          a.y -= ny * overlap;
+        } else if (bMovable) {
+          b.x += nx * overlap;
+          b.y += ny * overlap;
+        }
+
+        if (aMovable || bMovable) {
+          const relVx = a.vx - b.vx;
+          const relVy = a.vy - b.vy;
+          const relVn = relVx * nx + relVy * ny;
+
+          if (relVn > 0) {
+            if (aMovable) {
+              a.vx -= relVn * nx * COLLISION_PUSH;
+              a.vy -= relVn * ny * COLLISION_PUSH;
+            }
+            if (bMovable) {
+              b.vx += relVn * nx * COLLISION_PUSH;
+              b.vy += relVn * ny * COLLISION_PUSH;
+            }
+          }
+
+          const push = 0.08;
+          if (aMovable) {
+            a.vx = (a.vx - nx * push) * 0.95;
+            a.vy = (a.vy - ny * push) * 0.95;
+          }
+          if (bMovable) {
+            b.vx = (b.vx + nx * push) * 0.95;
+            b.vy = (b.vy + ny * push) * 0.95;
+          }
+        }
+      }
+    }
+  }
+
+  // Clean up old collision pairs
+  for (const [key, data] of collisionPairs) {
+    if (!currentPairs.has(key) || Date.now() - data.lastTime > 500) {
+      collisionPairs.delete(key);
+    }
+  }
+}
+
+let bgTime = 0;
+
+function gameLoop() {
+  frameCount++;
+  bgTime += 0.0003;
+  document.body.style.setProperty('--bg-hue1', (340 + Math.sin(bgTime) * 60 + 360) % 360);
+  document.body.style.setProperty('--bg-hue2', (40 + Math.sin(bgTime + 2) * 50 + 360) % 360);
+  document.body.style.setProperty('--bg-hue3', (210 + Math.sin(bgTime + 4) * 70 + 360) % 360);
+
+  // SAFETY: Always ensure at least one puppy exists after pops
+  if (puppies.length === 0) {
+    puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
+  }
+
+  // Check crowding periodically
+  if (frameCount % CULL_CHECK_INTERVAL === 0) {
+    const crowding = calculateCrowding();
+
+    // Adjust growth rate based on crowding
+    if (crowding > CROWDING_THRESHOLD) {
+      // Slow down growth proportionally
+      const slowdownFactor = 1 - ((crowding - CROWDING_THRESHOLD) / (1 - CROWDING_THRESHOLD));
+      currentGrowthRate = BASE_GROWTH_RATE * Math.max(0, slowdownFactor);
+    } else {
+      currentGrowthRate = BASE_GROWTH_RATE;
+    }
+
+    // Cull if critically overcrowded
+    if (crowding > CRITICAL_CROWDING) {
+      cullLargestPuppy();
+    }
+  }
+
+  checkCollisions();
+  for (const p of puppies) p.update();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============ AUDIO BUTTON ============
+const audioBtn = document.getElementById('audio-btn');
+audioBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+
+  if (!audioEngine.ctx || !audioEngine.isPlaying) {
+    const success = await audioEngine.init();
+    if (success) {
+      audioBtn.classList.remove('muted');
+      audioBtn.textContent = '♪';
+    }
+  } else {
+    const isPlaying = audioEngine.toggle();
+    audioBtn.classList.toggle('muted', !isPlaying);
+    audioBtn.textContent = isPlaying ? '♪' : '✕';
+  }
+});
+
+// ============ INIT ============
+async function init() {
+  // Initialize emoji carousel
+  emojiCarousel = new EmojiCarousel();
+
+  puppies.push(new Puppy(window.innerWidth / 2, window.innerHeight / 2));
+  gameLoop();
+
+  // Audio starts muted - user must tap to enable (browser policy)
+  audioBtn.classList.add('muted');
+  audioBtn.textContent = '✕';
+}
+
+// Add touchend for audio button on mobile
+audioBtn.addEventListener('touchend', async (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+
+  if (!audioEngine.ctx || !audioEngine.isPlaying) {
+    const success = await audioEngine.init();
+    if (success) {
+      audioBtn.classList.remove('muted');
+      audioBtn.textContent = '♪';
+    }
+  } else {
+    const isPlaying = audioEngine.toggle();
+    audioBtn.classList.toggle('muted', !isPlaying);
+    audioBtn.textContent = isPlaying ? '♪' : '✕';
+  }
+}, { passive: false });
+
+// ============ EVENT PREVENTION ============
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('gestureend', e => e.preventDefault());
+
+// Prevent zoom on double-tap
+let lastTap = 0;
+document.addEventListener('touchstart', e => {
+  const now = Date.now();
+  if (now - lastTap < 300 && e.touches.length === 1) {
+    e.preventDefault();
+  }
+  lastTap = now;
+}, { passive: false });
+
+// Lock orientation if possible
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('portrait').catch(() => {});
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
