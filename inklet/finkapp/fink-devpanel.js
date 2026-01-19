@@ -42,29 +42,41 @@ window.FinkDevPanel = {
     },
 
     setupEventListeners() {
-        // Settings button toggle
+        // Settings button toggle - use both click and touchend for mobile support
         const settingsBtn = document.getElementById('settingsBtn');
         if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => this.toggle());
-        }
+            // Prevent double-firing by tracking touch
+            let touchHandled = false;
 
-        // Close button
-        if (this.elements.closeBtn) {
-            this.elements.closeBtn.addEventListener('click', () => this.hide());
-        }
+            settingsBtn.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Prevent ghost click
+                touchHandled = true;
+                this.toggle();
+                setTimeout(() => { touchHandled = false; }, 300);
+            }, { passive: false });
 
-        // Tab switching
-        if (this.elements.tabs) {
-            this.elements.tabs.querySelectorAll('button[data-tab]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    this.switchTab(btn.dataset.tab);
-                });
+            settingsBtn.addEventListener('click', (e) => {
+                if (!touchHandled) {
+                    this.toggle();
+                }
             });
         }
 
-        // Copy logs button
+        // Close button - with touch support
+        if (this.elements.closeBtn) {
+            this.addTouchClickHandler(this.elements.closeBtn, () => this.hide());
+        }
+
+        // Tab switching - with touch support
+        if (this.elements.tabs) {
+            this.elements.tabs.querySelectorAll('button[data-tab]').forEach(btn => {
+                this.addTouchClickHandler(btn, () => this.switchTab(btn.dataset.tab));
+            });
+        }
+
+        // Copy logs button - with touch support
         if (this.elements.copyLogsBtn) {
-            this.elements.copyLogsBtn.addEventListener('click', () => this.copyLogs());
+            this.addTouchClickHandler(this.elements.copyLogsBtn, () => this.copyLogs());
         }
 
         // Log filter checkboxes
@@ -121,6 +133,24 @@ window.FinkDevPanel = {
                 }
             });
         }
+    },
+
+    // Helper to add touch-friendly click handler (prevents 300ms delay on mobile)
+    addTouchClickHandler(element, callback) {
+        let touchHandled = false;
+
+        element.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchHandled = true;
+            callback();
+            setTimeout(() => { touchHandled = false; }, 300);
+        }, { passive: false });
+
+        element.addEventListener('click', () => {
+            if (!touchHandled) {
+                callback();
+            }
+        });
     },
 
     // Toggle visibility

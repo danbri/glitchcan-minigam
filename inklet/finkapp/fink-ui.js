@@ -46,9 +46,7 @@ window.FinkUI = {
             });
         }
 
-        if (settingsBtn && window.FinkDevPanel) {
-            settingsBtn.addEventListener('click', () => FinkDevPanel.toggle());
-        }
+        // Note: Settings button handler is in fink-devpanel.js to avoid duplication
 
         // Click-to-dismiss on status overlay (for error messages)
         if (this.elements.statusOverlay) {
