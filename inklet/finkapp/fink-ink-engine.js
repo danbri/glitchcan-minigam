@@ -9,7 +9,7 @@ window.FinkInkEngine = {
     pendingMinigame: null,
 
     // Compile and run FINK story content
-    compileAndRunStory(finkContent) {
+    async compileAndRunStory(finkContent) {
         FinkUtils.debugLog('Processing FINK content with INK engine');
         FinkUtils.debugLog('Raw FINK content length: ' + finkContent.length);
 
@@ -18,7 +18,7 @@ window.FinkInkEngine = {
             this.currentStoryTags = { menu: [], images: [], basehref: null };
             this.pendingMinigame = null;
 
-            const inkSuccess = this.tryInkCompilation(finkContent);
+            const inkSuccess = await this.tryInkCompilation(finkContent);
 
             if (!inkSuccess) {
                 FinkUtils.debugLog('INK compilation failed');
@@ -34,7 +34,7 @@ window.FinkInkEngine = {
     },
 
     // Try INK compilation
-    tryInkCompilation(finkContent) {
+    async tryInkCompilation(finkContent) {
         // Verify INK library loaded from CDN
         if (typeof inkjs === 'undefined') {
             FinkUtils.debugLog('ERROR: inkjs library not available');
@@ -116,9 +116,20 @@ window.FinkInkEngine = {
                 FinkUI.populateDynamicMenu(this.currentStoryTags.menu);
             }
 
-            // Build navigation map (with FINK content for graph edges and PUBLIC tags)
+            // Build navigation map and check for deep links
             if (window.FinkNavigation) {
-                FinkNavigation.buildKnotIdMap(this.story, FinkPlayer.currentStoryUrl, finkContent);
+                // Check for deep link - this may navigate to a different knot or load a different FINK
+                const hasDeepLink = await FinkNavigation.checkDeepLink(
+                    this.story,
+                    FinkPlayer.currentStoryUrl,
+                    finkContent
+                );
+
+                // If deep link handled navigation, don't continue from beginning
+                if (hasDeepLink) {
+                    FinkUtils.debugLog('Deep link handled navigation');
+                    return true;
+                }
             }
 
             FinkUI.clearStory();
@@ -295,10 +306,10 @@ window.FinkInkEngine = {
         // 500ms delay before loading (matches working hamfink2026 timing)
         setTimeout(() => {
             FinkSandbox.loadViaSandbox(resolvedUrl)
-            .then((content) => {
+            .then(async (content) => {
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
-                this.compileAndRunStory(content);
+                await this.compileAndRunStory(content);
                 if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', resolvedUrl.split('/').pop());
             })
             .catch(error => {

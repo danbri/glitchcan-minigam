@@ -6,10 +6,10 @@ window.FinkDevPanel = {
     activeTab: 'logs',
     logFilters: {
         error: true, warn: true, info: true,
-        fink: true, ink: true, game: true, net: true, debug: false
+        fink: true, ink: true, game: true, net: true, nav: true, debug: false
     },
     logs: [],
-    swimlanes: { ink: [], fink: [], game: [], net: [] },
+    swimlanes: { nav: [], ink: [], fink: [], game: [], net: [] },
 
     // DOM elements
     elements: {},
@@ -31,6 +31,7 @@ window.FinkDevPanel = {
             closeBtn: document.getElementById('closeDevPanel'),
             stopSynthBtn: document.getElementById('stopSynthBtn'),
             // Swimlane bodies
+            swimNav: document.getElementById('swim-nav'),
             swimInk: document.getElementById('swim-ink'),
             swimFink: document.getElementById('swim-fink'),
             swimGame: document.getElementById('swim-game'),
@@ -271,13 +272,22 @@ window.FinkDevPanel = {
         if (!this.elements.stateDisplay) return;
 
         const state = {
+            // Current URL hash
+            currentHash: window.location.hash,
+
             // Navigation
             currentFinkUrl: window.FinkPlayer?.currentStoryUrl,
             navigationAPI: window.FinkNavigation?.usingNavigationAPI,
 
+            // Navigation cache stats
+            navCache: window.FinkNavigation?.getCacheStats?.() || {},
+
             // Story state
             storyLoaded: !!(window.FinkInkEngine?.story),
             currentKnot: this.getCurrentKnot(),
+
+            // Public entry points for current FINK
+            publicEntryPoints: window.FinkNavigation?.publicEntryPoints || [],
 
             // Minigame state
             minigameActive: window.FinkMinigames?.active,
@@ -331,7 +341,7 @@ window.FinkDevPanel = {
         Object.keys(this.swimlanes).forEach(lane => {
             this.swimlanes[lane] = [];
         });
-        ['swimInk', 'swimFink', 'swimGame', 'swimNet'].forEach(id => {
+        ['swimNav', 'swimInk', 'swimFink', 'swimGame', 'swimNet'].forEach(id => {
             if (this.elements[id]) this.elements[id].innerHTML = '';
         });
     }

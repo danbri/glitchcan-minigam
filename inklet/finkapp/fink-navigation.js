@@ -36,6 +36,26 @@ window.FinkNavigation = {
         // Check for modern Navigation API support
         this.usingNavigationAPI = 'navigation' in window;
 
+        const initialHash = window.location.hash;
+        this.log(`Init: hash="${initialHash}", navAPI=${this.usingNavigationAPI}`);
+
+        // Log initial hash analysis
+        if (initialHash && initialHash.length > 1) {
+            const fragmentId = initialHash.slice(1);
+            const parsed = this.parseFinkLinkId(fragmentId);
+            if (parsed) {
+                this.swimLog('🚀', 'Deep Link Detected',
+                    `Two-part: ${parsed.urlHash}-${parsed.knotHash}`);
+            } else if (fragmentId.endsWith('.fink.js')) {
+                this.swimLog('🚀', 'Direct FINK Link', fragmentId);
+            } else {
+                this.swimLog('⚠️', 'Legacy/Unknown Hash',
+                    `"${fragmentId}" (${fragmentId.length} chars, no hyphen)`);
+            }
+        } else {
+            this.swimLog('🏠', 'Fresh Start', 'No deep link in URL');
+        }
+
         if (this.usingNavigationAPI) {
             this.log('Using modern Navigation API');
             this.setupNavigationAPI();
@@ -45,6 +65,13 @@ window.FinkNavigation = {
         }
 
         this.initialized = true;
+    },
+
+    // Swimlane logging helper
+    swimLog(icon, title, detail, highlight = false) {
+        if (window.swimEvent) {
+            swimEvent('nav', icon, title, detail, highlight);
+        }
     },
 
     // Setup modern Navigation API
@@ -167,6 +194,8 @@ window.FinkNavigation = {
 
         const publicKnots = this.getPublicKnots(story);
         this.log(`Building knot map for ${publicKnots.length} public knots (urlHash: ${urlHash})`);
+        this.swimLog('📝', 'Building Knot Map',
+            `${finkUri?.split('/').pop()}: ${publicKnots.length} public knots`);
 
         // Build knotHash -> knotName map
         const knotMap = {};
@@ -178,6 +207,16 @@ window.FinkNavigation = {
 
         // Cache the knot map
         this.cache.knotMaps[urlHash] = knotMap;
+
+        // Log sample mappings for debugging
+        const sampleKnots = publicKnots.slice(0, 3);
+        for (const knotName of sampleKnots) {
+            const knotHash = await this.generateKnotHash(knotName);
+            this.swimLog('🔑', `Hash: ${knotHash.slice(0, 6)}...`, `→ ${knotName}`);
+        }
+        if (publicKnots.length > 3) {
+            this.swimLog('📊', 'Total Knots', `${publicKnots.length} mapped`);
+        }
 
         // Extract FINK references for graph edges (if content provided)
         if (finkContent) {
@@ -257,34 +296,52 @@ window.FinkNavigation = {
     // Navigate using two-part hash (urlHash-knotHash)
     async navigateToTwoPartLink(urlHash, knotHash) {
         this.log(`Resolving two-part link: ${urlHash}-${knotHash}`);
+        this.swimLog('🧭', 'Resolving Two-Part', `${urlHash}-${knotHash}`);
 
         // Step 1: Check if current FINK matches urlHash
         if (this.currentFinkUri) {
             const currentUrlHash = await this.generateUrlHash(this.currentFinkUri);
+            this.swimLog('1️⃣', 'Check Current FINK',
+                `Current: ${currentUrlHash}, Need: ${urlHash}`);
+
             if (currentUrlHash === urlHash) {
                 const knotName = this.knotIdMap.get(knotHash);
                 if (knotName) {
                     this.log(`Found knot in current FINK: ${knotName}`);
+                    this.swimLog('✅', 'Knot Found!', `${knotHash} → ${knotName}`);
                     return await this.navigateToKnotInCurrentStory(knotName);
+                } else {
+                    this.swimLog('⚠️', 'Knot Hash Unknown',
+                        `${knotHash} not in current story's map`);
                 }
             }
         }
 
         // Step 2: Check cached URL index
+        this.swimLog('2️⃣', 'Check URL Cache',
+            `Looking for ${urlHash} in ${Object.keys(this.cache.urlIndex).length} cached URLs`);
+
         const targetUrl = this.cache.urlIndex[urlHash];
         if (targetUrl) {
             this.log(`Found URL in cache: ${targetUrl}`);
+            this.swimLog('✅', 'URL in Cache', targetUrl.split('/').pop());
             return await this.loadAndNavigateToKnot(targetUrl, knotHash);
         }
 
         // Step 3: Scan known FINK URLs from graph
+        this.swimLog('3️⃣', 'Scan FINK Graph',
+            `${Object.keys(this.cache.graph).length} graph edges`);
+
         const foundUrl = await this.scanGraphForUrlHash(urlHash);
         if (foundUrl) {
             this.log(`Found URL via graph scan: ${foundUrl}`);
+            this.swimLog('✅', 'Found via Graph', foundUrl.split('/').pop());
             return await this.loadAndNavigateToKnot(foundUrl, knotHash);
         }
 
         // Step 4: Link not found - show error
+        this.swimLog('❌', 'Link Resolution FAILED',
+            `No FINK found for urlHash: ${urlHash}`, true);
         this.showLinkNotFoundError(urlHash, knotHash);
         return false;
     },
@@ -322,7 +379,7 @@ window.FinkNavigation = {
             FinkPlayer.currentStoryUrl = finkUrl;
 
             // Compile and run (this will build the knot map)
-            FinkInkEngine.compileAndRunStory(content);
+            await FinkInkEngine.compileAndRunStory(content);
 
             // Wait a tick for compilation, then navigate
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -382,19 +439,34 @@ window.FinkNavigation = {
     showLinkNotFoundError(urlHash, knotHash) {
         this.log(`Link not found: ${urlHash}-${knotHash}`);
 
+        // Collect diagnostic info
+        const cacheStats = this.getCacheStats();
+        const knownUrls = Object.entries(this.cache.urlIndex)
+            .map(([h, u]) => `  ${h} = ${u.split('/').pop()}`)
+            .join('\n') || '  (none)';
+
+        this.swimLog('🚫', 'DEEP LINK FAILED',
+            `URL: ${urlHash}, Knot: ${knotHash}, Cache: ${cacheStats.urlsIndexed} URLs`, true);
+
         if (window.FinkUI) {
             const errorMessage = `
 Cannot find bookmark destination
 
 The link points to a story position we can't reach from here.
 
-Story hash: ${urlHash} (not found in known episodes)
+Story hash: ${urlHash} (not found in cache)
 Position hash: ${knotHash}
+Cached URLs: ${cacheStats.urlsIndexed}
+
+Known FINKs:
+${knownUrls}
 
 Possible causes:
+• The story hasn't been loaded yet in this session
 • The story has been moved or renamed
-• The story is not linked from the main menu
 • The link is from a different FINK universe
+
+Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
             `.trim();
 
             FinkUI.showStatus(errorMessage); // dismissable by default
@@ -408,6 +480,8 @@ Possible causes:
         }
 
         const finkLinkId = await this.generateFinkLinkId(this.currentFinkUri, knotName);
+        const urlHash = finkLinkId.split('-')[0];
+        const knotHash = finkLinkId.split('-')[1];
 
         if (this.usingNavigationAPI) {
             // Use Navigation API for cleaner updates
@@ -425,6 +499,8 @@ Possible causes:
         }
 
         this.log(`Updated fragment to: #${finkLinkId} (${knotName})`);
+        this.swimLog('📍', 'URL Updated',
+            `#${urlHash}-${knotHash?.slice(0,5)}... = ${knotName}`);
     },
 
     // Generate a shareable link for a knot (uses two-part hash)
@@ -566,30 +642,58 @@ Possible causes:
 
     // Check for deep link on initial load
     async checkDeepLink(story, finkUri, finkContent = null) {
+        const fragmentId = window.location.hash.slice(1);
+        this.swimLog('🔍', 'checkDeepLink Called',
+            `FINK: ${finkUri?.split('/').pop() || '?'}, hash: "${fragmentId || '(none)'}"`);
+
         // First, check for state parameter
         const urlState = this.extractAndPurgeUrlState();
         if (urlState) {
             this.pendingState = urlState;
             this.log('Found pending state to apply');
+            this.swimLog('📦', 'State Param Found', JSON.stringify(urlState).slice(0, 50));
         }
 
-        const fragmentId = window.location.hash.slice(1);
         if (!fragmentId) {
             // No deep link, but might have state to apply
             if (this.pendingState) {
                 this.applyVariableState(this.pendingState);
                 this.pendingState = null;
             }
+            this.swimLog('✅', 'No Deep Link', 'Starting at story beginning');
             return false;
         }
 
         // Build knot map first (with FINK content for graph edges)
         await this.buildKnotIdMap(story, finkUri, finkContent);
 
+        // Generate current FINK's URL hash for comparison
+        const currentUrlHash = await this.generateUrlHash(finkUri);
+        this.swimLog('📊', 'Current FINK Hash',
+            `${currentUrlHash} = ${finkUri?.split('/').pop()}`);
+
         // Check if it's a two-part hash
         const parsed = this.parseFinkLinkId(fragmentId);
         if (parsed) {
             this.log(`Two-part deep link detected: #${fragmentId}`);
+            this.swimLog('🔗', 'Two-Part Hash',
+                `URL: ${parsed.urlHash}, Knot: ${parsed.knotHash}`);
+
+            // Check if URL hash matches current FINK
+            if (parsed.urlHash === currentUrlHash) {
+                this.swimLog('✅', 'URL Hash Match', 'Deep link is for THIS story');
+            } else {
+                this.swimLog('❌', 'URL Hash Mismatch',
+                    `Need: ${parsed.urlHash}, Have: ${currentUrlHash}`, true);
+                // Log what FINK URLs we know about
+                const knownUrls = Object.entries(this.cache.urlIndex);
+                if (knownUrls.length > 0) {
+                    this.swimLog('📚', 'Known FINKs', knownUrls.map(([h, u]) =>
+                        `${h}=${u.split('/').pop()}`).join(', '));
+                } else {
+                    this.swimLog('📭', 'Cache Empty', 'No FINKs indexed yet');
+                }
+            }
 
             // Apply pending state before navigation
             if (this.pendingState) {
@@ -601,27 +705,40 @@ Possible causes:
         }
 
         // Try legacy single hash
+        this.swimLog('🏚️', 'Legacy Hash Format',
+            `"${fragmentId}" - checking ${this.knotIdMap.size} knots`);
+
         if (this.knotIdMap.has(fragmentId)) {
-            this.log(`Legacy deep link detected: #${fragmentId}`);
+            const knotName = this.knotIdMap.get(fragmentId);
+            this.log(`Legacy deep link detected: #${fragmentId} → ${knotName}`);
+            this.swimLog('✅', 'Legacy Match Found', `${fragmentId} → ${knotName}`);
 
             if (this.pendingState) {
                 this.applyVariableState(this.pendingState);
                 this.pendingState = null;
             }
 
-            return await this.navigateToKnotInCurrentStory(
-                this.knotIdMap.get(fragmentId),
-                true
-            );
+            return await this.navigateToKnotInCurrentStory(knotName, true);
+        }
+
+        // Log available knot hashes for debugging
+        if (this.knotIdMap.size > 0) {
+            const sampleHashes = Array.from(this.knotIdMap.entries())
+                .slice(0, 5)
+                .map(([h, k]) => `${h.slice(0, 6)}...→${k}`);
+            this.swimLog('📋', 'Available Hashes', sampleHashes.join(', '));
         }
 
         // Check if it's a direct FINK path reference
         if (fragmentId.endsWith('.fink.js')) {
             this.log(`Direct FINK reference: ${fragmentId}`);
+            this.swimLog('📄', 'Direct FINK Path', fragmentId);
             return false; // Let FinkPlayer handle this
         }
 
         this.log(`Unknown fragment format: ${fragmentId}`);
+        this.swimLog('❓', 'Hash Not Found',
+            `"${fragmentId}" not in current story's knot map`, true);
         return false;
     },
 

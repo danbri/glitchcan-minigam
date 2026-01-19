@@ -158,6 +158,7 @@
             <label><input type="checkbox" data-filter="ink" checked> 🖋️ Ink</label>
             <label><input type="checkbox" data-filter="game" checked> 🎮 Game</label>
             <label><input type="checkbox" data-filter="net" checked> 🌐 Net</label>
+            <label><input type="checkbox" data-filter="nav" checked> 🧭 Nav</label>
             <label><input type="checkbox" data-filter="debug"> 🔧 Debug</label>
         </div>
         <div id="log-output"></div>
@@ -165,6 +166,10 @@
 
     <!-- Swimlanes Tab -->
     <div id="swimlanes-content" class="dev-tab-content">
+        <div class="swimlane">
+            <div class="swimlane-header nav">🧭 NAV</div>
+            <div class="swimlane-body" id="swim-nav"></div>
+        </div>
         <div class="swimlane">
             <div class="swimlane-header ink">🖋️ INK</div>
             <div class="swimlane-body" id="swim-ink"></div>
