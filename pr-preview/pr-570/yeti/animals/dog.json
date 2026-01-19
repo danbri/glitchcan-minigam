@@ -1,0 +1,49 @@
+{
+  "name": "Dog",
+  "emoji": "🐕",
+  "version": "1.0",
+  "camera": { "distance": 6, "phi": 0.3, "theta": 0.25, "target": [0, 0, 0] },
+
+  "root": {
+    "type": "ref",
+    "id": "quadruped",
+    "params": {
+      "smooth": 0.15,
+      "color": [0.65, 0.55, 0.4],
+      "bodyRadii": [0.5, 0.45, 0.9],
+      "rumpRadii": [0.45, 0.4, 0.5],
+      "rumpPos": [0, 0.05, -0.9],
+      "headRadii": [0.28, 0.26, 0.32],
+      "headPos": [0, 0.35, 1.1],
+      "snoutRadii": [0.12, 0.1, 0.28],
+      "snoutPos": [0, 0.22, 1.45],
+      "noseSize": 0.06,
+      "nosePos": [0, 0.22, 1.72],
+      "earRadii": [0.08, 0.18, 0.06],
+      "earPos": [0.18, 0.58, 0.95],
+      "earPosR": [-0.18, 0.58, 0.95],
+      "earRotate": [0.3, 0, 0.2],
+      "legThighR": 0.12,
+      "legAnkleR": 0.06,
+      "frontLegH": 0.55,
+      "frontLegPos": [0.22, -0.55, 0.4],
+      "frontLegPosR": [-0.22, -0.55, 0.4],
+      "frontLegRot": [0, 0, 0],
+      "backLegH": 0.6,
+      "backLegPos": [0.22, -0.55, -0.8],
+      "backLegPosR": [-0.22, -0.55, -0.8],
+      "backLegRot": [0.15, 0, 0],
+      "tailLen": 0.4,
+      "tailR": 0.05,
+      "tailPos": [0, 0.3, -1.25],
+      "tailRot": [-0.6, 0, 0]
+    }
+  },
+
+  "appearance": {
+    "markColor": [0.2, 0.15, 0.1],
+    "patternScale": 1.0,
+    "organic": 0.8,
+    "brindleAmt": 0.6
+  }
+}
