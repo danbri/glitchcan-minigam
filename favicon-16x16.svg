@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Ultra-simple hatching chick for 16x16 -->
+  <!-- Yellow circle for chick -->
+  <circle cx="8" cy="8" r="6" fill="#ffd700"/>
+  <!-- Eyes -->
+  <circle cx="6" cy="6" r="1" fill="#000"/>
+  <circle cx="10" cy="6" r="1" fill="#000"/>
+  <!-- Beak -->
+  <polygon points="8,8 9,9 7,9" fill="#ff8c00"/>
+  <!-- Simple eggshell bottom -->
+  <ellipse cx="8" cy="13" rx="5" ry="2" fill="#f5f5dc"/>
+</svg>

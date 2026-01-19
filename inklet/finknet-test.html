@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>FinkNet Core Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test { padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+        .pass { background: #d4edda; border-color: #28a745; }
+        .fail { background: #f8d7da; border-color: #dc3545; }
+        .pending { background: #fff3cd; border-color: #ffc107; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        h1 { border-bottom: 2px solid #333; }
+    </style>
+</head>
+<body>
+    <h1>FinkNet Core Test</h1>
+    <p>Testing the JSONP-like script injection mechanism for loading .fink.js files.</p>
+    <p><a href="./finknet/README.md">View FinkNet README</a></p>
+
+    <div id="results"></div>
+
+    <h2>Extracted Content Preview</h2>
+    <pre id="preview">(waiting for test...)</pre>
+
+    <script type="module">
+    // Import FinkNet module
+    import { FinkNet } from './finknet/index.js';
+
+    // Also expose globally for console testing
+    window.FinkNet = FinkNet;
+
+    // Legacy inline implementation for comparison (kept for reference)
+    const FinkNetInline = {
+        // Load a .fink.js file via secure sandbox execution
+        async load(url) {
+            // Step 1: Fetch the script content (parent has same-origin access)
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const scriptContent = await response.text();
+            console.log('[FinkNet] Fetched', scriptContent.length, 'chars from', url);
+
+            // Step 2: Execute in sandbox and extract content
+            return new Promise((resolve, reject) => {
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('sandbox', 'allow-scripts');  // Secure: no same-origin
+                iframe.style.display = 'none';
+
+                const timeout = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('Sandbox timeout (10s)'));
+                }, 10000);
+
+                const cleanup = () => {
+                    clearTimeout(timeout);
+                    window.removeEventListener('message', handler);
+                    iframe.remove();
+                };
+
+                const handler = (event) => {
+                    const data = event.data;
+                    if (!data || !data.type) return;
+
+                    // Only handle our message types
+                    if (!['finknet-ready', 'finknet-loaded', 'finknet-error'].includes(data.type)) return;
+
+                    switch (data.type) {
+                        case 'finknet-ready':
+                            console.log('[FinkNet] Sandbox ready, sending script');
+                            iframe.contentWindow.postMessage({ type: 'exec', content: scriptContent }, '*');
+                            break;
+
+                        case 'finknet-loaded':
+                            console.log('[FinkNet] Content extracted:', data.data?.length, 'blocks');
+                            cleanup();
+                            // Return first block (typical case) or all blocks joined
+                            if (data.data && data.data.length > 0) {
+                                resolve(data.data.length === 1 ? data.data[0] : data.data.join('\n'));
+                            } else {
+                                reject(new Error('No content extracted'));
+                            }
+                            break;
+
+                        case 'finknet-error':
+                            cleanup();
+                            reject(new Error(data.error || 'Unknown sandbox error'));
+                            break;
+                    }
+                };
+
+                window.addEventListener('message', handler);
+
+                // Sandbox HTML - provides oooOO function and executes script
+                iframe.srcdoc = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<script>
+window.finkData = [];
+
+// The oooOO tagged template literal - captures content from .fink.js files
+function oooOO(strings) {
+    const content = (typeof strings === 'object' && strings && strings.raw && Array.isArray(strings.raw))
+        ? strings.raw.join('')
+        : String(strings);
+    window.finkData.push(content);
+    return content;
+}
+
+// Handle execution request from parent
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'exec') {
+        try {
+            (new Function(event.data.content))();
+            parent.postMessage({ type: 'finknet-loaded', data: window.finkData }, '*');
+        } catch (e) {
+            parent.postMessage({ type: 'finknet-error', error: e.message }, '*');
+        }
+    }
+});
+
+// Signal ready
+parent.postMessage({ type: 'finknet-ready' }, '*');
+<\/script>
+</body>
+</html>`;
+
+                document.body.appendChild(iframe);
+            });
+        }
+    };
+
+    // Test runner
+    const results = document.getElementById('results');
+    const preview = document.getElementById('preview');
+
+    function addResult(name, status, message) {
+        const div = document.createElement('div');
+        div.className = 'test ' + status;
+        div.innerHTML = `<strong>${status.toUpperCase()}:</strong> ${name}<br><small>${message}</small>`;
+        results.appendChild(div);
+    }
+
+    async function runTests() {
+        addResult('Test initialization', 'pending', 'Starting tests...');
+
+        // Test 1: Load TOC
+        try {
+            const startTime = Date.now();
+            const content = await FinkNet.load('./toc.fink.js');
+            const elapsed = Date.now() - startTime;
+
+            // Verify content looks like INK
+            const hasMenuTags = content.includes('# MENU:');
+            const hasKnots = content.includes('===');
+            const hasChoices = content.includes('+ [');
+            const hasBasehref = content.includes('# BASEHREF:');
+
+            if (hasMenuTags && hasKnots && hasChoices) {
+                addResult('Load toc.fink.js', 'pass',
+                    `Loaded ${content.length} chars in ${elapsed}ms. ` +
+                    `Found: MENU tags=${hasMenuTags}, knots=${hasKnots}, choices=${hasChoices}, BASEHREF=${hasBasehref}`);
+
+                // Show first 500 chars
+                preview.textContent = content.substring(0, 500) + '\n...(truncated)';
+            } else {
+                addResult('Load toc.fink.js', 'fail',
+                    `Content loaded but missing expected INK features`);
+            }
+        } catch (e) {
+            addResult('Load toc.fink.js', 'fail', e.message);
+        }
+
+        // Test 2: Load Hampstead
+        try {
+            const content = await FinkNet.load('./hampstead.fink.js');
+            const hasVars = content.includes('VAR ');
+            const hasScore = content.includes('score');
+
+            addResult('Load hampstead.fink.js', 'pass',
+                `Loaded ${content.length} chars. Variables=${hasVars}, score tracking=${hasScore}`);
+        } catch (e) {
+            addResult('Load hampstead.fink.js', 'fail', e.message);
+        }
+
+        // Test 3: Error handling (non-existent file)
+        try {
+            await FinkNet.load('./nonexistent.fink.js');
+            addResult('Error handling', 'fail', 'Should have thrown for missing file');
+        } catch (e) {
+            addResult('Error handling', 'pass', `Correctly threw: ${e.message}`);
+        }
+
+        results.querySelector('.pending').remove();
+        addResult('Tests complete', 'pass', 'All tests finished');
+    }
+
+    // Run on load
+    runTests();
+    </script>
+</body>
+</html>

@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ED-209 Parking Enforcement</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      touch-action: none;
+      background: #111;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #debug-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      box-sizing: border-box;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #score-panel {
+      position: fixed;
+      top: 70px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #ff0;
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #help-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 5px;
+      z-index: 101;
+      cursor: pointer;
+    }
+    #help-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 400px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 102;
+      border: 2px solid #0f0;
+      display: none;
+    }
+    .help-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #0f0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="debug-panel"></div>
+  <div id="score-panel">SCORE: 0</div>
+  <div id="help-btn">?</div>
+  <div id="help-panel">
+    <div class="help-close">X</div>
+    <h2>ED-209 PARKING ENFORCEMENT</h2>
+    <p>You control a fleet of ED-209s tasked with maintaining urban parking harmony.</p>
+    <p>- Tap an ED-209 to select it (glows blue)</p>
+    <p>- Tap a flashing red vehicle to assign the target</p>
+    <p>- ED-209 will automatically neutralize illegal parking</p>
+    <p>- Score points for each violation corrected</p>
+    <p>- New violations appear regularly</p>
+    <p>- Keep the city safe from parking chaos!</p>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.module.min.js';
+    
+    // === SCENE SETUP ===
+    const debugPanel = document.getElementById('debug-panel');
+    const scorePanel = document.getElementById('score-panel');
+    const helpBtn = document.getElementById('help-btn');
+    const helpPanel = document.getElementById('help-panel');
+    const helpClose = document.querySelector('.help-close');
+    
+    helpBtn.addEventListener('click', () => {
+      helpPanel.style.display = 'block';
+    });
+    
+    helpClose.addEventListener('click', () => {
+      helpPanel.style.display = 'none';
+    });
+    
+    function debugLog(msg) {
+      debugPanel.innerHTML = msg;
+    }
+    
+    // Game state
+    let score = 0;
+    let selectedED209 = null;
+    const ed209Units = [];
+    const violatingVehicles = [];
+    
+    // Set up scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+    
+    // Camera
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 60;
+    const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
+    camera.position.set(80, 80, 80);
+    camera.lookAt(0, 0, 0);
+    
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+    
+    // Lights
+    scene.add(new THREE.AmbientLight(0x444444));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(1, 1, 1);
+    scene.add(dirLight);
+    
+    // Ground grid
+    const gridSize = 200;
+    const gridDivisions = 20;
+    const grid = new THREE.GridHelper(gridSize, gridDivisions, 0x222222, 0xFFFF00);
+    grid.position.y = 0.01;
+    scene.add(grid);
+    
+    // City layout
+    const citySize = 10;
+    const blockSize = 20;
+    const roadWidth = 8;
+    const buildings = [];
+    
+    // Create a simple city layout
+    function createCity() {
+      const offset = (citySize - 1) * (blockSize + roadWidth) / 2;
+      
+      // Buildings
+      for (let i = 0; i < citySize; i++) {
+        for (let j = 0; j < citySize; j++) {
+          const x = i * (blockSize + roadWidth) - offset;
+          const z = j * (blockSize + roadWidth) - offset;
+          
+          // Add some buildings (not too many)
+          if (Math.random() < 0.3) {
+            const numBuildings = Math.floor(Math.random() * 2) + 1;
+            for (let k = 0; k < numBuildings; k++) {
+              createBuilding(
+                x + (Math.random() * blockSize - blockSize/2) * 0.7,
+                z + (Math.random() * blockSize - blockSize/2) * 0.7
+              );
+            }
+          }
+          
+          // Add some trees or decorations to parks
+          if (Math.random() < 0.3) {
+            const numTrees = Math.floor(Math.random() * 4) + 1;
+            for (let t = 0; t < numTrees; t++) {
+              createTree(
+                x + (Math.random() * blockSize - blockSize/2) * 0.8,
+                z + (Math.random() * blockSize - blockSize/2) * 0.8
+              );
+            }
+          }
+          
+          // Add parking spots around the blocks
+          if (Math.random() < 0.7) {
+            createParkingSpots(x, z, blockSize);
+          }
+        }
+      }
+    }
+    
+    function createBuilding(x, z) {
+      const width = 3 + Math.random() * 4;
+      const height = 5 + Math.random() * 10;
+      const depth = 3 + Math.random() * 4;
+      
+      const building = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        new THREE.MeshLambertMaterial({
+          color: new THREE.Color(
+            0.5 + Math.random() * 0.3,
+            0.5 + Math.random() * 0.3,
+            0.5 + Math.random() * 0.3
+          )
+        })
+      );
+      
+      building.position.set(x, height/2, z);
+      scene.add(building);
+      buildings.push(building);
+      
+      return building;
+    }
+    
+    function createTree(x, z) {
+      // Tree trunk
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8),
+        new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+      );
+      trunk.position.set(x, 0.75, z);
+      scene.add(trunk);
+      
+      // Tree top
+      const treeTop = new THREE.Mesh(
+        new THREE.ConeGeometry(1.5, 3, 8),
+        new THREE.MeshLambertMaterial({ color: 0x33AA33 })
+      );
+      treeTop.position.set(x, 3, z);
+      scene.add(treeTop);
+    }
+    
+    function createParkingSpots(blockX, blockZ, size) {
+      // Create parking spots on one side of the block
+      const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+      const spotSize = 2.5;
+      const spotDepth = 5;
+      const spotsPerSide = Math.floor(size / spotSize);
+      
+      for (let i = 0; i < spotsPerSide; i++) {
+        const offset = (i - spotsPerSide/2) * spotSize + spotSize/2;
+        let x = blockX;
+        let z = blockZ;
+        let rotation = 0;
+        
+        switch(side) {
+          case 0: // top
+            x += offset;
+            z += size/2 + spotDepth/2;
+            rotation = Math.PI/2;
+            break;
+          case 1: // right
+            x += size/2 + spotDepth/2;
+            z += offset;
+            rotation = 0;
+            break;
+          case 2: // bottom
+            x += offset;
+            z -= size/2 + spotDepth/2;
+            rotation = -Math.PI/2;
+            break;
+          case 3: // left
+            x -= size/2 + spotDepth/2;
+            z += offset;
+            rotation = Math.PI;
+            break;
+        }
+        
+        // Mark parking spot
+        const spot = new THREE.Mesh(
+          new THREE.PlaneGeometry(spotSize * 0.9, spotDepth * 0.9),
+          new THREE.MeshBasicMaterial({ 
+            color: 0x444444,
+            transparent: true,
+            opacity: 0.5
+          })
+        );
+        spot.rotation.x = -Math.PI/2;
+        spot.position.set(x, 0.02, z);
+        scene.add(spot);
+        
+        // Add outline
+        const spotOutline = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.PlaneGeometry(spotSize * 0.9, spotDepth * 0.9)),
+          new THREE.LineBasicMaterial({ color: 0xFFFFFF })
+        );
+        spotOutline.rotation.x = -Math.PI/2;
+        spotOutline.position.set(x, 0.03, z);
+        scene.add(spotOutline);
+        
+        // Create parking violation with a probability
+        if (Math.random() < 0.2) {
+          setTimeout(() => {
+            createViolatingVehicle(x, z, rotation);
+          }, Math.random() * 5000);
+        }
+      }
+    }
+    
+    function createViolatingVehicle(x, z, rotation) {
+      // Create a vehicle with random color
+      const colors = [0xFF0000, 0x0000FF, 0x00FF00, 0xFF00FF, 0x00FFFF, 0x8800FF, 0xFF8800];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      const vehicle = new THREE.Group();
+      
+      // Vehicle body
+      const vehicleBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 0.8, 3.5),
+        new THREE.MeshLambertMaterial({ color: color })
+      );
+      vehicleBody.position.y = 0.4;
+      vehicle.add(vehicleBody);
+      
+      // Vehicle top
+      const vehicleTop = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 0.7, 2),
+        new THREE.MeshLambertMaterial({ color: color })
+      );
+      vehicleTop.position.set(0, 1, 0);
+      vehicle.add(vehicleTop);
+      
+      // Vehicle wheels
+      const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8);
+      wheelGeometry.rotateX(Math.PI / 2);
+      const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 });
+      
+      const wheelFL = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheelFL.position.set(-0.9, 0.3, 1);
+      vehicle.add(wheelFL);
+      
+      const wheelFR = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheelFR.position.set(0.9, 0.3, 1);
+      vehicle.add(wheelFR);
+      
+      const wheelBL = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheelBL.position.set(-0.9, 0.3, -1);
+      vehicle.add(wheelBL);
+      
+      const wheelBR = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheelBR.position.set(0.9, 0.3, -1);
+      vehicle.add(wheelBR);
+      
+      // Position the vehicle
+      vehicle.position.set(x, 0, z);
+      vehicle.rotation.y = rotation;
+      
+      // Add violation marker - flashing red light
+      const violationMarker = new THREE.PointLight(0xFF0000, 1, 5);
+      violationMarker.position.set(0, 1.5, 0);
+      vehicle.add(violationMarker);
+      
+      // Store vehicle data
+      vehicle.userData = {
+        isViolation: true,
+        targeted: false,
+        flashTimer: 0,
+        violationCode: Math.floor(Math.random() * 10) + 1 // Random violation code
+      };
+      
+      scene.add(vehicle);
+      violatingVehicles.push(vehicle);
+      
+      return vehicle;
+    }
+    
+    // Create ED-209 model
+    function createED209(x, z) {
+      const ed209 = new THREE.Group();
+      
+      // Body
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 2, 2),
+        new THREE.MeshLambertMaterial({ color: 0x888888 })
+      );
+      body.position.y = 2;
+      ed209.add(body);
+      
+      // Head
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 0.8, 1),
+        new THREE.MeshLambertMaterial({ color: 0x666666 })
+      );
+      head.position.y = 3.4;
+      ed209.add(head);
+      
+      // Arms
+      const armGeometry = new THREE.BoxGeometry(0.5, 2, 0.5);
+      const armMaterial = new THREE.MeshLambertMaterial({ color: 0x444444 });
+      
+      const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+      leftArm.position.set(-1.25, 2, 0);
+      ed209.add(leftArm);
+      
+      const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+      rightArm.position.set(1.25, 2, 0);
+      ed209.add(rightArm);
+      
+      // Weapons
+      const weaponGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+      const weaponMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+      
+      const leftWeapon = new THREE.Mesh(weaponGeometry, weaponMaterial);
+      leftWeapon.rotation.x = Math.PI / 2;
+      leftWeapon.position.set(-1.25, 2, 1);
+      ed209.add(leftWeapon);
+      
+      const rightWeapon = new THREE.Mesh(weaponGeometry, weaponMaterial);
+      rightWeapon.rotation.x = Math.PI / 2;
+      rightWeapon.position.set(1.25, 2, 1);
+      ed209.add(rightWeapon);
+      
+      // Legs
+      const legUpper = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1, 1),
+        new THREE.MeshLambertMaterial({ color: 0x777777 })
+      );
+      legUpper.position.y = 1;
+      ed209.add(legUpper);
+      
+      const legLower = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 1, 1.5),
+        new THREE.MeshLambertMaterial({ color: 0x555555 })
+      );
+      legLower.position.y = 0.5;
+      ed209.add(legLower);
+      
+      // Selection indicator (initially invisible)
+      const selectionRing = new THREE.Mesh(
+        new THREE.RingGeometry(2, 2.3, 32),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00FFFF,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8,
+          visible: false
+        })
+      );
+      selectionRing.rotation.x = -Math.PI / 2;
+      selectionRing.position.y = 0.1;
+      selectionRing.name = "selectionRing";
+      ed209.add(selectionRing);
+      
+      // Add to scene
+      ed209.position.set(x, 0, z);
+      ed209.rotation.y = Math.random() * Math.PI * 2;
+      ed209.userData = {
+        isED209: true,
+        selected: false,
+        targetVehicle: null,
+        state: 'idle', // idle, pursuing, neutralizing
+        speed: 0.1,
+        animationTime: 0
+      };
+      
+      scene.add(ed209);
+      ed209Units.push(ed209);
+      
+      return ed209;
+    }
+    
+    // Handle ED-209 unit selection and targeting
+    function selectED209(ed209) {
+      // Deselect previously selected ED-209
+      if (selectedED209) {
+        const prevRing = selectedED209.getObjectByName("selectionRing");
+        if (prevRing) prevRing.material.visible = false;
+        selectedED209.userData.selected = false;
+      }
+      
+      // Select new ED-209
+      selectedED209 = ed209;
+      const ring = ed209.getObjectByName("selectionRing");
+      if (ring) ring.material.visible = true;
+      ed209.userData.selected = true;
+    }
+    
+    function assignTarget(ed209, vehicle) {
+      if (!vehicle.userData.targeted) {
+        ed209.userData.targetVehicle = vehicle;
+        ed209.userData.state = 'pursuing';
+        vehicle.userData.targeted = true;
+      }
+    }
+    
+    // Update ED-209 units
+    function updateED209Units(deltaTime) {
+      ed209Units.forEach(ed209 => {
+        const data = ed209.userData;
+        
+        // Animation time for all states
+        data.animationTime += deltaTime;
+        
+        // Add a slight bobbing motion for all ED-209s
+        ed209.position.y = Math.sin(data.animationTime * 5) * 0.05;
+        
+        switch(data.state) {
+          case 'idle':
+            // Rotate slowly when idle
+            ed209.rotation.y += deltaTime * 0.2;
+            break;
+            
+          case 'pursuing':
+            if (data.targetVehicle) {
+              // Calculate direction to target
+              const targetPos = data.targetVehicle.position.clone();
+              const directionToTarget = targetPos.sub(ed209.position).normalize();
+              
+              // Rotate towards target
+              const targetAngle = Math.atan2(directionToTarget.x, directionToTarget.z);
+              ed209.rotation.y = THREE.MathUtils.lerp(
+                ed209.rotation.y,
+                targetAngle,
+                deltaTime * 5
+              );
+              
+              // Move towards target
+              const moveDir = new THREE.Vector3(
+                Math.sin(ed209.rotation.y), 
+                0, 
+                Math.cos(ed209.rotation.y)
+              );
+              
+              ed209.position.add(moveDir.multiplyScalar(data.speed));
+              
+              // Check if we've reached the target
+              if (ed209.position.distanceTo(data.targetVehicle.position) < 3) {
+                data.state = 'neutralizing';
+                data.neutralizeTime = 0;
+              }
+            }
+            break;
+            
+          case 'neutralizing':
+            data.neutralizeTime += deltaTime;
+            
+            // Shake during neutralization
+            ed209.position.x += (Math.random() - 0.5) * 0.1;
+            ed209.position.z += (Math.random() - 0.5) * 0.1;
+            
+            // Flash the target during neutralization
+            if (data.targetVehicle) {
+              // Make the target flash red
+              data.targetVehicle.children[0].material.color.setHex(
+                Math.floor(data.neutralizeTime * 10) % 2 === 0 ? 0xFF0000 : 0x333333
+              );
+              
+              // Add animation for "neutralizing"
+              data.targetVehicle.position.y = Math.sin(data.neutralizeTime * 20) * 0.2;
+              data.targetVehicle.rotation.z = Math.sin(data.neutralizeTime * 15) * 0.2;
+              
+              // After 2 seconds, remove the vehicle
+              if (data.neutralizeTime > 2) {
+                const index = violatingVehicles.indexOf(data.targetVehicle);
+                if (index > -1) {
+                  scene.remove(data.targetVehicle);
+                  violatingVehicles.splice(index, 1);
+                }
+                
+                // Increase score
+                score += data.targetVehicle.userData.violationCode * 10;
+                scorePanel.innerHTML = `SCORE: ${score}`;
+                
+                // Reset ED-209
+                data.targetVehicle = null;
+                data.state = 'idle';
+                
+                // Deselect
+                if (data.selected) {
+                  const ring = ed209.getObjectByName("selectionRing");
+                  if (ring) ring.material.visible = false;
+                  data.selected = false;
+                  selectedED209 = null;
+                }
+              }
+            }
+            break;
+        }
+      });
+    }
+    
+    // Update violating vehicles
+    function updateViolatingVehicles(deltaTime) {
+      violatingVehicles.forEach(vehicle => {
+        const data = vehicle.userData;
+        
+        // Update flashing for vehicles not being neutralized
+        if (data.state !== 'neutralizing') {
+          data.flashTimer += deltaTime;
+          
+          // Flash the violation marker
+          const light = vehicle.children[vehicle.children.length - 1];
+          if (light instanceof THREE.PointLight) {
+            light.intensity = Math.sin(data.flashTimer * 10) * 0.5 + 0.5;
+          }
+        }
+      });
+      
+      // Randomly add new violations
+      if (Math.random() < 0.01 && violatingVehicles.length < 10) {
+        const x = (Math.random() - 0.5) * 100;
+        const z = (Math.random() - 0.5) * 100;
+        const rotation = Math.random() * Math.PI * 2;
+        createViolatingVehicle(x, z, rotation);
+      }
+    }
+    
+    // Handle mouse/touch input
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    
+    function onTouchStart(event) {
+      event.preventDefault();
+      
+      // Convert touch position to normalized device coordinates
+      const touch = event.touches[0];
+      mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+      
+      checkIntersections();
+    }
+    
+    function onMouseDown(event) {
+      // Convert mouse position to normalized device coordinates
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      
+      checkIntersections();
+    }
+    
+    function checkIntersections() {
+      // Update the picking ray with the camera and mouse position
+      raycaster.setFromCamera(mouse, camera);
+      
+      // Check for intersections with ED-209 units
+      const intersects = raycaster.intersectObjects(scene.children, true);
+      
+      if (intersects.length > 0) {
+        // Find the first object that's either an ED-209 or a violating vehicle
+        let clickedObject = null;
+        
+        for (let i = 0; i < intersects.length; i++) {
+          const object = intersects[i].object;
+          let parent = object;
+          
+          // Traverse up to find parent with userData
+          while (parent && !parent.userData) {
+            parent = parent.parent;
+          }
+          
+          if (parent && parent.userData) {
+            if (parent.userData.isED209) {
+              // Clicked on an ED-209
+              selectED209(parent);
+              clickedObject = parent;
+              break;
+            } else if (parent.userData.isViolation && !parent.userData.targeted && selectedED209) {
+              // Clicked on a violating vehicle and we have a selected ED-209
+              assignTarget(selectedED209, parent);
+              clickedObject = parent;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // Initialize scene
+    function init() {
+      // Create city
+      createCity();
+      
+      // Add ED-209 units
+      for (let i = 0; i < 5; i++) {
+        const x = (Math.random() - 0.5) * 80;
+        const z = (Math.random() - 0.5) * 80;
+        createED209(x, z);
+      }
+      
+      // Event listeners
+      renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+      renderer.domElement.addEventListener('mousedown', onMouseDown);
+      
+      window.addEventListener('resize', () => {
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.left = -d * aspect;
+        camera.right = d * aspect;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+      
+      // Show help panel on start
+      helpPanel.style.display = 'block';
+    }
+    
+    // Animation loop
+    let lastTime = performance.now();
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const now = performance.now();
+      const deltaTime = (now - lastTime) / 1000; // Convert to seconds
+      lastTime = now;
+      
+      // Update game objects
+      updateED209Units(deltaTime);
+      updateViolatingVehicles(deltaTime);
+      
+      // Rotate camera slowly around the scene
+      camera.position.x = Math.sin(now * 0.0001) * 80;
+      camera.position.z = Math.cos(now * 0.0001) * 80;
+      camera.lookAt(0, 0, 0);
+      
+      // Update debug panel
+      const renderInfo = renderer.info.render;
+      const fps = Math.round(1000 / (now - lastTime + 1));
+      
+      debugLog(`
+      <span style="color:#0f0">
+      RENDER INFO:<br>
+      FPS: ${fps}<br>
+      Triangles: ${renderInfo.triangles}<br>
+      Calls: ${renderInfo.calls}<br>
+      <br>
+      GAME INFO:<br>
+      ED-209 Units: ${ed209Units.length}<br>
+      Violations: ${violatingVehicles.length}<br>
+      Selected Unit: ${selectedED209 ? 'YES' : 'NO'}<br>
+      </span>`);
+      
+      renderer.render(scene, camera);
+    }
+    
+    // Start the game
+    init();
+    animate();
+  </script>
+</body>
+</html>
