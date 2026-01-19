@@ -1,13 +1,31 @@
 // FINK Navigation - Cache-Aware Deep Linking System
-// Uses two-part hash structure: #<finkUrlHash>-<knotIdHash>
 // Supports Navigation API (2022+) with fallback to hash-based navigation
+//
+// ===== FINK LINK SPEC =====
+// Format: #<urlHash>-<knotHash>
+//   - urlHash: 8 hex chars from SHA-256 of FINK file URL
+//   - knotHash: 9 hex chars from SHA-256 of knot name (with # prefix)
+//   - Total: 18 characters (8 + 1 hyphen + 9)
+//
+// Hash Generation:
+//   - urlHash = SHA256("glitchcan-fink-v2:url:<trimmed_fink_url>").slice(0,8)
+//   - knotHash = SHA256("glitchcan-fink-v2:knot:#<trimmed_knot_name>").slice(0,9)
+//
+// IMPORTANT: All inputs are trimmed of leading/trailing whitespace before hashing!
+// This ensures consistent hash generation regardless of input formatting.
+//
+// Examples:
+//   Valid:   #a1b2c3d4-e5f6g7h8i (18 chars, has hyphen)
+//   Invalid: #b6104110 (8 chars, no hyphen - legacy or malformed)
+// ===========================
 
 window.FinkNavigation = {
     // Configuration
+    // SPEC: urlHashLength + 1 (hyphen) + knotHashLength = total link ID length
     config: {
         salt: 'glitchcan-fink-v2',
-        urlHashLength: 8,
-        knotHashLength: 9
+        urlHashLength: 8,    // First part of link ID
+        knotHashLength: 9    // Second part of link ID (after hyphen)
     },
 
     // State
@@ -118,34 +136,61 @@ window.FinkNavigation = {
     },
 
     // Generate URL hash (first part of fink link)
+    // SPEC: Input URL is trimmed of leading/trailing whitespace before hashing
     async generateUrlHash(finkUrl) {
-        const data = `${this.config.salt}:url:${finkUrl}`;
+        const trimmedUrl = (finkUrl || '').trim();
+        const data = `${this.config.salt}:url:${trimmedUrl}`;
         const hash = await this.sha256hex(data);
         return hash.slice(0, this.config.urlHashLength);
     },
 
-    // Generate knot hash (second part of fink link) - includes # prefix
+    // Generate knot hash (second part of fink link)
+    // SPEC: Input knot name is trimmed of leading/trailing whitespace before hashing
+    // SPEC: Hash input includes # prefix: "salt:knot:#knotName"
     async generateKnotHash(knotName) {
-        const data = `${this.config.salt}:knot:#${knotName}`;
+        const trimmedKnot = (knotName || '').trim();
+        const data = `${this.config.salt}:knot:#${trimmedKnot}`;
         const hash = await this.sha256hex(data);
         return hash.slice(0, this.config.knotHashLength);
     },
 
     // Generate full two-part fink link ID
+    // SPEC: Format is "urlHash-knotHash" where:
+    //   - urlHash: 8 hex chars from SHA-256 of trimmed FINK URL
+    //   - knotHash: 9 hex chars from SHA-256 of trimmed knot name (with # prefix)
+    //   - Both inputs trimmed of leading/trailing whitespace
     async generateFinkLinkId(finkUrl, knotName) {
         const urlHash = await this.generateUrlHash(finkUrl);
         const knotHash = await this.generateKnotHash(knotName);
-        return `${urlHash}-${knotHash}`;
+        const linkId = `${urlHash}-${knotHash}`;
+
+        // Debug: Log the full link generation
+        this.swimLog('🔗', 'Generated Link ID',
+            `${urlHash}-${knotHash?.slice(0,5)}... for "${(knotName||'').trim()}"`);
+
+        return linkId;
     },
 
     // Parse a two-part fink link ID
+    // SPEC: Expected format "urlHash-knotHash" (8 chars + hyphen + 9 chars = 18 total)
+    // SPEC: Input is trimmed of leading/trailing whitespace before parsing
     parseFinkLinkId(fragmentId) {
-        if (!fragmentId || !fragmentId.includes('-')) {
+        const trimmed = (fragmentId || '').trim();
+        if (!trimmed || !trimmed.includes('-')) {
             return null;
         }
-        const [urlHash, knotHash] = fragmentId.split('-', 2);
+        const [urlHash, knotHash] = trimmed.split('-', 2);
         if (!urlHash || !knotHash) return null;
-        return { urlHash, knotHash };
+
+        // Validate expected lengths (warn but don't reject if different)
+        if (urlHash.length !== this.config.urlHashLength) {
+            this.log(`Warning: urlHash "${urlHash}" is ${urlHash.length} chars, expected ${this.config.urlHashLength}`);
+        }
+        if (knotHash.length !== this.config.knotHashLength) {
+            this.log(`Warning: knotHash "${knotHash}" is ${knotHash.length} chars, expected ${this.config.knotHashLength}`);
+        }
+
+        return { urlHash: urlHash.trim(), knotHash: knotHash.trim() };
     },
 
     // Legacy: Generate old-style single hash (for backwards compat)
@@ -474,14 +519,33 @@ Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
     },
 
     // Update URL fragment when entering a knot (uses two-part hash)
+    // SPEC: Fragment format is "#urlHash-knotHash" (8 + 1 + 9 = 18 chars)
+    // SPEC: Both knot name and FINK URL are trimmed before hashing
     async updateFragment(knotName) {
-        if (!this.isPublicKnot(knotName) || !this.currentFinkUri) {
+        const trimmedKnot = (knotName || '').trim();
+
+        if (!this.isPublicKnot(trimmedKnot) || !this.currentFinkUri) {
+            this.log(`updateFragment skipped: knot="${trimmedKnot}", uri=${!!this.currentFinkUri}`);
             return;
         }
 
-        const finkLinkId = await this.generateFinkLinkId(this.currentFinkUri, knotName);
-        const urlHash = finkLinkId.split('-')[0];
-        const knotHash = finkLinkId.split('-')[1];
+        const finkLinkId = await this.generateFinkLinkId(this.currentFinkUri, trimmedKnot);
+
+        // Validate the generated link ID format
+        if (!finkLinkId || !finkLinkId.includes('-')) {
+            this.log(`ERROR: Invalid finkLinkId generated: "${finkLinkId}"`);
+            this.swimLog('🚨', 'Invalid Link ID', `"${finkLinkId}" missing hyphen!`, true);
+            return;
+        }
+
+        const [urlHash, knotHash] = finkLinkId.split('-', 2);
+
+        // Sanity check - should always have both parts
+        if (!urlHash || !knotHash) {
+            this.log(`ERROR: Link ID missing parts: url="${urlHash}", knot="${knotHash}"`);
+            this.swimLog('🚨', 'Malformed Link ID', `Missing ${!urlHash ? 'urlHash' : 'knotHash'}`, true);
+            return;
+        }
 
         if (this.usingNavigationAPI) {
             // Use Navigation API for cleaner updates
@@ -498,9 +562,9 @@ Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
             history.replaceState(null, '', `#${finkLinkId}`);
         }
 
-        this.log(`Updated fragment to: #${finkLinkId} (${knotName})`);
+        this.log(`Updated fragment to: #${finkLinkId} (${trimmedKnot})`);
         this.swimLog('📍', 'URL Updated',
-            `#${urlHash}-${knotHash?.slice(0,5)}... = ${knotName}`);
+            `#${urlHash}-${knotHash.slice(0,5)}... = ${trimmedKnot}`);
     },
 
     // Generate a shareable link for a knot (uses two-part hash)
