@@ -1,0 +1,77 @@
+{
+  "title": "Sunflower Field (Fixed)",
+  "subtitle": "Working version without repeat+radial conflicts",
+  "version": "1.3",
+  "notes": "Fixed version using individual spheres instead of radial pattern to avoid repeat+radial distortion",
+
+  "params": {
+    "petalColor": {
+      "value": [1.0, 0.8, 0.1],
+      "type": "color3",
+      "description": "Petal color"
+    },
+    "centerColor": {
+      "value": [0.45, 0.3, 0.1],
+      "type": "color3",
+      "description": "Center color"
+    }
+  },
+
+  "defs": {
+    "sunflower": {
+      "type": "union",
+      "comment": "Sunflower using individual petals instead of radial to avoid repeat+radial issues",
+      "children": [
+        {
+          "type": "sphere",
+          "params": { "r": 0.25, "color": {"var": "centerColor"} }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [0.35, 0, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [0.25, 0.25, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [0, 0.35, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [-0.25, 0.25, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [-0.35, 0, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [-0.25, -0.25, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [0, -0.35, 0] }
+        },
+        {
+          "type": "sphere",
+          "params": { "r": 0.12, "color": {"var": "petalColor"} },
+          "transform": { "translate": [0.25, -0.25, 0] }
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "repeat",
+    "period": [2.5, 0, 2.5],
+    "child": { "type": "ref", "id": "sunflower" }
+  }
+}
