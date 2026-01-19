@@ -7,10 +7,11 @@ window.FinkPlayer = {
     // Initialize the player
     init() {
         FinkUtils.debugLog('Initializing FINK Player v5 with modular architecture...');
-        
+
         // Initialize all modules
         FinkUI.init();
-        
+        FinkBreadcrumb.init();
+
         FinkUtils.debugLog('FINK Player v5 initialized');
         
         // Auto-load default story from config
@@ -49,6 +50,10 @@ window.FinkPlayer = {
             const resolvedUrl = FinkUtils.resolveUrl(finkUrl);
             this.currentStoryUrl = resolvedUrl; // Store for content-centric resolution
             FinkUtils.debugLog('Loading story from: ' + resolvedUrl);
+
+            // Update breadcrumb with new story URL
+            FinkBreadcrumb.setFinkUrl(resolvedUrl);
+
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
             FinkInkEngine.compileAndRunStory(content);
         } catch (error) {
@@ -74,6 +79,7 @@ window.FinkPlayer = {
                 FinkInkEngine.story.ResetState();
                 FinkUI.clearStory();
                 FinkUI.clearChoices();
+                FinkBreadcrumb.clearPath(); // Clear navigation history
                 FinkInkEngine.continueStory();
                 FinkUtils.debugLog('Story restarted successfully');
             } catch (error) {
@@ -177,5 +183,6 @@ window.fink = {
     engine: FinkInkEngine,
     sandbox: FinkSandbox,
     utils: FinkUtils,
-    config: FinkConfig
+    config: FinkConfig,
+    breadcrumb: FinkBreadcrumb
 };

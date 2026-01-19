@@ -643,3 +643,138 @@ body, html {
     color: #4ade80;
     border-color: #4ade80;
 }
+
+/* Breadcrumb navigation widget */
+.breadcrumb-container {
+    position: fixed;
+    top: 4px;
+    left: 4px;
+    z-index: 15;
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 6px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    max-width: calc(100% - 8px);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.breadcrumb-container:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.breadcrumb-toggle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 10px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    vertical-align: middle;
+}
+
+.breadcrumb-toggle:hover {
+    color: var(--text);
+}
+
+.breadcrumb-content {
+    display: none;
+    padding: 0 10px 8px 4px;
+}
+
+.breadcrumb-container.expanded .breadcrumb-content {
+    display: block;
+}
+
+.breadcrumb-container.expanded {
+    max-width: 90%;
+}
+
+.breadcrumb-url {
+    display: block;
+    color: #818cf8;
+    font-weight: 600;
+    padding: 4px 0 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 6px;
+    word-break: break-all;
+    cursor: default;
+}
+
+.breadcrumb-url:hover {
+    color: #a5b4fc;
+}
+
+.breadcrumb-knots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    line-height: 1.8;
+}
+
+.breadcrumb-ellipsis {
+    color: var(--text-secondary);
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.breadcrumb-separator {
+    color: rgba(255, 255, 255, 0.3);
+    user-select: none;
+}
+
+.breadcrumb-knot {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.breadcrumb-knot-name {
+    color: var(--text);
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+}
+
+.breadcrumb-knot-name:hover {
+    background: rgba(99, 102, 241, 0.3);
+    color: #c7d2fe;
+}
+
+.breadcrumb-link-icon {
+    font-size: 9px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.15s ease;
+    padding: 2px;
+}
+
+.breadcrumb-link-icon:hover {
+    opacity: 1;
+}
+
+.breadcrumb-empty {
+    color: var(--text-secondary);
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* Collapsed state - just show arrow and brief info */
+.breadcrumb-container:not(.expanded) .breadcrumb-url,
+.breadcrumb-container:not(.expanded) .breadcrumb-knots {
+    display: none;
+}
+
+/* Make room for breadcrumb when title bar is hidden */
+@media (min-width: 768px) {
+    .breadcrumb-container {
+        top: 6px;
+        left: 6px;
+    }
+}

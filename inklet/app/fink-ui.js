@@ -263,6 +263,7 @@ window.FinkUI = {
                         FinkInkEngine.story.ChoosePathString(item.target);
                         FinkUI.clearStory();
                         FinkUI.clearChoices();
+                        FinkBreadcrumb.recordKnot(item.target); // Record menu navigation
                         FinkInkEngine.continueStory();
                     } catch (error) {
                         FinkUtils.debugLog('Error navigating to ' + item.target + ': ' + error.message);

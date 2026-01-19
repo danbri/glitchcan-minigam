@@ -21,12 +21,24 @@
     <script src="fink-sandbox.js"></script>
     <script src="fink-ink-engine.js"></script>
     <script src="fink-ui.js"></script>
+    <script src="fink-breadcrumb.js"></script>
     <script src="fink-player.js"></script>
     
     <link rel="stylesheet" href="fink-player.css">
 </head>
 <body>
     <div class="app-container" id="app-container">
+        <!-- Breadcrumb navigation widget -->
+        <div class="breadcrumb-container" id="breadcrumb-container">
+            <button class="breadcrumb-toggle" id="breadcrumb-toggle" title="Show navigation path">▶</button>
+            <div class="breadcrumb-content" id="breadcrumb-content">
+                <span class="breadcrumb-url" id="breadcrumb-url">No story loaded</span>
+                <div class="breadcrumb-knots" id="breadcrumb-knots">
+                    <span class="breadcrumb-empty">Start navigating...</span>
+                </div>
+            </div>
+        </div>
+
         <div class="menu-trigger" id="menu-trigger"></div>
         <div class="title-bar" id="title-bar">
             <div class="story-menu">

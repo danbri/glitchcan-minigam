@@ -121,7 +121,10 @@ window.FinkInkEngine = {
                 FinkUI.clearStory();
                 FinkUI.hideStatus();
                 this.continueStory();
-                
+
+                // Record initial knot in breadcrumb
+                this.recordCurrentKnotToBreadcrumb();
+
                 return true;
                 
             } catch (storyError) {
@@ -149,6 +152,9 @@ window.FinkInkEngine = {
             if (choiceIndex !== null && typeof choiceIndex === 'number') {
                 FinkUtils.debugLog('Making choice: ' + choiceIndex);
                 this.story.ChooseChoiceIndex(choiceIndex);
+
+                // Record the knot we're now in after making a choice
+                this.recordCurrentKnotToBreadcrumb();
             }
 
             FinkUI.clearChoices();
@@ -244,6 +250,8 @@ window.FinkInkEngine = {
                 // Update currentStoryUrl so BASEHREF resolves correctly
                 FinkPlayer.currentStoryUrl = resolvedUrl;
                 FinkUtils.debugLog('Updated currentStoryUrl to: ' + resolvedUrl);
+                // Update breadcrumb with new external story URL
+                FinkBreadcrumb.setFinkUrl(resolvedUrl);
                 this.compileAndRunStory(content);
             })
             .catch(error => {
@@ -288,5 +296,41 @@ window.FinkInkEngine = {
         });
         
         return tags;
+    },
+
+    // Record current knot position to breadcrumb
+    recordCurrentKnotToBreadcrumb() {
+        if (!this.story) return;
+
+        try {
+            // Try to extract current knot from story state
+            const state = this.story.state;
+            if (state && state.currentPathString) {
+                const pathString = state.currentPathString;
+                // Extract knot name from path like "knot_name.stitch_name.0"
+                const knotName = pathString.split('.')[0];
+                if (knotName && !knotName.startsWith('_')) {
+                    FinkBreadcrumb.recordKnot(knotName);
+                    return;
+                }
+            }
+
+            // Alternative: try callStack approach
+            if (state && state.callStack && state.callStack.currentThread) {
+                const thread = state.callStack.currentThread;
+                if (thread.elements && thread.elements.length > 0) {
+                    const currentElement = thread.elements[thread.elements.length - 1];
+                    if (currentElement && currentElement.currentPointer && currentElement.currentPointer.path) {
+                        const pathStr = currentElement.currentPointer.path.toString();
+                        const knotName = pathStr.split('.')[0];
+                        if (knotName && !knotName.startsWith('_')) {
+                            FinkBreadcrumb.recordKnot(knotName);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            FinkUtils.debugLog('Could not extract current knot for breadcrumb: ' + e.message);
+        }
     }
 };
