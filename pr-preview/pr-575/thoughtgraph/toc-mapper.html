@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Falklands/Malvinas Analysis (Relations in Cards + Smooth Nav)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f8f9fa;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .tab-buttons {
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+    .tab-buttons button {
+      background: none;
+      border: none;
+      padding: 0.6rem 1rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    .tab-buttons button.active {
+      border-bottom: 2px solid #007bff;
+      color: #007bff;
+    }
+    #cardsView, #networkView, #editView, #docsView {
+      display: none;
+      margin-top: 1rem;
+    }
+    /* Filter toggles row */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .filters button {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-left-width: 6px;
+      border-radius: 4px;
+      padding: 1rem;
+      cursor: default;
+      transition: background 0.2s;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      position: relative;
+    }
+    .card-header {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+    }
+    .card-subheader {
+      font-size: 0.7rem;
+      color: #999;
+      margin-bottom: 0.5rem;
+    }
+    .card-body {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    /* Relations listing inside card */
+    .relations-list {
+      margin: 0.4rem 0;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #555;
+    }
+    .relations-list .rel-label {
+      font-weight: bold;
+      color: #333;
+      margin-right: 0.3rem;
+    }
+    .relations-list .rel-link {
+      color: #1d4ed8;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-left: 0.2rem;
+    }
+    /* Highlight animation for card */
+    .card-highlight {
+      animation: highlightFade 1.5s ease forwards;
+    }
+    @keyframes highlightFade {
+      0% { background-color: #fff7dc; }
+      50% { background-color: #fffbeb; }
+      100% { background-color: transparent; }
+    }
+    /* Network */
+    #networkContainer {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 4px;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+    #networkContainer svg {
+      display: block;
+      width: 800px;
+      height: 600px;
+    }
+    .node-tooltip {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.5rem;
+      pointer-events: none;
+      font-size: 0.8rem;
+      max-width: 200px;
+    }
+    /* Editor */
+    .json-editor {
+      width: 100%;
+      height: 300px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      white-space: pre;
+      overflow: auto;
+    }
+    .btn-apply {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .error-msg {
+      margin-top: 0.5rem;
+      color: #dc2626;
+      font-size: 0.9rem;
+    }
+    /* Docs */
+    .doc-content {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      padding: 1rem;
+      border-radius: 4px;
+      line-height: 1.4;
+      font-size: 0.9rem;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Falklands/Malvinas Analysis (Relations in Cards + Smooth Nav)</h1>
+  <!-- Tab bar -->
+  <div class="tab-buttons">
+    <button id="cardsTabBtn" class="active">Cards View</button>
+    <button id="networkTabBtn">Network View</button>
+    <button id="editTabBtn">Edit Data</button>
+    <button id="docsTabBtn">Data Format</button>
+  </div>
+  <!-- Filter toggles row -->
+  <div class="filters" id="filterButtons"></div>
+  <!-- Cards tab -->
+  <div id="cardsView">
+    <div class="card-grid" id="cardsContainer"></div>
+  </div>
+  <!-- Network tab -->
+  <div id="networkView">
+    <div id="networkContainer">
+      <svg id="networkSvg"></svg>
+      <div id="nodeTooltip" class="node-tooltip" style="display:none;"></div>
+    </div>
+  </div>
+  <!-- Edit tab -->
+  <div id="editView">
+    <textarea id="jsonEditor" class="json-editor"></textarea>
+    <button id="applyJsonBtn" class="btn-apply">Apply JSON</button>
+    <div id="jsonError" class="error-msg"></div>
+  </div>
+  <!-- Docs tab -->
+  <div id="docsView">
+    <div class="doc-content" id="docContent"></div>
+  </div>
+</div>
+<script>
+  //////////////////////////////////////////////////////////////////////////
+  // 1) Data Structures + Default JSON + Documentation
+  //////////////////////////////////////////////////////////////////////////
+
+  let thoughts = [];   // array of { id, text, type }
+  let relations = [];  // array of { id, rel, source, target }
+
+  // color map
+  const typeColors = {
+    entity: '#3b82f6',
+    thought: '#64748b',
+    historical: '#0891b2',
+    future: '#8b5cf6',
+    concept: '#f59e0b',
+    perspective: '#22c55e'
+  };
+
+  // filter toggles
+  const activeFilters = {
+    entity: true,
+    thought: true,
+    historical: true,
+    future: true,
+    concept: true,
+    perspective: true
+  };
+
+  // force layout
+  let globalLayout = [];
+  let globalFilteredEdges = [];
+
+  // highlight states
+  let highlightNodeId = null;
+  let highlightNeighborIds = [];
+
+  // Improved default JSON data
+  const defaultJsonData = {
+    "thoughts": [
+      {
+        "id": "t001",
+        "text": "Statement: The Falkland Islands (Malvinas) belong to Argentina and should be returned to Argentine control.",
+        "type": "thought"
+      },
+      {
+        "id": "t002",
+        "text": "Entity: Malvinas Islands. Wikidata ID: Q5379",
+        "type": "entity"
+      },
+      {
+        "id": "t003",
+        "text": "Entity: Argentina. Wikidata ID: Q414",
+        "type": "entity"
+      },
+      {
+        "id": "t004",
+        "text": "Entity: United Kingdom. Wikidata ID: Q145",
+        "type": "entity"
+      },
+      {
+        "id": "t008",
+        "text": "Concept: Sovereignty. Wikidata ID: Q180573",
+        "type": "concept"
+      },
+      {
+        "id": "t010",
+        "text": "Argentina asserts a claim of sovereignty over the Falkland Islands.",
+        "type": "thought"
+      },
+      {
+        "id": "t012",
+        "text": "The United Kingdom asserts a claim of sovereignty over the Falkland Islands.",
+        "type": "thought"
+      },
+      {
+        "id": "t015",
+        "text": "The statement implies that Argentina previously controlled the Falkland Islands.",
+        "type": "thought"
+      },
+      {
+        "id": "t017",
+        "text": "Historical Context: Spain established settlements in the Falkland Islands in the 18th century.",
+        "type": "historical"
+      },
+      {
+        "id": "t020",
+        "text": "Historical Context: Argentina declared independence from Spain in 1816. Wikidata ID: Q7707",
+        "type": "historical"
+      },
+      {
+        "id": "t023",
+        "text": "Historical Claim: Argentina inherited sovereign rights from Spain upon independence, including over the Falkland Islands.",
+        "type": "historical"
+      },
+      {
+        "id": "t026",
+        "text": "Historical Context: The United Kingdom established a presence in the Falkland Islands in the late 18th century but later withdrew.",
+        "type": "historical"
+      },
+      {
+        "id": "t028",
+        "text": "Historical Context: The United Kingdom reasserted control in 1833 and has maintained a continuous presence since, except during the 1982 conflict.",
+        "type": "historical"
+      },
+      {
+        "id": "t031",
+        "text": "Historical Event: Falklands War of 1982. Wikidata ID: Q209288",
+        "type": "historical"
+      },
+      {
+        "id": "t033",
+        "text": "The 1982 Falklands War was a military conflict between Argentina and the United Kingdom over the islands.",
+        "type": "historical"
+      },
+      {
+        "id": "t035",
+        "text": "Outcome: The United Kingdom won the Falklands War and retained control of the islands.",
+        "type": "historical"
+      },
+      {
+        "id": "t037",
+        "text": "Principle: Self-determination. Wikidata ID: Q176194",
+        "type": "concept"
+      },
+      {
+        "id": "t040",
+        "text": "Self-determination holds that a people can determine their political status and development.",
+        "type": "thought"
+      },
+      {
+        "id": "t042",
+        "text": "Current Inhabitants: The Falkland Islanders identify as British and favor remaining under UK sovereignty.",
+        "type": "thought"
+      },
+      {
+        "id": "t046",
+        "text": "Viewpoint: The self-determination of the Falkland Islanders is a key factor in the dispute.",
+        "type": "perspective"
+      },
+      {
+        "id": "t049",
+        "text": "UN Resolutions: Various UN resolutions address the Falklands dispute and call for negotiations.",
+        "type": "thought"
+      },
+      {
+        "id": "t052",
+        "text": "UN Resolution: In 1965, UN General Assembly Resolution 2065 (XX) acknowledged the sovereignty dispute over the islands.",
+        "type": "historical"
+      },
+      {
+        "id": "t054",
+        "text": "UN Resolutions emphasize negotiation without explicitly endorsing either claim.",
+        "type": "thought"
+      },
+      {
+        "id": "t056",
+        "text": "Historical Claim (Argentine perspective): Argentina claims effective occupation of the islands in the 1820s before the 1833 UK reassertion.",
+        "type": "historical"
+      },
+      {
+        "id": "t059",
+        "text": "Historical counter-claim (UK perspective): The UK argues that Argentina’s occupation in the 1820s was brief and insufficient to establish sovereignty.",
+        "type": "historical"
+      },
+      {
+        "id": "t062",
+        "text": "Research Task: Investigate Spanish settlements in the Falklands to clarify the historical basis for the claims.",
+        "type": "thought"
+      },
+      {
+        "id": "t064",
+        "text": "Historical Event: In 1833, British warships reasserted control over the Falkland Islands, displacing the Argentine administration.",
+        "type": "historical"
+      },
+      {
+        "id": "t067",
+        "text": "Legal Basis (UK Claim post-1833): The UK bases its claim on continuous and effective occupation since 1833.",
+        "type": "historical"
+      },
+      {
+        "id": "t070",
+        "text": "Legal counter-argument (Argentine perspective): Argentina argues that the UK's 1833 reassertion was an illegal occupation.",
+        "type": "historical"
+      },
+      {
+        "id": "t073",
+        "text": "Self-determination Application: The UK and the Falkland Islanders emphasize self-determination in the dispute.",
+        "type": "thought"
+      },
+      {
+        "id": "t076",
+        "text": "Argentine view on Self-determination: Argentina argues that self-determination does not apply because the current inhabitants are not the original population.",
+        "type": "perspective"
+      },
+      {
+        "id": "t079",
+        "text": "Concept: Territorial Integrity. Wikidata ID: Q193955",
+        "type": "concept"
+      },
+      {
+        "id": "t082",
+        "text": "Territorial Integrity (Argentine perspective): Argentina claims the islands are part of its continental shelf and were separated from its territory.",
+        "type": "thought"
+      },
+      {
+        "id": "t084",
+        "text": "Geographical Proximity (Argentine perspective): Argentina argues that the islands’ proximity to the mainland supports its claim.",
+        "type": "thought"
+      },
+      {
+        "id": "t087",
+        "text": "Geographical counter-argument (UK perspective): The UK contends that proximity alone does not determine sovereignty.",
+        "type": "thought"
+      },
+      {
+        "id": "t089",
+        "text": "Economic Factors: The Falkland Islands' EEZ is important for fishing and potential offshore resources. Wikidata ID: Q5380",
+        "type": "thought"
+      },
+      {
+        "id": "t092",
+        "text": "Economic Activities: Fishing and tourism are key industries in the Falkland Islands.",
+        "type": "thought"
+      },
+      {
+        "id": "t095",
+        "text": "Strategic Importance: The Falkland Islands hold strategic value in the South Atlantic.",
+        "type": "thought"
+      },
+      {
+        "id": "t098",
+        "text": "Emotive Framing (Argentine perspective): In Argentina, the dispute is linked to national pride and historical injustice.",
+        "type": "perspective"
+      },
+      {
+        "id": "t101",
+        "text": "Emotive Framing (UK perspective): In the UK, the dispute is framed around self-determination and the legacy of the 1982 conflict.",
+        "type": "perspective"
+      },
+      {
+        "id": "t103",
+        "text": "Public Opinion in Argentina: Argentine public opinion strongly supports the claim to the Falkland Islands.",
+        "type": "thought"
+      },
+      {
+        "id": "t105",
+        "text": "Public Opinion in the UK: UK public opinion generally supports the Falkland Islanders' right to self-determination.",
+        "type": "thought"
+      },
+      {
+        "id": "t107",
+        "text": "Future Scenario: Continued Status Quo – the islands remain under UK control while Argentina maintains its claim.",
+        "type": "future"
+      },
+      {
+        "id": "t110",
+        "text": "Future Scenario: Joint Sovereignty – both nations agree to share sovereignty over the islands.",
+        "type": "future"
+      },
+      {
+        "id": "t113",
+        "text": "Future Scenarios: Other possibilities include international arbitration or increased UN involvement.",
+        "type": "future"
+      },
+      {
+        "id": "t116",
+        "text": "Conclusion: The claim that the Falkland Islands belong to Argentina is supported by historical and geographical arguments. The UK counters with its record of continuous occupation, legal claims, and the principle of self-determination.",
+        "type": "thought"
+      }
+    ],
+    "relations": [
+      { "id": "t005", "rel": "concerns", "source": "t001", "target": "t002" },
+      { "id": "t006", "rel": "concerns", "source": "t001", "target": "t003" },
+      { "id": "t009", "rel": "isRelatedTo", "source": "t008", "target": "t001" },
+      { "id": "t011", "rel": "supports", "source": "t010", "target": "t001" },
+      { "id": "t013", "rel": "incompatibleWith", "source": "t012", "target": "t010" },
+      { "id": "t014", "rel": "challenges", "source": "t012", "target": "t001" },
+      { "id": "t016", "rel": "interpretationOf", "source": "t015", "target": "t001" },
+      { "id": "t018", "rel": "contextualizes", "source": "t017", "target": "t010" },
+      { "id": "t019", "rel": "contextualizes", "source": "t017", "target": "t012" },
+      { "id": "t021", "rel": "contextualizes", "source": "t020", "target": "t017" },
+      { "id": "t022", "rel": "contextualizes", "source": "t020", "target": "t010" },
+      { "id": "t024", "rel": "supports", "source": "t023", "target": "t010" },
+      { "id": "t025", "rel": "addresses", "source": "investigate historical basis of Argentine claim", "target": "t023", "log": "pop: investigate historical basis of Argentine claim" },
+      { "id": "t027", "rel": "contextualizes", "source": "t026", "target": "t012" },
+      { "id": "t029", "rel": "contextualizes", "source": "t028", "target": "t012" },
+      { "id": "t030", "rel": "addresses", "source": "investigate historical basis of UK claim", "target": "t028", "log": "pop: investigate historical basis of UK claim" },
+      { "id": "t032", "rel": "isContextFor", "source": "t031", "target": "t028" },
+      { "id": "t034", "rel": "explains", "source": "t033", "target": "t031" },
+      { "id": "t036", "rel": "outcomeOf", "source": "t035", "target": "t031" },
+      { "id": "t038", "rel": "isRelatedTo", "source": "t037", "target": "t001" },
+      { "id": "t039", "rel": "addresses", "source": "consider principle of self-determination", "target": "t037", "log": "pop: consider principle of self-determination" },
+      { "id": "t041", "rel": "explains", "source": "t040", "target": "t037" },
+      { "id": "t043", "rel": "addresses", "source": "consider current inhabitants' views", "target": "t042", "log": "pop: consider current inhabitants' views" },
+      { "id": "t044", "rel": "relevantTo", "source": "t042", "target": "t037" },
+      { "id": "t045", "rel": "relevantTo", "source": "t042", "target": "t001" },
+      { "id": "t047", "rel": "perspectiveOn", "source": "t046", "target": "t037" },
+      { "id": "t048", "rel": "perspectiveOn", "source": "t046", "target": "t042" },
+      { "id": "t050", "rel": "addresses", "source": "examine UN resolutions on the matter", "target": "t049", "log": "pop: examine UN resolutions on the matter" },
+      { "id": "t051", "rel": "relevantTo", "source": "t049", "target": "t001" },
+      { "id": "t053", "rel": "exampleOf", "source": "t052", "target": "t049" },
+      { "id": "t055", "rel": "clarifies", "source": "t054", "target": "t049", "log": "pop: examine UN resolutions on the matter" },
+      { "id": "t057", "rel": "addresses", "source": "verify historical Argentine control of Malvinas", "target": "t056", "log": "pop: verify historical Argentine control of Malvinas" },
+      { "id": "t058", "rel": "supports", "source": "t056", "target": "t010" },
+      { "id": "t060", "rel": "challenges", "source": "t059", "target": "t056" },
+      { "id": "t061", "rel": "challenges", "source": "t059", "target": "t010" },
+      { "id": "t063", "rel": "addresses", "source": "research Spanish settlements in Falklands", "target": "t062", "log": "pop: research Spanish settlements in Falklands" },
+      { "id": "t065", "rel": "details", "source": "t064", "target": "t030" },
+      { "id": "t066", "rel": "addresses", "source": "detail events of UK reassertion in 1833", "target": "t064", "log": "pop: detail events of UK reassertion in 1833" },
+      { "id": "t068", "rel": "addresses", "source": "investigate legal basis of UK claim post-1833", "target": "t067", "log": "pop: investigate legal basis of UK claim post-1833" },
+      { "id": "t069", "rel": "supports", "source": "t067", "target": "t012" },
+      { "id": "t071", "rel": "challenges", "source": "t070", "target": "t067" },
+      { "id": "t072", "rel": "challenges", "source": "t070", "target": "t012" },
+      { "id": "t074", "rel": "addresses", "source": "investigate application of self-determination to Falklands", "target": "t073", "log": "pop: investigate application of self-determination to Falklands" },
+      { "id": "t075", "rel": "supports", "source": "t073", "target": "t012" },
+      { "id": "t077", "rel": "addresses", "source": "investigate Argentine perspective on self-determination in this context", "target": "t076", "log": "pop: investigate Argentine perspective on self-determination in this context" },
+      { "id": "t078", "rel": "challenges", "source": "t076", "target": "t073" },
+      { "id": "t080", "rel": "isRelatedTo", "source": "t079", "target": "t010" },
+      { "id": "t081", "rel": "addresses", "source": "consider concept of 'territorial integrity' in relation to Argentine claim", "target": "t079", "log": "pop: consider concept of 'territorial integrity' in relation to Argentine claim" },
+      { "id": "t083", "rel": "supports", "source": "t082", "target": "t010" },
+      { "id": "t085", "rel": "addresses", "source": "consider geographical proximity argument by Argentina", "target": "t084", "log": "pop: consider geographical proximity argument by Argentina" },
+      { "id": "t086", "rel": "supports", "source": "t084", "target": "t010" },
+      { "id": "t088", "rel": "challenges", "source": "t087", "target": "t084" },
+      { "id": "t090", "rel": "addresses", "source": "consider economic factors", "target": "t089", "log": "pop: consider economic factors" },
+      { "id": "t093", "rel": "addresses", "source": "investigate economic activities in Falklands", "target": "t092", "log": "pop: investigate economic activities in Falklands" },
+      { "id": "t094", "rel": "exampleOf", "source": "t092", "target": "t089" },
+      { "id": "t096", "rel": "addresses", "source": "consider strategic importance of Falklands", "target": "t095", "log": "pop: consider strategic importance of Falklands" },
+      { "id": "t099", "rel": "emotiveFramingOf", "source": "t098", "target": "t001" },
+      { "id": "t100", "rel": "addresses", "source": "explore emotive framing by both sides", "target": "t098", "log": "pop: explore emotive framing by both sides" },
+      { "id": "t102", "rel": "emotiveFramingOf", "source": "t101", "target": "t001" },
+      { "id": "t104", "rel": "addresses", "source": "investigate public opinion in Argentina regarding Malvinas", "target": "t103", "log": "pop: investigate public opinion in Argentina regarding Malvinas" },
+      { "id": "t106", "rel": "addresses", "source": "investigate public opinion in UK regarding Falklands", "target": "t105", "log": "pop: investigate public opinion in UK regarding Falklands" },
+      { "id": "t108", "rel": "addresses", "source": "consider possibility of continued status quo", "target": "t107", "log": "pop: consider possibility of continued status quo" },
+      { "id": "t109", "rel": "potentialFuture", "source": "t107", "target": "t001" },
+      { "id": "t111", "rel": "addresses", "source": "consider possibility of joint sovereignty", "target": "t110", "log": "pop: consider possibility of joint sovereignty" },
+      { "id": "t112", "rel": "potentialFuture", "source": "t110", "target": "t001" },
+      { "id": "t114", "rel": "addresses", "source": "consider potential future scenarios", "target": "t113", "log": "pop: consider potential future scenarios" },
+      { "id": "t115", "rel": "potentialFuture", "source": "t113", "target": "t001" },
+      { "id": "t117", "rel": "summarizes", "source": "t116", "target": "t001" },
+      { "id": "t118", "rel": "summarizes", "source": "t116", "target": "t010" },
+      { "id": "t119", "rel": "summarizes", "source": "t116", "target": "t012" },
+      { "id": "t120", "rel": "summarizes", "source": "t116", "target": "t037" },
+      { "id": "t121", "rel": "summarizes", "source": "t116", "target": "t042" },
+      { "id": "t122", "rel": "summarizes", "source": "t116", "target": "t084" },
+      { "id": "t123", "rel": "summarizes", "source": "t116", "target": "t073" }
+    ],
+    "thinkingTasks": [
+      {
+        "todo": "investigate historical basis of Argentine claim, investigate historical basis of UK claim, consider self-determination, review current inhabitants' views, examine UN resolutions",
+        "log": "push: investigate historical basis of Argentine claim, push: investigate historical basis of UK claim, push: consider self-determination, push: review current inhabitants' views, push: examine UN resolutions"
+      },
+      {
+        "todo": "investigate historical basis of Argentine claim, investigate historical basis of UK claim, consider self-determination, review current inhabitants' views, examine UN resolutions, verify historical Argentine control",
+        "log": "push: verify historical Argentine control"
+      },
+      {
+        "todo": "investigate historical basis of Argentine claim, investigate historical basis of UK claim, consider self-determination, review current inhabitants' views, examine UN resolutions, verify historical Argentine control, research Spanish settlements",
+        "log": "push: research Spanish settlements"
+      },
+      {
+        "todo": "review self-determination, current inhabitants' views, UN resolutions, historical control, Spanish settlements, and UK reassertion",
+        "log": "push: investigate UK reassertion"
+      },
+      {
+        "todo": "investigate self-determination, current inhabitants' views, UN resolutions, historical control, Spanish settlements, UK reassertion, and application of self-determination",
+        "log": "push: investigate application of self-determination"
+      },
+      {
+        "todo": "examine UN resolutions, verify historical control, research Spanish settlements, investigate UK reassertion, and Argentine view on self-determination",
+        "log": "push: investigate Argentine perspective on self-determination"
+      },
+      {
+        "todo": "investigate UK reassertion, self-determination application, Argentine perspective on self-determination, legal basis post-1833, and detail events of UK reassertion",
+        "log": "push: detail events of UK reassertion"
+      },
+      {
+        "todo": "investigate self-determination application, Argentine view on self-determination, territorial integrity, and geographical proximity arguments",
+        "log": "push: consider territorial integrity and geographical proximity"
+      },
+      {
+        "todo": "consider economic factors, strategic importance, and emotive framing",
+        "log": "push: consider economic factors, strategic importance, and emotive framing"
+      },
+      {
+        "todo": "explore emotive framing and investigate public opinion in Argentina and the UK",
+        "log": "push: investigate public opinion in Argentina and the UK"
+      },
+      {
+        "todo": "consider future scenarios including joint sovereignty and continued status quo",
+        "log": "push: consider future scenarios and joint sovereignty"
+      }
+    ]
+  };
+
+  // Documentation for the "Data Format" tab
+  const docsText = `
+DATA FORMAT FOR JSON “thoughts”, “relations” and “thinkingTasks”:
+
+{
+  "thoughts": [
+    {
+      "id": "...",       // Unique identifier for the claim or statement
+      "text": "...",     // The claim or thought text
+      "type": "..."      // e.g., entity, thought, historical, future, concept, perspective
+    },
+    ...
+  ],
+  "relations": [
+    {
+      "id": "...",       // Unique identifier for the relation
+      "rel": "...",      // Type of relation (supports, challenges, addresses, etc.)
+      "source": "...",   // The source thought id or description
+      "target": "..."    // The target thought id (should match a thought’s id)
+    },
+    ...
+  ],
+  "thinkingTasks": [
+    {
+      "todo": "...",     // Tasks to be considered or investigated
+      "log": "..."       // Log information for task management
+    },
+    ...
+  ]
+}
+
+This JSON maps out the sayable claims and can be used to index further content.
+`;
+
+  //////////////////////////////////////////////////////////////////////////
+  // 2) Setup + Load + Tab Controls
+  //////////////////////////////////////////////////////////////////////////
+
+  function loadDataFromJson(jsonData) {
+    thoughts = jsonData.thoughts || [];
+    relations = jsonData.relations || [];
+  }
+
+  function showTab(tab) {
+    const cardsView = document.getElementById("cardsView");
+    const networkView = document.getElementById("networkView");
+    const editView = document.getElementById("editView");
+    const docsView = document.getElementById("docsView");
+
+    const cardsTabBtn = document.getElementById("cardsTabBtn");
+    const networkTabBtn = document.getElementById("networkTabBtn");
+    const editTabBtn = document.getElementById("editTabBtn");
+    const docsTabBtn = document.getElementById("docsTabBtn");
+
+    cardsView.style.display   = (tab === "cards")   ? "block" : "none";
+    networkView.style.display = (tab === "network") ? "block" : "none";
+    editView.style.display    = (tab === "edit")    ? "block" : "none";
+    docsView.style.display    = (tab === "docs")    ? "block" : "none";
+
+    cardsTabBtn.classList.toggle("active",   tab === "cards");
+    networkTabBtn.classList.toggle("active", tab === "network");
+    editTabBtn.classList.toggle("active",    tab === "edit");
+    docsTabBtn.classList.toggle("active",    tab === "docs");
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    // Insert documentation text
+    document.getElementById("docContent").textContent = docsText;
+
+    // Load default data
+    loadDataFromJson(defaultJsonData);
+
+    // Put JSON into editor
+    document.getElementById("jsonEditor").value = JSON.stringify(defaultJsonData, null, 2);
+
+    // Build views
+    buildFilterButtons();
+    renderCards();
+    renderNetwork();
+    showTab("cards");
+
+    // Tab event handlers
+    document.getElementById("cardsTabBtn").onclick   = () => showTab("cards");
+    document.getElementById("networkTabBtn").onclick = () => showTab("network");
+    document.getElementById("editTabBtn").onclick    = () => showTab("edit");
+    document.getElementById("docsTabBtn").onclick    = () => showTab("docs");
+
+    // “Apply JSON” button
+    document.getElementById("applyJsonBtn").onclick = () => {
+      const text = document.getElementById("jsonEditor").value;
+      const errDiv = document.getElementById("jsonError");
+      errDiv.textContent = "";
+      try {
+        const parsed = JSON.parse(text);
+        loadDataFromJson(parsed);
+        buildFilterButtons();
+        renderCards();
+        renderNetwork();
+        showTab("cards");
+      } catch (err) {
+        errDiv.textContent = `Error parsing JSON: ${err.message}`;
+      }
+    };
+  });
+
+  //////////////////////////////////////////////////////////////////////////
+  // 3) Filter Buttons
+  //////////////////////////////////////////////////////////////////////////
+
+  function buildFilterButtons() {
+    const filterDiv = document.getElementById("filterButtons");
+    filterDiv.innerHTML = "";
+    Object.keys(activeFilters).forEach(type => {
+      const btn = document.createElement("button");
+      btn.textContent = type;
+      if (activeFilters[type]) {
+        btn.style.backgroundColor = "#3b82f6";
+        btn.style.color = "#fff";
+      } else {
+        btn.style.backgroundColor = "#e2e8f0";
+        btn.style.color = "#333";
+      }
+      btn.onclick = () => {
+        activeFilters[type] = !activeFilters[type];
+        buildFilterButtons();
+        renderCards();
+        renderNetwork();
+      };
+      filterDiv.appendChild(btn);
+    });
+  }
+
+  //////////////////////////////////////////////////////////////////////////
+  // 4) Cards View
+  //////////////////////////////////////////////////////////////////////////
+
+  function renderCards() {
+    const container = document.getElementById("cardsContainer");
+    container.innerHTML = "";
+    const visible = thoughts.filter(t => activeFilters[t.type]);
+    const inOutMap = {};
+    visible.forEach(node => {
+      inOutMap[node.id] = { incoming: [], outgoing: [] };
+    });
+    const filteredEdges = relations.filter(r =>
+      visible.some(n => n.id === r.source) &&
+      visible.some(n => n.id === r.target)
+    );
+    filteredEdges.forEach(r => {
+      if (inOutMap[r.target]) {
+        inOutMap[r.target].incoming.push({ relID: r.id, rel: r.rel, from: r.source });
+      }
+      if (inOutMap[r.source]) {
+        inOutMap[r.source].outgoing.push({ relID: r.id, rel: r.rel, to: r.target });
+      }
+    });
+    visible.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.id = `card-${t.id}`;
+      card.style.borderLeftColor = typeColors[t.type] || "#64748b";
+      const header = document.createElement("div");
+      header.className = "card-header";
+      header.textContent = t.id;
+      const subheader = document.createElement("div");
+      subheader.className = "card-subheader";
+      subheader.textContent = t.type;
+      const body = document.createElement("div");
+      body.className = "card-body";
+      body.textContent = t.text;
+      card.appendChild(header);
+      card.appendChild(subheader);
+      card.appendChild(body);
+      const relsInfo = inOutMap[t.id];
+      if (relsInfo) {
+        if (relsInfo.incoming.length > 0) {
+          const incDiv = document.createElement("div");
+          incDiv.className = "relations-list";
+          const incLabel = document.createElement("div");
+          incLabel.className = "rel-label";
+          incLabel.textContent = "Incoming:";
+          incDiv.appendChild(incLabel);
+          relsInfo.incoming.forEach(item => {
+            const line = document.createElement("div");
+            line.innerHTML = `(${item.rel}) &larr; `;
+            const link = document.createElement("span");
+            link.className = "rel-link";
+            link.textContent = item.from;
+            link.onclick = () => scrollToCard(item.from);
+            line.appendChild(link);
+            incDiv.appendChild(line);
+          });
+          card.appendChild(incDiv);
+        }
+        if (relsInfo.outgoing.length > 0) {
+          const outDiv = document.createElement("div");
+          outDiv.className = "relations-list";
+          const outLabel = document.createElement("div");
+          outLabel.className = "rel-label";
+          outLabel.textContent = "Outgoing:";
+          outDiv.appendChild(outLabel);
+          relsInfo.outgoing.forEach(item => {
+            const line = document.createElement("div");
+            line.innerHTML = `(${item.rel}) &rarr; `;
+            const link = document.createElement("span");
+            link.className = "rel-link";
+            link.textContent = item.to;
+            link.onclick = () => scrollToCard(item.to);
+            line.appendChild(link);
+            outDiv.appendChild(line);
+          });
+          card.appendChild(outDiv);
+        }
+      }
+      container.appendChild(card);
+    });
+  }
+
+  function scrollToCard(nodeID) {
+    const cardEl = document.getElementById(`card-${nodeID}`);
+    if (!cardEl) return;
+    cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    cardEl.classList.remove("card-highlight");
+    void cardEl.offsetWidth;
+    cardEl.classList.add("card-highlight");
+  }
+
+  //////////////////////////////////////////////////////////////////////////
+  // 5) Network View
+  //////////////////////////////////////////////////////////////////////////
+
+  function renderNetwork() {
+    const svg = document.getElementById("networkSvg");
+    svg.innerHTML = "";
+    const filteredNodes = thoughts.filter(t => activeFilters[t.type]);
+    const filteredEdges = relations.filter(r =>
+      filteredNodes.some(n => n.id === r.source) &&
+      filteredNodes.some(n => n.id === r.target)
+    );
+    globalLayout = calculateLayout(filteredNodes, filteredEdges);
+    globalFilteredEdges = filteredEdges;
+    drawNetwork(globalLayout, globalFilteredEdges);
+  }
+
+  function drawNetwork(layout, edges) {
+    const svg = document.getElementById("networkSvg");
+    const tooltip = document.getElementById("nodeTooltip");
+    svg.innerHTML = "";
+    edges.forEach(e => {
+      const s = layout.find(n => n.id === e.source);
+      const t = layout.find(n => n.id === e.target);
+      if (!s || !t) return;
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", s.x);
+      line.setAttribute("y1", s.y);
+      line.setAttribute("x2", t.x);
+      line.setAttribute("y2", t.y);
+      line.setAttribute("stroke", "#94a3b8");
+      line.setAttribute("stroke-width", "1");
+      svg.appendChild(line);
+      const midX = (s.x + t.x) / 2;
+      const midY = (s.y + t.y) / 2 - 5;
+      const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      lbl.setAttribute("x", midX);
+      lbl.setAttribute("y", midY);
+      lbl.setAttribute("fill", "#666");
+      lbl.setAttribute("font-size", "10");
+      lbl.setAttribute("text-anchor", "middle");
+      lbl.textContent = e.rel;
+      svg.appendChild(lbl);
+    });
+    layout.forEach(n => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", n.x);
+      circle.setAttribute("cy", n.y);
+      circle.setAttribute("r", 8);
+      if (n.id === highlightNodeId) {
+        circle.setAttribute("fill", "#ef4444");
+      } else if (highlightNeighborIds.includes(n.id)) {
+        circle.setAttribute("fill", "#fbbf24");
+      } else {
+        circle.setAttribute("fill", typeColors[n.type] || "#64748b");
+      }
+      circle.style.cursor = "pointer";
+      const showTooltip = () => {
+        tooltip.style.display = "block";
+        tooltip.style.left = (n.x + 20) + "px";
+        tooltip.style.top  = (n.y + 20) + "px";
+        tooltip.textContent = `${n.id}: ${n.text}`;
+      };
+      const hideTooltip = () => { tooltip.style.display = "none"; };
+      circle.addEventListener("pointerover", showTooltip);
+      circle.addEventListener("pointerout", hideTooltip);
+      circle.addEventListener("pointerdown", () => { highlightAndPullNeighbors(n.id); showTooltip(); });
+      circle.addEventListener("pointerup", hideTooltip);
+      circle.addEventListener("touchstart", e => { e.preventDefault(); highlightAndPullNeighbors(n.id); showTooltip(); }, { passive: false });
+      circle.addEventListener("touchend", hideTooltip, { passive: false });
+      svg.appendChild(circle);
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", n.x + 12);
+      label.setAttribute("y", n.y + 4);
+      label.setAttribute("fill", "#333");
+      label.setAttribute("font-size", "10");
+      label.textContent = n.id;
+      svg.appendChild(label);
+    });
+  }
+
+  //////////////////////////////////////////////////////////////////////////
+  // 6) Force Layout + “Pull Neighbors”
+  //////////////////////////////////////////////////////////////////////////
+
+  function calculateLayout(nodes, edges) {
+    const width = 800, height = 600;
+    const iterations = 100;
+    const pos = nodes.map(n => ({
+      ...n,
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: 0, vy: 0
+    }));
+    for (let i = 0; i < iterations; i++) {
+      for (let a = 0; a < pos.length; a++) {
+        for (let b = a + 1; b < pos.length; b++) {
+          const A = pos[a], B = pos[b];
+          const dx = B.x - A.x, dy = B.y - A.y;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+          const force = 1000 / (dist*dist);
+          const nx = dx / dist, ny = dy / dist;
+          A.vx -= nx*force; A.vy -= ny*force;
+          B.vx += nx*force; B.vy += ny*force;
+        }
+      }
+      edges.forEach(e => {
+        const s = pos.find(p => p.id === e.source);
+        const t = pos.find(p => p.id === e.target);
+        if (!s || !t) return;
+        const dx = t.x - s.x, dy = t.y - s.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        const spring = (dist - 100)*0.05;
+        const nx = dx / dist, ny = dy / dist;
+        s.vx += nx*spring; s.vy += ny*spring;
+        t.vx -= nx*spring; t.vy -= ny*spring;
+      });
+      pos.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        p.vx *= 0.9; p.vy *= 0.9;
+        p.x = Math.max(30, Math.min(width - 30, p.x));
+        p.y = Math.max(30, Math.min(height - 30, p.y));
+      });
+    }
+    return pos;
+  }
+
+  function highlightAndPullNeighbors(selectedId) {
+    const node = globalLayout.find(n => n.id === selectedId);
+    if (!node) return;
+    const neighborEdges = globalFilteredEdges.filter(e =>
+      e.source === selectedId || e.target === selectedId
+    );
+    const neighIds = neighborEdges.map(e =>
+      (e.source === selectedId) ? e.target : e.source
+    );
+    highlightNodeId = selectedId;
+    highlightNeighborIds = neighIds;
+    drawNetwork(globalLayout, globalFilteredEdges);
+    let step = 0;
+    const steps = 30, pullFactor = 0.15;
+    const interval = setInterval(() => {
+      step++;
+      neighIds.forEach(nid => {
+        const neigh = globalLayout.find(x => x.id === nid);
+        if (!neigh) return;
+        const dx = node.x - neigh.x, dy = node.y - neigh.y;
+        neigh.x += pullFactor * dx;
+        neigh.y += pullFactor * dy;
+      });
+      drawNetwork(globalLayout, globalFilteredEdges);
+      if (step >= steps) clearInterval(interval);
+    }, 30);
+  }
+</script>
+</body>
+</html>

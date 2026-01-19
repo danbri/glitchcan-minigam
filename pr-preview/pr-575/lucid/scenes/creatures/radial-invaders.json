@@ -1,0 +1,82 @@
+{
+  "title": "Radial Invaders",
+  "subtitle": "6 detailed invaders from radial symmetry",
+  "version": "1.1",
+
+  "params": {
+    "invaderCount": {
+      "value": 6,
+      "type": "scalar",
+      "min": 2,
+      "max": 12,
+      "description": "Number of invaders in the circle"
+    },
+    "invaderDistance": {
+      "value": 1.8,
+      "type": "scalar",
+      "min": 1.0,
+      "max": 3.0,
+      "description": "Distance from center"
+    },
+    "wobbleAmount": {
+      "value": 0.15,
+      "type": "scalar",
+      "min": 0,
+      "max": 0.5,
+      "description": "How much they wobble"
+    },
+    "invaderColor": {
+      "value": [0, 1, 0.5],
+      "type": "color3",
+      "description": "Invader color"
+    }
+  },
+
+  "defs": {
+    "invader": {
+      "type": "subtract",
+      "children": [
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.35, 0.25, 0.1] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.25, 0.35, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.25, 0.35, 0] } },
+            { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [0.4, 0.05, 0] } },
+            { "type": "box", "params": { "size": [0.05, 0.15, 0.1] }, "transform": { "translate": [-0.4, 0.05, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [0.35, -0.35, 0] } },
+            { "type": "box", "params": { "size": [0.1, 0.1, 0.1] }, "transform": { "translate": [-0.35, -0.35, 0] } }
+          ]
+        },
+        {
+          "type": "union",
+          "children": [
+            { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [0.15, 0.1, 0.05] } },
+            { "type": "box", "params": { "size": [0.08, 0.08, 0.2] }, "transform": { "translate": [-0.15, 0.1, 0.05] } },
+            { "type": "box", "params": { "size": [0.12, 0.08, 0.2] }, "transform": { "translate": [0.0, -0.25, 0.05] } }
+          ]
+        }
+      ]
+    }
+  },
+  "root": {
+    "type": "radial",
+    "count": { "var": "invaderCount" },
+    "axis": "y",
+    "child": {
+      "type": "material",
+      "params": { "color": { "var": "invaderColor" } },
+      "child": {
+        "type": "transform",
+        "transform": {
+          "translate": [
+            { "expr": "add", "args": [{ "var": "invaderDistance" }, { "expr": "mul", "args": [{ "var": "wobbleAmount" }, { "expr": "sin", "args": [{ "var": "time" }] }] }] },
+            0,
+            0
+          ]
+        },
+        "child": { "type": "ref", "id": "invader" }
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; padding: 0; background: white; }
+        svg { display: block; }
+    </style>
+</head>
+<body>
+    <?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#98FB98;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="robeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#708090;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2F4F4F;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky -->
+  <rect width="400" height="150" fill="url(#skyGrad)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="150" width="400" height="150" fill="#228B22"/>
+  
+  <!-- Hill -->
+  <ellipse cx="280" cy="180" rx="120" ry="45" fill="#32CD32"/>
+  <ellipse cx="280" cy="175" rx="110" ry="40" fill="#228B22"/>
+  
+  <!-- Door -->
+  <circle cx="280" cy="195" r="20" fill="#8B4513" stroke="#654321" stroke-width="2"/>
+  <circle cx="290" cy="195" r="2" fill="#FFD700"/>
+  
+  <!-- Path -->
+  <path d="M 100 300 Q 190 250 280 215" stroke="#8B4513" stroke-width="12" fill="none"/>
+  
+  <!-- Gandalf's figure -->
+  <!-- Staff -->
+  <line x1="120" y1="120" x2="120" y2="240" stroke="#8B4513" stroke-width="4"/>
+  <circle cx="120" cy="115" r="5" fill="#FFD700"/>
+  
+  <!-- Robe body -->
+  <path d="M 130 240 Q 140 200 135 170 Q 130 150 125 140 Q 120 150 115 170 Q 110 200 120 240 Z" fill="url(#robeGrad)"/>
+  
+  <!-- Arms -->
+  <path d="M 125 170 Q 140 175 145 185" stroke="url(#robeGrad)" stroke-width="8" fill="none"/>
+  <path d="M 125 170 Q 110 175 115 180" stroke="url(#robeGrad)" stroke-width="6" fill="none"/>
+  
+  <!-- Hat -->
+  <path d="M 125 140 Q 120 120 115 110 Q 120 105 130 110 Q 125 120 125 140" fill="#2F4F4F"/>
+  
+  <!-- Hat brim -->
+  <ellipse cx="125" cy="140" rx="12" ry="3" fill="#2F4F4F"/>
+  
+  <!-- Beard -->
+  <path d="M 125 145 Q 130 155 125 165 Q 120 155 125 145" fill="#D3D3D3"/>
+  
+  <!-- Shadow -->
+  <ellipse cx="125" cy="245" rx="15" ry="5" fill="#000000" opacity="0.3"/>
+  
+  <!-- Background trees -->
+  <rect x="30" y="140" width="6" height="30" fill="#8B4513"/>
+  <circle cx="33" cy="135" r="15" fill="#228B22"/>
+  <rect x="360" y="145" width="5" height="25" fill="#8B4513"/>
+  <circle cx="362" cy="140" r="12" fill="#228B22"/>
+  
+  <!-- Speech bubble -->
+  <ellipse cx="180" cy="120" rx="50" ry="25" fill="#FFFFFF" stroke="#000000" stroke-width="2"/>
+  <path d="M 150 135 Q 140 145 130 140" fill="#FFFFFF" stroke="#000000" stroke-width="2"/>
+  <text x="180" y="115" text-anchor="middle" font-family="monospace" font-size="10" fill="#000000">"Good morning!"</text>
+  <text x="180" y="128" text-anchor="middle" font-family="monospace" font-size="8" fill="#000000">...or is it?</text>
+  
+  <!-- Title -->
+  <text x="200" y="30" text-anchor="middle" font-family="monospace" font-size="14" fill="#2F4F4F" font-weight="bold">AN UNEXPECTED VISITOR</text>
+</svg>
+    <script>
+        // Auto-convert when loaded in browser
+        setTimeout(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            const svg = document.querySelector('svg');
+            if (svg) {
+                const data = new XMLSerializer().serializeToString(svg);
+                const img = new Image();
+                img.onload = function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Download the PNG
+                    const link = document.createElement('a');
+                    link.download = 'gandalf_at_door.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+                const blob = new Blob([data], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            }
+        }, 100);
+    </script>
+</body>
+</html>
