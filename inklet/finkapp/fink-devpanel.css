@@ -86,6 +86,7 @@
 .log-output .log-ink { color: #8cf; }
 .log-output .log-game { color: var(--zx-green); }
 .log-output .log-net { color: var(--zx-yellow); }
+.log-output .log-nav { color: #ff9966; }
 .log-output .log-debug { color: #888; }
 
 /* --- Swimlanes Tab --- */
@@ -107,6 +108,7 @@
     text-align: center;
     border-bottom: 1px solid #333;
 }
+.swimlane-header.nav { color: #ff9966; }
 .swimlane-header.ink { color: var(--zx-cyan); }
 .swimlane-header.fink { color: var(--zx-mag); }
 .swimlane-header.game { color: var(--zx-green); }

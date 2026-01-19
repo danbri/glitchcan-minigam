@@ -95,7 +95,7 @@ window.FinkPlayer = {
             if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', finkUrl);
 
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
-            FinkInkEngine.compileAndRunStory(content);
+            await FinkInkEngine.compileAndRunStory(content);
 
             if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', finkUrl.split('/').pop());
         } catch (error) {
@@ -208,9 +208,9 @@ window.FinkPlayer = {
                 FinkUtils.debugLog('Loading bookmarked story: ' + bookmark.storyUrl);
                 FinkUI.showStatus('Loading bookmark...', true);
 
-                FinkSandbox.loadViaSandbox(bookmark.storyUrl).then(content => {
+                FinkSandbox.loadViaSandbox(bookmark.storyUrl).then(async (content) => {
                     this.currentStoryUrl = bookmark.storyUrl;
-                    FinkInkEngine.compileAndRunStory(content);
+                    await FinkInkEngine.compileAndRunStory(content);
 
                     setTimeout(() => {
                         if (FinkInkEngine.story) {
