@@ -1,0 +1,111 @@
+{
+  "title": "Walk Cycle (Rig)",
+  "subtitle": "Phase-coupled quadruped gait using rig system",
+  "version": "1.0",
+  "description": "Demonstrates rig.phase for coordinated leg animation with body sway",
+  "camera": { "distance": 4, "phi": 0.3, "theta": 0.3, "target": [0, 0, 0] },
+
+  "params": {
+    "walkSpeed": { "value": 2.0, "min": 0, "max": 6, "description": "Gait cycle speed" },
+    "legSwing": { "value": 25, "min": 0, "max": 45, "description": "Leg swing amplitude (degrees)" },
+    "bodySway": { "value": 3, "min": 0, "max": 10, "description": "Body roll amplitude (degrees)" },
+    "bodyColor": { "value": [0.6, 0.55, 0.5], "type": "color3" },
+    "legColor": { "value": [0.5, 0.45, 0.4], "type": "color3" }
+  },
+
+  "rig": {
+    "phase": {
+      "gait": {
+        "comment": "Quadruped diagonal gait - FL+RR together, FR+RL together",
+        "driver": { "expr": "mul", "args": ["time", "walkSpeed"] },
+        "followers": {
+          "legFL": { "phase": 0, "amplitude": "legSwing" },
+          "legRR": { "phase": 0, "amplitude": "legSwing" },
+          "legFR": { "phase": 0.5, "amplitude": "legSwing" },
+          "legRL": { "phase": 0.5, "amplitude": "legSwing" },
+          "bodyRoll": { "phase": 0.25, "amplitude": "bodySway" }
+        }
+      }
+    }
+  },
+
+  "defs": {
+    "leg": {
+      "comment": "Single leg capsule - rotation applied by parent transform",
+      "type": "material",
+      "params": { "color": { "var": "legColor" } },
+      "child": {
+        "type": "capsule",
+        "params": { "h": 0.5, "r": 0.08 }
+      }
+    }
+  },
+
+  "root": {
+    "type": "union",
+    "children": [
+      {
+        "comment": "=== BODY with sway ===",
+        "type": "transform",
+        "transform": {
+          "rotate": [0, 0, { "var": "gait_bodyRoll" }]
+        },
+        "child": {
+          "type": "material",
+          "params": { "color": { "var": "bodyColor" } },
+          "child": {
+            "type": "smoothUnion", "k": 0.15,
+            "children": [
+              { "type": "ellipsoid", "params": { "radii": [0.5, 0.4, 0.8] } },
+              {
+                "type": "ellipsoid",
+                "params": { "radii": [0.25, 0.22, 0.25] },
+                "transform": { "translate": [0, 0.1, 0.85] }
+              }
+            ]
+          }
+        }
+      },
+
+      {
+        "comment": "=== FRONT LEFT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": [0.35, -0.25, 0.4],
+          "rotate": [{ "var": "gait_legFL" }, 0, 0]
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== FRONT RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": [-0.35, -0.25, 0.4],
+          "rotate": [{ "var": "gait_legFR" }, 0, 0]
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR LEFT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": [0.35, -0.25, -0.4],
+          "rotate": [{ "var": "gait_legRL" }, 0, 0]
+        },
+        "child": { "type": "ref", "id": "leg" }
+      },
+
+      {
+        "comment": "=== REAR RIGHT LEG ===",
+        "type": "transform",
+        "transform": {
+          "translate": [-0.35, -0.25, -0.4],
+          "rotate": [{ "var": "gait_legRR" }, 0, 0]
+        },
+        "child": { "type": "ref", "id": "leg" }
+      }
+    ]
+  }
+}
