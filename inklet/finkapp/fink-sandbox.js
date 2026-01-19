@@ -3,6 +3,7 @@
 window.FinkSandbox = {
     activeSandbox: null,
     sandboxTimeout: null,
+    initialTimeout: null,  // Track initial setup timeout for proper cleanup
     activeMessageHandler: null,
 
     // Load FINK file via sandbox iframe
@@ -35,7 +36,8 @@ window.FinkSandbox = {
             this.activeSandbox = iframe;
 
             // Start initial timeout for sandbox setup (in case sandbox-ready never arrives)
-            let initialTimeout = setTimeout(() => {
+            // Store as instance property so cleanupSandbox() can clear stale timeouts
+            this.initialTimeout = setTimeout(() => {
                 FinkUtils.debugLog('Sandbox setup timeout - sandbox-ready never received');
                 this.cleanupSandbox();  // Also removes message handler
                 reject(new Error('Sandbox setup timeout - iframe may have failed to initialize'));
@@ -62,7 +64,8 @@ window.FinkSandbox = {
                 switch (data.type) {
                     case 'sandbox-ready':
                         FinkUtils.debugLog('Sandbox ready, sending script content');
-                        clearTimeout(initialTimeout);  // Clear initial timeout
+                        clearTimeout(this.initialTimeout);  // Clear initial timeout
+                        this.initialTimeout = null;
                         this.startSandboxTimeout(reject);
                         iframe.contentWindow.postMessage({ type: 'exec-script', content: scriptContent }, '*');
                         break;
@@ -150,6 +153,11 @@ parent.postMessage({ type: 'sandbox-ready' }, '*');
     },
 
     cleanupSandbox() {
+        // Clear initial setup timeout (prevents stale timeouts from previous loads)
+        if (this.initialTimeout) {
+            clearTimeout(this.initialTimeout);
+            this.initialTimeout = null;
+        }
         if (this.sandboxTimeout) {
             clearTimeout(this.sandboxTimeout);
             this.sandboxTimeout = null;
