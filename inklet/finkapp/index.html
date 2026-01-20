@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="fink-player.css">
     <link rel="stylesheet" href="fink-devpanel.css">
     <link rel="stylesheet" href="fink-minigames.css">
+    <link rel="stylesheet" href="fink-breadcrumb.css">
 
     <!-- Image container styling -->
     <style>
@@ -129,6 +130,17 @@
     </style>
 </head>
 <body>
+
+<!-- Breadcrumb navigation widget -->
+<div class="breadcrumb-container" id="breadcrumb-container">
+    <button class="breadcrumb-toggle" id="breadcrumb-toggle" title="Show navigation path">▶</button>
+    <div class="breadcrumb-content" id="breadcrumb-content">
+        <span class="breadcrumb-url" id="breadcrumb-url">No story loaded</span>
+        <div class="breadcrumb-knots" id="breadcrumb-knots">
+            <span class="breadcrumb-empty">Start navigating...</span>
+        </div>
+    </div>
+</div>
 
 <header class="fink-header">
     <button id="homeBtn" title="Back to main menu">🏠</button>
@@ -284,6 +296,7 @@
 <script src="fink-foley.js"></script>
 <script src="fink-audio.js"></script>
 <script src="fink-navigation.js"></script>
+<script src="fink-breadcrumb.js"></script>
 <script src="fink-devpanel.js"></script>
 <script src="fink-ui.js"></script>
 <script src="gems.minigam.js"></script>
