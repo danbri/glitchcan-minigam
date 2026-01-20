@@ -423,20 +423,21 @@ window.FinkNavigation = {
             const content = await FinkSandbox.loadViaSandbox(finkUrl);
             FinkPlayer.currentStoryUrl = finkUrl;
 
-            // Compile and run (this will build the knot map)
+            // Compile and run - this will:
+            // 1. Build the knot map via buildKnotIdMap
+            // 2. Check for deep link via checkDeepLink (which reads URL hash)
+            // 3. If deep link matches this FINK, navigate to the target knot
+            //
+            // IMPORTANT: We don't navigate again after this call!
+            // checkDeepLink will see the URL hash (same one that caused us to load
+            // this FINK) and handle navigation. Navigating again would cause:
+            // - UI flicker (clear and redisplay content)
+            // - Potential server spam if it somehow triggers reloads
             await FinkInkEngine.compileAndRunStory(content);
 
-            // Wait a tick for compilation, then navigate
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Look up the knot name from the now-built map
-            const knotName = this.knotIdMap.get(knotHash);
-            if (knotName) {
-                return await this.navigateToKnotInCurrentStory(knotName, true);
-            } else {
-                this.log(`Knot hash not found in loaded story: ${knotHash}`);
-                return false;
-            }
+            // Navigation was handled by checkDeepLink inside compileAndRunStory
+            this.log(`FINK loaded and deep link handled: ${finkUrl}`);
+            return true;
         } catch (error) {
             this.log(`Error loading FINK: ${error.message}`);
             if (window.FinkUI) {

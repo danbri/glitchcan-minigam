@@ -4,9 +4,72 @@ window.FinkSandbox = {
     activeSandbox: null,
     sandboxTimeout: null,
 
+    // Duplicate load prevention: track recently loaded URLs with timestamps
+    recentLoads: new Map(),
+    DUPLICATE_LOAD_WINDOW_MS: 5000,  // 5 second window for duplicate detection
+
+    // Check if URL was loaded recently (within duplicate window)
+    checkDuplicateLoad(url) {
+        const now = Date.now();
+        const lastLoad = this.recentLoads.get(url);
+
+        if (lastLoad) {
+            const elapsed = now - lastLoad;
+            if (elapsed < this.DUPLICATE_LOAD_WINDOW_MS) {
+                const secondsAgo = (elapsed / 1000).toFixed(1);
+                const warnMsg = `⚠️ DUPLICATE FINK LOAD DETECTED: "${url}" was loaded ${secondsAgo}s ago (within ${this.DUPLICATE_LOAD_WINDOW_MS/1000}s window)`;
+
+                // Log to finkdev console
+                FinkUtils.debugLog(warnMsg);
+                // Log to browser console (always visible)
+                console.warn('[FinkSandbox]', warnMsg);
+                console.warn('[FinkSandbox] This may indicate a bug causing multiple loads. Stack trace:', new Error().stack);
+
+                return { isDuplicate: true, elapsed, lastLoad };
+            }
+        }
+
+        // Clean up old entries (older than window) to prevent memory leak
+        for (const [cachedUrl, timestamp] of this.recentLoads) {
+            if (now - timestamp > this.DUPLICATE_LOAD_WINDOW_MS * 2) {
+                this.recentLoads.delete(cachedUrl);
+            }
+        }
+
+        return { isDuplicate: false };
+    },
+
+    // Record that a URL was loaded
+    recordLoad(url) {
+        this.recentLoads.set(url, Date.now());
+    },
+
+    // Clear recent load record for a specific URL (allows intentional retry)
+    clearLoadRecord(url) {
+        if (url) {
+            this.recentLoads.delete(url);
+            FinkUtils.debugLog('Cleared load record for: ' + url);
+        } else {
+            this.recentLoads.clear();
+            FinkUtils.debugLog('Cleared all load records');
+        }
+    },
+
     // Load FINK file via sandbox iframe
     async loadViaSandbox(url) {
         FinkUtils.debugLog('loadViaSandbox called for: ' + url);
+
+        // Check for duplicate load within time window
+        const duplicateCheck = this.checkDuplicateLoad(url);
+        if (duplicateCheck.isDuplicate) {
+            const errorMsg = `Blocked duplicate load of "${url}" - loaded ${(duplicateCheck.elapsed/1000).toFixed(1)}s ago`;
+            FinkUtils.debugLog('❌ ' + errorMsg);
+            console.error('[FinkSandbox]', errorMsg);
+            throw new Error(errorMsg);
+        }
+
+        // Record this load attempt
+        this.recordLoad(url);
 
         // Step 1: Fetch script content in parent (has same-origin access)
         let scriptContent;
