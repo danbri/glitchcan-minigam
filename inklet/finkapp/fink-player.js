@@ -147,6 +147,11 @@ window.FinkPlayer = {
             history.replaceState(null, '', window.location.pathname);
         }
 
+        // Clear breadcrumb history (full reset for main menu)
+        if (window.FinkBreadcrumb) {
+            FinkBreadcrumb.clearHistory();
+        }
+
         FinkUI.showStatus('Loading main menu...', true);
         this.loadFinkStory(FinkConfig.DEFAULT_FINK_FILE);
     },

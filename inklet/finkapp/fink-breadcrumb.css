@@ -162,3 +162,86 @@
     70% { opacity: 1; }
     100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
 }
+
+/* ENHANCED BREADCRUMB - Cross-FINK Hierarchy Styles */
+
+/* FINK history entries - show path of FINKs visited */
+.breadcrumb-fink-entry {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+}
+
+.breadcrumb-history {
+    opacity: 0.7;
+}
+
+.breadcrumb-history:hover {
+    opacity: 1;
+}
+
+.breadcrumb-current {
+    opacity: 1;
+}
+
+.breadcrumb-fink-name {
+    color: var(--zx-mag);
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.breadcrumb-fink-name:hover {
+    background: rgba(192, 0, 192, 0.3);
+    color: var(--zx-white);
+}
+
+.breadcrumb-fink-current {
+    color: var(--zx-yellow);
+    font-weight: bold;
+}
+
+.breadcrumb-last-knot {
+    color: var(--zx-cyan);
+    font-size: 9px;
+    opacity: 0.8;
+}
+
+/* Arrow separator between FINK entries */
+.breadcrumb-arrow {
+    color: var(--zx-cyan);
+    font-size: 10px;
+    text-align: center;
+    opacity: 0.5;
+    padding: 1px 0;
+}
+
+/* Knot list container within current FINK */
+.breadcrumb-knot-list {
+    padding-left: 8px;
+    margin-top: 4px;
+    border-left: 1px solid rgba(0, 192, 192, 0.3);
+}
+
+/* Individual knot row with tree marker */
+.breadcrumb-knot-row {
+    display: flex;
+    align-items: center;
+    padding: 1px 0;
+}
+
+.breadcrumb-tree-marker {
+    color: var(--zx-cyan);
+    font-size: 9px;
+    opacity: 0.5;
+    user-select: none;
+    font-family: monospace;
+}
+
+/* Override knots flex display for hierarchical rendering */
+.breadcrumb-container.expanded .breadcrumb-knots {
+    display: block;
+    flex-wrap: unset;
+}
