@@ -5,11 +5,6 @@ on:
     branches:
       - master
 
-# Prevent race conditions with pr-preview workflow
-concurrency:
-  group: gh-pages-deployment
-  cancel-in-progress: false
-
 permissions:
   contents: write
 
@@ -25,26 +20,11 @@ jobs:
           cd thumbwar
           python3 update_index.py
 
-      - name: Prepare deploy directory
-        run: |
-          # Create clean deploy directory excluding .git and .github
-          mkdir -p _deploy
-          rsync -av --exclude='.git' --exclude='.github' --exclude='_deploy' . _deploy/
-
-          # Fetch and restore pr-preview from gh-pages if it exists
-          git fetch origin gh-pages --depth=1 || true
-          if git show origin/gh-pages:pr-preview 2>/dev/null; then
-            git checkout origin/gh-pages -- pr-preview || true
-            if [ -d "pr-preview" ]; then
-              cp -r pr-preview _deploy/
-            fi
-          fi
-
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _deploy
+          publish_dir: .
           publish_branch: gh-pages
-          force_orphan: false
-          keep_files: false
+          force_orphan: true
+          exclude_assets: '.github,.git'
