@@ -43,7 +43,7 @@ VAR confronted_with_boots = false
 // ============================================
 VAR discovered_charles_debt_paid = false
 VAR discovered_mrs_pemberton_affair = false
-VAR discovered_ashford_paternity = false
+VAR discovered_ashford_secret = false
 VAR discovered_victoria_knew_truth = false
 
 // Chess integration
@@ -315,17 +315,18 @@ You examine it closely - good quality, a woman's jewelry box. Initials carved on
 
 Not Victoria's initials. Not anyone in the household you've met.
 
-ANDRÉ-LOUIS: E.M. Victoria's mother, perhaps?
+ANDRÉ-LOUIS: E.M. Victoria's mother, perhaps? Elena... something?
 
 The box rattles when shaken. Something inside.
 
 + [Force the lock]
     You apply pressure carefully. The old lock gives way.
-    Inside: a locket containing two photographs. A young woman with Victoria's eyes. A man - hard-faced, military bearing, a scar across his jaw.
+    Inside: a locket containing two photographs. A young woman with Victoria's eyes - gentle, afraid, beautiful. A man on the opposite side - hard-faced, military bearing, a scar across his jaw. The contrast is striking: victim and predator.
 
+    On the back of the woman's photograph, faded ink: "Elena, 1880"
     On the back of the man's photograph: "Viktor Markov, 1879"
 
-    ANDRÉ-LOUIS: Viktor. Victoria. She was named for her father.
+    ANDRÉ-LOUIS: Elena Markov. E.M. And Viktor... Victoria was named for her father. A man she was hidden from her entire life.
 
     -> examine_safe
 
@@ -910,11 +911,11 @@ VICTORIA: Tell him. Or I will.
 
 ASHFORD: *voice cracking* Miss Victoria, please...
 
-VICTORIA: Inspector André-Louis, the man who raised me - the man who loved me as a daughter - isn't the one who died last night.
+VICTORIA: Inspector André-Louis, there's someone in this room who has watched over me my entire life. Someone who knew my mother - truly knew her - before I was ever born.
 
 She looks at Ashford.
 
-VICTORIA: It's the man standing right there. Ashford is my real father. He's been protecting me since the day I was born.
+VICTORIA: He loved her. And when she died, he swore to protect me. Ask him why he really stayed at Greystone Manor for thirty years.
 
 -> resolution_twist
 
@@ -998,25 +999,29 @@ ENDING: THE BROKEN FAMILY
 
 === resolution_twist ===
 ~ player_reputation += 10
-~ discovered_ashford_paternity = true
+~ discovered_ashford_secret = true
 
-ASHFORD: *stepping forward* It's true. Victoria's mother was... she was a woman I loved, years ago. When she died, I begged Lord Pemberton to take Victoria in. To protect her from Markov.
+ASHFORD: *stepping forward* It's true. Victoria's mother was... she was a woman I loved. Elena. We met before she fled Markov, before she knew what kind of man he truly was.
 
-ANDRÉ-LOUIS: And Lord Pemberton agreed?
+ANDRÉ-LOUIS: You helped her escape.
 
-ASHFORD: He was a good man. Better than I deserved. He raised her as his own, knowing she was the daughter of his butler and a woman who'd fled a criminal empire.
+ASHFORD: I was young, foolish, desperately in love. When she realized she was carrying Markov's child, she begged me to help her disappear. I arranged everything - the Ashworth family, the false papers. And when she died in that fire...
+
+His voice breaks.
+
+ASHFORD: Lord Pemberton owed me a great debt from years before. I called it in. He took Victoria as his ward, and I stayed close - watching over her, protecting Elena's daughter as I'd promised.
 
 Victoria stares at him with a mixture of shock and understanding.
 
-ASHFORD: But when those letters came - when Markov's people started watching - Lord Pemberton panicked. He wanted to send Victoria away. Make her disappear again. I couldn't let that happen.
+ASHFORD: But when those letters came - when Markov's people started watching - Lord Pemberton panicked. He wanted to send Victoria away. Expose her to the very monster we'd spent twenty years hiding her from. I couldn't let that happen.
 
 ANDRÉ-LOUIS: So you killed him?
 
-ASHFORD: *broken* I went to reason with him. We argued. He said things about Victoria - called her damaged, dangerous. I... the letter opener was right there. Thirty years of service, and in one moment...
+ASHFORD: *broken* I went to reason with him. We argued. He said Victoria was a liability now, that her presence endangered the whole family. He was going to tell Markov's agents where to find her - trade her safety for his own. I... the letter opener was right there. Thirty years of loyal service, and in one moment...
 
-Victoria: *whisper* Father...
+VICTORIA: *whisper* You loved her. My mother.
 
-The word hangs in the air. For the first time, spoken aloud.
+ASHFORD: Every day since she died, I have looked at you and seen her face. Protecting you was the only way I could keep my promise to her.
 
 ENDING: BLOOD AND LOYALTY
 
@@ -1043,7 +1048,7 @@ ENDING: THE SPIDER'S WEB
 === resolution_ashford ===
 ~ player_reputation += 7
 
-Ashford's confession reveals a man torn between duty and love. His loyalty to Victoria - his secret daughter - drove him to protect her at any cost.
+Ashford's confession reveals a man torn between duty and love. His devotion to Elena - Victoria's mother - never faded. He killed to protect the daughter of the woman he loved, honoring a promise made twenty years ago.
 
 ENDING: THE FAITHFUL SERVANT
 
