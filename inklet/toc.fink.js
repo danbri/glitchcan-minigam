@@ -1,9 +1,5 @@
 oooOO`
 
-# MENU: 🏠 Main Menu -> main_menu
-# MENU: 🎮 Episodes -> episodes_menu
-# MENU: 📚 Minigames -> minigames_menu
-
 # BASEHREF: /glitchcan-minigam/inklet/media/
 
 -> main_menu
