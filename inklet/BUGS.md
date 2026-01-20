@@ -2,6 +2,28 @@
 
 ## Active Bugs
 
+### BUG-007: Breadcrumb nav shows flat knots, story loading fails (Bagend, Diamond Ch2)
+**Severity:** P0 - Critical
+**File:** `inklet/demos/hamfink2026.html`, breadcrumb/navigation system
+**Reported:** 2026-01-20
+**Status:** OPEN
+**Merged to main:** PR #585
+
+**Symptoms:**
+1. **Nav bar panel shows all knots as if part of "toc"** - should be nested bullet points showing path within a given FINK, and transitions between FINKs
+2. **Bagend loading fails** - glitch canary image continues from TOC, then green box with blank line then "Bag End", nothing more
+3. **Diamond Ch2 fails on entry** - green box containing "You step through the portal into a realm of pure crystalline energy…" and nothing more
+
+**Context:** Recent commits attempted to fix FINK loading and breadcrumb hierarchy:
+- `a20abed` revert: Restore absolute FINK paths in toc.fink.js
+- `f780011` fix: FINK loading and breadcrumb hierarchy
+- `2444f82` feat: Interactive INK-based recovery for failed deep links
+- `d606e20` fix: Improve FINK breadcrumb navigation and deep linking
+
+**Root cause:** TBD - needs investigation
+
+---
+
 ### BUG-001: Raw HTML links displayed in "How It Works" section
 **Severity:** Medium
 **File:** `inklet/demos/hamfink2026.html`
