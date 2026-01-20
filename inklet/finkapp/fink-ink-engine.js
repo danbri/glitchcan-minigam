@@ -342,6 +342,12 @@ window.FinkInkEngine = {
                 }
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
+
+                // Notify breadcrumb of FINK transition (saves previous FINK to history)
+                if (window.FinkBreadcrumb) {
+                    FinkBreadcrumb.setFinkUrl(resolvedUrl);
+                }
+
                 await this.compileAndRunStory(content);
                 if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', resolvedUrl.split('/').pop());
             })
