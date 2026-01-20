@@ -296,3 +296,111 @@ main {
     .choices-container { gap: 0.4em; }
     .choice-btn { padding: 0.6em; font-size: var(--font-size-small); }
 }
+
+/* --- Image/Video Container --- */
+#image-container {
+    position: relative;
+    max-width: 100%;
+    margin: 0.5em 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #111;
+}
+#image-container.hidden { display: none; }
+
+#story-image {
+    max-width: 100%;
+    max-height: 40vh;
+    display: block;
+    margin: 0 auto;
+    border-radius: 8px;
+    object-fit: contain;
+}
+#story-image.hidden { display: none; }
+
+#story-video {
+    max-width: 100%;
+    max-height: 40vh;
+    display: block;
+    margin: 0 auto;
+    border-radius: 8px;
+}
+
+/* --- Status Overlay --- */
+#status-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+#status-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+#status-overlay.dismissable {
+    cursor: pointer;
+}
+#status-overlay.dismissable #status-text::after {
+    content: ' (tap to dismiss)';
+    font-size: 10px;
+    opacity: 0.6;
+    display: block;
+    margin-top: 0.5em;
+}
+#status-text {
+    color: var(--zx-cyan);
+    font-family: var(--zx-font);
+    font-size: 14px;
+    text-align: center;
+    padding: 1em;
+}
+.status-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--zx-blue);
+    border-top-color: var(--zx-cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1em;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Dynamic Menu (Dropdown) --- */
+#dynamic-menu-section {
+    border-top: 1px solid #333;
+    margin-top: 0.5em;
+    padding-top: 0.5em;
+    display: none;
+}
+.dropdown-header {
+    font-size: 10px;
+    color: #666;
+    padding: 0.3em 0.5em;
+    text-transform: uppercase;
+}
+.dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.4em 0.8em;
+    background: none;
+    border: none;
+    color: var(--zx-cyan);
+    font-family: var(--zx-font);
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.dropdown-item:hover {
+    background: var(--zx-blue);
+    color: #fff;
+}
