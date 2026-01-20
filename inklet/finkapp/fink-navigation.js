@@ -446,6 +446,16 @@ window.FinkNavigation = {
                 FinkUI.showStatus('Loading story...', true);
             }
 
+            // CRITICAL: Temporarily clear the URL hash to prevent navigation loop.
+            // We'll restore/update it after the story loads via checkDeepLink's knot navigation.
+            // Without this, the newly loaded FINK's checkDeepLink sees the old hash and
+            // tries to load yet another FINK, causing an infinite loop.
+            const savedHash = window.location.hash;
+            if (savedHash) {
+                this.log('Temporarily clearing hash to prevent loop');
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+
             // Load the FINK content
             const content = await FinkSandbox.loadViaSandbox(finkUrl);
 
