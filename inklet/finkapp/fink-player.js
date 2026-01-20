@@ -104,6 +104,9 @@ window.FinkPlayer = {
 
             if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', finkUrl);
 
+            // Clear any duplicate detection for this URL - this is intentional user action
+            FinkSandbox.clearLoadRecord(resolvedUrl);
+
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
 
             // Handle duplicate load skip (loadViaSandbox returns null if skipped)

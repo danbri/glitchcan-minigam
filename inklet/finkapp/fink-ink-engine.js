@@ -332,6 +332,11 @@ window.FinkInkEngine = {
         // It may be vestigial - investigate if removal causes issues.
         // See: https://github.com/danbri/glitchcan-minigam/issues/579
         setTimeout(() => {
+            // Clear any duplicate detection for this URL - this is intentional user navigation
+            // (e.g., clicking a menu item), so we should always honor it even if the URL
+            // was recently loaded by deep link resolution or other automatic processes.
+            FinkSandbox.clearLoadRecord(resolvedUrl);
+
             FinkSandbox.loadViaSandbox(resolvedUrl)
             .then(async (content) => {
                 // Handle duplicate load skip (loadViaSandbox returns null if skipped)
