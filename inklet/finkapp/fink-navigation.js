@@ -47,9 +47,15 @@ window.FinkNavigation = {
         knotMaps: {}
     },
 
+    // LocalStorage key for persisting cache
+    CACHE_STORAGE_KEY: 'fink-nav-cache-v1',
+
     // Initialize the navigation system
     init() {
         if (this.initialized) return;
+
+        // Load persisted cache from localStorage
+        this.loadCacheFromStorage();
 
         // Check for modern Navigation API support
         this.usingNavigationAPI = 'navigation' in window;
@@ -268,6 +274,9 @@ window.FinkNavigation = {
             await this.extractFinkGraphEdges(urlHash, finkContent);
             this.extractPublicEntryPoints(finkContent);
         }
+
+        // Persist cache to localStorage for cross-session deep linking
+        this.saveCacheToStorage();
 
         return this.knotIdMap;
     },
@@ -924,7 +933,42 @@ Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
             graph: {},
             knotMaps: {}
         };
+        this.saveCacheToStorage();
         this.log('Cache cleared');
+    },
+
+    // Load cache from localStorage
+    loadCacheFromStorage() {
+        try {
+            const stored = localStorage.getItem(this.CACHE_STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Only restore urlIndex - graph and knotMaps can be rebuilt
+                if (parsed.urlIndex) {
+                    this.cache.urlIndex = parsed.urlIndex;
+                    this.log(`Loaded ${Object.keys(this.cache.urlIndex).length} cached FINK URLs from storage`);
+                    this.swimLog('💾', 'Cache Loaded',
+                        `${Object.keys(this.cache.urlIndex).length} FINK URLs`);
+                }
+            }
+        } catch (e) {
+            this.log('Failed to load cache from storage: ' + e.message);
+        }
+    },
+
+    // Save cache to localStorage
+    saveCacheToStorage() {
+        try {
+            // Only persist urlIndex - it's the critical mapping
+            const toStore = {
+                urlIndex: this.cache.urlIndex,
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem(this.CACHE_STORAGE_KEY, JSON.stringify(toStore));
+            this.log(`Saved ${Object.keys(this.cache.urlIndex).length} FINK URLs to storage`);
+        } catch (e) {
+            this.log('Failed to save cache to storage: ' + e.message);
+        }
     },
 
     log(msg) {
