@@ -185,13 +185,29 @@ window.FinkBreadcrumb = {
         const url = await this.generateKnotUrl(knotName);
         try {
             await navigator.clipboard.writeText(url);
-            if (window.FinkUI) {
-                FinkUI.showStatus('Link copied!');
-                setTimeout(() => FinkUI.hideStatus(), 1500);
-            }
+            this.showToast('🔗 Link copied!');
         } catch (err) {
             FinkUtils.debugLog('Breadcrumb: Copy failed: ' + err.message);
+            this.showToast('Copy failed');
         }
+    },
+
+    // Show a brief toast notification
+    showToast(message) {
+        // Remove any existing toast
+        const existingToast = document.querySelector('.breadcrumb-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'breadcrumb-toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // Auto-remove after animation
+        setTimeout(() => toast.remove(), 1500);
     },
 
     // Render the breadcrumb widget

@@ -105,6 +105,14 @@ window.FinkPlayer = {
             if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', finkUrl);
 
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
+
+            // Handle duplicate load skip (loadViaSandbox returns null if skipped)
+            if (content === null) {
+                FinkUtils.debugLog('FINK load skipped (duplicate): ' + resolvedUrl);
+                FinkUI.hideStatus();
+                return;
+            }
+
             await FinkInkEngine.compileAndRunStory(content);
 
             if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', finkUrl.split('/').pop());
@@ -225,6 +233,13 @@ window.FinkPlayer = {
                 FinkUI.showStatus('Loading bookmark...', true);
 
                 FinkSandbox.loadViaSandbox(bookmark.storyUrl).then(async (content) => {
+                    // Handle duplicate load skip
+                    if (content === null) {
+                        FinkUtils.debugLog('Bookmark story load skipped (duplicate)');
+                        FinkUI.hideStatus();
+                        return;
+                    }
+
                     this.currentStoryUrl = bookmark.storyUrl;
                     await FinkInkEngine.compileAndRunStory(content);
 

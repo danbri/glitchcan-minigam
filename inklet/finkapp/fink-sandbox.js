@@ -64,10 +64,12 @@ window.FinkSandbox = {
         // Check for duplicate load within time window
         const duplicateCheck = this.checkDuplicateLoad(url);
         if (duplicateCheck.isDuplicate) {
-            const errorMsg = `Blocked duplicate load of "${url}" - loaded ${(duplicateCheck.elapsed/1000).toFixed(1)}s ago`;
-            FinkUtils.debugLog('❌ ' + errorMsg);
-            console.error('[FinkSandbox]', errorMsg);
-            throw new Error(errorMsg);
+            const warnMsg = `Skipping duplicate load of "${url}" - loaded ${(duplicateCheck.elapsed/1000).toFixed(1)}s ago`;
+            FinkUtils.debugLog('⏭️ ' + warnMsg);
+            console.warn('[FinkSandbox]', warnMsg);
+            // Return null to indicate skip (caller should handle gracefully)
+            // This is gentler than throwing - allows code flow to continue
+            return null;
         }
 
         // Record this load attempt
