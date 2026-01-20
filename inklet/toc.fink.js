@@ -53,6 +53,7 @@ This is where things might be documented, eventually.
 
 + [Developer Guide] -> dev_guide_selected
 + [Shane Manor Mystery (testing)] -> shane_manor_selected
++ [Shane Manor ENRICHED (WIP)] -> shane_manor_enriched_selected
 + [Experiments] -> experiments_selected
 
 === hobbit_selected ===
@@ -159,6 +160,19 @@ Shane Manor Mystery
 A test story for debugging and demonstrating FINK functionality. This is primarily for development testing.
 
 + [Enter Shane Manor] -> external_story
+
+=== shane_manor_enriched_selected ===
+# FINK: /glitchcan-minigam/inklet/_tmp_shane-manor.fink.js
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Shane Manor Mystery ENRICHED
+
+Work-in-progress deep revision with expanded Victoria path. Features evidence chains, contradiction mechanics, fair-play clue system, and multiple layered endings.
+
+Design principles: Phoenix Wright confrontations, Agatha Christie layered secrets, evidence-gated accusations.
+
++ [Enter Enriched Manor] -> external_story
 
 === experiments_selected ===
 
