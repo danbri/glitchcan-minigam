@@ -718,6 +718,10 @@ Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
             this.swimLog('📦', 'State Param Found', JSON.stringify(urlState).slice(0, 50));
         }
 
+        // ALWAYS build knot map - needed for updateFragment to work
+        // This sets currentFinkUri which is required for URL hash updates
+        await this.buildKnotIdMap(story, finkUri, finkContent);
+
         if (!fragmentId) {
             // No deep link, but might have state to apply
             if (this.pendingState) {
@@ -727,9 +731,6 @@ Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
             this.swimLog('✅', 'No Deep Link', 'Starting at story beginning');
             return false;
         }
-
-        // Build knot map first (with FINK content for graph edges)
-        await this.buildKnotIdMap(story, finkUri, finkContent);
 
         // Generate current FINK's URL hash for comparison
         const currentUrlHash = await this.generateUrlHash(finkUri);
