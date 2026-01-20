@@ -502,41 +502,156 @@ window.FinkNavigation = {
         }
     },
 
-    // Show error when link cannot be resolved
+    // Show error when link cannot be resolved - uses inline INK for interactive recovery
     showLinkNotFoundError(urlHash, knotHash) {
         this.log(`Link not found: ${urlHash}-${knotHash}`);
 
-        // Collect diagnostic info
         const cacheStats = this.getCacheStats();
-        const knownUrls = Object.entries(this.cache.urlIndex)
-            .map(([h, u]) => `  ${h} = ${u.split('/').pop()}`)
-            .join('\n') || '  (none)';
-
         this.swimLog('🚫', 'DEEP LINK FAILED',
             `URL: ${urlHash}, Knot: ${knotHash}, Cache: ${cacheStats.urlsIndexed} URLs`, true);
 
-        if (window.FinkUI) {
-            const errorMessage = `
-Cannot find bookmark destination
+        // Build list of known FINKs for the recovery menu
+        const knownFinks = Object.entries(this.cache.urlIndex);
+        let recentChoices = '';
+        if (knownFinks.length > 0) {
+            // Show up to 5 recent FINKs as choices
+            const recentFinks = knownFinks.slice(-5).reverse();
+            recentChoices = recentFinks.map(([hash, url]) => {
+                const name = url.split('/').pop().replace('.fink.js', '');
+                return `+ [${name}] -> load_recent_${hash}`;
+            }).join('\n');
 
-The link points to a story position we can't reach from here.
+            // Add knots for each recent FINK
+            recentChoices += '\n\n' + recentFinks.map(([hash, url]) => {
+                return `=== load_recent_${hash} ===\n# FINK: ${url}\n-> END`;
+            }).join('\n\n');
+        }
 
-Story hash: ${urlHash} (not found in cache)
-Position hash: ${knotHash}
-Cached URLs: ${cacheStats.urlsIndexed}
+        // Generate inline INK story for error recovery
+        const recoveryInk = `
+=== link_not_found ===
+# BG: #1a1a2e
+**Bookmark Not Found** 🔍
 
-Known FINKs:
-${knownUrls}
+The link you followed points to a story we can't locate.
 
-Possible causes:
-• The story hasn't been loaded yet in this session
-• The story has been moved or renamed
-• The link is from a different FINK universe
+*Link ID: ${urlHash}-${knotHash.slice(0, 5)}...*
 
-Open DevPanel (⚙️) → Swimlanes → NAV for full trace.
-            `.trim();
+This can happen if:
+- You haven't visited that story yet on this device
+- The story was moved or renamed
+- The link is from a different FINK collection
 
-            FinkUI.showStatus(errorMessage); // dismissable by default
+What would you like to do?
+
++ [🏠 Go to Main Menu] -> go_home
+${knownFinks.length > 0 ? '+ [📚 Browse Recent Stories] -> recent_stories' : ''}
++ [ℹ️ Technical Details] -> tech_details
+
+=== go_home ===
+~ temp placeholder = true
+-> END
+
+=== recent_stories ===
+**Recently Visited Stories**
+
+Choose a story to continue:
+
+${recentChoices || '(No recent stories found)'}
+
++ [🏠 Back to Main Menu] -> go_home
+
+=== tech_details ===
+**Technical Details**
+
+Story hash: \`${urlHash}\`
+Position hash: \`${knotHash}\`
+Cached stories: ${cacheStats.urlsIndexed}
+${knownFinks.length > 0 ? `\nKnown story hashes:\n${knownFinks.slice(-5).map(([h, u]) => `- ${h} = ${u.split('/').pop()}`).join('\n')}` : ''}
+
++ [🔙 Back] -> link_not_found
++ [🏠 Go to Main Menu] -> go_home
+`.trim();
+
+        // Compile and run the recovery story
+        if (window.FinkInkEngine && window.inkjs) {
+            try {
+                FinkUI.hideStatus();
+                FinkUI.clearStory();
+                FinkUI.clearChoices();
+
+                const compiler = new inkjs.Compiler(recoveryInk);
+                const story = compiler.Compile();
+
+                // Set up special handler for go_home choice
+                const originalContinue = FinkInkEngine.continueStory.bind(FinkInkEngine);
+
+                FinkInkEngine.story = story;
+                FinkInkEngine._currentKnotName = 'link_not_found';
+
+                // Custom continue that detects go_home
+                const recoveryContinue = (choiceIndex) => {
+                    if (choiceIndex !== null) {
+                        story.ChooseChoiceIndex(choiceIndex);
+                    }
+
+                    // Check if we're at go_home or a load_recent knot
+                    const pathStr = story.state.currentPathString || '';
+                    if (pathStr.startsWith('go_home')) {
+                        // Return to main menu
+                        if (window.FinkPlayer) {
+                            FinkPlayer.returnToMainMenu();
+                        }
+                        return;
+                    }
+
+                    // Continue normally
+                    FinkUI.clearChoices();
+                    const fragment = document.createDocumentFragment();
+
+                    while (story.canContinue) {
+                        const text = story.Continue().trim();
+                        if (text) {
+                            const p = document.createElement('p');
+                            p.innerHTML = text
+                                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                                .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                                .replace(/`(.*?)`/g, '<code>$1</code>');
+                            fragment.appendChild(p);
+                        }
+
+                        // Check for FINK tag (loading recent story)
+                        const tags = story.currentTags || [];
+                        for (const tag of tags) {
+                            if (tag.startsWith('FINK:')) {
+                                const finkUrl = tag.slice(5).trim();
+                                this.log(`Recovery: Loading FINK ${finkUrl}`);
+                                if (window.FinkPlayer) {
+                                    FinkPlayer.loadFinkStory(finkUrl);
+                                }
+                                return;
+                            }
+                        }
+                    }
+
+                    FinkUI.replaceStoryContent(fragment);
+
+                    if (story.currentChoices.length > 0) {
+                        FinkUI.displayChoices(story.currentChoices, recoveryContinue);
+                    }
+                };
+
+                // Start the recovery flow
+                recoveryContinue(null);
+
+            } catch (e) {
+                this.log(`Recovery INK error: ${e.message}`);
+                // Fallback to simple status message
+                FinkUI.showStatus(`Bookmark not found. The story "${urlHash}" isn't in your history.`);
+            }
+        } else {
+            // Fallback if INK engine not available
+            FinkUI.showStatus(`Bookmark not found. The story "${urlHash}" isn't in your history.`);
         }
     },
 
