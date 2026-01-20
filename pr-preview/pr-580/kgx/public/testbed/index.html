@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageSnippets Explorer (Testbed)</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --bg-card: #1e1e32;
+            --accent: #e94560;
+            --accent-light: #ff6b8a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0b0;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --gradient-1: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+            --gradient-2: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--gradient-1);
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: white;
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .subtitle a { color: #ffd700; text-decoration: none; }
+
+        .disclaimer {
+            background: rgba(0,0,0,0.3);
+            color: rgba(255,255,255,0.9);
+            padding: 8px 15px;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .disclaimer a { color: #ffd700; text-decoration: none; }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 10px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+
+        .stat { display: flex; gap: 5px; align-items: center; }
+        .stat-label { color: var(--text-secondary); }
+        .stat-value { color: var(--success); font-weight: bold; }
+
+        .controls-panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--gradient-2);
+            color: white;
+        }
+
+        .btn-primary:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover { background: #1f4a7a; }
+
+        .btn-large {
+            padding: 12px 24px;
+            font-size: 1rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .search-input::placeholder { color: var(--text-secondary); }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .status-loading { background: rgba(251, 191, 36, 0.15); border: 1px solid var(--warning); color: var(--warning); }
+        .status-ready { background: rgba(74, 222, 128, 0.15); border: 1px solid var(--success); color: var(--success); }
+        .status-error { background: rgba(233, 69, 96, 0.15); border: 1px solid var(--accent); color: var(--accent); }
+
+        /* Image Gallery */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .image-card:hover { transform: translateY(-3px); }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 66%;
+            background: var(--bg-tertiary);
+        }
+
+        .image-wrapper img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .image-wrapper img.loaded { opacity: 1; }
+
+        .image-wrapper .placeholder, .image-wrapper .loading-spinner {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .placeholder { color: var(--text-secondary); font-size: 2.5rem; }
+
+        .loading-spinner {
+            width: 30px; height: 30px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .image-info { padding: 12px; }
+
+        .image-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin: 0 0 6px 0;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .image-depicts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .depicts-tag {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .depicts-tag a { color: inherit; text-decoration: none; }
+
+        .load-more-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .gallery-info {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+
+        /* Nerdy Section */
+        .nerdy-section {
+            margin-top: 20px;
+        }
+
+        .nerdy-toggle {
+            width: 100%;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nerdy-toggle:hover { background: var(--bg-tertiary); }
+
+        /* AI Enhancement Panel */
+        .ai-panel {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(79, 70, 229, 0.15));
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .ai-panel.available { display: block; }
+
+        .ai-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .ai-panel-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .ai-panel-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .ai-progress {
+            flex: 1;
+            min-width: 150px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+        }
+
+        .btn-ai:hover { opacity: 0.9; }
+        .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .nerdy-content {
+            display: none;
+            background: var(--bg-secondary);
+            border-radius: 0 0 10px 10px;
+            padding: 15px;
+            margin-top: -5px;
+        }
+
+        .nerdy-content.open { display: block; }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        textarea:focus { outline: none; border-color: var(--accent); }
+
+        #query-input { min-height: 100px; }
+        #results-output { min-height: 120px; margin-top: 10px; }
+
+        .examples-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .example-btn {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        /* Image Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-overlay.open { display: flex; justify-content: center; align-items: flex-start; }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg-tertiary);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .modal-close:hover { color: var(--accent); }
+
+        .modal-body { padding: 20px; }
+
+        .modal-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .modal-meta {
+            display: grid;
+            gap: 10px;
+        }
+
+        .meta-row {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .meta-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            min-width: 100px;
+        }
+
+        .meta-value {
+            flex: 1;
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+
+        .meta-value a { color: var(--accent-light); }
+
+        .ai-keywords-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(79, 70, 229, 0.1));
+            border-radius: 8px;
+            border: 1px solid rgba(147, 51, 234, 0.2);
+        }
+
+        .ai-keywords-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .ai-keywords-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .ai-keyword {
+            background: rgba(147, 51, 234, 0.3);
+            color: #d8b4fe;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .image-card { cursor: pointer; transition: transform 0.2s; }
+        .image-card:hover { transform: translateY(-3px); }
+
+        @media (max-width: 600px) {
+            .image-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+            .btn-row { flex-direction: column; }
+            button { width: 100%; }
+            .search-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ImageSnippets Explorer</h1>
+        <p class="subtitle">Testbed - <a href="../">back to stable</a></p>
+    </div>
+
+    <div class="disclaimer">
+        Demo only - data from <a href="https://imagesnippets.com" target="_blank">ImageSnippets.com</a> |
+        <a href="mailto:info@metadata.rocks">Contact for licensing</a>
+    </div>
+
+    <div class="container">
+        <div id="status" class="status status-loading">Initializing...</div>
+
+        <div class="stats-bar">
+            <div class="stat"><span class="stat-label">Triples:</span><span class="stat-value" id="triple-count">0</span></div>
+            <div class="stat"><span class="stat-label">Images:</span><span class="stat-value" id="image-count">0</span></div>
+            <div class="stat"><span class="stat-label">Showing:</span><span class="stat-value" id="showing-count">0</span></div>
+            <div class="stat"><span class="stat-label">Load:</span><span class="stat-value" id="load-time">-</span></div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="btn-row">
+                <button id="load-50k" class="btn-primary btn-large">Load 50k Triples</button>
+                <button id="load-quads" class="btn-secondary">50k Quads</button>
+                <button id="load-10k" class="btn-secondary">Load 10k</button>
+                <button id="load-demo" class="btn-secondary">Demo</button>
+                <button id="clear-data" class="btn-secondary">Clear</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" placeholder="Search images (e.g. tower, animal, paris...)">
+                <button id="search-btn" class="btn-primary">Search</button>
+                <button id="show-all-btn" class="btn-secondary">Show All</button>
+            </div>
+        </div>
+
+        <!-- Chrome Built-in AI Panel (shown when available) -->
+        <div id="ai-panel" class="ai-panel">
+            <div class="ai-panel-header">
+                <span class="ai-badge">LOCAL AI</span>
+                <span class="ai-panel-title">Chrome Built-in AI Available</span>
+            </div>
+            <div class="ai-panel-desc">
+                Click any image to view details and generate AI keywords. Runs locally in your browser.
+            </div>
+        </div>
+
+        <div id="image-grid" class="image-grid"></div>
+
+        <div id="gallery-info" class="gallery-info"></div>
+
+        <div id="load-more-container" class="load-more-container" style="display:none;">
+            <button id="load-more" class="btn-secondary">Load More Images</button>
+        </div>
+
+        <!-- Image Detail Modal -->
+        <div id="image-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="modal-title">Image Details</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <img id="modal-image" class="modal-image" src="" alt="">
+                    <div class="modal-meta" id="modal-meta"></div>
+                    <div class="ai-keywords-section" id="ai-keywords-section" style="display:none;">
+                        <div class="ai-keywords-header">
+                            <span class="ai-badge">LOCAL AI</span>
+                            <button id="generate-keywords-btn" class="btn-ai">Generate Keywords</button>
+                            <span id="keyword-status"></span>
+                        </div>
+                        <div id="ai-keywords-list" class="ai-keywords-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nerdy-section">
+            <button id="nerdy-toggle" class="nerdy-toggle">
+                <span>🤓 Advanced SPARQL</span>
+                <span id="nerdy-arrow">▼</span>
+            </button>
+            <div id="nerdy-content" class="nerdy-content">
+                <div class="examples-row">
+                    <button class="example-btn" data-query="count">Count</button>
+                    <button class="example-btn" data-query="predicates">Predicates</button>
+                    <button class="example-btn" data-query="types">Types</button>
+                    <button class="example-btn" data-query="images">Images</button>
+                    <button class="example-btn" data-query="depicts">Depicts</button>
+                </div>
+                <textarea id="query-input" placeholder="SPARQL query...">SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20</textarea>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button id="run-query" class="btn-primary">Run Query</button>
+                </div>
+                <textarea id="results-output" readonly placeholder="Results..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { Store } from '../web.js';
+
+        let store = null;
+        let allImages = [];
+        let displayedCount = 0;
+        const PAGE_SIZE = 24;
+
+        // Local dataset paths (loaded from repo)
+        const DATASET_50K = '../../../datasets/upstream/imagesnippets-50k.ttl';
+        const DATASET_10K = '../../../datasets/upstream/imagesnippets-10k.ttl';
+        const DATASET_QUADS = '../../../datasets/upstream/imagesnippets-imgtag-50k.nq';
+
+        // Note: ImageSnippets uses http://schema.org/ (not https)
+        const exampleQueries = {
+            count: `SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }`,
+            predicates: `SELECT DISTINCT ?p (COUNT(?s) AS ?n) WHERE { ?s ?p ?o } GROUP BY ?p ORDER BY DESC(?n) LIMIT 50`,
+            types: `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nSELECT DISTINCT ?type (COUNT(?s) AS ?n) WHERE { ?s rdf:type ?type } GROUP BY ?type ORDER BY DESC(?n)`,
+            images: `PREFIX schema: <http://schema.org/>\nSELECT ?img ?name WHERE { ?img schema:name ?name } LIMIT 100`,
+            depicts: `PREFIX lio: <https://w3id.org/lio/v1#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?img ?entity ?label WHERE { ?img lio:depicts ?entity . OPTIONAL { ?entity rdfs:label ?label } } LIMIT 100`
+        };
+
+        const statusEl = document.getElementById('status');
+        const tripleCountEl = document.getElementById('triple-count');
+        const imageCountEl = document.getElementById('image-count');
+        const showingCountEl = document.getElementById('showing-count');
+        const loadTimeEl = document.getElementById('load-time');
+        const imageGrid = document.getElementById('image-grid');
+        const galleryInfo = document.getElementById('gallery-info');
+        const loadMoreContainer = document.getElementById('load-more-container');
+        const searchInput = document.getElementById('search-input');
+        const queryInput = document.getElementById('query-input');
+        const resultsOutput = document.getElementById('results-output');
+
+        // Chrome Built-in AI state
+        const AI_GRAPH = 'http://local.ai/keywords';
+        let aiAvailable = false;
+        let aiSession = null;
+        const aiPanel = document.getElementById('ai-panel');
+        const imageKeywords = new Map(); // Cache: uri -> keywords
+
+        // Modal elements
+        const imageModal = document.getElementById('image-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalImage = document.getElementById('modal-image');
+        const modalMeta = document.getElementById('modal-meta');
+        const aiKeywordsSection = document.getElementById('ai-keywords-section');
+        const generateKeywordsBtn = document.getElementById('generate-keywords-btn');
+        const keywordStatus = document.getElementById('keyword-status');
+        const aiKeywordsList = document.getElementById('ai-keywords-list');
+        let currentModalImage = null;
+
+        // Check Chrome Prompt API availability
+        async function checkAIAvailability() {
+            try {
+                if (typeof LanguageModel !== 'undefined') {
+                    const availability = await LanguageModel.availability();
+                    console.log('Chrome AI availability:', availability);
+                    if (availability === 'available' || availability === 'downloadable') {
+                        aiAvailable = true;
+                        aiPanel.classList.add('available');
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.log('Chrome AI not available:', e.message);
+            }
+            return false;
+        }
+
+        // Open image detail modal
+        function openImageModal(idx) {
+            const img = allImages[idx];
+            if (!img) return;
+            currentModalImage = img;
+
+            modalTitle.textContent = img.name;
+            modalImage.src = img.contentUrl || img.thumbnail || '';
+            modalImage.alt = img.name;
+
+            // Build metadata HTML
+            let metaHtml = '';
+            if (img.uri) {
+                metaHtml += `<div class="meta-row"><span class="meta-label">URI</span><span class="meta-value"><a href="${img.uri}" target="_blank">${img.uri.split('/').pop()}</a></span></div>`;
+            }
+            if (img.depicts && img.depicts.length > 0) {
+                const tags = img.depicts.map(d => `<span class="depicts-tag">${d.label}</span>`).join(' ');
+                metaHtml += `<div class="meta-row"><span class="meta-label">Depicts</span><span class="meta-value">${tags}</span></div>`;
+            }
+            if (img.contentUrl) {
+                metaHtml += `<div class="meta-row"><span class="meta-label">Full Image</span><span class="meta-value"><a href="${img.contentUrl}" target="_blank">View</a></span></div>`;
+            }
+            modalMeta.innerHTML = metaHtml;
+
+            // Show AI section if available
+            if (aiAvailable) {
+                aiKeywordsSection.style.display = 'block';
+                const cached = imageKeywords.get(img.uri);
+                if (cached) {
+                    showKeywords(cached);
+                    generateKeywordsBtn.textContent = 'Regenerate';
+                } else {
+                    aiKeywordsList.innerHTML = '';
+                    keywordStatus.textContent = '';
+                    generateKeywordsBtn.textContent = 'Generate Keywords';
+                }
+                generateKeywordsBtn.disabled = false;
+            } else {
+                aiKeywordsSection.style.display = 'none';
+            }
+
+            imageModal.classList.add('open');
+        }
+
+        function closeImageModal() {
+            imageModal.classList.remove('open');
+            currentModalImage = null;
+        }
+
+        function showKeywords(keywords) {
+            aiKeywordsList.innerHTML = keywords.map(kw => `<span class="ai-keyword">${kw}</span>`).join('');
+        }
+
+        // Generate keywords for single image
+        async function generateKeywordsForImage() {
+            if (!currentModalImage || !aiAvailable) return;
+
+            generateKeywordsBtn.disabled = true;
+            generateKeywordsBtn.textContent = 'Thinking...';
+            keywordStatus.textContent = '';
+
+            try {
+                if (!aiSession) {
+                    aiSession = await LanguageModel.create({ temperature: 0.3, topK: 5 });
+                }
+
+                const prompt = `Generate 5-8 search keywords for an image titled "${currentModalImage.name}".
+${currentModalImage.depicts?.length ? `It depicts: ${currentModalImage.depicts.map(d => d.label).join(', ')}` : ''}
+Return ONLY a JSON array of strings like: ["keyword1", "keyword2", ...]`;
+
+                const response = await aiSession.prompt(prompt);
+
+                // Parse JSON response
+                const jsonMatch = response.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    let jsonStr = jsonMatch[0].replace(/,\s*\]/g, ']').replace(/'/g, '"');
+                    try {
+                        const keywords = JSON.parse(jsonStr);
+                        if (Array.isArray(keywords)) {
+                            imageKeywords.set(currentModalImage.uri, keywords);
+                            showKeywords(keywords);
+                            storeKeywordsInGraph([{ uri: currentModalImage.uri, keywords }]);
+                            keywordStatus.textContent = `${keywords.length} keywords`;
+                        }
+                    } catch (e) {
+                        // Fallback: extract quoted strings
+                        const kws = jsonStr.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, '')) || [];
+                        if (kws.length > 0) {
+                            imageKeywords.set(currentModalImage.uri, kws);
+                            showKeywords(kws);
+                            storeKeywordsInGraph([{ uri: currentModalImage.uri, keywords: kws }]);
+                            keywordStatus.textContent = `${kws.length} keywords`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('AI error:', e);
+                keywordStatus.textContent = 'Error: ' + e.message;
+            }
+
+            generateKeywordsBtn.disabled = false;
+            generateKeywordsBtn.textContent = 'Regenerate';
+        }
+
+        // Store keywords in named graph for search
+        function storeKeywordsInGraph(keywordData) {
+            if (!store) return;
+            const triples = [];
+            for (const item of keywordData) {
+                if (item.keywords?.length > 0) {
+                    for (const kw of item.keywords) {
+                        triples.push(`<${item.uri}> <http://local.ai/keyword> "${kw.replace(/"/g, '\\"')}"@en .`);
+                    }
+                }
+            }
+            if (triples.length > 0) {
+                try {
+                    store.load(triples.join('\n'), { format: 'text/turtle', base_iri: AI_GRAPH });
+                } catch (e) {
+                    console.error('Error storing keywords:', e);
+                }
+            }
+        }
+
+        // Search including AI keywords
+        function queryImagesWithAI(searchTerm) {
+            if (!store || !searchTerm) return queryImages(searchTerm);
+            const sparql = `
+                PREFIX schema: <http://schema.org/>
+                PREFIX lio: <https://w3id.org/lio/v1#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX ai: <http://local.ai/>
+                SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                    ?img schema:name ?name .
+                    OPTIONAL { ?img schema:thumbnail ?thumb }
+                    OPTIONAL { ?img schema:contentUrl ?url }
+                    {
+                        FILTER(CONTAINS(LCASE(?name), LCASE("${searchTerm}")))
+                    } UNION {
+                        ?img lio:depicts ?entity .
+                        ?entity rdfs:label ?label .
+                        FILTER(CONTAINS(LCASE(?label), LCASE("${searchTerm}")))
+                    } UNION {
+                        ?img ai:keyword ?kw .
+                        FILTER(CONTAINS(LCASE(?kw), LCASE("${searchTerm}")))
+                    }
+                } LIMIT 500
+            `;
+            try {
+                const results = [...store.query(sparql)];
+                return results.map(b => {
+                    const imgUri = b.get('img')?.value;
+                    const depicts = [];
+                    if (imgUri) {
+                        try {
+                            const dr = store.query(`
+                                PREFIX lio: <https://w3id.org/lio/v1#>
+                                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                SELECT ?e ?l WHERE { <${imgUri}> lio:depicts ?e . OPTIONAL { ?e rdfs:label ?l } } LIMIT 5
+                            `);
+                            for (const d of dr) {
+                                depicts.push({
+                                    uri: d.get('e')?.value,
+                                    label: d.get('l')?.value || d.get('e')?.value.split('/').pop().replace(/_/g, ' ')
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                    return {
+                        uri: imgUri,
+                        name: b.get('name')?.value || 'Untitled',
+                        thumbnail: b.get('thumb')?.value,
+                        contentUrl: b.get('url')?.value,
+                        depicts
+                    };
+                });
+            } catch (e) {
+                console.error('AI search error:', e);
+                return queryImages(searchTerm);
+            }
+        }
+
+        function setStatus(msg, type) {
+            statusEl.textContent = msg;
+            statusEl.className = `status status-${type}`;
+        }
+
+        function updateStats() {
+            if (!store) return;
+            try {
+                const r = store.query('SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o }');
+                for (const b of r) tripleCountEl.textContent = b.get('c').value;
+
+                const ir = store.query(`PREFIX schema: <http://schema.org/> SELECT (COUNT(DISTINCT ?i) AS ?c) WHERE { ?i schema:name ?n }`);
+                for (const b of ir) imageCountEl.textContent = b.get('c').value;
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadDataset(url, label, format = 'text/turtle') {
+            if (!store) return;
+            setStatus(`Loading ${label}...`, 'loading');
+            const start = performance.now();
+
+            try {
+                console.log('Fetching from:', url);
+                const res = await fetch(url);
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+                const data = await res.text();
+                console.log('Received data, length:', data.length);
+
+                if (!data || data.trim().length === 0) {
+                    throw new Error('Empty file');
+                }
+
+                store.load(data, { format: format });
+
+                loadTimeEl.textContent = ((performance.now() - start) / 1000).toFixed(1) + 's';
+                updateStats();
+                setStatus(`${label} loaded! Search or browse images.`, 'ready');
+                showAllImages();
+
+                // Enable AI button if available
+                if (aiAvailable) aiEnhanceBtn.disabled = false;
+            } catch (e) {
+                console.error('Load error:', e);
+                setStatus('Error: ' + e.message, 'error');
+            }
+        }
+
+        function load50k() { loadDataset(DATASET_50K, '50k triples', 'text/turtle'); }
+        function load10k() { loadDataset(DATASET_10K, '10k triples', 'text/turtle'); }
+        function loadQuads() { loadDataset(DATASET_QUADS, '50k quads', 'application/n-quads'); }
+
+        async function loadDemoData() {
+            if (!store) return;
+            setStatus('Loading demo...', 'loading');
+            const start = performance.now();
+            try {
+                const res = await fetch('./demo-data.ttl');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                store.load(await res.text(), { format: 'text/turtle' });
+                loadTimeEl.textContent = (performance.now() - start).toFixed(0) + 'ms';
+                updateStats();
+                setStatus('Demo loaded!', 'ready');
+                showAllImages();
+
+                // Enable AI button if available
+                if (aiAvailable) aiEnhanceBtn.disabled = false;
+            } catch (e) {
+                setStatus('Error: ' + e.message, 'error');
+            }
+        }
+
+        function clearStore() {
+            store = new Store();
+            allImages = [];
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+            galleryInfo.textContent = '';
+            loadMoreContainer.style.display = 'none';
+            tripleCountEl.textContent = '0';
+            imageCountEl.textContent = '0';
+            showingCountEl.textContent = '0';
+            loadTimeEl.textContent = '-';
+            setStatus('Cleared. Load data to begin.', 'ready');
+
+            // Reset AI state
+            aiKeywordsGenerated = false;
+            aiSearchToggle.checked = false;
+            aiSearchLabel.style.display = 'none';
+            aiEnhanceBtn.disabled = true;
+            aiProgress.textContent = aiAvailable ? 'Ready' : '';
+        }
+
+        function queryImages(searchTerm = '') {
+            if (!store) return [];
+
+            let sparql;
+            if (searchTerm) {
+                // Search by name or depicts label
+                sparql = `
+                    PREFIX schema: <http://schema.org/>
+                    PREFIX lio: <https://w3id.org/lio/v1#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                        ?img schema:name ?name .
+                        OPTIONAL { ?img schema:thumbnail ?thumb }
+                        OPTIONAL { ?img schema:contentUrl ?url }
+                        {
+                            FILTER(CONTAINS(LCASE(?name), LCASE("${searchTerm}")))
+                        } UNION {
+                            ?img lio:depicts ?entity .
+                            ?entity rdfs:label ?label .
+                            FILTER(CONTAINS(LCASE(?label), LCASE("${searchTerm}")))
+                        }
+                    } LIMIT 500
+                `;
+            } else {
+                sparql = `
+                    PREFIX schema: <http://schema.org/>
+                    SELECT DISTINCT ?img ?name ?thumb ?url WHERE {
+                        ?img schema:name ?name .
+                        OPTIONAL { ?img schema:thumbnail ?thumb }
+                        OPTIONAL { ?img schema:contentUrl ?url }
+                    } LIMIT 1000
+                `;
+            }
+
+            try {
+                const results = [...store.query(sparql)];
+                return results.map(b => {
+                    const imgUri = b.get('img')?.value;
+                    const depicts = [];
+
+                    if (imgUri) {
+                        try {
+                            const dr = store.query(`
+                                PREFIX lio: <https://w3id.org/lio/v1#>
+                                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                SELECT ?e ?l WHERE { <${imgUri}> lio:depicts ?e . OPTIONAL { ?e rdfs:label ?l } } LIMIT 5
+                            `);
+                            for (const d of dr) {
+                                depicts.push({
+                                    uri: d.get('e')?.value,
+                                    label: d.get('l')?.value || d.get('e')?.value.split('/').pop().replace(/_/g, ' ')
+                                });
+                            }
+                        } catch(e) {}
+                    }
+
+                    return {
+                        uri: imgUri,
+                        name: b.get('name')?.value || 'Untitled',
+                        thumbnail: b.get('thumb')?.value,
+                        contentUrl: b.get('url')?.value,
+                        depicts
+                    };
+                });
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
+        }
+
+        function showAllImages() {
+            allImages = queryImages('');
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+            loadMoreImages();
+        }
+
+        function searchImages() {
+            const term = searchInput.value.trim();
+            // Always use AI-aware search (includes any generated keywords)
+            allImages = imageKeywords.size > 0 && term ? queryImagesWithAI(term) : queryImages(term);
+            displayedCount = 0;
+            imageGrid.innerHTML = '';
+
+            if (allImages.length === 0) {
+                galleryInfo.textContent = term ? `No images found for "${term}"` : 'No images in store.';
+                loadMoreContainer.style.display = 'none';
+            } else {
+                loadMoreImages();
+            }
+        }
+
+        function loadMoreImages() {
+            const batch = allImages.slice(displayedCount, displayedCount + PAGE_SIZE);
+            displayedCount += batch.length;
+
+            const html = batch.map((img, idx) => {
+                const imgUrl = img.thumbnail || img.contentUrl;
+                const tags = img.depicts.slice(0, 3).map(d =>
+                    `<span class="depicts-tag">${d.label}</span>`
+                ).join('');
+                const globalIdx = displayedCount - batch.length + idx;
+
+                return `
+                    <div class="image-card" data-idx="${globalIdx}">
+                        <div class="image-wrapper">
+                            ${imgUrl ? `<div class="loading-spinner"></div><img data-src="${imgUrl}" alt="${img.name}">` : `<div class="placeholder">🖼️</div>`}
+                        </div>
+                        <div class="image-info">
+                            <h3 class="image-title">${img.name}</h3>
+                            ${tags ? `<div class="image-depicts">${tags}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            imageGrid.insertAdjacentHTML('beforeend', html);
+
+            // Add click handlers for new cards
+            imageGrid.querySelectorAll('.image-card[data-idx]:not([data-bound])').forEach(card => {
+                card.setAttribute('data-bound', 'true');
+                card.addEventListener('click', () => openImageModal(parseInt(card.dataset.idx)));
+            });
+
+            // Lazy load new images
+            imageGrid.querySelectorAll('img[data-src]:not([src])').forEach(img => {
+                const observer = new IntersectionObserver((entries, obs) => {
+                    if (entries[0].isIntersecting) {
+                        img.src = img.dataset.src;
+                        img.onload = () => { img.classList.add('loaded'); img.parentElement.querySelector('.loading-spinner')?.remove(); };
+                        img.onerror = () => { img.parentElement.querySelector('.loading-spinner')?.remove(); img.parentElement.innerHTML = '<div class="placeholder">⚠️</div>'; };
+                        obs.disconnect();
+                    }
+                }, { rootMargin: '200px' });
+                observer.observe(img);
+            });
+
+            showingCountEl.textContent = displayedCount;
+            galleryInfo.textContent = `Showing ${displayedCount} of ${allImages.length} images`;
+            loadMoreContainer.style.display = displayedCount < allImages.length ? 'block' : 'none';
+        }
+
+        function runQuery() {
+            if (!store) return;
+            const q = queryInput.value.trim();
+            if (!q) return;
+
+            try {
+                const r = store.query(q);
+                if (typeof r === 'boolean') {
+                    resultsOutput.value = `Result: ${r}`;
+                } else {
+                    const items = [...r];
+                    if (items.length === 0) {
+                        resultsOutput.value = 'No results.';
+                    } else if (items[0].subject !== undefined) {
+                        resultsOutput.value = items.slice(0, 100).map(q => `${q.subject.value} ${q.predicate.value} ${q.object.value}`).join('\n');
+                    } else if (items[0].get) {
+                        const vars = [...items[0].entries()].map(([k]) => k);
+                        resultsOutput.value = `${items.length} results\n\n` + items.slice(0, 100).map(b => vars.map(v => `${v}=${b.get(v)?.value || ''}`).join(' | ')).join('\n');
+                    }
+                }
+            } catch (e) {
+                resultsOutput.value = 'Error: ' + e.message;
+            }
+        }
+
+        async function init_app() {
+            try {
+                await init();
+                store = new Store();
+                setStatus('Ready! Load data to begin.', 'ready');
+
+                // Check for Chrome Built-in AI
+                await checkAIAvailability();
+            } catch (e) {
+                setStatus('Init failed: ' + e.message, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('load-50k').onclick = load50k;
+        document.getElementById('load-quads').onclick = loadQuads;
+        document.getElementById('load-10k').onclick = load10k;
+        document.getElementById('load-demo').onclick = loadDemoData;
+        document.getElementById('clear-data').onclick = clearStore;
+        document.getElementById('search-btn').onclick = searchImages;
+        document.getElementById('show-all-btn').onclick = showAllImages;
+        document.getElementById('load-more').onclick = loadMoreImages;
+        document.getElementById('run-query').onclick = runQuery;
+
+        // Modal event listeners
+        document.getElementById('modal-close').onclick = closeImageModal;
+        generateKeywordsBtn.onclick = generateKeywordsForImage;
+        imageModal.onclick = (e) => { if (e.target === imageModal) closeImageModal(); };
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeImageModal(); });
+
+        searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchImages(); });
+
+        document.getElementById('nerdy-toggle').onclick = () => {
+            const content = document.getElementById('nerdy-content');
+            const arrow = document.getElementById('nerdy-arrow');
+            content.classList.toggle('open');
+            arrow.textContent = content.classList.contains('open') ? '▲' : '▼';
+        };
+
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.onclick = () => {
+                queryInput.value = exampleQueries[btn.dataset.query];
+                runQuery();
+            };
+        });
+
+        init_app();
+    </script>
+</body>
+</html>

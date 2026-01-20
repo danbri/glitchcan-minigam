@@ -1,0 +1,3887 @@
+{
+  "timestamp": "2026-01-16T17:56:36.528Z",
+  "source": "local",
+  "startFile": "inklet/toc.fink.js",
+  "files": [
+    {
+      "file": "inklet/toc.fink.js",
+      "status": "OK",
+      "knots": 17,
+      "choices": 28,
+      "graph": {
+        "main_menu": {
+          "targets": [
+            "episodes_menu",
+            "minigames_menu",
+            "help_menu"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "coverart/glitchcan-cover-medium.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Episodes",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Minigames",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Help",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "episodes_menu": {
+          "targets": [
+            "hobbit_selected",
+            "hampstead_selected",
+            "maple_hollow_selected",
+            "mudslidemines_selected",
+            "riverbend_selected"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Bagend",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Hampstead",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Maple Hollow",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Mudslide Mines",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Riverbend",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "minigames_menu": {
+          "targets": [
+            "ukrainian_selected",
+            "bagend2_selected"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Ukrainian Language",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Bagend bleeding edge",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "help_menu": {
+          "targets": [
+            "shane_manor_selected",
+            "experiments_selected"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Developer Guide",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Shane Manor Mystery (testing)",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Experiments",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "hobbit_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "coverart/bagend_splash_imag_9453.jpeg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "enter Bag End",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "load_bagend": {
+          "targets": [
+            "main_menu"
+          ],
+          "choices": 1,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "bagend2_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "coverart/bagend_splash_imag_9453.jpeg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "enter Bag End v2 / alpha etc",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "load_bagend2": {
+          "targets": [
+            "main_menu"
+          ],
+          "choices": 1,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "hampstead_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "coverart/hamstead_img_9432.jpeg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "enter Hampstead",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "mudslidemines_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "enter Mudslide Mines",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "riverbend_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "riverbend/village_overview.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Enter Riverbend",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "maple_hollow_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Enter Maple Hollow",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "ukrainian_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Enter Language demo",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "dev_guide_selected": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "shane_manor_selected": {
+          "targets": [
+            "load_bagend"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Enter Shane Manor",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "experiments_selected": {
+          "targets": [
+            "help_menu"
+          ],
+          "choices": 4,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "glitchcan-grey-portrait-web.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "*Games & Interactive Experiments:**",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "*Sounds & Visuals:**",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "*Infrastructure:**",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Return to Help Menu",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "external_story": {
+          "targets": [
+            "main_menu"
+          ],
+          "choices": 1,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Return to Main Menu",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        }
+      },
+      "linkedFinks": [
+        "../bagend.fink.js",
+        "../bagend2.fink.js",
+        "../hampstead.fink.js",
+        "../mudslidemines.fink.js",
+        "../riverbend.fink.js",
+        "../../cozyverse/maple-hollow.fink.js",
+        "../tml-2025-langlearn.fink.js",
+        "../shane-manor.fink.js"
+      ],
+      "islands": [
+        "episodes_menu",
+        "minigames_menu",
+        "hobbit_selected",
+        "bagend2_selected",
+        "load_bagend2",
+        "hampstead_selected",
+        "mudslidemines_selected",
+        "riverbend_selected",
+        "maple_hollow_selected",
+        "ukrainian_selected",
+        "dev_guide_selected",
+        "shane_manor_selected",
+        "experiments_selected",
+        "external_story"
+      ]
+    },
+    {
+      "file": "inklet/bagend.fink.js",
+      "status": "OK",
+      "knots": 16,
+      "choices": 36,
+      "graph": {
+        "Bag_End": {
+          "targets": [
+            "Talk_To_Gandalf",
+            "Outside_Bag_End",
+            "Kitchen"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "../coverart/bagend_entrance_img_9445.jpeg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Talk to Gandalf",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Leave through the front door",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go to the kitchen",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Outside_Bag_End": {
+          "targets": [
+            "Bag_End",
+            "Hobbiton_Village",
+            "Trollshaws"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "adventure_path.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return inside",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go East to the village",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go North into the wilderness",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Kitchen": {
+          "targets": [
+            "Peaceful_Retirement",
+            "Bag_End"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "hobbit_pantry.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Talk to Thorin",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the main room",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Take some food",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Hobbiton_Village": {
+          "targets": [
+            "Outside_Bag_End",
+            "Green_Dragon",
+            "Trollshaws"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "gandalf_at_door.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return West to Bag End",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Enter the Green Dragon Inn",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go North toward the wilderness",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Green_Dragon": {
+          "targets": [
+            "Hobbiton_Village"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "green_dragon.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Talk to the innkeeper",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Leave the inn",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Trollshaws": {
+          "targets": [
+            "Hobbiton_Village",
+            "Troll_Cave",
+            "Troll_Clearing"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "trollshaws.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Go South back to Hobbiton",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go East to the cave",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Investigate the noises",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Troll_Clearing": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "troll_clearing.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Hide and wait",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Run back to the path",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Troll_Clearing_Dawn": {
+          "targets": [
+            "Trollshaws",
+            "Troll_Cave"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "troll_statues.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Examine the gleam",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the path",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go to the cave",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Troll_Cave": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "troll_cave.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Open the chest",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Leave the cave",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Troll_Cave_Explored": {
+          "targets": [
+            "Troll_Clearing",
+            "Victorious_Return"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "troll_cave.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return to the trolls",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Head back to Hobbiton with your treasure",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "return_to_trolls": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Victorious_Return": {
+          "targets": [
+            "The_Adventure_Begins",
+            "Peaceful_Retirement"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "bag_end_exterior.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Begin planning the journey to the Lonely Mountain",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Stay content with your small victory",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "The_Adventure_Begins": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "adventure_path.svg"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "Peaceful_Retirement": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Talk_To_Gandalf": {
+          "targets": [
+            "Bag_End"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "gandalf_at_door.svg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Ask about the mark on the door",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to your comfortable armchair",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Ask about the adventure",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Talk_To_Thorin": {
+          "targets": [],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Show you can be stealthy",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Insist you're not burglar material",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Ask about the treasure",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "Kitchen",
+        "Green_Dragon",
+        "Troll_Clearing_Dawn",
+        "Troll_Cave",
+        "Troll_Cave_Explored",
+        "return_to_trolls",
+        "Victorious_Return",
+        "The_Adventure_Begins",
+        "Peaceful_Retirement",
+        "Talk_To_Gandalf",
+        "Talk_To_Thorin"
+      ]
+    },
+    {
+      "file": "inklet/bagend2.fink.js",
+      "status": "OK",
+      "knots": 16,
+      "choices": 36,
+      "graph": {
+        "Bag_End": {
+          "targets": [
+            "Talk_To_Gandalf",
+            "Outside_Bag_End",
+            "Kitchen"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Outside_Bag_End": {
+          "targets": [
+            "Bag_End",
+            "Hobbiton_Village",
+            "Trollshaws"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Kitchen": {
+          "targets": [
+            "Talk_To_Thorin",
+            "Bag_End"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Hobbiton_Village": {
+          "targets": [
+            "Outside_Bag_End",
+            "Green_Dragon",
+            "Trollshaws"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Green_Dragon": {
+          "targets": [
+            "Hobbiton_Village"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Trollshaws": {
+          "targets": [
+            "Hobbiton_Village",
+            "Troll_Cave",
+            "Troll_Clearing"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Troll_Clearing": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Troll_Clearing_Dawn": {
+          "targets": [
+            "Trollshaws",
+            "Troll_Cave"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Troll_Cave": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Troll_Cave_Explored": {
+          "targets": [
+            "Troll_Clearing"
+          ],
+          "choices": 1,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "return_to_trolls": {
+          "targets": [
+            "Trollshaws"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Victorious_Return": {
+          "targets": [
+            "The_Adventure_Begins",
+            "Peaceful_Retirement"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "The_Adventure_Begins": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Peaceful_Retirement": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Talk_To_Gandalf": {
+          "targets": [
+            "Bag_End"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "Talk_To_Thorin": {
+          "targets": [],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "Kitchen",
+        "Green_Dragon",
+        "Troll_Clearing_Dawn",
+        "Troll_Cave",
+        "Troll_Cave_Explored",
+        "return_to_trolls",
+        "Victorious_Return",
+        "The_Adventure_Begins",
+        "Peaceful_Retirement",
+        "Talk_To_Gandalf",
+        "Talk_To_Thorin"
+      ]
+    },
+    {
+      "file": "inklet/hampstead.fink.js",
+      "status": "OK",
+      "knots": 37,
+      "choices": 83,
+      "graph": {
+        "splash": {
+          "targets": [
+            "intro"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#0050e0"
+            },
+            {
+              "type": "CLASS",
+              "value": "info"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Continue",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "intro": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#000"
+            },
+            {
+              "type": "IMAGE",
+              "value": "coverart/hamstead_img_9433.jpeg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Boot the Speccy",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Wander off to VR",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "bedsit": {
+          "targets": [
+            "wardrobe"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#0a0a0a"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Open wardrobe",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Leave for Main Street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "wardrobe": {
+          "targets": [
+            "bedsit"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "CLASS",
+              "value": "gritty"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Wear the jeans",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Wear the tie",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Close wardrobe",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "street": {
+          "targets": [
+            "jobcentre",
+            "oxfam",
+            "pub",
+            "gallery_pass"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#001515"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "East to Job Centre",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "West to Oxfam",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "South to Duke Pub",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "North to Gallery District",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Try to sell the diamond at a pawn shop",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "jobcentre": {
+          "targets": [
+            "street"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Collect your GIRO cheque",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Go to Post Office window",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "postoffice": {
+          "targets": [
+            "street"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#031"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Cash the giro",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Cash the giro again",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Leave → street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "giro_fraud_video": {
+          "targets": [
+            "fraud_aftermath"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#200"
+            },
+            {
+              "type": "CLASS",
+              "value": "danger"
+            },
+            {
+              "type": "BASEHREF",
+              "value": "media/"
+            },
+            {
+              "type": "VIDEO",
+              "value": "../media/d94a6357-1549-44a1-9173-ce2a9a51d556.mp4"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "ATTENTION: Benefits fraud is a serious offence. Th",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Shuffle away in shame",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "fraud_aftermath": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#111"
+            },
+            {
+              "type": "CLASS",
+              "value": "gritty"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Keep walking, don't look back",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Mutter an excuse to no one",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "street_shameful": {
+          "targets": [
+            "jobcentre",
+            "oxfam",
+            "pub",
+            "gallery_pass"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#001515"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "oxfam": {
+          "targets": [
+            "street"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Browse jacket rail",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Dig in bargain bin",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Donate the diamond to Oxfam",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pub": {
+          "targets": [
+            "street"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#210"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Buy a round (£10)",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Flash the diamond and offer to buy the pub",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "gallery_pass": {
+          "targets": [
+            "street"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#021"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Admit ignorance",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Stare at a sculpture of a urinal",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Offer the diamond as an art exhibit",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "mansion_tip": {
+          "targets": [
+            "mansion",
+            "street"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#002"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Visit Sir Lionel’s mansion",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "mansion": {
+          "targets": [
+            "street"
+          ],
+          "choices": 1,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Present playwright’s card",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "car": {
+          "targets": [
+            "jobcentre",
+            "oxfam",
+            "pub",
+            "gallery_pass"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#112233"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Proceed to estate agent",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "estate": {
+          "targets": [
+            "street"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Sign the mortgage",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to street",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "housewarming": {
+          "targets": [
+            "jobcentre",
+            "oxfam",
+            "pub",
+            "gallery_pass"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#041"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "fraud_ending": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#300"
+            },
+            {
+              "type": "CLASS",
+              "value": "danger"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "** FRAUD DETECTED — GAME OVER ***",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "victory": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#041"
+            },
+            {
+              "type": "CLASS",
+              "value": "success"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "** HAMPSTEAD ACHIEVED ***",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "diamond_pawn": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#300"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "jail": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#111"
+            },
+            {
+              "type": "CLASS",
+              "value": "danger"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "diamond_pub_attempt": {
+          "targets": [
+            "jobcentre",
+            "oxfam",
+            "pub",
+            "gallery_pass"
+          ],
+          "choices": 5,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#300"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "diamond_gallery_exhibit": {
+          "targets": [
+            "diamond_opening"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#021"
+            },
+            {
+              "type": "CLASS",
+              "value": "artsy"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Watch the opening night",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "diamond_opening": {
+          "targets": [
+            "one_week_later"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#025"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Continue",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "one_week_later": {
+          "targets": [
+            "artist_confrontation"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#0a0a0a"
+            },
+            {
+              "type": "CLASS",
+              "value": "gritty"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Visit the pub",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "artist_confrontation": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#210"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "\"How did you afford this pub?\"",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "\"You owe me a diamond.\"",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "artist_challenge": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#300"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "\"What plane of reality are you from?\"",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "artist_reveal": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#400"
+            },
+            {
+              "type": "CLASS",
+              "value": "danger"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Dive through after them",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "world_between_worlds": {
+          "targets": [
+            "world_rest"
+          ],
+          "choices": 7,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#020"
+            },
+            {
+              "type": "CLASS",
+              "value": "info"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "** THE WORLD BETWEEN WORLDS ***",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Approach the golden pool (warm light, distant hill",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Peer into the dark pool (flickering torches, stone",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Examine the misty pool (manor silhouette, ravens)",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Study the gentle pool (autumn leaves, chimney smok",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Look into the rippling pool (flowing water, reeds)",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Rest here a while",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pool_bagend": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#141"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Step into the pool",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the glade",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pool_mines": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#210"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Descend into the pool",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the glade",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pool_manor": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#203"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Enter the pool",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the glade",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pool_maple": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#320"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Slip into the pool",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the glade",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "pool_riverbend": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#024"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Wade into the pool",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the glade",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "world_rest": {
+          "targets": [
+            "world_end"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#010"
+            },
+            {
+              "type": "CLASS",
+              "value": "info"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Continue exploring",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Close your eyes and drift...",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "world_end": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "BG",
+              "value": "#000"
+            },
+            {
+              "type": "CLASS",
+              "value": "mega"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "** THE END... FOR NOW ***",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "intro",
+        "wardrobe",
+        "postoffice",
+        "giro_fraud_video",
+        "fraud_aftermath",
+        "street_shameful",
+        "mansion_tip",
+        "mansion",
+        "car",
+        "estate",
+        "housewarming",
+        "fraud_ending",
+        "victory",
+        "diamond_pawn",
+        "jail",
+        "diamond_pub_attempt",
+        "diamond_gallery_exhibit",
+        "diamond_opening",
+        "one_week_later",
+        "artist_confrontation",
+        "artist_challenge",
+        "artist_reveal",
+        "world_between_worlds",
+        "pool_bagend",
+        "pool_mines",
+        "pool_manor",
+        "pool_maple",
+        "pool_riverbend",
+        "world_rest",
+        "world_end"
+      ]
+    },
+    {
+      "file": "inklet/mudslidemines.fink.js",
+      "status": "OK",
+      "knots": 12,
+      "choices": 23,
+      "graph": {
+        "Crash_Site_Clearing": {
+          "targets": [
+            "Overgrown_Path",
+            "Dark_Cave"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Follow the overgrown trail",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Enter the dark cave mouth",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Overgrown_Path": {
+          "targets": [
+            "Crash_Site_Clearing",
+            "Snake_Pit",
+            "Control_Room"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Push back through the foliage",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Venture toward the stone ruins",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Descend the mossy steps",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Snake_Pit": {
+          "targets": [
+            "Overgrown_Path",
+            "Ancient_Grove"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "B266C9A3-9402-4622-962E-129F6921D855.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Carefully back away through the vines",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Edge around the snakes toward the ancient tree",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Dark_Cave": {
+          "targets": [
+            "Crash_Site_Clearing",
+            "Waterfall_Base"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return to the sunlit clearing",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Follow the sound of rushing water",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Control_Room": {
+          "targets": [
+            "Overgrown_Path",
+            "River_Ledge"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Climb back up to the jungle path",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Pass through the mysterious red door",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Ancient_Grove": {
+          "targets": [
+            "Snake_Pit",
+            "Hidden_Shrine"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "6055F905-B41A-4D17-80F9-76F45CC522C3.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Retreat back to the stone ruins",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Follow the hidden path behind the waterfall",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Waterfall_Base": {
+          "targets": [
+            "Dark_Cave"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "237A2C79-5EDE-407D-A699-B0A3CF1C4567.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Wade back through the cave passages",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "River_Ledge": {
+          "targets": [
+            "Control_Room",
+            "River_Crossing"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "EA969AD0-24EE-4A5D-99F1-3A576217C355.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return through the red door",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Edge carefully along the cliff",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Hidden_Shrine": {
+          "targets": [
+            "Ancient_Grove"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "3E17DDFA-7CA2-44B3-A852-A6A64C0A44BB.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Return to the ancient tree",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "River_Crossing": {
+          "targets": [
+            "River_Ledge",
+            "Far_Shore"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "EA969AD0-24EE-4A5D-99F1-3A576217C355.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Retreat back along the ledge",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Risk crossing the treacherous log bridge",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Far_Shore": {
+          "targets": [
+            "River_Crossing",
+            "Ancient_Vault"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "E4C85ECB-2AD7-4AE4-9B36-1C8271E3D503.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Cross back over the dangerous bridge",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Enter the carved stone archway",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "Ancient_Vault": {
+          "targets": [
+            "Far_Shore"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "12E67B94-4352-4F5F-BCA7-0DB27A471ED9.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Exit through the stone archway",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Admire the treasure",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "Waterfall_Base",
+        "Hidden_Shrine",
+        "Ancient_Vault"
+      ]
+    },
+    {
+      "file": "inklet/riverbend.fink.js",
+      "status": "OK",
+      "knots": 16,
+      "choices": 17,
+      "graph": {
+        "intro": {
+          "targets": [
+            "follow_whispers",
+            "settle_in"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "village_overview.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Follow the whispers.",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Settle into village life and ignore the rumors.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "settle_in": {
+          "targets": [
+            "peaceful_life",
+            "intro"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_cottage.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Continue enjoying the peace.",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "A nagging curiosity resurfaces. Maybe just a littl",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "peaceful_life": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "peaceful_sunset.png"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "follow_whispers": {
+          "targets": [
+            "eavesdrop",
+            "mill_direct"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_looking_for_clues.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Try to eavesdrop on these hushed conversations.",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Investigate the old mill that several people menti",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "eavesdrop": {
+          "targets": [
+            "mill_direct"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_reading_inscription.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Investigate the old mill that several people menti",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "mill_direct": {
+          "targets": [
+            "main_door"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_searching_details.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Try the main door.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "main_door": {
+          "targets": [
+            "enter_mill"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_approaching_mill_day.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Step inside cautiously.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "enter_mill": {
+          "targets": [
+            "search_mill"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "inside_dilapidated_mill.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Search for anything unusual.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "search_mill": {
+          "targets": [
+            "metal_door"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "search_mill_interior.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "A sturdy metal door, seemingly out of place.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "metal_door": {
+          "targets": [
+            "look_for_clues"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "metal_door.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Look for any clues to the code nearby.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "look_for_clues": {
+          "targets": [
+            "roman_numerals"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "look_for_clues.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Faint etchings on a nearby gear – Roman numerals?",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "roman_numerals": {
+          "targets": [
+            "correct_code"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "roman_numerals.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Try entering these numbers in order: 5-8-12.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "correct_code": {
+          "targets": [
+            "use_atm"
+          ],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "hidden_inscription.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Use the ATM to see what happens.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "use_atm": {
+          "targets": [
+            "join_guardians",
+            "keep_secret"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "metal_door.png"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Accept the responsibility and join the Guardians.",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Politely decline and offer to keep the secret.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "join_guardians": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "metal_door.png"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "keep_secret": {
+          "targets": [],
+          "choices": 0,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "elara_thinking.png"
+            }
+          ],
+          "choiceDetails": []
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "settle_in",
+        "peaceful_life",
+        "follow_whispers",
+        "eavesdrop",
+        "mill_direct",
+        "main_door",
+        "enter_mill",
+        "search_mill",
+        "metal_door",
+        "look_for_clues",
+        "roman_numerals",
+        "correct_code",
+        "use_atm",
+        "join_guardians",
+        "keep_secret"
+      ]
+    },
+    {
+      "file": "cozyverse/maple-hollow.fink.js",
+      "status": "OK",
+      "knots": 13,
+      "choices": 29,
+      "graph": {
+        "train_arrives": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "R4ZGGJsho7I"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Step onto the platform, heart pounding",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Linger in the doorway, scanning the crowd",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Watch a snowflake land on her glove",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "spot_jake": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "BlAGHcJsJio"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Walk toward him—let the past be past",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Nod politely, keep walking",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "walk_together": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "q6mGKXTJdCw"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Accept a ride to the festival grounds",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Walk into town instead—need time to think",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "{heard_song == false} [The truck radio crackles to",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "go_to_bakery": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "7Fs_xFCEegM"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Ask about Jake",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Help with the baking",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Accidentally knock over the flour",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "stranger_kindness": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "5BT8jT16n88"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Follow Grandma June to the bakery for cocoa",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Ask what she means by \"someone\"",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Return to the platform—too much, too fast",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "lily_ambush": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "bFo5lWvD8Ms"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Help Lily plot more snowball chaos",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Suggest hot cocoa at the bakery",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "festival_prep": {
+          "targets": [
+            "song_returns"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "TBPoH_FyWLw"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Let their hands brush reaching for the same light",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Step back—this is moving too fast",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "song_returns": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "LpjWnlA5Eus"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "That* song.",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Hum along—let the memory live",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Change the subject—too vulnerable",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "flour_disaster": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "gY0AynfJ3m8"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Challenge Mom to a flour fight",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "The flour war spills outside",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "ask_about_jake": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "q6mGKXTJdCw"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Go find him",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Stay and process this",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "lights_of_rising": {
+          "targets": [
+            "ending_hope",
+            "train_arrives"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "mj1Dqod1MTA"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Smile at the lights—savor this moment",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Start a new path from here",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "ending_love": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "mj1Dqod1MTA"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "*THE END**",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "ending_hope": {
+          "targets": [],
+          "choices": 1,
+          "tags": [
+            {
+              "type": "VIDEO",
+              "value": "mj1Dqod1MTA"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "*THE END**",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "spot_jake",
+        "walk_together",
+        "go_to_bakery",
+        "stranger_kindness",
+        "lily_ambush",
+        "festival_prep",
+        "song_returns",
+        "flour_disaster",
+        "ask_about_jake",
+        "lights_of_rising",
+        "ending_love",
+        "ending_hope"
+      ]
+    },
+    {
+      "file": "inklet/tml-2025-langlearn.fink.js",
+      "status": "OK",
+      "knots": 35,
+      "choices": 98,
+      "graph": {
+        "start": {
+          "targets": [
+            "bread_question"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Yes, let's go!",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Not right now.",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "bread_question": {
+          "targets": [
+            "correct_bread",
+            "wrong_bread_1",
+            "wrong_bread_2",
+            "wrong_bread_3"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Хліб",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Молоко",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Сир",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Яблуко",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "correct_bread": {
+          "targets": [
+            "dairy_correct_milk",
+            "dairy_correct_cheese",
+            "dairy_wrong_borscht",
+            "dairy_wrong_bread"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "wrong_bread_1": {
+          "targets": [
+            "dairy_correct_milk",
+            "dairy_correct_cheese",
+            "dairy_wrong_borscht",
+            "dairy_wrong_bread"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "wrong_bread_2": {
+          "targets": [
+            "dairy_correct_milk",
+            "dairy_correct_cheese",
+            "dairy_wrong_borscht",
+            "dairy_wrong_bread"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "wrong_bread_3": {
+          "targets": [
+            "dairy_correct_milk",
+            "dairy_correct_cheese",
+            "dairy_wrong_borscht",
+            "dairy_wrong_bread"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "dairy_question": {
+          "targets": [
+            "dairy_correct_milk",
+            "dairy_correct_cheese",
+            "dairy_wrong_borscht",
+            "dairy_wrong_bread"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Молоко",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Сир",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Борщ",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Хліб",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "dairy_correct_milk": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "dairy_correct_cheese": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "dairy_wrong_borscht": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "dairy_wrong_bread": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "match_question": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "match_borscht": {
+          "targets": [
+            "match_varenyky"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Beet soup",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Dumplings",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Sausage",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "match_varenyky": {
+          "targets": [
+            "match_sausage"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Dumplings",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Sausage",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Beet soup",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "match_sausage": {
+          "targets": [
+            "fruit_question"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Sausage",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Dumplings",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Beet soup",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "fruit_question": {
+          "targets": [
+            "fruit_correct",
+            "fruit_wrong_cheese",
+            "fruit_wrong_bread",
+            "fruit_wrong_milk"
+          ],
+          "choices": 4,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Яблуко",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Сир",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Хліб",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Молоко",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "fruit_correct": {
+          "targets": [
+            "grammar_case_example"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "fruit_wrong_cheese": {
+          "targets": [
+            "grammar_case_example"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "fruit_wrong_bread": {
+          "targets": [
+            "grammar_case_example"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "fruit_wrong_milk": {
+          "targets": [
+            "grammar_case_example"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "grammar_intro": {
+          "targets": [
+            "grammar_case_example"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "grammar_case_example": {
+          "targets": [
+            "case_bread_correct",
+            "case_bread_wrong"
+          ],
+          "choices": 5,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "case_practice_bread": {
+          "targets": [
+            "case_bread_correct",
+            "case_bread_wrong"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "хліб",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "хліба",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "хлібом",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "case_bread_correct": {
+          "targets": [
+            "case_cheese_correct",
+            "case_cheese_wrong"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "case_bread_wrong": {
+          "targets": [
+            "case_cheese_correct",
+            "case_cheese_wrong"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "case_practice_cheese": {
+          "targets": [
+            "case_cheese_correct",
+            "case_cheese_wrong"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "сир",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "сиру",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "сиром",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "case_cheese_correct": {
+          "targets": [
+            "sausage_wrong_nominative",
+            "sausage_correct",
+            "sausage_wrong_instrumental"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "case_cheese_wrong": {
+          "targets": [
+            "sausage_wrong_nominative",
+            "sausage_correct",
+            "sausage_wrong_instrumental"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "case_practice_sausage": {
+          "targets": [
+            "sausage_wrong_nominative",
+            "sausage_correct",
+            "sausage_wrong_instrumental"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "ковбаса",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "ковбасу",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "ковбасою",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "sausage_correct": {
+          "targets": [],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "sausage_wrong_nominative": {
+          "targets": [],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "sausage_wrong_instrumental": {
+          "targets": [],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "grammar_review": {
+          "targets": [],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "*Nominative (Subject)**",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "*Accusative (Object)**",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "tutorial_complete": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "end": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "bread_question",
+        "correct_bread",
+        "wrong_bread_1",
+        "wrong_bread_2",
+        "wrong_bread_3",
+        "dairy_question",
+        "dairy_correct_milk",
+        "dairy_correct_cheese",
+        "dairy_wrong_borscht",
+        "dairy_wrong_bread",
+        "match_question",
+        "match_borscht",
+        "match_varenyky",
+        "match_sausage",
+        "fruit_question",
+        "fruit_correct",
+        "fruit_wrong_cheese",
+        "fruit_wrong_bread",
+        "fruit_wrong_milk",
+        "grammar_intro",
+        "grammar_case_example",
+        "case_practice_bread",
+        "case_bread_correct",
+        "case_bread_wrong",
+        "case_practice_cheese",
+        "case_cheese_correct",
+        "case_cheese_wrong",
+        "case_practice_sausage",
+        "sausage_correct",
+        "sausage_wrong_nominative",
+        "sausage_wrong_instrumental",
+        "grammar_review",
+        "tutorial_complete",
+        "end"
+      ]
+    },
+    {
+      "file": "inklet/shane-manor.fink.js",
+      "status": "OK",
+      "knots": 35,
+      "choices": 51,
+      "graph": {
+        "test_chess_position": {
+          "targets": [
+            "chess_minigame",
+            "chess_forensics",
+            "chess_records"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "test_character_confrontation": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "test_multiple_endings": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "start": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/manor_with_taxi_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Question the driver about local gossip",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Observe the manor's architecture and security",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Review your case notes methodically",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "meet_butler": {
+          "targets": [],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/entrance_hall_stairs_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Put him at ease with gentle questioning",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Press for details about the will change",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Notice his suspicious behavior",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "investigation_choice": {
+          "targets": [],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "Examine the crime scene immediately",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Interview the person who found the body",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Gather the household together for initial statemen",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "crime_scene": {
+          "targets": [
+            "examine_safe",
+            "examine_chess",
+            "examine_footprints"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/study_crime_scene_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Examine the open safe first",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Study the chess position",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Investigate the muddy footprints",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "examine_safe": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/study_library_combo_desktop.jpg"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "examine_chess": {
+          "targets": [
+            "chess_minigame",
+            "chess_forensics",
+            "chess_records"
+          ],
+          "choices": 3,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/dining_room_formal_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Test your chess skills on this exact position",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Analyze the fingerprints on the pieces",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Look for chess notation or game records",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "examine_footprints": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/manor_floor_plan_desktop.jpg"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "chess_minigame": {
+          "targets": [
+            "accuse_charles",
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "chess_aftermath": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": [
+            {
+              "text": "This proves Charles knew his uncle's style",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Victoria must have learned chess from him",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Continue examining the scene",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "charles_chess_evidence": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "victoria_chess_evidence": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "chess_forensics": {
+          "targets": [
+            "accuse_charles",
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "chess_records": {
+          "targets": [
+            "accuse_victoria",
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 3,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "chess_realization": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "interview_mary": {
+          "targets": [],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/servants_hall_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Ask about the argument she overheard",
+              "repeatable": false,
+              "sticky": true
+            },
+            {
+              "text": "Press for details about the locked room",
+              "repeatable": false,
+              "sticky": true
+            }
+          ]
+        },
+        "gather_household": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/butler_questioning_desktop.jpg"
+            }
+          ],
+          "choiceDetails": []
+        },
+        "household_confrontation": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "deduction": {
+          "targets": [
+            "conspiracy_theory",
+            "outside_theory"
+          ],
+          "choices": 2,
+          "tags": [
+            {
+              "type": "IMAGE",
+              "value": "desktop/morning_room_table_desktop.jpg"
+            }
+          ],
+          "choiceDetails": [
+            {
+              "text": "Accuse Victoria of the murder",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Accuse Charles using the chess evidence",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Accuse Mrs. Pemberton of orchestrating the murder",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Expose Ashford's secret involvement",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Present the conspiracy theory - multiple killers",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Suggest an outside intruder theory",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "Gather more evidence first",
+              "repeatable": true,
+              "sticky": false
+            },
+            {
+              "text": "The case grows cold",
+              "repeatable": true,
+              "sticky": false
+            }
+          ]
+        },
+        "accuse_charles": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "outside_theory": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "time_up": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "accuse_victoria": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "accuse_mrs_pemberton": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "accuse_ashford": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "conspiracy_theory": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution_charles": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution_victoria": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution_mrs_pemberton": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution_ashford": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "resolution_conspiracy": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        },
+        "partial_resolution": {
+          "targets": [],
+          "choices": 0,
+          "tags": [],
+          "choiceDetails": []
+        }
+      },
+      "linkedFinks": [],
+      "islands": [
+        "test_chess_position",
+        "test_character_confrontation",
+        "test_multiple_endings",
+        "meet_butler",
+        "investigation_choice",
+        "crime_scene",
+        "examine_safe",
+        "examine_chess",
+        "examine_footprints",
+        "chess_minigame",
+        "chess_aftermath",
+        "charles_chess_evidence",
+        "victoria_chess_evidence",
+        "chess_forensics",
+        "chess_records",
+        "chess_realization",
+        "interview_mary",
+        "gather_household",
+        "household_confrontation",
+        "deduction",
+        "accuse_charles",
+        "outside_theory",
+        "time_up",
+        "resolution",
+        "accuse_victoria",
+        "accuse_mrs_pemberton",
+        "accuse_ashford",
+        "conspiracy_theory",
+        "resolution_charles",
+        "resolution_victoria",
+        "resolution_mrs_pemberton",
+        "resolution_ashford",
+        "resolution_conspiracy",
+        "partial_resolution"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "compiled": 9,
+    "failed": 0
+  },
+  "designDocs": [
+    "docs/hampstead-story-graph-analysis.md",
+    "docs/3dmap-idea.md"
+  ]
+}
