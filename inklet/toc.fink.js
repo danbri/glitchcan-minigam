@@ -60,7 +60,7 @@ This is where things might be documented, eventually.
 + [Experiments] -> experiments_selected
 
 === hobbit_selected ===
-# FINK: bagend.fink.js
+# FINK: /glitchcan-minigam/inklet/bagend.fink.js
 
 Bag End
 
@@ -71,7 +71,7 @@ A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG image
 + [enter Bag End] -> external_story
 
 === bagend2_selected ===
-# FINK: bagend2.fink.js
+# FINK: /glitchcan-minigam/inklet/bagend2.fink.js
 
 Bag End v2 (Enhanced)
 
@@ -82,7 +82,7 @@ The improved Hobbit adventure with proper inventory tracking, conversation gatin
 + [enter Bag End v2] -> external_story
 
 === diamond_cave_selected ===
-# FINK: demos/diamond-cave.fink.js
+# FINK: /glitchcan-minigam/inklet/demos/diamond-cave.fink.js
 
 Diamond Cave
 
@@ -93,7 +93,7 @@ Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and esca
 + [enter Diamond Cave] -> external_story
 
 === hampstead_selected ===
-# FINK: hampstead.fink.js
+# FINK: /glitchcan-minigam/inklet/hampstead.fink.js
 
 Hampstead
 
@@ -104,7 +104,7 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 + [enter Hampstead] -> external_story
 
 === mudslidemines_selected ===
-# FINK: mudslidemines.fink.js
+# FINK: /glitchcan-minigam/inklet/mudslidemines.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
@@ -113,7 +113,7 @@ Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer
 + [enter Mudslide Mines] -> external_story
 
 === riverbend_selected ===
-# FINK: riverbend.fink.js
+# FINK: /glitchcan-minigam/inklet/riverbend.fink.js
 
 # IMAGE: riverbend/village_overview.png
 
@@ -135,7 +135,7 @@ A cozy interactive romance with YouTube mood clips. Return to a snow-covered hom
 + [Enter Maple Hollow] -> external_story
 
 === ukrainian_selected ===
-# FINK: tml-2025-langlearn.fink.js
+# FINK: /glitchcan-minigam/inklet/tml-2025-langlearn.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
@@ -154,7 +154,7 @@ FINK Developer Guide
 Does not exist.
 
 === shane_manor_selected ===
-# FINK: shane-manor.fink.js
+# FINK: /glitchcan-minigam/inklet/shane-manor.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
