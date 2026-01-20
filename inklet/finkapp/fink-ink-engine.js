@@ -322,6 +322,15 @@ window.FinkInkEngine = {
 
         if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', this.lastSeenFinkTag);
 
+        // CRITICAL: Clear URL hash before loading new FINK to prevent navigation loop.
+        // Without this, checkDeepLink() sees the old FINK's hash and tries to navigate
+        // back to it, causing a toc → bagend → toc → bagend loop.
+        // The new FINK's hash will be set by updateFragment() after it loads.
+        if (window.location.hash) {
+            FinkUtils.debugLog('Clearing URL hash before FINK load to prevent navigation loop');
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
         // 500ms delay before loading (matches working hamfink2026 timing)
         // NOTE: This delay was added to match hamfink2026 behavior during initial port.
         // It may be vestigial - investigate if removal causes issues.

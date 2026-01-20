@@ -246,6 +246,11 @@
     flex-wrap: unset;
 }
 
+/* Hide URL display when expanded - the tree view shows the full hierarchy */
+.breadcrumb-container.expanded .breadcrumb-url {
+    display: none;
+}
+
 /* HIERARCHICAL LEVEL-BASED DISPLAY */
 
 /* Each level in the FINK stack */
