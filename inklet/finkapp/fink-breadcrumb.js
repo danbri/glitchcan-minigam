@@ -218,6 +218,9 @@ window.FinkBreadcrumb = {
             // Remove .fink.js extension for cleaner display
             filename = filename.replace(/\.fink\.js$/, '').replace(/\.js$/, '');
 
+            // Debug: Log what we're transforming
+            FinkUtils.debugLog(`formatUrl: "${url}" → pathname="${urlObj.pathname}" → filename="${filename}"`);
+
             // Truncate if too long
             if (filename.length > this.maxUrlLength) {
                 return '[...]' + filename.slice(-this.maxUrlLength);
