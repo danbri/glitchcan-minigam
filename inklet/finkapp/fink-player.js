@@ -28,6 +28,11 @@ window.FinkPlayer = {
             FinkNavigation.init();
         }
 
+        // Initialize breadcrumb widget
+        if (window.FinkBreadcrumb) {
+            FinkBreadcrumb.init();
+        }
+
         // Initialize audio systems
         if (window.FinkAudio) {
             FinkAudio.init();
@@ -92,6 +97,11 @@ window.FinkPlayer = {
             this.currentStoryUrl = resolvedUrl;
             FinkUtils.debugLog('Loading story from: ' + resolvedUrl);
 
+            // Update breadcrumb with new FINK URL
+            if (window.FinkBreadcrumb) {
+                FinkBreadcrumb.setFinkUrl(resolvedUrl);
+            }
+
             if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', finkUrl);
 
             const content = await FinkSandbox.loadViaSandbox(resolvedUrl);
@@ -153,6 +163,12 @@ window.FinkPlayer = {
                 FinkUI.clearStory();
                 FinkUI.clearChoices();
                 FinkUI.switchView('narrative');
+
+                // Clear breadcrumb navigation history
+                if (window.FinkBreadcrumb) {
+                    FinkBreadcrumb.clearPath();
+                }
+
                 FinkInkEngine.continueStory();
                 FinkUtils.debugLog('Story restarted successfully');
             } catch (error) {
@@ -256,7 +272,8 @@ window.fink = {
     foley: window.FinkFoley,
     audio: window.FinkAudio,
     devpanel: window.FinkDevPanel,
-    nav: window.FinkNavigation
+    nav: window.FinkNavigation,
+    breadcrumb: window.FinkBreadcrumb
 };
 
 // Global swimEvent function for logging to swimlanes

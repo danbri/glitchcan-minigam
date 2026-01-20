@@ -248,11 +248,21 @@ window.FinkInkEngine = {
             FinkUI.replaceStoryContent(storyFragment);
             FinkUI.updateImageFromINKTags(this.story);
 
-            // Update navigation fragment
-            if (window.FinkNavigation && this.story.state) {
+            // Update navigation fragment and breadcrumb
+            if (this.story.state) {
                 const currentPath = this.story.state.currentPathString;
                 if (currentPath) {
-                    FinkNavigation.updateFragment(currentPath.split('.')[0]);
+                    const knotName = currentPath.split('.')[0];
+
+                    // Update URL hash
+                    if (window.FinkNavigation) {
+                        FinkNavigation.updateFragment(knotName);
+                    }
+
+                    // Record in breadcrumb trail
+                    if (window.FinkBreadcrumb) {
+                        FinkBreadcrumb.recordKnot(knotName);
+                    }
                 }
             }
 
