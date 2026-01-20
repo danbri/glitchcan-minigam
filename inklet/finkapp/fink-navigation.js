@@ -473,19 +473,20 @@ window.FinkNavigation = {
                 FinkBreadcrumb.setFinkUrl(finkUrl);
             }
 
-            // Compile and run - this will:
-            // 1. Build the knot map via buildKnotIdMap
-            // 2. Check for deep link via checkDeepLink (which reads URL hash)
-            // 3. If deep link matches this FINK, navigate to the target knot
-            //
-            // IMPORTANT: We don't navigate again after this call!
-            // checkDeepLink will see the URL hash (same one that caused us to load
-            // this FINK) and handle navigation. Navigating again would cause:
-            // - UI flicker (clear and redisplay content)
-            // - Potential server spam if it somehow triggers reloads
+            // Compile and run the story
+            // Note: checkDeepLink won't navigate because we cleared the hash above
             await FinkInkEngine.compileAndRunStory(content);
 
-            // Navigation was handled by checkDeepLink inside compileAndRunStory
+            // Now navigate to the target knot using the knotHash we saved
+            // (checkDeepLink couldn't do this because we cleared the URL hash)
+            const knotName = this.knotIdMap.get(knotHash);
+            if (knotName) {
+                this.log(`Deep link: navigating to knot ${knotName}`);
+                await this.navigateToKnotInCurrentStory(knotName, true);
+            } else {
+                this.log(`Deep link: knotHash ${knotHash} not found in newly loaded FINK`);
+            }
+
             this.log(`FINK loaded and deep link handled: ${finkUrl}`);
             return true;
         } catch (error) {
