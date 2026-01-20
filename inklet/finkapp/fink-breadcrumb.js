@@ -90,6 +90,9 @@ window.FinkBreadcrumb = {
     // Record a new FINK file being loaded
     // HIERARCHICAL: Pushes a new level onto the finkStack
     setFinkUrl(url) {
+        FinkUtils.debugLog('Breadcrumb setFinkUrl called with: ' + url);
+        FinkUtils.debugLog('Breadcrumb current stack: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
+
         // Check if this URL is already the current level (avoid duplicates)
         const currentLevel = this.finkStack[this.finkStack.length - 1];
         if (currentLevel && currentLevel.url === url) {
@@ -105,6 +108,7 @@ window.FinkBreadcrumb = {
         });
 
         FinkUtils.debugLog('Breadcrumb: New FINK level ' + (this.finkStack.length - 1) + ': ' + this.formatUrl(url));
+        FinkUtils.debugLog('Breadcrumb: Stack is now: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
 
         // Limit stack depth to prevent unbounded growth (10 levels deep should be plenty)
         if (this.finkStack.length > 10) {
@@ -307,12 +311,40 @@ window.FinkBreadcrumb = {
     // Copy knot URL to clipboard
     async copyKnotUrl(knotName) {
         const url = await this.generateKnotUrl(knotName);
+        FinkUtils.debugLog('Breadcrumb: Copying URL: ' + url);
+
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(url);
+                this.showToast('🔗 Link copied!');
+                return;
+            } catch (err) {
+                FinkUtils.debugLog('Breadcrumb: Clipboard API failed: ' + err.message);
+                // Fall through to fallback
+            }
+        }
+
+        // Fallback: use execCommand (works in more contexts)
         try {
-            await navigator.clipboard.writeText(url);
-            this.showToast('🔗 Link copied!');
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            if (success) {
+                this.showToast('🔗 Link copied!');
+            } else {
+                throw new Error('execCommand failed');
+            }
         } catch (err) {
-            FinkUtils.debugLog('Breadcrumb: Copy failed: ' + err.message);
-            this.showToast('Copy failed');
+            FinkUtils.debugLog('Breadcrumb: Copy fallback failed: ' + err.message);
+            // Last resort: show URL for manual copy
+            this.showToast('Copy manually: ' + url.slice(-30));
         }
     },
 
@@ -352,16 +384,20 @@ window.FinkBreadcrumb = {
             if (this.finkStack.length === 0) {
                 this.elements.urlDisplay.textContent = 'No story loaded';
                 this.elements.urlDisplay.title = '';
+                FinkUtils.debugLog('Breadcrumb render: No story loaded');
             } else if (this.finkStack.length === 1) {
                 // Single level - just show the name
                 const displayUrl = this.formatUrl(this.currentFinkUrl);
                 this.elements.urlDisplay.textContent = displayUrl;
                 this.elements.urlDisplay.title = this.currentFinkUrl || '';
+                FinkUtils.debugLog('Breadcrumb render: Single level - ' + displayUrl);
             } else {
                 // Multiple levels - show breadcrumb trail
                 const trail = this.finkStack.map(level => this.formatUrl(level.url)).join(' › ');
                 this.elements.urlDisplay.textContent = trail;
                 this.elements.urlDisplay.title = this.finkStack.map(l => l.url).join(' → ');
+                FinkUtils.debugLog('Breadcrumb render: Multi-level trail - ' + trail);
+                FinkUtils.debugLog('Breadcrumb render: Stack URLs - ' + this.finkStack.map(l => l.url).join(' | '));
             }
         }
 
