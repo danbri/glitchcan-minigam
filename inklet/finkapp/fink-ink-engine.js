@@ -262,8 +262,10 @@ window.FinkInkEngine = {
                 this._currentKnotName = detectedKnot;
                 FinkUtils.debugLog('Current knot for nav: ' + detectedKnot);
 
-                // Update URL hash
-                if (window.FinkNavigation) {
+                // Update URL hash - but NOT if we're about to load external FINK
+                // (updating hash during FINK transition triggers hash change listener,
+                // which navigates back to this knot, causing an infinite loop)
+                if (window.FinkNavigation && !shouldLoadExternal) {
                     FinkNavigation.updateFragment(detectedKnot);
                 }
 
