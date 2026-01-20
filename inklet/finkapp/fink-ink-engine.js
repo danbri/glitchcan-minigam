@@ -316,6 +316,7 @@ window.FinkInkEngine = {
         // 500ms delay before loading (matches working hamfink2026 timing)
         // NOTE: This delay was added to match hamfink2026 behavior during initial port.
         // It may be vestigial - investigate if removal causes issues.
+        // See: https://github.com/danbri/glitchcan-minigam/issues/579
         setTimeout(() => {
             FinkSandbox.loadViaSandbox(resolvedUrl)
             .then(async (content) => {
