@@ -218,6 +218,9 @@ window.FinkBreadcrumb = {
             // Remove .fink.js extension for cleaner display
             filename = filename.replace(/\.fink\.js$/, '').replace(/\.js$/, '');
 
+            // Debug: Log what we're transforming
+            FinkUtils.debugLog(`formatUrl: "${url}" → pathname="${urlObj.pathname}" → filename="${filename}"`);
+
             // Truncate if too long
             if (filename.length > this.maxUrlLength) {
                 return '[...]' + filename.slice(-this.maxUrlLength);
@@ -435,13 +438,25 @@ window.FinkBreadcrumb = {
             // FINK name with icon
             const finkName = document.createElement('span');
             finkName.className = 'breadcrumb-fink-name' + (isCurrentLevel ? ' breadcrumb-fink-current' : '');
-            finkName.textContent = (isCurrentLevel ? '📖 ' : '📁 ') + this.formatUrl(level.url);
-            finkName.title = isCurrentLevel ? 'Current story: ' + level.url : `Return to ${this.formatUrl(level.url)}`;
+            const formattedName = this.formatUrl(level.url);
+            finkName.textContent = (isCurrentLevel ? '📖 ' : '📁 ') + formattedName;
+            finkName.title = isCurrentLevel ? 'Current story: ' + level.url : `Return to ${formattedName}`;
+            FinkUtils.debugLog(`Breadcrumb renderKnots: Level ${levelIndex} - URL: ${level.url} → Display: "${formattedName}" (current: ${isCurrentLevel})`);
 
             // Make parent levels clickable
             if (!isCurrentLevel) {
+                // Capture URL at render time for comparison
+                const urlAtRenderTime = level.url;
                 finkName.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    const urlAtClickTime = this.finkStack[levelIndex]?.url;
+                    FinkUtils.debugLog(`Breadcrumb CLICK: levelIndex=${levelIndex}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at render time: ${urlAtRenderTime}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at click time: ${urlAtClickTime}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: Current stack: [${this.finkStack.map(l => this.formatUrl(l.url)).join(', ')}]`);
+                    if (urlAtRenderTime !== urlAtClickTime) {
+                        FinkUtils.debugLog(`Breadcrumb CLICK: ⚠️ URL MISMATCH! Stack changed since render.`);
+                    }
                     this.navigateBackToFink(levelIndex);
                 });
             }

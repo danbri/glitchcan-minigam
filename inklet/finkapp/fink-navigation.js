@@ -127,7 +127,21 @@ window.FinkNavigation = {
     setupHashNavigation() {
         window.addEventListener('hashchange', async (event) => {
             const fragmentId = window.location.hash.slice(1);
-            if (fragmentId && this.knotIdMap.has(fragmentId)) {
+            if (!fragmentId) return;
+
+            this.log(`Hash changed to: ${fragmentId}`);
+            this.swimLog('🔙', 'Hash Change', fragmentId.slice(0, 20) + '...');
+
+            // Check if it's a two-part hash (urlHash-knotHash) - handles cross-FINK navigation
+            const parsed = this.parseFinkLinkId(fragmentId);
+            if (parsed) {
+                this.log(`Two-part hash detected, navigating: ${parsed.urlHash}-${parsed.knotHash}`);
+                await this.navigateToTwoPartLink(parsed.urlHash, parsed.knotHash);
+                return;
+            }
+
+            // Legacy single hash - check current story's knot map
+            if (this.knotIdMap.has(fragmentId)) {
                 await this.navigateToKnotById(fragmentId);
             }
         });
@@ -443,6 +457,11 @@ window.FinkNavigation = {
             }
 
             FinkPlayer.currentStoryUrl = finkUrl;
+
+            // Update breadcrumb with new FINK URL (was missing - caused levels to be skipped!)
+            if (window.FinkBreadcrumb) {
+                FinkBreadcrumb.setFinkUrl(finkUrl);
+            }
 
             // Compile and run - this will:
             // 1. Build the knot map via buildKnotIdMap
