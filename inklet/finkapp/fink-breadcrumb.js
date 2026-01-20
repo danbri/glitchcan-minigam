@@ -132,18 +132,40 @@ window.FinkBreadcrumb = {
 
     // Generate deep link URL for a knot using FinkNavigation
     async generateKnotUrl(knotName) {
-        // Use FinkNavigation's two-part hash format if available
-        if (window.FinkNavigation && this.currentFinkUrl) {
+        // Use FinkNavigation's two-part hash format (preferred)
+        if (window.FinkNavigation) {
+            // Ensure FinkNavigation has the current FINK URI
+            if (!FinkNavigation.currentFinkUri && this.currentFinkUrl) {
+                FinkUtils.debugLog('Breadcrumb: FinkNavigation.currentFinkUri not set, using breadcrumb URL');
+            }
+
             const shareLink = await FinkNavigation.generateShareLink(knotName, false);
-            if (shareLink) return shareLink;
+            if (shareLink) {
+                FinkUtils.debugLog('Breadcrumb: Generated share link: ' + shareLink);
+                return shareLink;
+            } else {
+                FinkUtils.debugLog('Breadcrumb: generateShareLink returned null');
+            }
         }
 
-        // Fallback to simple URL params
-        const baseUrl = new URL(window.location.href);
-        baseUrl.hash = '';
-        baseUrl.searchParams.set('story', this.currentFinkUrl || '');
-        baseUrl.searchParams.set('knot', knotName);
-        return baseUrl.toString();
+        // Fallback: generate two-part hash manually if we have the FINK URL
+        if (this.currentFinkUrl && window.FinkNavigation) {
+            try {
+                const urlHash = await FinkNavigation.generateUrlHash(this.currentFinkUrl);
+                const knotHash = await FinkNavigation.generateKnotHash(knotName);
+                const baseUrl = new URL(window.location.href);
+                baseUrl.hash = `${urlHash}-${knotHash}`;
+                baseUrl.search = '';  // Clear any query params
+                FinkUtils.debugLog('Breadcrumb: Fallback link: ' + baseUrl.toString());
+                return baseUrl.toString();
+            } catch (e) {
+                FinkUtils.debugLog('Breadcrumb: Fallback hash generation failed: ' + e.message);
+            }
+        }
+
+        // Last resort: just return current page URL (link won't deep link properly)
+        FinkUtils.debugLog('Breadcrumb: Using current URL as fallback (no deep linking)');
+        return window.location.href;
     },
 
     // Navigate to a specific knot

@@ -171,11 +171,24 @@ window.FinkInkEngine = {
             let shouldLoadExternal = false;
             let shouldStartMinigame = false;
             let minigameType = 'normal';
+            let detectedKnot = null;  // Track knot during this continue cycle
 
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 let rawText = this.story.Continue();
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
+
+                // Track current knot from path (detect knot changes during flow)
+                const pathStr = this.story.state.currentPathString;
+                if (pathStr) {
+                    const knotPart = pathStr.split('.')[0];
+                    if (knotPart && !/^\d+$/.test(knotPart)) {
+                        if (knotPart !== detectedKnot) {
+                            detectedKnot = knotPart;
+                            FinkUtils.debugLog('Detected knot: ' + detectedKnot);
+                        }
+                    }
+                }
 
                 let currentTags = this.story.currentTags || [];
                 FinkUtils.debugLog('Current tags: [' + currentTags.join(', ') + ']');
@@ -248,22 +261,23 @@ window.FinkInkEngine = {
             FinkUI.replaceStoryContent(storyFragment);
             FinkUI.updateImageFromINKTags(this.story);
 
-            // Update navigation fragment and breadcrumb
-            if (this.story.state) {
-                const currentPath = this.story.state.currentPathString;
-                if (currentPath) {
-                    const knotName = currentPath.split('.')[0];
+            // Update navigation fragment and breadcrumb with detected knot
+            if (detectedKnot) {
+                // Store for reference
+                this._currentKnotName = detectedKnot;
+                FinkUtils.debugLog('Current knot for nav: ' + detectedKnot);
 
-                    // Update URL hash
-                    if (window.FinkNavigation) {
-                        FinkNavigation.updateFragment(knotName);
-                    }
-
-                    // Record in breadcrumb trail
-                    if (window.FinkBreadcrumb) {
-                        FinkBreadcrumb.recordKnot(knotName);
-                    }
+                // Update URL hash
+                if (window.FinkNavigation) {
+                    FinkNavigation.updateFragment(detectedKnot);
                 }
+
+                // Record in breadcrumb trail
+                if (window.FinkBreadcrumb) {
+                    FinkBreadcrumb.recordKnot(detectedKnot);
+                }
+            } else {
+                FinkUtils.debugLog('Could not determine current knot name from path');
             }
 
             // Handle external loading or minigame start
@@ -367,5 +381,55 @@ window.FinkInkEngine = {
         });
 
         return tags;
+    },
+
+    // Track current knot name explicitly
+    // This is more reliable than parsing story.state.currentPathString
+    _currentKnotName: null,
+
+    // Get current knot name - use tracked value or fallback to state parsing
+    getCurrentKnotName() {
+        // Return tracked knot if available
+        if (this._currentKnotName) {
+            return this._currentKnotName;
+        }
+
+        // Fallback: try to parse from story state
+        if (!this.story || !this.story.state) {
+            return null;
+        }
+
+        try {
+            // Try currentPathString (inkjs 2.x)
+            let pathString = this.story.state.currentPathString;
+
+            // Fallback to currentPointer.path
+            if (!pathString && this.story.state.currentPointer?.path) {
+                pathString = this.story.state.currentPointer.path.toString();
+            }
+
+            if (!pathString) {
+                return null;
+            }
+
+            // Extract knot name (first component before any dot)
+            const knotName = pathString.split('.')[0];
+
+            // Filter out empty strings and numeric-only paths
+            if (!knotName || /^\d+$/.test(knotName)) {
+                return null;
+            }
+
+            return knotName;
+        } catch (e) {
+            FinkUtils.debugLog('Error getting current knot name: ' + e.message);
+            return null;
+        }
+    },
+
+    // Set current knot when navigating (called from external navigation)
+    setCurrentKnot(knotName) {
+        this._currentKnotName = knotName;
+        FinkUtils.debugLog('Set current knot: ' + knotName);
     }
 };
