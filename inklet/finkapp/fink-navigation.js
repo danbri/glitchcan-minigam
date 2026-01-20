@@ -356,8 +356,12 @@ window.FinkNavigation = {
                     this.swimLog('✅', 'Knot Found!', `${knotHash} → ${knotName}`);
                     return await this.navigateToKnotInCurrentStory(knotName);
                 } else {
+                    // urlHash matches but knotHash not found - this is an invalid link
+                    // within the current story. Do NOT fall through to re-load the same FINK!
                     this.swimLog('⚠️', 'Knot Hash Unknown',
-                        `${knotHash} not in current story's map`);
+                        `${knotHash} not in current story's map - cannot navigate`);
+                    this.log(`Knot hash ${knotHash} not found in current FINK - ignoring deep link`);
+                    return false;
                 }
             }
         }
@@ -421,6 +425,14 @@ window.FinkNavigation = {
 
             // Load the FINK content
             const content = await FinkSandbox.loadViaSandbox(finkUrl);
+
+            // Handle duplicate load skip (loadViaSandbox returns null if skipped)
+            if (content === null) {
+                this.log(`FINK load skipped (duplicate): ${finkUrl}`);
+                FinkUI.hideStatus();
+                return false;
+            }
+
             FinkPlayer.currentStoryUrl = finkUrl;
 
             // Compile and run - this will:

@@ -138,3 +138,27 @@
         top: 50px; /* Below the fink-header */
     }
 }
+
+/* Toast notification for copy feedback */
+.breadcrumb-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid var(--zx-green);
+    color: var(--zx-green);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 2000;
+    animation: toastFade 1.5s ease forwards;
+    pointer-events: none;
+}
+
+@keyframes toastFade {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}

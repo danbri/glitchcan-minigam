@@ -314,9 +314,18 @@ window.FinkInkEngine = {
         if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', this.lastSeenFinkTag);
 
         // 500ms delay before loading (matches working hamfink2026 timing)
+        // NOTE: This delay was added to match hamfink2026 behavior during initial port.
+        // It may be vestigial - investigate if removal causes issues.
+        // See: https://github.com/danbri/glitchcan-minigam/issues/579
         setTimeout(() => {
             FinkSandbox.loadViaSandbox(resolvedUrl)
             .then(async (content) => {
+                // Handle duplicate load skip (loadViaSandbox returns null if skipped)
+                if (content === null) {
+                    FinkUtils.debugLog('External FINK load skipped (duplicate)');
+                    FinkUI.hideStatus();
+                    return;
+                }
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
                 await this.compileAndRunStory(content);
