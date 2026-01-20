@@ -458,6 +458,11 @@ window.FinkNavigation = {
 
             FinkPlayer.currentStoryUrl = finkUrl;
 
+            // Update breadcrumb with new FINK URL (was missing - caused levels to be skipped!)
+            if (window.FinkBreadcrumb) {
+                FinkBreadcrumb.setFinkUrl(finkUrl);
+            }
+
             // Compile and run - this will:
             // 1. Build the knot map via buildKnotIdMap
             // 2. Check for deep link via checkDeepLink (which reads URL hash)
