@@ -450,26 +450,8 @@ These are suggestions - you may prefer to run servers in your own tab/process:
 - Deploy-pages action: v4 (not v1)
 
 ## PR Preview Deployments
-PRs from org members automatically deploy to staging for review.
-
-**Preview URL format:**
-```
-https://danbri.github.io/glitchcan-minigam/pr-preview/pr-{NUMBER}/
-```
-
-**How it works:**
-- Uses `rossjrw/pr-preview-action@v1`
-- Deploys to `gh-pages` branch under `pr-preview/` directory
-- Auto-cleanup when PR closes/merges
-- **Security:** Only OWNER, MEMBER, or COLLABORATOR PRs get previews (external contributors excluded)
-
-**When creating PRs**, include the preview link in the description:
-```markdown
-## Preview
-https://danbri.github.io/glitchcan-minigam/pr-preview/pr-{NUMBER}/
-```
-
-**Workflow file:** `.github/workflows/pr-preview.yml`
+**DISABLED** - PR previews are currently disabled for faster, simpler deployments.
+The workflow file is preserved at `.github/workflows/pr-preview.yml.disabled` if needed later.
 
 ## Spectro Development Notes
 - Retro ZX Spectrum style platformer inspired by Jet Set Willy
