@@ -442,8 +442,18 @@ window.FinkBreadcrumb = {
 
             // Make parent levels clickable
             if (!isCurrentLevel) {
+                // Capture URL at render time for comparison
+                const urlAtRenderTime = level.url;
                 finkName.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    const urlAtClickTime = this.finkStack[levelIndex]?.url;
+                    FinkUtils.debugLog(`Breadcrumb CLICK: levelIndex=${levelIndex}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at render time: ${urlAtRenderTime}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at click time: ${urlAtClickTime}`);
+                    FinkUtils.debugLog(`Breadcrumb CLICK: Current stack: [${this.finkStack.map(l => this.formatUrl(l.url)).join(', ')}]`);
+                    if (urlAtRenderTime !== urlAtClickTime) {
+                        FinkUtils.debugLog(`Breadcrumb CLICK: ⚠️ URL MISMATCH! Stack changed since render.`);
+                    }
                     this.navigateBackToFink(levelIndex);
                 });
             }
