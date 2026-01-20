@@ -60,7 +60,7 @@ This is where things might be documented, eventually.
 
 Bag End
 
-A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters Gandalf and is drawn into an unexpected adventure.
+A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters a mysterious wizard and is drawn into an unexpected adventure.
 
 # IMAGE: coverart/bagend_splash_imag_9453.jpeg
 
