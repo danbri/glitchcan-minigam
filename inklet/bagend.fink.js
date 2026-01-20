@@ -18,8 +18,8 @@ VAR troll_status = "alive"
 // # alternate: bag_end_exterior.svg
 # IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
 
-You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. Gandalf the wizard sits smoking a pipe.
-+ [Talk to Gandalf] -> Talk_To_Gandalf
+You are in a comfortable hobbit-hole with a round green door. The hole is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.
++ [Talk to the Wizard] -> Talk_To_Gandalf
 + [Leave through the front door] -> Outside_Bag_End
 + [Go to the kitchen] -> Kitchen
 
@@ -36,8 +36,8 @@ You stand on the path outside your hobbit-hole. The green hills of Hobbiton stre
 
 # IMAGE: hobbit_pantry.svg
 
-This is a well-stocked hobbit kitchen with pantries full of food. A small window looks out onto the garden. Thorin Oakenshield sits at your table, looking impatient.
-+ [Talk to Thorin] -> Talk_To_Thorin
+This is a well-stocked hobbit kitchen with pantries full of food. A small window looks out onto the garden. A stern dwarf sits at your table, looking impatient.
++ [Talk to the Dwarf] -> Talk_To_Thorin
 + [Return to the main room] -> Bag_End
 + [Take some food]
     You put some cheese, bread, and apples in your pocket.
@@ -133,7 +133,7 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
 
 # IMAGE: bag_end_exterior.svg
 
-You return to Bag End as the sun sets, your pockets heavy with troll gold and your mind filled with the wonders you've seen. Gandalf sits on your doorstep, smoking his pipe with a knowing smile.
+You return to Bag End as the sun sets, your pockets heavy with troll gold and your mind filled with the wonders you've seen. The Wizard sits on your doorstep, smoking his pipe with a knowing smile.
 
 "So, Bilbo," he says, "still think you want no part in adventures?"
 
@@ -146,7 +146,7 @@ You pat the treasure in your pocket and gaze toward the horizon. "Perhaps... the
 
 # IMAGE: adventure_path.svg
 
-With Gandalf's guidance and the treasure map as your guide, you set off toward greater adventures. The path to the Lonely Mountain stretches before you, filled with dangers and wonders beyond imagination.
+With the Wizard's guidance and the treasure map as your guide, you set off toward greater adventures. The path to the Lonely Mountain stretches before you, filled with dangers and wonders beyond imagination.
 
 Your story as a burglar has only just begun...
 
@@ -178,19 +178,19 @@ Sometimes, on clear evenings, you look toward the mountains and wonder what migh
 
 # IMAGE: gandalf_at_door.svg
 
-"My dear Bilbo," says Gandalf, "I am looking for someone to share in an adventure."
+"My dear Bilbo," says the Wizard, "I am looking for someone to share in an adventure."
 
 "No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today."
 
-Gandalf looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door.
+The Wizard looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door.
 
 + [Ask about the mark on the door]
-    "Oh, that's just a burglar mark," Gandalf says casually. "It means this is a good house to burgle."
+    "Oh, that's just a burglar mark," the Wizard says casually. "It means this is a good house to burgle."
     "BURGLE?!" you splutter. "I'll have you know this is a respectable household!"
     -> Bag_End
 + [Return to your comfortable armchair] -> Bag_End
 + [Ask about the adventure]
-    "Ah, now that's more like it!" Gandalf's eyes twinkle. "There's a dragon needs dealing with, and a treasure to be recovered. Perfectly straightforward."
+    "Ah, now that's more like it!" The Wizard's eyes twinkle. "There's a dragon needs dealing with, and a treasure to be recovered. Perfectly straightforward."
     "A DRAGON?!" you exclaim, nearly dropping your tea.
     -> Bag_End
 
@@ -198,22 +198,22 @@ Gandalf looks at you with raised eyebrows. "We shall see..." He puffs thoughtful
 
 # IMAGE: hobbit_pantry.svg
 
-"Hmm, burglar?" Thorin examines you skeptically. "You don't look like much of a thief to me."
+"Hmm, burglar?" The Dwarf examines you skeptically. "You don't look like much of a thief to me."
 
 "I'm not a burglar!" you protest. "I'm a respectable hobbit!"
 
-Thorin strokes his magnificent beard thoughtfully. "Perhaps... but Gandalf speaks highly of your people. He says you move quietly and have quick fingers."
+The Dwarf strokes his magnificent beard thoughtfully. "Perhaps... but the Wizard speaks highly of your people. He says you move quietly and have quick fingers."
 
 + [Show you can be stealthy]
     You creep around the kitchen as quietly as possible, managing to pocket a small cake without making a sound.
-    "Impressive," admits Thorin. "Perhaps you'll do after all."
+    "Impressive," admits the Dwarf. "Perhaps you'll do after all."
     -> Kitchen
 + [Insist you're not burglar material]
     "I'm perfectly respectable!" you declare. "I pay my taxes, tend my garden, and have never been on an adventure in my life!"
-    Thorin nods grimly. "Exactly what we need. Someone unexpected."
+    The Dwarf nods grimly. "Exactly what we need. Someone unexpected."
     -> Kitchen
 + [Ask about the treasure]
-    Thorin's eyes gleam. "The treasure of Erebor, stolen by the dragon Smaug. Gold beyond counting, and the Arkenstone - the Heart of the Mountain."
+    The Dwarf's eyes gleam. "The treasure of Erebor, stolen by the dragon Smaug. Gold beyond counting, and the Arkenstone - the Heart of the Mountain."
     Your own eyes widen despite yourself. That does sound rather exciting...
     -> Kitchen
 `
