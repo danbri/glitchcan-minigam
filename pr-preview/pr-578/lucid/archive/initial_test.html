@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <title>SDF Playground – DSL, Layers, Compositing</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #1e1e1e;
+      color: #fff;
+    }
+    raymarcher-app {
+      display: block;
+      height: 100vh;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <raymarcher-app></raymarcher-app>
+
+  <script type="module">
+    // ============================================================
+    // Import core utilities from extracted modules
+    // ============================================================
+    import {
+      appContext,
+      log,
+      parseDslToSceneGraph,
+      generateGlslFromSceneGraph,
+      initDefaultSceneGraph
+    } from './core/index.js';
+
+    // Expose globally for components (they expect window.appContext)
+    window.appContext = appContext;
+
+    // ============================================================
+    // Debug console element
+    // ============================================================
+
+    class DebugConsoleApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              background: #111827;
+              color: #e5e7eb;
+              box-sizing: border-box;
+              padding: 8px;
+              font-family: system-ui, -apple-system, sans-serif;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: #1f2937;
+              padding: 6px 8px;
+              border-radius: 4px;
+              font-size: 13px;
+            }
+            .content {
+              margin-top: 8px;
+              height: calc(100% - 40px);
+              overflow-y: auto;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+              font-size: 12px;
+            }
+            .entry { margin-bottom: 4px; }
+            .entry.info { color: #93c5fd; }
+            .entry.success { color: #86efac; }
+            .entry.error { color: #fca5a5; }
+            button {
+              background: #374151;
+              border: none;
+              border-radius: 4px;
+              color: #e5e7eb;
+              padding: 4px 8px;
+              font-size: 11px;
+              cursor: pointer;
+            }
+            button:hover { background: #4b5563; }
+          </style>
+          <div class="header">
+            <span>Debug</span>
+            <button id="clearBtn">Clear</button>
+          </div>
+          <div id="log" class="content"></div>
+        `;
+      }
+      connectedCallback() {
+        this.shadowRoot.getElementById("clearBtn")
+          .addEventListener("click", () => {
+            this.shadowRoot.getElementById("log").innerHTML = "";
+            appContext.debugLogger.clear();
+          });
+        this._onLog = this.onLog.bind(this);
+        this._onClear = this.onClear.bind(this);
+        window.addEventListener("debug-log", this._onLog);
+        window.addEventListener("debug-clear", this._onClear);
+      }
+      disconnectedCallback() {
+        window.removeEventListener("debug-log", this._onLog);
+        window.removeEventListener("debug-clear", this._onClear);
+      }
+      onLog(e) {
+        const { message, type, time } = e.detail;
+        const div = document.createElement("div");
+        div.className = "entry " + type;
+        div.textContent = "[" + time + "s] " + message;
+        const logEl = this.shadowRoot.getElementById("log");
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      onClear() {
+        this.shadowRoot.getElementById("log").innerHTML = "";
+      }
+    }
+    customElements.define("debug-console-app", DebugConsoleApp);
+
+    // ============================================================
+    // Node editor stub
+    // ============================================================
+
+    class NodeEditorApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              background: #111827;
+              color: #e5e7eb;
+              box-sizing: border-box;
+              padding: 12px;
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 14px;
+            }
+            h2 { margin: 0 0 8px 0; font-size: 16px; }
+            p { margin: 4px 0; line-height: 1.4; }
+            .tag {
+              display: inline-block;
+              padding: 2px 6px;
+              border-radius: 999px;
+              background: #4b5563;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-right: 6px;
+            }
+            .box {
+              margin-top: 8px;
+              padding: 8px;
+              border-radius: 6px;
+              background: #020617;
+              border: 1px dashed #374151;
+            }
+            ul {
+              padding-left: 18px;
+              margin: 4px 0;
+            }
+            li {
+              margin-bottom: 2px;
+            }
+          </style>
+          <h2>Node Editor (experimental)</h2>
+          <p>
+            <span class="tag">Design</span>
+            Placeholder for a future SDF node graph editor that round-trips with the text DSL.
+          </p>
+          <div class="box">
+            <p>MVP direction:</p>
+            <ul>
+              <li>Text DSL is the source of truth.</li>
+              <li>Node graph will be a structured view over the same IR.</li>
+              <li>Later: DSL ⇄ graph round-tripping and per-node parameters.</li>
+            </ul>
+          </div>
+        `;
+      }
+      connectedCallback() {
+        appContext.instances.nodeEditor = this;
+        log("Node editor stub initialized", "info");
+      }
+      disconnectedCallback() {
+        if (appContext.instances.nodeEditor === this) {
+          appContext.instances.nodeEditor = null;
+        }
+      }
+    }
+    customElements.define("node-editor-app", NodeEditorApp);
+
+    // Initialize default scene graph
+    initDefaultSceneGraph();
+
+    class GlslPreviewApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              background: #020617;
+              color: #e5e7eb;
+              box-sizing: border-box;
+              padding: 8px;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+              font-size: 12px;
+            }
+            .header {
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: space-between;
+              align-items: center;
+              padding: 6px 8px;
+              background: #111827;
+              border-radius: 6px;
+              margin-bottom: 6px;
+              gap: 6px;
+            }
+            .header-title {
+              font-size: 13px;
+              font-weight: 600;
+            }
+            .header-buttons {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 6px;
+              align-items: center;
+              justify-content: flex-end;
+            }
+            .btn-group {
+              display: flex;
+              gap: 4px;
+              flex-wrap: wrap;
+            }
+            button {
+              border: none;
+              cursor: pointer;
+              font-size: 11px;
+              white-space: nowrap;
+            }
+            .btn-ex {
+              background: #374151;
+              color: #e5e7eb;
+              border-radius: 999px;
+              padding: 3px 10px;
+            }
+            .btn-ex:hover {
+              background: #4b5563;
+            }
+            .btn-action {
+              background: #2563eb;
+              color: #e5e7eb;
+              border-radius: 4px;
+              padding: 4px 10px;
+              font-weight: 600;
+            }
+            .btn-action:hover {
+              background: #1d4ed8;
+            }
+            .content {
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+              height: calc(100% - 40px);
+              margin-top: 4px;
+            }
+            .pane {
+              flex: 1;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+            }
+            .pane-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #9ca3af;
+              margin-bottom: 2px;
+            }
+            textarea {
+              flex: 1;
+              width: 100%;
+              border-radius: 6px;
+              border: 1px solid #1f2937;
+              background: #020617;
+              color: #e5e7eb;
+              padding: 8px;
+              resize: none;
+              box-sizing: border-box;
+              white-space: pre;
+              -webkit-user-select: text;
+              user-select: text;
+              touch-action: auto;
+            }
+          </style>
+          <div class="header">
+            <div class="header-title">SDF DSL → GLSL</div>
+            <div class="header-buttons">
+              <div class="btn-group">
+                <button class="btn-ex" id="ex1">Two Spheres</button>
+                <button class="btn-ex" id="ex2">Box Minus Sphere</button>
+                <button class="btn-ex" id="ex3">Animated Blob</button>
+                <button class="btn-ex" id="ex4">Wandering Box</button>
+              </div>
+              <div class="btn-group">
+                <button class="btn-action" id="render">Render</button>
+                <button class="btn-action" id="reset">Reset</button>
+                <button class="btn-action" id="clear">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="pane">
+              <div class="pane-header">
+                <span>DSL (editable)</span>
+                <button class="btn-ex" id="selectDsl">Select</button>
+              </div>
+              <textarea id="dsl" spellcheck="false"></textarea>
+            </div>
+            <div class="pane">
+              <div class="pane-header">
+                <span>Generated GLSL</span>
+                <button class="btn-ex" id="selectGlsl">Select</button>
+              </div>
+              <textarea id="glsl" spellcheck="false" readonly></textarea>
+            </div>
+          </div>
+        `;
+      }
+
+      connectedCallback() {
+        appContext.instances.glslPreview = this;
+        const root = this.shadowRoot;
+
+        root.getElementById("render").addEventListener("click", () => this.applyDsl());
+        root.getElementById("reset").addEventListener("click", () => this.resetDsl());
+        root.getElementById("clear").addEventListener("click", () => this.clearDsl());
+        root.getElementById("ex1").addEventListener("click", () => this.loadExample(1));
+        root.getElementById("ex2").addEventListener("click", () => this.loadExample(2));
+        root.getElementById("ex3").addEventListener("click", () => this.loadExample(3));
+        root.getElementById("ex4").addEventListener("click", () => this.loadExample(4));
+        root.getElementById("selectDsl").addEventListener("click", () => this.selectTextarea("dsl"));
+        root.getElementById("selectGlsl").addEventListener("click", () => this.selectTextarea("glsl"));
+
+        const dslArea = root.getElementById("dsl");
+        if (dslArea.value.trim() === "") {
+          dslArea.value = DEFAULT_DSL;
+        }
+        this.applyDsl();
+      }
+
+      disconnectedCallback() {
+        if (appContext.instances.glslPreview === this) {
+          appContext.instances.glslPreview = null;
+        }
+      }
+
+      selectTextarea(id) {
+        const ta = this.shadowRoot.getElementById(id);
+        if (!ta) return;
+        ta.focus();
+        ta.select();
+      }
+
+      clearDsl() {
+        const dslArea = this.shadowRoot.getElementById("dsl");
+        dslArea.value = "";
+        appContext.sceneGraph = [];
+        this.refreshGlsl();
+        log("DSL cleared; sceneGraph reset", "info");
+        window.dispatchEvent(new CustomEvent("dsl-args-usage", {
+          detail: { arg_1: false, arg_2: false, arg_3: false, arg_4: false }
+        }));
+        if (appContext.instances.sdfRenderer) {
+          appContext.instances.sdfRenderer.rebuildProgramFromSceneGraph();
+        }
+      }
+
+      resetDsl() {
+        const dslArea = this.shadowRoot.getElementById("dsl");
+        dslArea.value = DEFAULT_DSL;
+        this.applyDsl();
+      }
+
+      loadExample(which) {
+        let text = "";
+        if (which === 1) {
+          text = [
+            "# Example 1: two colored spheres (uses arg_1 for radius tweak)",
+            "",
+            "n0 = sphere(",
+            "      r = 1.0 + arg_1,",
+            "      color = [1.0, 0.2, 0.2],",
+            "      offset = [-0.8, 0.0, 0.0]",
+            ")",
+            "n1 = sphere(",
+            "      r = 0.8,",
+            "      color = [0.2, 0.8, 1.0],",
+            "      offset = [0.8, 0.0, 0.0]",
+            ")",
+            "out = union(n0, n1)"
+          ].join("\n");
+        } else if (which === 2) {
+          text = [
+            "# Example 2: box with carved-out sphere",
+            "",
+            "b = box(",
+            "      s = [1.3, 0.9, 0.7],",
+            "      color = [0.2, 0.9, 0.4],",
+            "      rot = [0.0, 0.4, 0.0]",
+            ")",
+            "s = sphere(",
+            "      r = 0.9,",
+            "      color = [1.0, 0.9, 0.5],",
+            "      offset = [0.0, 0.0, 0.0]",
+            ")",
+            "out = subtract(b, s)"
+          ].join("\n");
+        } else if (which === 3) {
+          text = DEFAULT_DSL;
+        } else {
+          text = [
+            "# Example 4: wandering, tumbling box (uses quatEuler)",
+            "",
+            "s0 = box(",
+            "      s = [1.4, 1.0, 0.6],",
+            "      color = [0.4 + sin(time), 0.0, 1.0],",
+            "      offset = [0.4 + sin(time), 1.0, 0.0],",
+            "      rotq = quatEuler(1.2*time, 0.9*time, 0.7*time)",
+            ")",
+            "out = s0"
+          ].join("\n");
+        }
+        const dslArea = this.shadowRoot.getElementById("dsl");
+        dslArea.value = text;
+        this.applyDsl();
+      }
+
+      applyDsl() {
+        const dslArea = this.shadowRoot.getElementById("dsl");
+        const codeArea = this.shadowRoot.getElementById("glsl");
+        const text = dslArea.value || "";
+
+        // 1) Legacy parser (source of truth)
+        const { nodes, errors } = parseDslToSceneGraph(text);
+
+        // 2) Shadow parser (AST-only, defensively wrapped)
+        try {
+          const shadow = shadowParseDsl(text);
+          const ast = shadow.ast || [];
+          const errs = shadow.errors || [];
+          const counts = {
+            total: ast.length,
+            def: ast.filter(n => n.kind === "def").length,
+            assign: ast.filter(n => n.kind === "assign").length,
+            call: ast.filter(n => n.kind === "call").length,
+            ident: ast.filter(n => n.kind === "ident").length,
+            unknown: ast.filter(n => n.kind === "unknown").length
+          };
+          log(
+            "Shadow parser: " +
+              counts.total + " stmt(s), " +
+              counts.def + " def, " +
+              counts.assign + " assign, " +
+              counts.call + " call, " +
+              counts.ident + " ident, " +
+              counts.unknown + " unknown",
+            errs.length ? "error" : "info"
+          );
+          if (errs.length) {
+            log("Shadow parser notes: " + errs.slice(0, 3).join(" | "), "error");
+          }
+        } catch (e) {
+          log("Shadow parser exception: " + (e && e.message ? e.message : e), "error");
+        }
+
+        // args usage for UI sliders
+        const used = {
+          arg_1: /\barg_1\b/.test(text),
+          arg_2: /\barg_2\b/.test(text),
+          arg_3: /\barg_3\b/.test(text),
+          arg_4: /\barg_4\b/.test(text)
+        };
+        window.dispatchEvent(new CustomEvent("dsl-args-usage", { detail: used }));
+
+        if (errors.length) {
+          const header = "// DSL parse errors (legacy parser):\n// " + errors.join("\n// ") + "\n\n";
+          const oldCode = generateGlslFromSceneGraph(appContext.sceneGraph || []);
+          codeArea.value = header + oldCode;
+          log("DSL parse (legacy) failed with " + errors.length + " error(s)", "error");
+          return;
+        }
+
+        appContext.sceneGraph = nodes;
+        const glslCode = generateGlslFromSceneGraph(nodes);
+        codeArea.value = glslCode;
+        log("DSL applied via legacy parser: " + nodes.length + " node(s)", "success");
+
+        if (appContext.instances.sdfRenderer) {
+          const r = appContext.instances.sdfRenderer;
+          r.params.sceneMode = 3;
+          r.updateUniforms();
+          r.rebuildProgramFromSceneGraph();
+        }
+      }
+
+      refreshGlsl() {
+        const codeArea = this.shadowRoot.getElementById("glsl");
+        const code = generateGlslFromSceneGraph(appContext.sceneGraph || []);
+        codeArea.value = code;
+        log("GLSL preview refreshed from sceneGraph", "info");
+      }
+    }
+    customElements.define("glsl-preview-app", GlslPreviewApp);
+
+    // ============================================================
+    // Compositing editor: one-line GLSL combining layers
+    // ============================================================
+
+    const DEFAULT_COMPOSITE = [
+      "// Available: colSurf, colVol, colUtil, depthSurf, depthVol",
+      "// depthSurf/depthVol in [0,1]; 1.0 ~ no hit",
+      "finalColor = mix(colSurf, colVol, 0.4) + 0.2 * colUtil;"
+    ].join("\n");
+
+    class CompositeEditorApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              background: #020617;
+              color: #e5e7eb;
+              box-sizing: border-box;
+              padding: 8px;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+              font-size: 12px;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 6px 8px;
+              background: #111827;
+              border-radius: 6px;
+              margin-bottom: 6px;
+            }
+            button {
+              background: #2563eb;
+              border: none;
+              border-radius: 4px;
+              color: #e5e7eb;
+              padding: 4px 10px;
+              font-size: 11px;
+              cursor: pointer;
+              font-weight: 600;
+            }
+            button:hover { background: #1d4ed8; }
+            textarea {
+              width: 100%;
+              height: calc(100% - 40px);
+              border-radius: 6px;
+              border: 1px solid #1f2937;
+              background: #020617;
+              color: #e5e7eb;
+              padding: 8px;
+              box-sizing: border-box;
+              resize: none;
+              white-space: pre;
+            }
+          </style>
+          <div class="header">
+            <span>Compositing (GLSL one-liner)</span>
+            <button id="apply">Apply Composite</button>
+          </div>
+          <textarea id="expr" spellcheck="false"></textarea>
+        `;
+      }
+      connectedCallback() {
+        appContext.instances.compositeEditor = this;
+        const ta = this.shadowRoot.getElementById("expr");
+        if (!ta.value.trim()) ta.value = DEFAULT_COMPOSITE;
+        this.shadowRoot.getElementById("apply")
+          .addEventListener("click", () => this.apply());
+      }
+      disconnectedCallback() {
+        if (appContext.instances.compositeEditor === this) {
+          appContext.instances.compositeEditor = null;
+        }
+      }
+      apply() {
+        const expr = this.shadowRoot.getElementById("expr").value || DEFAULT_COMPOSITE;
+        window.dispatchEvent(new CustomEvent("composite-updated", {
+          detail: { expr }
+        }));
+        log("Composite expression updated", "info");
+      }
+    }
+    customElements.define("composite-editor-app", CompositeEditorApp);
+
+    // ============================================================
+    // SDF Renderer (three-layer, composited, edges, pause)
+    // ============================================================
+
+    class SdfRendererApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              background: #111827;
+              color: #e5e7eb;
+              box-sizing: border-box;
+              padding: 8px;
+            }
+            .container {
+              display: flex;
+              flex-direction: row;
+              height: 100%;
+              gap: 8px;
+            }
+            .canvas-wrap {
+              flex: 1;
+              min-width: 0;
+              display: flex;
+              align-items: stretch;
+              justify-content: center;
+            }
+            canvas {
+              width: 100%;
+              height: 100%;
+              border-radius: 8px;
+              background: #000;
+            }
+            .controls {
+              width: 260px;
+              max-width: 40%;
+              background: #020617;
+              border-radius: 8px;
+              padding: 8px;
+              box-sizing: border-box;
+              font-size: 13px;
+              overflow-y: auto;
+            }
+            .controls h3 {
+              margin: 4px 0 6px 0;
+              font-size: 14px;
+            }
+            .row {
+              display: grid;
+              grid-template-columns: 90px 1fr 46px;
+              gap: 6px;
+              align-items: center;
+              margin-bottom: 6px;
+            }
+            .row label { font-size: 12px; }
+            .row span.value {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+              font-size: 11px;
+              text-align: right;
+            }
+            .row-check {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-bottom: 6px;
+              font-size: 12px;
+            }
+            input[type="range"] {
+              width: 100%;
+              -webkit-appearance: none;
+              background: #1f2937;
+              height: 6px;
+              border-radius: 3px;
+            }
+            input[type="range"]::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              width: 14px;
+              height: 14px;
+              border-radius: 50%;
+              background: #2563eb;
+            }
+            select {
+              width: 100%;
+              padding: 6px;
+              border-radius: 4px;
+              border: 1px solid #374151;
+              background: #111827;
+              color: #e5e7eb;
+              font-size: 13px;
+              margin-bottom: 6px;
+            }
+            input[disabled]::-webkit-slider-thumb {
+              background: #6b7280;
+            }
+            @media (max-width: 768px) {
+              .container { flex-direction: column; }
+              .controls {
+                width: 100%;
+                max-width: 100%;
+                max-height: 40vh;
+              }
+              .canvas-wrap { flex: 0 0 60vh; }
+            }
+          </style>
+          <div class="container">
+            <div class="canvas-wrap">
+              <canvas id="canvas"></canvas>
+            </div>
+            <div class="controls">
+              <h3>Scene</h3>
+              <select id="preset">
+                <option value="dsl" selected>DSL Graph Render</option>
+                <option value="jellies">Jellies (sphere + box)</option>
+                <option value="vol-cubes">Volume Cubes</option>
+                <option value="vol-spheres">Volume Spheres</option>
+                <option value="vol-capsules">Volume Capsules</option>
+                <option value="ball">Bouncing Ball</option>
+              </select>
+
+              <h3>Camera & Shading</h3>
+              <div class="row-check">
+                <input id="orbitCamera" type="checkbox" checked />
+                <label for="orbitCamera">Orbit camera</label>
+              </div>
+              <div class="row-check">
+                <input id="edgeRender" type="checkbox" checked />
+                <label for="edgeRender">Edge render (DSL)</label>
+              </div>
+              <div class="row-check">
+                <input id="pauseRender" type="checkbox" />
+                <label for="pauseRender">Pause rendering</label>
+              </div>
+
+              <h3>Volume / DSL Raymarch</h3>
+              <div class="row">
+                <label>Steps</label>
+                <input id="steps" type="range" min="16" max="256" step="16" value="64" />
+                <span id="stepsVal" class="value">64</span>
+              </div>
+              <div class="row">
+                <label>Step Size</label>
+                <input id="stepSize" type="range" min="0.01" max="0.2" step="0.01" value="0.1" />
+                <span id="stepSizeVal" class="value">0.10</span>
+              </div>
+              <div class="row">
+                <label>Max Dist</label>
+                <input id="maxDist" type="range" min="5" max="20" step="1" value="10" />
+                <span id="maxDistVal" class="value">10</span>
+              </div>
+
+              <h3>DSL Args</h3>
+              <div class="row">
+                <label>arg_1</label>
+                <input id="arg1" type="range" min="-2.0" max="2.0" step="0.05" value="0.0" />
+                <span id="arg1Val" class="value">0.00</span>
+              </div>
+              <div class="row">
+                <label>arg_2</label>
+                <input id="arg2" type="range" min="-2.0" max="2.0" step="0.05" value="0.0" />
+                <span id="arg2Val" class="value">0.00</span>
+              </div>
+              <div class="row">
+                <label>arg_3</label>
+                <input id="arg3" type="range" min="-2.0" max="2.0" step="0.05" value="0.0" />
+                <span id="arg3Val" class="value">0.00</span>
+              </div>
+              <div class="row">
+                <label>arg_4</label>
+                <input id="arg4" type="range" min="-2.0" max="2.0" step="0.05" value="0.0" />
+                <span id="arg4Val" class="value">0.00</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        this.params = {
+          sceneMode: 3,     // 0=jellies, 1=volume shapes, 2=ball, 3=DSL
+          maxSteps: 64.0,
+          stepSize: 0.1,
+          maxDist: 10.0,
+          shape: 0,
+          ballRadius: 0.5,
+          cameraOrbit: 1,
+          enableEdges: 1,
+          arg1: 0.0,
+          arg2: 0.0,
+          arg3: 0.0,
+          arg4: 0.0
+        };
+
+        this.gl = null;
+        this.program = null;
+        this.uniforms = null;
+        this._rafId = 0;
+        this.compositeExpr = DEFAULT_COMPOSITE;
+
+        this._running = false;
+        this._userPaused = false;
+        this._visibilityHandler = null;
+      }
+
+      connectedCallback() {
+        appContext.instances.sdfRenderer = this;
+        this.initGL();
+        this.setupControls();
+        this.resizeCanvas();
+        window.addEventListener("resize", this._onResize = () => this.resizeCanvas());
+        window.addEventListener("dsl-args-usage",
+          this._onArgsUsage = (e) => this.updateArgUsage(e.detail));
+        window.addEventListener("composite-updated",
+          this._onComposite = (e) => this.updateComposite(e.detail.expr));
+
+        this._visibilityHandler = () => {
+          if (document.hidden) {
+            this.stopAnimation();
+          } else {
+            if (!this._userPaused) this.startAnimation();
+          }
+        };
+        document.addEventListener("visibilitychange", this._visibilityHandler);
+
+        this.startAnimation();
+        log("SDF renderer initialized", "success");
+      }
+
+      disconnectedCallback() {
+        window.removeEventListener("resize", this._onResize);
+        window.removeEventListener("dsl-args-usage", this._onArgsUsage);
+        window.removeEventListener("composite-updated", this._onComposite);
+        document.removeEventListener("visibilitychange", this._visibilityHandler);
+        this.stopAnimation();
+        if (appContext.instances.sdfRenderer === this) {
+          appContext.instances.sdfRenderer = null;
+        }
+      }
+
+      startAnimation() {
+        if (this._running || !this.gl) return;
+        this._running = true;
+        this._rafId = requestAnimationFrame((t) => this.animate(t));
+      }
+
+      stopAnimation() {
+        if (!this._running) return;
+        this._running = false;
+        if (this._rafId) cancelAnimationFrame(this._rafId);
+        this._rafId = 0;
+      }
+
+      resizeCanvas() {
+        const canvas = this.shadowRoot.getElementById("canvas");
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width || 300;
+        canvas.height = rect.height || 300;
+      }
+
+      updateArgUsage(detail) {
+        const root = this.shadowRoot;
+        const pairs = [
+          ["arg1", "arg_1"],
+          ["arg2", "arg_2"],
+          ["arg3", "arg_3"],
+          ["arg4", "arg_4"]
+        ];
+        pairs.forEach(([id, key]) => {
+          const input = root.getElementById(id);
+          input.disabled = !detail[key];
+        });
+      }
+
+      updateComposite(expr) {
+        this.compositeExpr = expr || DEFAULT_COMPOSITE;
+        this.buildProgramFromSceneGraph();
+      }
+
+      getFragmentSource(extraGraphCode, compositeExpr) {
+        const exprLines = (compositeExpr || DEFAULT_COMPOSITE).split(/\r?\n/);
+        const sanitized = exprLines.map((l) => l).join("\n");
+
+        return `
+precision highp float;
+uniform float u_time;
+uniform float u_maxSteps;
+uniform float u_stepSize;
+uniform float u_maxDist;
+uniform int   u_sceneMode;
+uniform int   u_shape;
+uniform float u_ballRadius;
+uniform int   u_cameraOrbit;
+uniform int   u_enableEdges;
+uniform float u_arg1;
+uniform float u_arg2;
+uniform float u_arg3;
+uniform float u_arg4;
+
+// DSL arg aliases
+#define arg_1 u_arg1
+#define arg_2 u_arg2
+#define arg_3 u_arg3
+#define arg_4 u_arg4
+
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+float sdBox(vec3 p, vec3 b) {
+  vec3 d = abs(p) - b;
+  return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+  vec3 pa = p - a;
+  vec3 ba = b - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h) - r;
+}
+
+${extraGraphCode}
+
+// jellies: sphere + box smooth union
+vec4 sampleJellies(vec3 p, out float sdf, out vec3 surfCol) {
+  vec3 p1 = p - vec3(0.8, 0.0, 0.0);
+  vec3 p2 = p + vec3(0.8, 0.0, 0.0);
+
+  float dSphere = sdSphere(p1, 1.0);
+  float dBox = sdBox(p2, vec3(1.0));
+
+  float d = dSphere;
+  float d2 = dBox;
+  float k = 0.2;
+  float h = clamp(0.5 + 0.5 * (d2 - d) / k, 0.0, 1.0);
+  float dBlend = mix(d2, d, h) - k * h * (1.0 - h);
+
+  vec3 color = 0.5 + 0.5 * cos(vec3(1.0, 2.0, 3.0) + dBlend * 2.0 + u_time);
+  float density = smoothstep(0.1, -0.1, dBlend) * 0.5;
+
+  sdf = dBlend;
+  surfCol = color;
+  return vec4(color, density);
+}
+
+// tiled volume shapes
+vec4 sampleVolumeShapes(vec3 p, out float sdf, out vec3 surfCol) {
+  vec3 q = mod(p + 2.0, 4.0) - 2.0;
+  float d;
+  if (u_shape == 0) {
+    d = sdBox(q, vec3(0.5));
+  } else if (u_shape == 1) {
+    d = sdSphere(q, 0.7);
+  } else {
+    d = sdCapsule(q, vec3(-0.3), vec3(0.3), 0.2);
+  }
+
+  vec3 color = 0.5 + 0.5 * cos(vec3(1.0,2.0,3.0) + p.z + u_time);
+  float density = smoothstep(0.1, -0.1, d) * 0.5;
+
+  vec3 grid = abs(mod(p + 0.5, 1.0) - 0.5);
+  float gridLines = min(min(grid.x, grid.y), grid.z);
+  float gridDensity = (1.0 - smoothstep(0.0, 0.02, gridLines)) * 0.1;
+
+  sdf = d;
+  surfCol = color;
+  return vec4(color, density + gridDensity);
+}
+
+// bouncing ball with squash & stretch
+vec4 sampleBallScene(vec3 p, out float sdf, out vec3 surfCol) {
+  float dGround = p.y;
+
+  float omega = 2.5;
+  float s = abs(sin(u_time * omega));
+  float bounceHeight = 2.0;
+  float radius = u_ballRadius;
+
+  float ballY = radius + s * bounceHeight;
+  vec3 ballCenter = vec3(0.0, ballY, 0.0);
+
+  vec3 q = p - ballCenter;
+
+  float contact = 1.0 - s;
+  float squash = contact * 0.4;
+  float sy = 1.0 - squash;
+  float sxz = 1.0 + squash;
+
+  vec3 qScaled = vec3(q.x / sxz, q.y / sy, q.z / sxz);
+  float dBall = length(qScaled) - radius;
+
+  float d = min(dBall, dGround);
+
+  vec3 ballColor = vec3(0.9, 0.5, 0.2);
+  vec3 groundColor = vec3(0.2, 0.7, 0.3);
+  vec3 color = mix(groundColor, ballColor, smoothstep(dGround, dBall, dBall));
+
+  float density = smoothstep(0.1, -0.1, d) * 0.7;
+  float groundBand = smoothstep(0.0, 0.3, -p.y) * 0.2;
+  density += groundBand;
+
+  sdf = d;
+  surfCol = color;
+  return vec4(color, density);
+}
+
+// estimate normal for DSL SDF via g_df_scene
+vec3 estimateNormal(vec3 p) {
+  float eps = 0.001;
+  float dx = g_df_scene(p + vec3(eps,0.0,0.0)).x - g_df_scene(p - vec3(eps,0.0,0.0)).x;
+  float dy = g_df_scene(p + vec3(0.0,eps,0.0)).x - g_df_scene(p - vec3(0.0,eps,0.0)).x;
+  float dz = g_df_scene(p + vec3(0.0,0.0,eps)).x - g_df_scene(p - vec3(0.0,0.0,eps)).x;
+  return normalize(vec3(dx, dy, dz));
+}
+
+void main() {
+  vec2 resolution = vec2(300.0, 300.0);
+  vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+
+  vec3 ro;
+  vec3 upHint;
+
+  if (u_cameraOrbit == 1) {
+    float theta = u_time * 0.5;
+    if (u_sceneMode == 2) {
+      ro = vec3(5.0 * sin(theta), 3.0, 5.0 * cos(theta));
+    } else {
+      ro = vec3(4.0 * sin(theta), 2.0, 4.0 * cos(theta));
+    }
+    upHint = normalize(vec3(0.05 * sin(u_time * 0.4), 1.0, 0.05 * cos(u_time * 0.6)));
+  } else {
+    ro = vec3(0.0, 2.5, 5.0);
+    upHint = vec3(0.0, 1.0, 0.0);
+  }
+
+  vec3 forward = normalize(-ro);
+  vec3 right = normalize(cross(upHint, forward));
+  vec3 up = cross(forward, right);
+  vec3 rd = normalize(uv.x * right + uv.y * up + 1.5 * forward);
+
+  vec3 colVol = vec3(0.0);
+  vec3 colSurf = vec3(0.0);
+  vec3 colUtil = vec3(0.0);
+  float trans = 1.0;
+  float t = 0.0;
+  bool hitSurf = false;
+  float depthSurf = 1.0;
+
+  for (float i = 0.0; i < 256.0; i += 1.0) {
+    if (i >= u_maxSteps || t > u_maxDist || trans < 0.01) break;
+    vec3 p = ro + rd * t;
+
+    float sdf = 9999.0;
+    vec3 surfCol = vec3(1.0);
+    vec4 sample;
+
+    if (u_sceneMode == 0) {
+      sample = sampleJellies(p, sdf, surfCol);
+    } else if (u_sceneMode == 1) {
+      sample = sampleVolumeShapes(p, sdf, surfCol);
+    } else if (u_sceneMode == 2) {
+      sample = sampleBallScene(p, sdf, surfCol);
+    } else {
+      sample = sampleGraphScene(p, sdf, surfCol);
+    }
+
+    if (!hitSurf && sdf < 0.001) {
+      hitSurf = true;
+      depthSurf = clamp(t / u_maxDist, 0.0, 1.0);
+      colSurf = surfCol;
+    }
+
+    colVol += trans * sample.rgb * sample.a * u_stepSize;
+    trans *= exp(-sample.a * u_stepSize * 2.0);
+
+    float adv = max(u_stepSize * 0.3, abs(sdf));
+    t += adv;
+  }
+
+  float depthVol = clamp(t / u_maxDist, 0.0, 1.0);
+  if (!hitSurf) colSurf = colVol;
+  colUtil = vec3(depthSurf);
+
+  vec3 colSurfLit = colSurf;
+  if (hitSurf && u_sceneMode == 3) {
+    float tHit = depthSurf * u_maxDist;
+    vec3 pSurf = ro + rd * tHit;
+    vec3 n = estimateNormal(pSurf);
+    float diff = clamp(dot(n, normalize(vec3(0.3, 0.7, 0.5))), 0.0, 1.0);
+    colSurfLit *= 0.5 + 0.5 * diff;
+  }
+
+  vec3 colSurfFinal = colSurfLit;
+  vec3 finalColor;
+${sanitized}
+  vec3 col = finalColor;
+
+  if (u_enableEdges == 1 && hitSurf && u_sceneMode == 3) {
+    float tHit = depthSurf * u_maxDist;
+    vec3 pSurf = ro + rd * tHit;
+    vec3 n = estimateNormal(pSurf);
+    float edge = pow(clamp(1.0 - abs(dot(n, rd)), 0.0, 1.0), 2.0);
+    col = mix(col, vec3(0.0), edge);
+  }
+
+  col += vec3(0.05);
+  col = col / (1.0 + col);
+  col = pow(col, vec3(0.4545));
+  gl_FragColor = vec4(col, 1.0);
+}
+        `;
+      }
+
+      initGL() {
+        const canvas = this.shadowRoot.getElementById("canvas");
+        const gl = canvas.getContext("webgl");
+        if (!gl) {
+          log("WebGL not available", "error");
+          return;
+        }
+        this.gl = gl;
+        this.buildProgramFromSceneGraph();
+      }
+
+      buildProgramFromSceneGraph() {
+        if (!this.gl) return;
+        const gl = this.gl;
+
+        const extra = generateGlslFromSceneGraph(appContext.sceneGraph || []);
+        const vsSource = `
+attribute vec4 a_position;
+void main() { gl_Position = a_position; }
+        `;
+        const fsSource = this.getFragmentSource(extra, this.compositeExpr);
+
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, vsSource);
+        gl.compileShader(vs);
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+          console.error("VS error:", gl.getShaderInfoLog(vs));
+        }
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, fsSource);
+        gl.compileShader(fs);
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+          const logMsg = gl.getShaderInfoLog(fs);
+          console.error("FS error:", logMsg);
+          log("Fragment shader compile failed; DSL/composite may not work.", "error");
+        }
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          console.error("Program link error:", gl.getProgramInfoLog(prog));
+          log("Program link error; renderer may be broken.", "error");
+        }
+
+        gl.useProgram(prog);
+        this.program = prog;
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+          gl.STATIC_DRAW
+        );
+        const posLoc = gl.getAttribLocation(prog, "a_position");
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        this.uniforms = {
+          time: gl.getUniformLocation(prog, "u_time"),
+          maxSteps: gl.getUniformLocation(prog, "u_maxSteps"),
+          stepSize: gl.getUniformLocation(prog, "u_stepSize"),
+          maxDist: gl.getUniformLocation(prog, "u_maxDist"),
+          sceneMode: gl.getUniformLocation(prog, "u_sceneMode"),
+          shape: gl.getUniformLocation(prog, "u_shape"),
+          ballRadius: gl.getUniformLocation(prog, "u_ballRadius"),
+          cameraOrbit: gl.getUniformLocation(prog, "u_cameraOrbit"),
+          enableEdges: gl.getUniformLocation(prog, "u_enableEdges"),
+          arg1: gl.getUniformLocation(prog, "u_arg1"),
+          arg2: gl.getUniformLocation(prog, "u_arg2"),
+          arg3: gl.getUniformLocation(prog, "u_arg3"),
+          arg4: gl.getUniformLocation(prog, "u_arg4")
+        };
+
+        this.updateUniforms();
+        log("WebGL program rebuilt from sceneGraph + composite", "info");
+      }
+
+      rebuildProgramFromSceneGraph() {
+        this.buildProgramFromSceneGraph();
+      }
+
+      updateUniforms() {
+        if (!this.gl || !this.uniforms) return;
+        const gl = this.gl;
+        gl.uniform1f(this.uniforms.maxSteps, this.params.maxSteps);
+        gl.uniform1f(this.uniforms.stepSize, this.params.stepSize);
+        gl.uniform1f(this.uniforms.maxDist, this.params.maxDist);
+        gl.uniform1i(this.uniforms.sceneMode, this.params.sceneMode);
+        gl.uniform1i(this.uniforms.shape, this.params.shape);
+        gl.uniform1f(this.uniforms.ballRadius, this.params.ballRadius);
+        gl.uniform1i(this.uniforms.cameraOrbit, this.params.cameraOrbit);
+        gl.uniform1i(this.uniforms.enableEdges, this.params.enableEdges);
+        gl.uniform1f(this.uniforms.arg1, this.params.arg1);
+        gl.uniform1f(this.uniforms.arg2, this.params.arg2);
+        gl.uniform1f(this.uniforms.arg3, this.params.arg3);
+        gl.uniform1f(this.uniforms.arg4, this.params.arg4);
+      }
+
+      animate(timeMs) {
+        if (!this._running || !this.gl || !this.uniforms) return;
+        const time = timeMs / 1000;
+        this.render(time);
+        this._rafId = requestAnimationFrame((t) => this.animate(t));
+      }
+
+      render(time) {
+        if (!this.gl || !this.uniforms) return;
+        const gl = this.gl;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.uniform1f(this.uniforms.time, time);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      setupControls() {
+        const root = this.shadowRoot;
+
+        const steps = root.getElementById("steps");
+        const stepsVal = root.getElementById("stepsVal");
+        const stepSize = root.getElementById("stepSize");
+        const stepSizeVal = root.getElementById("stepSizeVal");
+        const maxDist = root.getElementById("maxDist");
+        const maxDistVal = root.getElementById("maxDistVal");
+        const preset = root.getElementById("preset");
+        const orbitCamera = root.getElementById("orbitCamera");
+        const edgeRender = root.getElementById("edgeRender");
+        const pauseRender = root.getElementById("pauseRender");
+
+        const arg1 = root.getElementById("arg1");
+        const arg1Val = root.getElementById("arg1Val");
+        const arg2 = root.getElementById("arg2");
+        const arg2Val = root.getElementById("arg2Val");
+        const arg3 = root.getElementById("arg3");
+        const arg3Val = root.getElementById("arg3Val");
+        const arg4 = root.getElementById("arg4");
+        const arg4Val = root.getElementById("arg4Val");
+
+        const setText = (el, v, decimals) => {
+          el.textContent = v.toFixed(decimals);
+        };
+
+        steps.addEventListener("input", e => {
+          const v = parseFloat(e.target.value);
+          this.params.maxSteps = v;
+          stepsVal.textContent = v.toFixed(0);
+          this.updateUniforms();
+        });
+        stepSize.addEventListener("input", e => {
+          const v = parseFloat(e.target.value);
+          this.params.stepSize = v;
+          setText(stepSizeVal, v, 2);
+          this.updateUniforms();
+        });
+        maxDist.addEventListener("input", e => {
+          const v = parseFloat(e.target.value);
+          this.params.maxDist = v;
+          maxDistVal.textContent = v.toFixed(0);
+          this.updateUniforms();
+        });
+
+        orbitCamera.addEventListener("change", e => {
+          this.params.cameraOrbit = e.target.checked ? 1 : 0;
+          this.updateUniforms();
+        });
+
+        edgeRender.addEventListener("change", e => {
+          this.params.enableEdges = e.target.checked ? 1 : 0;
+          this.updateUniforms();
+        });
+
+        pauseRender.addEventListener("change", e => {
+          this._userPaused = e.target.checked;
+          if (this._userPaused) {
+            this.stopAnimation();
+          } else {
+            if (!document.hidden) this.startAnimation();
+          }
+        });
+
+        preset.addEventListener("change", e => {
+          const v = e.target.value;
+          if (v === "jellies") {
+            this.params.sceneMode = 0;
+          } else if (v === "vol-cubes" || v === "vol-spheres" || v === "vol-capsules") {
+            this.params.sceneMode = 1;
+            this.params.shape = (v === "vol-cubes") ? 0 :
+                                (v === "vol-spheres") ? 1 : 2;
+          } else if (v === "ball") {
+            this.params.sceneMode = 2;
+            this.params.maxSteps = 128.0;
+            this.params.stepSize = 0.05;
+            this.params.maxDist = 15.0;
+            steps.value = this.params.maxSteps;
+            stepsVal.textContent = this.params.maxSteps.toFixed(0);
+            stepSize.value = this.params.stepSize;
+            setText(stepSizeVal, this.params.stepSize, 2);
+            maxDist.value = this.params.maxDist;
+            maxDistVal.textContent = this.params.maxDist.toFixed(0);
+          } else {
+            this.params.sceneMode = 3;
+          }
+          this.updateUniforms();
+        });
+
+        const argHandler = (valEl, key) => e => {
+          const v = parseFloat(e.target.value);
+          this.params[key] = v;
+          setText(valEl, v, 2);
+          this.updateUniforms();
+        };
+        arg1.addEventListener("input", argHandler(arg1Val, "arg1"));
+        arg2.addEventListener("input", argHandler(arg2Val, "arg2"));
+        arg3.addEventListener("input", argHandler(arg3Val, "arg3"));
+        arg4.addEventListener("input", argHandler(arg4Val, "arg4"));
+
+        stepsVal.textContent = this.params.maxSteps.toFixed(0);
+        setText(stepSizeVal, this.params.stepSize, 2);
+        maxDistVal.textContent = this.params.maxDist.toFixed(0);
+        setText(arg1Val, this.params.arg1, 2);
+        setText(arg2Val, this.params.arg2, 2);
+        setText(arg3Val, this.params.arg3, 2);
+        setText(arg4Val, this.params.arg4, 2);
+      }
+    }
+    customElements.define("sdf-renderer-app", SdfRendererApp);
+
+    // ============================================================
+    // Main app container with tabs
+    // ============================================================
+
+    class RaymarcherApp extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              height: 100%;
+              overflow: hidden;
+            }
+            .tab-bar {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 44px;
+              display: flex;
+              background: #020617;
+              z-index: 10;
+              border-bottom: 1px solid #111827;
+            }
+            .tab-btn {
+              flex: 1;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 13px;
+              user-select: none;
+              cursor: pointer;
+              color: #9ca3af;
+              background: #020617;
+              border-bottom: 2px solid transparent;
+              font-weight: 500;
+            }
+            .tab-btn.active {
+              border-bottom-color: #22d3ee;
+              background: #1f2937;
+              color: #22d3ee;
+            }
+            .content {
+              height: calc(100% - 44px);
+              margin-top: 44px;
+            }
+            .tab {
+              display: none;
+              height: 100%;
+            }
+            .tab.active {
+              display: block;
+            }
+          </style>
+          <div class="tab-bar">
+            <div class="tab-btn active" data-tab="render">Render</div>
+            <div class="tab-btn" data-tab="glsl">DSL / GLSL</div>
+            <div class="tab-btn" data-tab="composite">Composite</div>
+            <div class="tab-btn" data-tab="debug">Debug</div>
+            <div class="tab-btn" data-tab="editor">Editor (exp)</div>
+          </div>
+          <div class="content">
+            <div id="tab-render" class="tab active">
+              <sdf-renderer-app style="width:100%; height:100%;"></sdf-renderer-app>
+            </div>
+            <div id="tab-glsl" class="tab">
+              <glsl-preview-app style="width:100%; height:100%;"></glsl-preview-app>
+            </div>
+            <div id="tab-composite" class="tab">
+              <composite-editor-app style="width:100%; height:100%;"></composite-editor-app>
+            </div>
+            <div id="tab-debug" class="tab">
+              <debug-console-app style="width:100%; height:100%;"></debug-console-app>
+            </div>
+            <div id="tab-editor" class="tab">
+              <node-editor-app style="width:100%; height:100%;"></node-editor-app>
+            </div>
+          </div>
+        `;
+      }
+
+      connectedCallback() {
+        const bar = this.shadowRoot.querySelector(".tab-bar");
+        const buttons = bar.querySelectorAll(".tab-btn");
+        buttons.forEach(btn => {
+          btn.addEventListener("click", () => this.switchTab(btn.dataset.tab));
+        });
+      }
+
+      switchTab(name) {
+        const buttons = this.shadowRoot.querySelectorAll(".tab-btn");
+        const tabs = this.shadowRoot.querySelectorAll(".tab");
+        buttons.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+        tabs.forEach(t => t.classList.toggle("active", t.id === "tab-" + name));
+        log("Switched to " + name + " tab", "info");
+
+        if (name === "glsl" && appContext.instances.glslPreview) {
+          appContext.instances.glslPreview.refreshGlsl();
+        }
+      }
+    }
+    customElements.define("raymarcher-app", RaymarcherApp);
+  </script>
+</body>
+</html>

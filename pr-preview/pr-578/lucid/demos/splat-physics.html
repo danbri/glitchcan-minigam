@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bouncing Objects</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    header {
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ff6b6b;
+    }
+
+    .stats {
+      font-size: 0.75rem;
+      color: #888;
+      display: flex;
+      gap: 12px;
+    }
+
+    .stats span {
+      color: #00d9ff;
+    }
+
+    canvas {
+      flex: 1;
+      width: 100%;
+      display: block;
+      background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+    }
+
+    .controls {
+      background: rgba(0,0,0,0.5);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .control-row label {
+      font-size: 0.8rem;
+      color: #888;
+      min-width: 70px;
+    }
+
+    .control-row input[type="range"] {
+      flex: 1;
+      height: 32px;
+      accent-color: #ff6b6b;
+    }
+
+    .control-row .value {
+      font-size: 0.85rem;
+      color: #ff6b6b;
+      min-width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .btn-ball {
+      background: linear-gradient(135deg, #00d9ff, #0099cc);
+      color: #000;
+    }
+
+    .btn-cube {
+      background: linear-gradient(135deg, #ff6b6b, #cc4444);
+      color: #fff;
+    }
+
+    .btn-clear {
+      background: rgba(255,255,255,0.1);
+      color: #888;
+      flex: 0.5;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #666;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Bouncing Objects</h1>
+      <div class="stats">
+        <div>Objects: <span id="count">0</span></div>
+      </div>
+    </header>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="controls">
+      <div class="control-row">
+        <label>Bounce</label>
+        <input type="range" id="bounce" min="0" max="100" value="70">
+        <span class="value" id="bounceVal">70%</span>
+      </div>
+
+      <div class="control-row">
+        <label>Gravity</label>
+        <input type="range" id="gravity" min="0" max="30" value="15">
+        <span class="value" id="gravityVal">15</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-ball" id="addBall">+ Ball</button>
+        <button class="btn-cube" id="addCube">+ Cube</button>
+        <button class="btn-clear" id="clear">Clear</button>
+      </div>
+    </div>
+
+    <div class="hint">Tap anywhere to drop objects</div>
+  </div>
+
+  <script type="module">
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Physics objects
+    const objects = [];
+    let nextId = 0;
+
+    // Parameters
+    let bounce = 0.7;
+    let gravity = 15;
+    let spawnType = 'ball';
+
+    // Constants
+    const FIXED_DT = 1 / 60;
+    const MAX_OBJECTS = 50;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function spawnObject(x, y, type) {
+      if (objects.length >= MAX_OBJECTS) {
+        objects.shift();  // Remove oldest
+      }
+
+      const size = 20 + Math.random() * 15;
+      const obj = {
+        id: nextId++,
+        type,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 100,
+        vy: -50 - Math.random() * 100,
+        size,
+        rotation: 0,
+        angularVel: type === 'cube' ? (Math.random() - 0.5) * 5 : 0,
+        hue: type === 'ball' ? 180 + Math.random() * 40 : 0 + Math.random() * 30
+      };
+      objects.push(obj);
+      updateCount();
+    }
+
+    function updateCount() {
+      document.getElementById('count').textContent = objects.length;
+    }
+
+    function stepPhysics() {
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const groundY = h - 30;
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+
+        // Apply gravity
+        obj.vy += gravity * 30 * FIXED_DT;
+
+        // Move
+        obj.x += obj.vx * FIXED_DT;
+        obj.y += obj.vy * FIXED_DT;
+        obj.rotation += obj.angularVel * FIXED_DT;
+
+        // Ground collision
+        const bottom = obj.y + obj.size / 2;
+        if (bottom > groundY) {
+          obj.y = groundY - obj.size / 2;
+          obj.vy = -obj.vy * bounce;
+          obj.vx *= 0.9;  // Friction
+
+          // Stop tiny bounces
+          if (Math.abs(obj.vy) < 20) {
+            obj.vy = 0;
+          }
+        }
+
+        // Wall collisions
+        if (obj.x - obj.size / 2 < 0) {
+          obj.x = obj.size / 2;
+          obj.vx = -obj.vx * bounce;
+        }
+        if (obj.x + obj.size / 2 > w) {
+          obj.x = w - obj.size / 2;
+          obj.vx = -obj.vx * bounce;
+        }
+
+        // Remove if fallen way off screen
+        if (obj.y > h + 100) {
+          objects.splice(i, 1);
+          updateCount();
+        }
+      }
+
+      // Object-object collisions (circle-circle for simplicity)
+      for (let i = 0; i < objects.length; i++) {
+        for (let j = i + 1; j < objects.length; j++) {
+          const a = objects[i];
+          const b = objects[j];
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = (a.size + b.size) / 2;
+
+          if (dist < minDist && dist > 0) {
+            // Collision detected - separate objects
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const overlap = minDist - dist;
+
+            // Push apart equally
+            a.x -= nx * overlap / 2;
+            a.y -= ny * overlap / 2;
+            b.x += nx * overlap / 2;
+            b.y += ny * overlap / 2;
+
+            // Relative velocity
+            const dvx = a.vx - b.vx;
+            const dvy = a.vy - b.vy;
+            const dvn = dvx * nx + dvy * ny;
+
+            // Only resolve if objects are approaching
+            if (dvn > 0) {
+              // Impulse (equal mass assumption)
+              const impulse = dvn * (1 + bounce) / 2;
+
+              a.vx -= impulse * nx;
+              a.vy -= impulse * ny;
+              b.vx += impulse * nx;
+              b.vy += impulse * ny;
+
+              // Add some spin on collision for cubes
+              if (a.type === 'cube') a.angularVel += (Math.random() - 0.5) * 2;
+              if (b.type === 'cube') b.angularVel += (Math.random() - 0.5) * 2;
+            }
+          }
+        }
+      }
+    }
+
+    function render() {
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      const groundY = h - 30;
+
+      // Clear with gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#0d0d1a');
+      grad.addColorStop(1, '#1a1a2e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw ground
+      ctx.fillStyle = '#2d2d44';
+      ctx.fillRect(0, groundY, w, h - groundY);
+
+      // Ground line
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(w, groundY);
+      ctx.stroke();
+
+      // Draw objects
+      for (const obj of objects) {
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.rotation);
+
+        if (obj.type === 'ball') {
+          // Ball with gradient
+          const grad = ctx.createRadialGradient(
+            -obj.size * 0.2, -obj.size * 0.2, 0,
+            0, 0, obj.size / 2
+          );
+          grad.addColorStop(0, `hsl(${obj.hue}, 80%, 70%)`);
+          grad.addColorStop(1, `hsl(${obj.hue}, 70%, 50%)`);
+          ctx.fillStyle = grad;
+
+          ctx.beginPath();
+          ctx.arc(0, 0, obj.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.beginPath();
+          ctx.arc(-obj.size * 0.15, -obj.size * 0.15, obj.size * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Cube
+          const half = obj.size / 2;
+          ctx.fillStyle = `hsl(${obj.hue}, 70%, 55%)`;
+          ctx.fillRect(-half, -half, obj.size, obj.size);
+
+          // Edge highlight
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-half, -half, obj.size, obj.size);
+
+          // Face lines
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(-half, 0);
+          ctx.lineTo(half, 0);
+          ctx.moveTo(0, -half);
+          ctx.lineTo(0, half);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      // Draw "tap zone" hint if no objects
+      if (objects.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.font = '48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👆', w / 2, h / 2 - 50);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillText('Tap to drop objects', w / 2, h / 2);
+      }
+    }
+
+    let lastTime = 0;
+    let accumulator = 0;
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+      accumulator += dt;
+
+      while (accumulator >= FIXED_DT) {
+        stepPhysics();
+        accumulator -= FIXED_DT;
+      }
+
+      render();
+    }
+
+    // Event handlers
+    function getEventPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function handleTap(e) {
+      e.preventDefault();
+      const pos = getEventPos(e);
+      spawnObject(pos.x, pos.y, spawnType);
+    }
+
+    // Setup
+    function init() {
+      // Canvas tap
+      canvas.addEventListener('touchstart', handleTap, { passive: false });
+      canvas.addEventListener('click', handleTap);
+
+      // Controls
+      document.getElementById('bounce').addEventListener('input', (e) => {
+        bounce = parseInt(e.target.value) / 100;
+        document.getElementById('bounceVal').textContent = e.target.value + '%';
+      });
+
+      document.getElementById('gravity').addEventListener('input', (e) => {
+        gravity = parseInt(e.target.value);
+        document.getElementById('gravityVal').textContent = gravity;
+      });
+
+      document.getElementById('addBall').addEventListener('click', (e) => {
+        e.stopPropagation();
+        spawnType = 'ball';
+        const rect = canvas.getBoundingClientRect();
+        spawnObject(rect.width / 2, 80, 'ball');
+      });
+
+      document.getElementById('addCube').addEventListener('click', (e) => {
+        e.stopPropagation();
+        spawnType = 'cube';
+        const rect = canvas.getBoundingClientRect();
+        spawnObject(rect.width / 2, 80, 'cube');
+      });
+
+      document.getElementById('clear').addEventListener('click', (e) => {
+        e.stopPropagation();
+        objects.length = 0;
+        updateCount();
+      });
+
+      // Resize
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Start
+      requestAnimationFrame(animate);
+    }
+
+    init();
+  </script>
+</body>
+</html>
