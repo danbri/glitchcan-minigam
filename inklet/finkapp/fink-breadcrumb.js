@@ -435,8 +435,10 @@ window.FinkBreadcrumb = {
             // FINK name with icon
             const finkName = document.createElement('span');
             finkName.className = 'breadcrumb-fink-name' + (isCurrentLevel ? ' breadcrumb-fink-current' : '');
-            finkName.textContent = (isCurrentLevel ? '📖 ' : '📁 ') + this.formatUrl(level.url);
-            finkName.title = isCurrentLevel ? 'Current story: ' + level.url : `Return to ${this.formatUrl(level.url)}`;
+            const formattedName = this.formatUrl(level.url);
+            finkName.textContent = (isCurrentLevel ? '📖 ' : '📁 ') + formattedName;
+            finkName.title = isCurrentLevel ? 'Current story: ' + level.url : `Return to ${formattedName}`;
+            FinkUtils.debugLog(`Breadcrumb renderKnots: Level ${levelIndex} - URL: ${level.url} → Display: "${formattedName}" (current: ${isCurrentLevel})`);
 
             // Make parent levels clickable
             if (!isCurrentLevel) {
