@@ -18,7 +18,6 @@ window.FinkUI = {
             storyImage: document.getElementById('story-image'),
             storyVideo: document.getElementById('story-video'),
             imageContainer: document.getElementById('image-container'),
-            dynamicMenuSection: document.getElementById('dynamic-menu-section'),
             // Stats
             statDiamonds: document.getElementById('stat-diamonds'),
             statMega: document.getElementById('stat-mega'),
@@ -214,40 +213,6 @@ window.FinkUI = {
         if (this.elements.choicesContainer) {
             this.elements.choicesContainer.innerHTML = '';
         }
-    },
-
-    // Dynamic menu from MENU: tags
-    populateDynamicMenu(menuItems) {
-        const section = this.elements.dynamicMenuSection;
-        if (!section) return;
-
-        section.innerHTML = '<div class="dropdown-header">Navigation</div>';
-
-        if (!menuItems || menuItems.length === 0) {
-            section.style.display = 'none';
-            return;
-        }
-
-        menuItems.forEach(item => {
-            const button = document.createElement('button');
-            button.className = 'dropdown-item';
-            button.textContent = item.label;
-            button.addEventListener('click', () => {
-                if (window.FinkInkEngine?.story) {
-                    try {
-                        FinkInkEngine.story.ChoosePathString(item.target);
-                        this.clearStory();
-                        this.clearChoices();
-                        FinkInkEngine.continueStory();
-                    } catch (error) {
-                        FinkUtils.debugLog('Menu navigation error: ' + error.message);
-                    }
-                }
-            });
-            section.appendChild(button);
-        });
-
-        section.style.display = 'block';
     },
 
     // Image and media handling

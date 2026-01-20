@@ -15,7 +15,7 @@ window.FinkInkEngine = {
 
         try {
             this.finkStoryContent = finkContent;
-            this.currentStoryTags = { menu: [], images: [], basehref: null };
+            this.currentStoryTags = { images: [], basehref: null };
             this.pendingMinigame = null;
 
             const inkSuccess = await this.tryInkCompilation(finkContent);
@@ -109,11 +109,6 @@ window.FinkInkEngine = {
                 FinkPlayer.mediaBasePath = this.currentStoryTags.basehref.endsWith('/') ?
                                            this.currentStoryTags.basehref :
                                            this.currentStoryTags.basehref + '/';
-            }
-
-            // Populate dynamic menu
-            if (this.currentStoryTags.menu && this.currentStoryTags.menu.length > 0) {
-                FinkUI.populateDynamicMenu(this.currentStoryTags.menu);
             }
 
             // Build navigation map and check for deep links
@@ -366,7 +361,7 @@ window.FinkInkEngine = {
 
     // Extract story-level tags from compiled INK Story
     extractStoryTagsFromINK() {
-        const tags = { menu: [], images: [], basehref: null };
+        const tags = { images: [], basehref: null };
 
         if (!this.story) return tags;
 
@@ -377,12 +372,7 @@ window.FinkInkEngine = {
         FinkUtils.debugLog('Extracting story-level tags: [' + allTags.join(', ') + ']');
 
         allTags.forEach(tag => {
-            if (tag.includes('MENU:')) {
-                const menuMatch = tag.match(/MENU:\s*(.+?)\s*->\s*(.+)/);
-                if (menuMatch) {
-                    tags.menu.push({ label: menuMatch[1], target: menuMatch[2] });
-                }
-            } else if (tag.includes('BASEHREF:')) {
+            if (tag.includes('BASEHREF:')) {
                 const basehrefMatch = tag.match(/BASEHREF:\s*(.*)/);
                 if (basehrefMatch) {
                     tags.basehref = basehrefMatch[1].trim();
