@@ -135,6 +135,82 @@ Outgoing links (to GitHub, external sites) should display a dedicated warning UI
 
 ---
 
+### BUG-008: Investigate 500ms delay in handleExternalFinkLoading
+**Severity:** Low (Technical debt / Performance)
+**File:** `inklet/finkapp/fink-ink-engine.js` (lines 330-334)
+**Reported:** 2026-01-20
+**Status:** OPEN - Needs investigation
+**Related:** GitHub issue #579
+
+**Current code:**
+```javascript
+// 500ms delay before loading (matches working hamfink2026 timing)
+setTimeout(() => {
+    FinkSandbox.clearLoadRecord(resolvedUrl);
+    FinkSandbox.loadViaSandbox(resolvedUrl)
+    ...
+}, 500);
+```
+
+**Code trace - What happens BEFORE the delay (lines 261-285):**
+1. `FinkUI.replaceStoryContent(storyFragment)` - DOM update with text
+2. `FinkUI.updateImageFromINKTags(this.story)` - DOM update for image
+3. `FinkNavigation.updateFragment(detectedKnot)` - **ASYNC**: calls `generateFinkLinkId()` which uses `crypto.subtle.digest()` (SHA-256)
+4. `FinkBreadcrumb.recordKnot(detectedKnot)` - Breadcrumb state update
+5. `FinkUI.showStatus('Loading...')` - Shows loading indicator
+
+**Code trace - What happens INSIDE the setTimeout:**
+1. `FinkSandbox.clearLoadRecord(resolvedUrl)` - Clears duplicate detection
+2. `FinkSandbox.loadViaSandbox(resolvedUrl)`:
+   - `fetch()` the .fink.js file content (async network I/O)
+   - `cleanupSandbox()` - Removes any existing iframe
+   - Creates new iframe with `sandbox="allow-scripts"`
+   - Sets up postMessage handlers
+   - Waits for `sandbox-ready` message
+   - Sends script content to sandbox
+   - Waits for `fink-loaded` response
+
+**Risk analysis for REMOVING the delay:**
+
+| Risk | Severity | Details |
+|------|----------|---------|
+| SHA-256 hash race | MEDIUM | `updateFragment()` uses async `crypto.subtle.digest()`. If new FINK loads before hash completes, URL might show stale/wrong hash during transition. |
+| DOM render race | LOW | Browser may not have rendered the "Loading..." status before new content replaces it. Perceived as instant transition (could be good or bad UX). |
+| Sandbox cleanup | LOW | `cleanupSandbox()` called at start of `loadViaSandbox()`. Existing sandbox is removed synchronously; unlikely to cause issues. |
+| Event loop pressure | LOW | 500ms gives microtasks/macrotasks breathing room. Without delay, rapid clicking could queue multiple loads. (Mitigated by duplicate detection.) |
+| User feedback | LOW | Users might not see "Loading..." flash. Could feel too abrupt on slow connections. |
+
+**Likely safe to remove because:**
+- SHA-256 hash is for deep-linking/bookmarking only, not critical path
+- Sandbox has its own 5s setup timeout + 15s execution timeout
+- Duplicate detection prevents accidental double-loads
+- All async operations have error handling
+
+**Recommendation:**
+Try removing the delay on a test branch and verify:
+1. Fast story transitions still work (TOC → Bagend → Chapter navigation)
+2. Deep links still work after removing delay
+3. No console errors during rapid navigation
+4. "Loading..." status still visible on slow connections (add artificial 1s delay to fetch for testing)
+
+**Test cases needed:**
+```javascript
+// Test 1: Rapid navigation
+// Click Bagend, immediately click back, immediately click Diamond Cave
+// Expected: No errors, no stuck states
+
+// Test 2: Deep link during transition
+// Navigate to Bagend, copy URL hash, refresh page
+// Expected: Deep link resolves correctly
+
+// Test 3: Network latency simulation
+// DevTools → Network → Slow 3G
+// Navigate to external FINK
+// Expected: "Loading..." visible, then content appears
+```
+
+---
+
 ## Resolved Bugs
 
 (none yet)
