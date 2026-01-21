@@ -96,27 +96,23 @@ You stand in a glowing space filled with floating game cabinets. Each one hums w
 + Return to the World Between Worlds -> world_between_worlds
 
 === play_gems ===
-A small chest appears before you, gems spilling from its lid...
-# MINIGAME: gems display=inline
-The gems glitter invitingly. You can collect them as you continue your journey.
+# MINIGAME: gems
+Gems scatter before you, waiting to be collected...
 -> arcade_return
 
 === play_mudslider ===
-The cave entrance yawns before you, promising adventure...
-# MINIGAME: mudslider display=medium
-Click to enter the mines when you're ready.
+# MINIGAME: mudslider
+The cave entrance yawns before you...
 -> arcade_return
 
 === play_battleboids ===
-Flocks of strange creatures gather, awaiting your command...
-# MINIGAME: battleboids display=medium
-Guide your wizard flock to victory!
+# MINIGAME: battleboids
+Flocks of strange creatures await your command...
 -> arcade_return
 
 === play_gridluck ===
-The maze materializes around you, ghosts stirring in the darkness...
-# MINIGAME: gridluck display=medium
-Navigate the maze and collect all the pellets!
+# MINIGAME: gridluck
+The maze materializes around you...
 -> arcade_return
 
 === arcade_return ===

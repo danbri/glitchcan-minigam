@@ -125,6 +125,93 @@ window.FinkMinigames = {
                 }
             });
         }
+
+        // Double-click minimized pip to restore
+        if (this.elements.minigameView) {
+            this.elements.minigameView.addEventListener('dblclick', (e) => {
+                if (this.windowState.minimized) {
+                    e.preventDefault();
+                    this.toggleMinimize(); // Restore from pip
+                }
+            });
+
+            // Make pip draggable when minimized or pinned
+            this._initDragging();
+        }
+    },
+
+    // Dragging state
+    _dragState: {
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+        startLeft: 0,
+        startBottom: 0
+    },
+
+    // Initialize dragging for minimized/pinned states
+    _initDragging() {
+        const view = this.elements.minigameView;
+        const controls = document.getElementById('minigame-controls');
+        if (!view || !controls) return;
+
+        const startDrag = (e) => {
+            // Only drag when minimized or pinned
+            if (!this.windowState.minimized && !this.windowState.pinned) return;
+            // Don't drag when clicking buttons
+            if (e.target.tagName === 'BUTTON') return;
+
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+
+            this._dragState.isDragging = true;
+            this._dragState.startX = touch.clientX;
+            this._dragState.startY = touch.clientY;
+
+            // Get current position
+            const rect = view.getBoundingClientRect();
+            this._dragState.startLeft = rect.left;
+            this._dragState.startBottom = window.innerHeight - rect.bottom;
+
+            view.style.transition = 'none';
+        };
+
+        const doDrag = (e) => {
+            if (!this._dragState.isDragging) return;
+
+            const touch = e.touches ? e.touches[0] : e;
+            const deltaX = touch.clientX - this._dragState.startX;
+            const deltaY = touch.clientY - this._dragState.startY;
+
+            const newLeft = this._dragState.startLeft + deltaX;
+            const newBottom = this._dragState.startBottom - deltaY;
+
+            // Clamp to viewport
+            const rect = view.getBoundingClientRect();
+            const maxLeft = window.innerWidth - rect.width;
+            const maxBottom = window.innerHeight - rect.height;
+
+            view.style.left = Math.max(0, Math.min(maxLeft, newLeft)) + 'px';
+            view.style.bottom = Math.max(0, Math.min(maxBottom, newBottom)) + 'px';
+            view.style.right = 'auto';
+        };
+
+        const endDrag = () => {
+            if (this._dragState.isDragging) {
+                this._dragState.isDragging = false;
+                view.style.transition = '';
+            }
+        };
+
+        // Mouse events
+        controls.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', endDrag);
+
+        // Touch events
+        controls.addEventListener('touchstart', startDrag, { passive: false });
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('touchend', endDrag);
     },
 
     // Toggle pause state
@@ -170,9 +257,15 @@ window.FinkMinigames = {
         this.log(`Minigame ${this.windowState.pinned ? 'pinned' : 'unpinned'}`);
     },
 
-    // Toggle minimize state
+    // Toggle minimize state (pip mode)
     toggleMinimize() {
-        // Can't minimize if maximized
+        const view = this.elements.minigameView;
+
+        // Add transition class for smooth animation
+        view?.classList.add('transitioning');
+        setTimeout(() => view?.classList.remove('transitioning'), 350);
+
+        // If maximized, first restore then minimize
         if (this.windowState.maximized) {
             this.windowState.maximized = false;
             this.elements.maximizeBtn?.classList.remove('active');
@@ -181,35 +274,96 @@ window.FinkMinigames = {
         this.windowState.minimized = !this.windowState.minimized;
 
         if (this.windowState.minimized) {
-            // Auto-pin when minimizing
-            if (!this.windowState.pinned) {
-                this.windowState.pinned = true;
-                this.elements.narrativeView?.classList.add('active');
-                this.elements.pinBtn?.classList.add('active');
+            // Reset position to default corner when minimizing
+            if (view) {
+                view.style.left = '';
+                view.style.right = '20px';
+                view.style.bottom = '80px';
             }
+
+            // Show narrative view when minimized
+            this.elements.narrativeView?.classList.add('active');
             this.elements.minimizeBtn?.classList.add('active');
+
+            // Update button icon
+            if (this.elements.minimizeBtn) {
+                this.elements.minimizeBtn.textContent = '🗗'; // Restore icon
+                this.elements.minimizeBtn.title = 'Restore';
+            }
         } else {
+            // Restore from pip
+            if (view) {
+                view.style.left = '';
+                view.style.right = '';
+                view.style.bottom = '';
+            }
+
+            // Hide narrative if not pinned
+            if (!this.windowState.pinned) {
+                this.elements.narrativeView?.classList.remove('active');
+            }
             this.elements.minimizeBtn?.classList.remove('active');
+
+            // Update button icon
+            if (this.elements.minimizeBtn) {
+                this.elements.minimizeBtn.textContent = '🗕';
+                this.elements.minimizeBtn.title = 'Minimize';
+            }
         }
 
         this._updateWindowState();
-        this.log(`Minigame ${this.windowState.minimized ? 'minimized' : 'restored'}`);
+        this.log(`Minigame ${this.windowState.minimized ? 'minimized to pip' : 'restored from pip'}`);
     },
 
-    // Toggle maximize state
+    // Toggle maximize state (true fullscreen)
     toggleMaximize() {
-        // Can't maximize if minimized
+        const view = this.elements.minigameView;
+
+        // Add transition class for smooth animation
+        view?.classList.add('transitioning');
+        setTimeout(() => view?.classList.remove('transitioning'), 350);
+
+        // If minimized, restore first
         if (this.windowState.minimized) {
             this.windowState.minimized = false;
             this.elements.minimizeBtn?.classList.remove('active');
+            if (this.elements.minimizeBtn) {
+                this.elements.minimizeBtn.textContent = '🗕';
+            }
         }
 
         this.windowState.maximized = !this.windowState.maximized;
 
         if (this.windowState.maximized) {
+            // Reset any custom positioning
+            if (view) {
+                view.style.left = '';
+                view.style.right = '';
+                view.style.bottom = '';
+            }
+
+            // Hide pinned state when maximized
+            if (this.windowState.pinned) {
+                this.windowState.pinned = false;
+                this.elements.pinBtn?.classList.remove('active');
+            }
+
             this.elements.maximizeBtn?.classList.add('active');
+            this.elements.narrativeView?.classList.remove('active');
+
+            // Update button icon
+            if (this.elements.maximizeBtn) {
+                this.elements.maximizeBtn.textContent = '🗗'; // Restore icon
+                this.elements.maximizeBtn.title = 'Restore';
+            }
         } else {
             this.elements.maximizeBtn?.classList.remove('active');
+
+            // Update button icon
+            if (this.elements.maximizeBtn) {
+                this.elements.maximizeBtn.textContent = '🗖';
+                this.elements.maximizeBtn.title = 'Maximize';
+            }
         }
 
         this._updateWindowState();
@@ -229,6 +383,8 @@ window.FinkMinigames = {
 
     // Reset window state when minigame ends
     _resetWindowState() {
+        const view = this.elements.minigameView;
+
         this.windowState = {
             paused: false,
             pinned: false,
@@ -237,12 +393,30 @@ window.FinkMinigames = {
         };
         this._updateWindowState();
 
-        // Reset button states
+        // Reset any custom positioning
+        if (view) {
+            view.style.left = '';
+            view.style.right = '';
+            view.style.bottom = '';
+        }
+
+        // Reset button states and icons
         this.elements.pauseBtn?.classList.remove('active');
         if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸️';
+
         this.elements.pinBtn?.classList.remove('active');
+
         this.elements.minimizeBtn?.classList.remove('active');
+        if (this.elements.minimizeBtn) {
+            this.elements.minimizeBtn.textContent = '🗕';
+            this.elements.minimizeBtn.title = 'Minimize';
+        }
+
         this.elements.maximizeBtn?.classList.remove('active');
+        if (this.elements.maximizeBtn) {
+            this.elements.maximizeBtn.textContent = '🗖';
+            this.elements.maximizeBtn.title = 'Maximize';
+        }
     },
 
     // Start a minigame by type

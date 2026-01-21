@@ -230,25 +230,21 @@ window.FinkInkEngine = {
                             FinkUtils.debugLog('FINK tag detected: ' + value);
                             break;
                         case 'MINIGAME':
-                            // Parse: "gems display=inline" or "mudslider mode=cave display=medium"
+                            // Parse: "mudslider mode=cave" or just "chess"
                             const mgParts = value.toLowerCase().split(/\s+/);
                             const mgName = mgParts[0];
                             let mgMode = 'normal';
-                            let mgDisplay = 'full'; // full, medium, inline
-                            // Look for parameters
+                            // Look for mode=xxx parameter
                             mgParts.slice(1).forEach(p => {
                                 if (p.startsWith('mode=')) mgMode = p.replace('mode=', '');
-                                if (p.startsWith('display=')) mgDisplay = p.replace('display=', '');
                             });
                             if (mgName === 'chess') minigameType = 'chess';
                             else if (mgName === 'mega') minigameType = 'mega';
                             else if (mgName === 'mudslider') minigameType = 'mudslider';
                             else minigameType = mgName || 'normal';
                             minigameMode = mgMode;
-                            // Store display mode for use below
-                            this._pendingMinigameDisplay = mgDisplay;
                             shouldStartMinigame = true;
-                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType + ' (mode: ' + mgMode + ', display: ' + mgDisplay + ')');
+                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType + ' (mode: ' + mgMode + ')');
                             break;
                         case 'FOLEY':
                             FinkUtils.debugLog('FOLEY tag: ' + value);
@@ -339,20 +335,8 @@ window.FinkInkEngine = {
             }
 
             if (shouldStartMinigame && window.FinkMinigames) {
-                const mgDisplay = this._pendingMinigameDisplay || 'full';
-                this._pendingMinigameDisplay = null;  // Clear after use
-
-                if (mgDisplay === 'inline' || mgDisplay === 'medium') {
-                    // Create inline/embedded minigame container
-                    const container = FinkMinigames.createInlineContainer(minigameType, mgDisplay);
-                    FinkUI.appendStoryContent(container);
-                    FinkUtils.debugLog('Inserted inline minigame container: ' + minigameType);
-                    // Continue story flow (don't block on inline games)
-                    this.continueStory();
-                } else {
-                    // Full mode: take over view (existing behavior)
-                    setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode), 800);
-                }
+                // Start minigame - user can use window controls to minimize/maximize
+                setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode), 800);
                 return;
             }
 

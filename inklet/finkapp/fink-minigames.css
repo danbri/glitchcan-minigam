@@ -32,6 +32,8 @@
     justify-content: stretch;
     flex-direction: column;
     overflow-y: auto;
+    /* Smooth transitions for all window state changes */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- Minigame Control Bar --- */
@@ -44,6 +46,12 @@
     justify-content: flex-end;
     z-index: 10;
     flex-shrink: 0;
+    /* Draggable handle area */
+    cursor: grab;
+}
+
+#minigame-controls:active {
+    cursor: grabbing;
 }
 
 #minigame-controls button {
@@ -167,29 +175,46 @@
     opacity: 1;
 }
 
-/* --- Minimized State --- */
+/* --- Minimized State (Picture-in-Picture pip) --- */
 #minigame-view.minimized {
     position: fixed;
     bottom: 80px;
     right: 20px;
-    width: 120px;
-    height: 80px;
+    width: 160px;
+    height: 100px;
     border-radius: var(--border-radius-md);
     border: 2px solid var(--zx-blue);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3);
     z-index: 1000;
     overflow: hidden;
+    /* Pip is draggable */
+    cursor: move;
+    /* Subtle breathing animation */
+    animation: pipBreath 3s ease-in-out infinite;
+}
+
+@keyframes pipBreath {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3); }
+    50% { box-shadow: 0 4px 25px rgba(0,0,0,0.6), 0 0 0 2px rgba(0,150,255,0.5); }
+}
+
+#minigame-view.minimized:hover {
+    border-color: var(--zx-cyan);
+    animation: none;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.6), 0 0 15px rgba(0,200,255,0.4);
 }
 
 #minigame-view.minimized #minigame-controls {
-    padding: 0.2em;
-    gap: 0.2em;
+    padding: 0.15em;
+    gap: 0.15em;
+    background: rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(0,150,255,0.3);
 }
 
 #minigame-view.minimized #minigame-controls button {
-    width: 1.5em;
-    height: 1.5em;
-    font-size: 0.8em;
+    width: 1.3em;
+    height: 1.3em;
+    font-size: 0.7em;
 }
 
 #minigame-view.minimized #minigame-instructions,
@@ -197,33 +222,87 @@
     display: none;
 }
 
-/* --- Maximized State --- */
+/* Double-click hint on pip */
+#minigame-view.minimized::after {
+    content: '🔲';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 0.8em;
+    opacity: 0.4;
+}
+
+/* --- Maximized State (True fullscreen) --- */
 #minigame-view.maximized {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100vw !important;
+    height: 100vh !important;
     z-index: 2000;
     border-radius: 0;
+    border: none;
+    background: #000;
 }
 
-/* --- Pinned State (show alongside narrative) --- */
+#minigame-view.maximized #minigame-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    border-radius: 0 0 0 var(--border-radius-md);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-left: 1px solid rgba(255,255,255,0.1);
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+#minigame-view.maximized #minigame-controls:hover {
+    opacity: 1;
+}
+
+#minigame-view.maximized #minigame-content {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- Pinned State (Picture-in-Picture while reading) --- */
 #minigame-view.pinned {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 300px;
-    height: 250px;
+    width: 320px;
+    height: 240px;
     border-radius: var(--border-radius-md);
     border: 2px solid var(--zx-green);
-    box-shadow: 0 4px 30px rgba(0,255,100,0.2);
+    box-shadow: 0 4px 30px rgba(0,255,100,0.2), 0 0 0 1px rgba(0,255,100,0.1);
     z-index: 500;
+    /* Resizable */
+    resize: both;
+    min-width: 200px;
+    min-height: 150px;
+    max-width: 80vw;
+    max-height: 60vh;
 }
 
 #minigame-view.pinned #minigame-instructions,
 #minigame-view.pinned #minigame-score {
     display: none;
+}
+
+/* Resize handle indicator */
+#minigame-view.pinned::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, transparent 50%, var(--zx-green) 50%);
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 /* Pinned indicator glow */
@@ -235,6 +314,11 @@
 @keyframes pinGlow {
     0%, 100% { box-shadow: 0 0 5px var(--zx-green); }
     50% { box-shadow: 0 0 15px var(--zx-green); }
+}
+
+/* --- Window State Transitions --- */
+#minigame-view.transitioning {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* --- Mobile Adjustments --- */
