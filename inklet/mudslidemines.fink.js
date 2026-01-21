@@ -34,9 +34,22 @@ You enter a low-walled area built from stone blocks. Several large, golden snake
 
 === Dark_Cave ===
 # IMAGE: 8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png
-The air grows cool and damp as you step into a dark cave entrance. Water drips somewhere within, echoing off unseen walls.
+The air grows cool and damp as you step into a dark cave entrance. Water drips somewhere within, echoing off unseen walls. The cave walls are studded with glittering gems...
 + [Return to the sunlit clearing] -> Crash_Site_Clearing
 + [Follow the sound of rushing water] -> Waterfall_Base
++ [Explore the gem-studded depths] -> Cave_Exploration
+
+=== Cave_Exploration ===
+# IMAGE: 8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png
+# MINIGAME: mudslider mode=cave
+You venture deeper into the twisting cave passages...
+-> Cave_Return
+
+=== Cave_Return ===
+# IMAGE: 8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png
+You emerge from the depths, pockets heavy with gems and treasures. The experience has left you wiser about the dangers lurking in these ancient ruins.
++ [Return to the cave entrance] -> Dark_Cave
++ [Rest and continue exploring] -> Crash_Site_Clearing
 
 === Control_Room ===
 # IMAGE: 596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png

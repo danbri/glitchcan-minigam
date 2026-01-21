@@ -157,6 +157,8 @@
     <div id="minigame-view" class="view">
         <div id="game-container"></div>
         <div id="chess-container" style="display:none; width:100%; height:100%;"></div>
+        <!-- Sandboxed iframe for external minigames (slovib, etc) -->
+        <div id="iframe-minigame-container" style="display:none; width:100%; height:100%;"></div>
         <div id="minigame-instructions">Click the gems to collect them!</div>
         <div id="minigame-score">Collected: <span id="gems-collected">0</span></div>
         <button id="returnToStory">Return to Story</button>
@@ -189,6 +191,7 @@
 <script src="fink-ui.js"></script>
 <script src="gems.minigam.js"></script>
 <script src="chess.minigam.js"></script>
+<script src="../minigames/minigame-host.js"></script>
 <script src="fink-minigames.js"></script>
 <script src="fink-ink-engine.js"></script>
 <script src="fink-player.js"></script>

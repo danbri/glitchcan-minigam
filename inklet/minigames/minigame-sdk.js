@@ -1,0 +1,256 @@
+/**
+ * MinigameSDK - Client-side SDK for FINK minigames
+ *
+ * Runs inside the sandboxed iframe. Provides a clean API for minigames
+ * to communicate with the FINK host via postMessage.
+ *
+ * Usage:
+ *   const sdk = new MinigameSDK();
+ *   sdk.onInit((config, variables) => startGame(config, variables));
+ *   sdk.onPause(() => pauseGame());
+ *   sdk.onResume(() => resumeGame());
+ *   sdk.setVariable('diamonds', 5);
+ *   sdk.complete({ success: true, score: 100 });
+ */
+
+class MinigameSDK {
+    constructor() {
+        this._config = null;
+        this._variables = {};
+        this._callbacks = {
+            init: null,
+            pause: null,
+            resume: null,
+            terminate: null,
+            variableChanged: null
+        };
+        this._ready = false;
+        this._paused = false;
+
+        // Setup message listener
+        window.addEventListener('message', (event) => this._handleMessage(event));
+
+        // Signal ready to host
+        this._sendMessage({ type: 'ready', capabilities: ['pause', 'resume'] });
+        this._log('SDK initialized, sent ready signal');
+    }
+
+    /**
+     * Register callback for initialization
+     * @param {Function} callback - (config, variables) => void
+     */
+    onInit(callback) {
+        this._callbacks.init = callback;
+        // If already initialized, call immediately
+        if (this._config !== null) {
+            callback(this._config, this._variables);
+        }
+        return this;
+    }
+
+    /**
+     * Register callback for pause event
+     * @param {Function} callback - () => void
+     */
+    onPause(callback) {
+        this._callbacks.pause = callback;
+        return this;
+    }
+
+    /**
+     * Register callback for resume event
+     * @param {Function} callback - () => void
+     */
+    onResume(callback) {
+        this._callbacks.resume = callback;
+        return this;
+    }
+
+    /**
+     * Register callback for terminate event
+     * @param {Function} callback - (reason) => void
+     */
+    onTerminate(callback) {
+        this._callbacks.terminate = callback;
+        return this;
+    }
+
+    /**
+     * Register callback for variable changes from story
+     * @param {Function} callback - (name, value) => void
+     */
+    onVariableChanged(callback) {
+        this._callbacks.variableChanged = callback;
+        return this;
+    }
+
+    /**
+     * Set an INK variable (must be in manifest's write allowlist)
+     * @param {string} name - Variable name
+     * @param {*} value - Variable value
+     */
+    setVariable(name, value) {
+        this._sendMessage({
+            type: 'set-variable',
+            name,
+            value
+        });
+        // Also update local copy
+        this._variables[name] = value;
+    }
+
+    /**
+     * Get current value of a variable
+     * @param {string} name - Variable name
+     * @returns {*} Variable value
+     */
+    getVariable(name) {
+        return this._variables[name];
+    }
+
+    /**
+     * Get all variables
+     * @returns {Object} All variables
+     */
+    getVariables() {
+        return { ...this._variables };
+    }
+
+    /**
+     * Get configuration
+     * @returns {Object} Config object
+     */
+    getConfig() {
+        return this._config ? { ...this._config } : null;
+    }
+
+    /**
+     * Check if game is currently paused
+     * @returns {boolean}
+     */
+    isPaused() {
+        return this._paused;
+    }
+
+    /**
+     * Signal progress update to host
+     * @param {Object} data - Progress data (e.g., { score: 50, level: 3 })
+     */
+    progress(data) {
+        this._sendMessage({
+            type: 'progress',
+            data
+        });
+    }
+
+    /**
+     * Signal game completion
+     * @param {Object} result - Result object
+     * @param {boolean} result.success - Whether player succeeded
+     * @param {number} [result.score] - Final score
+     * @param {Object} [result.variables] - Variables to update in INK story
+     */
+    complete(result) {
+        this._sendMessage({
+            type: 'complete',
+            result: {
+                success: result.success,
+                score: result.score,
+                variables: result.variables || {}
+            }
+        });
+        this._log(`Game complete: success=${result.success}, score=${result.score}`);
+    }
+
+    /**
+     * Report an error to the host
+     * @param {string} code - Error code
+     * @param {string} message - Human-readable message
+     */
+    error(code, message) {
+        this._sendMessage({
+            type: 'error',
+            code,
+            message
+        });
+        this._log(`Error reported: ${code} - ${message}`);
+    }
+
+    /**
+     * Handle incoming messages from host
+     */
+    _handleMessage(event) {
+        const data = event.data;
+        if (!data || typeof data.type !== 'string') return;
+
+        this._log(`Received message: ${data.type}`);
+
+        switch (data.type) {
+            case 'init':
+                this._config = data.config || {};
+                this._variables = data.variables || {};
+                this._ready = true;
+                if (this._callbacks.init) {
+                    this._callbacks.init(this._config, this._variables);
+                }
+                break;
+
+            case 'pause':
+                this._paused = true;
+                if (this._callbacks.pause) {
+                    this._callbacks.pause();
+                }
+                break;
+
+            case 'resume':
+                this._paused = false;
+                if (this._callbacks.resume) {
+                    this._callbacks.resume();
+                }
+                break;
+
+            case 'terminate':
+                if (this._callbacks.terminate) {
+                    this._callbacks.terminate(data.reason);
+                }
+                break;
+
+            case 'variable-changed':
+                this._variables[data.name] = data.value;
+                if (this._callbacks.variableChanged) {
+                    this._callbacks.variableChanged(data.name, data.value);
+                }
+                break;
+
+            default:
+                this._log(`Unknown message type: ${data.type}`);
+        }
+    }
+
+    /**
+     * Send message to host
+     */
+    _sendMessage(data) {
+        if (window.parent !== window) {
+            window.parent.postMessage(data, '*');
+        } else {
+            // Running standalone (no parent iframe)
+            this._log(`[Standalone] Would send: ${JSON.stringify(data)}`);
+        }
+    }
+
+    /**
+     * Internal logging
+     */
+    _log(msg) {
+        console.log(`[MinigameSDK] ${msg}`);
+    }
+}
+
+// Export for ES6 modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { MinigameSDK };
+}
+
+// Also make available globally for script tag usage
+window.MinigameSDK = MinigameSDK;

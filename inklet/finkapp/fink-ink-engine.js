@@ -166,6 +166,7 @@ window.FinkInkEngine = {
             let shouldLoadExternal = false;
             let shouldStartMinigame = false;
             let minigameType = 'normal';
+            let minigameMode = 'normal';
             let detectedKnot = null;  // Track knot during this continue cycle
 
             // CRITICAL: Check currentPathString BEFORE first Continue() call
@@ -229,12 +230,21 @@ window.FinkInkEngine = {
                             FinkUtils.debugLog('FINK tag detected: ' + value);
                             break;
                         case 'MINIGAME':
-                            const type = value.toLowerCase();
-                            if (type === 'chess') minigameType = 'chess';
-                            else if (type === 'mega') minigameType = 'mega';
-                            else minigameType = 'normal';
+                            // Parse: "mudslider mode=cave" or just "chess"
+                            const mgParts = value.toLowerCase().split(/\s+/);
+                            const mgName = mgParts[0];
+                            let mgMode = 'normal';
+                            // Look for mode=xxx parameter
+                            mgParts.slice(1).forEach(p => {
+                                if (p.startsWith('mode=')) mgMode = p.replace('mode=', '');
+                            });
+                            if (mgName === 'chess') minigameType = 'chess';
+                            else if (mgName === 'mega') minigameType = 'mega';
+                            else if (mgName === 'mudslider') minigameType = 'mudslider';
+                            else minigameType = mgName || 'normal';
+                            minigameMode = mgMode;
                             shouldStartMinigame = true;
-                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType);
+                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType + ' (mode: ' + mgMode + ')');
                             break;
                         case 'FOLEY':
                             FinkUtils.debugLog('FOLEY tag: ' + value);
@@ -325,7 +335,7 @@ window.FinkInkEngine = {
             }
 
             if (shouldStartMinigame && window.FinkMinigames) {
-                setTimeout(() => FinkMinigames.startMinigame('gems', minigameType), 800);
+                setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode), 800);
                 return;
             }
 
