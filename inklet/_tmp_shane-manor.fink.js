@@ -195,6 +195,9 @@ Your trained eye catalogues the scene:
 * [Examine the locked room mechanism]
     -> examine_locked_room
 
++ [Return to the hallway]
+    -> investigation_hub
+
 // ============================================
 // SAFE EXAMINATION - Expanded Evidence Chain
 // ============================================
@@ -210,16 +213,16 @@ The safe door hangs open. Inside, you see:
 
 ANDRÉ-LOUIS: Money left behind. This wasn't robbery.
 
-+ [Examine the photographs closely]
+* [Examine the photographs closely]
     -> examine_photographs
 
-+ [Read the bound letters]
+* [Read the bound letters]
     -> examine_letters
 
-+ [Study the will]
+* [Study the will]
     -> examine_will
 
-+ [Open the wooden box]
+* [Open the wooden box]
     -> examine_box
 
 + [Return to the study]
@@ -246,19 +249,15 @@ ANDRÉ-LOUIS: Lord Pemberton was watching someone. Documenting their movements. 
 -> examine_safe
 
 === examine_letters ===
+~ evidence_threatening_letters = true
 
 You untie the string and spread the letters. Two distinct sets:
 
-**SET ONE - Threatening letters:**
-~ evidence_threatening_letters = true
-
-Block-printed, crude. "PAY WHAT YOU OWE OR THE TRUTH COMES OUT." "YOUR SECRET DIES WITH YOU." "LAST WARNING."
+SET ONE - Threatening letters: Block-printed, crude. "PAY WHAT YOU OWE OR THE TRUTH COMES OUT." "YOUR SECRET DIES WITH YOU." "LAST WARNING."
 
 ANDRÉ-LOUIS: Threatening, but vague. What secret? What debt?
 
-**SET TWO - Old correspondence:**
-
-Yellowed paper, dated twenty-three years ago. You begin to read...
+SET TWO - Old correspondence: Yellowed paper, dated twenty-three years ago. You begin to read...
 
 * [Read the old letters carefully]
     -> read_parentage_letters
@@ -292,18 +291,9 @@ A final letter, dated just three days ago:
 
 The will is dated one week ago. You compare it with an older version tucked behind it.
 
-**ORIGINAL WILL (2 years ago):**
-- Victoria Ashworth: Primary beneficiary - the estate, the manor, all holdings
-- Charles Pemberton: £5,000 annual stipend
-- Mrs. Margaret Pemberton: Residence rights only
-- Ashford: £500 and cottage tenancy
+ORIGINAL WILL (2 years ago): Victoria Ashworth as primary beneficiary - the estate, the manor, all holdings. Charles Pemberton gets £5,000 annual stipend. Mrs. Margaret Pemberton gets residence rights only. Ashford gets £500 and cottage tenancy.
 
-**NEW WILL (1 week ago):**
-- Victoria Ashworth: REMOVED ENTIRELY
-- Charles Pemberton: Primary beneficiary - the estate
-- Mrs. Margaret Pemberton: £10,000 settlement
-- Ashford: £2,000 and cottage ownership
-- <em>Handwritten note:</em> "See attached letter explaining reasons - to be read at will execution"
+NEW WILL (1 week ago): Victoria Ashworth REMOVED ENTIRELY. Charles Pemberton now primary beneficiary - the estate. Mrs. Margaret Pemberton gets £10,000 settlement. Ashford gets £2,000 and cottage ownership. A handwritten note reads: "See attached letter explaining reasons - to be read at will execution."
 
 ANDRÉ-LOUIS: Lord Pemberton disinherited Victoria completely. One week ago. What did he discover?
 
@@ -323,7 +313,7 @@ ANDRÉ-LOUIS: E.M. Victoria's mother, perhaps? Elena... something?
 
 The box rattles when shaken. Something inside.
 
-+ [Force the lock]
+* [Force the lock]
     You apply pressure carefully. The old lock gives way.
     Inside: a locket containing two photographs. A young woman with Victoria's eyes - gentle, afraid, beautiful. A man on the opposite side - hard-faced, military bearing, a scar across his jaw. The contrast is striking: victim and predator.
 
@@ -334,7 +324,7 @@ The box rattles when shaken. Something inside.
 
     -> examine_safe
 
-+ [Leave it for now - look for the key]
+* [Leave it for now - look for the key]
     The key might be elsewhere. Perhaps in Victoria's possession?
     -> examine_safe
 
@@ -360,6 +350,9 @@ The black pieces show fresh fingerprints. And the positioning is wrong - someone
 
 * [Look for game notation]
     -> chess_records
+
++ [Return to the study]
+    -> crime_scene
 
 === chess_minigame ===
 ~ chess_game_completed = true
@@ -699,14 +692,6 @@ VICTORIA: I don't know. The voice was... muffled. But they were arguing.
     ANDRÉ-LOUIS: The evidence suggests otherwise.
 
     VICTORIA: *sharply* Then your evidence is wrong. I'm not going to confess to something I didn't do just because you've decided I'm convenient.
-
-    + [Press harder - you know she's lying]
-        ANDRÉ-LOUIS: Miss Ashworth, three people have placed you near the study that night. Your coat appears in surveillance photographs. You have no alibi.
-        -> victoria_breaks
-
-    + [Back off - gather more evidence]
-        Perhaps she needs more pressure. Or perhaps you need more proof.
-        -> investigation_hub
 }
 
 {victoria_deflections == 2:
@@ -719,16 +704,25 @@ VICTORIA: I don't know. The voice was... muffled. But they were arguing.
     VICTORIA: *bitterly* Understanding won't bring him back. And it won't make me guilty of murder.
 
     She's cracking. One more push and the truth will come out.
-
-    + [Mention what she said to Lord Pemberton]
-        ANDRÉ-LOUIS: You called him a liar. A coward. Mary heard every word.
-        -> victoria_breaks
-
-    + [Mention Markov - her real father]
-        ANDRÉ-LOUIS: Viktor Markov. Your biological father. The man you were hidden from your entire life.
-        -> victoria_breaks
 }
 
++ {victoria_deflections == 1} [Press harder - you know she's lying]
+    ANDRÉ-LOUIS: Miss Ashworth, three people have placed you near the study that night. Your coat appears in surveillance photographs. You have no alibi.
+    -> victoria_breaks
+
++ {victoria_deflections == 1} [Back off - gather more evidence]
+    Perhaps she needs more pressure. Or perhaps you need more proof.
+    -> investigation_hub
+
++ {victoria_deflections == 2} [Mention what she said to Lord Pemberton]
+    ANDRÉ-LOUIS: You called him a liar. A coward. Mary heard every word.
+    -> victoria_breaks
+
++ {victoria_deflections == 2} [Mention Markov - her real father]
+    ANDRÉ-LOUIS: Viktor Markov. Your biological father. The man you were hidden from your entire life.
+    -> victoria_breaks
+
+- {victoria_deflections >= 3}
 // Third confrontation - she finally breaks
 Victoria sits heavily, all composure gone.
 
