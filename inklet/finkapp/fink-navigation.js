@@ -546,6 +546,35 @@ window.FinkNavigation = {
                 FinkUI.clearChoices();
             }
 
+            // Process knot-level tags BEFORE continueStory since we know the exact knot name
+            // This ensures IMAGE tags at knot level are applied even if knot detection fails
+            if (FinkInkEngine.story.TagsForContentAtPath) {
+                try {
+                    const knotTags = FinkInkEngine.story.TagsForContentAtPath(knotName) || [];
+                    this.log(`Knot-level tags for ${knotName}: [${knotTags.join(', ')}]`);
+                    knotTags.forEach(tag => {
+                        if (tag.includes('IMAGE:')) {
+                            const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                            this.log(`Processing knot-level IMAGE: ${imagePath}`);
+                            if (window.FinkUI) {
+                                FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                            }
+                        } else if (tag.includes('BASEHREF:')) {
+                            let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                            if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
+                                (basePath.startsWith("'") && basePath.endsWith("'"))) {
+                                basePath = basePath.slice(1, -1);
+                            }
+                            if (!basePath.endsWith('/')) basePath += '/';
+                            FinkPlayer.mediaBasePath = basePath;
+                            this.log(`Knot-level BASEHREF: ${basePath}`);
+                        }
+                    });
+                } catch (e) {
+                    this.log(`Error getting knot tags: ${e.message}`);
+                }
+            }
+
             FinkInkEngine.continueStory();
             this.log(`Navigated to knot: ${knotName}`);
             return true;
