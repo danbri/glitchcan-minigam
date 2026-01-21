@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
- * Blind Playtest for FINK stories
+ * Blanked Context Playtest for FINK stories using finkapp
  *
  * Each persona plays through the story making decisions based on their personality.
- * Output is a transcript that the subagent can analyze.
+ * Output is a transcript that the subagent can analyze - they see only what a player
+ * would see, without access to source code (blanked context).
+ * Uses finkapp/index.html with proper sandbox-based FINK loading (no hackparsing).
  *
- * Usage: node blind-playtest.mjs --persona=<name> --story=<path> [--port=8080]
+ * Usage: node blanked-playtest.mjs --persona=<name> --story=<path> [--port=8080]
  *
+ * Story path should be relative to server root (e.g., "/glitchcan-minigam/inklet/_tmp_shane-manor.fink.js")
  * Personas: casual, mystery-fan, ace-attorney, speedrunner, completionist
  */
 
@@ -20,7 +23,7 @@ const getArg = (name, defaultVal) => {
 };
 
 const PERSONA = getArg('persona', 'casual');
-const STORY_PATH = getArg('story', '_tmp_shane-manor.fink.js');
+const STORY_PATH = getArg('story', '/glitchcan-minigam/inklet/_tmp_shane-manor.fink.js');
 const PORT = getArg('port', '8080');
 const MAX_TURNS = parseInt(getArg('max-turns', '50'));
 
@@ -113,12 +116,12 @@ async function runPlaytest() {
     const history = [];
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`  BLIND PLAYTEST: ${persona.name}`);
+    console.log(`  BLANKED CONTEXT PLAYTEST: ${persona.name}`);
     console.log(`  ${persona.description}`);
     console.log(`  Story: ${STORY_PATH}`);
     console.log(`${'='.repeat(60)}\n`);
 
-    transcript.push(`# Blind Playtest: ${persona.name}`);
+    transcript.push(`# Blanked Context Playtest: ${persona.name}`);
     transcript.push(`Persona: ${persona.description}`);
     transcript.push(`Story: ${STORY_PATH}`);
     transcript.push(`---\n`);
@@ -141,13 +144,15 @@ async function runPlaytest() {
         }
     });
 
-    // Navigate to dedicated playtest page
-    const url = `http://localhost:${PORT}/inklet/playtest-shane.html`;
+    // Navigate to finkapp with story query param
+    const storyParam = encodeURIComponent(STORY_PATH);
+    const url = `http://localhost:${PORT}/glitchcan-minigam/inklet/finkapp/index.html?story=${storyParam}`;
     console.log(`Loading: ${url}\n`);
 
     try {
         await page.goto(url);
-        await page.waitForTimeout(3000); // Wait for story to load
+        // Wait for finkapp to load story via sandbox (needs more time)
+        await page.waitForTimeout(5000);
     } catch (e) {
         console.error(`Failed to load page: ${e.message}`);
         await browser.close();
