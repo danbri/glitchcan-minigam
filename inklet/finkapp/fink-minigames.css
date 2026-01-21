@@ -32,8 +32,7 @@
     justify-content: stretch;
     flex-direction: column;
     overflow-y: auto;
-    /* Smooth transitions for all window state changes */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* No transition by default - only during state changes */
 }
 
 /* --- Minigame Control Bar --- */
@@ -317,8 +316,21 @@
 }
 
 /* --- Window State Transitions --- */
+/* Only apply transitions when in a positioned state or transitioning */
+#minigame-view.minimized,
+#minigame-view.maximized,
+#minigame-view.pinned,
 #minigame-view.transitioning {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- Mobile Adjustments --- */
