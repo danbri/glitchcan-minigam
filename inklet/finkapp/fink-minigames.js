@@ -13,7 +13,14 @@ window.FinkMinigames = {
     lastSync: {
         gameGems: 0,        // gems reported by game at last sync
         storyDiamonds: 0    // diamonds we set in story at last sync
-    }
+    },
+    // Window state (pause, pin, minimize, maximize)
+    windowState: {
+        paused: false,
+        pinned: false,
+        minimized: false,
+        maximized: false
+    },
 
     // Known iframe-based minigames
     iframeMinigames: ['mudslider'],
@@ -22,12 +29,19 @@ window.FinkMinigames = {
     elements: {
         narrativeView: null,
         minigameView: null,
+        minigameContent: null,
         gameContainer: null,
         chessContainer: null,
         iframeContainer: null,
         instructions: null,
         scoreDisplay: null,
-        returnBtn: null
+        returnBtn: null,
+        // Control buttons
+        pauseBtn: null,
+        pinBtn: null,
+        minimizeBtn: null,
+        maximizeBtn: null,
+        frostOverlay: null
     },
 
     // Initialize the minigame system
@@ -35,12 +49,19 @@ window.FinkMinigames = {
         this.elements = {
             narrativeView: document.getElementById('narrative-view'),
             minigameView: document.getElementById('minigame-view'),
+            minigameContent: document.getElementById('minigame-content'),
             gameContainer: document.getElementById('game-container'),
             chessContainer: document.getElementById('chess-container'),
             iframeContainer: document.getElementById('iframe-minigame-container'),
             instructions: document.getElementById('minigame-instructions'),
             scoreDisplay: document.getElementById('gems-collected'),
-            returnBtn: document.getElementById('returnToStory')
+            returnBtn: document.getElementById('returnToStory'),
+            // Control buttons
+            pauseBtn: document.getElementById('minigame-pause'),
+            pinBtn: document.getElementById('minigame-pin'),
+            minimizeBtn: document.getElementById('minigame-minimize'),
+            maximizeBtn: document.getElementById('minigame-maximize'),
+            frostOverlay: document.getElementById('minigame-frost-overlay')
         };
 
         // Initialize inline minigame modules
@@ -57,10 +78,155 @@ window.FinkMinigames = {
             this.elements.returnBtn.addEventListener('click', () => this.endMinigame());
         }
 
+        // Control button handlers
+        this._initControlButtons();
+
         // Bind message handler for iframe communication
         this.messageHandler = this._handleIframeMessage.bind(this);
 
         this.log('Minigames system initialized');
+    },
+
+    // Initialize control button event handlers
+    _initControlButtons() {
+        const { pauseBtn, pinBtn, minimizeBtn, maximizeBtn } = this.elements;
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => this.togglePause());
+        }
+        if (pinBtn) {
+            pinBtn.addEventListener('click', () => this.togglePin());
+        }
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+        }
+        if (maximizeBtn) {
+            maximizeBtn.addEventListener('click', () => this.toggleMaximize());
+        }
+
+        // Click frost overlay to unpause
+        if (this.elements.frostOverlay) {
+            this.elements.frostOverlay.addEventListener('click', () => {
+                if (this.windowState.paused) {
+                    this.togglePause();
+                }
+            });
+        }
+    },
+
+    // Toggle pause state
+    togglePause() {
+        this.windowState.paused = !this.windowState.paused;
+        this._updateWindowState();
+
+        if (this.windowState.paused) {
+            this.pauseMinigame();
+            this.elements.pauseBtn?.classList.add('active');
+        } else {
+            this.resumeMinigame();
+            this.elements.pauseBtn?.classList.remove('active');
+        }
+
+        this.log(`Minigame ${this.windowState.paused ? 'paused' : 'resumed'}`);
+    },
+
+    // Toggle pin state (keep visible while reading story)
+    togglePin() {
+        // Can't pin if minimized
+        if (this.windowState.minimized) {
+            this.toggleMinimize();
+        }
+
+        this.windowState.pinned = !this.windowState.pinned;
+
+        if (this.windowState.pinned) {
+            // Show narrative view alongside pinned minigame
+            this.elements.narrativeView?.classList.add('active');
+            this.elements.pinBtn?.classList.add('active');
+        } else {
+            // Hide narrative view when unpinned (unless exiting)
+            if (this.active) {
+                this.elements.narrativeView?.classList.remove('active');
+            }
+            this.elements.pinBtn?.classList.remove('active');
+        }
+
+        this._updateWindowState();
+        this.log(`Minigame ${this.windowState.pinned ? 'pinned' : 'unpinned'}`);
+    },
+
+    // Toggle minimize state
+    toggleMinimize() {
+        // Can't minimize if maximized
+        if (this.windowState.maximized) {
+            this.windowState.maximized = false;
+            this.elements.maximizeBtn?.classList.remove('active');
+        }
+
+        this.windowState.minimized = !this.windowState.minimized;
+
+        if (this.windowState.minimized) {
+            // Auto-pin when minimizing
+            if (!this.windowState.pinned) {
+                this.windowState.pinned = true;
+                this.elements.narrativeView?.classList.add('active');
+                this.elements.pinBtn?.classList.add('active');
+            }
+            this.elements.minimizeBtn?.classList.add('active');
+        } else {
+            this.elements.minimizeBtn?.classList.remove('active');
+        }
+
+        this._updateWindowState();
+        this.log(`Minigame ${this.windowState.minimized ? 'minimized' : 'restored'}`);
+    },
+
+    // Toggle maximize state
+    toggleMaximize() {
+        // Can't maximize if minimized
+        if (this.windowState.minimized) {
+            this.windowState.minimized = false;
+            this.elements.minimizeBtn?.classList.remove('active');
+        }
+
+        this.windowState.maximized = !this.windowState.maximized;
+
+        if (this.windowState.maximized) {
+            this.elements.maximizeBtn?.classList.add('active');
+        } else {
+            this.elements.maximizeBtn?.classList.remove('active');
+        }
+
+        this._updateWindowState();
+        this.log(`Minigame ${this.windowState.maximized ? 'maximized' : 'restored'}`);
+    },
+
+    // Update CSS classes based on window state
+    _updateWindowState() {
+        const view = this.elements.minigameView;
+        if (!view) return;
+
+        view.classList.toggle('paused', this.windowState.paused);
+        view.classList.toggle('pinned', this.windowState.pinned);
+        view.classList.toggle('minimized', this.windowState.minimized);
+        view.classList.toggle('maximized', this.windowState.maximized);
+    },
+
+    // Reset window state when minigame ends
+    _resetWindowState() {
+        this.windowState = {
+            paused: false,
+            pinned: false,
+            minimized: false,
+            maximized: false
+        };
+        this._updateWindowState();
+
+        // Reset button states
+        this.elements.pauseBtn?.classList.remove('active');
+        this.elements.pinBtn?.classList.remove('active');
+        this.elements.minimizeBtn?.classList.remove('active');
+        this.elements.maximizeBtn?.classList.remove('active');
     },
 
     // Start a minigame by type
@@ -392,6 +558,9 @@ window.FinkMinigames = {
         this.log(`Minigame complete: ${JSON.stringify(result)}`);
 
         this.active = false;
+
+        // Reset window state (paused, pinned, minimized, maximized)
+        this._resetWindowState();
 
         // Reset UI
         if (this.elements.gameContainer) {

@@ -27,9 +27,238 @@
 
 /* --- Minigame View --- */
 #minigame-view {
-    padding: 1em;
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    flex-direction: column;
+}
+
+/* --- Minigame Control Bar --- */
+#minigame-controls {
+    display: flex;
+    gap: 0.5em;
+    padding: 0.5em;
+    background: linear-gradient(180deg, #222 0%, #111 100%);
+    border-bottom: 2px solid var(--zx-blue);
+    justify-content: flex-end;
+    z-index: 10;
+}
+
+#minigame-controls button {
+    background: #333;
+    border: 1px solid #555;
+    color: #fff;
+    font-size: 1.2em;
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
     align-items: center;
     justify-content: center;
+}
+
+#minigame-controls button:hover {
+    background: #444;
+    border-color: var(--zx-cyan);
+}
+
+#minigame-controls button:active {
+    transform: scale(0.95);
+}
+
+#minigame-controls button.active {
+    background: var(--zx-blue);
+    border-color: var(--zx-cyan);
+    box-shadow: 0 0 10px var(--zx-blue);
+}
+
+#returnToStory {
+    background: #522;
+    border-color: #833;
+}
+#returnToStory:hover {
+    background: #733;
+    border-color: var(--zx-red);
+}
+
+/* --- Minigame Content Area --- */
+#minigame-content {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* --- Frosted Panes Overlay (Pause State) --- */
+#minigame-frost-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+}
+
+#minigame-view.paused #minigame-frost-overlay {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.frost-pane {
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    backdrop-filter: blur(8px);
+    background: linear-gradient(
+        135deg,
+        rgba(100, 150, 200, 0.3) 0%,
+        rgba(150, 200, 255, 0.2) 50%,
+        rgba(100, 150, 200, 0.3) 100%
+    );
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.frost-pane-top {
+    top: -150%;
+    left: -25%;
+    transform: rotate(-45deg) translateY(0);
+}
+
+.frost-pane-bottom {
+    bottom: -150%;
+    right: -25%;
+    transform: rotate(-45deg) translateY(0);
+}
+
+/* Panes slide in diagonally when paused */
+#minigame-view.paused .frost-pane-top {
+    transform: rotate(-45deg) translateY(100%);
+}
+
+#minigame-view.paused .frost-pane-bottom {
+    transform: rotate(-45deg) translateY(-100%);
+}
+
+.frost-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(0, 100, 200, 0.8), 0 2px 4px rgba(0,0,0,0.5);
+    letter-spacing: 0.3em;
+    opacity: 0;
+    transition: all 0.3s ease-out 0.2s;
+}
+
+#minigame-view.paused .frost-status {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+/* --- Minimized State --- */
+#minigame-view.minimized {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 120px;
+    height: 80px;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--zx-blue);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+#minigame-view.minimized #minigame-controls {
+    padding: 0.2em;
+    gap: 0.2em;
+}
+
+#minigame-view.minimized #minigame-controls button {
+    width: 1.5em;
+    height: 1.5em;
+    font-size: 0.8em;
+}
+
+#minigame-view.minimized #minigame-instructions,
+#minigame-view.minimized #minigame-score {
+    display: none;
+}
+
+/* --- Maximized State --- */
+#minigame-view.maximized {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    border-radius: 0;
+}
+
+/* --- Pinned State (show alongside narrative) --- */
+#minigame-view.pinned {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    height: 250px;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--zx-green);
+    box-shadow: 0 4px 30px rgba(0,255,100,0.2);
+    z-index: 500;
+}
+
+#minigame-view.pinned #minigame-instructions,
+#minigame-view.pinned #minigame-score {
+    display: none;
+}
+
+/* Pinned indicator glow */
+#minigame-view.pinned #minigame-pin {
+    background: var(--zx-green);
+    animation: pinGlow 2s ease-in-out infinite;
+}
+
+@keyframes pinGlow {
+    0%, 100% { box-shadow: 0 0 5px var(--zx-green); }
+    50% { box-shadow: 0 0 15px var(--zx-green); }
+}
+
+/* --- Mobile Adjustments --- */
+@media (max-width: 600px) {
+    #minigame-controls button {
+        width: 2em;
+        height: 2em;
+        font-size: 1em;
+    }
+
+    #minigame-view.pinned {
+        width: 200px;
+        height: 160px;
+        bottom: 10px;
+        right: 10px;
+    }
+
+    #minigame-view.minimized {
+        width: 80px;
+        height: 60px;
+        bottom: 70px;
+        right: 10px;
+    }
+
+    .frost-status {
+        font-size: 1.5em;
+    }
 }
 
 /* --- Game Container --- */

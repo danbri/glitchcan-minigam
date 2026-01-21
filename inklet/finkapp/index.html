@@ -155,13 +155,32 @@
 
     <!-- Minigame View -->
     <div id="minigame-view" class="view">
-        <div id="game-container"></div>
-        <div id="chess-container" style="display:none; width:100%; height:100%;"></div>
-        <!-- Sandboxed iframe for external minigames (slovib, etc) -->
-        <div id="iframe-minigame-container" style="display:none; width:100%; height:100%;"></div>
+        <!-- Minigame control bar -->
+        <div id="minigame-controls">
+            <button id="minigame-pause" title="Pause">⏸️</button>
+            <button id="minigame-pin" title="Pin (keep visible while reading)">📌</button>
+            <button id="minigame-minimize" title="Minimize">🗕</button>
+            <button id="minigame-maximize" title="Maximize">🗖</button>
+            <button id="returnToStory" title="Exit minigame">✕</button>
+        </div>
+
+        <!-- Minigame content area -->
+        <div id="minigame-content">
+            <div id="game-container"></div>
+            <div id="chess-container" style="display:none; width:100%; height:100%;"></div>
+            <!-- Sandboxed iframe for external minigames -->
+            <div id="iframe-minigame-container" style="display:none; width:100%; height:100%;"></div>
+
+            <!-- Frosted panes overlay for pause state -->
+            <div id="minigame-frost-overlay">
+                <div class="frost-pane frost-pane-top"></div>
+                <div class="frost-pane frost-pane-bottom"></div>
+                <div class="frost-status">PAUSED</div>
+            </div>
+        </div>
+
         <div id="minigame-instructions">Click the gems to collect them!</div>
         <div id="minigame-score">Collected: <span id="gems-collected">0</span></div>
-        <button id="returnToStory">Return to Story</button>
     </div>
 
     <!-- Stats Bar -->
