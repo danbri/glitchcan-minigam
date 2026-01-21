@@ -992,13 +992,21 @@ ${knownFinks.length > 0 ? `\nKnown story hashes:\n${knownFinks.slice(-5).map(([h
         return this.knotIdMap.get(fragmentId) || null;
     },
 
-    // Get FINK file path from URL hash (for direct linking to .fink.js files)
-    // Supports: #story=bagend.fink.js or #bagend.fink.js patterns
+    // Get FINK file path from URL (for direct linking to .fink.js files)
+    // Supports: ?story=path.fink.js (query) or #story=path.fink.js or #path.fink.js (hash)
     getFinkFromHash() {
+        // First check query string ?story=
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryStory = urlParams.get('story');
+        if (queryStory) {
+            return decodeURIComponent(queryStory);
+        }
+
+        // Then check hash
         const hash = window.location.hash.slice(1);
         if (!hash) return null;
 
-        // Check for explicit story= parameter
+        // Check for explicit story= parameter in hash
         const storyMatch = hash.match(/story=([^&]+)/);
         if (storyMatch) {
             return decodeURIComponent(storyMatch[1]);

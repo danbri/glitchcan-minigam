@@ -9,7 +9,6 @@ oooOO`
 VAR player_reputation = 50
 VAR investigation_style = ""
 VAR time_pressure = 5
-VAR primary_suspect = ""
 
 // ============================================
 // EVIDENCE TRACKING - Fair Play System
@@ -36,19 +35,19 @@ VAR victoria_alibi = ""
 VAR confronted_with_photos = false
 VAR confronted_with_letters = false
 VAR confronted_with_boots = false
+VAR victoria_deflections = 0
 
 // ============================================
 // CHARACTER SECRET LAYERS
 // Surface secrets vs deeper secrets
 // ============================================
 VAR discovered_charles_debt_paid = false
-VAR discovered_mrs_pemberton_affair = false
 VAR discovered_ashford_secret = false
 VAR discovered_victoria_knew_truth = false
+VAR total_secrets_discovered = 0
 
 // Chess integration
 VAR chess_game_completed = false
-VAR chess_won = false
 
 # BASEHREF: media/shane/
 
@@ -128,9 +127,14 @@ ASHFORD: *voice drops to whisper* His Lordship was deeply troubled last night. S
 === investigation_hub ===
 The grandfather clock in the hallway chimes.
 
-{time_pressure > 3: Time is on your side - for now. | time_pressure > 1: The hours slip away. Witnesses' memories fade. | time_pressure == 1: Last chance to gather evidence before you must act. | Time has run out. You must make your accusation now. -> forced_deduction }
+{
+    - time_pressure > 3: Time is on your side - for now.
+    - time_pressure > 1: The hours slip away. Witnesses' memories fade.
+    - time_pressure == 1: Last chance to gather evidence before you must act.
+    - else: Time has run out. You must make your accusation now. -> forced_deduction
+}
 
-{victoria_evidence_count >= 3: <em>You have gathered substantial evidence regarding Victoria.</em>}
+{victoria_evidence_count >= 3:<em>You have gathered substantial evidence regarding Victoria.</em>|}
 
 Where will you investigate?
 
@@ -191,6 +195,9 @@ Your trained eye catalogues the scene:
 * [Examine the locked room mechanism]
     -> examine_locked_room
 
++ [Return to the hallway]
+    -> investigation_hub
+
 // ============================================
 // SAFE EXAMINATION - Expanded Evidence Chain
 // ============================================
@@ -206,16 +213,16 @@ The safe door hangs open. Inside, you see:
 
 ANDRÉ-LOUIS: Money left behind. This wasn't robbery.
 
-+ [Examine the photographs closely]
+* [Examine the photographs closely]
     -> examine_photographs
 
-+ [Read the bound letters]
+* [Read the bound letters]
     -> examine_letters
 
-+ [Study the will]
+* [Study the will]
     -> examine_will
 
-+ [Open the wooden box]
+* [Open the wooden box]
     -> examine_box
 
 + [Return to the study]
@@ -242,19 +249,15 @@ ANDRÉ-LOUIS: Lord Pemberton was watching someone. Documenting their movements. 
 -> examine_safe
 
 === examine_letters ===
+~ evidence_threatening_letters = true
 
 You untie the string and spread the letters. Two distinct sets:
 
-**SET ONE - Threatening letters:**
-~ evidence_threatening_letters = true
-
-Block-printed, crude. "PAY WHAT YOU OWE OR THE TRUTH COMES OUT." "YOUR SECRET DIES WITH YOU." "LAST WARNING."
+SET ONE - Threatening letters: Block-printed, crude. "PAY WHAT YOU OWE OR THE TRUTH COMES OUT." "YOUR SECRET DIES WITH YOU." "LAST WARNING."
 
 ANDRÉ-LOUIS: Threatening, but vague. What secret? What debt?
 
-**SET TWO - Old correspondence:**
-
-Yellowed paper, dated twenty-three years ago. You begin to read...
+SET TWO - Old correspondence: Yellowed paper, dated twenty-three years ago. You begin to read...
 
 * [Read the old letters carefully]
     -> read_parentage_letters
@@ -288,18 +291,9 @@ A final letter, dated just three days ago:
 
 The will is dated one week ago. You compare it with an older version tucked behind it.
 
-**ORIGINAL WILL (2 years ago):**
-- Victoria Ashworth: Primary beneficiary - the estate, the manor, all holdings
-- Charles Pemberton: £5,000 annual stipend
-- Mrs. Margaret Pemberton: Residence rights only
-- Ashford: £500 and cottage tenancy
+ORIGINAL WILL (2 years ago): Victoria Ashworth as primary beneficiary - the estate, the manor, all holdings. Charles Pemberton gets £5,000 annual stipend. Mrs. Margaret Pemberton gets residence rights only. Ashford gets £500 and cottage tenancy.
 
-**NEW WILL (1 week ago):**
-- Victoria Ashworth: REMOVED ENTIRELY
-- Charles Pemberton: Primary beneficiary - the estate
-- Mrs. Margaret Pemberton: £10,000 settlement
-- Ashford: £2,000 and cottage ownership
-- <em>Handwritten note:</em> "See attached letter explaining reasons - to be read at will execution"
+NEW WILL (1 week ago): Victoria Ashworth REMOVED ENTIRELY. Charles Pemberton now primary beneficiary - the estate. Mrs. Margaret Pemberton gets £10,000 settlement. Ashford gets £2,000 and cottage ownership. A handwritten note reads: "See attached letter explaining reasons - to be read at will execution."
 
 ANDRÉ-LOUIS: Lord Pemberton disinherited Victoria completely. One week ago. What did he discover?
 
@@ -319,7 +313,7 @@ ANDRÉ-LOUIS: E.M. Victoria's mother, perhaps? Elena... something?
 
 The box rattles when shaken. Something inside.
 
-+ [Force the lock]
+* [Force the lock]
     You apply pressure carefully. The old lock gives way.
     Inside: a locket containing two photographs. A young woman with Victoria's eyes - gentle, afraid, beautiful. A man on the opposite side - hard-faced, military bearing, a scar across his jaw. The contrast is striking: victim and predator.
 
@@ -330,7 +324,7 @@ The box rattles when shaken. Something inside.
 
     -> examine_safe
 
-+ [Leave it for now - look for the key]
+* [Leave it for now - look for the key]
     The key might be elsewhere. Perhaps in Victoria's possession?
     -> examine_safe
 
@@ -357,9 +351,11 @@ The black pieces show fresh fingerprints. And the positioning is wrong - someone
 * [Look for game notation]
     -> chess_records
 
++ [Return to the study]
+    -> crime_scene
+
 === chess_minigame ===
 ~ chess_game_completed = true
-~ chess_won = true
 
 You sit at the board, working through the position. The queen sacrifice demands a precise response...
 
@@ -482,6 +478,7 @@ MARY: Inspector... there's something else. I saw Miss Victoria that night. Aroun
     ANDRÉ-LOUIS: She knew. Before the murder, Victoria had already found the letters about her parentage.
 
     ~ discovered_victoria_knew_truth = true
+    ~ total_secrets_discovered++
 
     -> investigation_hub
 
@@ -684,10 +681,52 @@ VICTORIA: I don't know. The voice was... muffled. But they were arguing.
 -> confront_victoria
 
 === victoria_breaks ===
+~ victoria_deflections++
 
+// TESTIMONY LOOP: Victoria deflects twice before breaking
+{victoria_deflections == 1:
+    Victoria's jaw tightens. She looks away.
+
+    VICTORIA: I've already told you everything I know, Inspector. I was walking the grounds. I heard arguing. I went to bed.
+
+    ANDRÉ-LOUIS: The evidence suggests otherwise.
+
+    VICTORIA: *sharply* Then your evidence is wrong. I'm not going to confess to something I didn't do just because you've decided I'm convenient.
+}
+
+{victoria_deflections == 2:
+    Victoria stands abruptly, knocking her chair back.
+
+    VICTORIA: *voice rising* Stop! Just... stop. You keep pushing and pushing, but you don't understand anything about this family!
+
+    ANDRÉ-LOUIS: Then help me understand.
+
+    VICTORIA: *bitterly* Understanding won't bring him back. And it won't make me guilty of murder.
+
+    She's cracking. One more push and the truth will come out.
+}
+
++ {victoria_deflections == 1} [Press harder - you know she's lying]
+    ANDRÉ-LOUIS: Miss Ashworth, three people have placed you near the study that night. Your coat appears in surveillance photographs. You have no alibi.
+    -> victoria_breaks
+
++ {victoria_deflections == 1} [Back off - gather more evidence]
+    Perhaps she needs more pressure. Or perhaps you need more proof.
+    -> investigation_hub
+
++ {victoria_deflections == 2} [Mention what she said to Lord Pemberton]
+    ANDRÉ-LOUIS: You called him a liar. A coward. Mary heard every word.
+    -> victoria_breaks
+
++ {victoria_deflections == 2} [Mention Markov - her real father]
+    ANDRÉ-LOUIS: Viktor Markov. Your biological father. The man you were hidden from your entire life.
+    -> victoria_breaks
+
+- {victoria_deflections >= 3}
+// Third confrontation - she finally breaks
 Victoria sits heavily, all composure gone.
 
-VICTORIA: You want the truth? Fine.
+VICTORIA: *whisper* You want the truth? Fine.
 
 She looks up at you with raw desperation.
 
@@ -763,6 +802,7 @@ MARY: I... I was in the servants' quarters. I heard arguing around midnight, but
     CHARLES: *glances at Mrs. Pemberton* A private arrangement. Family business.
 
     ~ discovered_charles_debt_paid = true
+    ~ total_secrets_discovered++
 
     -> household_continue
 
@@ -800,7 +840,11 @@ The room erupts. Accusations fly. And beneath it all, you sense layers of secret
 
 You gather your thoughts. The evidence points in several directions.
 
-{victoria_evidence_count >= 4: You have built a strong case against Victoria. | victoria_evidence_count >= 2: You have circumstantial evidence against Victoria. | The evidence is thin, but time forces your hand.}
+{
+    - victoria_evidence_count >= 4: You have built a strong case against Victoria.
+    - victoria_evidence_count >= 2: You have circumstantial evidence against Victoria.
+    - else: The evidence is thin, but time forces your hand.
+}
 
 # IMAGE: desktop/morning_room_table_desktop.jpg
 
@@ -816,7 +860,7 @@ You gather your thoughts. The evidence points in several directions.
 + {evidence_locked_room_key && investigation_style == "psychological"} [Accuse Ashford - he knew about the hidden door]
     -> accuse_ashford
 
-+ [Present a conspiracy theory - multiple killers]
++ {total_secrets_discovered >= 2} [Present a conspiracy theory - multiple killers]
     -> conspiracy_theory
 
 + {victoria_interviewed && victoria_alibi == "walking_grounds"} [Accept Victoria's account - look for another killer]

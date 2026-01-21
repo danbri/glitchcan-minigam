@@ -34,6 +34,8 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "playwright": "^1.57.0"
+    "inkjs": "^2.3.2",
+    "playwright": "^1.57.0",
+    "puppeteer-core": "^24.35.0"
   }
 }
