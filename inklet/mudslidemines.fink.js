@@ -9,6 +9,7 @@ oooOO`
 // Game variables for minigame integration
 VAR diamonds = 0
 VAR score = 0
+VAR minigame_played = false
 
 // Start the player at the crash site
 

@@ -9,6 +9,7 @@ window.FinkMinigames = {
     currentMode: null,
     iframeMinigame: null,  // Current iframe element
     messageHandler: null,   // Bound message handler
+    startingDiamonds: 0,    // Diamonds before minigame started (for additive sync)
 
     // Known iframe-based minigames
     iframeMinigames: ['mudslider'],
@@ -92,6 +93,12 @@ window.FinkMinigames = {
     startIframeMinigame(type, mode = 'full') {
         this.log(`Starting iframe minigame: ${type} (${mode})`);
 
+        // Track starting diamonds for additive progress sync
+        if (window.FinkInkEngine?.story?.variablesState) {
+            this.startingDiamonds = FinkInkEngine.story.variablesState['diamonds'] || 0;
+            this.log(`Starting diamonds: ${this.startingDiamonds}`);
+        }
+
         // Hide other containers
         if (this.elements.gameContainer) {
             this.elements.gameContainer.style.display = 'none';
@@ -151,9 +158,11 @@ window.FinkMinigames = {
             case 'progress':
                 this.log('Progress: ' + JSON.stringify(data.data));
                 // Sync variables to story and update stats display
+                // Add game gems to starting diamonds (not overwrite)
                 if (data.data) {
                     if (data.data.gems !== undefined) {
-                        this._setStoryVariable('diamonds', data.data.gems);
+                        const newTotal = this.startingDiamonds + data.data.gems;
+                        this._setStoryVariable('diamonds', newTotal);
                     }
                     if (data.data.score !== undefined) {
                         this._setStoryVariable('score', data.data.score);
@@ -431,8 +440,15 @@ window.FinkMinigames = {
                     story.variablesState['chess_game_completed'] = true;
                 }
             } else if (result.type === 'mudslider') {
-                // Mudslider variables are already set via _handleIframeComplete
-                this.log('Mudslider variables already updated');
+                // Mudslider: add collected gems to diamonds (same pattern as gems minigame)
+                if (result.score !== undefined && result.score > 0) {
+                    const oldDiamonds = story.variablesState['diamonds'] || 0;
+                    story.variablesState['diamonds'] = oldDiamonds + result.score;
+                    this.log(`Updated diamonds: ${oldDiamonds} + ${result.score} = ${story.variablesState['diamonds']}`);
+                }
+                if (story.variablesState['minigame_played'] !== undefined) {
+                    story.variablesState['minigame_played'] = true;
+                }
             } else {
                 // Gems variables
                 if (result.isMega) {
