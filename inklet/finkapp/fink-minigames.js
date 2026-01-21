@@ -222,11 +222,11 @@ window.FinkMinigames = {
         if (this.windowState.paused) {
             this.pauseMinigame();
             this.elements.pauseBtn?.classList.add('active');
-            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '▶️';
+            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '▶';
         } else {
             this.resumeMinigame();
             this.elements.pauseBtn?.classList.remove('active');
-            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸️';
+            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸';
         }
 
         this.log(`Minigame ${this.windowState.paused ? 'paused' : 'resumed'}`);
@@ -287,7 +287,7 @@ window.FinkMinigames = {
 
             // Update button icon
             if (this.elements.minimizeBtn) {
-                this.elements.minimizeBtn.textContent = '🗗'; // Restore icon
+                this.elements.minimizeBtn.textContent = '▢'; // Restore icon
                 this.elements.minimizeBtn.title = 'Restore';
             }
         } else {
@@ -306,7 +306,7 @@ window.FinkMinigames = {
 
             // Update button icon
             if (this.elements.minimizeBtn) {
-                this.elements.minimizeBtn.textContent = '🗕';
+                this.elements.minimizeBtn.textContent = '−';
                 this.elements.minimizeBtn.title = 'Minimize';
             }
         }
@@ -328,7 +328,7 @@ window.FinkMinigames = {
             this.windowState.minimized = false;
             this.elements.minimizeBtn?.classList.remove('active');
             if (this.elements.minimizeBtn) {
-                this.elements.minimizeBtn.textContent = '🗕';
+                this.elements.minimizeBtn.textContent = '−';
             }
         }
 
@@ -353,7 +353,7 @@ window.FinkMinigames = {
 
             // Update button icon
             if (this.elements.maximizeBtn) {
-                this.elements.maximizeBtn.textContent = '🗗'; // Restore icon
+                this.elements.maximizeBtn.textContent = '▢'; // Restore icon
                 this.elements.maximizeBtn.title = 'Restore';
             }
         } else {
@@ -361,7 +361,7 @@ window.FinkMinigames = {
 
             // Update button icon
             if (this.elements.maximizeBtn) {
-                this.elements.maximizeBtn.textContent = '🗖';
+                this.elements.maximizeBtn.textContent = '□';
                 this.elements.maximizeBtn.title = 'Maximize';
             }
         }
@@ -402,19 +402,19 @@ window.FinkMinigames = {
 
         // Reset button states and icons
         this.elements.pauseBtn?.classList.remove('active');
-        if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸️';
+        if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸';
 
         this.elements.pinBtn?.classList.remove('active');
 
         this.elements.minimizeBtn?.classList.remove('active');
         if (this.elements.minimizeBtn) {
-            this.elements.minimizeBtn.textContent = '🗕';
+            this.elements.minimizeBtn.textContent = '−';
             this.elements.minimizeBtn.title = 'Minimize';
         }
 
         this.elements.maximizeBtn?.classList.remove('active');
         if (this.elements.maximizeBtn) {
-            this.elements.maximizeBtn.textContent = '🗖';
+            this.elements.maximizeBtn.textContent = '□';
             this.elements.maximizeBtn.title = 'Maximize';
         }
     },
