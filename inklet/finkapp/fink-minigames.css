@@ -1,51 +1,25 @@
 /* FINK Minigames - Game-specific styling */
-/* Stats bar, gem collection, chess, and other minigame elements */
-
-/* --- Stats Bar (optional, game-specific) --- */
-#stats-bar {
-    padding: 0.5em 1em;
-    background: #111;
-    border-top: 2px solid var(--zx-blue);
-    display: flex;
-    gap: 2em;
-    font-size: var(--font-size-small);
-    flex-wrap: wrap;
-}
-.stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-}
-.stat-icon { font-size: 1.5em; }
-.stat-value { color: var(--zx-yellow); }
-.stat-value.mega { color: var(--zx-mag); text-shadow: 0 0 10px var(--zx-mag); }
-
-@media (max-width: 600px) {
-    #stats-bar { gap: 1em; font-size: var(--font-size-tiny); padding: 0.4em 0.6em; }
-    .stat-icon { font-size: 1.2em; }
-}
+/* Compact, space-efficient minigame UI */
 
 /* --- Minigame View --- */
 #minigame-view {
     padding: 0;
-    align-items: stretch;
-    justify-content: stretch;
+    display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    /* No transition by default - only during state changes */
+    overflow: hidden;
+    height: 100%;
 }
 
 /* --- Minigame Control Bar --- */
 #minigame-controls {
     display: flex;
-    gap: 0.5em;
-    padding: 0.5em;
-    background: linear-gradient(180deg, #222 0%, #111 100%);
-    border-bottom: 2px solid var(--zx-blue);
+    gap: 0.3em;
+    padding: 0.3em 0.5em;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 1px solid var(--zx-blue);
     justify-content: flex-end;
     z-index: 10;
     flex-shrink: 0;
-    /* Draggable handle area */
     cursor: grab;
 }
 
@@ -57,12 +31,14 @@
     background: #333;
     border: 1px solid #555;
     color: #fff;
-    font-size: 1.2em;
-    width: 2.5em;
-    height: 2.5em;
+    font-size: 1em;
+    width: 2em;
+    height: 2em;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -97,10 +73,10 @@
     flex: 1;
     position: relative;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: auto;
-    min-height: 0;  /* Allow flex child to shrink and scroll */
+    align-items: stretch;
+    justify-content: stretch;
+    overflow: hidden;
+    min-height: 0;
 }
 
 /* --- Frosted Panes Overlay (Pause State) --- */
@@ -524,22 +500,31 @@
 /* --- Game Container --- */
 #game-container {
     width: 100%;
-    max-width: 400px;
-    min-height: 300px;
-    aspect-ratio: 1;
+    height: 100%;
     background: #111;
-    border: 4px solid var(--zx-mag);
+    border: 2px solid var(--zx-mag);
     position: relative;
     overflow: hidden;
-    margin: 0 auto;
 }
+
 #game-container.mega-mode {
     border-color: var(--zx-yellow);
     box-shadow: 0 0 30px var(--zx-yellow), inset 0 0 50px rgba(255,255,0,0.1);
 }
 
-@media (max-width: 600px) {
-    #game-container { max-width: 100%; }
+/* --- Iframe Minigame Container --- */
+#iframe-minigame-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+#iframe-minigame-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
 }
 
 /* --- Gem Styling --- */
@@ -574,55 +559,22 @@
     to { transform: scale(2); opacity: 0; }
 }
 
-/* --- Minigame Instructions --- */
-.minigame-instructions {
-    margin-top: 1em;
-    text-align: center;
-    color: var(--zx-cyan);
-    font-size: var(--font-size-small);
-}
-
-/* --- Minigame Score --- */
-.minigame-score {
-    font-size: 1.5em;
-    color: var(--zx-yellow);
-    margin-top: 0.5em;
-    text-align: center;
-}
-
-/* --- Return Button --- */
-.return-btn {
-    margin-top: 1em;
-    padding: 1em 2em;
-    font-family: inherit;
-    font-size: var(--font-size-base);
-    background: var(--zx-green);
-    color: #000;
-    border: none;
-    cursor: pointer;
-    min-height: var(--touch-target-min);
-    min-width: 200px;
-    transition: background var(--transition-normal), transform var(--transition-fast);
-}
-.return-btn:hover { background: var(--zx-cyan); }
-.return-btn:active { transform: scale(0.96); }
 
 /* --- Chess Container --- */
-.chess-container {
+#chess-container {
     display: none;
     width: 100%;
     height: 100%;
     align-items: center;
     justify-content: center;
 }
-.chess-container.active { display: flex; }
 
-.chess-iframe {
+#chess-container.active { display: flex; }
+
+#chess-container iframe {
     width: 100%;
     height: 100%;
     border: none;
-    max-width: 500px;
-    max-height: 500px;
 }
 
 /* --- Collectible Effects --- */

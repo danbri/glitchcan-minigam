@@ -76,31 +76,13 @@ window.FinkUtils = {
         }
     },
 
-    // Debug logging - routes to FinkDevPanel if available
+    // Debug logging - console-based
     debugLog(message) {
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = `[${timestamp}] ${message}`;
-
-        if (window.FinkDevPanel) {
-            FinkDevPanel.log(message, 'debug');
-        } else {
-            console.log(logEntry);
-        }
-    },
-
-    // Toggle debug console (for legacy compatibility)
-    toggleDebugConsole() {
-        if (window.FinkDevPanel) {
-            FinkDevPanel.toggle();
-        }
+        console.log(`[FINK] ${message}`);
     }
 };
 
-// Global convenience
+// Global convenience logging function
 window.log = (msg, type = 'info') => {
-    if (window.FinkDevPanel) {
-        FinkDevPanel.log(msg, type);
-    } else {
-        console.log(`[${type}] ${msg}`);
-    }
+    console.log(`[${type}] ${msg}`);
 };

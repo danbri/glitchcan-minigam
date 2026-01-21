@@ -39,6 +39,7 @@ main {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* --- View Switching --- */
@@ -46,14 +47,18 @@ main {
     flex: 1;
     display: none;
     flex-direction: column;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    min-height: 0;
 }
 
 .view.active { display: flex; }
 
 /* --- Narrative View --- */
-#narrative-view { padding: 1em; }
+#narrative-view {
+    padding: 0.5em;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
 
 /* --- Choices Container --- */
 #choices {
@@ -61,16 +66,17 @@ main {
     max-height: 40vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    padding-top: 0.5em;
 }
 
 #story-output {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 1em;
+    padding: 0.5em;
     background: rgba(0,20,0,0.5);
-    border: 2px solid var(--zx-green);
-    margin-bottom: 1em;
+    border: 1px solid var(--zx-green);
+    min-height: 0;
 }
 
 /* Text animation styles */
@@ -159,11 +165,11 @@ main {
 }
 
 .choice-btn {
-    padding: 0.8em;
+    padding: 0.6em;
     text-align: left;
     background: #024;
     color: #0ff;
-    border: 2px solid var(--zx-cyan);
+    border: 1px solid var(--zx-cyan);
     font-family: inherit;
     font-size: var(--font-size-base);
     cursor: pointer;
@@ -173,7 +179,7 @@ main {
     position: relative;
     pointer-events: none;
     min-height: var(--touch-target-min);
-    transition: background var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+    transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
 .choice-btn::before {

@@ -13,11 +13,6 @@ window.FinkPlayer = {
         // Initialize all modules
         FinkUI.init();
 
-        // Initialize dev panel if present
-        if (window.FinkDevPanel) {
-            FinkDevPanel.init();
-        }
-
         // Initialize minigames
         if (window.FinkMinigames) {
             FinkMinigames.init();
@@ -294,14 +289,11 @@ window.fink = {
     minigames: window.FinkMinigames,
     foley: window.FinkFoley,
     audio: window.FinkAudio,
-    devpanel: window.FinkDevPanel,
     nav: window.FinkNavigation,
     breadcrumb: window.FinkBreadcrumb
 };
 
-// Global swimEvent function for logging to swimlanes
+// Global swimEvent function - logs to console
 window.swimEvent = (lane, emoji, title, detail) => {
-    if (window.FinkDevPanel) {
-        FinkDevPanel.swimEvent(lane, emoji, title, detail);
-    }
+    console.log(`[${lane}] ${emoji} ${title}: ${detail || ''}`);
 };
