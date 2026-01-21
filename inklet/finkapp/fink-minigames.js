@@ -150,7 +150,15 @@ window.FinkMinigames = {
 
             case 'progress':
                 this.log('Progress: ' + JSON.stringify(data.data));
-                // Could update UI here
+                // Sync variables to story and update stats display
+                if (data.data) {
+                    if (data.data.gems !== undefined) {
+                        this._setStoryVariable('diamonds', data.data.gems);
+                    }
+                    if (data.data.score !== undefined) {
+                        this._setStoryVariable('score', data.data.score);
+                    }
+                }
                 break;
 
             case 'set-variable':
@@ -164,6 +172,14 @@ window.FinkMinigames = {
 
             case 'error':
                 this.log(`Minigame error: ${data.code} - ${data.message}`);
+                break;
+
+            case 'log':
+                // Route minigame logs to finkapp dev console
+                const prefix = `[Minigame] `;
+                if (window.FinkDevPanel) {
+                    FinkDevPanel.log(prefix + data.message, data.level === 'error' ? 'error' : 'game');
+                }
                 break;
         }
     },
@@ -378,6 +394,12 @@ window.FinkMinigames = {
 
         // Switch back to narrative view
         this.switchView('narrative');
+
+        // Reset UI state to ensure choices work
+        if (window.FinkUI) {
+            FinkUI.animationInProgress = false;
+            FinkUI.hideStatus();
+        }
 
         // Continue story if available
         if (window.FinkInkEngine && FinkInkEngine.continueStory) {

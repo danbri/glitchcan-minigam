@@ -65,6 +65,26 @@
         // Initialize SDK
         const sdk = new MinigameSDK();
 
+        // Route logs to host when in iframe
+        if (window.parent !== window) {
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+            const originalError = console.error;
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                sdk._sendMessage({ type: 'log', level: 'info', message: args.map(String).join(' ') });
+            };
+            console.warn = function(...args) {
+                originalWarn.apply(console, args);
+                sdk._sendMessage({ type: 'log', level: 'warn', message: args.map(String).join(' ') });
+            };
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                sdk._sendMessage({ type: 'log', level: 'error', message: args.map(String).join(' ') });
+            };
+        }
+
         // Game state tracking
         let gameState = {
             gemsCollected: 0,
@@ -162,12 +182,58 @@
             });
         });
 
+        // Periodic progress sync (every 1 second)
+        let progressInterval = null;
+        function startProgressSync() {
+            if (progressInterval) return;
+            progressInterval = setInterval(() => {
+                if (!gameState.gameElement) return;
+
+                // Try to read score from game component
+                const game = gameState.gameElement;
+                if (game.playerState && game.playerState.score !== undefined) {
+                    const currentGems = game.playerState.score;
+                    if (currentGems !== gameState.gemsCollected) {
+                        gameState.gemsCollected = currentGems;
+                        sdk.progress({ gems: currentGems });
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopProgressSync() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        // Start progress sync when game is created
+        const originalCreateGame = createGame;
+        createGame = function() {
+            const game = originalCreateGame();
+            startProgressSync();
+            return game;
+        };
+
         // If running standalone (not in iframe), auto-create the game
         if (window.parent === window) {
             console.log('[Mudslider] Running standalone');
             document.addEventListener('DOMContentLoaded', () => {
                 createGame();
             });
+        }
+
+        // When in iframe, hide the footer tabs (clutter) - inject CSS
+        if (window.parent !== window) {
+            const style = document.createElement('style');
+            style.textContent = `
+                /* Hide footer UI when running in iframe */
+                #footer-ui { display: none !important; }
+                /* Maximize play area */
+                #game-area { flex: 1; height: 100%; }
+            `;
+            document.head.appendChild(style);
         }
     </script>
 </body>
