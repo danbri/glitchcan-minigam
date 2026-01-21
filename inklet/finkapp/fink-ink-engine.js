@@ -174,9 +174,25 @@ window.FinkInkEngine = {
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
 
                 // Track current knot from path (detect knot changes during flow)
-                const pathStr = this.story.state.currentPathString;
-                FinkUtils.debugLog('Path string: ' + pathStr);
+                // Try multiple methods for inkjs 2.x compatibility
+                let pathStr = this.story.state.currentPathString;
+
+                // Fallback 1: currentPointer.path (some inkjs versions)
+                if (!pathStr && this.story.state.currentPointer?.path) {
+                    pathStr = this.story.state.currentPointer.path.toString();
+                    FinkUtils.debugLog('Using fallback currentPointer.path: ' + pathStr);
+                }
+
+                // Fallback 2: callStack current element
+                if (!pathStr && this.story.state.callStack?.currentElement?.currentPointer?.path) {
+                    pathStr = this.story.state.callStack.currentElement.currentPointer.path.toString();
+                    FinkUtils.debugLog('Using fallback callStack path: ' + pathStr);
+                }
+
+                FinkUtils.debugLog('Path string: ' + (pathStr || '(null/empty)'));
+
                 if (pathStr) {
+                    // Extract knot name from path like "Bag_End.0" or "Bag_End.subknot.0"
                     const knotPart = pathStr.split('.')[0];
                     FinkUtils.debugLog('Knot part extracted: "' + knotPart + '" (isNumeric: ' + /^\d+$/.test(knotPart) + ')');
                     if (knotPart && !/^\d+$/.test(knotPart)) {
@@ -185,6 +201,8 @@ window.FinkInkEngine = {
                             FinkUtils.debugLog('Detected knot: ' + detectedKnot);
                         }
                     }
+                } else {
+                    FinkUtils.debugLog('WARNING: No path string available from story state');
                 }
 
                 let currentTags = this.story.currentTags || [];
@@ -340,6 +358,12 @@ window.FinkInkEngine = {
         // It may be vestigial - investigate if removal causes issues.
         // See: https://github.com/danbri/glitchcan-minigam/issues/579
         setTimeout(() => {
+            // Notify breadcrumb of FINK transition BEFORE loading
+            // This ensures the stack always reflects navigation intent, even if load is skipped
+            if (window.FinkBreadcrumb) {
+                FinkBreadcrumb.setFinkUrl(resolvedUrl);
+            }
+
             // Clear any duplicate detection for this URL - this is intentional user navigation
             // (e.g., clicking a menu item), so we should always honor it even if the URL
             // was recently loaded by deep link resolution or other automatic processes.
@@ -355,11 +379,6 @@ window.FinkInkEngine = {
                 }
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
-
-                // Notify breadcrumb of FINK transition (saves previous FINK to history)
-                if (window.FinkBreadcrumb) {
-                    FinkBreadcrumb.setFinkUrl(resolvedUrl);
-                }
 
                 await this.compileAndRunStory(content);
                 if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', resolvedUrl.split('/').pop());
