@@ -264,6 +264,167 @@
     }
 }
 
+/* --- Inline Minigame Container (embedded in story flow) --- */
+.inline-minigame {
+    position: relative;
+    margin: 1em 0;
+    border-radius: var(--border-radius-md, 8px);
+    overflow: hidden;
+    background: #111;
+    border: 2px solid var(--zx-cyan);
+}
+
+/* Inline size - small widget embedded in text */
+.inline-minigame.size-inline {
+    width: 100%;
+    max-width: 280px;
+    height: 200px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Medium size - preview with splash, can expand */
+.inline-minigame.size-medium {
+    width: 100%;
+    max-width: 400px;
+    height: 250px;
+}
+
+/* Full size - takes over flow, but still in story-output */
+.inline-minigame.size-full {
+    width: 100%;
+    max-width: 100%;
+    height: 400px;
+}
+
+.inline-minigame-content {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inline-minigame-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Inline minigame controls bar */
+.inline-minigame-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 0.25em;
+    padding: 0.25em;
+    background: rgba(0,0,0,0.6);
+    border-bottom-left-radius: var(--border-radius-sm, 4px);
+    z-index: 10;
+}
+
+.inline-minigame-controls button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.inline-minigame-controls button:hover {
+    opacity: 1;
+}
+
+/* Splash/Preview overlay for medium mode */
+.inline-minigame-splash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: opacity 0.3s ease;
+}
+
+.inline-minigame-splash.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.inline-minigame-splash-icon {
+    font-size: 3em;
+    margin-bottom: 0.3em;
+    animation: splashPulse 2s ease-in-out infinite;
+}
+
+.inline-minigame-splash-title {
+    font-size: 1.2em;
+    color: var(--zx-yellow);
+    text-shadow: 0 0 10px var(--zx-yellow);
+    margin-bottom: 0.3em;
+}
+
+.inline-minigame-splash-subtitle {
+    font-size: 0.8em;
+    color: var(--zx-cyan);
+    opacity: 0.8;
+}
+
+.inline-minigame-splash-play {
+    margin-top: 0.8em;
+    padding: 0.5em 1.2em;
+    background: var(--zx-green);
+    color: #000;
+    border: none;
+    border-radius: var(--border-radius-sm, 4px);
+    font-family: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.inline-minigame-splash-play:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px var(--zx-green);
+}
+
+@keyframes splashPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Expand button for going fullscreen from inline/medium */
+.inline-minigame-expand {
+    position: absolute;
+    bottom: 0.5em;
+    right: 0.5em;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--zx-cyan);
+    color: var(--zx-cyan);
+    padding: 0.3em 0.6em;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-sm, 4px);
+    cursor: pointer;
+    z-index: 15;
+    transition: all 0.2s;
+}
+
+.inline-minigame-expand:hover {
+    background: var(--zx-cyan);
+    color: #000;
+}
+
 /* --- Game Container --- */
 #game-container {
     width: 100%;

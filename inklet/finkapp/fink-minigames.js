@@ -25,6 +25,19 @@ window.FinkMinigames = {
     // Known iframe-based minigames
     iframeMinigames: ['mudslider', 'battleboids', 'gridluck'],
 
+    // Minigame metadata for splash screens
+    minigameInfo: {
+        gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!' },
+        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!' },
+        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle' },
+        battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock' },
+        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase' },
+        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game' }
+    },
+
+    // Active inline minigames (keyed by container ID)
+    inlineMinigames: {},
+
     // DOM elements
     elements: {
         narrativeView: null,
@@ -689,6 +702,357 @@ window.FinkMinigames = {
             window.FinkDevPanel.log(`Minigames: ${msg}`, 'game');
         } else {
             console.log(`[FinkMinigames] ${msg}`);
+        }
+    },
+
+    // ========== INLINE MINIGAME SYSTEM ==========
+
+    /**
+     * Create an inline minigame container that embeds in story flow
+     * @param {string} type - Minigame type (gems, mudslider, etc.)
+     * @param {string} display - Display mode: 'inline', 'medium', 'full'
+     * @param {object} options - Additional options (preview image, etc.)
+     * @returns {HTMLElement} The container element to insert into story
+     */
+    createInlineContainer(type, display = 'medium', options = {}) {
+        const containerId = `inline-minigame-${Date.now()}`;
+        const info = this.minigameInfo[type] || { icon: '🎮', title: type, subtitle: '' };
+
+        this.log(`Creating inline container: ${type} (${display})`);
+
+        // Create main container
+        const container = document.createElement('div');
+        container.className = `inline-minigame size-${display}`;
+        container.id = containerId;
+        container.dataset.type = type;
+        container.dataset.display = display;
+
+        // Content area
+        const content = document.createElement('div');
+        content.className = 'inline-minigame-content';
+        container.appendChild(content);
+
+        // Controls bar (minimize/expand/close)
+        const controls = document.createElement('div');
+        controls.className = 'inline-minigame-controls';
+        controls.innerHTML = `
+            <button class="inline-expand" title="Expand to fullscreen">⛶</button>
+            <button class="inline-close" title="Close">✕</button>
+        `;
+        container.appendChild(controls);
+
+        // For medium mode, show splash first
+        if (display === 'medium') {
+            const splash = this._createSplashOverlay(type, info, options);
+            container.appendChild(splash);
+
+            // Click splash to start
+            splash.addEventListener('click', (e) => {
+                if (e.target.classList.contains('inline-close')) return;
+                splash.classList.add('hidden');
+                this._startInlineMinigame(containerId, type, content);
+            });
+        } else if (display === 'inline') {
+            // For inline mode, start immediately (no splash)
+            setTimeout(() => {
+                this._startInlineMinigame(containerId, type, content);
+            }, 100);
+        }
+
+        // Wire up control buttons
+        controls.querySelector('.inline-expand')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._expandInlineToFullscreen(containerId, type);
+        });
+
+        controls.querySelector('.inline-close')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._closeInlineMinigame(containerId);
+        });
+
+        // Store reference
+        this.inlineMinigames[containerId] = {
+            type,
+            display,
+            container,
+            content,
+            active: false
+        };
+
+        return container;
+    },
+
+    /**
+     * Create splash overlay for medium mode
+     */
+    _createSplashOverlay(type, info, options) {
+        const splash = document.createElement('div');
+        splash.className = 'inline-minigame-splash';
+
+        // Use preview image if provided, otherwise use icon
+        const visual = options.previewImage
+            ? `<img src="${options.previewImage}" style="max-width:80%;max-height:50%;object-fit:contain;border-radius:4px;" alt="${info.title}">`
+            : `<div class="inline-minigame-splash-icon">${info.icon}</div>`;
+
+        splash.innerHTML = `
+            ${visual}
+            <div class="inline-minigame-splash-title">${info.title}</div>
+            <div class="inline-minigame-splash-subtitle">${info.subtitle}</div>
+            <button class="inline-minigame-splash-play">▶ Play</button>
+        `;
+
+        return splash;
+    },
+
+    /**
+     * Start a minigame inside an inline container
+     */
+    _startInlineMinigame(containerId, type, contentEl) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry) return;
+
+        this.log(`Starting inline minigame: ${type} in ${containerId}`);
+        entry.active = true;
+
+        // Check if this is an iframe-based minigame
+        if (this.iframeMinigames.includes(type)) {
+            this._startInlineIframeMinigame(containerId, type, contentEl);
+            return;
+        }
+
+        // For gems/inline games, create a mini game container
+        if (type === 'gems' || type === 'mega') {
+            this._startInlineGemsMinigame(containerId, type, contentEl);
+            return;
+        }
+
+        // Fallback: show placeholder
+        contentEl.innerHTML = `<div style="color:#888;text-align:center;padding:1em;">
+            ${type} minigame (inline mode coming soon)
+        </div>`;
+    },
+
+    /**
+     * Start gems minigame in inline container
+     */
+    _startInlineGemsMinigame(containerId, type, contentEl) {
+        const entry = this.inlineMinigames[containerId];
+
+        // Create inline gem container
+        const gemContainer = document.createElement('div');
+        gemContainer.className = 'inline-gem-container';
+        gemContainer.style.cssText = 'width:100%;height:100%;position:relative;overflow:hidden;';
+        contentEl.appendChild(gemContainer);
+
+        // Score display
+        const scoreEl = document.createElement('div');
+        scoreEl.style.cssText = 'position:absolute;top:4px;left:4px;color:var(--zx-yellow);font-size:0.9em;z-index:5;';
+        scoreEl.innerHTML = '💎 <span class="gem-count">0</span>';
+        gemContainer.appendChild(scoreEl);
+
+        // Start mini gems game
+        entry.gemsState = {
+            collected: 0,
+            container: gemContainer,
+            scoreEl: scoreEl.querySelector('.gem-count'),
+            mode: type === 'mega' ? 'mega' : 'normal'
+        };
+
+        this._spawnInlineGems(containerId);
+    },
+
+    /**
+     * Spawn gems in inline container
+     */
+    _spawnInlineGems(containerId) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry || !entry.active || !entry.gemsState) return;
+
+        const state = entry.gemsState;
+        const cfg = {
+            normal: { emojis: ['💎', '💠', '🔷'], count: 5, timeout: 4000 },
+            mega: { emojis: ['👑', '💛', '🌟'], count: 3, timeout: 3000 }
+        }[state.mode] || { emojis: ['💎'], count: 5, timeout: 4000 };
+
+        // Spawn a few gems
+        for (let i = 0; i < cfg.count; i++) {
+            setTimeout(() => {
+                if (!entry.active) return;
+                this._createInlineGem(containerId, cfg);
+            }, i * 300);
+        }
+
+        // Continue spawning
+        setTimeout(() => {
+            if (entry.active) this._spawnInlineGems(containerId);
+        }, 3000);
+    },
+
+    /**
+     * Create single gem in inline container
+     */
+    _createInlineGem(containerId, cfg) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry || !entry.gemsState) return;
+
+        const state = entry.gemsState;
+        const gem = document.createElement('div');
+        gem.className = 'gem';
+        gem.textContent = cfg.emojis[Math.floor(Math.random() * cfg.emojis.length)];
+        gem.style.cssText = `
+            position: absolute;
+            font-size: 1.5em;
+            cursor: pointer;
+            left: ${10 + Math.random() * 70}%;
+            top: ${10 + Math.random() * 70}%;
+            transition: transform 0.2s;
+        `;
+
+        gem.addEventListener('click', () => {
+            if (gem.classList.contains('collected')) return;
+            gem.classList.add('collected');
+            state.collected++;
+            state.scoreEl.textContent = state.collected;
+
+            // Update story diamonds
+            this._setStoryVariable('diamonds', (FinkInkEngine?.story?.variablesState?.['diamonds'] || 0) + 1);
+
+            // Play sound
+            this._playGemSound();
+
+            setTimeout(() => gem.remove(), 300);
+        });
+
+        state.container.appendChild(gem);
+
+        // Auto-remove after timeout
+        setTimeout(() => {
+            if (gem.parentNode && !gem.classList.contains('collected')) {
+                gem.style.opacity = '0';
+                setTimeout(() => gem.remove(), 300);
+            }
+        }, cfg.timeout);
+    },
+
+    /**
+     * Play gem collection sound
+     */
+    _playGemSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 800 + Math.random() * 400;
+            gain.gain.value = 0.1;
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * Start iframe-based minigame in inline container
+     */
+    _startInlineIframeMinigame(containerId, type, contentEl) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry) return;
+
+        // Initialize delta-based sync
+        const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        entry.lastSync = { gameGems: 0, storyDiamonds: currentDiamonds };
+
+        // Create sandboxed iframe
+        const iframe = document.createElement('iframe');
+        iframe.src = `../minigames/${type}/index.html`;
+        iframe.sandbox = 'allow-scripts';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;';
+        contentEl.appendChild(iframe);
+
+        entry.iframe = iframe;
+
+        // Setup message listener
+        entry.messageHandler = (event) => this._handleInlineMessage(containerId, event);
+        window.addEventListener('message', entry.messageHandler);
+
+        // Send init when loaded
+        iframe.onload = () => {
+            this.log(`Inline iframe loaded for ${containerId}`);
+            iframe.contentWindow?.postMessage({
+                type: 'init',
+                config: { mode: 'inline', display: entry.display },
+                variables: this._getStoryVariables()
+            }, '*');
+        };
+    },
+
+    /**
+     * Handle messages from inline iframe minigames
+     */
+    _handleInlineMessage(containerId, event) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry) return;
+
+        const data = event.data;
+        if (!data || typeof data.type !== 'string') return;
+
+        switch (data.type) {
+            case 'progress':
+                // Delta-based sync for inline games
+                if (data.data?.gems !== undefined && entry.lastSync) {
+                    const currentGems = data.data.gems;
+                    const gameDelta = currentGems - entry.lastSync.gameGems;
+                    const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+                    const newDiamonds = currentStoryDiamonds + gameDelta;
+                    this._setStoryVariable('diamonds', newDiamonds);
+                    entry.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+                }
+                break;
+
+            case 'complete':
+                this.log(`Inline minigame complete: ${containerId}`);
+                // Handle completion - could auto-close or show score
+                break;
+        }
+    },
+
+    /**
+     * Expand inline minigame to fullscreen view
+     */
+    _expandInlineToFullscreen(containerId, type) {
+        this.log(`Expanding ${containerId} to fullscreen`);
+
+        // Close inline version
+        this._closeInlineMinigame(containerId, false);
+
+        // Start fullscreen version
+        this.startMinigame(type, 'normal');
+    },
+
+    /**
+     * Close an inline minigame
+     */
+    _closeInlineMinigame(containerId, continueStory = true) {
+        const entry = this.inlineMinigames[containerId];
+        if (!entry) return;
+
+        this.log(`Closing inline minigame: ${containerId}`);
+        entry.active = false;
+
+        // Clean up iframe listener if present
+        if (entry.messageHandler) {
+            window.removeEventListener('message', entry.messageHandler);
+        }
+
+        // Remove container from DOM
+        entry.container?.remove();
+
+        // Remove from tracking
+        delete this.inlineMinigames[containerId];
+
+        // Continue story if requested
+        if (continueStory && window.FinkInkEngine) {
+            FinkInkEngine.continueStory();
         }
     }
 };
