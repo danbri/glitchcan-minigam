@@ -31,6 +31,7 @@
     align-items: stretch;
     justify-content: stretch;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 /* --- Minigame Control Bar --- */
@@ -42,6 +43,7 @@
     border-bottom: 2px solid var(--zx-blue);
     justify-content: flex-end;
     z-index: 10;
+    flex-shrink: 0;
 }
 
 #minigame-controls button {
@@ -90,7 +92,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: auto;
+    min-height: 0;  /* Allow flex child to shrink and scroll */
 }
 
 /* --- Frosted Panes Overlay (Pause State) --- */
