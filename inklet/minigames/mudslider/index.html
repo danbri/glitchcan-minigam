@@ -65,22 +65,40 @@
         // Initialize SDK
         const sdk = new MinigameSDK();
 
-        // Route logs to host when in iframe
+        // Batched log routing (send at most once per second, errors immediately)
         if (window.parent !== window) {
             const originalLog = console.log;
             const originalWarn = console.warn;
             const originalError = console.error;
+            let logBatch = [];
+            let logTimer = null;
+
+            function flushLogs() {
+                if (logBatch.length > 0) {
+                    sdk._sendMessage({ type: 'log-batch', logs: logBatch });
+                    logBatch = [];
+                }
+                logTimer = null;
+            }
+
+            function queueLog(level, message) {
+                logBatch.push({ level, message });
+                if (!logTimer) {
+                    logTimer = setTimeout(flushLogs, 1000);
+                }
+            }
 
             console.log = function(...args) {
                 originalLog.apply(console, args);
-                sdk._sendMessage({ type: 'log', level: 'info', message: args.map(String).join(' ') });
+                queueLog('info', args.map(String).join(' '));
             };
             console.warn = function(...args) {
                 originalWarn.apply(console, args);
-                sdk._sendMessage({ type: 'log', level: 'warn', message: args.map(String).join(' ') });
+                queueLog('warn', args.map(String).join(' '));
             };
             console.error = function(...args) {
                 originalError.apply(console, args);
+                // Errors sent immediately
                 sdk._sendMessage({ type: 'log', level: 'error', message: args.map(String).join(' ') });
             };
         }

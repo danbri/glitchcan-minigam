@@ -50,6 +50,12 @@ You venture deeper into the twisting cave passages...
 You emerge from the depths, pockets heavy with gems and treasures. The experience has left you wiser about the dangers lurking in these ancient ruins.
 + [Return to the cave entrance] -> Dark_Cave
 + [Rest and continue exploring] -> Crash_Site_Clearing
++ [Return to the world between worlds] -> Exit_To_Menu
+
+=== Exit_To_Menu ===
+The jungle shimmers and fades as you feel yourself pulled back toward the familiar glow of the pool's edge...
+# FINK: toc.fink.js
+-> END
 
 === Control_Room ===
 # IMAGE: 596A5299-AA05-443E-B7D3-EEEB3D8B5EAA.png

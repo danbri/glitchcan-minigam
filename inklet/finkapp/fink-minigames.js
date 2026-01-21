@@ -175,10 +175,18 @@ window.FinkMinigames = {
                 break;
 
             case 'log':
-                // Route minigame logs to finkapp dev console
-                const prefix = `[Minigame] `;
+                // Route single minigame log to finkapp dev console
                 if (window.FinkDevPanel) {
-                    FinkDevPanel.log(prefix + data.message, data.level === 'error' ? 'error' : 'game');
+                    FinkDevPanel.log(`[Minigame] ${data.message}`, data.level === 'error' ? 'error' : 'game');
+                }
+                break;
+
+            case 'log-batch':
+                // Route batched minigame logs to finkapp dev console
+                if (window.FinkDevPanel && data.logs) {
+                    data.logs.forEach(log => {
+                        FinkDevPanel.log(`[Minigame] ${log.message}`, log.level === 'error' ? 'error' : 'game');
+                    });
                 }
                 break;
         }
