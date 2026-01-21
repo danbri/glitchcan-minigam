@@ -14,7 +14,6 @@
     <!-- Modular CSS -->
     <link rel="stylesheet" href="fink-theme.css">
     <link rel="stylesheet" href="fink-player.css">
-    <link rel="stylesheet" href="fink-devpanel.css">
     <link rel="stylesheet" href="fink-minigames.css">
     <link rel="stylesheet" href="fink-breadcrumb.css">
 </head>
@@ -34,113 +33,7 @@
 <header class="fink-header">
     <button id="homeBtn" title="Back to main menu">🏠</button>
     <button id="restartBtn" title="Restart story">↺</button>
-    <button id="settingsBtn" title="Developer panel">⚙️</button>
 </header>
-
-<!-- Developer Panel -->
-<div id="dev-panel" class="dev-panel">
-    <div id="dev-tabs" class="dev-tabs">
-        <button class="active" data-tab="logs" title="Logs">📋</button>
-        <button data-tab="swimlanes" title="Swimlanes">🏊</button>
-        <button data-tab="state" title="Config">📊</button>
-        <button data-tab="finks" title="FINK files">📂</button>
-        <button data-tab="audio" title="Audio">🔊</button>
-        <button id="copyLogsBtn" title="Copy logs">📄</button>
-        <button id="closeDevPanel" title="Close" style="margin-left:auto;">✕</button>
-    </div>
-
-    <!-- Logs Tab -->
-    <div id="logs-content" class="dev-tab-content active">
-        <div id="log-filters">
-            <label><input type="checkbox" data-filter="error" checked> ❌ Error</label>
-            <label><input type="checkbox" data-filter="warn" checked> ⚠️ Warn</label>
-            <label><input type="checkbox" data-filter="info" checked> ℹ️ Info</label>
-            <label><input type="checkbox" data-filter="fink" checked> 📜 FINK</label>
-            <label><input type="checkbox" data-filter="ink" checked> 🖋️ Ink</label>
-            <label><input type="checkbox" data-filter="game" checked> 🎮 Game</label>
-            <label><input type="checkbox" data-filter="net" checked> 🌐 Net</label>
-            <label><input type="checkbox" data-filter="nav" checked> 🧭 Nav</label>
-            <label><input type="checkbox" data-filter="debug"> 🔧 Debug</label>
-        </div>
-        <div id="log-output"></div>
-    </div>
-
-    <!-- Swimlanes Tab -->
-    <div id="swimlanes-content" class="dev-tab-content">
-        <div class="swimlane">
-            <div class="swimlane-header nav">🧭 NAV</div>
-            <div class="swimlane-body" id="swim-nav"></div>
-        </div>
-        <div class="swimlane">
-            <div class="swimlane-header ink">🖋️ INK</div>
-            <div class="swimlane-body" id="swim-ink"></div>
-        </div>
-        <div class="swimlane">
-            <div class="swimlane-header fink">📜 FINK</div>
-            <div class="swimlane-body" id="swim-fink"></div>
-        </div>
-        <div class="swimlane">
-            <div class="swimlane-header game">🎮 GAME</div>
-            <div class="swimlane-body" id="swim-game"></div>
-        </div>
-        <div class="swimlane">
-            <div class="swimlane-header net">🌐 NET</div>
-            <div class="swimlane-body" id="swim-net"></div>
-        </div>
-    </div>
-
-    <!-- State Tab -->
-    <div id="state-content" class="dev-tab-content">
-        <pre id="state-display">Loading...</pre>
-    </div>
-
-    <!-- FINKs Tab -->
-    <div id="finks-content" class="dev-tab-content">
-        <div style="display:flex; gap:2em; flex-wrap:wrap;">
-            <div>
-                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">📁 Local Stories</h4>
-                <div id="local-finks" style="display:flex; flex-direction:column; gap:0.3em; font-size:12px;">
-                    <!-- Populated dynamically from FinkConfig.LOCAL_FINKS -->
-                </div>
-            </div>
-            <div>
-                <h4 style="margin:0 0 0.5em; color:var(--zx-mag);">🌐 External URL</h4>
-                <div style="display:flex; gap:0.5em;">
-                    <input type="text" id="external-fink-url" placeholder="https://example.com/story.fink.js" style="flex:1; min-width:200px; padding:0.3em; font-size:12px; background:#111; color:#fff; border:1px solid var(--zx-mag);">
-                    <button id="load-external-fink" style="padding:0.3em 0.6em; font-size:12px;">Load</button>
-                </div>
-                <div style="margin-top:0.5em; font-size:10px; color:#888;">
-                    Paste any .fink.js URL to load external stories
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Audio Tab -->
-    <div id="audio-content" class="dev-tab-content">
-        <div style="display:flex; flex-direction:column; gap:1em;">
-            <div>
-                <h4 style="margin:0 0 0.5em; color:var(--zx-cyan);">🎵 Foley (WebAudio)</h4>
-                <p style="font-size:11px; color:#888; margin:0 0 0.5em;">Layered procedural sounds. Multiple can play together.</p>
-                <div style="display:flex; gap:0.5em; flex-wrap:wrap;">
-                    <button class="synth-btn" data-sound="water">💧 Water</button>
-                    <button class="synth-btn" data-sound="wind">🌬️ Wind</button>
-                    <button class="synth-btn" data-sound="fire">🔥 Fire</button>
-                    <button class="synth-btn" data-sound="machinery">⚙️ Machinery</button>
-                    <button class="synth-btn" data-sound="rumble">🌋 Rumble</button>
-                    <button id="stopSynthBtn" style="background:#522;">⏹️ Stop All</button>
-                </div>
-            </div>
-            <div>
-                <h4 style="margin:0 0 0.5em; color:var(--zx-green);">🎧 Audio Status</h4>
-                <div id="audio-status" style="font-size:12px; color:#8f8;">
-                    AudioContext: <span id="audio-ctx-state">--</span><br>
-                    Currently playing: <span id="audio-current">None</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <main>
     <!-- Narrative View -->
@@ -178,17 +71,6 @@
                 <div class="frost-status">PAUSED</div>
             </div>
         </div>
-
-        <div id="minigame-instructions">Click the gems to collect them!</div>
-        <div id="minigame-score">Collected: <span id="gems-collected">0</span></div>
-    </div>
-
-    <!-- Stats Bar -->
-    <div id="stats-bar">
-        <div class="stat"><span class="stat-icon">💎</span> Diamonds: <span class="stat-value" id="stat-diamonds">0</span></div>
-        <div class="stat"><span class="stat-icon">👑</span> Mega: <span class="stat-value mega" id="stat-mega">0</span></div>
-        <div class="stat"><span class="stat-icon">🗝️</span> Keys: <span class="stat-value" id="stat-keys">0</span></div>
-        <div class="stat"><span class="stat-icon">⭐</span> Score: <span class="stat-value" id="stat-score">0</span></div>
     </div>
 </main>
 
@@ -206,7 +88,6 @@
 <script src="fink-audio.js"></script>
 <script src="fink-navigation.js"></script>
 <script src="fink-breadcrumb.js"></script>
-<script src="fink-devpanel.js"></script>
 <script src="fink-ui.js"></script>
 <script src="gems.minigam.js"></script>
 <script src="chess.minigam.js"></script>

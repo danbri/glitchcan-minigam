@@ -178,10 +178,6 @@ window.GemsMinigame = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            window.FinkDevPanel.log(`GemsMinigame: ${msg}`, 'game');
-        } else {
-            console.log(`[GemsMinigame] ${msg}`);
-        }
+        console.log(`[GemsMinigame] ${msg}`);
     }
 };

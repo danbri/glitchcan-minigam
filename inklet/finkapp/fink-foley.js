@@ -123,11 +123,7 @@ window.FinkFoley = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            window.FinkDevPanel.log(`Foley: ${msg}`, 'info');
-        } else {
-            console.log(`[Foley] ${msg}`);
-        }
+        console.log(`[Foley] ${msg}`);
     },
 
     // ===== FOLEY SOUND TYPES =====

@@ -77,10 +77,6 @@ window.ChessMinigame = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            window.FinkDevPanel.log(`ChessMinigame: ${msg}`, 'game');
-        } else {
-            console.log(`[ChessMinigame] ${msg}`);
-        }
+        console.log(`[ChessMinigame] ${msg}`);
     }
 };

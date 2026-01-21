@@ -1178,11 +1178,7 @@ ${knownFinks.length > 0 ? `\nKnown story hashes:\n${knownFinks.slice(-5).map(([h
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            window.FinkDevPanel.log(`Navigation: ${msg}`, 'info');
-        } else {
-            console.log(`[FinkNavigation] ${msg}`);
-        }
+        console.log(`[FinkNavigation] ${msg}`);
     }
 };
 

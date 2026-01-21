@@ -46,8 +46,6 @@ window.FinkMinigames = {
         gameContainer: null,
         chessContainer: null,
         iframeContainer: null,
-        instructions: null,
-        scoreDisplay: null,
         returnBtn: null,
         // Control buttons
         pauseBtn: null,
@@ -66,8 +64,6 @@ window.FinkMinigames = {
             gameContainer: document.getElementById('game-container'),
             chessContainer: document.getElementById('chess-container'),
             iframeContainer: document.getElementById('iframe-minigame-container'),
-            instructions: document.getElementById('minigame-instructions'),
-            scoreDisplay: document.getElementById('gems-collected'),
             returnBtn: document.getElementById('returnToStory'),
             // Control buttons
             pauseBtn: document.getElementById('minigame-pause'),
@@ -79,7 +75,7 @@ window.FinkMinigames = {
 
         // Initialize inline minigame modules
         if (window.GemsMinigame && this.elements.gameContainer) {
-            GemsMinigame.init(this.elements.gameContainer, this.elements.scoreDisplay);
+            GemsMinigame.init(this.elements.gameContainer, null);
         }
 
         if (window.ChessMinigame && this.elements.chessContainer) {
@@ -465,12 +461,6 @@ window.FinkMinigames = {
         if (this.elements.chessContainer) {
             this.elements.chessContainer.style.display = 'none';
         }
-        if (this.elements.instructions) {
-            this.elements.instructions.style.display = 'none';
-        }
-        if (this.elements.scoreDisplay) {
-            this.elements.scoreDisplay.parentElement.style.display = 'none';
-        }
 
         // Show iframe container
         if (this.elements.iframeContainer) {
@@ -545,17 +535,23 @@ window.FinkMinigames = {
                 break;
 
             case 'log':
-                // Route single minigame log to finkapp dev console
-                if (window.FinkDevPanel) {
-                    FinkDevPanel.log(`[Minigame] ${data.message}`, data.level === 'error' ? 'error' : 'game');
+                // Route minigame log to console
+                if (data.level === 'error') {
+                    console.error(`[Minigame] ${data.message}`);
+                } else {
+                    console.log(`[Minigame] ${data.message}`);
                 }
                 break;
 
             case 'log-batch':
-                // Route batched minigame logs to finkapp dev console
-                if (window.FinkDevPanel && data.logs) {
+                // Route batched minigame logs to console
+                if (data.logs) {
                     data.logs.forEach(log => {
-                        FinkDevPanel.log(`[Minigame] ${log.message}`, log.level === 'error' ? 'error' : 'game');
+                        if (log.level === 'error') {
+                            console.error(`[Minigame] ${log.message}`);
+                        } else {
+                            console.log(`[Minigame] ${log.message}`);
+                        }
                     });
                 }
                 break;
@@ -646,15 +642,6 @@ window.FinkMinigames = {
         if (this.elements.gameContainer) {
             this.elements.gameContainer.style.display = '';
         }
-        if (this.elements.instructions) {
-            this.elements.instructions.style.display = '';
-            this.elements.instructions.textContent = mode === 'mega'
-                ? 'Catch the MEGA GEMS! Each worth 1000x!'
-                : 'Click the gems to collect them!';
-        }
-        if (this.elements.scoreDisplay) {
-            this.elements.scoreDisplay.parentElement.style.display = '';
-        }
         if (this.elements.chessContainer) {
             this.elements.chessContainer.style.display = 'none';
         }
@@ -675,12 +662,6 @@ window.FinkMinigames = {
         // Hide gem elements, show chess
         if (this.elements.gameContainer) {
             this.elements.gameContainer.style.display = 'none';
-        }
-        if (this.elements.instructions) {
-            this.elements.instructions.style.display = 'none';
-        }
-        if (this.elements.scoreDisplay) {
-            this.elements.scoreDisplay.parentElement.style.display = 'none';
         }
         if (this.elements.chessContainer) {
             this.elements.chessContainer.style.display = 'flex';
@@ -762,12 +743,6 @@ window.FinkMinigames = {
         }
         if (this.elements.iframeContainer) {
             this.elements.iframeContainer.style.display = 'none';
-        }
-        if (this.elements.instructions) {
-            this.elements.instructions.style.display = '';
-        }
-        if (this.elements.scoreDisplay) {
-            this.elements.scoreDisplay.parentElement.style.display = '';
         }
 
         // Update story variables if available
@@ -872,11 +847,7 @@ window.FinkMinigames = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            window.FinkDevPanel.log(`Minigames: ${msg}`, 'game');
-        } else {
-            console.log(`[FinkMinigames] ${msg}`);
-        }
+        console.log(`[FinkMinigames] ${msg}`);
     },
 
     // ========== INLINE MINIGAME SYSTEM ==========

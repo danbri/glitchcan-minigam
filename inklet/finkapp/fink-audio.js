@@ -140,11 +140,7 @@ window.FinkAudio = {
     },
 
     log(msg, type = 'info') {
-        if (window.FinkDevPanel) {
-            FinkDevPanel.log(`Audio: ${msg}`, type);
-        } else {
-            console.log(`[FinkAudio] ${msg}`);
-        }
+        console.log(`[FinkAudio] ${msg}`);
     }
 };
 
