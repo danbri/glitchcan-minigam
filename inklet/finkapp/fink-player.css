@@ -55,6 +55,14 @@ main {
 /* --- Narrative View --- */
 #narrative-view { padding: 1em; }
 
+/* --- Choices Container --- */
+#choices {
+    flex-shrink: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 #story-output {
     flex: 1;
     overflow-y: auto;

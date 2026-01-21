@@ -335,6 +335,7 @@ window.FinkInkEngine = {
             }
 
             if (shouldStartMinigame && window.FinkMinigames) {
+                // Start minigame - user can use window controls to minimize/maximize
                 setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode), 800);
                 return;
             }

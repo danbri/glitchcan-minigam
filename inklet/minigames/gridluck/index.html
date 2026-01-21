@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GridLuck - Minigame</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #pause-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            color: #ff0;
+            font-size: 2em;
+        }
+        #pause-overlay.visible {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="game-frame" src="../../../thumbwar/gridluck.html"></iframe>
+    <div id="pause-overlay">PAUSED</div>
+
+    <script src="../minigame-sdk.js"></script>
+    <script>
+        const sdk = new MinigameSDK();
+        const gameFrame = document.getElementById('game-frame');
+        let gameActive = false;
+        let lastScore = 0;
+
+        sdk.onInit((config, variables) => {
+            console.log('[GridLuck] Initialized');
+            gameActive = true;
+        });
+
+        sdk.onPause(() => {
+            console.log('[GridLuck] Paused');
+            document.getElementById('pause-overlay').classList.add('visible');
+        });
+
+        sdk.onResume(() => {
+            console.log('[GridLuck] Resumed');
+            document.getElementById('pause-overlay').classList.remove('visible');
+        });
+
+        sdk.onTerminate((reason) => {
+            console.log('[GridLuck] Terminated:', reason);
+        });
+
+        // Monitor game state and sync progress
+        setInterval(() => {
+            if (!gameActive) return;
+            try {
+                const doc = gameFrame.contentDocument;
+                if (!doc) return;
+
+                // Check for game over screen
+                const gameOverScreen = doc.getElementById('gameOverScreen');
+                if (gameOverScreen && gameOverScreen.style.display === 'flex') {
+                    // Game has ended
+                    const messageText = doc.getElementById('gameOverMessageText')?.textContent || '';
+                    const won = messageText.includes('WIN') || messageText.includes('VICTORY');
+
+                    sdk.complete({
+                        success: won,
+                        score: lastScore,
+                        variables: {
+                            game_won: won,
+                            final_score: lastScore
+                        }
+                    });
+                    gameActive = false;
+                    return;
+                }
+
+                // Try to read current score from UI
+                const scoreEl = doc.querySelector('#ui-level, #scoreDisplay, .score');
+                if (scoreEl) {
+                    const scoreMatch = scoreEl.textContent.match(/\d+/);
+                    if (scoreMatch) {
+                        const currentScore = parseInt(scoreMatch[0], 10);
+                        if (currentScore !== lastScore) {
+                            lastScore = currentScore;
+                            sdk.progress({ gems: currentScore, score: currentScore });
+                        }
+                    }
+                }
+            } catch (e) { /* iframe not accessible */ }
+        }, 1000);
+
+        // Route console logs to host
+        if (window.parent !== window) {
+            const originalLog = console.log;
+            let logBatch = [];
+            let logTimer = null;
+
+            function flushLogs() {
+                if (logBatch.length > 0) {
+                    sdk._sendMessage({ type: 'log-batch', logs: logBatch });
+                    logBatch = [];
+                }
+                logTimer = null;
+            }
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                logBatch.push({ level: 'info', message: args.map(String).join(' ') });
+                if (!logTimer) logTimer = setTimeout(flushLogs, 1000);
+            };
+        }
+    </script>
+</body>
+</html>

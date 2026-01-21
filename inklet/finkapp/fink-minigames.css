@@ -31,6 +31,9 @@
     align-items: stretch;
     justify-content: stretch;
     flex-direction: column;
+    overflow-y: auto;
+    /* Smooth transitions for all window state changes */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- Minigame Control Bar --- */
@@ -42,6 +45,13 @@
     border-bottom: 2px solid var(--zx-blue);
     justify-content: flex-end;
     z-index: 10;
+    flex-shrink: 0;
+    /* Draggable handle area */
+    cursor: grab;
+}
+
+#minigame-controls:active {
+    cursor: grabbing;
 }
 
 #minigame-controls button {
@@ -90,7 +100,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: auto;
+    min-height: 0;  /* Allow flex child to shrink and scroll */
 }
 
 /* --- Frosted Panes Overlay (Pause State) --- */
@@ -101,48 +112,48 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    opacity: 0;
     z-index: 100;
-}
-
-#minigame-view.paused #minigame-frost-overlay {
-    pointer-events: auto;
-    opacity: 1;
+    overflow: hidden;
 }
 
 .frost-pane {
     position: absolute;
-    width: 150%;
-    height: 150%;
+    width: 200%;
+    height: 200%;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     background: linear-gradient(
         135deg,
-        rgba(100, 150, 200, 0.3) 0%,
-        rgba(150, 200, 255, 0.2) 50%,
-        rgba(100, 150, 200, 0.3) 100%
+        rgba(100, 150, 200, 0.4) 0%,
+        rgba(150, 200, 255, 0.3) 50%,
+        rgba(100, 150, 200, 0.4) 100%
     );
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .frost-pane-top {
-    top: -150%;
-    left: -25%;
-    transform: rotate(-45deg) translateY(0);
+    top: 0;
+    left: 0;
+    transform: translate(-100%, -100%) rotate(-45deg);
 }
 
 .frost-pane-bottom {
-    bottom: -150%;
-    right: -25%;
-    transform: rotate(-45deg) translateY(0);
+    bottom: 0;
+    right: 0;
+    transform: translate(100%, 100%) rotate(-45deg);
 }
 
 /* Panes slide in diagonally when paused */
+#minigame-view.paused #minigame-frost-overlay {
+    pointer-events: auto;
+}
+
 #minigame-view.paused .frost-pane-top {
-    transform: rotate(-45deg) translateY(100%);
+    transform: translate(-25%, -25%) rotate(-45deg);
 }
 
 #minigame-view.paused .frost-pane-bottom {
-    transform: rotate(-45deg) translateY(-100%);
+    transform: translate(25%, 25%) rotate(-45deg);
 }
 
 .frost-status {
@@ -164,29 +175,46 @@
     opacity: 1;
 }
 
-/* --- Minimized State --- */
+/* --- Minimized State (Picture-in-Picture pip) --- */
 #minigame-view.minimized {
     position: fixed;
     bottom: 80px;
     right: 20px;
-    width: 120px;
-    height: 80px;
+    width: 160px;
+    height: 100px;
     border-radius: var(--border-radius-md);
     border: 2px solid var(--zx-blue);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3);
     z-index: 1000;
     overflow: hidden;
+    /* Pip is draggable */
+    cursor: move;
+    /* Subtle breathing animation */
+    animation: pipBreath 3s ease-in-out infinite;
+}
+
+@keyframes pipBreath {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3); }
+    50% { box-shadow: 0 4px 25px rgba(0,0,0,0.6), 0 0 0 2px rgba(0,150,255,0.5); }
+}
+
+#minigame-view.minimized:hover {
+    border-color: var(--zx-cyan);
+    animation: none;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.6), 0 0 15px rgba(0,200,255,0.4);
 }
 
 #minigame-view.minimized #minigame-controls {
-    padding: 0.2em;
-    gap: 0.2em;
+    padding: 0.15em;
+    gap: 0.15em;
+    background: rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(0,150,255,0.3);
 }
 
 #minigame-view.minimized #minigame-controls button {
-    width: 1.5em;
-    height: 1.5em;
-    font-size: 0.8em;
+    width: 1.3em;
+    height: 1.3em;
+    font-size: 0.7em;
 }
 
 #minigame-view.minimized #minigame-instructions,
@@ -194,33 +222,87 @@
     display: none;
 }
 
-/* --- Maximized State --- */
+/* Double-click hint on pip */
+#minigame-view.minimized::after {
+    content: '▢';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 0.8em;
+    opacity: 0.4;
+}
+
+/* --- Maximized State (True fullscreen) --- */
 #minigame-view.maximized {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100vw !important;
+    height: 100vh !important;
     z-index: 2000;
     border-radius: 0;
+    border: none;
+    background: #000;
 }
 
-/* --- Pinned State (show alongside narrative) --- */
+#minigame-view.maximized #minigame-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    border-radius: 0 0 0 var(--border-radius-md);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-left: 1px solid rgba(255,255,255,0.1);
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+#minigame-view.maximized #minigame-controls:hover {
+    opacity: 1;
+}
+
+#minigame-view.maximized #minigame-content {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- Pinned State (Picture-in-Picture while reading) --- */
 #minigame-view.pinned {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 300px;
-    height: 250px;
+    width: 320px;
+    height: 240px;
     border-radius: var(--border-radius-md);
     border: 2px solid var(--zx-green);
-    box-shadow: 0 4px 30px rgba(0,255,100,0.2);
+    box-shadow: 0 4px 30px rgba(0,255,100,0.2), 0 0 0 1px rgba(0,255,100,0.1);
     z-index: 500;
+    /* Resizable */
+    resize: both;
+    min-width: 200px;
+    min-height: 150px;
+    max-width: 80vw;
+    max-height: 60vh;
 }
 
 #minigame-view.pinned #minigame-instructions,
 #minigame-view.pinned #minigame-score {
     display: none;
+}
+
+/* Resize handle indicator */
+#minigame-view.pinned::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, transparent 50%, var(--zx-green) 50%);
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 /* Pinned indicator glow */
@@ -232,6 +314,11 @@
 @keyframes pinGlow {
     0%, 100% { box-shadow: 0 0 5px var(--zx-green); }
     50% { box-shadow: 0 0 15px var(--zx-green); }
+}
+
+/* --- Window State Transitions --- */
+#minigame-view.transitioning {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* --- Mobile Adjustments --- */
@@ -259,6 +346,167 @@
     .frost-status {
         font-size: 1.5em;
     }
+}
+
+/* --- Inline Minigame Container (embedded in story flow) --- */
+.inline-minigame {
+    position: relative;
+    margin: 1em 0;
+    border-radius: var(--border-radius-md, 8px);
+    overflow: hidden;
+    background: #111;
+    border: 2px solid var(--zx-cyan);
+}
+
+/* Inline size - small widget embedded in text */
+.inline-minigame.size-inline {
+    width: 100%;
+    max-width: 280px;
+    height: 200px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Medium size - preview with splash, can expand */
+.inline-minigame.size-medium {
+    width: 100%;
+    max-width: 400px;
+    height: 250px;
+}
+
+/* Full size - takes over flow, but still in story-output */
+.inline-minigame.size-full {
+    width: 100%;
+    max-width: 100%;
+    height: 400px;
+}
+
+.inline-minigame-content {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inline-minigame-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Inline minigame controls bar */
+.inline-minigame-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 0.25em;
+    padding: 0.25em;
+    background: rgba(0,0,0,0.6);
+    border-bottom-left-radius: var(--border-radius-sm, 4px);
+    z-index: 10;
+}
+
+.inline-minigame-controls button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.inline-minigame-controls button:hover {
+    opacity: 1;
+}
+
+/* Splash/Preview overlay for medium mode */
+.inline-minigame-splash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: opacity 0.3s ease;
+}
+
+.inline-minigame-splash.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.inline-minigame-splash-icon {
+    font-size: 3em;
+    margin-bottom: 0.3em;
+    animation: splashPulse 2s ease-in-out infinite;
+}
+
+.inline-minigame-splash-title {
+    font-size: 1.2em;
+    color: var(--zx-yellow);
+    text-shadow: 0 0 10px var(--zx-yellow);
+    margin-bottom: 0.3em;
+}
+
+.inline-minigame-splash-subtitle {
+    font-size: 0.8em;
+    color: var(--zx-cyan);
+    opacity: 0.8;
+}
+
+.inline-minigame-splash-play {
+    margin-top: 0.8em;
+    padding: 0.5em 1.2em;
+    background: var(--zx-green);
+    color: #000;
+    border: none;
+    border-radius: var(--border-radius-sm, 4px);
+    font-family: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.inline-minigame-splash-play:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px var(--zx-green);
+}
+
+@keyframes splashPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Expand button for going fullscreen from inline/medium */
+.inline-minigame-expand {
+    position: absolute;
+    bottom: 0.5em;
+    right: 0.5em;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--zx-cyan);
+    color: var(--zx-cyan);
+    padding: 0.3em 0.6em;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-sm, 4px);
+    cursor: pointer;
+    z-index: 15;
+    transition: all 0.2s;
+}
+
+.inline-minigame-expand:hover {
+    background: var(--zx-cyan);
+    color: #000;
 }
 
 /* --- Game Container --- */
