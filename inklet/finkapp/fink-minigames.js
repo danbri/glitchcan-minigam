@@ -9,7 +9,11 @@ window.FinkMinigames = {
     currentMode: null,
     iframeMinigame: null,  // Current iframe element
     messageHandler: null,   // Bound message handler
-    startingDiamonds: 0,    // Diamonds before minigame started (for additive sync)
+    // Delta-based sync: track last update to preserve parallel activity changes
+    lastSync: {
+        gameGems: 0,        // gems reported by game at last sync
+        storyDiamonds: 0    // diamonds we set in story at last sync
+    }
 
     // Known iframe-based minigames
     iframeMinigames: ['mudslider'],
@@ -93,11 +97,10 @@ window.FinkMinigames = {
     startIframeMinigame(type, mode = 'full') {
         this.log(`Starting iframe minigame: ${type} (${mode})`);
 
-        // Track starting diamonds for additive progress sync
-        if (window.FinkInkEngine?.story?.variablesState) {
-            this.startingDiamonds = FinkInkEngine.story.variablesState['diamonds'] || 0;
-            this.log(`Starting diamonds: ${this.startingDiamonds}`);
-        }
+        // Initialize delta-based sync tracking (preserves parallel activity changes)
+        const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        this.lastSync = { gameGems: 0, storyDiamonds: currentDiamonds };
+        this.log(`Starting sync: diamonds=${currentDiamonds}`);
 
         // Hide other containers
         if (this.elements.gameContainer) {
@@ -156,17 +159,19 @@ window.FinkMinigames = {
                 break;
 
             case 'progress':
-                this.log('Progress: ' + JSON.stringify(data.data));
-                // Sync variables to story and update stats display
-                // Add game gems to starting diamonds (not overwrite)
-                if (data.data) {
-                    if (data.data.gems !== undefined) {
-                        const newTotal = this.startingDiamonds + data.data.gems;
-                        this._setStoryVariable('diamonds', newTotal);
-                    }
-                    if (data.data.score !== undefined) {
-                        this._setStoryVariable('score', data.data.score);
-                    }
+                // Delta-based sync: preserves changes from parallel activities
+                if (data.data && data.data.gems !== undefined) {
+                    const currentGems = data.data.gems;
+                    const gameDelta = currentGems - this.lastSync.gameGems;
+                    const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+                    const newDiamonds = currentStoryDiamonds + gameDelta;
+
+                    this._setStoryVariable('diamonds', newDiamonds);
+                    this.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+                    this.log(`Progress: game=${currentGems} delta=+${gameDelta} diamonds=${newDiamonds}`);
+                }
+                if (data.data?.score !== undefined) {
+                    this._setStoryVariable('score', data.data.score);
                 }
                 break;
 

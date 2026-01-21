@@ -1,14 +1,8 @@
 # Minigame Variable Sync Design
 
-## Current Implementation (v1)
+## Current Implementation (v2 - Delta-Based)
 
-When an iframe minigame starts, we capture `startingDiamonds` from the story state. During progress updates, we compute:
-
-```
-diamonds = startingDiamonds + gameGems
-```
-
-This works for single-activity scenarios but has a flaw.
+When an iframe minigame starts, we initialize tracking state. On each progress update, we compute the **delta** (change) and apply it to the current story value, preserving any external changes.
 
 ## The Parallel Activity Problem
 
@@ -21,7 +15,7 @@ If other activities modify `diamonds` while the minigame is running:
 
 Result: We **lost** the 3 diamonds from the external event.
 
-## Proposed Fix: Delta-Based Sync (v2)
+## How It Works: Delta-Based Sync
 
 Track the last update state, not just the starting state:
 
@@ -70,9 +64,4 @@ Result: External 3 diamonds preserved, game's 7 gems added correctly.
 
 ## Implementation Status
 
-- [ ] v1 (current): Simple `startingDiamonds` tracking
-- [ ] v2 (future): Delta-based sync for parallel safety
-
-## Notes
-
-For now, v1 is sufficient since we don't yet support true parallel activities. Document this for when that capability is added.
+- [x] v2: Delta-based sync for parallel safety (implemented Jan 2026)
