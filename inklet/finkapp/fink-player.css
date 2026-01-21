@@ -55,16 +55,18 @@ main {
 /* --- Narrative View --- */
 #narrative-view {
     padding: 0.5em;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* --- Choices Container --- */
 #choices {
     flex-shrink: 0;
-    max-height: 35vh;
+    max-height: 40vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    padding-top: 0.5em;
 }
 
 #story-output {
@@ -74,7 +76,6 @@ main {
     padding: 0.5em;
     background: rgba(0,20,0,0.5);
     border: 1px solid var(--zx-green);
-    margin-bottom: 0.5em;
     min-height: 0;
 }
 
