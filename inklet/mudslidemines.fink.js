@@ -6,7 +6,9 @@ oooOO`
 # BASEHREF: media/mudslidemines/
 # IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png
 
-
+// Game variables for minigame integration
+VAR diamonds = 0
+VAR score = 0
 
 // Start the player at the crash site
 
@@ -54,7 +56,7 @@ You emerge from the depths, pockets heavy with gems and treasures. The experienc
 
 === Exit_To_Menu ===
 The jungle shimmers and fades as you feel yourself pulled back toward the familiar glow of the pool's edge...
-# FINK: toc.fink.js
+# FINK: world-between-worlds.fink.js
 -> END
 
 === Control_Room ===

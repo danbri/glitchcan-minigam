@@ -2,7 +2,7 @@
 /* Stats bar, gem collection, chess, and other minigame elements */
 
 /* --- Stats Bar (optional, game-specific) --- */
-.stats-bar {
+#stats-bar {
     padding: 0.5em 1em;
     background: #111;
     border-top: 2px solid var(--zx-blue);
@@ -21,7 +21,7 @@
 .stat-value.mega { color: var(--zx-mag); text-shadow: 0 0 10px var(--zx-mag); }
 
 @media (max-width: 600px) {
-    .stats-bar { gap: 1em; font-size: var(--font-size-tiny); padding: 0.4em 0.6em; }
+    #stats-bar { gap: 1em; font-size: var(--font-size-tiny); padding: 0.4em 0.6em; }
     .stat-icon { font-size: 1.2em; }
 }
 
