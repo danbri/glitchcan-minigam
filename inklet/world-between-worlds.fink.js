@@ -18,6 +18,7 @@ Scattered throughout the glade are pools - perfectly still, perfectly round, eac
 + Examine the misty pool (manor silhouette, ravens) -> pool_manor
 + Study the gentle pool (autumn leaves, chimney smoke) -> pool_maple
 + Look into the rippling pool (flowing water, reeds) -> pool_riverbend
++ Approach the shimmering pool (arcade lights, pixel glow) -> pool_arcade
 + Sit quietly among the pools -> rest_here
 
 === pool_bagend ===
@@ -72,6 +73,53 @@ The rippling pool shows a wide river winding through marshland. Herons stand mot
     # FINK: riverbend.fink.js
     -> END
 + Return to the glade -> world_between_worlds
+
+=== pool_arcade ===
+#BG:#202
+The shimmering pool pulses with neon light. Pixelated shapes dance across its surface - ghosts, gems, strange creatures battling in formations.
+
++ Step into the arcade
+    The pixels swirl around you...
+    -> arcade_hangout
++ Return to the glade -> world_between_worlds
+
+=== arcade_hangout ===
+#BG:#101
+*** PIXEL ARCADE ***
+
+You stand in a glowing space filled with floating game cabinets. Each one hums with potential adventure.
+
++ [Gem Hunt] Collect sparkling gems -> play_gems
++ [Mudslider] Boulder Dash-style puzzle -> play_mudslider
++ [BoidWars] Command your wizard flock -> play_battleboids
++ [GridLuck] Pac-Man style maze chase -> play_gridluck
++ Return to the World Between Worlds -> world_between_worlds
+
+=== play_gems ===
+# MINIGAME: gems
+Gems scatter before you, waiting to be collected...
+-> arcade_return
+
+=== play_mudslider ===
+# MINIGAME: mudslider
+The cave entrance yawns before you...
+-> arcade_return
+
+=== play_battleboids ===
+# MINIGAME: battleboids
+Flocks of strange creatures await your command...
+-> arcade_return
+
+=== play_gridluck ===
+# MINIGAME: gridluck
+The maze materializes around you...
+-> arcade_return
+
+=== arcade_return ===
+You return to the arcade, the glow of games surrounding you.
+
++ Play another game -> arcade_hangout
++ Return to the World Between Worlds -> world_between_worlds
 
 === rest_here ===
 #BG:#020

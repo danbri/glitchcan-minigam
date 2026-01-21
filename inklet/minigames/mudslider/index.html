@@ -140,6 +140,20 @@
             if (!gameState.gameElement) {
                 createGame();
             }
+
+            // Auto-start the game (skip "Ready?" button)
+            setTimeout(() => {
+                if (gameState.gameElement) {
+                    const startOverlay = gameState.gameElement.shadowRoot?.getElementById('start-overlay');
+                    if (startOverlay) {
+                        startOverlay.style.display = 'none';
+                    }
+                    // Start the game loop if it has that method
+                    if (gameState.gameElement._startGameLoop) {
+                        gameState.gameElement._startGameLoop();
+                    }
+                }
+            }, 200);
         });
 
         sdk.onPause(() => {

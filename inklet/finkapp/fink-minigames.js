@@ -23,7 +23,7 @@ window.FinkMinigames = {
     },
 
     // Known iframe-based minigames
-    iframeMinigames: ['mudslider'],
+    iframeMinigames: ['mudslider', 'battleboids', 'gridluck'],
 
     // DOM elements
     elements: {

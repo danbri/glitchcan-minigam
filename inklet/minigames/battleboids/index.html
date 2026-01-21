@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Boidwars - Minigame</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0A0F28;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #pause-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            color: white;
+            font-size: 2em;
+        }
+        #pause-overlay.visible {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="game-frame" src="../../../thumbwar/battleboids.html"></iframe>
+    <div id="pause-overlay">PAUSED</div>
+
+    <script src="../minigame-sdk.js"></script>
+    <script>
+        const sdk = new MinigameSDK();
+        const gameFrame = document.getElementById('game-frame');
+        let gameStarted = false;
+
+        sdk.onInit((config, variables) => {
+            console.log('[Battleboids] Initialized');
+            gameStarted = true;
+
+            // Auto-start the game by simulating a click on the splash
+            gameFrame.onload = () => {
+                setTimeout(() => {
+                    try {
+                        const splashOverlay = gameFrame.contentDocument?.getElementById('splashOverlay');
+                        if (splashOverlay && splashOverlay.style.display !== 'none') {
+                            splashOverlay.click();
+                        }
+                    } catch (e) {
+                        console.log('[Battleboids] Could not auto-start:', e.message);
+                    }
+                }, 500);
+            };
+        });
+
+        sdk.onPause(() => {
+            console.log('[Battleboids] Paused');
+            document.getElementById('pause-overlay').classList.add('visible');
+        });
+
+        sdk.onResume(() => {
+            console.log('[Battleboids] Resumed');
+            document.getElementById('pause-overlay').classList.remove('visible');
+        });
+
+        sdk.onTerminate((reason) => {
+            console.log('[Battleboids] Terminated:', reason);
+        });
+
+        // Listen for messages from game frame about completion
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'battleboids-complete') {
+                sdk.complete({
+                    success: event.data.won,
+                    score: event.data.score || 0,
+                    variables: {
+                        game_won: event.data.won
+                    }
+                });
+            }
+        });
+
+        // Also detect when game ends by checking the iframe periodically
+        setInterval(() => {
+            if (!gameStarted) return;
+            try {
+                const restartBtn = gameFrame.contentDocument?.getElementById('restartButton');
+                if (restartBtn && restartBtn.style.display !== 'none') {
+                    // Game has ended
+                    const msg = gameFrame.contentDocument?.getElementById('uiMessages')?.textContent || '';
+                    const won = msg.includes('Victorious');
+                    sdk.complete({
+                        success: won,
+                        score: won ? 100 : 0,
+                        variables: { game_won: won }
+                    });
+                    gameStarted = false; // Prevent multiple completions
+                }
+            } catch (e) { /* iframe not accessible */ }
+        }, 1000);
+
+        // Route console logs to host
+        if (window.parent !== window) {
+            const originalLog = console.log;
+            let logBatch = [];
+            let logTimer = null;
+
+            function flushLogs() {
+                if (logBatch.length > 0) {
+                    sdk._sendMessage({ type: 'log-batch', logs: logBatch });
+                    logBatch = [];
+                }
+                logTimer = null;
+            }
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                logBatch.push({ level: 'info', message: args.map(String).join(' ') });
+                if (!logTimer) logTimer = setTimeout(flushLogs, 1000);
+            };
+        }
+    </script>
+</body>
+</html>
