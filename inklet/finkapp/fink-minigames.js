@@ -122,9 +122,11 @@ window.FinkMinigames = {
         if (this.windowState.paused) {
             this.pauseMinigame();
             this.elements.pauseBtn?.classList.add('active');
+            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '▶️';
         } else {
             this.resumeMinigame();
             this.elements.pauseBtn?.classList.remove('active');
+            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸️';
         }
 
         this.log(`Minigame ${this.windowState.paused ? 'paused' : 'resumed'}`);
@@ -224,6 +226,7 @@ window.FinkMinigames = {
 
         // Reset button states
         this.elements.pauseBtn?.classList.remove('active');
+        if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸️';
         this.elements.pinBtn?.classList.remove('active');
         this.elements.minimizeBtn?.classList.remove('active');
         this.elements.maximizeBtn?.classList.remove('active');
