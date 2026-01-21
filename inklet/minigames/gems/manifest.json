@@ -1,0 +1,43 @@
+{
+  "name": "gems",
+  "title": "Gem Collector",
+  "description": "Click gems to collect them! Larger gems are worth more points.",
+  "version": "1.0.0",
+  "author": "FINK Team",
+  "entry": "index.html",
+
+  "sandbox": {
+    "permissions": ["allow-scripts"],
+    "timeout": 300000
+  },
+
+  "variables": {
+    "read": ["player_level", "has_pickaxe", "difficulty"],
+    "write": ["diamonds", "mega_diamonds", "minigame_played"]
+  },
+
+  "modes": {
+    "normal": {
+      "description": "Standard gem collection - 30 seconds",
+      "timeLimit": 30,
+      "gemCount": 15
+    },
+    "mega": {
+      "description": "Mega gems worth 10x! - 60 seconds",
+      "timeLimit": 60,
+      "gemCount": 10,
+      "megaMultiplier": 10
+    },
+    "timed": {
+      "description": "Quick 15-second challenge",
+      "timeLimit": 15,
+      "gemCount": 20
+    }
+  },
+
+  "ui": {
+    "width": "100%",
+    "height": "400px",
+    "background": "#1a1a2e"
+  }
+}
