@@ -25,7 +25,6 @@ Enter the Finkiverse. Everything isn't here yet.
 Choose your adventure! Each episode is half-finished in a different way.
 
 + [Bagend] -> hobbit_selected
-+ [Bagend v2 (enhanced)] -> bagend2_selected
 + [Diamond Cave] -> diamond_cave_selected
 + [Hampstead] -> hampstead_selected
 + [Maple Hollow] -> maple_hollow_selected
@@ -61,22 +60,11 @@ This is where things might be documented, eventually.
 
 Bag End
 
-A buggy and broken nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters a mysterious wizard and is drawn into an unexpected adventure.
+A nod to the classic 1982 text adventure, The Hobbit. SVG images by Claude. Follow Bilbo Baggins as he encounters a mysterious wizard and is drawn into an unexpected adventure. Features inventory tracking, conversation gating, and state management.
 
 # IMAGE: coverart/bagend_splash_imag_9453.jpeg
 
 + [enter Bag End] -> external_story
-
-=== bagend2_selected ===
-# FINK: /glitchcan-minigam/inklet/bagend2.fink.js
-
-Bag End v2 (Enhanced)
-
-The improved Hobbit adventure with proper inventory tracking, conversation gating, and state management. Same story as the original, but with polished game mechanics.
-
-# IMAGE: coverart/bagend_splash_imag_9453.jpeg
-
-+ [enter Bag End v2] -> external_story
 
 === diamond_cave_selected ===
 # FINK: /glitchcan-minigam/inklet/demos/diamond-cave.fink.js

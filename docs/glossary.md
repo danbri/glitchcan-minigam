@@ -190,8 +190,7 @@ Prevents re-loading the same FINK URL within a session.
 | File | Purpose |
 |------|---------|
 | [`toc.fink.js`](../inklet/toc.fink.js) | Table of contents / main menu |
-| [`bagend.fink.js`](../inklet/bagend.fink.js) | Hobbit adventure story |
-| [`bagend2.fink.js`](../inklet/bagend2.fink.js) | Alternate version (purpose unclear) |
+| [`bagend.fink.js`](../inklet/bagend.fink.js) | Hobbit adventure story (with inventory tracking, state management) |
 | [`shane-manor.fink.js`](../inklet/shane-manor.fink.js) | Murder mystery story |
 
 ---
