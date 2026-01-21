@@ -714,20 +714,11 @@ ${knownFinks.length > 0 ? `\nKnown story hashes:\n${knownFinks.slice(-5).map(([h
             return;
         }
 
-        if (this.usingNavigationAPI) {
-            // Use Navigation API for cleaner updates
-            try {
-                const url = new URL(window.location.href);
-                url.hash = finkLinkId;
-                navigation.navigate(url.toString(), { history: 'replace' });
-            } catch (e) {
-                // Fallback if navigation fails
-                history.replaceState(null, '', `#${finkLinkId}`);
-            }
-        } else {
-            // Use history.replaceState to avoid polluting history
-            history.replaceState(null, '', `#${finkLinkId}`);
-        }
+        // CRITICAL: Always use history.replaceState() to avoid triggering hashchange events.
+        // Using navigation.navigate() fires hashchange listeners, which causes a navigation
+        // loop: choice click → updateFragment → hashchange → continueStory → replays!
+        // history.replaceState() updates the URL silently without firing events.
+        history.replaceState(null, '', `#${finkLinkId}`);
 
         this.log(`Updated fragment to: #${finkLinkId} (${trimmedKnot})`);
         this.swimLog('📍', 'URL Updated',
