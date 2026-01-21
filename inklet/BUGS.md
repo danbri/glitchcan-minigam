@@ -211,6 +211,105 @@ Try removing the delay on a test branch and verify:
 
 ---
 
+### BUG-009: Knot detection fails in Bagend, breadcrumb shows stale/missing knots
+**Severity:** P1 - High
+**File:** [`inklet/finkapp/fink-ink-engine.js`](../inklet/finkapp/fink-ink-engine.js) (lines 176-206)
+**Reported:** 2026-01-21
+**Status:** OPEN - Needs debugging data
+
+**User report (verbatim):**
+> Playing bagend, navpanel shows this:
+> - Talk_To_Gandalf
+> - Talk_To_Thorin
+> - Kitchen
+>
+> But these are stale, I'm at Trolls at Dawn clearing (not in the breadcrumb)
+> Trying nav to Thorin puts me in a random place talking to Thorin about elves
+>
+> [Logs showed]: "Could not determine current knot name from path"
+
+**Later report:**
+> Something is working wrong - I started with Bagend then to pools then to misty pool Mansion
+> All thru Bagend it felt like little bugs plus no IDs appended to url in browser
+> Whereas in Mansion it seems functional
+> I try copying nav panel from mansion: toc → shane-manor
+> Weird missing Bagend entirely
+
+**Symptoms:**
+1. Breadcrumb shows stale knots (Talk_To_Gandalf, Talk_To_Thorin, Kitchen) instead of current location
+2. URL hash not updated during Bagend playthrough (no deep link IDs)
+3. FINK stack loses intermediate levels (toc → bagend → pools → shane-manor shows as toc → shane-manor)
+4. Console shows "Could not determine current knot name from path" for outdoor locations
+
+**Current knot detection code:**
+```javascript
+// fink-ink-engine.js:176-193
+const pathStr = this.story.state.currentPathString;
+FinkUtils.debugLog('Path string: ' + (pathStr || '(null/empty)'));
+if (pathStr) {
+    const knotPart = pathStr.split('.')[0];
+    // Skip if purely numeric (not a knot name)
+    if (knotPart && !/^\d+$/.test(knotPart)) {
+        detectedKnot = knotPart;
+    }
+}
+```
+
+**Theories:**
+
+#### Theory A: `currentPathString` returns unexpected format for some knots
+The detection logic assumes `currentPathString` is like `"Bag_End.0"` or `"Kitchen.greeting.3"`.
+If Bagend's outdoor knots return a different format (empty string, purely numeric, or structured differently),
+detection would fail silently.
+
+**To verify:** Need console logs from Bagend playthrough showing actual `pathStr` values.
+
+#### Theory B: Bagend.fink.js and Bagend2.fink.js collision (user theory)
+Both files exist in the codebase and share identical knot names:
+- `Bag_End`, `Outside_Bag_End`, `Kitchen`, `Talk_To_Gandalf`, `Talk_To_Thorin`, etc.
+
+**Evidence from codebase:**
+- TOC has both: `+ [Bagend] -> load_bagend` and `+ [Bagend v2 (enhanced)] -> bagend2_selected`
+- [`toc.fink.js:70-75`](../inklet/toc.fink.js) shows bagend2_selected loads `/glitchcan-minigam/inklet/bagend2.fink.js`
+- Both files' knots would generate **identical knotHashes** (since knotHash is based on knot name alone)
+
+**Potential collision scenarios:**
+1. `FinkNavigation.knotIdMap` is cleared on each new story load, BUT...
+2. `FinkNavigation.cache.knotMaps[urlHash]` persists across loads
+3. If URL resolution differs slightly (trailing slashes, absolute vs relative), same file could get different urlHashes
+4. Deep link resolution might look up knotHash in wrong file's cache entry
+
+**Relevant code paths:**
+- [`FinkNavigation.buildKnotIdMap()`](../inklet/finkapp/fink-navigation.js:250) - clears knotIdMap, but populates cache
+- [`FinkNavigation.cache.knotMaps`](../inklet/finkapp/fink-navigation.js:47) - keyed by urlHash
+- [`navigateToTwoPartLink()`](../inklet/finkapp/fink-navigation.js:365) - resolves urlHash then knotHash
+
+**To verify:**
+1. Load bagend from TOC, note console output for urlHash
+2. Load bagend2 from TOC, note console output for urlHash
+3. Check if `FinkNavigation.cache.urlIndex` has entries for both
+4. Try deep linking after loading bagend2 - does it accidentally navigate to bagend's knot?
+
+#### Theory C: setFinkUrl timing issue
+`setFinkUrl` was being called AFTER `loadViaSandbox` success in [`handleExternalFinkLoading`](../inklet/finkapp/fink-ink-engine.js:361).
+If load was skipped (duplicate detection), setFinkUrl was never called, losing that FINK from the breadcrumb stack.
+
+**Partial fix applied:** Moved setFinkUrl BEFORE load (commit 48e2978). But this alone may not fix the knot detection issue.
+
+**Debugging steps needed:**
+1. Play through Bagend with console open
+2. Capture actual `pathStr` values logged for outdoor knots (Outside_Bag_End, Trollshaws, Troll_Clearing)
+3. Check if pathStr is null/empty or has unexpected format
+4. Check if bagend2.fink.js is being loaded anywhere during the flow
+
+**Files to investigate:**
+- [`inklet/bagend.fink.js`](../inklet/bagend.fink.js) - primary Bagend story
+- [`inklet/bagend2.fink.js`](../inklet/bagend2.fink.js) - alternate version (why does this exist?)
+- [`inklet/finkapp/fink-navigation.js`](../inklet/finkapp/fink-navigation.js) - knotIdMap and cache management
+- [`inklet/finkapp/fink-breadcrumb.js`](../inklet/finkapp/fink-breadcrumb.js) - FINK stack management
+
+---
+
 ## Resolved Bugs
 
 (none yet)

@@ -174,25 +174,9 @@ window.FinkInkEngine = {
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
 
                 // Track current knot from path (detect knot changes during flow)
-                // Try multiple methods for inkjs 2.x compatibility
-                let pathStr = this.story.state.currentPathString;
-
-                // Fallback 1: currentPointer.path (some inkjs versions)
-                if (!pathStr && this.story.state.currentPointer?.path) {
-                    pathStr = this.story.state.currentPointer.path.toString();
-                    FinkUtils.debugLog('Using fallback currentPointer.path: ' + pathStr);
-                }
-
-                // Fallback 2: callStack current element
-                if (!pathStr && this.story.state.callStack?.currentElement?.currentPointer?.path) {
-                    pathStr = this.story.state.callStack.currentElement.currentPointer.path.toString();
-                    FinkUtils.debugLog('Using fallback callStack path: ' + pathStr);
-                }
-
+                const pathStr = this.story.state.currentPathString;
                 FinkUtils.debugLog('Path string: ' + (pathStr || '(null/empty)'));
-
                 if (pathStr) {
-                    // Extract knot name from path like "Bag_End.0" or "Bag_End.subknot.0"
                     const knotPart = pathStr.split('.')[0];
                     FinkUtils.debugLog('Knot part extracted: "' + knotPart + '" (isNumeric: ' + /^\d+$/.test(knotPart) + ')');
                     if (knotPart && !/^\d+$/.test(knotPart)) {
@@ -201,8 +185,6 @@ window.FinkInkEngine = {
                             FinkUtils.debugLog('Detected knot: ' + detectedKnot);
                         }
                     }
-                } else {
-                    FinkUtils.debugLog('WARNING: No path string available from story state');
                 }
 
                 let currentTags = this.story.currentTags || [];
