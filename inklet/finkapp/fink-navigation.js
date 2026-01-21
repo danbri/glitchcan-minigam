@@ -145,6 +145,29 @@ window.FinkNavigation = {
                 await this.navigateToKnotById(fragmentId);
             }
         });
+
+        // Handle back/forward button navigation (popstate fires when history changes)
+        window.addEventListener('popstate', async (event) => {
+            const fragmentId = window.location.hash.slice(1);
+            this.log(`Popstate fired, hash: ${fragmentId}, state: ${JSON.stringify(event.state)}`);
+            this.swimLog('⏪', 'Back/Forward', fragmentId ? fragmentId.slice(0, 15) + '...' : '(empty)');
+
+            if (!fragmentId) {
+                // No hash - user went back to initial page state
+                this.log('Popstate: No hash, returning to initial state');
+                return;
+            }
+
+            // Navigate to the hash location
+            const parsed = this.parseFinkLinkId(fragmentId);
+            if (parsed) {
+                this.log(`Popstate: Navigating to ${parsed.urlHash}-${parsed.knotHash}`);
+                await this.navigateToTwoPartLink(parsed.urlHash, parsed.knotHash);
+            } else if (this.knotIdMap.has(fragmentId)) {
+                // Legacy single hash
+                await this.navigateToKnotById(fragmentId);
+            }
+        });
     },
 
     // Generate SHA-256 hex hash
@@ -523,6 +546,35 @@ window.FinkNavigation = {
                 FinkUI.clearChoices();
             }
 
+            // Process knot-level tags BEFORE continueStory since we know the exact knot name
+            // This ensures IMAGE tags at knot level are applied even if knot detection fails
+            if (FinkInkEngine.story.TagsForContentAtPath) {
+                try {
+                    const knotTags = FinkInkEngine.story.TagsForContentAtPath(knotName) || [];
+                    this.log(`Knot-level tags for ${knotName}: [${knotTags.join(', ')}]`);
+                    knotTags.forEach(tag => {
+                        if (tag.includes('IMAGE:')) {
+                            const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                            this.log(`Processing knot-level IMAGE: ${imagePath}`);
+                            if (window.FinkUI) {
+                                FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                            }
+                        } else if (tag.includes('BASEHREF:')) {
+                            let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                            if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
+                                (basePath.startsWith("'") && basePath.endsWith("'"))) {
+                                basePath = basePath.slice(1, -1);
+                            }
+                            if (!basePath.endsWith('/')) basePath += '/';
+                            FinkPlayer.mediaBasePath = basePath;
+                            this.log(`Knot-level BASEHREF: ${basePath}`);
+                        }
+                    });
+                } catch (e) {
+                    this.log(`Error getting knot tags: ${e.message}`);
+                }
+            }
+
             FinkInkEngine.continueStory();
             this.log(`Navigated to knot: ${knotName}`);
             return true;
@@ -714,11 +766,21 @@ ${knownFinks.length > 0 ? `\nKnown story hashes:\n${knownFinks.slice(-5).map(([h
             return;
         }
 
-        // CRITICAL: Always use history.replaceState() to avoid triggering hashchange events.
-        // Using navigation.navigate() fires hashchange listeners, which causes a navigation
-        // loop: choice click → updateFragment → hashchange → continueStory → replays!
-        // history.replaceState() updates the URL silently without firing events.
-        history.replaceState(null, '', `#${finkLinkId}`);
+        // Use pushState/replaceState instead of navigation.navigate() to avoid hashchange events.
+        // navigation.navigate() fires hashchange listeners, causing navigation loops.
+        // pushState/replaceState update URL silently without firing events.
+        const newHash = `#${finkLinkId}`;
+        const currentHash = window.location.hash;
+
+        if (currentHash !== newHash) {
+            // Push new history entry so back/forward buttons work
+            history.pushState({ finkLinkId, knotName: trimmedKnot }, '', newHash);
+            this.log(`Pushed new history entry: ${newHash}`);
+        } else {
+            // Same location - just replace to avoid duplicate entries
+            history.replaceState({ finkLinkId, knotName: trimmedKnot }, '', newHash);
+            this.log(`Replaced history (same location): ${newHash}`);
+        }
 
         this.log(`Updated fragment to: #${finkLinkId} (${trimmedKnot})`);
         this.swimLog('📍', 'URL Updated',
