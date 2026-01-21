@@ -168,6 +168,18 @@ window.FinkInkEngine = {
             let minigameType = 'normal';
             let detectedKnot = null;  // Track knot during this continue cycle
 
+            // CRITICAL: Check currentPathString BEFORE first Continue() call
+            // After initial divert (-> Knot), the path is valid here but becomes null after Continue()
+            const initialPathStr = this.story.state.currentPathString;
+            FinkUtils.debugLog('Initial path string (before Continue): ' + (initialPathStr || '(null/empty)'));
+            if (initialPathStr) {
+                const knotPart = initialPathStr.split('.')[0];
+                if (knotPart && !/^\d+$/.test(knotPart)) {
+                    detectedKnot = knotPart;
+                    FinkUtils.debugLog('Initial knot detected: ' + detectedKnot);
+                }
+            }
+
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 let rawText = this.story.Continue();
@@ -175,7 +187,7 @@ window.FinkInkEngine = {
 
                 // Track current knot from path (detect knot changes during flow)
                 const pathStr = this.story.state.currentPathString;
-                FinkUtils.debugLog('Path string: ' + pathStr);
+                FinkUtils.debugLog('Path string: ' + (pathStr || '(null/empty)'));
                 if (pathStr) {
                     const knotPart = pathStr.split('.')[0];
                     FinkUtils.debugLog('Knot part extracted: "' + knotPart + '" (isNumeric: ' + /^\d+$/.test(knotPart) + ')');
@@ -340,6 +352,12 @@ window.FinkInkEngine = {
         // It may be vestigial - investigate if removal causes issues.
         // See: https://github.com/danbri/glitchcan-minigam/issues/579
         setTimeout(() => {
+            // Notify breadcrumb of FINK transition BEFORE loading
+            // This ensures the stack always reflects navigation intent, even if load is skipped
+            if (window.FinkBreadcrumb) {
+                FinkBreadcrumb.setFinkUrl(resolvedUrl);
+            }
+
             // Clear any duplicate detection for this URL - this is intentional user navigation
             // (e.g., clicking a menu item), so we should always honor it even if the URL
             // was recently loaded by deep link resolution or other automatic processes.
@@ -355,11 +373,6 @@ window.FinkInkEngine = {
                 }
                 FinkUtils.debugLog('External FINK loaded successfully');
                 FinkPlayer.currentStoryUrl = resolvedUrl;
-
-                // Notify breadcrumb of FINK transition (saves previous FINK to history)
-                if (window.FinkBreadcrumb) {
-                    FinkBreadcrumb.setFinkUrl(resolvedUrl);
-                }
 
                 await this.compileAndRunStory(content);
                 if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', resolvedUrl.split('/').pop());
