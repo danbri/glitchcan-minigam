@@ -104,48 +104,48 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    opacity: 0;
     z-index: 100;
-}
-
-#minigame-view.paused #minigame-frost-overlay {
-    pointer-events: auto;
-    opacity: 1;
+    overflow: hidden;
 }
 
 .frost-pane {
     position: absolute;
-    width: 150%;
-    height: 150%;
+    width: 200%;
+    height: 200%;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     background: linear-gradient(
         135deg,
-        rgba(100, 150, 200, 0.3) 0%,
-        rgba(150, 200, 255, 0.2) 50%,
-        rgba(100, 150, 200, 0.3) 100%
+        rgba(100, 150, 200, 0.4) 0%,
+        rgba(150, 200, 255, 0.3) 50%,
+        rgba(100, 150, 200, 0.4) 100%
     );
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .frost-pane-top {
-    top: -150%;
-    left: -25%;
-    transform: rotate(-45deg) translateY(0);
+    top: 0;
+    left: 0;
+    transform: translate(-100%, -100%) rotate(-45deg);
 }
 
 .frost-pane-bottom {
-    bottom: -150%;
-    right: -25%;
-    transform: rotate(-45deg) translateY(0);
+    bottom: 0;
+    right: 0;
+    transform: translate(100%, 100%) rotate(-45deg);
 }
 
 /* Panes slide in diagonally when paused */
+#minigame-view.paused #minigame-frost-overlay {
+    pointer-events: auto;
+}
+
 #minigame-view.paused .frost-pane-top {
-    transform: rotate(-45deg) translateY(100%);
+    transform: translate(-25%, -25%) rotate(-45deg);
 }
 
 #minigame-view.paused .frost-pane-bottom {
-    transform: rotate(-45deg) translateY(-100%);
+    transform: translate(25%, 25%) rotate(-45deg);
 }
 
 .frost-status {

@@ -586,16 +586,27 @@ window.FinkMinigames = {
         // Switch back to narrative view
         this.switchView('narrative');
 
+        // Explicitly hide minigame view to ensure it's not blocking
+        if (this.elements.minigameView) {
+            this.elements.minigameView.style.display = 'none';
+        }
+
         // Reset UI state to ensure choices work
         if (window.FinkUI) {
             FinkUI.animationInProgress = false;
             FinkUI.hideStatus();
         }
 
-        // Continue story if available
-        if (window.FinkInkEngine && FinkInkEngine.continueStory) {
-            FinkInkEngine.continueStory();
-        }
+        // Continue story after a brief delay to ensure DOM updates
+        setTimeout(() => {
+            if (window.FinkInkEngine && FinkInkEngine.continueStory) {
+                FinkInkEngine.continueStory();
+            }
+            // Re-enable minigame view CSS (remove inline style) for next minigame
+            if (this.elements.minigameView) {
+                this.elements.minigameView.style.display = '';
+            }
+        }, 100);
     },
 
     // Update story variables based on minigame results
