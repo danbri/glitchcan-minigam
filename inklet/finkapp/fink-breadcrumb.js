@@ -15,7 +15,12 @@ window.FinkBreadcrumb = {
     //   { url: 'diamonds.fink.js', knots: [{name: 'cave'}, ...] }       // Level 2 (current)
     // ]
     finkStack: [],          // Stack of {url, knots[]} representing hierarchy
-    isExpanded: false,
+
+    // Tristate display mode: 'minimal' | 'compact' | 'expanded'
+    displayMode: 'minimal',
+
+    // Backwards compatibility
+    get isExpanded() { return this.displayMode === 'expanded'; },
 
     // Computed properties for backwards compatibility
     get currentFinkUrl() {
@@ -69,21 +74,31 @@ window.FinkBreadcrumb = {
         });
     },
 
-    // Toggle expanded state
+    // Cycle through display modes: minimal → compact → expanded → minimal
     toggleExpanded() {
-        this.isExpanded = !this.isExpanded;
+        const modes = ['minimal', 'compact', 'expanded'];
+        const currentIndex = modes.indexOf(this.displayMode);
+        this.displayMode = modes[(currentIndex + 1) % 3];
         this.render();
     },
 
-    // Expand the breadcrumb
+    // Set specific display mode
+    setDisplayMode(mode) {
+        if (['minimal', 'compact', 'expanded'].includes(mode)) {
+            this.displayMode = mode;
+            this.render();
+        }
+    },
+
+    // Expand the breadcrumb (full tree)
     expand() {
-        this.isExpanded = true;
+        this.displayMode = 'expanded';
         this.render();
     },
 
-    // Collapse the breadcrumb
+    // Collapse to minimal
     collapse() {
-        this.isExpanded = false;
+        this.displayMode = 'minimal';
         this.render();
     },
 
@@ -369,44 +384,83 @@ window.FinkBreadcrumb = {
         setTimeout(() => toast.remove(), 1500);
     },
 
+    // Get current knot name (last knot of current level)
+    getCurrentKnotName() {
+        if (this.finkStack.length === 0) return null;
+        const currentLevel = this.finkStack[this.finkStack.length - 1];
+        if (currentLevel.knots.length === 0) return null;
+        return currentLevel.knots[currentLevel.knots.length - 1].name;
+    },
+
+    // Generate compact single-line display: "filename > Knot"
+    getCompactDisplay() {
+        if (this.finkStack.length === 0) return 'No story';
+
+        const parts = [];
+
+        // Add FINK filenames
+        this.finkStack.forEach((level, i) => {
+            parts.push(this.formatUrl(level.url));
+        });
+
+        // Add current knot if any
+        const currentKnot = this.getCurrentKnotName();
+        if (currentKnot) {
+            parts.push(currentKnot);
+        }
+
+        return parts.join(' › ');
+    },
+
     // Render the breadcrumb widget
     render() {
         if (!this.elements.container) return;
 
-        // Update container class
-        this.elements.container.classList.toggle('expanded', this.isExpanded);
+        // Update container classes for display mode
+        this.elements.container.classList.remove('mode-minimal', 'mode-compact', 'mode-expanded');
+        this.elements.container.classList.add('mode-' + this.displayMode);
 
-        // Update toggle arrow
+        // Backwards compat: keep 'expanded' class for full tree view
+        this.elements.container.classList.toggle('expanded', this.displayMode === 'expanded');
+
+        // Update toggle icon based on mode
         if (this.elements.toggle) {
-            this.elements.toggle.textContent = this.isExpanded ? '▼' : '▶';
-            this.elements.toggle.title = this.isExpanded ? 'Collapse' : 'Show navigation path';
+            const icons = { minimal: '▶', compact: '—', expanded: '▼' };
+            const titles = {
+                minimal: 'Show path (compact)',
+                compact: 'Show full tree',
+                expanded: 'Collapse to icon'
+            };
+            this.elements.toggle.textContent = icons[this.displayMode];
+            this.elements.toggle.title = titles[this.displayMode];
         }
 
-        // Update URL display - show hierarchy trail when collapsed
+        // Update URL display based on mode
         if (this.elements.urlDisplay) {
-            if (this.finkStack.length === 0) {
-                this.elements.urlDisplay.textContent = 'No story loaded';
-                this.elements.urlDisplay.title = '';
-                FinkUtils.debugLog('Breadcrumb render: No story loaded');
-            } else if (this.finkStack.length === 1) {
-                // Single level - just show the name
-                const displayUrl = this.formatUrl(this.currentFinkUrl);
-                this.elements.urlDisplay.textContent = displayUrl;
-                this.elements.urlDisplay.title = this.currentFinkUrl || '';
-                FinkUtils.debugLog('Breadcrumb render: Single level - ' + displayUrl);
-            } else {
-                // Multiple levels - show breadcrumb trail
-                const trail = this.finkStack.map(level => this.formatUrl(level.url)).join(' › ');
-                this.elements.urlDisplay.textContent = trail;
+            if (this.displayMode === 'minimal') {
+                // Hidden in minimal mode
+                this.elements.urlDisplay.textContent = '';
+            } else if (this.displayMode === 'compact') {
+                // Single line: "filename › Knot"
+                this.elements.urlDisplay.textContent = this.getCompactDisplay();
                 this.elements.urlDisplay.title = this.finkStack.map(l => l.url).join(' → ');
-                FinkUtils.debugLog('Breadcrumb render: Multi-level trail - ' + trail);
-                FinkUtils.debugLog('Breadcrumb render: Stack URLs - ' + this.finkStack.map(l => l.url).join(' | '));
+            } else {
+                // Expanded mode - URL hidden, tree shows hierarchy
+                if (this.finkStack.length === 0) {
+                    this.elements.urlDisplay.textContent = 'No story loaded';
+                } else {
+                    this.elements.urlDisplay.textContent = '';
+                }
             }
         }
 
-        // Update knot list
+        // Update knot list (only in expanded mode)
         if (this.elements.knotList) {
-            this.renderKnots();
+            if (this.displayMode === 'expanded') {
+                this.renderKnots();
+            } else {
+                this.elements.knotList.innerHTML = '';
+            }
         }
     },
 

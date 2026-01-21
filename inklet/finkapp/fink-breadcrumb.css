@@ -1,6 +1,8 @@
 /* FINK Breadcrumb Widget Styles */
 /* Matches ZX Spectrum theme from fink-theme.css */
 
+/* TRISTATE BREADCRUMB: minimal | compact | expanded */
+
 .breadcrumb-container {
     position: fixed;
     top: 4px;
@@ -10,12 +12,30 @@
     border: 1px solid rgba(0, 192, 192, 0.3);
     border-radius: var(--border-radius-sm);
     font-size: var(--font-size-tiny);
-    max-width: 200px;
+    max-width: 40px;
     transition: max-width var(--transition-slow), border-color var(--transition-normal);
+    display: flex;
+    align-items: center;
 }
 
 .breadcrumb-container:hover {
     border-color: rgba(0, 192, 192, 0.5);
+}
+
+/* Minimal mode: just the toggle icon */
+.breadcrumb-container.mode-minimal {
+    max-width: 40px;
+}
+
+/* Compact mode: single line like browser address bar */
+.breadcrumb-container.mode-compact {
+    max-width: 85vw;
+}
+
+/* Expanded mode: full hierarchical tree */
+.breadcrumb-container.mode-expanded {
+    max-width: 90%;
+    display: block;
 }
 
 .breadcrumb-toggle {
@@ -27,6 +47,7 @@
     font-size: 10px;
     opacity: 0.7;
     transition: opacity var(--transition-normal);
+    flex-shrink: 0;
 }
 
 .breadcrumb-toggle:hover {
@@ -38,12 +59,34 @@
     padding: 0 10px 8px 4px;
 }
 
-.breadcrumb-container.expanded .breadcrumb-content {
-    display: block;
+/* Minimal: content hidden */
+.breadcrumb-container.mode-minimal .breadcrumb-content {
+    display: none;
 }
 
-.breadcrumb-container.expanded {
-    max-width: 90%;
+/* Compact: inline single-line display */
+.breadcrumb-container.mode-compact .breadcrumb-content {
+    display: flex;
+    align-items: center;
+    padding: 0 8px 0 0;
+}
+
+.breadcrumb-container.mode-compact .breadcrumb-url {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 75vw;
+    margin: 0;
+}
+
+.breadcrumb-container.mode-compact .breadcrumb-knots {
+    display: none;
+}
+
+/* Expanded: full tree view */
+.breadcrumb-container.mode-expanded .breadcrumb-content {
+    display: block;
 }
 
 .breadcrumb-url {
