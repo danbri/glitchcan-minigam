@@ -175,8 +175,10 @@ window.FinkInkEngine = {
 
                 // Track current knot from path (detect knot changes during flow)
                 const pathStr = this.story.state.currentPathString;
+                FinkUtils.debugLog('Path string: ' + pathStr);
                 if (pathStr) {
                     const knotPart = pathStr.split('.')[0];
+                    FinkUtils.debugLog('Knot part extracted: "' + knotPart + '" (isNumeric: ' + /^\d+$/.test(knotPart) + ')');
                     if (knotPart && !/^\d+$/.test(knotPart)) {
                         if (knotPart !== detectedKnot) {
                             detectedKnot = knotPart;
