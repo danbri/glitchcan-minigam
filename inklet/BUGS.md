@@ -213,9 +213,9 @@ Try removing the delay on a test branch and verify:
 
 ### BUG-009: Knot detection fails in Bagend, breadcrumb shows stale/missing knots
 **Severity:** P1 - High
-**File:** [`inklet/finkapp/fink-ink-engine.js`](../inklet/finkapp/fink-ink-engine.js) (lines 176-206)
+**File:** [`inklet/finkapp/fink-ink-engine.js`](../inklet/finkapp/fink-ink-engine.js), [`fink-navigation.js`](../inklet/finkapp/fink-navigation.js)
 **Reported:** 2026-01-21
-**Status:** OPEN - Needs debugging data
+**Status:** MOSTLY FIXED - Double-click bug resolved, minor URL hash inaccuracy remains
 
 **User report (verbatim):**
 > Playing bagend, navpanel shows this:
@@ -313,10 +313,29 @@ User debugging session proved Theory A correct:
 - `currentPathString` is **null** after initial divert (`-> Bag_End`)
 - `currentPathString` is **valid** after choice click (`Talk_To_Gandalf.0.5`)
 
-The fix: Check `currentPathString` BEFORE the first `story.Continue()` call, not after.
-When the story starts with a divert, the path is valid before Continue() but becomes null after.
+**Fixes applied:**
 
-**Fix applied:** Commit adds pre-Continue pathString check in `continueStory()`.
+1. **Pre-Continue pathString check** (commit 48e2978):
+   - Check `currentPathString` BEFORE the first `story.Continue()` call
+   - When story starts with a divert, path is valid before Continue() but null after
+
+2. **Navigation loop fix** (commit pending):
+   - Changed `navigation.navigate()` to `history.replaceState()` in `updateFragment()`
+   - **Root cause of double-click bug:** `navigation.navigate()` fires hashchange events
+   - This caused: choice click → updateFragment → hashchange → continueStory replay → user must click again
+   - `history.replaceState()` updates URL silently without firing events
+
+**Remaining limitation (P3):**
+After choice click, `currentPathString` detects SOURCE knot not DESTINATION:
+- User clicks "Leave through front door" (at Bag_End)
+- Pre-Continue path: `Bag_End.0.c-1.0` → detects `Bag_End` (source)
+- Continue() outputs "You stand on the path outside..." (destination text)
+- Post-Continue path: **null** → can't detect `Outside_Bag_End`
+- URL hash shows source knot instead of destination
+
+This is an INK runtime behavior: `currentPathString` becomes null after Continue() processes a divert.
+Deep linking to this URL would navigate to wrong knot (source instead of destination).
+**Impact:** Cosmetic - navigation works correctly, only URL hash accuracy affected.
 
 ---
 
