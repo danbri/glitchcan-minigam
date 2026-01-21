@@ -46,6 +46,8 @@
 .dev-tab-content.active {
     display: flex;
     flex-direction: column;
+    overflow: auto;  /* Allow scroll on active tab */
+    -webkit-overflow-scrolling: touch;  /* Smooth iOS scroll */
 }
 
 /* --- Logs Tab --- */
@@ -68,6 +70,8 @@
 .log-output {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;  /* Smooth iOS scroll */
+    touch-action: pan-y;  /* Allow vertical touch scrolling */
     padding: 0.5em;
     font-family: var(--font-mono);
     font-size: 11px;
@@ -117,6 +121,8 @@
 .swimlane-body {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;  /* Smooth iOS scroll */
+    touch-action: pan-y;  /* Allow vertical touch scrolling */
     padding: 0.3em;
     font-size: 9px;
     font-family: var(--font-mono);
@@ -134,7 +140,12 @@
 }
 
 /* --- State Tab --- */
-.state-content { padding: 0.5em; overflow-y: auto; }
+.state-content {
+    padding: 0.5em;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
 .state-content pre {
     font-family: var(--font-mono);
     font-size: var(--font-size-tiny);
@@ -145,7 +156,12 @@
 }
 
 /* --- FINKs Tab --- */
-.finks-content { padding: 1em; overflow-y: auto; }
+.finks-content {
+    padding: 1em;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
 
 .fink-list {
     display: flex;
@@ -191,7 +207,12 @@
 .external-fink-loader button:hover { background: #f0f; }
 
 /* --- Audio Tab --- */
-.audio-content { padding: 1em; overflow-y: auto; }
+.audio-content {
+    padding: 1em;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
 
 .synth-btn {
     padding: 0.4em 0.8em;
@@ -248,6 +269,8 @@
     border-radius: var(--border-radius-sm);
     max-height: 200px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     margin-bottom: 1em;
 }
 .var-row {

@@ -308,6 +308,33 @@ If load was skipped (duplicate detection), setFinkUrl was never called, losing t
 - [`inklet/finkapp/fink-navigation.js`](../inklet/finkapp/fink-navigation.js) - knotIdMap and cache management
 - [`inklet/finkapp/fink-breadcrumb.js`](../inklet/finkapp/fink-breadcrumb.js) - FINK stack management
 
+**Root cause confirmed (2026-01-21):**
+User debugging session proved Theory A correct:
+- `currentPathString` is **null** after initial divert (`-> Bag_End`)
+- `currentPathString` is **valid** after choice click (`Talk_To_Gandalf.0.5`)
+
+The fix: Check `currentPathString` BEFORE the first `story.Continue()` call, not after.
+When the story starts with a divert, the path is valid before Continue() but becomes null after.
+
+**Fix applied:** Commit adds pre-Continue pathString check in `continueStory()`.
+
+---
+
+### BUG-010: Dev panel cannot scroll on touch devices
+**Severity:** P2 - Medium (UX)
+**File:** [`inklet/finkapp/fink-devpanel.css`](../inklet/finkapp/fink-devpanel.css)
+**Reported:** 2026-01-21
+**Status:** FIXED
+
+**Symptom:** Cannot scroll within the top (dev console) half of screen on iOS/touch devices.
+
+**Root cause:** Missing touch scroll CSS properties on scrollable elements.
+
+**Fix applied:**
+- Added `-webkit-overflow-scrolling: touch` for smooth iOS momentum scrolling
+- Added `touch-action: pan-y` to allow vertical touch scrolling
+- Applied to: `.dev-tab-content.active`, `.log-output`, `.swimlane-body`, `.state-content`, `.finks-content`, `.audio-content`, `.var-list`
+
 ---
 
 ## Resolved Bugs

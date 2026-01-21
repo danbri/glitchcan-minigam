@@ -168,6 +168,18 @@ window.FinkInkEngine = {
             let minigameType = 'normal';
             let detectedKnot = null;  // Track knot during this continue cycle
 
+            // CRITICAL: Check currentPathString BEFORE first Continue() call
+            // After initial divert (-> Knot), the path is valid here but becomes null after Continue()
+            const initialPathStr = this.story.state.currentPathString;
+            FinkUtils.debugLog('Initial path string (before Continue): ' + (initialPathStr || '(null/empty)'));
+            if (initialPathStr) {
+                const knotPart = initialPathStr.split('.')[0];
+                if (knotPart && !/^\d+$/.test(knotPart)) {
+                    detectedKnot = knotPart;
+                    FinkUtils.debugLog('Initial knot detected: ' + detectedKnot);
+                }
+            }
+
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 let rawText = this.story.Continue();
