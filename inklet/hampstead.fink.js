@@ -126,7 +126,7 @@ Queues coil like serpents.
         -> street
 }
 
-{ giro_cashed and giro_collected and fraud_caught == false:
+{ giro_cashed and giro_collected:
     + Cash the giro again
         -> giro_fraud_video
 }
