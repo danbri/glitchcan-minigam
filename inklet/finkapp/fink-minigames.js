@@ -426,6 +426,12 @@ window.FinkMinigames = {
         // Switch to minigame view
         this.switchView('minigame');
 
+        // Show slider and set to full state
+        if (window.FinkWindowSlider) {
+            FinkWindowSlider.setState('full', false);
+            FinkWindowSlider.show();
+        }
+
         // Check if this is an iframe-based minigame
         if (this.iframeMinigames.includes(type)) {
             this.startIframeMinigame(type, mode);
@@ -728,6 +734,11 @@ window.FinkMinigames = {
         // Reset window state (paused, pinned, minimized, maximized)
         this._resetWindowState();
         this.log(`Window state after reset: ${JSON.stringify(this.windowState)}`);
+
+        // Hide slider
+        if (window.FinkWindowSlider) {
+            FinkWindowSlider.hide();
+        }
 
         // Reset UI
         if (this.elements.gameContainer) {
