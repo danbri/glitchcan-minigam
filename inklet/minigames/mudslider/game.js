@@ -59,6 +59,13 @@
                 try {
                     this._render(); // Create shadow DOM content
                     this._cacheDomReferences(); // Get references to elements within shadow DOM
+
+                    // Hide footer UI when running in iframe (embedded in FINK player)
+                    if (window.parent !== window && this.footerUiElement) {
+                        this.footerUiElement.style.display = 'none';
+                        this._debugLog("Hiding footer UI (running in iframe)", 'info');
+                    }
+
                     this._setupInternalEventListeners(); // Add listeners to shadow DOM elements
                     this._initAudio(); // Attempt audio setup
                     this._setupFooterTabs(); // Initialize footer tab functionality

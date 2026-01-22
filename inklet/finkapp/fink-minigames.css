@@ -15,10 +15,10 @@
     display: flex;
 }
 
-/* --- Game Window Slider --- */
+/* --- Game Window Slider (at top, replaces old window control buttons) --- */
 .game-slider {
     position: fixed;
-    bottom: 20px;
+    top: 8px;
     left: 50%;
     transform: translateX(-50%);
     width: 85%;
@@ -177,12 +177,9 @@
     flex-shrink: 0;
 }
 
-/* Hide redundant buttons - slider handles these now */
-#minigame-pause,
-#minigame-pin,
-#minigame-minimize,
-#minigame-maximize {
-    display: none;
+/* Hide entire control bar - slider at top handles window management now */
+#minigame-controls {
+    display: none !important;
 }
 
 #minigame-controls button {
