@@ -369,7 +369,7 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             const section = this.startNewSection();
             section.appendChild(fragment);
-            this.scrollToTop();
+            this.scrollToCurrentSection();
         }
     },
 
@@ -383,12 +383,19 @@ window.FinkUI = {
     },
 
     // Scroll to top to see current section
-    scrollToTop() {
+    scrollToCurrentSection() {
         const narrativeView = document.getElementById('narrative-view');
-        if (narrativeView) {
+        if (narrativeView && this.currentSection) {
             setTimeout(() => {
-                narrativeView.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 50);
+                // Scroll to show the current section with a small offset from top
+                // This ensures the image (if any) is visible along with content
+                const sectionTop = this.currentSection.offsetTop;
+                const historyToggle = narrativeView.querySelector('.history-toggle');
+                const toggleHeight = historyToggle ? historyToggle.offsetHeight : 0;
+                // Scroll to section top, accounting for history toggle
+                const scrollTarget = Math.max(0, sectionTop - toggleHeight - 10);
+                narrativeView.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            }, 100); // Slightly longer delay to ensure images start loading
         }
     },
 
@@ -421,9 +428,9 @@ window.FinkUI = {
         }
     },
 
-    // Image and media handling
+    // Image and media handling - returns the image path shown (for de-duplication)
     updateImageFromINKTags(story) {
-        if (!story) return;
+        if (!story) return null;
 
         const currentTags = story.currentTags || [];
         let imageToShow = null;
@@ -459,17 +466,24 @@ window.FinkUI = {
         if (imageToShow) {
             this.updateImage(imageToShow, currentRawBasehref);
         }
+
+        return imageToShow; // Return for de-duplication
     },
 
     // Add image to current section (images live inside content chunks now)
     updateImage(imagePath, rawBasehref) {
-        if (!imagePath || !this.currentSection) return;
+        if (!imagePath || !this.currentSection) {
+            FinkUtils.debugLog(`updateImage SKIPPED: path=${imagePath}, hasSection=${!!this.currentSection}`);
+            return;
+        }
 
+        FinkUtils.debugLog(`updateImage CALLED: ${imagePath} (decision #${this.decisionCount})`);
         const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
 
         // CRITICAL: Capture the target section NOW, not when onload fires
         // Otherwise, if user navigates before image loads, it goes to wrong section
         const targetSection = this.currentSection;
+        const capturedDecisionCount = this.decisionCount; // For debugging
 
         // Remove any existing media from target section
         const existingMedia = targetSection.querySelector('.section-media');
@@ -483,10 +497,16 @@ window.FinkUI = {
         img.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
 
         img.onload = () => {
-            // Insert at the beginning of the captured section
-            // Only insert if section is still in DOM (hasn't been cleared)
-            if (targetSection.parentNode) {
+            // CRITICAL: Only insert if:
+            // 1. Section is still in DOM (hasn't been cleared)
+            // 2. Section is still CURRENT (not marked as past)
+            // This prevents old images from appearing in past sections that are briefly visible
+            const nowDecisionCount = this.decisionCount;
+            if (targetSection.parentNode && targetSection.classList.contains('current')) {
                 targetSection.insertBefore(img, targetSection.firstChild);
+                FinkUtils.debugLog(`Image INSERTED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount})`);
+            } else {
+                FinkUtils.debugLog(`Image BLOCKED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount}) - section is ${targetSection.parentNode ? 'past' : 'removed'}`);
             }
         };
 
