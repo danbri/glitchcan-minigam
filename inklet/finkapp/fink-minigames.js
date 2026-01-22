@@ -25,14 +25,15 @@ window.FinkMinigames = {
     // Known iframe-based minigames
     iframeMinigames: ['mudslider', 'battleboids', 'gridluck'],
 
-    // Minigame metadata for splash screens
+    // Minigame metadata for splash screens and controls
+    // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
     minigameInfo: {
-        gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!' },
-        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!' },
-        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle' },
-        battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock' },
-        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase' },
-        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game' }
+        gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!', controls: 'none' },
+        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none' },
+        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'dpad' },
+        battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'lite' },
+        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'dpad' },
+        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' }
     },
 
     // Active inline minigames (keyed by container ID)
@@ -565,12 +566,18 @@ window.FinkMinigames = {
     },
 
     // Start a minigame by type
-    startMinigame(type = 'gems', mode = 'normal') {
-        this.log(`Starting minigame: ${type} (${mode})`);
+    // controls: 'dpad' (full), 'lite' (simple), 'none' (tap) - or null to use default
+    startMinigame(type = 'gems', mode = 'normal', controls = null) {
+        // Determine controls from parameter or default from minigameInfo
+        const info = this.minigameInfo[type] || {};
+        const effectiveControls = controls || info.controls || 'none';
+
+        this.log(`Starting minigame: ${type} (mode: ${mode}, controls: ${effectiveControls})`);
 
         this.active = true;
         this.currentType = type;
         this.currentMode = mode;
+        this.currentControls = effectiveControls;
 
         // Switch to minigame view
         this.switchView('minigame');
@@ -580,6 +587,9 @@ window.FinkMinigames = {
             FinkWindowSlider.setState('full', false);
             FinkWindowSlider.show();
         }
+
+        // Show d-pad based on control type
+        this._showDPad(effectiveControls === 'dpad' || effectiveControls === 'lite');
 
         // Check if this is an iframe-based minigame
         if (this.iframeMinigames.includes(type)) {
@@ -643,9 +653,7 @@ window.FinkMinigames = {
                     config: { mode },
                     variables: this._getStoryVariables()
                 });
-
-                // Show d-pad on touch devices
-                this._showDPad(true);
+                // D-pad visibility is handled in startMinigame based on controls param
             };
         }
     },

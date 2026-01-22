@@ -31,7 +31,9 @@ You decide to embrace the tranquility of Riverbend. Days turn into weeks filled 
 # FOLEY: stop
 # FOLEY: wind(pan:0, vol:0.2, gust:0.1)
 Years pass. You become a beloved member of Riverbend, your initial curiosity forgotten. The secret of the Whisperwind ATM remains undisturbed. You live a happy, if uneventful, life.
--> END
+
++ [Settle into contentment] -> END
++ [One day, you notice a strange pool by the riverbank...] -> riverbend_portal
 
 === question_neighbor_settled ===
 # IMAGE: neighbor_gardening.png
@@ -522,7 +524,8 @@ You accept Mrs. Gable's offer. Over the coming months, you learn the true histor
 
 As a Guardian, you help maintain the balance, ensuring the ATM's gifts are used wisely and its secret remains protected. You've found not just a home in Riverbend, but a purpose.
 
--> END
++ [Continue your life as Guardian] -> END
++ [One day, you notice a strange pool by the riverbank...] -> riverbend_portal
 
 === keep_secret ===
 # IMAGE: peaceful_sunset.png
@@ -533,5 +536,13 @@ You decide that some secrets should remain just that - secrets. You promise Mrs.
 
 Life in Riverbend continues, peaceful and idyllic, but now you understand the subtle undercurrent that sustains this tranquil village. Sometimes, when the wind whispers through the streets, you fancy you can hear it speaking of ancient mysteries and hidden gifts.
 
++ [Enjoy your peaceful life] -> END
++ [One day, you notice a strange pool by the riverbank...] -> riverbend_portal
+
+=== riverbend_portal ===
+#BG:#024
+The pool's surface shimmers with impossible colors. You feel drawn to it, as if it were a window to another place entirely...
+
+# FINK: world-between-worlds.fink.js
 -> END
 `

@@ -7,6 +7,7 @@ window.FinkUI = {
     // State
     animationInProgress: false,
     decisionCount: 0,
+    currentSection: null,  // Current story-section element for content block model
 
     // Initialize UI elements
     init() {
@@ -138,21 +139,31 @@ window.FinkUI = {
 
             this.elements.choicesContainer.appendChild(choiceBtn);
         });
+
+        // Scroll to ensure choices are visible after they're added
+        // Use a delay to allow for choice animation to start
+        setTimeout(() => this.scrollToBottom(), 200);
     },
 
     handleChoiceClick(index) {
         if (this.animationInProgress) return;
         this.animationInProgress = true;
 
-        // Add player decision marker
+        // Add player decision marker to the CURRENT section before transitioning
         const decision = document.createElement('div');
         decision.className = 'player-decision';
         decision.textContent = this.storedChoices[index].text;
-        this.elements.storyOutput.appendChild(decision);
+
+        // Add to current section if it exists, otherwise directly to story output
+        if (this.currentSection) {
+            this.currentSection.appendChild(decision);
+        } else if (this.elements.storyOutput) {
+            this.elements.storyOutput.appendChild(decision);
+        }
 
         this.decisionCount++;
 
-        // Brief animation then continue
+        // Brief animation then continue - the callback will start a new section
         setTimeout(() => {
             this.animationInProgress = false;
             if (this.storedCallback) {
@@ -177,26 +188,63 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             this.elements.storyOutput.innerHTML = '';
         }
+        this.currentSection = null;
+    },
+
+    // Start a new content section, marking old ones as past
+    startNewSection() {
+        // Mark all existing sections as past
+        if (this.elements.storyOutput) {
+            const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
+            existingSections.forEach(section => {
+                section.classList.remove('current');
+                section.classList.add('past');
+            });
+        }
+
+        // Create new current section
+        const section = document.createElement('div');
+        section.className = 'story-section current decision-block-' + (this.decisionCount % 4);
+        this.currentSection = section;
+
+        if (this.elements.storyOutput) {
+            this.elements.storyOutput.appendChild(section);
+        }
+
+        return section;
     },
 
     replaceStoryContent(fragment) {
         if (this.elements.storyOutput) {
-            this.elements.storyOutput.innerHTML = '';
-            this.elements.storyOutput.appendChild(fragment);
+            // Use content block model - start new section instead of clearing
+            const section = this.startNewSection();
+            section.appendChild(fragment);
             this.scrollToBottom();
         }
     },
 
     appendStoryContent(fragment) {
         if (this.elements.storyOutput) {
-            this.elements.storyOutput.appendChild(fragment);
+            // Add to current section, or start new one if none exists
+            if (!this.currentSection) {
+                this.startNewSection();
+            }
+            this.currentSection.appendChild(fragment);
             this.scrollToBottom();
         }
     },
 
     scrollToBottom() {
-        if (this.elements.storyOutput) {
-            this.elements.storyOutput.scrollTop = this.elements.storyOutput.scrollHeight;
+        // Scroll the narrative view container, not just story output
+        const narrativeView = document.getElementById('narrative-view');
+        if (narrativeView) {
+            // Use smooth scroll with a small delay to ensure content is rendered
+            setTimeout(() => {
+                narrativeView.scrollTo({
+                    top: narrativeView.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 50);
         }
     },
 

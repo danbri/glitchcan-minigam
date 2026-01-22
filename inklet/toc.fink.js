@@ -136,7 +136,18 @@ Learn Ukrainian food vocabulary and basic grammar through interactive lessons an
 
 FINK Developer Guide
 
-Does not exist.
+Technical documentation is a work in progress. For now, explore the system through these resources:
+
++ [World Between Worlds - Hub connecting all stories] -> dev_wbw_selected
++ [Diamond Cave - Tech demo with minigames] -> diamond_cave_selected
++ [Return to Help Menu] -> help_menu
+
+=== dev_wbw_selected ===
+# FINK: world-between-worlds.fink.js
+
+The World Between Worlds serves as a hub connecting all FINK adventures. It demonstrates cross-story navigation, minigame integration, and the pool metaphor for story transitions.
+
++ [Enter the World Between Worlds] -> external_story
 
 === shane_manor_selected ===
 # FINK: /glitchcan-minigam/inklet/shane-manor.fink.js
