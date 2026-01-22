@@ -70,7 +70,10 @@ window.FinkMinigames = {
             pinBtn: document.getElementById('minigame-pin'),
             minimizeBtn: document.getElementById('minigame-minimize'),
             maximizeBtn: document.getElementById('minigame-maximize'),
-            frostOverlay: document.getElementById('minigame-frost-overlay')
+            frostOverlay: document.getElementById('minigame-frost-overlay'),
+            // D-Pad elements
+            dpad: document.getElementById('game-dpad'),
+            actionBtns: document.getElementById('game-action-btns')
         };
 
         // Initialize inline minigame modules
@@ -90,10 +93,151 @@ window.FinkMinigames = {
         // Control button handlers
         this._initControlButtons();
 
+        // Initialize d-pad controls
+        this._initDPad();
+
         // Bind message handler for iframe communication
         this.messageHandler = this._handleIframeMessage.bind(this);
 
         this.log('Minigames system initialized');
+    },
+
+    // Initialize D-Pad touch controls
+    _initDPad() {
+        const dpad = this.elements.dpad;
+        if (!dpad) return;
+
+        // Key mappings for directions
+        const dirMap = {
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight'
+        };
+
+        // Get all d-pad buttons
+        const buttons = dpad.querySelectorAll('.dpad-btn[data-dir]');
+        buttons.forEach(btn => {
+            const dir = btn.dataset.dir;
+            const key = dirMap[dir];
+            if (!key) return;
+
+            // Track active state for continuous input
+            let isPressed = false;
+            let repeatInterval = null;
+
+            const startPress = (e) => {
+                e.preventDefault();
+                if (isPressed) return;
+                isPressed = true;
+                btn.classList.add('pressed');
+
+                // Send key down
+                this._sendKeyToIframe(key, 'keydown');
+
+                // For continuous movement, repeat keydown every 50ms
+                repeatInterval = setInterval(() => {
+                    if (isPressed) {
+                        this._sendKeyToIframe(key, 'keydown');
+                    }
+                }, 50);
+            };
+
+            const endPress = (e) => {
+                e.preventDefault();
+                if (!isPressed) return;
+                isPressed = false;
+                btn.classList.remove('pressed');
+
+                // Clear repeat interval
+                if (repeatInterval) {
+                    clearInterval(repeatInterval);
+                    repeatInterval = null;
+                }
+
+                // Send key up
+                this._sendKeyToIframe(key, 'keyup');
+            };
+
+            // Touch events
+            btn.addEventListener('touchstart', startPress, { passive: false });
+            btn.addEventListener('touchend', endPress, { passive: false });
+            btn.addEventListener('touchcancel', endPress, { passive: false });
+
+            // Mouse events for desktop testing
+            btn.addEventListener('mousedown', startPress);
+            btn.addEventListener('mouseup', endPress);
+            btn.addEventListener('mouseleave', endPress);
+        });
+
+        // Initialize action buttons
+        this._initActionButtons();
+
+        this.log('D-Pad controls initialized');
+    },
+
+    // Initialize action buttons (A/B)
+    _initActionButtons() {
+        const actionA = document.getElementById('action-btn-a');
+        const actionB = document.getElementById('action-btn-b');
+
+        if (actionA) {
+            this._setupActionButton(actionA, ' ', 'Space'); // Space/Action
+        }
+        if (actionB) {
+            this._setupActionButton(actionB, 'Escape', 'Escape'); // Cancel/Back
+        }
+    },
+
+    // Setup single action button
+    _setupActionButton(btn, key, code) {
+        let isPressed = false;
+
+        const startPress = (e) => {
+            e.preventDefault();
+            if (isPressed) return;
+            isPressed = true;
+            btn.classList.add('pressed');
+            this._sendKeyToIframe(key, 'keydown', code);
+        };
+
+        const endPress = (e) => {
+            e.preventDefault();
+            if (!isPressed) return;
+            isPressed = false;
+            btn.classList.remove('pressed');
+            this._sendKeyToIframe(key, 'keyup', code);
+        };
+
+        btn.addEventListener('touchstart', startPress, { passive: false });
+        btn.addEventListener('touchend', endPress, { passive: false });
+        btn.addEventListener('touchcancel', endPress, { passive: false });
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('mouseup', endPress);
+        btn.addEventListener('mouseleave', endPress);
+    },
+
+    // Send keyboard event to iframe minigame
+    _sendKeyToIframe(key, eventType, code = null) {
+        if (!this.iframeMinigame) return;
+
+        // Send via postMessage to iframe
+        this.iframeMinigame.contentWindow?.postMessage({
+            type: 'key',
+            event: eventType,
+            key: key,
+            code: code || key
+        }, '*');
+    },
+
+    // Show/hide d-pad based on minigame state
+    _showDPad(show) {
+        if (this.elements.dpad) {
+            this.elements.dpad.style.display = show ? 'block' : 'none';
+        }
+        if (this.elements.actionBtns) {
+            this.elements.actionBtns.style.display = show ? 'flex' : 'none';
+        }
     },
 
     // Initialize control button event handlers
@@ -394,6 +538,11 @@ window.FinkMinigames = {
             view.style.left = '';
             view.style.right = '';
             view.style.bottom = '';
+
+            // CRITICAL: Remove slider state classes that have z-index/position:fixed
+            // Without this, state-full (z-index:2000, position:fixed) blocks clicks on narrative
+            view.classList.remove('state-full', 'state-embed', 'state-mini-live', 'state-mini-paused');
+            view.classList.remove('slider-transitioning');
         }
 
         // Reset button states and icons
@@ -494,6 +643,9 @@ window.FinkMinigames = {
                     config: { mode },
                     variables: this._getStoryVariables()
                 });
+
+                // Show d-pad on touch devices
+                this._showDPad(true);
             };
         }
     },
@@ -735,10 +887,11 @@ window.FinkMinigames = {
         this._resetWindowState();
         this.log(`Window state after reset: ${JSON.stringify(this.windowState)}`);
 
-        // Hide slider
+        // Hide slider and d-pad
         if (window.FinkWindowSlider) {
             FinkWindowSlider.hide();
         }
+        this._showDPad(false);
 
         // Reset UI
         if (this.elements.gameContainer) {
@@ -755,15 +908,22 @@ window.FinkMinigames = {
         // Update story variables if available
         this.updateStoryVariables(result);
 
-        // Switch back to narrative view
+        // Switch back to narrative view - removes 'active' class from minigame
         this.switchView('narrative');
-        this.log(`Minigame view classes: ${this.elements.minigameView?.className}`);
-        this.log(`Narrative view classes: ${this.elements.narrativeView?.className}`);
 
-        // Explicitly hide minigame view to ensure it's not blocking
+        // CRITICAL: Force minigame view fully hidden
+        // The .view class has display:none when not .active, but position:fixed
+        // states (pinned, minimized) can override. Ensure ALL state classes removed.
         if (this.elements.minigameView) {
-            this.elements.minigameView.style.display = 'none';
-            this.log('Minigame view hidden with display:none');
+            // Remove ALL position-altering classes
+            this.elements.minigameView.classList.remove(
+                'active', 'paused', 'pinned', 'minimized', 'maximized',
+                'transitioning', 'state-full', 'state-embed',
+                'state-mini-live', 'state-mini-paused', 'slider-transitioning'
+            );
+            // Clear any inline styles that might override CSS
+            this.elements.minigameView.style.cssText = '';
+            this.log('Minigame view: all classes and styles cleared');
         }
 
         // Reset UI state to ensure choices work
@@ -778,11 +938,6 @@ window.FinkMinigames = {
             this.log('Timeout fired - calling continueStory');
             if (window.FinkInkEngine && FinkInkEngine.continueStory) {
                 FinkInkEngine.continueStory();
-            }
-            // Re-enable minigame view CSS (remove inline style) for next minigame
-            if (this.elements.minigameView) {
-                this.elements.minigameView.style.display = '';
-                this.log(`Minigame view display reset, classes: ${this.elements.minigameView.className}`);
             }
         }, 100);
     },

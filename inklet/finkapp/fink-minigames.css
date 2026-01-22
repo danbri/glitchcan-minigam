@@ -12,19 +12,18 @@
 
 /* --- Game Window Slider --- */
 .game-slider {
-    position: absolute;
-    bottom: 70px;
+    position: fixed;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 80%;
-    max-width: 280px;
-    z-index: 1500;
-    padding: 0.5em;
-    background: rgba(0, 0, 0, 0.85);
+    width: 85%;
+    max-width: 300px;
+    z-index: 2500;
+    padding: 0.6em 0.8em;
+    background: rgba(0, 0, 0, 0.9);
     border-radius: var(--border-radius-md);
-    border: 1px solid var(--zx-cyan);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid var(--zx-cyan);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
 }
 
 .game-slider.hidden { display: none; }
@@ -154,20 +153,24 @@
 }
 
 /* --- Minigame Control Bar --- */
+/* Simplified: Only exit button shown - slider handles size/state */
 #minigame-controls {
     display: flex;
     gap: 0.3em;
     padding: 0.3em 0.5em;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.8);
     border-bottom: 1px solid var(--zx-blue);
     justify-content: flex-end;
     z-index: 10;
     flex-shrink: 0;
-    cursor: grab;
 }
 
-#minigame-controls:active {
-    cursor: grabbing;
+/* Hide redundant buttons - slider handles these now */
+#minigame-pause,
+#minigame-pin,
+#minigame-minimize,
+#minigame-maximize {
+    display: none;
 }
 
 #minigame-controls button {
@@ -175,8 +178,8 @@
     border: 1px solid #555;
     color: #fff;
     font-size: 1em;
-    width: 2em;
-    height: 2em;
+    width: 2.2em;
+    height: 2.2em;
     min-width: var(--touch-target-min);
     min-height: var(--touch-target-min);
     border-radius: var(--border-radius-sm);
@@ -194,12 +197,6 @@
 
 #minigame-controls button:active {
     transform: scale(0.95);
-}
-
-#minigame-controls button.active {
-    background: var(--zx-blue);
-    border-color: var(--zx-cyan);
-    box-shadow: 0 0 10px var(--zx-blue);
 }
 
 #returnToStory {
@@ -638,6 +635,126 @@
 .inline-minigame-expand:hover {
     background: var(--zx-cyan);
     color: #000;
+}
+
+/* --- Mobile D-Pad Controls --- */
+.game-dpad {
+    position: fixed;
+    bottom: 100px;
+    left: 20px;
+    z-index: 2400;
+    display: none; /* Shown via JS when needed */
+    touch-action: none;
+    user-select: none;
+}
+
+/* Show d-pad on touch devices when game is active */
+@media (pointer: coarse) {
+    #minigame-view.active .game-dpad,
+    #minigame-view.state-full .game-dpad {
+        display: block;
+    }
+}
+
+.game-dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 4px;
+}
+
+.dpad-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    touch-action: manipulation;
+}
+
+.dpad-btn:active {
+    background: var(--zx-cyan);
+    color: #000;
+    transform: scale(0.92);
+}
+
+.dpad-btn.pressed {
+    background: var(--zx-cyan);
+    color: #000;
+}
+
+/* Center button - no action or special */
+.dpad-center {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Corner placeholders - empty */
+.dpad-empty {
+    background: transparent;
+    pointer-events: none;
+}
+
+/* Action buttons on the right side */
+.game-action-btns {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 2400;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@media (pointer: coarse) {
+    #minigame-view.active .game-action-btns,
+    #minigame-view.state-full .game-action-btns {
+        display: flex;
+    }
+}
+
+.action-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.1s;
+    touch-action: manipulation;
+}
+
+.action-btn:active,
+.action-btn.pressed {
+    background: var(--zx-green);
+    border-color: var(--zx-green);
+    color: #000;
+    transform: scale(0.9);
+}
+
+.action-btn-secondary {
+    width: 44px;
+    height: 44px;
+    font-size: 1.2em;
+    background: rgba(255, 100, 100, 0.2);
+    border-color: rgba(255, 100, 100, 0.4);
+}
+
+.action-btn-secondary:active {
+    background: var(--zx-red);
+    border-color: var(--zx-red);
 }
 
 /* --- Game Container --- */
