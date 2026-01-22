@@ -518,40 +518,50 @@ window.FinkUI = {
     },
 
     updateVideo(videoPath, rawBasehref) {
+        console.log('[VIDEO-TRACE] updateVideo CALLED, path:', videoPath);
         FinkUtils.debugLog('updateVideo CALLED with path: ' + videoPath);
         if (!videoPath) {
-            FinkUtils.debugLog('updateVideo: no videoPath, returning');
+            console.log('[VIDEO-TRACE] no videoPath, returning');
             return;
         }
 
         const isLocalFile = videoPath.endsWith('.mp4') || videoPath.endsWith('.webm') || videoPath.endsWith('.mov');
         const isYouTube = !isLocalFile && (videoPath.length === 11 || videoPath.includes('youtube'));
-        FinkUtils.debugLog('updateVideo: isLocalFile=' + isLocalFile + ', isYouTube=' + isYouTube);
+        console.log('[VIDEO-TRACE] isLocalFile=' + isLocalFile + ', isYouTube=' + isYouTube);
 
         // Create or get video container
         let videoContainer = document.getElementById('video-container');
+        console.log('[VIDEO-TRACE] existing container:', videoContainer);
         if (!videoContainer) {
             videoContainer = document.createElement('div');
             videoContainer.id = 'video-container';
             videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;background:#000;margin:1rem auto;border-radius:8px;overflow:hidden;';
             // Try to insert before image container, or fallback to story output
+            console.log('[VIDEO-TRACE] this.elements:', this.elements);
+            console.log('[VIDEO-TRACE] imageContainer:', this.elements?.imageContainer);
             if (this.elements.imageContainer?.parentNode) {
                 this.elements.imageContainer.parentNode.insertBefore(videoContainer, this.elements.imageContainer);
+                console.log('[VIDEO-TRACE] inserted before imageContainer');
             } else if (this.elements.storyOutput) {
                 this.elements.storyOutput.parentNode.insertBefore(videoContainer, this.elements.storyOutput);
+                console.log('[VIDEO-TRACE] inserted before storyOutput');
             } else {
                 // Last resort: append to main or body
                 const main = document.querySelector('main') || document.body;
                 main.insertBefore(videoContainer, main.firstChild);
+                console.log('[VIDEO-TRACE] inserted into main/body');
             }
             FinkUtils.debugLog('Video container created and inserted into DOM');
         }
 
         videoContainer.innerHTML = '';
+        console.log('[VIDEO-TRACE] cleared container, isLocalFile:', isLocalFile);
 
         if (isLocalFile) {
             const storyBase = FinkPlayer.currentStoryUrl ? new URL('.', FinkPlayer.currentStoryUrl).href : window.location.href;
+            console.log('[VIDEO-TRACE] storyBase:', storyBase);
             const actualVideoPath = new URL(videoPath, storyBase).href;
+            console.log('[VIDEO-TRACE] actualVideoPath:', actualVideoPath);
 
             const video = document.createElement('video');
             video.controls = true;
@@ -561,10 +571,12 @@ window.FinkUI = {
             video.src = actualVideoPath;
 
             video.onerror = () => {
+                console.log('[VIDEO-TRACE] video error event');
                 videoContainer.innerHTML = '<p style="color:#f66;padding:1rem;text-align:center;">Video failed to load</p>';
             };
 
             videoContainer.appendChild(video);
+            console.log('[VIDEO-TRACE] video element appended, src:', actualVideoPath);
             FinkUtils.debugLog('updateVideo: video element appended, src=' + actualVideoPath);
         } else if (isYouTube) {
             videoContainer.style.paddingBottom = '56.25%';

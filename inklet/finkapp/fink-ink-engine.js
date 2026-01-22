@@ -382,7 +382,15 @@ window.FinkInkEngine = {
             // Show collected VIDEO (gathered from ALL Continue() calls in the loop)
             if (collectedVideoTag) {
                 FinkUtils.debugLog('Showing collected VIDEO: ' + collectedVideoTag);
-                FinkUI.updateVideo(collectedVideoTag, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                try {
+                    if (typeof FinkUI.updateVideo === 'function') {
+                        FinkUI.updateVideo(collectedVideoTag, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                    } else {
+                        console.error('[FINK] FinkUI.updateVideo is not a function:', typeof FinkUI.updateVideo);
+                    }
+                } catch (videoError) {
+                    console.error('[FINK] Error calling updateVideo:', videoError);
+                }
             }
 
             // Also check knot-level tags as fallback (for edge cases)
