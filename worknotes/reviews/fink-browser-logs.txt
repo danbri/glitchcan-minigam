@@ -1,0 +1,534 @@
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[error] Failed to load resource: the server responded with a status of 404 (File not found)
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 11 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-0.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Choose your adventure! Each episode is half-finished in a different way."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Displaying 6 choices
+[log] [FinkNavigation] Replaced history (same location): #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): episodes_menu.0.c-0.0
+[log] [FINK:debug] Initial knot detected: episodes_menu
+[log] [FINK:debug] Story.Continue() output: "Bag End"
+[log] [FINK:debug] Path string: hobbit_selected.0.5
+[log] [FINK:debug] Knot part extracted: "hobbit_selected" (isNumeric: false)
+[log] [FINK:debug] Detected knot: hobbit_selected
+[log] [FINK:debug] Current tags: [FINK: /glitchcan-minigam/inklet/bagend.fink.js]
+[log] [FINK:debug] FINK tag detected: /glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] Breaking story loop for FINK load
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 5)
+[log] [FINK:debug] Knot-level tags for hobbit_selected: [FINK: /glitchcan-minigam/inklet/bagend.fink.js]
+[log] [FINK:debug] Current knot for nav: hobbit_selected
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: hobbit_selected
+[log] [FINK:debug] Loading external FINK file: /glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] Resolved URL: http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] Clearing URL hash before FINK load to prevent navigation loop
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb current stack: [toc]
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js" → pathname="/glitchcan-minigam/inklet/bagend.fink.js" → filename="bagend"
+[log] [FINK:debug] Breadcrumb: New FINK level 1: bagend
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js" → pathname="/glitchcan-minigam/inklet/bagend.fink.js" → filename="bagend"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc, bagend]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/bagend.fink.js
+[log] [FINK:debug] Fetched 11093 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 10913 characters (total: 2)
+[log] [FINK:debug] External FINK loaded successfully
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 10913
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 2)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: media/bagend/]
+[log] [FinkNavigation] Building knot map for 18 public knots (urlHash: 3fbe9ab7)
+[log] [FinkNavigation] Found 1 FINK references in content
+[log] [FinkNavigation] Saved 11 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Collected BASEHREF tag: media/bagend/
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: [BASEHREF: media/bagend/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 6)
+[log] [FINK:debug] Applied collected BASEHREF: media/bagend/
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #6)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #6, now #6)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: ""My dear Bilbo," says the Wizard, "I am looking for someone to share in an adventure.""
+[log] [FINK:debug] Collected IMAGE tag: gandalf_at_door.svg
+[log] [FINK:debug] Path string: Talk_To_Gandalf.0.5
+[log] [FINK:debug] Knot part extracted: "Talk_To_Gandalf" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Talk_To_Gandalf
+[log] [FINK:debug] Current tags: [IMAGE: gandalf_at_door.svg]
+[log] [FINK:debug] Story.Continue() output: ""No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today.""
+[log] [FINK:debug] Path string: Talk_To_Gandalf.0.7
+[log] [FINK:debug] Knot part extracted: "Talk_To_Gandalf" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "The Wizard looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 8)
+[log] [FINK:debug] Showing collected IMAGE: gandalf_at_door.svg
+[log] [FINK:debug] updateImage CALLED: gandalf_at_door.svg (decision #8)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "gandalf_at_door.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/gandalf_at_door.svg
+[log] [FINK:debug] Current knot for nav: Talk_To_Gandalf
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Talk_To_Gandalf
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #3fbe9ab7-3bdab0504
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-3bdab0504 (Talk_To_Gandalf)
+[log] [FINK:debug] Image INSERTED: gandalf_at_door.svg (was decision #8, now #8)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Talk_To_Gandalf.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Talk_To_Gandalf
+[log] [FINK:debug] Story.Continue() output: ""Oh, that's just a burglar mark," the Wizard says casually. "It means this is a good house to burgle.""
+[log] [FINK:debug] Path string: Talk_To_Gandalf.0.c-0.3
+[log] [FINK:debug] Knot part extracted: "Talk_To_Gandalf" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""BURGLE?!" you splutter. "I'll have you know this is a respectable household!""
+[log] [FINK:debug] Path string: Talk_To_Gandalf.0.c-0.5
+[log] [FINK:debug] Knot part extracted: "Talk_To_Gandalf" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 10)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #10)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #10, now #10)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 12)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #12)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #12, now #12)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Outside_Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Outside_Bag_End
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 14)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #14)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #14, now #14)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 16)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #16)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #16, now #16)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Outside_Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Outside_Bag_End
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 18)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #18)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #18, now #18)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 20)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #20)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #20, now #20)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Outside_Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Outside_Bag_End
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 22)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #22)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #22, now #22)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 24)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #24)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #24, now #24)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Outside_Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Outside_Bag_End
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 26)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #26)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #26, now #26)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 28)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #28)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #28, now #28)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Outside_Bag_End.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Outside_Bag_End
+[log] [FINK:debug] Story.Continue() output: "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe."
+[log] [FINK:debug] Path string: Bag_End.0.2
+[log] [FINK:debug] Knot part extracted: "Bag_End" (isNumeric: false)
+[log] [FINK:debug] Detected knot: Bag_End
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: ../coverart/bagend_entrance_img_9445.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 30)
+[log] [FINK:debug] Showing collected IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] updateImage CALLED: ../coverart/bagend_entrance_img_9445.jpeg (decision #30)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "../coverart/bagend_entrance_img_9445.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/bagend_entrance_img_9445.jpeg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: ../coverart/bagend_entrance_img_9445.jpeg (was decision #30, now #30)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Bag_End.0.c-1.0
+[log] [FINK:debug] Initial knot detected: Bag_End
+[log] [FINK:debug] Story.Continue() output: "You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness."
+[log] [FINK:debug] Collected IMAGE tag: adventure_path.svg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: adventure_path.svg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 32)
+[log] [FINK:debug] Showing collected IMAGE: adventure_path.svg
+[log] [FINK:debug] updateImage CALLED: adventure_path.svg (decision #32)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/bagend"
+[log] [FINK:debug] Image path: "adventure_path.svg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/bagend/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/bagend/adventure_path.svg
+[log] [FINK:debug] Current knot for nav: Bag_End
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #3fbe9ab7-2e12cf773
+[log] [FinkNavigation] Updated fragment to: #3fbe9ab7-2e12cf773 (Bag_End)
+[log] [FINK:debug] Image INSERTED: adventure_path.svg (was decision #32, now #32)

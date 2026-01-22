@@ -1,0 +1,279 @@
+[
+  {
+    "stage": "first-impression",
+    "text": "Enter the Finkiverse. Everything isn't here yet.",
+    "choices": [
+      "🎯 Episodes",
+      "🚀 Minigames",
+      "🆘 Help"
+    ],
+    "hasImage": false
+  },
+  {
+    "stage": "step-1",
+    "clicked": "🎯 Episodes",
+    "text": "[+] History\n\nChoose your adventure! Each episode is half-finished in a different way.",
+    "choices": [
+      "🌟 Bagend",
+      "✨ Diamond Cave",
+      "🎯 Hampstead",
+      "🧩 Maple Hollow",
+      "⛏️ Mudslide Mines",
+      "🎯 Riverbend"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-2",
+    "clicked": "🌟 Bagend",
+    "text": "You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "💬 Talk to the Wizard",
+      "🚀 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-3",
+    "clicked": "💬 Talk to the Wizard",
+    "text": "[+] History\n\n\"My dear Bilbo,\" says the Wizard, \"I am looking for someone to share in an adventure.\"\n\n\"No thank you!\" you reply hastily. \"I don't want any adventures, thank you. Not today.\"\n\nThe Wizard looks at you with raised eyebrows. \"We shall see...\" He puffs thoughtfully on his pipe, and you not",
+    "choices": [
+      "❓ Ask about the mark on the door",
+      "❓ Ask about the adventure",
+      "🎯 Return to your comfortable armchair"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-4",
+    "clicked": "❓ Ask about the mark on the door",
+    "text": "[+] History\n\n\"Oh, that's just a burglar mark,\" the Wizard says casually. \"It means this is a good house to burgle.\"\n\n\"BURGLE?!\" you splutter. \"I'll have you know this is a respectable household!\"\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A",
+    "choices": [
+      "🎯 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-5",
+    "clicked": "🎯 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "🧩 Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-6",
+    "clicked": "🧩 Return inside",
+    "text": "[+] History\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "🧩 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-7",
+    "clicked": "🧩 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "✨ Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-8",
+    "clicked": "✨ Return inside",
+    "text": "[+] History\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "🌟 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-9",
+    "clicked": "🌟 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "🌟 Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-10",
+    "clicked": "🌟 Return inside",
+    "text": "[+] History\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "🚀 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-11",
+    "clicked": "🚀 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "🌟 Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-12",
+    "clicked": "🌟 Return inside",
+    "text": "[+] History\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "🚀 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-13",
+    "clicked": "🚀 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "🧩 Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-14",
+    "clicked": "🧩 Return inside",
+    "text": "[+] History\n\nYou are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.",
+    "choices": [
+      "🚀 Leave through the front door",
+      "🚶 Go to the kitchen"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  },
+  {
+    "stage": "step-15",
+    "clicked": "🚀 Leave through the front door",
+    "text": "[+] History\n\nYou stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.",
+    "choices": [
+      "🎯 Return inside",
+      "🚶 Go East to the village",
+      "🚶 Go North into the wilderness"
+    ],
+    "stats": {
+      "diamonds": "0",
+      "mega": "0",
+      "score": "0"
+    },
+    "hasImage": false,
+    "hasVideo": false,
+    "hasMinigame": false
+  }
+]
