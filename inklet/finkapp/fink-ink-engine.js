@@ -233,8 +233,13 @@ window.FinkInkEngine = {
                 }
             }
 
+            let paragraphIndex = 0;
             while (this.story.canContinue) {
                 const p = document.createElement('p');
+                p.className = 'text-chunk';
+                // Stagger animation with delay based on paragraph index
+                p.style.animationDelay = `${paragraphIndex * 0.15}s`;
+                paragraphIndex++;
                 let rawText = this.story.Continue();
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
 
@@ -334,19 +339,28 @@ window.FinkInkEngine = {
             }
 
             FinkUI.replaceStoryContent(storyFragment);
-            FinkUI.updateImageFromINKTags(this.story);
 
-            // Also check knot-level tags for BASEHREF only
-            // NOTE: IMAGE tags are NOT processed here - they're already handled by
-            // updateImageFromINKTags via story.currentTags. Processing them here too
-            // caused duplicate images because tags at knot start appear in BOTH places.
+            // Track which IMAGE was shown by line-level tags to avoid duplicates
+            const lineImageShown = FinkUI.updateImageFromINKTags(this.story);
+
+            // Also check knot-level tags - but skip IMAGE if already shown from currentTags
+            // Tags at knot start appear in BOTH currentTags AND TagsForContentAtPath,
+            // so we need to de-duplicate to avoid showing the same image twice.
             if (detectedKnot && this.story.TagsForContentAtPath) {
                 try {
                     const knotTags = this.story.TagsForContentAtPath(detectedKnot) || [];
                     FinkUtils.debugLog('Knot-level tags for ' + detectedKnot + ': [' + knotTags.join(', ') + ']');
                     knotTags.forEach(tag => {
-                        // IMAGE tags intentionally NOT processed here - handled by updateImageFromINKTags
-                        if (tag.includes('BASEHREF:')) {
+                        if (tag.includes('IMAGE:')) {
+                            const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
+                            // Only process if not already shown by updateImageFromINKTags
+                            if (imagePath !== lineImageShown) {
+                                FinkUtils.debugLog('Knot-level IMAGE tag (not duplicate): ' + imagePath);
+                                FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                            } else {
+                                FinkUtils.debugLog('Skipping duplicate knot-level IMAGE: ' + imagePath);
+                            }
+                        } else if (tag.includes('BASEHREF:')) {
                             let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
                             if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
                                 (basePath.startsWith("'") && basePath.endsWith("'"))) {

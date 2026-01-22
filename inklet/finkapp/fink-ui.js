@@ -369,7 +369,7 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             const section = this.startNewSection();
             section.appendChild(fragment);
-            this.scrollToTop();
+            this.scrollToCurrentSection();
         }
     },
 
@@ -383,12 +383,19 @@ window.FinkUI = {
     },
 
     // Scroll to top to see current section
-    scrollToTop() {
+    scrollToCurrentSection() {
         const narrativeView = document.getElementById('narrative-view');
-        if (narrativeView) {
+        if (narrativeView && this.currentSection) {
             setTimeout(() => {
-                narrativeView.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 50);
+                // Scroll to show the current section with a small offset from top
+                // This ensures the image (if any) is visible along with content
+                const sectionTop = this.currentSection.offsetTop;
+                const historyToggle = narrativeView.querySelector('.history-toggle');
+                const toggleHeight = historyToggle ? historyToggle.offsetHeight : 0;
+                // Scroll to section top, accounting for history toggle
+                const scrollTarget = Math.max(0, sectionTop - toggleHeight - 10);
+                narrativeView.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            }, 100); // Slightly longer delay to ensure images start loading
         }
     },
 
@@ -421,9 +428,9 @@ window.FinkUI = {
         }
     },
 
-    // Image and media handling
+    // Image and media handling - returns the image path shown (for de-duplication)
     updateImageFromINKTags(story) {
-        if (!story) return;
+        if (!story) return null;
 
         const currentTags = story.currentTags || [];
         let imageToShow = null;
@@ -459,6 +466,8 @@ window.FinkUI = {
         if (imageToShow) {
             this.updateImage(imageToShow, currentRawBasehref);
         }
+
+        return imageToShow; // Return for de-duplication
     },
 
     // Add image to current section (images live inside content chunks now)
