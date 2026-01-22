@@ -5,7 +5,7 @@ window.FinkConfig = {
 
     // Default paths - story specified BASEHREF takes precedence
     DEFAULT_MEDIA_PATH: '',
-    DEFAULT_FINK_FILE: '../toc.fink.js',
+    DEFAULT_FINK_FILE: '/glitchcan-minigam/inklet/toc.fink.js',
 
     // Choice emoji mapping (for narrative choices)
     emojiMap: {
@@ -57,11 +57,11 @@ window.FinkConfig = {
 
     // Local FINK files for dev panel quick load
     LOCAL_FINKS: [
-        { name: '🏠 Bag End', path: 'bagend.fink.js' },
-        { name: '🎮 Hampstead', path: 'hampstead.fink.js' },
-        { name: '⛏️ Mudslide Mines', path: 'mudslidemines.fink.js' },
-        { name: '🏞️ Riverbend', path: 'riverbend.fink.js' },
-        { name: '🏚️ Shane Manor', path: 'shane-manor.fink.js' },
-        { name: '📑 TOC', path: '../toc.fink.js' }
+        { name: '🏠 Bag End', path: '/glitchcan-minigam/inklet/bagend.fink.js' },
+        { name: '🎮 Hampstead', path: '/glitchcan-minigam/inklet/hampstead.fink.js' },
+        { name: '⛏️ Mudslide Mines', path: '/glitchcan-minigam/inklet/mudslidemines.fink.js' },
+        { name: '🏞️ Riverbend', path: '/glitchcan-minigam/inklet/riverbend.fink.js' },
+        { name: '🏚️ Shane Manor', path: '/glitchcan-minigam/inklet/shane-manor.fink.js' },
+        { name: '📑 TOC', path: '/glitchcan-minigam/inklet/toc.fink.js' }
     ]
 };
