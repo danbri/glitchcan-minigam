@@ -311,6 +311,12 @@ window.FinkUI = {
             const expanded = this.elements.storyOutput.classList.toggle('history-expanded');
             toggle.textContent = expanded ? '[-] History' : '[+] History';
             toggle.classList.toggle('expanded', expanded);
+
+            // Update inline styles to match expanded state
+            const pastSections = this.elements.storyOutput.querySelectorAll('.story-section.past');
+            pastSections.forEach(section => {
+                section.style.display = expanded ? 'block' : 'none';
+            });
         });
 
         if (this.elements.storyOutput) {
@@ -327,9 +333,14 @@ window.FinkUI = {
             const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
             const hasPastContent = existingSections.length > 0;
 
-            existingSections.forEach(section => {
+            FinkUtils.debugLog(`startNewSection: Found ${existingSections.length} current sections to mark as past`);
+
+            existingSections.forEach((section, i) => {
                 section.classList.remove('current');
                 section.classList.add('past');
+                // Force hide with inline style as backup
+                section.style.display = 'none';
+                FinkUtils.debugLog(`Marked section ${i} as past (display:none)`);
             });
 
             // Show history toggle if there's past content
@@ -344,6 +355,8 @@ window.FinkUI = {
         section.className = 'story-section current';
         this.currentSection = section;
         this.decisionCount++;
+
+        FinkUtils.debugLog(`Created new section (decisionCount: ${this.decisionCount})`);
 
         if (this.elements.storyOutput) {
             this.elements.storyOutput.appendChild(section);
