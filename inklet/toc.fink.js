@@ -37,6 +37,8 @@ Choose your adventure! Each episode is half-finished in a different way.
 
 Minigames and experiments, eventually for integration into story-based episodes.
 
++ [BoidWars] -> boidwars_selected
++ [GridLuck] -> gridluck_selected
 + [Ukrainian Language] -> ukrainian_selected
 
 
@@ -129,6 +131,36 @@ Ukrainian Language Learning
 Learn Ukrainian food vocabulary and basic grammar through interactive lessons and practice exercises. Proof of concept.
 
 + [Enter Language demo] -> external_story
+
+=== boidwars_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+BoidWars
+
+Command your wizard flock in strategic boid-based combat. Flocks of strange creatures await your command.
+
++ [Play BoidWars]
+    # MINIGAME: battleboids
+    -> minigame_return
+
+=== gridluck_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+GridLuck
+
+Pac-Man style maze chase with treasures, power-ups, and zone exploration. Navigate the 5x5 zone grid world.
+
++ [Play GridLuck]
+    # MINIGAME: gridluck
+    -> minigame_return
+
+=== minigame_return ===
+You return from the game.
+
++ [Back to Minigames] -> minigames_menu
++ [Main Menu] -> main_menu
 
 === dev_guide_selected ===
 
