@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline OS - Skunkworks</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="shell">
+    <!-- Timeline strip at top -->
+    <timeline-strip id="main-timeline"></timeline-strip>
+
+    <!-- App workspace -->
+    <div id="workspace">
+      <!-- Apps will be added here dynamically -->
+    </div>
+
+    <!-- Activity stream at bottom -->
+    <div id="activity-stream">
+      <div class="stream-header">Activity</div>
+      <div class="stream-content" id="activity-log"></div>
+    </div>
+
+    <!-- App launcher -->
+    <div id="launcher">
+      <button data-app="editor">+ Editor</button>
+      <button data-app="renderer">+ Renderer</button>
+      <button data-app="chat">+ Chat</button>
+    </div>
+  </div>
+
+  <!-- Web Components -->
+  <script type="module" src="components/timeline-strip.js"></script>
+  <script type="module" src="components/timeline-app.js"></script>
+  <script type="module" src="shell.js"></script>
+</body>
+</html>
