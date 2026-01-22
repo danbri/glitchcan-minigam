@@ -141,7 +141,7 @@ The clerk's eyes narrow. "You've already cashed this one, haven't you?"
 
 Before you can protest, a TV on the wall flickers to life...
 
-**ATTENTION: Benefits fraud is a serious offence. This interaction has been logged.**
+ATTENTION: Benefits fraud is a serious offence. This interaction has been logged.
 
 ~ score -= 2
 ~ fraud_caught = true
