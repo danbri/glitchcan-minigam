@@ -347,20 +347,27 @@ window.FinkUI = {
 
         const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
 
-        // Remove any existing media from current section
-        const existingMedia = this.currentSection.querySelector('.section-media');
+        // CRITICAL: Capture the target section NOW, not when onload fires
+        // Otherwise, if user navigates before image loads, it goes to wrong section
+        const targetSection = this.currentSection;
+
+        // Remove any existing media from target section
+        const existingMedia = targetSection.querySelector('.section-media');
         if (existingMedia) {
             existingMedia.remove();
         }
 
-        // Create image element inside current section
+        // Create image element inside target section
         const img = document.createElement('img');
         img.className = 'section-media';
         img.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
 
         img.onload = () => {
-            // Insert at the beginning of the section
-            this.currentSection.insertBefore(img, this.currentSection.firstChild);
+            // Insert at the beginning of the captured section
+            // Only insert if section is still in DOM (hasn't been cleared)
+            if (targetSection.parentNode) {
+                targetSection.insertBefore(img, targetSection.firstChild);
+            }
         };
 
         img.onerror = () => {
