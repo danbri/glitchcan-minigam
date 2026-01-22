@@ -535,23 +535,17 @@ window.FinkMinigames = {
                 break;
 
             case 'log':
-                // Route minigame log to console
-                if (data.level === 'error') {
-                    console.error(`[Minigame] ${data.message}`);
-                } else {
-                    console.log(`[Minigame] ${data.message}`);
+                // Route minigame log to dev panel
+                if (window.FinkDevPanel) {
+                    FinkDevPanel.log(`[Minigame] ${data.message}`, data.level === 'error' ? 'error' : 'game');
                 }
                 break;
 
             case 'log-batch':
-                // Route batched minigame logs to console
-                if (data.logs) {
+                // Route batched minigame logs to dev panel
+                if (window.FinkDevPanel && data.logs) {
                     data.logs.forEach(log => {
-                        if (log.level === 'error') {
-                            console.error(`[Minigame] ${log.message}`);
-                        } else {
-                            console.log(`[Minigame] ${log.message}`);
-                        }
+                        FinkDevPanel.log(`[Minigame] ${log.message}`, log.level === 'error' ? 'error' : 'game');
                     });
                 }
                 break;
@@ -847,7 +841,11 @@ window.FinkMinigames = {
     },
 
     log(msg) {
-        console.log(`[FinkMinigames] ${msg}`);
+        if (window.FinkDevPanel) {
+            FinkDevPanel.log(`Minigames: ${msg}`, 'game');
+        } else {
+            console.log(`[FinkMinigames] ${msg}`);
+        }
     },
 
     // ========== INLINE MINIGAME SYSTEM ==========
