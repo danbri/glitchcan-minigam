@@ -2,12 +2,17 @@
 /* Compact, space-efficient minigame UI */
 
 /* --- Minigame View --- */
+/* NOTE: Don't set display here - let .view/.view.active in fink-player.css control visibility */
 #minigame-view {
     padding: 0;
-    display: flex;
     flex-direction: column;
     overflow: hidden;
     height: 100%;
+}
+
+/* When active, use flex layout */
+#minigame-view.active {
+    display: flex;
 }
 
 /* --- Game Window Slider --- */
@@ -27,6 +32,13 @@
 }
 
 .game-slider.hidden { display: none; }
+
+/* Hide slider when minigame is minimized - pip is too small for it */
+#minigame-view.minimized .game-slider,
+#minigame-view.state-mini-live .game-slider,
+#minigame-view.state-mini-paused .game-slider {
+    display: none !important;
+}
 
 .game-slider-track {
     position: relative;
@@ -765,6 +777,11 @@
     border: 2px solid var(--zx-mag);
     position: relative;
     overflow: hidden;
+}
+
+/* Hide game container when empty (no active game) */
+#game-container:empty {
+    display: none;
 }
 
 #game-container.mega-mode {
