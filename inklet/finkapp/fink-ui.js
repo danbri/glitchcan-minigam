@@ -472,13 +472,18 @@ window.FinkUI = {
 
     // Add image to current section (images live inside content chunks now)
     updateImage(imagePath, rawBasehref) {
-        if (!imagePath || !this.currentSection) return;
+        if (!imagePath || !this.currentSection) {
+            FinkUtils.debugLog(`updateImage SKIPPED: path=${imagePath}, hasSection=${!!this.currentSection}`);
+            return;
+        }
 
+        FinkUtils.debugLog(`updateImage CALLED: ${imagePath} (decision #${this.decisionCount})`);
         const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
 
         // CRITICAL: Capture the target section NOW, not when onload fires
         // Otherwise, if user navigates before image loads, it goes to wrong section
         const targetSection = this.currentSection;
+        const capturedDecisionCount = this.decisionCount; // For debugging
 
         // Remove any existing media from target section
         const existingMedia = targetSection.querySelector('.section-media');
@@ -492,10 +497,16 @@ window.FinkUI = {
         img.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
 
         img.onload = () => {
-            // Insert at the beginning of the captured section
-            // Only insert if section is still in DOM (hasn't been cleared)
-            if (targetSection.parentNode) {
+            // CRITICAL: Only insert if:
+            // 1. Section is still in DOM (hasn't been cleared)
+            // 2. Section is still CURRENT (not marked as past)
+            // This prevents old images from appearing in past sections that are briefly visible
+            const nowDecisionCount = this.decisionCount;
+            if (targetSection.parentNode && targetSection.classList.contains('current')) {
                 targetSection.insertBefore(img, targetSection.firstChild);
+                FinkUtils.debugLog(`Image INSERTED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount})`);
+            } else {
+                FinkUtils.debugLog(`Image BLOCKED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount}) - section is ${targetSection.parentNode ? 'past' : 'removed'}`);
             }
         };
 
