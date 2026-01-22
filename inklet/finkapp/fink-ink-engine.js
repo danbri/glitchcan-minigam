@@ -167,6 +167,7 @@ window.FinkInkEngine = {
             let shouldStartMinigame = false;
             let minigameType = 'normal';
             let minigameMode = 'normal';
+            let minigameControls = null;
             let detectedKnot = null;  // Track knot during this continue cycle
 
             // CRITICAL: Check currentPathString BEFORE first Continue() call
@@ -230,21 +231,25 @@ window.FinkInkEngine = {
                             FinkUtils.debugLog('FINK tag detected: ' + value);
                             break;
                         case 'MINIGAME':
-                            // Parse: "mudslider mode=cave" or just "chess"
+                            // Parse: "gridluck mode=cave controls=dpad" or just "chess"
+                            // controls: dpad (full), lite (simple), none (tap only)
                             const mgParts = value.toLowerCase().split(/\s+/);
                             const mgName = mgParts[0];
                             let mgMode = 'normal';
-                            // Look for mode=xxx parameter
+                            let mgControls = null; // null = use default from minigameInfo
+                            // Look for mode=xxx and controls=xxx parameters
                             mgParts.slice(1).forEach(p => {
                                 if (p.startsWith('mode=')) mgMode = p.replace('mode=', '');
+                                if (p.startsWith('controls=')) mgControls = p.replace('controls=', '');
                             });
                             if (mgName === 'chess') minigameType = 'chess';
                             else if (mgName === 'mega') minigameType = 'mega';
                             else if (mgName === 'mudslider') minigameType = 'mudslider';
                             else minigameType = mgName || 'normal';
                             minigameMode = mgMode;
+                            minigameControls = mgControls;
                             shouldStartMinigame = true;
-                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType + ' (mode: ' + mgMode + ')');
+                            FinkUtils.debugLog('MINIGAME tag detected: ' + minigameType + ' (mode: ' + mgMode + ', controls: ' + mgControls + ')');
                             break;
                         case 'FOLEY':
                             FinkUtils.debugLog('FOLEY tag: ' + value);
@@ -336,7 +341,7 @@ window.FinkInkEngine = {
 
             if (shouldStartMinigame && window.FinkMinigames) {
                 // Start minigame - user can use window controls to minimize/maximize
-                setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode), 800);
+                setTimeout(() => FinkMinigames.startMinigame(minigameType, minigameMode, minigameControls), 800);
                 return;
             }
 
