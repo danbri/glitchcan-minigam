@@ -187,8 +187,30 @@ window.FinkUI = {
     clearStory() {
         if (this.elements.storyOutput) {
             this.elements.storyOutput.innerHTML = '';
+            this.elements.storyOutput.classList.remove('history-expanded');
         }
         this.currentSection = null;
+        this.historyToggle = null;
+    },
+
+    // Ensure history toggle button exists
+    ensureHistoryToggle() {
+        if (this.historyToggle) return this.historyToggle;
+
+        const toggle = document.createElement('button');
+        toggle.className = 'history-toggle';
+        toggle.textContent = '[+] History';
+        toggle.addEventListener('click', () => {
+            const expanded = this.elements.storyOutput.classList.toggle('history-expanded');
+            toggle.textContent = expanded ? '[-] History' : '[+] History';
+            toggle.classList.toggle('expanded', expanded);
+        });
+
+        if (this.elements.storyOutput) {
+            this.elements.storyOutput.insertBefore(toggle, this.elements.storyOutput.firstChild);
+        }
+        this.historyToggle = toggle;
+        return toggle;
     },
 
     // Start a new content section, marking old ones as past
@@ -196,21 +218,23 @@ window.FinkUI = {
         // Mark all existing sections as past
         if (this.elements.storyOutput) {
             const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
+            const hasPastContent = existingSections.length > 0;
+
             existingSections.forEach(section => {
                 section.classList.remove('current');
                 section.classList.add('past');
             });
-        }
 
-        // Hide image until new content explicitly sets one
-        // (prevents stale image from previous section showing)
-        if (this.elements.imageContainer) {
-            this.elements.imageContainer.classList.add('hidden');
+            // Show history toggle if there's past content
+            if (hasPastContent) {
+                this.ensureHistoryToggle();
+                this.historyToggle.classList.add('has-history');
+            }
         }
 
         // Create new current section
         const section = document.createElement('div');
-        section.className = 'story-section current decision-block-' + (this.decisionCount % 4);
+        section.className = 'story-section current';
         this.currentSection = section;
         this.decisionCount++;
 
@@ -223,41 +247,27 @@ window.FinkUI = {
 
     replaceStoryContent(fragment) {
         if (this.elements.storyOutput) {
-            // Use content block model - start new section instead of clearing
             const section = this.startNewSection();
             section.appendChild(fragment);
-            this.scrollToCurrentSection();
+            this.scrollToTop();
         }
     },
 
     appendStoryContent(fragment) {
         if (this.elements.storyOutput) {
-            // Add to current section, or start new one if none exists
             if (!this.currentSection) {
                 this.startNewSection();
             }
             this.currentSection.appendChild(fragment);
-            this.scrollToCurrentSection();
         }
     },
 
-    // Scroll so current section is visible just below the pinned image
-    scrollToCurrentSection() {
+    // Scroll to top to see current section
+    scrollToTop() {
         const narrativeView = document.getElementById('narrative-view');
-        if (narrativeView && this.currentSection) {
+        if (narrativeView) {
             setTimeout(() => {
-                // Get the height of the sticky image container
-                const imageContainer = this.elements.imageContainer;
-                const imageHeight = imageContainer && !imageContainer.classList.contains('hidden')
-                    ? imageContainer.offsetHeight + 8 // 8px margin
-                    : 0;
-
-                // Scroll so current section starts just below the image
-                const sectionTop = this.currentSection.offsetTop - imageHeight;
-                narrativeView.scrollTo({
-                    top: Math.max(0, sectionTop),
-                    behavior: 'smooth'
-                });
+                narrativeView.scrollTo({ top: 0, behavior: 'smooth' });
             }, 50);
         }
     },
@@ -331,87 +341,33 @@ window.FinkUI = {
         }
     },
 
+    // Add image to current section (images live inside content chunks now)
     updateImage(imagePath, rawBasehref) {
-        if (!imagePath || !this.elements.storyImage) return;
+        if (!imagePath || !this.currentSection) return;
 
         const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
-        const isSvg = imagePath.toLowerCase().endsWith('.svg');
 
-        // Clear any existing SVG container
-        const existingSvgContainer = this.elements.imageContainer?.querySelector('.svg-draw-container');
-        if (existingSvgContainer) {
-            existingSvgContainer.remove();
+        // Remove any existing media from current section
+        const existingMedia = this.currentSection.querySelector('.section-media');
+        if (existingMedia) {
+            existingMedia.remove();
         }
 
-        if (isSvg) {
-            // Load SVG inline for drawing animation
-            this.loadSvgWithDrawEffect(actualImagePath, imagePath);
-        } else {
-            // Bitmap: apply blur-to-clear effect
-            this.elements.storyImage.classList.remove('loaded');
-            this.elements.storyImage.classList.add('loading', 'hidden');
+        // Create image element inside current section
+        const img = document.createElement('img');
+        img.className = 'section-media';
+        img.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
 
-            const img = new Image();
-            img.onload = () => {
-                this.elements.storyImage.src = actualImagePath;
-                this.elements.storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
-                this.elements.storyImage.classList.remove('hidden', 'loading');
-                // Trigger reflow then add loaded class for transition
-                void this.elements.storyImage.offsetWidth;
-                this.elements.storyImage.classList.add('loaded');
-                if (this.elements.imageContainer) {
-                    this.elements.imageContainer.classList.remove('hidden');
-                }
-            };
+        img.onload = () => {
+            // Insert at the beginning of the section
+            this.currentSection.insertBefore(img, this.currentSection.firstChild);
+        };
 
-            img.onerror = () => {
-                FinkUtils.debugLog('Image failed to load: ' + actualImagePath);
-                if (this.elements.imageContainer) {
-                    this.elements.imageContainer.classList.add('hidden');
-                }
-            };
+        img.onerror = () => {
+            FinkUtils.debugLog('Image failed to load: ' + actualImagePath);
+        };
 
-            img.src = actualImagePath;
-        }
-    },
-
-    // Load SVG inline and animate the drawing
-    async loadSvgWithDrawEffect(svgUrl, altText) {
-        try {
-            const response = await fetch(svgUrl);
-            if (!response.ok) throw new Error('Failed to fetch SVG');
-
-            const svgText = await response.text();
-
-            // Hide the regular image element
-            this.elements.storyImage.classList.add('hidden');
-
-            // Create container for SVG
-            const container = document.createElement('div');
-            container.className = 'svg-draw-container';
-            container.innerHTML = svgText;
-
-            // Insert into image container
-            if (this.elements.imageContainer) {
-                this.elements.imageContainer.classList.remove('hidden');
-                this.elements.imageContainer.appendChild(container);
-            }
-
-            // After animation completes, add 'drawn' class to fill colors
-            setTimeout(() => {
-                container.classList.add('drawn');
-            }, 1500);
-
-        } catch (error) {
-            FinkUtils.debugLog('SVG load error, falling back to img: ' + error.message);
-            // Fallback to regular image loading
-            this.elements.storyImage.src = svgUrl;
-            this.elements.storyImage.alt = altText.replace(/\.\w+$/, '').replace(/_/g, ' ');
-            this.elements.storyImage.classList.remove('hidden');
-            if (this.elements.imageContainer) {
-                this.elements.imageContainer.classList.remove('hidden');
-            }
-        }
+        img.src = actualImagePath;
     },
 
     updateVideo(videoPath, rawBasehref) {
