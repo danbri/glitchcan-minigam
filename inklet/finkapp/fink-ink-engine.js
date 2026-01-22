@@ -8,6 +8,50 @@ window.FinkInkEngine = {
     lastSeenFinkTag: null,
     pendingMinigame: null,
 
+    // Private inventory INK - gets injected into all stories
+    // Variables are only declared if not already present in story
+    getPrivateInventoryInk(storyContent) {
+        // Check which variables the story already declares
+        const hasDiamonds = /VAR\s+diamonds\s*=/.test(storyContent);
+        const hasMegaDiamonds = /VAR\s+mega_diamonds\s*=/.test(storyContent);
+        const hasKeys = /VAR\s+keys\s*=/.test(storyContent);
+        const hasScore = /VAR\s+score\s*=/.test(storyContent);
+
+        let varDeclarations = '\n// === FINK Private Variables (auto-injected) ===\n';
+        if (!hasDiamonds) varDeclarations += 'VAR diamonds = 0\n';
+        if (!hasMegaDiamonds) varDeclarations += 'VAR mega_diamonds = 0\n';
+        if (!hasKeys) varDeclarations += 'VAR keys = 0\n';
+        if (!hasScore) varDeclarations += 'VAR score = 0\n';
+
+        const inventoryKnot = `
+// === FINK Private Inventory (auto-injected) ===
+=== _inventory ===
+#BG:#113
+*** INVENTORY ***
+
+{diamonds > 0:
+    💎 Diamonds: {diamonds}
+}
+{mega_diamonds > 0:
+    💠 Mega Diamonds: {mega_diamonds}
+}
+{keys > 0:
+    🔑 Keys: {keys}
+}
+{score > 0:
+    ⭐ Score: {score}
+}
+{diamonds == 0 && mega_diamonds == 0 && keys == 0 && score == 0:
+    Your pockets are empty. Adventures await!
+}
+
++ [World Between Worlds]
+    # FINK: world-between-worlds.fink.js
+    -> END
+`;
+        return varDeclarations + inventoryKnot;
+    },
+
     // Compile and run FINK story content
     async compileAndRunStory(finkContent) {
         FinkUtils.debugLog('Processing FINK content with INK engine');
@@ -51,8 +95,13 @@ window.FinkInkEngine = {
 
         FinkUtils.debugLog('inkjs library verified, attempting compilation...');
 
+        // Inject private inventory system
+        const privateInk = this.getPrivateInventoryInk(finkContent);
+        const augmentedContent = finkContent + privateInk;
+        FinkUtils.debugLog('Injected private inventory INK (' + privateInk.length + ' chars)');
+
         try {
-            const compiler = new inkjs.Compiler(finkContent);
+            const compiler = new inkjs.Compiler(augmentedContent);
 
             if (compiler.errors && compiler.errors.length > 0) {
                 compiler.errors.forEach((error, i) => {

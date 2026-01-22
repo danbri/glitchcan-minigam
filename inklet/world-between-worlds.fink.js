@@ -13,13 +13,21 @@ A vast, quiet wood stretches in all directions. The trees are ancient beyond mea
 
 Scattered throughout the glade are pools - perfectly still, perfectly round, each reflecting a different sky.
 
-+ Approach the golden pool (warm light, distant hills) -> pool_bagend
-+ Peer into the dark pool (flickering torches, stone walls) -> pool_mines
-+ Examine the misty pool (manor silhouette, ravens) -> pool_manor
-+ Study the gentle pool (autumn leaves, chimney smoke) -> pool_maple
-+ Look into the rippling pool (flowing water, reeds) -> pool_riverbend
-+ Approach the shimmering pool (arcade lights, pixel glow) -> pool_arcade
-+ Sit quietly among the pools -> rest_here
+The golden pool glows with warm light; distant green hills shimmer within.
+The dark pool flickers with torchlight; stone walls and shadows beckon.
+The misty pool shows a manor silhouette; ravens circle above.
+The gentle pool drifts with autumn leaves; chimney smoke curls upward.
+The rippling pool flows with water and reeds; a river winds through marshland.
+The shimmering pool pulses with arcade lights and pixel glow.
+
++ [Approach the golden pool] -> pool_bagend
++ [Peer into the dark pool] -> pool_mines
++ [Examine the misty pool] -> pool_manor
++ [Study the gentle pool] -> pool_maple
++ [Look into the rippling pool] -> pool_riverbend
++ [Approach the shimmering pool] -> pool_arcade
++ [Sit quietly among the pools] -> rest_here
++ [...more] -> wbw_more_options
 
 === pool_bagend ===
 #BG:#141
@@ -120,6 +128,13 @@ You return to the arcade, the glow of games surrounding you.
 
 + Play another game -> arcade_hangout
 + Return to the World Between Worlds -> world_between_worlds
+
+=== wbw_more_options ===
+#BG:#020
+The quiet wood holds more secrets than just the pools.
+
++ [Inventory] -> _inventory
++ [Return to the pools] -> world_between_worlds
 
 === rest_here ===
 #BG:#020
