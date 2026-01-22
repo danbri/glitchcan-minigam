@@ -518,10 +518,15 @@ window.FinkUI = {
     },
 
     updateVideo(videoPath, rawBasehref) {
-        if (!videoPath) return;
+        FinkUtils.debugLog('updateVideo CALLED with path: ' + videoPath);
+        if (!videoPath) {
+            FinkUtils.debugLog('updateVideo: no videoPath, returning');
+            return;
+        }
 
         const isLocalFile = videoPath.endsWith('.mp4') || videoPath.endsWith('.webm') || videoPath.endsWith('.mov');
         const isYouTube = !isLocalFile && (videoPath.length === 11 || videoPath.includes('youtube'));
+        FinkUtils.debugLog('updateVideo: isLocalFile=' + isLocalFile + ', isYouTube=' + isYouTube);
 
         // Create or get video container
         let videoContainer = document.getElementById('video-container');
@@ -529,9 +534,17 @@ window.FinkUI = {
             videoContainer = document.createElement('div');
             videoContainer.id = 'video-container';
             videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;background:#000;margin:1rem auto;border-radius:8px;overflow:hidden;';
+            // Try to insert before image container, or fallback to story output
             if (this.elements.imageContainer?.parentNode) {
                 this.elements.imageContainer.parentNode.insertBefore(videoContainer, this.elements.imageContainer);
+            } else if (this.elements.storyOutput) {
+                this.elements.storyOutput.parentNode.insertBefore(videoContainer, this.elements.storyOutput);
+            } else {
+                // Last resort: append to main or body
+                const main = document.querySelector('main') || document.body;
+                main.insertBefore(videoContainer, main.firstChild);
             }
+            FinkUtils.debugLog('Video container created and inserted into DOM');
         }
 
         videoContainer.innerHTML = '';
@@ -552,6 +565,7 @@ window.FinkUI = {
             };
 
             videoContainer.appendChild(video);
+            FinkUtils.debugLog('updateVideo: video element appended, src=' + actualVideoPath);
         } else if (isYouTube) {
             videoContainer.style.paddingBottom = '56.25%';
 
