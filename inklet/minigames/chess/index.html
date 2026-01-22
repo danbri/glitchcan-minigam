@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mamichess - FINK Minigame</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a1a2e;
+            color: #eee;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', Arial, sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+        h1 { margin-bottom: 15px; color: #0ff; text-transform: uppercase; letter-spacing: 1px; font-size: 1.2em; }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 70px);
+            grid-template-rows: repeat(3, 70px);
+            border: 4px solid #0ff;
+            box-shadow: 0 0 20px rgba(0,255,255,0.3);
+            border-radius: 5px;
+            position: relative;
+        }
+        .cell {
+            width: 70px;
+            height: 70px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .cell.light-square { background-color: #2d4a6a; }
+        .cell.dark-square { background-color: #1a2a3a; }
+        .cell:hover { box-shadow: inset 0 0 10px rgba(0,255,255,0.3); }
+
+        .piece-emoji {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.1s, transform 0.1s;
+            font-size: 58px;
+            line-height: 1;
+        }
+        .piece-emoji[data-piece="king"],
+        .piece-emoji[data-piece="queen"] {
+            font-size: 85px;
+        }
+
+        .piece-emoji.dragging { opacity: 0.3; }
+        .piece-emoji.active-piece-animation {
+            animation: gentle-throb 1.2s infinite ease-in-out alternate;
+        }
+        @keyframes gentle-throb {
+            from { transform: scale(1); opacity: 1; }
+            to { transform: scale(1.08); opacity: 0.9; }
+        }
+
+        #controls { margin-top: 20px; display: flex; flex-direction: column; align-items: center; }
+        #message { font-size: 1em; font-weight: bold; color: #0ff; text-align: center; margin-bottom:12px; min-height: 1.3em;}
+        #subtle-move-message { font-size: 0.85em; color: #888; text-align: center; min-height: 1em; margin-bottom: 5px;}
+
+        #buttons-panel { display: flex; gap: 10px; }
+        .control-button {
+            padding: 10px 15px; font-size: 1.1em; cursor: pointer; border: 2px solid #0ff;
+            background-color: #1a2a3a; color: #0ff; border-radius: 5px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; min-width: 50px;
+        }
+        .control-button:hover { background-color: #2a3a4a; box-shadow: 0 0 10px rgba(0,255,255,0.3); }
+        #play-again { display: none; }
+        #return-to-story { display: none; background-color: #1a3a2a; border-color: #0f8; color: #0f8; }
+        #return-to-story:hover { background-color: #2a4a3a; }
+        #explanation-btn.active { background-color: #2a4a3a; border-color: #0f8; }
+
+        #explanation-text {
+            display:none;
+            margin-top:15px;
+            padding:12px;
+            border:2px solid #0ff;
+            background-color:#1a2a3a;
+            max-width: 300px;
+            text-align:left;
+            font-size: 0.9em;
+            line-height: 1.5;
+            border-radius: 5px;
+            color: #ccc;
+            max-height: 30vh;
+            overflow-y: auto;
+        }
+        #explanation-text a { color: #0ff; text-decoration: none; }
+        #explanation-text a:hover { text-decoration: underline; }
+
+        /* Skull Animation */
+        #skull-animation-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: rgba(0,0,0,0);
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        #animated-skull {
+            position: absolute;
+            opacity: 0;
+            color: #fff;
+            text-align: center;
+            will-change: transform, opacity, font-size, left, top;
+            transform-origin: center center;
+        }
+
+        .king-on-skull-fading {
+            animation: fadeOutBoardPiece 0.5s ease-out forwards;
+        }
+        @keyframes fadeOutBoardPiece {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.7); }
+        }
+
+        #animated-skull.trigger-skull-win-animation {
+            animation:
+                skullInitialFadeIn 0.3s forwards,
+                skullGlowCyan 1.5s linear infinite 0.1s,
+                skullGrowAndCenter2x 2.0s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+        }
+
+        @keyframes skullInitialFadeIn { to { opacity: 1; } }
+        @keyframes skullGlowCyan {
+            0%, 100% { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff; }
+            50% { text-shadow: 0 0 15px #0ff, 0 0 25px #0ff, 0 0 35px #0ff; }
+        }
+        @keyframes skullGrowAndCenter2x {
+            0% { transform: translate(0,0) scale(1); opacity: 1; }
+            40% { left: 50vw; top: 50vh; transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+            100% { left: 50vw; top: 50vh; transform: translate(-50%, -50%) scale(2); opacity: 0.9; }
+        }
+
+        #skull-animation-overlay.fading-to-black { animation: fadeToBlackBG 1s forwards; }
+        @keyframes fadeToBlackBG { to { background-color: rgba(0,0,0,1); } }
+        #skull-animation-overlay.fading-out-from-black { animation: fadeOutBlackBG 1s forwards; }
+        @keyframes fadeOutBlackBG {
+            from { background-color: rgba(0,0,0,1); opacity: 1; }
+            to { background-color: rgba(0,0,0,0); opacity: 0; }
+        }
+
+        /* Paused overlay */
+        #pause-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1500;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            color: #0ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mamichess</h1>
+    <div id="game-container">
+        <div id="game-board"></div>
+        <div id="controls">
+            <p id="message"></p>
+            <p id="subtle-move-message"></p>
+            <div id="buttons-panel">
+                <button id="explanation-btn" class="control-button" title="Help/Rules">?</button>
+                <button id="play-again" class="control-button" title="Play Again">Replay</button>
+                <button id="return-to-story" class="control-button" title="Return to Story">Back</button>
+            </div>
+            <div id="explanation-text">
+                <strong>Mamichess Puzzle</strong><br>
+                The Queen must force the King onto the skull square (top-right). Queen moves first. The King will try to avoid the grave or capture the Queen.
+                <br><br>
+                <a href="https://en.wikipedia.org/wiki/Mamikon_Mnatsakanian" target="_blank">About the creator</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="skull-animation-overlay">
+        <span id="animated-skull" class="piece-emoji"></span>
+    </div>
+
+    <div id="pause-overlay">PAUSED</div>
+
+    <!-- Minigame SDK -->
+    <script src="../minigame-sdk.js"></script>
+
+    <script>
+        // SDK Integration
+        let sdk = null;
+        let isEmbedded = window.parent !== window;
+
+        // Game Constants
+        const BOARD_SIZE = { rows: 3, cols: 4 };
+        const PIECE_EMOJI = { WHITE_QUEEN: '\u2655', BLACK_KING: '\u265A', SKULL: '\uD83D\uDC80' };
+        const INITIAL_KING_POS = { row: 0, col: 0 };
+        const INITIAL_QUEEN_POS = { row: 1, col: 2 };
+        const SKULL_TARGET = { row: 0, col: 3 };
+
+        // Game State
+        let kingPos, queenPos;
+        let currentTurn = 'white';
+        let gameOver = false;
+        let gameWon = false;
+        let gamePaused = false;
+        let queenPossibleMoves = [];
+        let cellElements = [];
+        let draggedPieceElement = null;
+        let originalQueenPos = null;
+        let isAnimatingMove = false;
+        const ANIMATION_DURATION_MS = 350;
+
+        // DOM Elements
+        const boardElement = document.getElementById('game-board');
+        const messageElement = document.getElementById('message');
+        const subtleMoveMessageElement = document.getElementById('subtle-move-message');
+        const playAgainButton = document.getElementById('play-again');
+        const explanationBtn = document.getElementById('explanation-btn');
+        const explanationText = document.getElementById('explanation-text');
+        const skullAnimationOverlay = document.getElementById('skull-animation-overlay');
+        const animatedSkullElement = document.getElementById('animated-skull');
+        const returnToStoryBtn = document.getElementById('return-to-story');
+        const pauseOverlay = document.getElementById('pause-overlay');
+
+        // Initialize SDK if embedded
+        if (isEmbedded) {
+            sdk = new MinigameSDK();
+            sdk.onInit((config, variables) => {
+                console.log('[Chess] SDK init received', config, variables);
+                resetGame();
+            });
+            sdk.onPause(() => {
+                gamePaused = true;
+                pauseOverlay.style.display = 'flex';
+            });
+            sdk.onResume(() => {
+                gamePaused = false;
+                pauseOverlay.style.display = 'none';
+            });
+            sdk.onTerminate((reason) => {
+                console.log('[Chess] Terminate received:', reason);
+            });
+        }
+
+        function createBoard() {
+            boardElement.innerHTML = '';
+            cellElements = [];
+            for (let r = 0; r < BOARD_SIZE.rows; r++) {
+                for (let c = 0; c < BOARD_SIZE.cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    if ((r + c) % 2 === 0) cell.classList.add('light-square');
+                    else cell.classList.add('dark-square');
+                    cell.addEventListener('click', handleCellClick);
+                    cell.addEventListener('dragover', handleDragOver);
+                    cell.addEventListener('drop', handleDrop);
+                    boardElement.appendChild(cell);
+                    cellElements.push(cell);
+                }
+            }
+        }
+
+        function getCellElement(row, col) {
+            if (row < 0 || row >= BOARD_SIZE.rows || col < 0 || col >= BOARD_SIZE.cols) return null;
+            return cellElements[row * BOARD_SIZE.cols + col];
+        }
+
+        function drawPiecesAndHighlights() {
+            if (currentTurn === 'white' && !gameOver && !isAnimatingMove) {
+                queenPossibleMoves = getValidMovesForPiece(queenPos, 'queen');
+            } else {
+                queenPossibleMoves = [];
+            }
+            subtleMoveMessageElement.textContent = '';
+
+            cellElements.forEach(cell => {
+                cell.innerHTML = '';
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                let pieceSpan = null;
+
+                if (r === SKULL_TARGET.row && c === SKULL_TARGET.col) {
+                    const isSkullCoveredByPiece = (kingPos.row === r && kingPos.col === c) || (queenPos.row === r && queenPos.col === c);
+                    if (!isSkullCoveredByPiece) {
+                        pieceSpan = document.createElement('span');
+                        pieceSpan.classList.add('piece-emoji');
+                        pieceSpan.textContent = PIECE_EMOJI.SKULL;
+                    }
+                }
+
+                if (r === queenPos.row && c === queenPos.col) {
+                    pieceSpan = document.createElement('span');
+                    pieceSpan.classList.add('piece-emoji');
+                    pieceSpan.textContent = PIECE_EMOJI.WHITE_QUEEN;
+                    pieceSpan.dataset.piece = 'queen';
+                    if (currentTurn === 'white' && !gameOver) {
+                        pieceSpan.classList.add('active-piece-animation');
+                        if (!isAnimatingMove) {
+                            pieceSpan.draggable = true;
+                            pieceSpan.addEventListener('dragstart', handleDragStartQueen);
+                            pieceSpan.addEventListener('dragend', handleDragEndQueen);
+                        }
+                    }
+                } else if (r === kingPos.row && c === kingPos.col) {
+                    pieceSpan = document.createElement('span');
+                    pieceSpan.classList.add('piece-emoji');
+                    pieceSpan.textContent = PIECE_EMOJI.BLACK_KING;
+                    pieceSpan.dataset.piece = 'king';
+                    if (currentTurn === 'black' && !gameOver) {
+                        pieceSpan.classList.add('active-piece-animation');
+                    }
+                }
+
+                if (pieceSpan) cell.appendChild(pieceSpan);
+            });
+        }
+
+        function animatePieceMove(pieceEmojiText, oldLogicPos, newLogicPos, onAnimationComplete) {
+            isAnimatingMove = true;
+            const boardRect = boardElement.getBoundingClientRect();
+            const oldCellElement = getCellElement(oldLogicPos.row, oldLogicPos.col);
+            const newCellElement = getCellElement(newLogicPos.row, newLogicPos.col);
+
+            if (!oldCellElement || !newCellElement) {
+                isAnimatingMove = false;
+                onAnimationComplete();
+                return;
+            }
+
+            const oldCellRect = oldCellElement.getBoundingClientRect();
+            const newCellRect = newCellElement.getBoundingClientRect();
+
+            const ghostPiece = document.createElement('span');
+            ghostPiece.textContent = pieceEmojiText;
+            ghostPiece.classList.add('piece-emoji');
+            if (pieceEmojiText === PIECE_EMOJI.WHITE_QUEEN) ghostPiece.dataset.piece = 'queen';
+            if (pieceEmojiText === PIECE_EMOJI.BLACK_KING) ghostPiece.dataset.piece = 'king';
+
+            ghostPiece.style.position = 'absolute';
+            ghostPiece.style.left = `${oldCellRect.left - boardRect.left}px`;
+            ghostPiece.style.top = `${oldCellRect.top - boardRect.top}px`;
+            ghostPiece.style.width = `${oldCellRect.width}px`;
+            ghostPiece.style.height = `${oldCellRect.height}px`;
+            ghostPiece.style.display = 'flex';
+            ghostPiece.style.alignItems = 'center';
+            ghostPiece.style.justifyContent = 'center';
+            ghostPiece.style.zIndex = '1000';
+            ghostPiece.style.pointerEvents = 'none';
+
+            const pieceInOldCell = oldCellElement.querySelector('.piece-emoji');
+            if (pieceInOldCell) pieceInOldCell.style.visibility = 'hidden';
+
+            boardElement.appendChild(ghostPiece);
+            ghostPiece.getBoundingClientRect();
+
+            const deltaX = newCellRect.left - oldCellRect.left;
+            const deltaY = newCellRect.top - oldCellRect.top;
+
+            ghostPiece.style.transition = `transform ${ANIMATION_DURATION_MS / 1000}s ease-in-out`;
+            ghostPiece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            ghostPiece.addEventListener('transitionend', () => {
+                if (ghostPiece.parentNode) ghostPiece.parentNode.removeChild(ghostPiece);
+                isAnimatingMove = false;
+                onAnimationComplete();
+            }, { once: true });
+        }
+
+        function handleCellClick(event) {
+            if (gamePaused || isAnimatingMove || gameOver || currentTurn !== 'white') return;
+            const clickedRow = parseInt(event.currentTarget.dataset.row);
+            const clickedCol = parseInt(event.currentTarget.dataset.col);
+            const move = queenPossibleMoves.find(m => m.row === clickedRow && m.col === clickedCol);
+            if (move) makeQueenMove(clickedRow, clickedCol);
+        }
+
+        function makeQueenMove(newRow, newCol) {
+            if (gamePaused || isAnimatingMove || gameOver || currentTurn !== 'white') return;
+
+            const oldPos = { ...queenPos };
+            const newPos = { row: newRow, col: newCol };
+
+            animatePieceMove(PIECE_EMOJI.WHITE_QUEEN, oldPos, newPos, () => {
+                queenPos = newPos;
+                if (navigator.vibrate) navigator.vibrate(20);
+
+                checkWinConditions('white');
+
+                if (!gameOver) {
+                    currentTurn = 'black';
+                    updateMessage();
+                    drawPiecesAndHighlights();
+                    setTimeout(computerMove, 700);
+                } else if (!skullAnimationOverlay.classList.contains('fading-to-black') && skullAnimationOverlay.style.display !== 'block') {
+                    drawPiecesAndHighlights();
+                }
+            });
+        }
+
+        function getValidMovesForPiece(piecePos, pieceType, currentKingPos = kingPos) {
+            const moves = [];
+            const { row, col } = piecePos;
+
+            if (pieceType === 'queen') {
+                const directions = [
+                    { dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 },
+                    { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 }
+                ];
+                for (const dir of directions) {
+                    for (let i = 1; i < Math.max(BOARD_SIZE.rows, BOARD_SIZE.cols); i++) {
+                        const newR = row + dir.dr * i;
+                        const newC = col + dir.dc * i;
+                        if (!isValidBoardPos(newR, newC)) break;
+                        if (newR === currentKingPos.row && newC === currentKingPos.col) {
+                            moves.push({ row: newR, col: newC });
+                            break;
+                        }
+                        moves.push({ row: newR, col: newC });
+                    }
+                }
+            } else if (pieceType === 'king') {
+                const KingOffsets = [
+                    { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 }, { dr: 0, dc: -1 },
+                    { dr: 0, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+                ];
+                for (const offset of KingOffsets) {
+                    const newR = row + offset.dr;
+                    const newC = col + offset.dc;
+                    if (isValidBoardPos(newR, newC)) {
+                        if (newR === queenPos.row && newC === queenPos.col) {
+                            moves.push({ row: newR, col: newC });
+                        } else if (!isSquareAttackedByQueen({ row: newR, col: newC }, queenPos, { row: newR, col: newC })) {
+                            moves.push({ row: newR, col: newC });
+                        }
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function isValidBoardPos(row, col) {
+            return row >= 0 && row < BOARD_SIZE.rows && col >= 0 && col < BOARD_SIZE.cols;
+        }
+
+        function isSquareAttackedByQueen(targetPos, currentQueenPos, currentKingPosForLoS) {
+            const { row: qR, col: qC } = currentQueenPos;
+            const { row: tR, col: tC } = targetPos;
+
+            if (tR === qR && tC === qC) return false;
+
+            if (tR === qR || tC === qC || Math.abs(tR - qR) === Math.abs(tC - qC)) {
+                const dr = Math.sign(tR - qR);
+                const dc = Math.sign(tC - qC);
+                let r = qR + dr;
+                let c = qC + dc;
+                while ((r !== tR || c !== tC) && isValidBoardPos(r, c)) {
+                    if (r === currentKingPosForLoS.row && c === currentKingPosForLoS.col && !(r === tR && c === tC)) {
+                        return false;
+                    }
+                    r += dr;
+                    c += dc;
+                }
+                return (r === tR && c === tC);
+            }
+            return false;
+        }
+
+        function computerMove() {
+            if (gamePaused || isAnimatingMove || gameOver || currentTurn !== 'black') return;
+
+            const kingValidMoves = getValidMovesForPiece(kingPos, 'king');
+            let chosenMove = null;
+            const oldKingPos = { ...kingPos };
+
+            const captureQueenMove = kingValidMoves.find(m => m.row === queenPos.row && m.col === queenPos.col);
+            if (captureQueenMove) {
+                chosenMove = captureQueenMove;
+            } else {
+                const nonSkullMoves = kingValidMoves.filter(m => !(m.row === SKULL_TARGET.row && m.col === SKULL_TARGET.col));
+                if (nonSkullMoves.length > 0) {
+                    nonSkullMoves.sort((a, b) => {
+                        const distA = Math.hypot(a.row - queenPos.row, a.col - queenPos.col);
+                        const distB = Math.hypot(b.row - queenPos.row, b.col - queenPos.col);
+                        return distB - distA;
+                    });
+                    chosenMove = nonSkullMoves[0];
+                } else if (kingValidMoves.length > 0) {
+                    chosenMove = kingValidMoves[0];
+                }
+            }
+
+            if (chosenMove) {
+                const newKingPos = chosenMove;
+                animatePieceMove(PIECE_EMOJI.BLACK_KING, oldKingPos, newKingPos, () => {
+                    kingPos = newKingPos;
+                    checkWinConditions('black');
+                    if (!gameOver) {
+                        currentTurn = 'white';
+                        updateMessage();
+                        drawPiecesAndHighlights();
+                    } else if (!skullAnimationOverlay.classList.contains('fading-to-black') && skullAnimationOverlay.style.display !== 'block') {
+                        drawPiecesAndHighlights();
+                    }
+                });
+            } else {
+                if (isSquareAttackedByQueen(kingPos, queenPos, kingPos)) {
+                    endGame(`${PIECE_EMOJI.WHITE_QUEEN} wins! Checkmate.`, true);
+                } else {
+                    endGame(`Stalemate! White wins!`, true);
+                }
+                drawPiecesAndHighlights();
+            }
+        }
+
+        function checkWinConditions(whoMoved) {
+            if (gameOver && !(whoMoved === 'black' && kingPos.row === SKULL_TARGET.row && kingPos.col === SKULL_TARGET.col)) {
+                return;
+            }
+
+            if (whoMoved === 'white') {
+                if (queenPos.row === kingPos.row && queenPos.col === kingPos.col) {
+                    endGame(`${PIECE_EMOJI.WHITE_QUEEN} wins! Captured ${PIECE_EMOJI.BLACK_KING}!`, true);
+                }
+            } else if (whoMoved === 'black') {
+                if (kingPos.row === queenPos.row && kingPos.col === queenPos.col) {
+                    endGame(`${PIECE_EMOJI.BLACK_KING} wins! Captured ${PIECE_EMOJI.WHITE_QUEEN}!`, false);
+                } else if (kingPos.row === SKULL_TARGET.row && kingPos.col === SKULL_TARGET.col) {
+                    const message = `${PIECE_EMOJI.WHITE_QUEEN} wins! ${PIECE_EMOJI.BLACK_KING} forced to ${PIECE_EMOJI.SKULL}!`;
+                    playKingHitsSkullAnimation(message, () => drawPiecesAndHighlights());
+                    return;
+                }
+            }
+            if (!gameOver && currentTurn === 'white') {
+                const kingMoves = getValidMovesForPiece(kingPos, 'king');
+                if (kingMoves.length === 0) {
+                    if (isSquareAttackedByQueen(kingPos, queenPos, kingPos)) {
+                        endGame(`${PIECE_EMOJI.WHITE_QUEEN} wins! Checkmate.`, true);
+                    } else {
+                        endGame(`Stalemate! White wins!`, true);
+                    }
+                }
+            }
+        }
+
+        function playKingHitsSkullAnimation(endGameMessage, onAnimationEndCallback) {
+            gameOver = true;
+            gameWon = true;
+            isAnimatingMove = true;
+            messageElement.textContent = "The King meets his fate...";
+            subtleMoveMessageElement.textContent = '';
+            playAgainButton.style.display = 'none';
+            returnToStoryBtn.style.display = 'none';
+
+            const kingCellElement = getCellElement(kingPos.row, kingPos.col);
+            const kingEmojiOnBoard = kingCellElement ? kingCellElement.querySelector('.piece-emoji[data-piece="king"]') : null;
+
+            if (!kingEmojiOnBoard || !skullAnimationOverlay || !animatedSkullElement) {
+                endGame(endGameMessage, true);
+                if (onAnimationEndCallback) onAnimationEndCallback();
+                isAnimatingMove = false;
+                return;
+            }
+
+            kingEmojiOnBoard.classList.add('king-on-skull-fading');
+
+            const kingRect = kingEmojiOnBoard.getBoundingClientRect();
+            const kingComputedStyle = window.getComputedStyle(kingEmojiOnBoard);
+            const initialSkullFontSize = kingComputedStyle.fontSize;
+
+            animatedSkullElement.textContent = PIECE_EMOJI.SKULL;
+            animatedSkullElement.style.left = `${kingRect.left}px`;
+            animatedSkullElement.style.top = `${kingRect.top}px`;
+            animatedSkullElement.style.width = `${kingRect.width}px`;
+            animatedSkullElement.style.height = `${kingRect.height}px`;
+            animatedSkullElement.style.fontSize = initialSkullFontSize;
+            animatedSkullElement.style.transform = 'translate(0,0) scale(1)';
+            animatedSkullElement.style.opacity = '0';
+
+            skullAnimationOverlay.style.backgroundColor = 'rgba(0,0,0,0)';
+            skullAnimationOverlay.style.display = 'block';
+
+            animatedSkullElement.getBoundingClientRect();
+            animatedSkullElement.classList.add('trigger-skull-win-animation');
+
+            const growAnimationTotalTime = 2100;
+
+            setTimeout(() => {
+                skullAnimationOverlay.classList.add('fading-to-black');
+                setTimeout(() => {
+                    skullAnimationOverlay.classList.remove('fading-to-black');
+                    skullAnimationOverlay.classList.add('fading-out-from-black');
+                    setTimeout(() => {
+                        skullAnimationOverlay.style.display = 'none';
+                        skullAnimationOverlay.classList.remove('fading-out-from-black');
+                        animatedSkullElement.classList.remove('trigger-skull-win-animation');
+                        animatedSkullElement.style.opacity = '0';
+
+                        if (kingEmojiOnBoard) kingEmojiOnBoard.classList.remove('king-on-skull-fading');
+
+                        endGame(endGameMessage, true);
+                        if (onAnimationEndCallback) onAnimationEndCallback();
+                        isAnimatingMove = false;
+                        playAgainButton.style.display = 'inline-flex';
+                        returnToStoryBtn.style.display = 'inline-flex';
+                    }, 1000);
+                }, 1000);
+            }, growAnimationTotalTime);
+        }
+
+        function updateMessage() {
+            if (gameOver) return;
+            if (currentTurn === 'white') messageElement.textContent = `${PIECE_EMOJI.WHITE_QUEEN} to move`;
+            else messageElement.textContent = `${PIECE_EMOJI.BLACK_KING} thinking...`;
+        }
+
+        function endGame(msg, playerWon = false) {
+            gameOver = true;
+            gameWon = playerWon;
+            messageElement.textContent = msg;
+            subtleMoveMessageElement.textContent = '';
+            if (!skullAnimationOverlay.classList.contains('fading-to-black') && skullAnimationOverlay.style.display !== 'block') {
+                playAgainButton.style.display = 'inline-flex';
+                if (playerWon || isEmbedded) {
+                    returnToStoryBtn.style.display = 'inline-flex';
+                }
+            }
+            queenPossibleMoves = [];
+
+            // Notify via SDK or direct postMessage
+            if (sdk) {
+                sdk.complete({
+                    success: playerWon,
+                    score: playerWon ? 1 : 0,
+                    variables: {
+                        chess_won: playerWon,
+                        chess_game_completed: true
+                    }
+                });
+            } else if (isEmbedded) {
+                // Legacy postMessage for old integration
+                window.parent.postMessage({ type: 'minichess-complete', won: playerWon }, '*');
+            }
+        }
+
+        function resetGame() {
+            isAnimatingMove = false;
+            gamePaused = false;
+            kingPos = { ...INITIAL_KING_POS };
+            queenPos = { ...INITIAL_QUEEN_POS };
+            currentTurn = 'white';
+            gameOver = false;
+            gameWon = false;
+            playAgainButton.style.display = 'none';
+            returnToStoryBtn.style.display = 'none';
+            pauseOverlay.style.display = 'none';
+
+            explanationText.style.display = 'none';
+            explanationBtn.classList.remove('active');
+
+            skullAnimationOverlay.style.display = 'none';
+            skullAnimationOverlay.classList.remove('fading-to-black', 'fading-out-from-black');
+            animatedSkullElement.classList.remove('trigger-skull-win-animation');
+            animatedSkullElement.style.opacity = '0';
+
+            updateMessage();
+            subtleMoveMessageElement.textContent = '';
+            drawPiecesAndHighlights();
+        }
+
+        // Drag and Drop
+        function handleDragStartQueen(event) {
+            if (gamePaused || isAnimatingMove || currentTurn !== 'white' || gameOver) {
+                event.preventDefault();
+                return;
+            }
+            draggedPieceElement = event.target;
+            originalQueenPos = { ...queenPos };
+            event.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => { if (draggedPieceElement) draggedPieceElement.classList.add('dragging'); }, 0);
+        }
+
+        function handleDragOver(event) {
+            if (gamePaused || isAnimatingMove) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            if (gamePaused || isAnimatingMove || currentTurn !== 'white' || gameOver || !originalQueenPos) return;
+
+            const cell = event.currentTarget;
+            const r = parseInt(cell.dataset.row);
+            const c = parseInt(cell.dataset.col);
+
+            if (queenPossibleMoves.length === 0 && currentTurn === 'white' && !gameOver) {
+                queenPossibleMoves = getValidMovesForPiece(queenPos, 'queen');
+            }
+
+            const move = queenPossibleMoves.find(m => m.row === r && m.col === c);
+            if (move) makeQueenMove(r, c);
+        }
+
+        function handleDragEndQueen(event) {
+            if (draggedPieceElement) draggedPieceElement.classList.remove('dragging');
+            draggedPieceElement = null;
+            originalQueenPos = null;
+            if (!isAnimatingMove) drawPiecesAndHighlights();
+        }
+
+        // Event Listeners
+        playAgainButton.addEventListener('click', resetGame);
+
+        returnToStoryBtn.addEventListener('click', () => {
+            if (sdk) {
+                sdk.complete({
+                    success: gameWon,
+                    score: gameWon ? 1 : 0,
+                    variables: {
+                        chess_won: gameWon,
+                        chess_game_completed: true
+                    }
+                });
+            } else if (isEmbedded) {
+                window.parent.postMessage({ type: 'minichess-return', won: gameWon }, '*');
+            } else {
+                window.history.back();
+            }
+        });
+
+        explanationBtn.addEventListener('click', () => {
+            const currentlyVisible = explanationText.style.display === 'block';
+            explanationText.style.display = currentlyVisible ? 'none' : 'block';
+            explanationBtn.classList.toggle('active', !currentlyVisible);
+        });
+
+        // Initialize
+        createBoard();
+        // If not embedded, start immediately
+        if (!isEmbedded) {
+            resetGame();
+        }
+    </script>
+</body>
+</html>

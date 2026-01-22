@@ -23,7 +23,7 @@ window.FinkMinigames = {
     },
 
     // Known iframe-based minigames
-    iframeMinigames: ['mudslider', 'battleboids', 'gridluck'],
+    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess'],
 
     // Minigame metadata for splash screens and controls
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
@@ -964,13 +964,15 @@ window.FinkMinigames = {
 
         try {
             if (result.type === 'chess') {
-                // Chess variables
+                // Chess variables - support both 'won' (legacy) and 'success' (iframe SDK)
+                const chessWon = result.won !== undefined ? result.won : result.success;
                 if (story.variablesState['chess_won'] !== undefined) {
-                    story.variablesState['chess_won'] = result.won;
+                    story.variablesState['chess_won'] = chessWon;
                 }
                 if (story.variablesState['chess_game_completed'] !== undefined) {
                     story.variablesState['chess_game_completed'] = true;
                 }
+                this.log(`Chess result: won=${chessWon}`);
             } else if (result.type === 'mudslider') {
                 // Mudslider: add collected gems to diamonds (same pattern as gems minigame)
                 if (result.score !== undefined && result.score > 0) {
