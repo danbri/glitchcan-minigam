@@ -177,9 +177,20 @@
     flex-shrink: 0;
 }
 
-/* Hide entire control bar - slider at top handles window management now */
+/* Show only the exit button - other controls handled by slider */
 #minigame-controls {
-    display: none !important;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 200;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* Hide all controls except exit button */
+#minigame-controls button:not(#returnToStory) {
+    display: none;
 }
 
 #minigame-controls button {
@@ -209,12 +220,19 @@
 }
 
 #returnToStory {
-    background: #522;
-    border-color: #833;
+    background: rgba(80, 20, 20, 0.9);
+    border: 2px solid #f55;
+    color: #fff;
+    font-size: 1.2em;
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 #returnToStory:hover {
     background: #733;
-    border-color: var(--zx-red);
+    border-color: #f88;
+    transform: scale(1.1);
 }
 
 /* --- Minigame Content Area --- */

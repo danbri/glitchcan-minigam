@@ -25,6 +25,7 @@ window.GemsMinigame = {
     mode: 'normal',
     collected: 0,
     totalSpawned: 0,
+    activeGems: 0,  // Track gems currently on screen
     spawnTimer: null,
     container: null,
     scoreDisplay: null,
@@ -45,6 +46,7 @@ window.GemsMinigame = {
         this.mode = mode;
         this.collected = 0;
         this.totalSpawned = 0;
+        this.activeGems = 0;
         this.onComplete = onComplete;
 
         // Clear container
@@ -95,11 +97,14 @@ window.GemsMinigame = {
         gem.addEventListener('click', () => this.collectGem(gem));
 
         this.container.appendChild(gem);
+        this.activeGems++;
 
         // Auto-remove after timeout if not collected
         setTimeout(() => {
             if (gem.parentNode && !gem.classList.contains('collected')) {
                 gem.remove();
+                this.activeGems--;
+                this.checkAutoComplete();
             }
         }, cfg.timeout);
     },
@@ -110,6 +115,7 @@ window.GemsMinigame = {
 
         gemElement.classList.add('collected');
         this.collected++;
+        this.activeGems--;
 
         if (this.scoreDisplay) {
             this.scoreDisplay.textContent = this.collected;
@@ -121,6 +127,9 @@ window.GemsMinigame = {
         setTimeout(() => gemElement.remove(), 300);
 
         this.log(`Collected ${this.mode === 'mega' ? 'MEGA ' : ''}gem! Total: ${this.collected}`);
+
+        // Check if game should auto-complete
+        this.checkAutoComplete();
     },
 
     // Play collection sound
@@ -165,6 +174,21 @@ window.GemsMinigame = {
         }
 
         return result;
+    },
+
+    // Check if game should auto-complete
+    checkAutoComplete() {
+        const cfg = this.config[this.mode];
+        // Auto-complete when all gems spawned AND none left on screen
+        if (this.totalSpawned >= cfg.maxGems && this.activeGems <= 0 && this.active) {
+            this.log('All gems done - auto-completing');
+            // Brief delay to show final state
+            setTimeout(() => {
+                if (this.active && window.FinkMinigames) {
+                    FinkMinigames.endMinigame();
+                }
+            }, 800);
+        }
     },
 
     // Get current results without ending
