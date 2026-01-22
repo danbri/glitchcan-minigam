@@ -246,10 +246,10 @@ window.FinkInkEngine = {
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
 
                 // Collect IMAGE/BASEHREF tags from EVERY Continue() call
-                // (tags on empty lines would otherwise be lost)
+                // Use LAST image found (not first) so redirects show destination's image
                 const iterTags = this.story.currentTags || [];
                 iterTags.forEach(tag => {
-                    if (tag.includes('IMAGE:') && !collectedImageTag) {
+                    if (tag.includes('IMAGE:')) {
                         collectedImageTag = tag.replace(/^IMAGE:\s*/, '').trim();
                         FinkUtils.debugLog('Collected IMAGE tag: ' + collectedImageTag);
                     }
