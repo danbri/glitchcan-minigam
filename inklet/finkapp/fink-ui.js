@@ -631,18 +631,17 @@ window.FinkUI = {
 
         const vars = FinkInkEngine.story.variablesState;
 
-        if (this.elements.statDiamonds && vars['diamonds'] !== undefined) {
-            this.elements.statDiamonds.textContent = vars['diamonds'];
-        }
-        if (this.elements.statMega && vars['mega_diamonds'] !== undefined) {
-            this.elements.statMega.textContent = vars['mega_diamonds'];
-        }
-        if (this.elements.statKeys && vars['keys'] !== undefined) {
-            this.elements.statKeys.textContent = vars['keys'];
-        }
-        if (this.elements.statScore && vars['score'] !== undefined) {
-            this.elements.statScore.textContent = vars['score'];
-        }
+        // Helper to update stat and show/hide wrapper
+        const updateStat = (id, wrapId, value) => {
+            const el = document.getElementById(id);
+            const wrap = document.getElementById(wrapId);
+            if (el) el.textContent = value || 0;
+            if (wrap) wrap.classList.toggle('visible', value > 0);
+        };
+
+        updateStat('stat-diamonds', 'stat-diamonds-wrap', vars['diamonds']);
+        updateStat('stat-mega', 'stat-mega-wrap', vars['mega_diamonds']);
+        updateStat('stat-score', 'stat-score-wrap', vars['score']);
     },
 
     // View switching (narrative/minigame)
