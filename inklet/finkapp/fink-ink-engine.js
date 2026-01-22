@@ -7,6 +7,7 @@ window.FinkInkEngine = {
     currentStoryTags: {},
     lastSeenFinkTag: null,
     pendingMinigame: null,
+    compiledCount: 0,  // Track successful INK compilations
 
     // Private inventory INK - gets injected into all stories
     // Variables are only declared if not already present in story
@@ -132,7 +133,8 @@ window.FinkInkEngine = {
             }
 
             this.story = compiledStory;
-            FinkUtils.debugLog('INK compilation successful!');
+            this.compiledCount++;  // Track successful compilations
+            FinkUtils.debugLog('INK compilation successful! (total: ' + this.compiledCount + ')');
 
             // Set up error handler
             if (this.story.onError) {

@@ -64,6 +64,113 @@ window.FinkUI = {
                 if (window.FinkAudio) FinkAudio.unlock();
             }, { once: true, passive: true });
         });
+
+        // Radial menu
+        this.setupRadialMenu();
+
+        // Scroll status bar
+        this.setupScrollStatusBar();
+    },
+
+    // Radial menu setup
+    setupRadialMenu() {
+        const menu = document.getElementById('radial-menu');
+        const trigger = document.getElementById('radial-menu-trigger');
+
+        if (trigger && menu) {
+            trigger.addEventListener('click', () => {
+                menu.classList.toggle('open');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.classList.remove('open');
+                }
+            });
+
+            // Menu item handlers
+            const menuHome = document.getElementById('menu-home');
+            const menuReload = document.getElementById('menu-reload');
+            const menuSettings = document.getElementById('menu-settings');
+            const menuNavToggle = document.getElementById('menu-nav-toggle');
+
+            if (menuHome) {
+                menuHome.addEventListener('click', () => {
+                    menu.classList.remove('open');
+                    this.handleHomeClick();
+                });
+            }
+
+            if (menuReload) {
+                menuReload.addEventListener('click', () => {
+                    menu.classList.remove('open');
+                    if (window.FinkPlayer) FinkPlayer.restartStory();
+                });
+            }
+
+            if (menuSettings) {
+                menuSettings.addEventListener('click', () => {
+                    menu.classList.remove('open');
+                    if (window.FinkDevPanel) FinkDevPanel.toggle();
+                });
+            }
+
+            if (menuNavToggle) {
+                menuNavToggle.addEventListener('click', () => {
+                    menu.classList.remove('open');
+                    const breadcrumbToggle = document.getElementById('breadcrumb-toggle');
+                    if (breadcrumbToggle) breadcrumbToggle.click();
+                });
+            }
+        }
+    },
+
+    // Scroll status bar setup
+    scrollTimeout: null,
+    setupScrollStatusBar() {
+        const narrativeView = document.getElementById('narrative-view');
+        const statusBar = document.getElementById('scroll-status-bar');
+
+        if (narrativeView && statusBar) {
+            let lastScrollTop = 0;
+            let scrollTimer = null;
+
+            narrativeView.addEventListener('scroll', () => {
+                // Show status bar while scrolling
+                statusBar.classList.add('visible');
+
+                // Update stats
+                this.updateFinkStats();
+
+                // Clear existing timer
+                if (scrollTimer) clearTimeout(scrollTimer);
+
+                // Hide after 1.5s of no scrolling
+                scrollTimer = setTimeout(() => {
+                    statusBar.classList.remove('visible');
+                }, 1500);
+
+                lastScrollTop = narrativeView.scrollTop;
+            }, { passive: true });
+        }
+    },
+
+    // Update FINK stats in the status bar
+    updateFinkStats() {
+        const encounterEl = document.getElementById('stat-finks-encountered');
+        const loadedEl = document.getElementById('stat-finks-loaded');
+        const compiledEl = document.getElementById('stat-finks-compiled');
+
+        if (window.FinkNavigation) {
+            if (encounterEl) encounterEl.textContent = FinkNavigation.finkHistory?.length || 0;
+        }
+        if (window.FinkSandbox) {
+            if (loadedEl) loadedEl.textContent = FinkSandbox.loadedCount || 0;
+        }
+        if (window.FinkInkEngine) {
+            if (compiledEl) compiledEl.textContent = FinkInkEngine.compiledCount || 0;
+        }
     },
 
     handleHomeClick() {
