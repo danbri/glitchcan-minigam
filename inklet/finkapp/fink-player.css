@@ -104,77 +104,106 @@ main {
     padding-top: 0.5em;
 }
 
-/* --- Story Output: Timeline of Content Blocks --- */
+/* --- Story Output --- */
 #story-output {
     padding: 0.5em;
-    /* No longer a single box - each section is its own block */
 }
 
-/* Content sections - major story blocks in the timeline */
-.story-section {
-    padding: 0.5em;
-    background: rgba(0,20,0,0.5);
-    border: 1px solid var(--zx-green);
-    margin-bottom: 1em;
-    border-radius: var(--border-radius-sm);
-    transition: opacity 0.8s ease, filter 0.8s ease, transform 0.5s ease;
-}
-
-/* Fade out old sections when new content arrives */
+/* --- Past History: Collapsible --- */
 .story-section.past {
-    opacity: 0.4;
-    filter: saturate(0.5);
+    display: none; /* Hidden by default */
 }
 
-.story-section.past:hover {
+.history-toggle {
+    display: none; /* Hidden until there's history */
+    background: rgba(0, 40, 40, 0.6);
+    border: 1px solid var(--zx-green);
+    border-radius: var(--border-radius-sm);
+    color: var(--zx-green);
+    padding: 0.4em 0.8em;
+    margin-bottom: 0.5em;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--font-size-tiny);
     opacity: 0.7;
-    filter: saturate(0.8);
+    transition: opacity 0.2s, background 0.2s;
+}
+.history-toggle:hover {
+    opacity: 1;
+    background: rgba(0, 60, 60, 0.8);
+}
+.history-toggle.has-history {
+    display: block;
+}
+.history-toggle.expanded {
+    background: rgba(0, 60, 60, 0.8);
 }
 
-/* Images captured into past sections */
-.story-section .section-image {
-    max-width: 100%;
-    max-height: 30vh;
+/* When history is expanded, show past sections */
+#story-output.history-expanded .story-section.past {
     display: block;
-    margin: 0 auto 0.5em;
-    border-radius: 8px;
+    opacity: 0.5;
+    filter: saturate(0.4);
+    font-size: 0.85em;
+    padding: 0.4em;
+    margin-bottom: 0.5em;
+    border-color: var(--zx-green);
+    background: rgba(0, 20, 0, 0.3);
+}
+
+/* --- Current Content Chunk (the scene) --- */
+.story-section.current {
+    background: rgba(0, 20, 0, 0.6);
+    border: 1px solid var(--zx-cyan);
+    border-radius: var(--border-radius-md);
+    padding: 0.8em;
+    box-shadow: 0 0 15px rgba(0, 192, 192, 0.15);
+}
+
+/* Lead media inside the chunk */
+.story-section .section-media {
+    max-width: 100%;
+    max-height: 40vh;
+    display: block;
+    margin: 0 auto 0.8em;
+    border-radius: var(--border-radius-sm);
     object-fit: contain;
 }
 
-/* Current active section */
-.story-section.current {
-    opacity: 1;
-    border-color: var(--zx-cyan);
-    box-shadow: 0 0 10px rgba(0, 192, 192, 0.2);
-}
-
-/* Incremental text display animation */
+/* Incremental text reveal */
 .story-section.current p,
 .story-section.current .story-text {
-    animation: textReveal 0.4s ease-out forwards;
+    animation: textReveal 0.35s ease-out forwards;
     opacity: 0;
 }
 
 @keyframes textReveal {
     0% {
         opacity: 0;
-        transform: translateY(8px);
-        filter: blur(2px);
+        transform: translateY(6px);
     }
     100% {
         opacity: 1;
         transform: translateY(0);
-        filter: blur(0);
     }
 }
 
-/* Stagger text paragraphs */
+/* Stagger paragraphs */
 .story-section.current p:nth-child(1) { animation-delay: 0s; }
-.story-section.current p:nth-child(2) { animation-delay: 0.1s; }
-.story-section.current p:nth-child(3) { animation-delay: 0.2s; }
-.story-section.current p:nth-child(4) { animation-delay: 0.3s; }
-.story-section.current p:nth-child(5) { animation-delay: 0.4s; }
-.story-section.current p:nth-child(6) { animation-delay: 0.5s; }
+.story-section.current p:nth-child(2) { animation-delay: 0.08s; }
+.story-section.current p:nth-child(3) { animation-delay: 0.16s; }
+.story-section.current p:nth-child(4) { animation-delay: 0.24s; }
+.story-section.current p:nth-child(5) { animation-delay: 0.32s; }
+
+/* Decision shown after choice made */
+.player-decision {
+    color: var(--zx-yellow);
+    font-style: italic;
+    opacity: 0.8;
+    margin-top: 0.5em;
+    padding-left: 1em;
+    border-left: 2px solid var(--zx-yellow);
+}
 
 /* Player decision markers in timeline */
 .player-decision {
@@ -423,89 +452,17 @@ main {
     .choice-btn { padding: 0.6em; font-size: var(--font-size-small); }
 }
 
-/* --- Image/Video Container --- */
+/* --- Legacy Image Container (hidden, images now inside sections) --- */
 #image-container {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    max-width: 100%;
-    margin: 0 0 0.5em 0;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #111;
-    flex-shrink: 0;
-}
-#image-container.hidden { display: none; }
-
-#story-image {
-    max-width: 100%;
-    max-height: 35vh;
-    display: block;
-    margin: 0 auto;
-    border-radius: 8px;
-    object-fit: contain;
-}
-#story-image.hidden { display: none; }
-
-/* Bitmap image fade-in from blur effect */
-#story-image.loading {
-    filter: blur(8px);
-    opacity: 0.3;
-    transform: scale(1.02);
-}
-#story-image.loaded {
-    filter: blur(0);
-    opacity: 1;
-    transform: scale(1);
-    transition: filter 0.25s ease-out, opacity 0.25s ease-out, transform 0.25s ease-out;
-}
-
-/* SVG drawing animation container */
-.svg-draw-container {
-    max-width: 100%;
-    max-height: 35vh;
-    display: block;
-    margin: 0 auto;
-}
-.svg-draw-container svg {
-    max-width: 100%;
-    max-height: 35vh;
-}
-.svg-draw-container path,
-.svg-draw-container line,
-.svg-draw-container polyline,
-.svg-draw-container polygon,
-.svg-draw-container rect,
-.svg-draw-container circle,
-.svg-draw-container ellipse {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-    animation: svgDraw 1.5s ease-out forwards;
-    fill-opacity: 0;
-}
-.svg-draw-container.drawn path,
-.svg-draw-container.drawn line,
-.svg-draw-container.drawn polyline,
-.svg-draw-container.drawn polygon,
-.svg-draw-container.drawn rect,
-.svg-draw-container.drawn circle,
-.svg-draw-container.drawn ellipse {
-    fill-opacity: 1;
-    transition: fill-opacity 0.3s ease-in 1s;
-}
-
-@keyframes svgDraw {
-    to {
-        stroke-dashoffset: 0;
-    }
+    display: none;
 }
 
 #story-video {
     max-width: 100%;
-    max-height: 35vh;
+    max-height: 40vh;
     display: block;
-    margin: 0 auto;
-    border-radius: 8px;
+    margin: 0 auto 0.8em;
+    border-radius: var(--border-radius-sm);
 }
 
 /* --- Status Overlay --- */
