@@ -28,6 +28,13 @@
 
 .game-slider.hidden { display: none; }
 
+/* Hide slider when minigame is minimized - pip is too small for it */
+#minigame-view.minimized .game-slider,
+#minigame-view.state-mini-live .game-slider,
+#minigame-view.state-mini-paused .game-slider {
+    display: none !important;
+}
+
 .game-slider-track {
     position: relative;
     height: 6px;
@@ -765,6 +772,11 @@
     border: 2px solid var(--zx-mag);
     position: relative;
     overflow: hidden;
+}
+
+/* Hide game container when empty (no active game) */
+#game-container:empty {
+    display: none;
 }
 
 #game-container.mega-mode {
