@@ -236,6 +236,7 @@ window.FinkInkEngine = {
             let paragraphIndex = 0;
             let collectedImageTag = null;  // Track IMAGE tag across all Continue() calls
             let collectedBasehref = null;  // Track BASEHREF across all Continue() calls
+            let collectedVideoTag = null;  // Track VIDEO tag across all Continue() calls
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 p.className = 'text-chunk';
@@ -252,6 +253,10 @@ window.FinkInkEngine = {
                     if (tag.includes('IMAGE:')) {
                         collectedImageTag = tag.replace(/^IMAGE:\s*/, '').trim();
                         FinkUtils.debugLog('Collected IMAGE tag: ' + collectedImageTag);
+                    }
+                    if (tag.includes('VIDEO:')) {
+                        collectedVideoTag = tag.replace(/^VIDEO:\s*/, '').trim();
+                        FinkUtils.debugLog('Collected VIDEO tag: ' + collectedVideoTag);
                     }
                     if (tag.includes('BASEHREF:')) {
                         collectedBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
@@ -372,6 +377,12 @@ window.FinkInkEngine = {
             if (collectedImageTag) {
                 FinkUtils.debugLog('Showing collected IMAGE: ' + collectedImageTag);
                 FinkUI.updateImage(collectedImageTag, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+            }
+
+            // Show collected VIDEO (gathered from ALL Continue() calls in the loop)
+            if (collectedVideoTag) {
+                FinkUtils.debugLog('Showing collected VIDEO: ' + collectedVideoTag);
+                FinkUI.updateVideo(collectedVideoTag, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
             }
 
             // Also check knot-level tags as fallback (for edge cases)
