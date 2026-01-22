@@ -1,0 +1,65 @@
+{
+  "screenshots": [
+    {
+      "name": "usability-01-initial-load-desktop.png",
+      "desc": "Initial load state on desktop"
+    },
+    {
+      "name": "usability-02-content-loaded-desktop.png",
+      "desc": "Content loaded state on desktop"
+    },
+    {
+      "name": "usability-03-radial-menu-open.png",
+      "desc": "Radial menu opened"
+    },
+    {
+      "name": "usability-04-after-choice-desktop.png",
+      "desc": "After selecting first choice"
+    },
+    {
+      "name": "usability-05-dev-panel.png",
+      "desc": "Developer panel opened"
+    },
+    {
+      "name": "usability-06-breadcrumb-expanded.png",
+      "desc": "Breadcrumb navigation expanded"
+    },
+    {
+      "name": "usability-07-mobile-initial.png",
+      "desc": "Mobile initial load (375x667)"
+    },
+    {
+      "name": "usability-08-mobile-menu.png",
+      "desc": "Mobile radial menu open"
+    },
+    {
+      "name": "usability-09-mobile-scrolled.png",
+      "desc": "Mobile view after scroll"
+    },
+    {
+      "name": "usability-10-small-mobile.png",
+      "desc": "Very small mobile (320x568)"
+    },
+    {
+      "name": "usability-11-tablet.png",
+      "desc": "Tablet view (768x1024)"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "Failed to load resource: the server responded with a status of 404 (File not found)",
+    "[Mobile] Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+  ],
+  "consoleWarnings": [
+    "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+    "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio"
+  ],
+  "issues": {
+    "critical": [],
+    "major": [],
+    "minor": []
+  },
+  "metrics": {
+    "choiceCount": 3
+  }
+}

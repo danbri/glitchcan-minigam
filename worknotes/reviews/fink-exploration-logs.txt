@@ -1,0 +1,1448 @@
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[error] Failed to load resource: the server responded with a status of 404 (File not found)
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 11 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 1
+[log] [FINK:debug] Making choice: 1
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-1.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Minigames and experiments, eventually for integration into story-based episodes."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Replaced history (same location): #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 11 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 11 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-0.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Choose your adventure! Each episode is half-finished in a different way."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Displaying 6 choices
+[log] [FinkNavigation] Replaced history (same location): #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): episodes_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: episodes_menu
+[log] [FINK:debug] Story.Continue() output: "Hampstead"
+[log] [FINK:debug] Path string: hampstead_selected.0.5
+[log] [FINK:debug] Knot part extracted: "hampstead_selected" (isNumeric: false)
+[log] [FINK:debug] Detected knot: hampstead_selected
+[log] [FINK:debug] Current tags: [FINK: /glitchcan-minigam/inklet/hampstead.fink.js]
+[log] [FINK:debug] FINK tag detected: /glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] Breaking story loop for FINK load
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 5)
+[log] [FINK:debug] Knot-level tags for hampstead_selected: [FINK: /glitchcan-minigam/inklet/hampstead.fink.js]
+[log] [FINK:debug] Current knot for nav: hampstead_selected
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: hampstead_selected
+[log] [FINK:debug] Loading external FINK file: /glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] Resolved URL: http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] Clearing URL hash before FINK load to prevent navigation loop
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb current stack: [toc]
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js" → pathname="/glitchcan-minigam/inklet/hampstead.fink.js" → filename="hampstead"
+[log] [FINK:debug] Breadcrumb: New FINK level 1: hampstead
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js" → pathname="/glitchcan-minigam/inklet/hampstead.fink.js" → filename="hampstead"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc, hampstead]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/hampstead.fink.js
+[log] [FINK:debug] Fetched 16637 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 16629 characters (total: 2)
+[log] [FINK:debug] External FINK loaded successfully
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 16629
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (522 chars)
+[log] [FINK:debug] INK compilation successful! (total: 2)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: media/, IMPORT: diamonds, mega_diamonds]
+[log] [FinkNavigation] Building knot map for 38 public knots (urlHash: ea2a91dd)
+[log] [FinkNavigation] Found 5 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "ZX-Spectrum ready. 48 K RAM found."
+[log] [FINK:debug] Collected BASEHREF tag: media/
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [BASEHREF: media/, IMPORT: diamonds, mega_diamonds, BG:, 0050e0, CLASS:info]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 6)
+[log] [FINK:debug] Applied collected BASEHREF: media/
+[log] [FINK:debug] Could not determine current knot name from path
+[log] [FINK:debug] Displaying 1 choices
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): splash.0.c-0.0
+[log] [FINK:debug] Initial knot detected: splash
+[log] [FINK:debug] Story.Continue() output: "Continue You eye a cassette: Hampstead."
+[log] [FINK:debug] Path string: intro.0.8
+[log] [FINK:debug] Knot part extracted: "intro" (isNumeric: false)
+[log] [FINK:debug] Detected knot: intro
+[log] [FINK:debug] Current tags: [BG:, 000]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/hamstead_img_9433.jpeg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/hamstead_img_9433.jpeg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 8)
+[log] [FINK:debug] Showing collected IMAGE: coverart/hamstead_img_9433.jpeg
+[log] [FINK:debug] updateImage CALLED: coverart/hamstead_img_9433.jpeg (decision #8)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media"
+[log] [FINK:debug] Image path: "coverart/hamstead_img_9433.jpeg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/hamstead_img_9433.jpeg
+[log] [FINK:debug] Current knot for nav: intro
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: intro
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #ea2a91dd-dd89e1fe9
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-dd89e1fe9 (intro)
+[log] [FINK:debug] Image INSERTED: coverart/hamstead_img_9433.jpeg (was decision #8, now #8)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): intro.0.c-0.0
+[log] [FINK:debug] Initial knot detected: intro
+[log] [FINK:debug] Story.Continue() output: "Boot the Speccy"
+[log] [FINK:debug] Path string: intro.0.c-0.7
+[log] [FINK:debug] Knot part extracted: "intro" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Loading bars screech cheerfully."
+[log] [FINK:debug] Path string: intro.0.c-0.12
+[log] [FINK:debug] Knot part extracted: "intro" (isNumeric: false)
+[log] [FINK:debug] Current tags: [CLASS:info]
+[log] [FINK:debug] Story.Continue() output: "Grotty bedsit. 3-2-1 blares on TV."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [BG:, 0a0a0a]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 10)
+[log] [FINK:debug] Knot-level tags for intro: [BG:, 000]
+[log] [FINK:debug] Current knot for nav: intro
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #ea2a91dd-dd89e1fe9
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-dd89e1fe9 (intro)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): bedsit.0.c-0.0
+[log] [FINK:debug] Initial knot detected: bedsit
+[log] [FINK:debug] Story.Continue() output: "Open wardrobe Inside the wardrobe you see frayed jeans and a cheap tie."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [CLASS:gritty]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 12)
+[log] [FINK:debug] Knot-level tags for bedsit: []
+[log] [FINK:debug] Current knot for nav: bedsit
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: bedsit
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ea2a91dd-528a90356
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-528a90356 (bedsit)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): wardrobe.0.10.b.c-0.0
+[log] [FINK:debug] Initial knot detected: wardrobe
+[log] [FINK:debug] Story.Continue() output: "Wear the jeans"
+[log] [FINK:debug] Path string: wardrobe.0.10.b.c-0.7
+[log] [FINK:debug] Knot part extracted: "wardrobe" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "You feel marginally cleaner."
+[log] [FINK:debug] Path string: wardrobe.0.10.b.c-0.9
+[log] [FINK:debug] Knot part extracted: "wardrobe" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Inside the wardrobe you see frayed jeans and a cheap tie."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [CLASS:gritty]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 14)
+[log] [FINK:debug] Knot-level tags for wardrobe: [CLASS:gritty]
+[log] [FINK:debug] Current knot for nav: wardrobe
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: wardrobe
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #ea2a91dd-a27109313
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-a27109313 (wardrobe)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): wardrobe.0.18.b.c-0.0
+[log] [FINK:debug] Initial knot detected: wardrobe
+[log] [FINK:debug] Story.Continue() output: "Wear the tie"
+[log] [FINK:debug] Path string: wardrobe.0.18.b.c-0.7
+[log] [FINK:debug] Knot part extracted: "wardrobe" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "The knot pinches—but you look "professional.""
+[log] [FINK:debug] Path string: wardrobe.0.18.b.c-0.12
+[log] [FINK:debug] Knot part extracted: "wardrobe" (isNumeric: false)
+[log] [FINK:debug] Current tags: [CLASS:warning]
+[log] [FINK:debug] Story.Continue() output: "Inside the wardrobe you see frayed jeans and a cheap tie."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [CLASS:gritty]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 16)
+[log] [FINK:debug] Knot-level tags for wardrobe: [CLASS:gritty]
+[log] [FINK:debug] Current knot for nav: wardrobe
+[log] [FINK:debug] Displaying 1 choices
+[log] [FinkNavigation] Replaced history (same location): #ea2a91dd-a27109313
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-a27109313 (wardrobe)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): wardrobe.0.c-0.0
+[log] [FINK:debug] Initial knot detected: wardrobe
+[log] [FINK:debug] Story.Continue() output: "Close wardrobe Grotty bedsit. 3-2-1 blares on TV."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [BG:, 0a0a0a]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 18)
+[log] [FINK:debug] Knot-level tags for wardrobe: [CLASS:gritty]
+[log] [FINK:debug] Current knot for nav: wardrobe
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Replaced history (same location): #ea2a91dd-a27109313
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-a27109313 (wardrobe)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): bedsit.0.c-0.0
+[log] [FINK:debug] Initial knot detected: bedsit
+[log] [FINK:debug] Story.Continue() output: "Open wardrobe Inside the wardrobe you see frayed jeans and a cheap tie."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [CLASS:gritty]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 20)
+[log] [FINK:debug] Knot-level tags for bedsit: []
+[log] [FINK:debug] Current knot for nav: bedsit
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: bedsit
+[log] [FINK:debug] Displaying 1 choices
+[log] [FinkNavigation] Pushed new history entry: #ea2a91dd-528a90356
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-528a90356 (bedsit)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): wardrobe.0.c-0.0
+[log] [FINK:debug] Initial knot detected: wardrobe
+[log] [FINK:debug] Story.Continue() output: "Close wardrobe Grotty bedsit. 3-2-1 blares on TV."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [BG:, 0a0a0a]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 22)
+[log] [FINK:debug] Knot-level tags for wardrobe: [CLASS:gritty]
+[log] [FINK:debug] Current knot for nav: wardrobe
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: wardrobe
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #ea2a91dd-a27109313
+[log] [FinkNavigation] Updated fragment to: #ea2a91dd-a27109313 (wardrobe)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Get help with using the FINK system, understanding controls, and troubleshooting common issues."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: help_menu.0.5
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: help_menu
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path."
+[log] [FINK:debug] Path string: help_menu.0.7
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "This is where things might be documented, eventually."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: help_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: help_menu
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-a2aa208e6
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-a2aa208e6 (help_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): help_menu.0.c-0.0
+[log] [FINK:debug] Initial knot detected: help_menu
+[log] [FINK:debug] Story.Continue() output: "FINK Developer Guide"
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: dev_guide_selected.0.5
+[log] [FINK:debug] Knot part extracted: "dev_guide_selected" (isNumeric: false)
+[log] [FINK:debug] Detected knot: dev_guide_selected
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "Technical documentation is a work in progress. For now, explore the system through these resources:"
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 5)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #5)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: dev_guide_selected
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: dev_guide_selected
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-b967b871d
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-b967b871d (dev_guide_selected)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #5, now #5)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Get help with using the FINK system, understanding controls, and troubleshooting common issues."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: help_menu.0.5
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: help_menu
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path."
+[log] [FINK:debug] Path string: help_menu.0.7
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "This is where things might be documented, eventually."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: help_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: help_menu
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-a2aa208e6
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-a2aa208e6 (help_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Get help with using the FINK system, understanding controls, and troubleshooting common issues."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: help_menu.0.5
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: help_menu
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path."
+[log] [FINK:debug] Path string: help_menu.0.7
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "This is where things might be documented, eventually."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: help_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: help_menu
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-a2aa208e6
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-a2aa208e6 (help_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Get help with using the FINK system, understanding controls, and troubleshooting common issues."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: help_menu.0.5
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: help_menu
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path."
+[log] [FINK:debug] Path string: help_menu.0.7
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "This is where things might be documented, eventually."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: help_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: help_menu
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-a2aa208e6
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-a2aa208e6 (help_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[log] [FINK:debug] continueStory called with choiceIndex: 3
+[log] [FINK:debug] Making choice: 3
+[log] [FINK:debug] Initial path string (before Continue): help_menu.0.c-3.0
+[log] [FINK:debug] Initial knot detected: help_menu
+[log] [FINK:debug] Story.Continue() output: "Experiments & Prototypes"
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: experiments_selected.0.5
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Detected knot: experiments_selected
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "A collection of experimental games, prototypes, and technical demonstrations. These are works-in-progress showcasing different gameplay mechanics and visual styles."
+[log] [FINK:debug] Path string: experiments_selected.0.7
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "GamGam Web Components: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🚀 **Action Games:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Thumbwar: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Battleboids: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "GridLuck: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🤖 **AI & Simulation:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Schemoids: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "ED-209 Parking Bot: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Dejanking Test: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🌌 **Space & Strategy:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Rockall UI Tests: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Rockall Mocks: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Mamikon Mini-Chess: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Tankoff: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🎲 **Game Mechanics:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Rock Paper Boids: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🎬 **Video Integration Tests:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "INK + Video Test A: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "INK + Video Test B: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Grid-Alt Music Maker: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "🌍 **Visual Effects:**"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.4
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Twin Earth Animation: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.g-15.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Emoji Particles: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.g-15.g-16.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Hobbit/Bagend SVG: https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.g-15.g-16.g-17.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Mock Login (Steam/Discord/Mastodon): https:"
+[log] [FINK:debug] Path string: experiments_selected.0.g-0.g-1.g-2.g-3.g-4.g-5.g-6.g-7.g-8.g-9.g-10.g-11.g-12.g-13.g-14.g-15.g-16.g-17.g-18.2
+[log] [FINK:debug] Knot part extracted: "experiments_selected" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "Most experiments are hosted on CodePen for rapid prototyping and easy sharing. Local experiments are in the GitHub Pages deployment."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 5)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #5)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: experiments_selected
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: experiments_selected
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-de2d29fa7
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-de2d29fa7 (experiments_selected)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #5, now #5)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 2
+[log] [FINK:debug] Making choice: 2
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-2.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Get help with using the FINK system, understanding controls, and troubleshooting common issues."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: help_menu.0.5
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: help_menu
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] Story.Continue() output: "FINK stories are JavaScript-based interactive fiction that can load external content and cross-reference each other. All media assets are served relative to the story's base path."
+[log] [FINK:debug] Path string: help_menu.0.7
+[log] [FINK:debug] Knot part extracted: "help_menu" (isNumeric: false)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] Story.Continue() output: "This is where things might be documented, eventually."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: help_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: help_menu
+[log] [FINK:debug] Displaying 4 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-a2aa208e6
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-a2aa208e6 (help_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[error] Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+[log] [FinkNavigation] Loaded 12 cached FINK URLs from storage
+[log] [FinkNavigation] Init: hash="", navAPI=true
+[log] [FinkNavigation] Using modern Navigation API
+[log] [MinigameHost] Ready
+[log] [FINK:game] Slider: Slider initialized
+[log] [FINK:debug] Initializing FINK Player (finkapp) with modular architecture...
+[log] [FINK:debug] UI initialized
+[log] [FINK:debug] DevPanel initialized
+[log] [GemsMinigame] Gems minigame initialized
+[log] [ChessMinigame] Chess minigame initialized
+[log] [FINK:game] Minigames: D-Pad controls initialized
+[log] [FINK:game] Minigames: Minigames system initialized
+[log] [FINK:debug] Breadcrumb: Initialized
+[log] [FinkAudio] Context created (state: suspended)
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+[log] [FINK:debug] FINK Player (finkapp) initialized
+[log] [FINK:debug] Auto-loading default FINK from config: /glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadFinkStory called with: /glitchcan-minigam/inklet/toc.fink.js
+[log] [Foley] Stopped all layers
+[log] [FINK:debug] Loading story from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Breadcrumb current stack: []
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: New FINK level 0: toc
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js
+[log] [FINK:debug] Fetched 8487 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 8479 characters (total: 1)
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 8479
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (575 chars)
+[log] [FINK:debug] INK compilation successful! (total: 1)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FinkNavigation] Building knot map for 21 public knots (urlHash: ad3cd269)
+[log] [FinkNavigation] Found 10 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "Enter the Finkiverse. Everything isn't here yet."
+[log] [FINK:debug] Collected BASEHREF tag: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Path string: main_menu.0.2
+[log] [FINK:debug] Knot part extracted: "main_menu" (isNumeric: false)
+[log] [FINK:debug] Detected knot: main_menu
+[log] [FINK:debug] Current tags: [BASEHREF: /glitchcan-minigam/inklet/media/]
+[log] [FINK:debug] Story.Continue() output: ""
+[log] [FINK:debug] Collected IMAGE tag: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: coverart/glitchcan-cover-medium.jpg]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 1)
+[log] [FINK:debug] Applied collected BASEHREF: /glitchcan-minigam/inklet/media/
+[log] [FINK:debug] Showing collected IMAGE: coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] updateImage CALLED: coverart/glitchcan-cover-medium.jpg (decision #1)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "coverart/glitchcan-cover-medium.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/coverart/glitchcan-cover-medium.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: main_menu
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: coverart/glitchcan-cover-medium.jpg (was decision #1, now #1)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FinkAudio] Context unlocked (state: running)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): main_menu.0.c-0.0
+[log] [FINK:debug] Initial knot detected: main_menu
+[log] [FINK:debug] Story.Continue() output: "Choose your adventure! Each episode is half-finished in a different way."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 3)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #3)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: main_menu
+[log] [FINK:debug] Displaying 6 choices
+[log] [FinkNavigation] Replaced history (same location): #ad3cd269-ca4bd4a2f
+[log] [FinkNavigation] Updated fragment to: #ad3cd269-ca4bd4a2f (main_menu)
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #3, now #3)
+[log] [FINK:debug] continueStory called with choiceIndex: 4
+[log] [FINK:debug] Making choice: 4
+[log] [FINK:debug] Initial path string (before Continue): episodes_menu.0.c-4.0
+[log] [FINK:debug] Initial knot detected: episodes_menu
+[log] [FINK:debug] Story.Continue() output: "Mudslide Mines! Experimenting with alternate interface to a 2D pseudo-platformer. Test only."
+[log] [FINK:debug] Collected IMAGE tag: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [FINK: /glitchcan-minigam/inklet/mudslidemines.fink.js, IMAGE: glitchcan-grey-portrait-web.jpg]
+[log] [FINK:debug] FINK tag detected: /glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] Breaking story loop for FINK load
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 5)
+[log] [FINK:debug] Showing collected IMAGE: glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] updateImage CALLED: glitchcan-grey-portrait-web.jpg (decision #5)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "/glitchcan-minigam/inklet/media"
+[log] [FINK:debug] Image path: "glitchcan-grey-portrait-web.jpg"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "/glitchcan-minigam/inklet/media/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/glitchcan-grey-portrait-web.jpg
+[log] [FINK:debug] Current knot for nav: episodes_menu
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 0: episodes_menu
+[log] [FINK:debug] Loading external FINK file: /glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] Resolved URL: http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] Clearing URL hash before FINK load to prevent navigation loop
+[log] [FINK:debug] Image INSERTED: glitchcan-grey-portrait-web.jpg (was decision #5, now #5)
+[log] [FINK:debug] Breadcrumb setFinkUrl called with: http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] Breadcrumb current stack: [toc]
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js" → pathname="/glitchcan-minigam/inklet/mudslidemines.fink.js" → filename="mudslidemines"
+[log] [FINK:debug] Breadcrumb: New FINK level 1: mudslidemines
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/toc.fink.js" → pathname="/glitchcan-minigam/inklet/toc.fink.js" → filename="toc"
+[log] [FINK:debug] formatUrl: "http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js" → pathname="/glitchcan-minigam/inklet/mudslidemines.fink.js" → filename="mudslidemines"
+[log] [FINK:debug] Breadcrumb: Stack is now: [toc, mudslidemines]
+[log] [FINK:debug] Cleared load record for: http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] loadViaSandbox called for: http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] Fetching FINK content from: http://localhost:8080/glitchcan-minigam/inklet/mudslidemines.fink.js
+[log] [FINK:debug] Fetched 5494 chars
+[log] [FINK:debug] Sandbox ready, sending script content
+[log] [FINK:debug] FINK loaded - data blocks: 1
+[log] [FINK:debug] FINK story loaded: 5486 characters (total: 2)
+[log] [FINK:debug] External FINK loaded successfully
+[log] [FINK:debug] Processing FINK content with INK engine
+[log] [FINK:debug] Raw FINK content length: 5486
+[log] [FINK:debug] inkjs library verified, attempting compilation...
+[log] [FINK:debug] Injected private inventory INK (544 chars)
+[log] [FINK:debug] INK compilation successful! (total: 2)
+[log] [FINK:debug] Extracting story-level tags: [BASEHREF: media/mudslidemines/, IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png]
+[log] [FinkNavigation] Building knot map for 16 public knots (urlHash: cfcf7c03)
+[log] [FinkNavigation] Found 1 FINK references in content
+[log] [FinkNavigation] Saved 12 FINK URLs to storage
+[log] [FINK:debug] continueStory called with choiceIndex: null
+[log] [FINK:debug] Initial path string (before Continue): 0
+[log] [FINK:debug] Story.Continue() output: "You stand amidst the wreckage of a small plane in a jungle clearing. Moss covers twisted metal. Paths lead into the dense foliage."
+[log] [FINK:debug] Collected BASEHREF tag: media/mudslidemines/
+[log] [FINK:debug] Collected IMAGE tag: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [BASEHREF: media/mudslidemines/, IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png]
+[log] [FINK:debug] startNewSection: Found 0 current sections to mark as past
+[log] [FINK:debug] Created new section (decisionCount: 6)
+[log] [FINK:debug] Applied collected BASEHREF: media/mudslidemines/
+[log] [FINK:debug] Showing collected IMAGE: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png
+[log] [FINK:debug] updateImage CALLED: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png (decision #6)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "6E992CE5-A92F-45EE-A94C-9336B63513DE.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/6E992CE5-A92F-45EE-A94C-9336B63513DE.png
+[log] [FINK:debug] Could not determine current knot name from path
+[log] [FINK:debug] Displaying 2 choices
+[log] [FINK:debug] Image INSERTED: 6E992CE5-A92F-45EE-A94C-9336B63513DE.png (was decision #6, now #6)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Crash_Site_Clearing.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Crash_Site_Clearing
+[log] [FINK:debug] Story.Continue() output: "This path is narrow, crowded by large leaves and thick vines. You can barely see the way forward through the jungle labyrinth."
+[log] [FINK:debug] Collected IMAGE tag: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 8)
+[log] [FINK:debug] Showing collected IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #8)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Crash_Site_Clearing
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Crash_Site_Clearing
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-5c4da5d3a
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-5c4da5d3a (Crash_Site_Clearing)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #8, now #8)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Overgrown_Path.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Overgrown_Path
+[log] [FINK:debug] Story.Continue() output: "You stand amidst the wreckage of a small plane in a jungle clearing. Moss covers twisted metal. Paths lead into the dense foliage."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 10)
+[log] [FINK:debug] Knot-level tags for Overgrown_Path: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] Knot-level IMAGE (fallback): 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #10)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Overgrown_Path
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Overgrown_Path
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-b5e8c7136
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-b5e8c7136 (Overgrown_Path)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #10, now #10)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Crash_Site_Clearing.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Crash_Site_Clearing
+[log] [FINK:debug] Story.Continue() output: "This path is narrow, crowded by large leaves and thick vines. You can barely see the way forward through the jungle labyrinth."
+[log] [FINK:debug] Collected IMAGE tag: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 12)
+[log] [FINK:debug] Showing collected IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #12)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Crash_Site_Clearing
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Crash_Site_Clearing
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-5c4da5d3a
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-5c4da5d3a (Crash_Site_Clearing)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #12, now #12)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Overgrown_Path.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Overgrown_Path
+[log] [FINK:debug] Story.Continue() output: "You stand amidst the wreckage of a small plane in a jungle clearing. Moss covers twisted metal. Paths lead into the dense foliage."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 14)
+[log] [FINK:debug] Knot-level tags for Overgrown_Path: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] Knot-level IMAGE (fallback): 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #14)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Overgrown_Path
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Overgrown_Path
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-b5e8c7136
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-b5e8c7136 (Overgrown_Path)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #14, now #14)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Crash_Site_Clearing.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Crash_Site_Clearing
+[log] [FINK:debug] Story.Continue() output: "This path is narrow, crowded by large leaves and thick vines. You can barely see the way forward through the jungle labyrinth."
+[log] [FINK:debug] Collected IMAGE tag: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 16)
+[log] [FINK:debug] Showing collected IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #16)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Crash_Site_Clearing
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Crash_Site_Clearing
+[log] [FINK:debug] Displaying 3 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-5c4da5d3a
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-5c4da5d3a (Crash_Site_Clearing)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #16, now #16)
+[log] [FINK:debug] continueStory called with choiceIndex: 0
+[log] [FINK:debug] Making choice: 0
+[log] [FINK:debug] Initial path string (before Continue): Overgrown_Path.0.c-0.0
+[log] [FINK:debug] Initial knot detected: Overgrown_Path
+[log] [FINK:debug] Story.Continue() output: "You stand amidst the wreckage of a small plane in a jungle clearing. Moss covers twisted metal. Paths lead into the dense foliage."
+[log] [FINK:debug] Path string: (null/empty)
+[log] [FINK:debug] Current tags: []
+[log] [FINK:debug] startNewSection: Found 1 current sections to mark as past
+[log] [FINK:debug] Marked section 0 as past (display:none)
+[log] [FINK:debug] Created new section (decisionCount: 18)
+[log] [FINK:debug] Knot-level tags for Overgrown_Path: [IMAGE: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png]
+[log] [FINK:debug] Knot-level IMAGE (fallback): 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] updateImage CALLED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (decision #18)
+[log] [FINK:debug] === Layered Media Resolution ===
+[log] [FINK:debug] Story BASEHREF: "media/mudslidemines"
+[log] [FINK:debug] Image path: "288390B8-E588-4CDE-AFA7-7612F0F9DF91.png"
+[log] [FINK:debug] Using story directory as base: http://localhost:8080/glitchcan-minigam/inklet/
+[log] [FINK:debug] Processing storyMediaBase: "media/mudslidemines/"
+[log] [FINK:debug] Final image URL: http://localhost:8080/glitchcan-minigam/inklet/media/mudslidemines/288390B8-E588-4CDE-AFA7-7612F0F9DF91.png
+[log] [FINK:debug] Current knot for nav: Overgrown_Path
+[log] [FINK:debug] Breadcrumb: Recorded knot at level 1: Overgrown_Path
+[log] [FINK:debug] Displaying 2 choices
+[log] [FinkNavigation] Pushed new history entry: #cfcf7c03-b5e8c7136
+[log] [FinkNavigation] Updated fragment to: #cfcf7c03-b5e8c7136 (Overgrown_Path)
+[log] [FINK:debug] Image INSERTED: 288390B8-E588-4CDE-AFA7-7612F0F9DF91.png (was decision #18, now #18)

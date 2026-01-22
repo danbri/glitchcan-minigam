@@ -81,6 +81,7 @@ You see:
 + [Enter the Mega Gem field] -> mega_gem_field
 + [Visit the Crystal Shrine] -> crystal_shrine
 + {mega_diamonds >= 3} [Return through the portal (recommended: 3+ Mega Gems)] -> portal_return
++ {mega_diamonds < 3} [Risk the unstable portal (not recommended!)] -> early_return
 
 === mega_gem_field ===
 # CLASS: mega

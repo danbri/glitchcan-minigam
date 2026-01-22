@@ -24,6 +24,33 @@
 .fink-header .settings-btn { background: #333; color: #aaa; }
 .fink-header .settings-btn:hover { background: var(--zx-mag); color: #fff; }
 
+/* --- Stats Bar --- */
+.stats-bar {
+    display: flex;
+    gap: 1em;
+    padding: 0.4em 0.8em;
+    background: rgba(0, 0, 0, 0.85);
+    border-bottom: 1px solid var(--zx-blue);
+    font-size: 0.9em;
+    z-index: 100;
+    justify-content: center;
+}
+
+.stats-bar .stat-item {
+    display: none; /* Hidden by default, shown when value > 0 */
+    color: var(--zx-cyan);
+}
+
+.stats-bar .stat-item.visible {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+}
+
+.stats-bar #stat-diamonds-wrap { color: #5cf; }
+.stats-bar #stat-mega-wrap { color: #fc5; }
+.stats-bar #stat-score-wrap { color: #5f5; }
+
 /* --- Main Layout --- */
 main {
     flex: 1;

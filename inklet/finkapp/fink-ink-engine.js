@@ -466,6 +466,11 @@ window.FinkInkEngine = {
                 FinkUI.hideStatus();
             }
 
+            // Update stats display
+            if (FinkUI.updateStatsDisplay) {
+                FinkUI.updateStatsDisplay();
+            }
+
         } catch (e) {
             FinkUtils.debugLog('ERROR during story continuation: ' + e.message);
             FinkUI.showStatus('Runtime Error: ' + e.message);
