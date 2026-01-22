@@ -197,29 +197,17 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
             existingSections.forEach(section => {
-                // Capture current image into the section being marked as past
-                if (this.elements.storyImage &&
-                    this.elements.storyImage.src &&
-                    !this.elements.imageContainer?.classList.contains('hidden')) {
-                    const imgClone = this.elements.storyImage.cloneNode(true);
-                    imgClone.removeAttribute('id');
-                    imgClone.className = 'section-image';
-                    section.insertBefore(imgClone, section.firstChild);
-                }
+                // Don't clone images - the image container is now sticky/pinned
                 section.classList.remove('current');
                 section.classList.add('past');
             });
-
-            // Hide the main image container - new image will show it if needed
-            if (this.elements.imageContainer) {
-                this.elements.imageContainer.classList.add('hidden');
-            }
         }
 
         // Create new current section
         const section = document.createElement('div');
         section.className = 'story-section current decision-block-' + (this.decisionCount % 4);
         this.currentSection = section;
+        this.decisionCount++;
 
         if (this.elements.storyOutput) {
             this.elements.storyOutput.appendChild(section);
@@ -321,25 +309,83 @@ window.FinkUI = {
         if (!imagePath || !this.elements.storyImage) return;
 
         const actualImagePath = FinkUtils.resolveLayeredMediaUrl(rawBasehref, imagePath);
+        const isSvg = imagePath.toLowerCase().endsWith('.svg');
 
-        const img = new Image();
-        img.onload = () => {
-            this.elements.storyImage.src = actualImagePath;
-            this.elements.storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+        // Clear any existing SVG container
+        const existingSvgContainer = this.elements.imageContainer?.querySelector('.svg-draw-container');
+        if (existingSvgContainer) {
+            existingSvgContainer.remove();
+        }
+
+        if (isSvg) {
+            // Load SVG inline for drawing animation
+            this.loadSvgWithDrawEffect(actualImagePath, imagePath);
+        } else {
+            // Bitmap: apply blur-to-clear effect
+            this.elements.storyImage.classList.remove('loaded');
+            this.elements.storyImage.classList.add('loading', 'hidden');
+
+            const img = new Image();
+            img.onload = () => {
+                this.elements.storyImage.src = actualImagePath;
+                this.elements.storyImage.alt = imagePath.replace(/\.\w+$/, '').replace(/_/g, ' ');
+                this.elements.storyImage.classList.remove('hidden', 'loading');
+                // Trigger reflow then add loaded class for transition
+                void this.elements.storyImage.offsetWidth;
+                this.elements.storyImage.classList.add('loaded');
+                if (this.elements.imageContainer) {
+                    this.elements.imageContainer.classList.remove('hidden');
+                }
+            };
+
+            img.onerror = () => {
+                FinkUtils.debugLog('Image failed to load: ' + actualImagePath);
+                if (this.elements.imageContainer) {
+                    this.elements.imageContainer.classList.add('hidden');
+                }
+            };
+
+            img.src = actualImagePath;
+        }
+    },
+
+    // Load SVG inline and animate the drawing
+    async loadSvgWithDrawEffect(svgUrl, altText) {
+        try {
+            const response = await fetch(svgUrl);
+            if (!response.ok) throw new Error('Failed to fetch SVG');
+
+            const svgText = await response.text();
+
+            // Hide the regular image element
+            this.elements.storyImage.classList.add('hidden');
+
+            // Create container for SVG
+            const container = document.createElement('div');
+            container.className = 'svg-draw-container';
+            container.innerHTML = svgText;
+
+            // Insert into image container
+            if (this.elements.imageContainer) {
+                this.elements.imageContainer.classList.remove('hidden');
+                this.elements.imageContainer.appendChild(container);
+            }
+
+            // After animation completes, add 'drawn' class to fill colors
+            setTimeout(() => {
+                container.classList.add('drawn');
+            }, 1500);
+
+        } catch (error) {
+            FinkUtils.debugLog('SVG load error, falling back to img: ' + error.message);
+            // Fallback to regular image loading
+            this.elements.storyImage.src = svgUrl;
+            this.elements.storyImage.alt = altText.replace(/\.\w+$/, '').replace(/_/g, ' ');
             this.elements.storyImage.classList.remove('hidden');
             if (this.elements.imageContainer) {
                 this.elements.imageContainer.classList.remove('hidden');
             }
-        };
-
-        img.onerror = () => {
-            FinkUtils.debugLog('Image failed to load: ' + actualImagePath);
-            if (this.elements.imageContainer) {
-                this.elements.imageContainer.classList.add('hidden');
-            }
-        };
-
-        img.src = actualImagePath;
+        }
     },
 
     updateVideo(videoPath, rawBasehref) {

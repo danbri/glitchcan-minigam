@@ -148,6 +148,34 @@ main {
     box-shadow: 0 0 10px rgba(0, 192, 192, 0.2);
 }
 
+/* Incremental text display animation */
+.story-section.current p,
+.story-section.current .story-text {
+    animation: textReveal 0.4s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes textReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(8px);
+        filter: blur(2px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+/* Stagger text paragraphs */
+.story-section.current p:nth-child(1) { animation-delay: 0s; }
+.story-section.current p:nth-child(2) { animation-delay: 0.1s; }
+.story-section.current p:nth-child(3) { animation-delay: 0.2s; }
+.story-section.current p:nth-child(4) { animation-delay: 0.3s; }
+.story-section.current p:nth-child(5) { animation-delay: 0.4s; }
+.story-section.current p:nth-child(6) { animation-delay: 0.5s; }
+
 /* Player decision markers in timeline */
 .player-decision {
     padding: 0.4em 0.8em;
@@ -397,19 +425,21 @@ main {
 
 /* --- Image/Video Container --- */
 #image-container {
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     max-width: 100%;
-    margin: 0.5em 0;
+    margin: 0 0 0.5em 0;
     border-radius: 8px;
     overflow: hidden;
     background: #111;
-    flex-shrink: 0; /* Don't compress image in flex layout */
+    flex-shrink: 0;
 }
 #image-container.hidden { display: none; }
 
 #story-image {
     max-width: 100%;
-    max-height: 40vh;
+    max-height: 35vh;
     display: block;
     margin: 0 auto;
     border-radius: 8px;
@@ -417,9 +447,62 @@ main {
 }
 #story-image.hidden { display: none; }
 
+/* Bitmap image fade-in from blur effect */
+#story-image.loading {
+    filter: blur(8px);
+    opacity: 0.3;
+    transform: scale(1.02);
+}
+#story-image.loaded {
+    filter: blur(0);
+    opacity: 1;
+    transform: scale(1);
+    transition: filter 0.25s ease-out, opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+/* SVG drawing animation container */
+.svg-draw-container {
+    max-width: 100%;
+    max-height: 35vh;
+    display: block;
+    margin: 0 auto;
+}
+.svg-draw-container svg {
+    max-width: 100%;
+    max-height: 35vh;
+}
+.svg-draw-container path,
+.svg-draw-container line,
+.svg-draw-container polyline,
+.svg-draw-container polygon,
+.svg-draw-container rect,
+.svg-draw-container circle,
+.svg-draw-container ellipse {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: svgDraw 1.5s ease-out forwards;
+    fill-opacity: 0;
+}
+.svg-draw-container.drawn path,
+.svg-draw-container.drawn line,
+.svg-draw-container.drawn polyline,
+.svg-draw-container.drawn polygon,
+.svg-draw-container.drawn rect,
+.svg-draw-container.drawn circle,
+.svg-draw-container.drawn ellipse {
+    fill-opacity: 1;
+    transition: fill-opacity 0.3s ease-in 1s;
+}
+
+@keyframes svgDraw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
 #story-video {
     max-width: 100%;
-    max-height: 40vh;
+    max-height: 35vh;
     display: block;
     margin: 0 auto;
     border-radius: 8px;
