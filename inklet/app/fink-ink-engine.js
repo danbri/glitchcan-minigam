@@ -160,11 +160,16 @@ window.FinkInkEngine = {
             FinkUI.clearChoices();
             let storyFragment = document.createDocumentFragment();
 
+            // Collect IMAGE, VIDEO, BASEHREF tags from ALL Continue() calls
+            let collectedImageTag = null;
+            let collectedVideoTag = null;
+            let collectedBasehref = null;
+
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 let rawText = this.story.Continue();
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText + '"');
-                
+
                 let currentTags = this.story.currentTags || [];
                 FinkUtils.debugLog('Current tags: [' + currentTags.join(', ') + ']');
 
@@ -175,13 +180,13 @@ window.FinkInkEngine = {
                     .replace(/(https?:\/\/[^\s\)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 
                 p.innerHTML = formattedText;
-                
-                // Handle INK tags (like #BG:#0050e0, #CLASS:info, FINK:)
+
+                // Handle INK tags (like #BG:#0050e0, #CLASS:info, FINK:, IMAGE:, VIDEO:, BASEHREF:)
                 currentTags.forEach(tag => {
                     const parts = tag.split(':');
                     const key = parts[0]?.trim().toUpperCase();
-                    const value = parts[1]?.trim();
-                    
+                    const value = parts.slice(1).join(':').trim(); // Allow colons in value
+
                     if (key === 'BG' && value) {
                         document.body.style.background = value;
                     } else if (key === 'CLASS' && value) {
@@ -189,9 +194,23 @@ window.FinkInkEngine = {
                     } else if (key === 'FINK' && value) {
                         this.lastSeenFinkTag = value;
                         FinkUtils.debugLog('Stored FINK tag for later loading: ' + value);
+                    } else if (tag.includes('IMAGE:')) {
+                        collectedImageTag = tag.replace(/^IMAGE:\s*/, '').trim();
+                        FinkUtils.debugLog('Collected IMAGE tag: ' + collectedImageTag);
+                    } else if (tag.includes('VIDEO:')) {
+                        collectedVideoTag = tag.replace(/^VIDEO:\s*/, '').trim();
+                        FinkUtils.debugLog('Collected VIDEO tag: ' + collectedVideoTag);
+                    } else if (tag.includes('BASEHREF:')) {
+                        collectedBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                        // Remove quotes if present
+                        if ((collectedBasehref.startsWith('"') && collectedBasehref.endsWith('"')) ||
+                            (collectedBasehref.startsWith("'") && collectedBasehref.endsWith("'"))) {
+                            collectedBasehref = collectedBasehref.slice(1, -1);
+                        }
+                        FinkUtils.debugLog('Collected BASEHREF tag: ' + collectedBasehref);
                     }
                 });
-                
+
                 storyFragment.appendChild(p);
             }
 
@@ -206,7 +225,8 @@ window.FinkInkEngine = {
             }
 
             FinkUI.replaceStoryContent(storyFragment);
-            FinkUI.updateImageFromINKTags(this.story);
+            // Use collected tags from ALL Continue() calls (not just the last one)
+            FinkUI.updateMediaFromCollectedTags(collectedImageTag, collectedVideoTag, collectedBasehref);
 
             // Generate choices
             if (this.story.currentChoices.length > 0) {

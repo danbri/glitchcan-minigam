@@ -336,7 +336,39 @@ window.FinkUI = {
             FinkUtils.debugLog('No IMAGE tag found in current position');
         }
     },
-    
+
+    // Handle media updates from pre-collected tags (called from FinkInkEngine.continueStory)
+    updateMediaFromCollectedTags(imageTag, videoTag, basehrefTag) {
+        FinkUtils.debugLog('updateMediaFromCollectedTags: image=' + (imageTag || 'none') + ', video=' + (videoTag || 'none') + ', basehref=' + (basehrefTag || 'none'));
+
+        // Update stored BASEHREF if provided
+        let currentRawBasehref = null;
+        if (basehrefTag) {
+            let processedBasehref = basehrefTag;
+            if (!processedBasehref.endsWith('/')) processedBasehref += '/';
+            FinkPlayer.mediaBasePath = processedBasehref;
+            FinkPlayer.rawBasehref = basehrefTag;
+            currentRawBasehref = basehrefTag;
+            FinkUtils.debugLog('Updated mediaBasePath from collected tag: ' + processedBasehref);
+        } else {
+            currentRawBasehref = FinkPlayer.rawBasehref || (FinkPlayer.mediaBasePath ? FinkPlayer.mediaBasePath.replace(/\/$/, '') : null);
+        }
+
+        // Handle VIDEO first (if present)
+        if (videoTag) {
+            FinkUtils.debugLog('Showing video from collected tags: ' + videoTag);
+            this.updateVideo(videoTag, currentRawBasehref);
+        }
+
+        // Handle IMAGE (if present)
+        if (imageTag) {
+            FinkUtils.debugLog('Showing image from collected tags: ' + imageTag);
+            this.updateImage(imageTag, currentRawBasehref);
+        } else {
+            FinkUtils.debugLog('No IMAGE in collected tags');
+        }
+    },
+
     updateImage(imagePath, rawBasehref) {
         if (!imagePath) return;
         
