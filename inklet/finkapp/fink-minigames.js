@@ -908,15 +908,22 @@ window.FinkMinigames = {
         // Update story variables if available
         this.updateStoryVariables(result);
 
-        // Switch back to narrative view
+        // Switch back to narrative view - removes 'active' class from minigame
         this.switchView('narrative');
-        this.log(`Minigame view classes: ${this.elements.minigameView?.className}`);
-        this.log(`Narrative view classes: ${this.elements.narrativeView?.className}`);
 
-        // Explicitly hide minigame view to ensure it's not blocking
+        // CRITICAL: Force minigame view fully hidden
+        // The .view class has display:none when not .active, but position:fixed
+        // states (pinned, minimized) can override. Ensure ALL state classes removed.
         if (this.elements.minigameView) {
-            this.elements.minigameView.style.display = 'none';
-            this.log('Minigame view hidden with display:none');
+            // Remove ALL position-altering classes
+            this.elements.minigameView.classList.remove(
+                'active', 'paused', 'pinned', 'minimized', 'maximized',
+                'transitioning', 'state-full', 'state-embed',
+                'state-mini-live', 'state-mini-paused', 'slider-transitioning'
+            );
+            // Clear any inline styles that might override CSS
+            this.elements.minigameView.style.cssText = '';
+            this.log('Minigame view: all classes and styles cleared');
         }
 
         // Reset UI state to ensure choices work
@@ -931,11 +938,6 @@ window.FinkMinigames = {
             this.log('Timeout fired - calling continueStory');
             if (window.FinkInkEngine && FinkInkEngine.continueStory) {
                 FinkInkEngine.continueStory();
-            }
-            // Re-enable minigame view CSS (remove inline style) for next minigame
-            if (this.elements.minigameView) {
-                this.elements.minigameView.style.display = '';
-                this.log(`Minigame view display reset, classes: ${this.elements.minigameView.className}`);
             }
         }, 100);
     },
