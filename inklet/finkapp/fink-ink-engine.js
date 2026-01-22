@@ -27,7 +27,7 @@ window.FinkInkEngine = {
 // === FINK Private Inventory (auto-injected) ===
 === _inventory ===
 #BG:#113
-*** INVENTORY ***
+— INVENTORY —
 
 {diamonds > 0:
     💎 Diamonds: {diamonds}

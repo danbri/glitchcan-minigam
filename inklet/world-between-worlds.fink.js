@@ -7,7 +7,7 @@ oooOO`
 === world_between_worlds ===
 #BG:#020
 # AUDIO: synth:wind
-*** THE WORLD BETWEEN WORLDS ***
+— THE WORLD BETWEEN WORLDS —
 
 A vast, quiet wood stretches in all directions. The trees are ancient beyond measure, their leaves whispering secrets in a language older than words.
 
@@ -93,7 +93,7 @@ The shimmering pool pulses with neon light. Pixelated shapes dance across its su
 
 === arcade_hangout ===
 #BG:#101
-*** PIXEL ARCADE ***
+— PIXEL ARCADE —
 
 You stand in a glowing space filled with floating game cabinets. Each one hums with potential adventure.
 
