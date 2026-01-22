@@ -234,6 +234,8 @@ window.FinkInkEngine = {
             }
 
             let paragraphIndex = 0;
+            let collectedImageTag = null;  // Track IMAGE tag across all Continue() calls
+            let collectedBasehref = null;  // Track BASEHREF across all Continue() calls
             while (this.story.canContinue) {
                 const p = document.createElement('p');
                 p.className = 'text-chunk';
@@ -242,6 +244,24 @@ window.FinkInkEngine = {
                 paragraphIndex++;
                 let rawText = this.story.Continue();
                 FinkUtils.debugLog('Story.Continue() output: "' + rawText.trim() + '"');
+
+                // Collect IMAGE/BASEHREF tags from EVERY Continue() call
+                // (tags on empty lines would otherwise be lost)
+                const iterTags = this.story.currentTags || [];
+                iterTags.forEach(tag => {
+                    if (tag.includes('IMAGE:') && !collectedImageTag) {
+                        collectedImageTag = tag.replace(/^IMAGE:\s*/, '').trim();
+                        FinkUtils.debugLog('Collected IMAGE tag: ' + collectedImageTag);
+                    }
+                    if (tag.includes('BASEHREF:')) {
+                        collectedBasehref = tag.replace(/.*BASEHREF:\s*/, '').trim();
+                        if ((collectedBasehref.startsWith('"') && collectedBasehref.endsWith('"')) ||
+                            (collectedBasehref.startsWith("'") && collectedBasehref.endsWith("'"))) {
+                            collectedBasehref = collectedBasehref.slice(1, -1);
+                        }
+                        FinkUtils.debugLog('Collected BASEHREF tag: ' + collectedBasehref);
+                    }
+                });
 
                 // Track current knot from path (detect knot changes during flow)
                 const pathStr = this.story.state.currentPathString;
@@ -340,27 +360,32 @@ window.FinkInkEngine = {
 
             FinkUI.replaceStoryContent(storyFragment);
 
-            // Track which IMAGE was shown by line-level tags to avoid duplicates
-            const lineImageShown = FinkUI.updateImageFromINKTags(this.story);
+            // Apply collected BASEHREF first (affects image path resolution)
+            if (collectedBasehref) {
+                if (!collectedBasehref.endsWith('/')) collectedBasehref += '/';
+                FinkPlayer.mediaBasePath = collectedBasehref;
+                FinkUtils.debugLog('Applied collected BASEHREF: ' + collectedBasehref);
+            }
 
-            // Also check knot-level tags - but skip IMAGE if already shown from currentTags
-            // Tags at knot start appear in BOTH currentTags AND TagsForContentAtPath,
-            // so we need to de-duplicate to avoid showing the same image twice.
-            if (detectedKnot && this.story.TagsForContentAtPath) {
+            // Show collected IMAGE (gathered from ALL Continue() calls in the loop)
+            // This fixes tags on empty lines that would be lost if we only checked final currentTags
+            if (collectedImageTag) {
+                FinkUtils.debugLog('Showing collected IMAGE: ' + collectedImageTag);
+                FinkUI.updateImage(collectedImageTag, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+            }
+
+            // Also check knot-level tags as fallback (for edge cases)
+            // Skip if we already showed an image from the collected tags
+            if (!collectedImageTag && detectedKnot && this.story.TagsForContentAtPath) {
                 try {
                     const knotTags = this.story.TagsForContentAtPath(detectedKnot) || [];
                     FinkUtils.debugLog('Knot-level tags for ' + detectedKnot + ': [' + knotTags.join(', ') + ']');
                     knotTags.forEach(tag => {
                         if (tag.includes('IMAGE:')) {
                             const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
-                            // Only process if not already shown by updateImageFromINKTags
-                            if (imagePath !== lineImageShown) {
-                                FinkUtils.debugLog('Knot-level IMAGE tag (not duplicate): ' + imagePath);
-                                FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
-                            } else {
-                                FinkUtils.debugLog('Skipping duplicate knot-level IMAGE: ' + imagePath);
-                            }
-                        } else if (tag.includes('BASEHREF:')) {
+                            FinkUtils.debugLog('Knot-level IMAGE (fallback): ' + imagePath);
+                            FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
+                        } else if (tag.includes('BASEHREF:') && !collectedBasehref) {
                             let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
                             if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
                                 (basePath.startsWith("'") && basePath.endsWith("'"))) {
@@ -368,7 +393,7 @@ window.FinkInkEngine = {
                             }
                             if (!basePath.endsWith('/')) basePath += '/';
                             FinkPlayer.mediaBasePath = basePath;
-                            FinkUtils.debugLog('Knot-level BASEHREF: ' + basePath);
+                            FinkUtils.debugLog('Knot-level BASEHREF (fallback): ' + basePath);
                         }
                     });
                 } catch (e) {
