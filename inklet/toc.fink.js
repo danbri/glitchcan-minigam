@@ -111,7 +111,7 @@ Discover the secrets of a chocolate-box-perfect village where greed and jealousy
 + [Enter Riverbend] -> external_story
 
 === maple_hollow_selected ===
-# FINK: ../../cozyverse/maple-hollow.fink.js
+# FINK: ../cozyverse/maple-hollow.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
