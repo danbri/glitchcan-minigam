@@ -197,10 +197,15 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
             existingSections.forEach(section => {
-                // Don't clone images - the image container is now sticky/pinned
                 section.classList.remove('current');
                 section.classList.add('past');
             });
+        }
+
+        // Hide image until new content explicitly sets one
+        // (prevents stale image from previous section showing)
+        if (this.elements.imageContainer) {
+            this.elements.imageContainer.classList.add('hidden');
         }
 
         // Create new current section
@@ -221,7 +226,7 @@ window.FinkUI = {
             // Use content block model - start new section instead of clearing
             const section = this.startNewSection();
             section.appendChild(fragment);
-            this.scrollToBottom();
+            this.scrollToCurrentSection();
         }
     },
 
@@ -232,7 +237,28 @@ window.FinkUI = {
                 this.startNewSection();
             }
             this.currentSection.appendChild(fragment);
-            this.scrollToBottom();
+            this.scrollToCurrentSection();
+        }
+    },
+
+    // Scroll so current section is visible just below the pinned image
+    scrollToCurrentSection() {
+        const narrativeView = document.getElementById('narrative-view');
+        if (narrativeView && this.currentSection) {
+            setTimeout(() => {
+                // Get the height of the sticky image container
+                const imageContainer = this.elements.imageContainer;
+                const imageHeight = imageContainer && !imageContainer.classList.contains('hidden')
+                    ? imageContainer.offsetHeight + 8 // 8px margin
+                    : 0;
+
+                // Scroll so current section starts just below the image
+                const sectionTop = this.currentSection.offsetTop - imageHeight;
+                narrativeView.scrollTo({
+                    top: Math.max(0, sectionTop),
+                    behavior: 'smooth'
+                });
+            }, 50);
         }
     },
 
