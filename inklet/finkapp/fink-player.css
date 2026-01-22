@@ -55,28 +55,20 @@ main {
 /* --- Narrative View --- */
 #narrative-view {
     padding: 0.5em;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* --- Choices Container --- */
 #choices {
-    flex-shrink: 0;
-    max-height: 40vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
     padding-top: 0.5em;
 }
 
 #story-output {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
     padding: 0.5em;
     background: rgba(0,20,0,0.5);
     border: 1px solid var(--zx-green);
-    min-height: 0;
+    margin-bottom: 0.5em;
 }
 
 /* Text animation styles */

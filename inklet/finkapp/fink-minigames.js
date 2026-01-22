@@ -535,23 +535,17 @@ window.FinkMinigames = {
                 break;
 
             case 'log':
-                // Route minigame log to console
-                if (data.level === 'error') {
-                    console.error(`[Minigame] ${data.message}`);
-                } else {
-                    console.log(`[Minigame] ${data.message}`);
+                // Route minigame log to dev panel
+                if (window.FinkDevPanel) {
+                    FinkDevPanel.log(`[Minigame] ${data.message}`, data.level === 'error' ? 'error' : 'game');
                 }
                 break;
 
             case 'log-batch':
-                // Route batched minigame logs to console
-                if (data.logs) {
+                // Route batched minigame logs to dev panel
+                if (window.FinkDevPanel && data.logs) {
                     data.logs.forEach(log => {
-                        if (log.level === 'error') {
-                            console.error(`[Minigame] ${log.message}`);
-                        } else {
-                            console.log(`[Minigame] ${log.message}`);
-                        }
+                        FinkDevPanel.log(`[Minigame] ${log.message}`, log.level === 'error' ? 'error' : 'game');
                     });
                 }
                 break;
@@ -727,11 +721,13 @@ window.FinkMinigames = {
     // Handle minigame completion
     handleMinigameComplete(result) {
         this.log(`Minigame complete: ${JSON.stringify(result)}`);
+        this.log(`Window state before reset: ${JSON.stringify(this.windowState)}`);
 
         this.active = false;
 
         // Reset window state (paused, pinned, minimized, maximized)
         this._resetWindowState();
+        this.log(`Window state after reset: ${JSON.stringify(this.windowState)}`);
 
         // Reset UI
         if (this.elements.gameContainer) {
@@ -750,26 +746,32 @@ window.FinkMinigames = {
 
         // Switch back to narrative view
         this.switchView('narrative');
+        this.log(`Minigame view classes: ${this.elements.minigameView?.className}`);
+        this.log(`Narrative view classes: ${this.elements.narrativeView?.className}`);
 
         // Explicitly hide minigame view to ensure it's not blocking
         if (this.elements.minigameView) {
             this.elements.minigameView.style.display = 'none';
+            this.log('Minigame view hidden with display:none');
         }
 
         // Reset UI state to ensure choices work
         if (window.FinkUI) {
             FinkUI.animationInProgress = false;
             FinkUI.hideStatus();
+            this.log(`FinkUI.animationInProgress set to false`);
         }
 
         // Continue story after a brief delay to ensure DOM updates
         setTimeout(() => {
+            this.log('Timeout fired - calling continueStory');
             if (window.FinkInkEngine && FinkInkEngine.continueStory) {
                 FinkInkEngine.continueStory();
             }
             // Re-enable minigame view CSS (remove inline style) for next minigame
             if (this.elements.minigameView) {
                 this.elements.minigameView.style.display = '';
+                this.log(`Minigame view display reset, classes: ${this.elements.minigameView.className}`);
             }
         }, 100);
     },
@@ -847,7 +849,11 @@ window.FinkMinigames = {
     },
 
     log(msg) {
-        console.log(`[FinkMinigames] ${msg}`);
+        if (window.FinkDevPanel) {
+            FinkDevPanel.log(`Minigames: ${msg}`, 'game');
+        } else {
+            console.log(`[FinkMinigames] ${msg}`);
+        }
     },
 
     // ========== INLINE MINIGAME SYSTEM ==========

@@ -76,13 +76,21 @@ window.FinkUtils = {
         }
     },
 
-    // Debug logging - console-based
+    // Debug logging - routes to FinkDevPanel if available
     debugLog(message) {
-        console.log(`[FINK] ${message}`);
+        if (window.FinkDevPanel) {
+            FinkDevPanel.log(message, 'debug');
+        } else {
+            console.log(`[FINK] ${message}`);
+        }
     }
 };
 
 // Global convenience logging function
 window.log = (msg, type = 'info') => {
-    console.log(`[${type}] ${msg}`);
+    if (window.FinkDevPanel) {
+        FinkDevPanel.log(msg, type);
+    } else {
+        console.log(`[${type}] ${msg}`);
+    }
 };
