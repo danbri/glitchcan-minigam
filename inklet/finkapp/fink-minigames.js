@@ -721,11 +721,13 @@ window.FinkMinigames = {
     // Handle minigame completion
     handleMinigameComplete(result) {
         this.log(`Minigame complete: ${JSON.stringify(result)}`);
+        this.log(`Window state before reset: ${JSON.stringify(this.windowState)}`);
 
         this.active = false;
 
         // Reset window state (paused, pinned, minimized, maximized)
         this._resetWindowState();
+        this.log(`Window state after reset: ${JSON.stringify(this.windowState)}`);
 
         // Reset UI
         if (this.elements.gameContainer) {
@@ -744,26 +746,32 @@ window.FinkMinigames = {
 
         // Switch back to narrative view
         this.switchView('narrative');
+        this.log(`Minigame view classes: ${this.elements.minigameView?.className}`);
+        this.log(`Narrative view classes: ${this.elements.narrativeView?.className}`);
 
         // Explicitly hide minigame view to ensure it's not blocking
         if (this.elements.minigameView) {
             this.elements.minigameView.style.display = 'none';
+            this.log('Minigame view hidden with display:none');
         }
 
         // Reset UI state to ensure choices work
         if (window.FinkUI) {
             FinkUI.animationInProgress = false;
             FinkUI.hideStatus();
+            this.log(`FinkUI.animationInProgress set to false`);
         }
 
         // Continue story after a brief delay to ensure DOM updates
         setTimeout(() => {
+            this.log('Timeout fired - calling continueStory');
             if (window.FinkInkEngine && FinkInkEngine.continueStory) {
                 FinkInkEngine.continueStory();
             }
             // Re-enable minigame view CSS (remove inline style) for next minigame
             if (this.elements.minigameView) {
                 this.elements.minigameView.style.display = '';
+                this.log(`Minigame view display reset, classes: ${this.elements.minigameView.className}`);
             }
         }, 100);
     },
