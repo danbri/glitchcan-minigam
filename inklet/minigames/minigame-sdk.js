@@ -183,7 +183,10 @@ class MinigameSDK {
         const data = event.data;
         if (!data || typeof data.type !== 'string') return;
 
-        this._log(`Received message: ${data.type}`);
+        // Don't log key events (too noisy)
+        if (data.type !== 'key') {
+            this._log(`Received message: ${data.type}`);
+        }
 
         switch (data.type) {
             case 'init':
@@ -222,9 +225,47 @@ class MinigameSDK {
                 }
                 break;
 
+            case 'key':
+                // Handle keyboard events from parent d-pad
+                this._dispatchKeyEvent(data.event, data.key, data.code);
+                break;
+
             default:
                 this._log(`Unknown message type: ${data.type}`);
         }
+    }
+
+    /**
+     * Dispatch a synthetic keyboard event
+     * Used for mobile d-pad controls sent from parent
+     */
+    _dispatchKeyEvent(eventType, key, code) {
+        const event = new KeyboardEvent(eventType, {
+            key: key,
+            code: code || key,
+            keyCode: this._getKeyCode(key),
+            which: this._getKeyCode(key),
+            bubbles: true,
+            cancelable: true
+        });
+        document.dispatchEvent(event);
+    }
+
+    /**
+     * Get legacy keyCode for a key
+     */
+    _getKeyCode(key) {
+        const codes = {
+            'ArrowUp': 38,
+            'ArrowDown': 40,
+            'ArrowLeft': 37,
+            'ArrowRight': 39,
+            ' ': 32,
+            'Space': 32,
+            'Enter': 13,
+            'Escape': 27
+        };
+        return codes[key] || 0;
     }
 
     /**
