@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shane Manor Mystery - Infographic Summary</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #1a1a2e;
+            color: #eee;
+            line-height: 1.4;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #16213e 0%, #1a1a2e 50%, #0f0f23 100%);
+            page-break-after: always;
+        }
+
+        @media screen {
+            .page {
+                box-shadow: 0 0 30px rgba(0,0,0,0.5);
+                margin: 20px auto;
+            }
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.2em;
+            color: #c9a227;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        h2 {
+            color: #c9a227;
+            border-bottom: 2px solid #c9a227;
+            padding-bottom: 5px;
+            margin: 15px 0 10px;
+            font-size: 1.3em;
+        }
+
+        .premise-box {
+            background: rgba(201, 162, 39, 0.1);
+            border: 1px solid #c9a227;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .premise-box p {
+            font-size: 0.95em;
+        }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .character-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px;
+            border-left: 4px solid;
+        }
+
+        .victim { border-color: #e74c3c; }
+        .suspect { border-color: #f39c12; }
+        .detective { border-color: #3498db; }
+        .witness { border-color: #9b59b6; }
+        .hidden { border-color: #1abc9c; }
+
+        .character-card h3 {
+            font-size: 1em;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .character-card .role {
+            font-size: 0.75em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .character-card p {
+            font-size: 0.85em;
+            color: #ccc;
+        }
+
+        .character-card .motive {
+            font-size: 0.8em;
+            color: #e74c3c;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .emoji {
+            font-size: 1.3em;
+        }
+
+        .relationship-map {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.85em;
+        }
+
+        .relationship-map ul {
+            list-style: none;
+            columns: 2;
+        }
+
+        .relationship-map li {
+            margin-bottom: 5px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .relationship-map li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #c9a227;
+        }
+
+        .evidence-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .evidence-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.8em;
+        }
+
+        .evidence-item .icon {
+            font-size: 1.5em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 25px;
+            margin-top: 10px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #c9a227;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 10px;
+            font-size: 0.85em;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -21px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            background: #c9a227;
+            border-radius: 50%;
+        }
+
+        .timeline-item strong {
+            color: #c9a227;
+        }
+
+        .endings-box {
+            background: rgba(201, 162, 39, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .endings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.8em;
+        }
+
+        .ending {
+            background: rgba(0,0,0,0.2);
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+
+        .ending strong {
+            color: #c9a227;
+        }
+
+        .secret-box {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(155, 89, 182, 0.1));
+            border: 1px dashed #e74c3c;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+
+        .secret-box h3 {
+            color: #e74c3c;
+            font-size: 1em;
+            margin-bottom: 8px;
+        }
+
+        .secret-box ul {
+            font-size: 0.85em;
+            margin-left: 18px;
+        }
+
+        .secret-box li {
+            margin-bottom: 4px;
+        }
+
+        .link-section {
+            margin-top: 15px;
+        }
+
+        .link-card {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid #3498db;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .link-card strong {
+            color: #3498db;
+        }
+
+        .link-card a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .link-card a:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                background: white;
+                color: #222;
+                box-shadow: none;
+            }
+            .character-card, .evidence-item, .ending, .relationship-map, .premise-box, .endings-box {
+                background: #f5f5f5;
+            }
+            h1, h2, .timeline-item strong, .ending strong {
+                color: #8B4513;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- PAGE 1: Characters & Premise -->
+<div class="page">
+    <h1>THE MANOR HOUSE MYSTERY</h1>
+    <p class="subtitle">Inspector Shane André-Louis Investigation - Interactive Fiction Summary</p>
+
+    <div class="premise-box">
+        <p><strong>November, Victorian England.</strong> Lord Edgar Pemberton, 58, chess master and patriarch of Greystone Manor, is found stabbed in his locked study. A silver letter opener protrudes from between his shoulder blades. Inspector Shane André-Louis must navigate a web of family secrets, forbidden love, and a conspiracy spanning two decades to unmask the killer.</p>
+    </div>
+
+    <h2>THE CAST</h2>
+
+    <div class="character-grid">
+        <div class="character-card detective">
+            <h3><span class="emoji">🔍</span> Inspector Shane André-Louis</h3>
+            <span class="role">The Detective (Player)</span>
+            <p>A methodical investigator who can employ psychological, observational, or procedural approaches. His reputation rises or falls based on player choices.</p>
+        </div>
+
+        <div class="character-card victim">
+            <h3><span class="emoji">💀</span> Lord Edgar Pemberton</h3>
+            <span class="role">The Victim</span>
+            <p>Age 58. Chess master. Took in Victoria as ward 20 years ago. Recently discovered dangerous truths and changed his will one week before death.</p>
+            <p class="motive">He was hiding Victoria from her criminal father.</p>
+        </div>
+
+        <div class="character-card suspect">
+            <h3><span class="emoji">👩</span> Victoria Ashworth</h3>
+            <span class="role">Primary Suspect / Ward</span>
+            <p>Foundling raised at the manor. True identity: daughter of Viktor Markov, hidden since infancy. Disinherited days before the murder.</p>
+            <p class="motive">Lost inheritance, identity crisis, seen arguing with victim</p>
+        </div>
+
+        <div class="character-card suspect">
+            <h3><span class="emoji">🎰</span> Charles Pemberton</h3>
+            <span class="role">Suspect / Nephew</span>
+            <p>Lord Pemberton's nephew. Gambling debts to "nasty London types." Chain-smoker. Now primary beneficiary under new will.</p>
+            <p class="motive">Gambling debts, inheritance, humiliated at chess</p>
+        </div>
+
+        <div class="character-card suspect">
+            <h3><span class="emoji">👵</span> Mrs. Margaret Pemberton</h3>
+            <span class="role">Suspect / Widow</span>
+            <p>Watches Victoria "like a hawk." Takes sleeping draughts. Possibly embezzling from estate for years to pay Charles's debts.</p>
+            <p class="motive">Financial crimes exposed, protecting Charles</p>
+        </div>
+
+        <div class="character-card suspect">
+            <h3><span class="emoji">🎩</span> Ashford</h3>
+            <span class="role">Suspect / Butler</span>
+            <p>30 years of service. Secretly loved Elena (Victoria's mother). Arranged her escape from Markov. Knows all the manor's secret passages.</p>
+            <p class="motive">Protecting Victoria, honoring promise to Elena</p>
+        </div>
+
+        <div class="character-card witness">
+            <h3><span class="emoji">🧹</span> Mary Collins</h3>
+            <span class="role">Witness / Maid</span>
+            <p>Age 25. Found the body at 8 AM. Heard the argument at midnight. Discovered Victoria's muddy boots and was sworn to secrecy.</p>
+        </div>
+
+        <div class="character-card hidden">
+            <h3><span class="emoji">🇷🇺</span> Viktor Markov</h3>
+            <span class="role">Hidden Threat / Victoria's Father</span>
+            <p>Russian criminal. "A monster." Has been searching for Victoria for 20 years. Recently discovered she survived the fire.</p>
+        </div>
+
+        <div class="character-card hidden">
+            <h3><span class="emoji">💔</span> Elena Markov (deceased)</h3>
+            <span class="role">Victoria's Mother</span>
+            <p>Died in Ashworth family fire. Loved by Ashford. Fled from Viktor. The "E.M." on the locked jewelry box.</p>
+        </div>
+
+        <div class="character-card witness">
+            <h3><span class="emoji">🌙</span> James Blackwood</h3>
+            <span class="role">Mentioned Suspect</span>
+            <p>"Skulking around after dark" according to village gossip. Connection to the mystery remains unclear.</p>
+        </div>
+    </div>
+
+    <h2>RELATIONSHIP WEB</h2>
+    <div class="relationship-map">
+        <ul>
+            <li><strong>Lord Pemberton</strong> → guardian of Victoria (20 years)</li>
+            <li><strong>Lord Pemberton</strong> → owed debt to Ashford</li>
+            <li><strong>Ashford</strong> → loved Elena, protects Victoria</li>
+            <li><strong>Elena</strong> → fled Viktor, mother of Victoria</li>
+            <li><strong>Viktor Markov</strong> → hunting for Victoria</li>
+            <li><strong>Mrs. Pemberton</strong> → paid Charles's debts</li>
+            <li><strong>Charles</strong> → gambling debts, resents Victoria</li>
+            <li><strong>Mary</strong> → loyal to Victoria, knows secrets</li>
+        </ul>
+    </div>
+
+    <div class="footer">Page 1 of 2 - Characters & Relationships</div>
+</div>
+
+<!-- PAGE 2: Evidence, Timeline & Endings -->
+<div class="page">
+    <h1>THE INVESTIGATION</h1>
+    <p class="subtitle">Evidence, Timeline, and Multiple Endings</p>
+
+    <h2>KEY EVIDENCE</h2>
+    <div class="evidence-grid">
+        <div class="evidence-item">
+            <span class="icon">📷</span>
+            <strong>Surveillance Photos</strong><br>
+            Victoria's coat at garden gate
+        </div>
+        <div class="evidence-item">
+            <span class="icon">📜</span>
+            <strong>Parentage Letters</strong><br>
+            Victoria = Markov's daughter
+        </div>
+        <div class="evidence-item">
+            <span class="icon">📋</span>
+            <strong>Changed Will</strong><br>
+            Victoria disinherited 1 week ago
+        </div>
+        <div class="evidence-item">
+            <span class="icon">👢</span>
+            <strong>Muddy Boots</strong><br>
+            Victoria's secret excursions
+        </div>
+        <div class="evidence-item">
+            <span class="icon">♟️</span>
+            <strong>Chess Position</strong><br>
+            Pemberton Gambit - confrontation
+        </div>
+        <div class="evidence-item">
+            <span class="icon">🚪</span>
+            <strong>Hidden Door</strong><br>
+            Secret servant's entrance
+        </div>
+        <div class="evidence-item">
+            <span class="icon">💌</span>
+            <strong>Threatening Letters</strong><br>
+            "Your secret dies with you"
+        </div>
+        <div class="evidence-item">
+            <span class="icon">🪑</span>
+            <strong>Staged Scene</strong><br>
+            Chair fell wrong direction
+        </div>
+        <div class="evidence-item">
+            <span class="icon">💍</span>
+            <strong>Locket (E.M.)</strong><br>
+            Elena & Viktor photos
+        </div>
+    </div>
+
+    <h2>TIMELINE OF EVENTS</h2>
+    <div class="timeline">
+        <div class="timeline-item">
+            <strong>23 Years Ago:</strong> Victoria placed with Ashworth family. Elena dies in fire. Lord Pemberton takes Victoria as ward at Ashford's request.
+        </div>
+        <div class="timeline-item">
+            <strong>3 Days Before Murder:</strong> Solicitor Hartwell warns Lord Pemberton that Markov's agents are asking questions.
+        </div>
+        <div class="timeline-item">
+            <strong>1 Week Before Murder:</strong> Lord Pemberton changes will, disinherits Victoria entirely "to protect her."
+        </div>
+        <div class="timeline-item">
+            <strong>Evening of Murder:</strong> Victoria finds old letters about her parentage. Confronts Lord Pemberton.
+        </div>
+        <div class="timeline-item">
+            <strong>~11 PM:</strong> Victoria seen carrying letters, crying. Headed toward study. Mary hears argument: "I know who you really are."
+        </div>
+        <div class="timeline-item">
+            <strong>Midnight-2 AM:</strong> Time of death. Chess game interrupted. Someone exits via hidden door.
+        </div>
+        <div class="timeline-item">
+            <strong>8 AM:</strong> Mary Collins discovers body. Door apparently locked from inside.
+        </div>
+    </div>
+
+    <div class="secret-box">
+        <h3>THE CORE SECRET</h3>
+        <ul>
+            <li>Victoria is the daughter of <strong>Viktor Markov</strong>, a Russian criminal</li>
+            <li>Her mother <strong>Elena</strong> fled Viktor while pregnant</li>
+            <li><strong>Ashford</strong> loved Elena and helped her escape</li>
+            <li>Lord Pemberton hid Victoria as a favor to Ashford</li>
+            <li>The will change was meant to make Victoria worthless as leverage against Markov</li>
+            <li>Someone in the house wanted <strong>both</strong> Lord Pemberton dead and Victoria blamed</li>
+        </ul>
+    </div>
+
+    <h2>POSSIBLE ENDINGS</h2>
+    <div class="endings-box">
+        <div class="endings-grid">
+            <div class="ending">
+                <strong>Blood and Loyalty:</strong> Ashford confesses - killed to protect Victoria from being traded to Markov
+            </div>
+            <div class="ending">
+                <strong>The Prodigal Son:</strong> Charles confesses - killed in rage after chess humiliation
+            </div>
+            <div class="ending">
+                <strong>The Spider's Web:</strong> Mrs. Pemberton's embezzlement exposed, complicity suspected
+            </div>
+            <div class="ending">
+                <strong>The Broken Family:</strong> Victoria's heartbreak but not guilt - true killer unknown
+            </div>
+            <div class="ending">
+                <strong>Shadows of Doubt:</strong> Ambiguous - financial crimes cast doubt on all
+            </div>
+            <div class="ending">
+                <strong>The Long Shadow:</strong> External conspiracy - Markov's agents implicated
+            </div>
+            <div class="ending">
+                <strong>Family Sins:</strong> Multiple conspirators, no single killer
+            </div>
+            <div class="ending">
+                <strong>Unfinished Business:</strong> Case remains open
+            </div>
+        </div>
+    </div>
+
+    <h2 class="link-section">PLAY THE STORY</h2>
+    <div class="link-card">
+        <strong>FINK Player:</strong> <a href="https://danbri.github.io/glitchcan-minigam/inklet/inklet5.html" target="_blank">danbri.github.io/glitchcan-minigam/inklet/inklet5.html</a><br>
+        Navigate: Games → Shane Manor
+    </div>
+    <div class="link-card">
+        <strong>Source Code:</strong> <a href="https://github.com/danbri/glitchcan-minigam/blob/main/inklet/shane-manor.fink.js" target="_blank">github.com/danbri/glitchcan-minigam/.../shane-manor.fink.js</a>
+    </div>
+    <div class="link-card">
+        <strong>INK Language:</strong> <a href="https://www.inklestudios.com/ink/" target="_blank">inklestudios.com/ink/</a> - The scripting language powering this interactive fiction
+    </div>
+    <div class="link-card">
+        <strong>Project Home:</strong> <a href="https://github.com/danbri/glitchcan-minigam" target="_blank">github.com/danbri/glitchcan-minigam</a> - Minigames collection including FINK stories
+    </div>
+
+    <div class="footer">
+        Page 2 of 2 - Investigation & Endings<br>
+        <em>Shane Manor is an interactive murder mystery built with INK/FINK. Player choices determine which evidence is found and which ending is reached.</em>
+    </div>
+</div>
+
+</body>
+</html>
