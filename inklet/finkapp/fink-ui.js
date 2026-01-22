@@ -197,9 +197,23 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             const existingSections = this.elements.storyOutput.querySelectorAll('.story-section.current');
             existingSections.forEach(section => {
+                // Capture current image into the section being marked as past
+                if (this.elements.storyImage &&
+                    this.elements.storyImage.src &&
+                    !this.elements.imageContainer?.classList.contains('hidden')) {
+                    const imgClone = this.elements.storyImage.cloneNode(true);
+                    imgClone.removeAttribute('id');
+                    imgClone.className = 'section-image';
+                    section.insertBefore(imgClone, section.firstChild);
+                }
                 section.classList.remove('current');
                 section.classList.add('past');
             });
+
+            // Hide the main image container - new image will show it if needed
+            if (this.elements.imageContainer) {
+                this.elements.imageContainer.classList.add('hidden');
+            }
         }
 
         // Create new current section

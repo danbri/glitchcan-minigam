@@ -32,8 +32,8 @@ LIST Inventory = cheese, bread, apples, key, sword, map
 
 == Bag_End ==
 
-# IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
 You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.
+# IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
 + {not talked_to_gandalf} [Talk to the Wizard] -> Talk_To_Gandalf
 + [Leave through the front door] -> Outside_Bag_End
 + [Go to the kitchen] -> Kitchen
@@ -104,7 +104,7 @@ The path leads into a dark wooded area. Massive boulders dot the landscape. You 
     You take a few steps toward the cave mouth, but the angry troll voices echo closer. Not a good idea while they're still about.
     -> Trollshaws
 
-+ [Investigate the noises] -> Troll_Clearing
++ {troll_status != "stone"} [Investigate the noises] -> Troll_Clearing
 
 == Troll_Clearing ==
 
@@ -145,7 +145,8 @@ The clearing is quiet now. Three troll statues stand in comical poses, frozen in
 == Troll_Cave ==
 
 # IMAGE: troll_cave.svg
-The cave is dark and smells terrible. Piles of bones litter the floor. A chest sits in the corner. If the trolls are still active, this is extremely dangerous.
+The cave is dark and smells terrible. Piles of bones litter the floor. A chest sits in the corner.
+{troll_status == "alive": We don't know how many trolls live here, so best to be extremely careful.}
 + [Open the chest]
     {troll_status == "stone" && has_key && not has_map:
         You unlock the chest with the key and carefully lift the lid. Inside you find a small hoard of gold coins and a curious map showing the path to the Lonely Mountain. The adventure truly begins!
@@ -160,7 +161,7 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
         The chest is locked tight. You need a key to open it.
     }
     {troll_status == "alive":
-        The chest is locked tight, and you can hear the trolls arguing nearby. Too dangerous to investigate while they're still active!
+        The chest is locked tight, and you can hear the trolls arguing nearby. Too dangerous to investigate while they're around!
     }
     -> Troll_Cave_Explored
 + [Leave the cave] -> Trollshaws
@@ -175,7 +176,7 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
     The chest remains locked. You might have missed something back at the clearing.
 }
 {troll_status == "alive":
-    The cave remains dangerous while the trolls are active. Best to leave quickly.
+    The cave remains dangerous while the trolls are around. Best to leave quickly.
 }
 + [Return to the trolls] -> return_to_trolls
 + {has_treasure} [Head back to Hobbiton with your treasure] -> Victorious_Return

@@ -131,6 +131,16 @@ main {
     filter: saturate(0.8);
 }
 
+/* Images captured into past sections */
+.story-section .section-image {
+    max-width: 100%;
+    max-height: 30vh;
+    display: block;
+    margin: 0 auto 0.5em;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
 /* Current active section */
 .story-section.current {
     opacity: 1;
@@ -393,6 +403,7 @@ main {
     border-radius: 8px;
     overflow: hidden;
     background: #111;
+    flex-shrink: 0; /* Don't compress image in flex layout */
 }
 #image-container.hidden { display: none; }
 
