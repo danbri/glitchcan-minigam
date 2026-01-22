@@ -73,26 +73,26 @@
             image-rendering: -moz-crisp-edges;
             image-rendering: -webkit-optimize-contrast;
         }
-        #uiMessages { 
+        #uiMessages {
             position: absolute;
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); 
+            top: calc(env(safe-area-inset-top, 0px) + 12px);
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 480px; 
-            font-size: calc(0.55em + 1vw); 
-            min-height: 18px; 
-            color: #FFF0E0; 
-            text-align: center; 
+            max-width: 480px;
+            font-size: calc(0.55em + 1vw);
+            min-height: 18px;
+            color: #FFF0E0;
+            text-align: center;
             padding: 2px 4px;
-            background-color: rgba(10, 15, 40, 0.3); 
+            background-color: rgba(10, 15, 40, 0.3);
             border-radius: 3px;
             z-index: 20;
-            text-shadow: 
+            text-shadow:
                 -1px -1px 0 #0A0F28,  1px -1px 0 #0A0F28,
                 -1px  1px 0 #0A0F28,  1px  1px 0 #0A0F28,
-                 0px  0px 2px #000000; 
-            pointer-events: none; 
+                 0px  0px 2px #000000;
+            pointer-events: none;
         }
         #restartButton { 
             position: absolute;
@@ -108,10 +108,10 @@
         #restartButton:hover, #restartButton:active { background-color: #FFD700; }
 
         /* Mobile-first responsive design */
-        @media (max-width: 480px) { 
-            #uiMessages { 
-                font-size: 0.9em; 
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+        @media (max-width: 480px) {
+            #uiMessages {
+                font-size: 0.9em;
+                top: calc(env(safe-area-inset-top, 0px) + 8px);
                 width: 95%;
                 padding: 6px 8px;
             }
@@ -127,10 +127,10 @@
         
         /* Tablet and small desktop */
         @media (min-width: 481px) and (max-width: 1024px) {
-            #uiMessages { 
-                font-size: 1.1em; 
+            #uiMessages {
+                font-size: 1.1em;
                 max-width: 500px;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 25px);
+                top: calc(env(safe-area-inset-top, 0px) + 10px);
             }
             #restartButton { 
                 font-size: 1em; 
@@ -142,11 +142,11 @@
         }
         
         /* Large desktop */
-        @media (min-width: 1025px) { 
-            #uiMessages { 
-                font-size: 1.2em; 
+        @media (min-width: 1025px) {
+            #uiMessages {
+                font-size: 1.2em;
                 max-width: 600px;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
+                top: calc(env(safe-area-inset-top, 0px) + 12px);
                 padding: 8px 12px;
             }
             #restartButton { 
@@ -190,9 +190,9 @@
 
         /* Landscape mobile optimization */
         @media (max-height: 500px) and (orientation: landscape) {
-            #uiMessages { 
+            #uiMessages {
                 font-size: 0.85em;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 15px);
+                top: calc(env(safe-area-inset-top, 0px) + 6px);
                 padding: 4px 6px;
             }
             #restartButton { 

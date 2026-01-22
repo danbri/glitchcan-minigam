@@ -30,7 +30,7 @@ window.FinkMinigames = {
     minigameInfo: {
         gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!', controls: 'none' },
         mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none' },
-        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'dpad' },
+        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'lite' },
         battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'lite' },
         gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'dpad' },
         chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' }
@@ -231,13 +231,19 @@ window.FinkMinigames = {
         }, '*');
     },
 
-    // Show/hide d-pad based on minigame state
-    _showDPad(show) {
+    // Show/hide d-pad and action buttons based on control mode
+    // 'dpad': show d-pad + A/B buttons
+    // 'lite': show d-pad only (no A/B buttons)
+    // 'none'/false: hide everything
+    _showDPad(controlMode) {
+        const showDpad = controlMode === 'dpad' || controlMode === 'lite' || controlMode === true;
+        const showActionBtns = controlMode === 'dpad';  // Only full dpad mode gets A/B
+
         if (this.elements.dpad) {
-            this.elements.dpad.style.display = show ? 'block' : 'none';
+            this.elements.dpad.style.display = showDpad ? 'block' : 'none';
         }
         if (this.elements.actionBtns) {
-            this.elements.actionBtns.style.display = show ? 'flex' : 'none';
+            this.elements.actionBtns.style.display = showActionBtns ? 'flex' : 'none';
         }
     },
 
@@ -588,8 +594,8 @@ window.FinkMinigames = {
             FinkWindowSlider.show();
         }
 
-        // Show d-pad based on control type
-        this._showDPad(effectiveControls === 'dpad' || effectiveControls === 'lite');
+        // Show d-pad based on control type (pass mode string for proper handling)
+        this._showDPad(effectiveControls);
 
         // Check if this is an iframe-based minigame
         if (this.iframeMinigames.includes(type)) {

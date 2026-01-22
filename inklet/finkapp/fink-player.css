@@ -1,17 +1,8 @@
 /* FINK Player - Core narrative player UI (neutral, not game-specific) */
 
-/* --- Header --- */
+/* --- Header (hidden - controls moved to radial menu) --- */
 .fink-header {
-    padding: 0.3em 0.5em;
-    background: rgba(0,0,0,0.8);
-    display: flex;
-    gap: 0.5em;
-    align-items: center;
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 100;
-    border-radius: 0 0 0 var(--border-radius-md);
+    display: none;
 }
 
 .fink-header button {
@@ -511,4 +502,129 @@ main {
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* --- Radial Menu (Bottom-Left) --- */
+.radial-menu {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 200;
+}
+
+.radial-menu-trigger {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 40, 40, 0.9);
+    border: 2px solid var(--zx-cyan);
+    color: var(--zx-cyan);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.radial-menu-trigger:hover {
+    background: rgba(0, 60, 60, 0.95);
+    transform: scale(1.05);
+}
+
+.radial-menu.open .radial-menu-trigger {
+    background: var(--zx-cyan);
+    color: #000;
+}
+
+.radial-menu-items {
+    position: absolute;
+    bottom: 56px;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+}
+
+.radial-menu.open .radial-menu-items {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.radial-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 30, 30, 0.95);
+    border: 1px solid var(--zx-cyan);
+    border-radius: 24px;
+    color: var(--zx-cyan);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.radial-menu-item:hover {
+    background: rgba(0, 60, 60, 0.95);
+    color: var(--zx-yellow);
+    border-color: var(--zx-yellow);
+}
+
+.radial-menu-item .menu-icon {
+    font-size: 16px;
+}
+
+/* Animation delays for menu items */
+.radial-menu-item:nth-child(1) { transition-delay: 0ms; }
+.radial-menu-item:nth-child(2) { transition-delay: 30ms; }
+.radial-menu-item:nth-child(3) { transition-delay: 60ms; }
+.radial-menu-item:nth-child(4) { transition-delay: 90ms; }
+.radial-menu-item:nth-child(5) { transition-delay: 120ms; }
+
+/* --- Scroll Status Bar --- */
+.scroll-status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    background: linear-gradient(to top, rgba(0, 20, 20, 0.95), rgba(0, 20, 20, 0.7));
+    border-top: 1px solid var(--zx-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 12px;
+    font-size: 10px;
+    color: var(--zx-green);
+    z-index: 150;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+
+.scroll-status-bar.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-status-bar .stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.scroll-status-bar .stat-value {
+    color: var(--zx-cyan);
+    font-weight: bold;
 }

@@ -5,6 +5,7 @@ window.FinkSandbox = {
     sandboxTimeout: null,
     initialTimeout: null,  // Track initial setup timeout for proper cleanup
     activeMessageHandler: null,
+    loadedCount: 0,  // Track successful FINK loads for stats
 
     // Duplicate load prevention: track recently loaded URLs with timestamps
     recentLoads: new Map(),
@@ -141,7 +142,8 @@ window.FinkSandbox = {
                         if (data.data && data.data.length > 0) {
                             // Use only the first oooOO block (matches working hamfink2026 behavior)
                             const finkContent = data.data[0];
-                            FinkUtils.debugLog('FINK story loaded: ' + finkContent.length + ' characters');
+                            this.loadedCount++;  // Track successful loads
+                            FinkUtils.debugLog('FINK story loaded: ' + finkContent.length + ' characters (total: ' + this.loadedCount + ')');
                             resolve(finkContent);
                         } else {
                             reject(new Error('No FINK content found in file'));

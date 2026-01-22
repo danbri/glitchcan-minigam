@@ -154,6 +154,40 @@
     </div>
 </main>
 
+<!-- Radial Menu (Bottom-Left) -->
+<div class="radial-menu" id="radial-menu">
+    <div class="radial-menu-items">
+        <a href="https://danbri.github.io/glitchcan-minigam/inklet/finkapp/" class="radial-menu-item" title="FINK App Home">
+            <span class="menu-icon">🔗</span>
+            <span>FINK App</span>
+        </a>
+        <button class="radial-menu-item" id="menu-nav-toggle" title="Toggle navigation path">
+            <span class="menu-icon">🧭</span>
+            <span>NavPath</span>
+        </button>
+        <button class="radial-menu-item" id="menu-settings" title="Settings">
+            <span class="menu-icon">⚙️</span>
+            <span>Settings</span>
+        </button>
+        <button class="radial-menu-item" id="menu-reload" title="Reload story">
+            <span class="menu-icon">↺</span>
+            <span>Reload</span>
+        </button>
+        <button class="radial-menu-item" id="menu-home" title="Main menu">
+            <span class="menu-icon">🏠</span>
+            <span>Home</span>
+        </button>
+    </div>
+    <button class="radial-menu-trigger" id="radial-menu-trigger" title="Menu">☰</button>
+</div>
+
+<!-- Scroll Status Bar -->
+<div class="scroll-status-bar" id="scroll-status-bar">
+    <span class="stat">📜 FINKS: <span class="stat-value" id="stat-finks-encountered">0</span></span>
+    <span class="stat">📥 Loaded: <span class="stat-value" id="stat-finks-loaded">0</span></span>
+    <span class="stat">🖋️ Compiled: <span class="stat-value" id="stat-finks-compiled">0</span></span>
+</div>
+
 <!-- Status Overlay -->
 <div id="status-overlay">
     <div class="status-spinner"></div>
