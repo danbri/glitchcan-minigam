@@ -535,26 +535,23 @@ window.FinkUI = {
         if (!videoContainer) {
             videoContainer = document.createElement('div');
             videoContainer.id = 'video-container';
-            videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;background:#000;margin:1rem auto;border-radius:8px;overflow:hidden;';
-            // Try to insert before image container, or fallback to story output
+            videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;min-height:180px;background:#111;margin:1rem auto;border-radius:8px;overflow:hidden;border:2px solid #f0f;';
+            // Insert before story output for better visibility
             console.log('[VIDEO-TRACE] this.elements:', this.elements);
-            console.log('[VIDEO-TRACE] imageContainer:', this.elements?.imageContainer);
-            if (this.elements.imageContainer?.parentNode) {
-                this.elements.imageContainer.parentNode.insertBefore(videoContainer, this.elements.imageContainer);
-                console.log('[VIDEO-TRACE] inserted before imageContainer');
-            } else if (this.elements.storyOutput) {
+            if (this.elements.storyOutput) {
                 this.elements.storyOutput.parentNode.insertBefore(videoContainer, this.elements.storyOutput);
                 console.log('[VIDEO-TRACE] inserted before storyOutput');
             } else {
-                // Last resort: append to main or body
-                const main = document.querySelector('main') || document.body;
-                main.insertBefore(videoContainer, main.firstChild);
-                console.log('[VIDEO-TRACE] inserted into main/body');
+                // Fallback: append to narrative view or main
+                const narrativeView = document.getElementById('narrative-view') || document.querySelector('main') || document.body;
+                narrativeView.insertBefore(videoContainer, narrativeView.firstChild);
+                console.log('[VIDEO-TRACE] inserted into narrative-view/main');
             }
             FinkUtils.debugLog('Video container created and inserted into DOM');
         }
 
-        videoContainer.innerHTML = '';
+        // Show loading state
+        videoContainer.innerHTML = '<p style="color:#f0f;padding:1rem;text-align:center;">Loading video...</p>';
         console.log('[VIDEO-TRACE] cleared container, isLocalFile:', isLocalFile);
 
         if (isLocalFile) {
@@ -565,16 +562,26 @@ window.FinkUI = {
 
             const video = document.createElement('video');
             video.controls = true;
-            video.preload = 'metadata';
+            video.preload = 'auto';
             video.playsInline = true;
-            video.style.cssText = 'width:100%;display:block;border-radius:8px;';
+            video.setAttribute('webkit-playsinline', 'true');
+            video.style.cssText = 'width:100%;min-height:180px;display:block;border-radius:8px;background:#000;';
             video.src = actualVideoPath;
 
-            video.onerror = () => {
-                console.log('[VIDEO-TRACE] video error event');
-                videoContainer.innerHTML = '<p style="color:#f66;padding:1rem;text-align:center;">Video failed to load</p>';
+            video.onloadeddata = () => {
+                console.log('[VIDEO-TRACE] video loaded successfully');
+                // Clear loading message, keep only the video
+                const loadingMsg = videoContainer.querySelector('p');
+                if (loadingMsg) loadingMsg.remove();
             };
 
+            video.onerror = (e) => {
+                console.log('[VIDEO-TRACE] video error event', e);
+                videoContainer.innerHTML = '<p style="color:#f66;padding:1rem;text-align:center;">Video failed to load<br><small style="opacity:0.7;">' + actualVideoPath + '</small></p>';
+            };
+
+            // Clear loading message and add video
+            videoContainer.innerHTML = '';
             videoContainer.appendChild(video);
             console.log('[VIDEO-TRACE] video element appended, src:', actualVideoPath);
             FinkUtils.debugLog('updateVideo: video element appended, src=' + actualVideoPath);
