@@ -10,6 +10,149 @@
     height: 100%;
 }
 
+/* --- Game Window Slider --- */
+.game-slider {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 280px;
+    z-index: 1500;
+    padding: 0.5em;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--zx-cyan);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.game-slider.hidden { display: none; }
+
+.game-slider-track {
+    position: relative;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    margin: 0.8em 0.5em;
+}
+
+.game-slider-snap {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+}
+
+.game-slider-snap:hover {
+    background: var(--zx-cyan);
+    border-color: var(--zx-cyan);
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+.game-slider-snap.active {
+    background: var(--zx-yellow);
+    border-color: var(--zx-yellow);
+    box-shadow: 0 0 10px var(--zx-yellow);
+}
+
+.game-slider-thumb {
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--zx-cyan), var(--zx-blue));
+    border: 2px solid #fff;
+    cursor: grab;
+    touch-action: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+    z-index: 10;
+}
+
+.game-slider-thumb:active {
+    cursor: grabbing;
+    box-shadow: 0 0 15px var(--zx-cyan);
+}
+
+.game-slider-thumb.dragging {
+    transition: none;
+}
+
+.game-slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0 0.3em;
+    margin-top: 0.3em;
+}
+
+/* --- State Classes for Slider --- */
+#minigame-view.state-full {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 2000;
+    border-radius: 0;
+}
+
+#minigame-view.state-embed {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--zx-cyan);
+    margin: 0.5em 0;
+}
+
+#minigame-view.state-mini-live {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 140px;
+    height: 100px;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--zx-green);
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 255, 100, 0.2);
+}
+
+#minigame-view.state-mini-paused {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 140px;
+    height: 100px;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--zx-mag);
+    z-index: 1000;
+    filter: grayscale(50%);
+}
+
+/* Smooth transitions between states */
+#minigame-view.slider-transitioning {
+    transition:
+        width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        top 0.25s ease-out,
+        left 0.25s ease-out,
+        right 0.25s ease-out,
+        bottom 0.25s ease-out,
+        border-radius 0.2s ease,
+        border-color 0.2s ease;
+}
+
 /* --- Minigame Control Bar --- */
 #minigame-controls {
     display: flex;
