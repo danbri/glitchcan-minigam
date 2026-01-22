@@ -198,6 +198,7 @@ This is a 2-engine demo: Ink storytelling + JavaScript minigames.
 + [🎮 Minigame Tour] -> minigame_tour
 + [🎬 Video Tour] -> video_tour
 + [🗺️ Adventures Tour] -> adventures_tour
++ [🌀 World Between Worlds] -> wbw_portal
 + [🔧 Dev Tools / Godmode] -> dev_tools
 + [View source on GitHub] -> github_links
 + [Return to start] -> intro
@@ -384,6 +385,13 @@ View all source: https://github.com/danbri/glitchcan-minigam/tree/main/inklet/de
 
 + [Back to ending] -> victory
 + [Play again?] -> restart
+
+=== wbw_portal ===
+#BG:#203
+# CLASS: info
+The World Between Worlds serves as a hub connecting all FINK adventures. It demonstrates cross-story navigation, minigame integration, and the pool metaphor for story transitions.
+# FINK: ../world-between-worlds.fink.js
++ [Enter the World Between Worlds] -> END
 
 === restart ===
 ~diamonds = 0

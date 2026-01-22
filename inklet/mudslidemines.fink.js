@@ -56,7 +56,11 @@ You emerge from the depths, pockets heavy with gems and treasures. The experienc
 + [Return to the world between worlds] -> Exit_To_Menu
 
 === Exit_To_Menu ===
+~ diamonds = diamonds + 1066
 The jungle shimmers and fades as you feel yourself pulled back toward the familiar glow of the pool's edge...
+
+You've collected {diamonds} diamonds from the Mudslide Mines — a legendary treasure haul!
+
 # FINK: world-between-worlds.fink.js
 -> END
 

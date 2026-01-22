@@ -1028,7 +1028,7 @@ Sometimes the truth is messier than fiction.
 
 ENDING: SHADOWS OF DOUBT
 
--> END
+-> manor_epilogue
 
 === resolution_tragic ===
 ~ player_reputation += 6
@@ -1039,7 +1039,7 @@ Victoria's confession of heartbreak - but not murder - leaves the case unresolve
 
 ENDING: THE BROKEN FAMILY
 
--> END
+-> manor_epilogue
 
 === resolution_twist ===
 ~ player_reputation += 10
@@ -1069,7 +1069,7 @@ ASHFORD: Every day since she died, I have looked at you and seen her face. Prote
 
 ENDING: BLOOD AND LOYALTY
 
--> END
+-> manor_epilogue
 
 === resolution_charles ===
 ~ player_reputation += 8
@@ -1078,7 +1078,7 @@ Charles confesses to manslaughter. His uncle's contempt, his gambling shame, the
 
 ENDING: THE PRODIGAL SON
 
--> END
+-> manor_epilogue
 
 === resolution_mrs_pemberton ===
 ~ player_reputation += 6
@@ -1087,7 +1087,7 @@ Mrs. Pemberton's cold manipulation is exposed. Whether she committed murder hers
 
 ENDING: THE SPIDER'S WEB
 
--> END
+-> manor_epilogue
 
 === resolution_ashford ===
 ~ player_reputation += 7
@@ -1096,7 +1096,7 @@ Ashford's confession reveals a man torn between duty and love. His devotion to E
 
 ENDING: THE FAITHFUL SERVANT
 
--> END
+-> manor_epilogue
 
 === resolution_conspiracy ===
 ~ player_reputation += 5
@@ -1105,7 +1105,7 @@ The household's web of secrets is exposed, but no single killer emerges. Perhaps
 
 ENDING: FAMILY SINS
 
--> END
+-> manor_epilogue
 
 === resolution_external ===
 ~ player_reputation += 7
@@ -1114,7 +1114,7 @@ Your investigation extends beyond the manor. Viktor Markov's reach is long, and 
 
 ENDING: THE LONG SHADOW
 
--> END
+-> manor_epilogue
 
 === partial_resolution ===
 ~ player_reputation += 3
@@ -1123,5 +1123,18 @@ The case remains officially open. Your investigation provided valuable leads, bu
 
 ENDING: UNFINISHED BUSINESS
 
+-> manor_epilogue
+
+=== manor_epilogue ===
+You leave Shane Manor behind, the weight of its secrets pressing on your mind. The case may be closed - or not - but something has changed in you.
+
++ [Return to your life] -> END
++ [As you walk the misty grounds, you notice a strange pool...] -> manor_portal
+
+=== manor_portal ===
+#BG:#203
+The pool reflects not the grey sky above, but something else entirely - other worlds, other stories waiting to be told...
+
+# FINK: world-between-worlds.fink.js
 -> END
 `

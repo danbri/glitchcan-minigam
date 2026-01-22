@@ -348,7 +348,8 @@ Final Score: {score}/8 (invalidated)
 
 Final Score: {score}/8 — you truly embody Hampstead!
 
--> END
++ [Rest in your achievement] -> END
++ [Sense a strange shimmer in the air...] -> world_between_worlds
 
 // ========================================
 // DIAMOND STORYLINES

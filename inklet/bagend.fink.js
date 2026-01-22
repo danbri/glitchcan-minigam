@@ -229,7 +229,8 @@ You decide that one adventure is quite enough for a respectable hobbit. You hide
 
 Sometimes, on clear evenings, you look toward the mountains and wonder what might have been...
 
--> END
++ [Settle into quiet contentment] -> END
++ [One evening, a strange pool appears in your garden...] -> portal_dive
 
 == Talk_To_Gandalf ==
 
