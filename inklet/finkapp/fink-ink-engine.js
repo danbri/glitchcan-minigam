@@ -336,18 +336,17 @@ window.FinkInkEngine = {
             FinkUI.replaceStoryContent(storyFragment);
             FinkUI.updateImageFromINKTags(this.story);
 
-            // Also check knot-level tags (tags at the start of a knot, not on specific lines)
-            // story.currentTags only returns LINE-level tags; knot-level tags need TagsForContentAtPath
+            // Also check knot-level tags for BASEHREF only
+            // NOTE: IMAGE tags are NOT processed here - they're already handled by
+            // updateImageFromINKTags via story.currentTags. Processing them here too
+            // caused duplicate images because tags at knot start appear in BOTH places.
             if (detectedKnot && this.story.TagsForContentAtPath) {
                 try {
                     const knotTags = this.story.TagsForContentAtPath(detectedKnot) || [];
                     FinkUtils.debugLog('Knot-level tags for ' + detectedKnot + ': [' + knotTags.join(', ') + ']');
                     knotTags.forEach(tag => {
-                        if (tag.includes('IMAGE:')) {
-                            const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
-                            FinkUtils.debugLog('Knot-level IMAGE tag: ' + imagePath);
-                            FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
-                        } else if (tag.includes('BASEHREF:')) {
+                        // IMAGE tags intentionally NOT processed here - handled by updateImageFromINKTags
+                        if (tag.includes('BASEHREF:')) {
                             let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
                             if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
                                 (basePath.startsWith("'") && basePath.endsWith("'"))) {
