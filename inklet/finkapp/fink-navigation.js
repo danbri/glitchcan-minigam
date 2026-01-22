@@ -546,20 +546,15 @@ window.FinkNavigation = {
                 FinkUI.clearChoices();
             }
 
-            // Process knot-level tags BEFORE continueStory since we know the exact knot name
-            // This ensures IMAGE tags at knot level are applied even if knot detection fails
+            // Process knot-level BASEHREF BEFORE continueStory (needed for line-level images)
+            // NOTE: Do NOT process IMAGE tags here - that's handled by fink-ink-engine.js
+            // after it creates the new section. Processing here caused duplicate images.
             if (FinkInkEngine.story.TagsForContentAtPath) {
                 try {
                     const knotTags = FinkInkEngine.story.TagsForContentAtPath(knotName) || [];
                     this.log(`Knot-level tags for ${knotName}: [${knotTags.join(', ')}]`);
                     knotTags.forEach(tag => {
-                        if (tag.includes('IMAGE:')) {
-                            const imagePath = tag.replace(/^IMAGE:\s*/, '').trim();
-                            this.log(`Processing knot-level IMAGE: ${imagePath}`);
-                            if (window.FinkUI) {
-                                FinkUI.updateImage(imagePath, FinkPlayer.mediaBasePath?.replace(/\/$/, ''));
-                            }
-                        } else if (tag.includes('BASEHREF:')) {
+                        if (tag.includes('BASEHREF:')) {
                             let basePath = tag.replace(/.*BASEHREF:\s*/, '').trim();
                             if ((basePath.startsWith('"') && basePath.endsWith('"')) ||
                                 (basePath.startsWith("'") && basePath.endsWith("'"))) {
@@ -569,6 +564,7 @@ window.FinkNavigation = {
                             FinkPlayer.mediaBasePath = basePath;
                             this.log(`Knot-level BASEHREF: ${basePath}`);
                         }
+                        // IMAGE tags are NOT processed here - handled by fink-ink-engine.js
                     });
                 } catch (e) {
                     this.log(`Error getting knot tags: ${e.message}`);
