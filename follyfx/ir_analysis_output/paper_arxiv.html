@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Principal Component Analysis of Acoustic Impulse Responses</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 1in 0.75in;
+            @bottom-center {
+                content: counter(page);
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 10pt;
+            }
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            line-height: 1.2;
+            column-count: 2;
+            column-gap: 0.25in;
+            text-align: justify;
+            hyphens: auto;
+        }
+
+        h1 {
+            column-span: all;
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+            margin-top: 0;
+        }
+
+        .authors {
+            column-span: all;
+            text-align: center;
+            font-size: 11pt;
+            margin-bottom: 0.3em;
+        }
+
+        .affiliation {
+            column-span: all;
+            text-align: center;
+            font-size: 9pt;
+            font-style: italic;
+            margin-bottom: 1em;
+        }
+
+        .abstract-header {
+            font-weight: bold;
+            font-size: 9pt;
+            text-align: center;
+            margin-top: 0.5em;
+        }
+
+        .abstract {
+            column-span: all;
+            font-size: 9pt;
+            margin: 0 0.5in 1em 0.5in;
+            text-align: justify;
+        }
+
+        .keywords {
+            column-span: all;
+            font-size: 9pt;
+            margin: 0 0.5in 1.5em 0.5in;
+        }
+
+        h2 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            text-transform: uppercase;
+        }
+
+        h3 {
+            font-size: 10pt;
+            font-weight: bold;
+            font-style: italic;
+            margin-top: 0.8em;
+            margin-bottom: 0.3em;
+        }
+
+        h4 {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-top: 0.5em;
+            margin-bottom: 0.2em;
+        }
+
+        p {
+            margin: 0 0 0.5em 0;
+            text-indent: 1em;
+        }
+
+        p:first-of-type, h2 + p, h3 + p, h4 + p {
+            text-indent: 0;
+        }
+
+        table {
+            font-size: 9pt;
+            border-collapse: collapse;
+            margin: 0.5em auto;
+            width: 100%;
+        }
+
+        th, td {
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            padding: 3px 6px;
+            text-align: center;
+        }
+
+        th {
+            font-weight: bold;
+            border-bottom: 1px solid black;
+        }
+
+        tbody tr:first-child td {
+            border-top: none;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 1px solid black;
+        }
+
+        .caption {
+            font-size: 9pt;
+            text-align: center;
+            margin: 0.3em 0 0.8em 0;
+        }
+
+        .caption strong {
+            font-weight: bold;
+        }
+
+        .figure {
+            margin: 1em 0;
+            text-align: center;
+        }
+
+        .equation {
+            text-align: center;
+            margin: 0.5em 0;
+            font-style: italic;
+        }
+
+        ul, ol {
+            margin: 0.3em 0 0.5em 1.5em;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 0.2em;
+        }
+
+        .references {
+            font-size: 9pt;
+        }
+
+        .references p {
+            text-indent: -1em;
+            padding-left: 1em;
+            margin-bottom: 0.3em;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+        }
+
+        .footnote {
+            font-size: 8pt;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Principal Component Analysis of Acoustic Impulse Responses:<br>Discovering Interpretable Latent Dimensions</h1>
+
+<div class="authors">Anonymous Authors</div>
+<div class="affiliation">January 2026</div>
+
+<div class="abstract-header">Abstract</div>
+<div class="abstract">
+We investigate whether principal component analysis (PCA) can discover interpretable perceptual dimensions in acoustic impulse responses (IRs). Using 115 real-world IRs from the EchoThief library, we compare two approaches: (1) SVD directly on time-domain waveforms, and (2) PCA on extracted acoustic features. We find that feature-based PCA successfully recovers three interpretable axes&mdash;<em>clarity</em>, <em>spectral brightness</em>, and <em>bass content</em>&mdash;capturing 85% of variance in just three components. In contrast, raw waveform SVD spreads variance thinly across many components (31% in first 10 PCs) and correlates poorly with perceptual acoustic properties. These results suggest that while raw SVD on IRs is mathematically valid, it captures recording artifacts rather than room acoustics, and that feature engineering remains essential for interpretable IR parameterization.
+</div>
+
+<div class="keywords"><strong>Keywords:</strong> impulse response, PCA, SVD, room acoustics, dimensionality reduction</div>
+
+<h2>1. Introduction</h2>
+
+<p>Impulse responses (IRs) characterize the acoustic properties of physical spaces and are widely used in convolution reverb, acoustic simulation, and audio post-production. A natural question arises: <em>can we discover a compact, interpretable parameterization of IRs through unsupervised learning?</em></p>
+
+<p>Ideally, we would like to find axes such as:</p>
+<ul>
+    <li><em>"Size-ness"</em> &mdash; small room vs. cathedral</li>
+    <li><em>"Material-ness"</em> &mdash; hard/reflective vs. soft/absorptive</li>
+    <li><em>"Brightness-ness"</em> &mdash; dark vs. bright spectral character</li>
+</ul>
+
+<p>Previous work in parametric reverb design [1] decomposes IRs into physically meaningful components (early reflections, modal resonances, late diffuse tail), but this is model-driven rather than data-driven. We ask: <em>what does pure SVD on a corpus of IRs reveal?</em></p>
+
+<h3>1.1 Research Questions</h3>
+
+<p>We address three questions: (1) Does SVD on raw IR waveforms yield interpretable principal components? (2) How does this compare to PCA on engineered acoustic features? (3) Do unsupervised clusters correspond to semantic room categories?</p>
+
+<h2>2. Methods</h2>
+
+<h3>2.1 Dataset</h3>
+
+<p>We used the EchoThief Impulse Response Library [3], containing 115 IRs recorded in diverse real-world locations across 8 categories: Underground (25), Underpasses (23), Miscellaneous (26), Stairwells (7), Brutalism (11), Nature (11), Venues (5), and Recreation (7). All IRs were resampled to 44.1 kHz and truncated/padded to 2 seconds (88,200 samples).</p>
+
+<h3>2.2 Experiment 1: Raw Waveform SVD</h3>
+
+<p>Each IR was treated as an 88,200-dimensional vector. The data matrix <strong>X</strong> &isin; &#8477;<sup>115&times;88200</sup> was L2-normalized, mean-centered, and decomposed via SVD:</p>
+
+<div class="equation"><strong>X</strong> = <strong>U&Sigma;V</strong><sup>T</sup></div>
+
+<p>The rows of <strong>V</strong><sup>T</sup> represent "eigen-IRs"&mdash;orthogonal basis functions that capture maximum variance.</p>
+
+<h3>2.3 Experiment 2: Feature-Based PCA</h3>
+
+<p>We extracted 11 standard acoustic features from each IR: RT60 (reverberation time), EDT (early decay time), C50 and C80 (clarity ratios), D50 (definition), Ts (centre time), spectral centroid, spectral rolloff, bass ratio, early reflection density, and peak-to-tail ratio. The feature matrix <strong>F</strong> &isin; &#8477;<sup>115&times;11</sup> was standardized and decomposed via SVD.</p>
+
+<h3>2.4 Clustering and Visualization</h3>
+
+<p>We applied K-means clustering (k=6) and t-SNE visualization to both the raw SVD loadings and feature PCA scores.</p>
+
+<h2>3. Results</h2>
+
+<h3>3.1 Variance Explained</h3>
+
+<table>
+    <thead>
+        <tr><th>Component</th><th>Raw SVD</th><th>Feature PCA</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>PC1</td><td>8.0%</td><td><strong>52.6%</strong></td></tr>
+        <tr><td>PC2</td><td>6.3%</td><td><strong>25.7%</strong></td></tr>
+        <tr><td>PC3</td><td>3.4%</td><td><strong>7.1%</strong></td></tr>
+        <tr><td>Cumulative (PC1-3)</td><td>17.7%</td><td><strong>85.4%</strong></td></tr>
+        <tr><td>Cumulative (PC1-10)</td><td>31.2%</td><td>99.4%</td></tr>
+    </tbody>
+</table>
+<div class="caption"><strong>Table 1:</strong> Variance explained by principal components.</div>
+
+<p>The feature-based approach achieves dramatic dimensionality reduction: 3 components capture 85% of variance. Raw SVD spreads variance across many components, suggesting high intrinsic dimensionality or noise dominance.</p>
+
+<h3>3.2 Component Interpretation</h3>
+
+<h4>Feature PCA Components</h4>
+
+<p><strong>PC1 (52.6% variance): "Clarity/Definition"</strong> &mdash; High loadings on C50 (-0.40), C80 (-0.40), D50 (-0.39); low loadings on Ts (+0.38). Interpretation: Dry/direct &harr; Wet/reverberant.</p>
+
+<p><strong>PC2 (25.7% variance): "Spectral Brightness"</strong> &mdash; High loadings on spectral centroid (+0.55), spectral rolloff (+0.55), early reflection density (+0.51); low loadings on bass ratio (-0.34). Interpretation: Dark &harr; Bright.</p>
+
+<p><strong>PC3 (7.1% variance): "Bass Content"</strong> &mdash; Dominated by bass ratio (-0.91). Interpretation: Boomy &harr; Thin.</p>
+
+<h4>Raw SVD Components</h4>
+
+<p>The raw SVD components show weak correlations with acoustic features. Raw PC1 correlates most strongly with spectral features (spectral rolloff: -0.49, spectral centroid: -0.38), not reverb time, suggesting it captures frequency response variations rather than room acoustics.</p>
+
+<h3>3.3 Eigen-IR Analysis</h3>
+
+<table>
+    <thead>
+        <tr><th>Eigen-IR</th><th>Peak Time</th><th>Early Energy</th><th>Spectral Centroid</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>PC1</td><td>0.4 ms</td><td>98.3%</td><td>2,763 Hz</td></tr>
+        <tr><td>PC2</td><td>0.6 ms</td><td>98.2%</td><td>3,546 Hz</td></tr>
+        <tr><td>PC3</td><td>0.3 ms</td><td>96.9%</td><td>5,174 Hz</td></tr>
+        <tr><td>PC4</td><td>0.5 ms</td><td>94.4%</td><td>4,230 Hz</td></tr>
+        <tr><td>PC5</td><td>0.5 ms</td><td>92.8%</td><td>5,427 Hz</td></tr>
+    </tbody>
+</table>
+<div class="caption"><strong>Table 2:</strong> Properties of the first 5 eigen-IRs.</div>
+
+<p>All eigen-IRs concentrate energy in the early portion (&gt;92% in first 50ms), with progressively higher spectral centroids. This indicates raw SVD primarily captures variations in direct sound and early reflections.</p>
+
+<h3>3.4 Cluster Analysis</h3>
+
+<p>K-means clusters (k=6) on feature PCA scores show partial correspondence with EchoThief categories. Clusters 4 and 5 show category coherence (Underground/Stairwells at 83% and Underpasses at 55%), but most clusters are heterogeneous. This suggests EchoThief categories are semantic/visual rather than acoustic.</p>
+
+<h3>3.5 Cross-Space Correlation</h3>
+
+<p>Correlation between raw SVD and feature PCA components is weak. The strongest correlation (0.40) is between raw PC1 and feature PC2 (brightness), consistent with raw SVD capturing spectral characteristics.</p>
+
+<h2>4. Discussion</h2>
+
+<h3>4.1 Why Raw SVD Fails</h3>
+
+<p>Our hypothesis for the poor performance of raw waveform SVD:</p>
+<ul>
+    <li><strong>Alignment problem:</strong> IRs have different effective lengths. Zero-padding creates artificial structure.</li>
+    <li><strong>Phase sensitivity:</strong> SVD on time-domain signals finds components that minimize L2 error, but small phase shifts create large L2 differences while being perceptually negligible.</li>
+    <li><strong>Recording artifacts:</strong> Microphone frequency response, noise floor, and gain variations dominate over room acoustic properties.</li>
+    <li><strong>High intrinsic dimensionality:</strong> The late reverb tail is essentially filtered noise, which has high dimensionality that SVD cannot compress efficiently.</li>
+</ul>
+
+<h3>4.2 Why Feature PCA Succeeds</h3>
+
+<p>Feature extraction acts as a perceptually-informed bottleneck: RT60, C80, etc. are designed to capture human-audible properties; they are invariant to phase, gain, and many recording artifacts; and the feature space is low-dimensional by construction (11D vs 88,200D). The discovered axes&mdash;clarity, brightness, bass&mdash;correspond to well-known perceptual dimensions in room acoustics literature.</p>
+
+<h3>4.3 Implications for IR Parameterization</h3>
+
+<p>For applications requiring interpretable IR control (e.g., audio plugins, game audio): use feature-based representations, not raw waveforms; 3 parameters suffice to capture 85% of acoustic variation; and categories like "cathedral" or "bathroom" may not map cleanly to acoustic space.</p>
+
+<h3>4.4 Limitations</h3>
+
+<p>Our study has several limitations: dataset limited to 115 IRs from one source; synthetic IR generation for interpolation not tested; perceptual validation (listening tests) not performed; and alternative decompositions (NMF, autoencoders) not compared.</p>
+
+<h2>5. Conclusion</h2>
+
+<p>We find that SVD on raw IR waveforms does not yield interpretable acoustic dimensions. Variance is spread across many components that correlate with spectral/recording properties rather than perceptual room characteristics.</p>
+
+<p>In contrast, PCA on acoustic features successfully discovers three interpretable axes: (1) <strong>Clarity</strong> (dry &harr; reverberant), (2) <strong>Brightness</strong> (dark &harr; bright), and (3) <strong>Bass content</strong> (boomy &harr; thin). These three dimensions capture 85% of variance in 115 real-world IRs, suggesting a practical parameterization for reverb design and acoustic space interpolation.</p>
+
+<p>Future work should validate with perceptual experiments, test interpolation in feature space for IR morphing, compare with learned representations (variational autoencoders), and apply to larger, more diverse IR corpora.</p>
+
+<h2>References</h2>
+
+<div class="references">
+<p>[1] V. V&auml;lim&auml;ki, J. D. Parker, L. Savioja, J. O. Smith, and J. S. Abel, "Fifty years of artificial reverberation," <em>IEEE Trans. Audio, Speech, Lang. Process.</em>, vol. 20, no. 5, pp. 1421-1448, 2012.</p>
+
+<p>[2] ISO 3382-1:2009. Acoustics &mdash; Measurement of room acoustic parameters.</p>
+
+<p>[3] EchoThief Impulse Response Library. http://www.echothief.com/</p>
+
+<p>[4] J. M. Jot, "Real-time spatial processing of sounds for music, multimedia and interactive human-computer interfaces," <em>Multimedia Systems</em>, vol. 7, no. 1, pp. 55-69, 1999.</p>
+
+<p>[5] J. P&auml;tynen, S. Tervo, and T. Lokki, "Analysis of concert hall acoustics via visualizations of time-frequency and spatiotemporal responses," <em>J. Acoust. Soc. Am.</em>, vol. 123, no. 5, p. 3806, 2008.</p>
+</div>
+
+<h2>Appendix A: Extreme Examples</h2>
+
+<table>
+    <thead>
+        <tr><th>Property</th><th>IR Name</th><th>Category</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Most reverberant</td><td>FatMansSqueeze</td><td>Nature</td><td>PC1 = -0.18</td></tr>
+        <tr><td>Most direct/dry</td><td>SquareVictoriaDome</td><td>Underground</td><td>PC1 = +0.21</td></tr>
+        <tr><td>Brightest</td><td>LittlefieldLobby</td><td>Miscellaneous</td><td>PC2 = +0.22</td></tr>
+        <tr><td>Darkest</td><td>ConventionCenterSteps</td><td>Stairwells</td><td>PC2 = -0.16</td></tr>
+    </tbody>
+</table>
+<div class="caption"><strong>Table 3:</strong> IRs at extremes of the principal component space.</div>
+
+</body>
+</html>

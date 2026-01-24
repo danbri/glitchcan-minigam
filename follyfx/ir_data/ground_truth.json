@@ -1,0 +1,177 @@
+{
+  "small_bright_room": {
+    "rt60": 0.3,
+    "predelay": 5,
+    "early_density": 0.8,
+    "spectral_tilt": 0.3,
+    "room_size": 0.2
+  },
+  "small_dark_room": {
+    "rt60": 0.3,
+    "predelay": 5,
+    "early_density": 0.8,
+    "spectral_tilt": -0.5,
+    "room_size": 0.2
+  },
+  "medium_room": {
+    "rt60": 0.6,
+    "predelay": 10,
+    "early_density": 0.5,
+    "spectral_tilt": 0,
+    "room_size": 0.4
+  },
+  "medium_bright": {
+    "rt60": 0.6,
+    "predelay": 10,
+    "early_density": 0.5,
+    "spectral_tilt": 0.4,
+    "room_size": 0.4
+  },
+  "medium_dark": {
+    "rt60": 0.6,
+    "predelay": 10,
+    "early_density": 0.5,
+    "spectral_tilt": -0.4,
+    "room_size": 0.4
+  },
+  "large_hall": {
+    "rt60": 1.2,
+    "predelay": 20,
+    "early_density": 0.3,
+    "spectral_tilt": 0,
+    "room_size": 0.7
+  },
+  "large_dark_hall": {
+    "rt60": 1.2,
+    "predelay": 20,
+    "early_density": 0.3,
+    "spectral_tilt": -0.3,
+    "room_size": 0.7
+  },
+  "large_bright_hall": {
+    "rt60": 1.2,
+    "predelay": 20,
+    "early_density": 0.3,
+    "spectral_tilt": 0.3,
+    "room_size": 0.7
+  },
+  "cathedral": {
+    "rt60": 2.5,
+    "predelay": 40,
+    "early_density": 0.2,
+    "spectral_tilt": -0.2,
+    "room_size": 0.9
+  },
+  "cathedral_bright": {
+    "rt60": 2.5,
+    "predelay": 40,
+    "early_density": 0.2,
+    "spectral_tilt": 0.2,
+    "room_size": 0.9
+  },
+  "huge_reverberant": {
+    "rt60": 4.0,
+    "predelay": 60,
+    "early_density": 0.1,
+    "spectral_tilt": 0,
+    "room_size": 1.0
+  },
+  "tight_booth": {
+    "rt60": 0.15,
+    "predelay": 2,
+    "early_density": 0.9,
+    "spectral_tilt": 0.1,
+    "room_size": 0.1
+  },
+  "bathroom_small": {
+    "rt60": 0.4,
+    "predelay": 3,
+    "early_density": 0.9,
+    "spectral_tilt": 0.2,
+    "room_size": 0.15
+  },
+  "bathroom_large": {
+    "rt60": 0.6,
+    "predelay": 5,
+    "early_density": 0.7,
+    "spectral_tilt": 0.3,
+    "room_size": 0.25
+  },
+  "concrete_stairwell": {
+    "rt60": 1.5,
+    "predelay": 15,
+    "early_density": 0.6,
+    "spectral_tilt": 0.1,
+    "room_size": 0.5
+  },
+  "wooden_hall": {
+    "rt60": 0.8,
+    "predelay": 12,
+    "early_density": 0.4,
+    "spectral_tilt": -0.3,
+    "room_size": 0.5
+  },
+  "gymnasium": {
+    "rt60": 1.8,
+    "predelay": 25,
+    "early_density": 0.3,
+    "spectral_tilt": 0.1,
+    "room_size": 0.8
+  },
+  "parking_garage": {
+    "rt60": 2.2,
+    "predelay": 30,
+    "early_density": 0.4,
+    "spectral_tilt": 0.2,
+    "room_size": 0.7
+  },
+  "tunnel": {
+    "rt60": 3.0,
+    "predelay": 50,
+    "early_density": 0.2,
+    "spectral_tilt": 0,
+    "room_size": 0.6
+  },
+  "cave": {
+    "rt60": 3.5,
+    "predelay": 45,
+    "early_density": 0.15,
+    "spectral_tilt": -0.4,
+    "room_size": 0.85
+  },
+  "church_small": {
+    "rt60": 1.0,
+    "predelay": 15,
+    "early_density": 0.4,
+    "spectral_tilt": -0.1,
+    "room_size": 0.5
+  },
+  "church_large": {
+    "rt60": 2.0,
+    "predelay": 30,
+    "early_density": 0.25,
+    "spectral_tilt": -0.2,
+    "room_size": 0.8
+  },
+  "concert_hall": {
+    "rt60": 1.8,
+    "predelay": 25,
+    "early_density": 0.35,
+    "spectral_tilt": 0,
+    "room_size": 0.75
+  },
+  "opera_house": {
+    "rt60": 1.5,
+    "predelay": 22,
+    "early_density": 0.4,
+    "spectral_tilt": 0.1,
+    "room_size": 0.7
+  },
+  "studio_live": {
+    "rt60": 0.4,
+    "predelay": 8,
+    "early_density": 0.6,
+    "spectral_tilt": 0,
+    "room_size": 0.3
+  }
+}
