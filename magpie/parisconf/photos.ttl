@@ -1,0 +1,1967 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema: <http://schema.org/> .
+@prefix pc51: <http://example.org/parisconf1951/> .
+
+# =============================================================================
+# Paris Conference 1951 - Page Image Index
+# "Les Machines a Calculer et la Pensee Humaine"
+# Computing Machines and Human Thought
+# Institut Blaise Pascal, CNRS, Paris, 8-13 January 1951
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Custom Vocabulary (Warren/McCarthy style)
+# -----------------------------------------------------------------------------
+
+pc51:PageImage a rdfs:Class ;
+    rdfs:label "Conference Page Image"@en ;
+    rdfs:comment "A scanned page image from the 1951 Paris conference proceedings"@en .
+
+pc51:pageNumber a rdf:Property ;
+    rdfs:label "page number"@en ;
+    rdfs:domain pc51:PageImage ;
+    rdfs:range xsd:integer .
+
+pc51:contentType a rdf:Property ;
+    rdfs:label "content type"@en ;
+    rdfs:comment "Type of content on the page: programme, participant-list, abstract, paper, administrative, etc."@en .
+
+pc51:sessionSection a rdf:Property ;
+    rdfs:label "session section"@en ;
+    rdfs:comment "Conference section: section-1 (machines), section-2 (applications), section-3 (logic/nervous system)"@en .
+
+pc51:author a rdf:Property ;
+    rdfs:label "author"@en ;
+    rdfs:comment "Author of the paper or communication on this page"@en .
+
+pc51:paperTitle a rdf:Property ;
+    rdfs:label "paper title"@en ;
+    rdfs:comment "Title of the paper or communication"@en .
+
+pc51:hasTranscription a rdf:Property ;
+    rdfs:label "has transcription"@en ;
+    rdfs:comment "Link to markdown transcription file"@en .
+
+pc51:isTranslationOf a rdf:Property ;
+    rdfs:label "is translation of"@en ;
+    rdfs:comment "This page is a translation of another page"@en .
+
+# -----------------------------------------------------------------------------
+# The Conference Event
+# -----------------------------------------------------------------------------
+
+pc51:Conference1951 a schema:Event ;
+    dc:title "Les Machines a Calculer et la Pensee Humaine"@fr ;
+    dc:title "Computing Machines and Human Thought"@en ;
+    dc:description "International Colloquium on Computing Machines and Human Thought, organized by Institut Blaise Pascal, CNRS"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    schema:startDate "1951-01-08"^^xsd:date ;
+    schema:endDate "1951-01-13"^^xsd:date ;
+    schema:location "Paris, France" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    foaf:topic "computing machines", "cybernetics", "nervous system", "human thought" .
+
+# -----------------------------------------------------------------------------
+# The Source PDF Document
+# -----------------------------------------------------------------------------
+
+pc51:SourcePDF a foaf:Document ;
+    dc:title "Conference Proceedings - Les Machines a Calculer et la Pensee Humaine"@fr ;
+    dc:format "application/pdf" ;
+    dc:source "Computer History Museum archive" ;
+    dc:identifier "102805935-05-01-acc.pdf" ;
+    dcterms:extent "128 pages" ;
+    dc:relation pc51:Conference1951 .
+
+# =============================================================================
+# Page Images (128 pages)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Pages 1-9: Conference Programme and Administrative Information
+# -----------------------------------------------------------------------------
+
+pc51:page-001 a pc51:PageImage ;
+    pc51:pageNumber 1 ;
+    dc:title "Page 1 - Title Page and Section 1 Programme"@en ;
+    dc:description "Title page with portrait of Blaise Pascal; Section 1 programme for Monday 8 January - Recent Progress in Large Calculating Machine Technology"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "programme" ;
+    pc51:sessionSection "section-1" ;
+    foaf:depicts "conference title", "Blaise Pascal portrait", "programme schedule" ;
+    foaf:topic "Mark II", "Mark III", "Mark IV", "H.H. Aiken", "A.D. Booth", "magnetic storage", "E. Stiefel", "Zuse", "E.W. Cannon", "NBS", "F.M. Colebrook", "ACE", "NPL" ;
+    pc51:hasTranscription <original-fr-p-001.md> .
+
+pc51:page-002 a pc51:PageImage ;
+    pc51:pageNumber 2 ;
+    dc:title "Page 2 - Verso with Library Stamps"@en ;
+    dc:description "Verso page with library stamps from Institut fur Praktische Mathematik, TH Darmstadt"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "de" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "library stamp", "catalog number" ;
+    pc51:hasTranscription <original-fr-p-002.md> .
+
+pc51:page-003 a pc51:PageImage ;
+    pc51:pageNumber 3 ;
+    dc:title "Page 3 - Programme Monday-Tuesday, Section 2 Introduction"@en ;
+    dc:description "Programme continuation: Monday lab visit, Tuesday sessions; Introduction to Section 2 - Mathematical and Applied Science Problems"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "programme" ;
+    pc51:sessionSection "section-1", "section-2" ;
+    foaf:depicts "programme schedule" ;
+    foaf:topic "F.C. Williams", "Manchester", "analog machines", "tripole", "rheolelectric analogies", "L. Malavard", "M. Caquot" ;
+    pc51:hasTranscription <original-fr-p-003.md> .
+
+pc51:page-004 a pc51:PageImage ;
+    pc51:pageNumber 4 ;
+    dc:title "Page 4 - Programme Wednesday-Thursday, Section 3 Introduction"@en ;
+    dc:description "Programme continuation: Wednesday-Thursday sessions; Introduction to Section 3 - Large Machines, Logic, and Nervous System Physiology"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "programme" ;
+    pc51:sessionSection "section-2", "section-3" ;
+    foaf:depicts "programme schedule" ;
+    foaf:topic "F.H. van den Dungen", "wave equation", "D.R. Hartree", "A. van Wijngaarden", "M.V. Wilkes", "EDSAC", "BARK", "Louis Lapicque", "W. Grey Walter", "H. Gastaud" ;
+    pc51:hasTranscription <original-fr-p-004.md> .
+
+pc51:page-005 a pc51:PageImage ;
+    pc51:pageNumber 5 ;
+    dc:title "Page 5 - Programme Friday-Saturday, Closing Banquet"@en ;
+    dc:description "Programme continuation: Friday-Saturday sessions; Torres Quevedo machines, Ashby homeostatic, Grey Walter artificial animals, Wiener on Gestalt, McCulloch, closing banquet"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "programme" ;
+    pc51:sessionSection "section-3" ;
+    foaf:depicts "programme schedule", "decorative ornament" ;
+    foaf:topic "Torres Quevedo", "chess automaton", "W.R. Ashby", "homeostatic", "W. Grey Walter", "artificial animals", "N. Wiener", "Gestalt", "A.M. Uttley", "W.S. McCulloch", "R. Lorente de No", "P. Chauchard", "L. Delpech", "cybernetics", "L. Couffignal" ;
+    pc51:hasTranscription <original-fr-p-005.md> .
+
+pc51:page-006 a pc51:PageImage ;
+    pc51:pageNumber 6 ;
+    dc:title "Page 6 - Notice sur le Colloque Title"@en ;
+    dc:description "Section divider page: Notice on the Colloquium"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "section title" ;
+    pc51:hasTranscription <original-fr-p-006.md> .
+
+pc51:page-007 a pc51:PageImage ;
+    pc51:pageNumber 7 ;
+    dc:title "Page 7 - Organization Committee"@en ;
+    dc:description "Organizing committee members: President Joseph Peres, Louis Couffignal, staff members; acknowledgments to CNDP, Ecole Estienne, Logabax"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "organization committee", "acknowledgments" ;
+    foaf:topic "Joseph Peres", "Louis Couffignal", "CNDP", "Ecole Estienne", "Logabax", "Audibel" ;
+    pc51:hasTranscription <original-fr-p-007.md> .
+
+pc51:page-008 a pc51:PageImage ;
+    pc51:pageNumber 8 ;
+    dc:title "Page 8 - Secretariat and Conference Procedures"@en ;
+    dc:description "Conference secretariat location, working sessions, study meetings, personal invitations, publication procedures"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "secretariat information", "conference procedures" ;
+    pc51:hasTranscription <original-fr-p-008.md> .
+
+pc51:page-009 a pc51:PageImage ;
+    pc51:pageNumber 9 ;
+    dc:title "Page 9 - Practical Information and Subscriptions"@en ;
+    dc:description "Proceedings subscription, book exhibition, communal meals, banquet details, excursions, correspondence"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "practical information", "subscription forms" ;
+    pc51:hasTranscription <original-fr-p-009.md> .
+
+# -----------------------------------------------------------------------------
+# Pages 10-18: Alphabetical List of Conference Participants
+# -----------------------------------------------------------------------------
+
+pc51:page-010 a pc51:PageImage ;
+    pc51:pageNumber 10 ;
+    dc:title "Page 10 - Participant List (A-B)"@en ;
+    dc:description "Alphabetical list of conference members: Aiken through Bezard; includes nationalities (USA, France, GB, Spain, Netherlands, Belgium, Italy, Sweden, Switzerland, Germany, Brazil)"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    foaf:topic "H.H. Aiken", "Harvard", "W.R. Ashby", "Barnwood House", "J.M. Bennett", "Ferranti" ;
+    pc51:hasTranscription <original-fr-p-010.md> .
+
+pc51:page-011 a pc51:PageImage ;
+    pc51:pageNumber 11 ;
+    dc:title "Page 11 - Participant List (B-C)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-011.md> .
+
+pc51:page-012 a pc51:PageImage ;
+    pc51:pageNumber 12 ;
+    dc:title "Page 12 - Participant List (C-D)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-012.md> .
+
+pc51:page-013 a pc51:PageImage ;
+    pc51:pageNumber 13 ;
+    dc:title "Page 13 - Participant List (D-G)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-013.md> .
+
+pc51:page-014 a pc51:PageImage ;
+    pc51:pageNumber 14 ;
+    dc:title "Page 14 - Participant List (G-L)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-014.md> .
+
+pc51:page-015 a pc51:PageImage ;
+    pc51:pageNumber 15 ;
+    dc:title "Page 15 - Participant List (M-P)"@en ;
+    dc:description "Alphabetical list of conference members: Maison Rouge through Peltier"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    foaf:topic "IBM", "L. Malavard", "C. Palm", "Stockholm" ;
+    pc51:hasTranscription <original-fr-p-015.md> .
+
+pc51:page-016 a pc51:PageImage ;
+    pc51:pageNumber 16 ;
+    dc:title "Page 16 - Participant List (P-S)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-016.md> .
+
+pc51:page-017 a pc51:PageImage ;
+    pc51:pageNumber 17 ;
+    dc:title "Page 17 - Participant List (S-V)"@en ;
+    dc:description "Alphabetical list of conference members continued"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-017.md> .
+
+pc51:page-018 a pc51:PageImage ;
+    pc51:pageNumber 18 ;
+    dc:title "Page 18 - Participant List (V-Z)"@en ;
+    dc:description "Alphabetical list of conference members: end of list"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "participant-list" ;
+    foaf:depicts "attendee list" ;
+    pc51:hasTranscription <original-fr-p-018.md> .
+
+# -----------------------------------------------------------------------------
+# Pages 19-80: Abstracts (French versions, followed by some English papers)
+# -----------------------------------------------------------------------------
+
+pc51:page-019 a pc51:PageImage ;
+    pc51:pageNumber 19 ;
+    dc:title "Page 19 - Aiken: Mark II, III, IV (French)"@en ;
+    dc:description "H.H. Aiken: Report on Mark II, Mark III, Mark IV - French abstract"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "H.H. Aiken" ;
+    pc51:paperTitle "Report on Mark II, Mark III, Mark IV" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "Harvard computers", "Mark II", "Mark III", "Mark IV" ;
+    pc51:hasTranscription <original-fr-p-019.md> .
+
+pc51:page-020 a pc51:PageImage ;
+    pc51:pageNumber 20 ;
+    dc:title "Page 20 - Booth: Magnetic Automatic Calculating Machine (French)"@en ;
+    dc:description "A.D. Booth: A Magnetic Automatic Calculating Machine - French abstract; SEC prototype 250 valves, APEXC 275 valves with magnetic drum"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "A.D. Booth" ;
+    pc51:paperTitle "Une Machine a Calculer Automatique et Magnetique" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "Birkbeck College", "SEC", "APEXC", "magnetic drum", "vacuum tubes" ;
+    pc51:hasTranscription <original-fr-p-020.md> .
+
+pc51:page-021 a pc51:PageImage ;
+    pc51:pageNumber 21 ;
+    dc:title "Page 21 - Stiefel: Zuse Machine at ETH Zurich (French)"@en ;
+    dc:description "E. Stiefel: The Zuse Machine at ETH Zurich and its Application to Integration - French abstract"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E. Stiefel" ;
+    pc51:paperTitle "La machine Zuse de l'Ecole Polytechnique Federale de Zurich" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "Konrad Zuse", "ETH Zurich", "integration" ;
+    pc51:hasTranscription <original-fr-p-021.md> .
+
+pc51:page-022 a pc51:PageImage ;
+    pc51:pageNumber 22 ;
+    dc:title "Page 22 - Cannon: NBS Computers (French) page 1"@en ;
+    dc:description "E.W. Cannon: Development of Electronic Digital Computers at NBS - French abstract page 1"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    pc51:paperTitle "Development of Electronic Digital Computers at the National Bureau of Standards" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "NBS", "SEAC", "SWAC", "electronic computers" ;
+    pc51:hasTranscription <original-fr-p-022.md> .
+
+pc51:page-023 a pc51:PageImage ;
+    pc51:pageNumber 23 ;
+    dc:title "Page 23 - Cannon: NBS Computers (French) page 2"@en ;
+    dc:description "E.W. Cannon: NBS Computers - French abstract continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    foaf:depicts "paper abstract" ;
+    pc51:hasTranscription <original-fr-p-023.md> .
+
+pc51:page-024 a pc51:PageImage ;
+    pc51:pageNumber 24 ;
+    dc:title "Page 24 - Cannon: NBS Computers (French) page 3"@en ;
+    dc:description "E.W. Cannon: NBS Computers - French abstract continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    foaf:depicts "paper abstract" ;
+    pc51:hasTranscription <original-fr-p-024.md> .
+
+pc51:page-025 a pc51:PageImage ;
+    pc51:pageNumber 25 ;
+    dc:title "Page 25 - Cannon: NBS Computers (French) page 4"@en ;
+    dc:description "E.W. Cannon: NBS Computers - binary vs decimal, serial vs parallel, magnetic drum, acoustic delay, SEAC, SWAC details"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "binary computers", "magnetic drum", "acoustic delay", "electrostatic storage" ;
+    pc51:hasTranscription <original-fr-p-025.md> .
+
+pc51:page-026 a pc51:PageImage ;
+    pc51:pageNumber 26 ;
+    dc:title "Page 26 - Colebrook: NPL ACE Pilot Model (French)"@en ;
+    dc:description "F.M. Colebrook: The Pilot Model of the NPL Digital Computer (ACE) - French abstract"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "F.M. Colebrook" ;
+    pc51:paperTitle "The Pilot Model of the National Physical Laboratory Digital Computer (ACE)" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "NPL", "ACE", "Turing", "digital computer" ;
+    pc51:hasTranscription <original-fr-p-026.md> .
+
+pc51:page-027 a pc51:PageImage ;
+    pc51:pageNumber 27 ;
+    dc:title "Page 27 - Technical Paper Continuation"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-027.md> .
+
+pc51:page-028 a pc51:PageImage ;
+    pc51:pageNumber 28 ;
+    dc:title "Page 28 - Technical Paper Continuation"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-028.md> .
+
+pc51:page-029 a pc51:PageImage ;
+    pc51:pageNumber 29 ;
+    dc:title "Page 29 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-030 a pc51:PageImage ;
+    pc51:pageNumber 30 ;
+    dc:title "Page 30 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-031 a pc51:PageImage ;
+    pc51:pageNumber 31 ;
+    dc:title "Page 31 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-032 a pc51:PageImage ;
+    pc51:pageNumber 32 ;
+    dc:title "Page 32 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-033 a pc51:PageImage ;
+    pc51:pageNumber 33 ;
+    dc:title "Page 33 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-033.md> .
+
+pc51:page-034 a pc51:PageImage ;
+    pc51:pageNumber 34 ;
+    dc:title "Page 34 - Technical Paper"@en ;
+    dc:description "Technical paper on computing machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-034.md> .
+
+pc51:page-035 a pc51:PageImage ;
+    pc51:pageNumber 35 ;
+    dc:title "Page 35 - van den Dungen: Wave Equation Integration (French)"@en ;
+    dc:description "F.H. van den Dungen: Numerical Integration of the Wave Equation - French; Cauchy data, characteristic cone"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "F.H. van den Dungen" ;
+    pc51:paperTitle "L'Integration Numerique de l'Equation des Ondes" ;
+    foaf:depicts "mathematical paper" ;
+    foaf:topic "wave equation", "numerical integration", "Cauchy problem", "partial differential equations" ;
+    pc51:hasTranscription <original-fr-p-035.md> .
+
+pc51:page-036 a pc51:PageImage ;
+    pc51:pageNumber 36 ;
+    dc:title "Page 36 - van den Dungen: Wave Equation (French) page 2"@en ;
+    dc:description "F.H. van den Dungen: Wave Equation - continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "F.H. van den Dungen" ;
+    foaf:depicts "mathematical paper" ;
+    pc51:hasTranscription <original-fr-p-036.md> .
+
+pc51:page-037 a pc51:PageImage ;
+    pc51:pageNumber 37 ;
+    dc:title "Page 37 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-037.md> .
+
+pc51:page-038 a pc51:PageImage ;
+    pc51:pageNumber 38 ;
+    dc:title "Page 38 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-038.md> .
+
+pc51:page-039 a pc51:PageImage ;
+    pc51:pageNumber 39 ;
+    dc:title "Page 39 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-039.md> .
+
+pc51:page-040 a pc51:PageImage ;
+    pc51:pageNumber 40 ;
+    dc:title "Page 40 - van Wijngaarden: Rounding-Off Errors (French)"@en ;
+    dc:description "A. van Wijngaarden: Rounding-Off Errors in Systematic Calculations - French abstract"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "A. van Wijngaarden" ;
+    pc51:paperTitle "Les Erreurs de Chute dans les Calculs Systematiques" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "rounding errors", "numerical analysis", "systematic calculations" ;
+    pc51:hasTranscription <original-fr-p-040.md> .
+
+pc51:page-041 a pc51:PageImage ;
+    pc51:pageNumber 41 ;
+    dc:title "Page 41 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-041.md> .
+
+pc51:page-042 a pc51:PageImage ;
+    pc51:pageNumber 42 ;
+    dc:title "Page 42 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-042.md> .
+
+pc51:page-043 a pc51:PageImage ;
+    pc51:pageNumber 43 ;
+    dc:title "Page 43 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-043.md> .
+
+pc51:page-044 a pc51:PageImage ;
+    pc51:pageNumber 44 ;
+    dc:title "Page 44 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-044.md> .
+
+pc51:page-045 a pc51:PageImage ;
+    pc51:pageNumber 45 ;
+    dc:title "Page 45 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-046 a pc51:PageImage ;
+    pc51:pageNumber 46 ;
+    dc:title "Page 46 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-047 a pc51:PageImage ;
+    pc51:pageNumber 47 ;
+    dc:title "Page 47 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-048 a pc51:PageImage ;
+    pc51:pageNumber 48 ;
+    dc:title "Page 48 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-049 a pc51:PageImage ;
+    pc51:pageNumber 49 ;
+    dc:title "Page 49 - Gastaud: Computing Machines and Nervous System (French) page 1"@en ;
+    dc:description "H. Gastaud: Large Machines and the Physiology of the Nervous System - French; brain-machine analogies"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "H. Gastaud" ;
+    pc51:paperTitle "Les Grosses Machines et la Physiologie du Systeme Nerveux" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "nervous system", "brain", "computing machines", "cybernetics" ;
+    pc51:hasTranscription <original-fr-p-049.md> .
+
+pc51:page-050 a pc51:PageImage ;
+    pc51:pageNumber 50 ;
+    dc:title "Page 50 - Gastaud: Nervous System (French) page 2"@en ;
+    dc:description "H. Gastaud: Continuation - McCulloch and Walter references; diencephalic switching; 'Can machines think?' conclusion"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "H. Gastaud" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "McCulloch", "Walter", "brain switching", "machine thought", "William James" ;
+    pc51:hasTranscription <original-fr-p-050.md> .
+
+pc51:page-051 a pc51:PageImage ;
+    pc51:pageNumber 51 ;
+    dc:title "Page 51 - Torres Quevedo Machines (French)"@en ;
+    dc:description "G. Torres Quevedo: Presentation of Leonardo Torres Quevedo's apparatus - chess automaton, Telekine, equation solving machines"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "G. Torres Quevedo" ;
+    pc51:paperTitle "Presentation des appareils de Leonardo Torres Quevedo" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "Torres Quevedo", "chess automaton", "Telekine", "equation solver" ;
+    pc51:hasTranscription <original-fr-p-051.md> .
+
+pc51:page-052 a pc51:PageImage ;
+    pc51:pageNumber 52 ;
+    dc:title "Page 52 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-052.md> .
+
+pc51:page-053 a pc51:PageImage ;
+    pc51:pageNumber 53 ;
+    dc:title "Page 53 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-053.md> .
+
+pc51:page-054 a pc51:PageImage ;
+    pc51:pageNumber 54 ;
+    dc:title "Page 54 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-054.md> .
+
+pc51:page-055 a pc51:PageImage ;
+    pc51:pageNumber 55 ;
+    dc:title "Page 55 - Torres Quevedo: Endless-Fuze Logarithmic Machines"@en ;
+    dc:description "Continuation of Torres Quevedo machines: logarithmic drums, epicycloidal gearing, Gauss additive logarithms"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "G. Torres Quevedo" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "logarithmic machines", "analog computing", "Gauss" ;
+    pc51:hasTranscription <original-fr-p-055.md> .
+
+pc51:page-056 a pc51:PageImage ;
+    pc51:pageNumber 56 ;
+    dc:title "Page 56 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-056.md> .
+
+pc51:page-057 a pc51:PageImage ;
+    pc51:pageNumber 57 ;
+    dc:title "Page 57 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-057.md> .
+
+pc51:page-058 a pc51:PageImage ;
+    pc51:pageNumber 58 ;
+    dc:title "Page 58 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-059 a pc51:PageImage ;
+    pc51:pageNumber 59 ;
+    dc:title "Page 59 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-060 a pc51:PageImage ;
+    pc51:pageNumber 60 ;
+    dc:title "Page 60 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-061 a pc51:PageImage ;
+    pc51:pageNumber 61 ;
+    dc:title "Page 61 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-062 a pc51:PageImage ;
+    pc51:pageNumber 62 ;
+    dc:title "Page 62 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-063 a pc51:PageImage ;
+    pc51:pageNumber 63 ;
+    dc:title "Page 63 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-064 a pc51:PageImage ;
+    pc51:pageNumber 64 ;
+    dc:title "Page 64 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-065 a pc51:PageImage ;
+    pc51:pageNumber 65 ;
+    dc:title "Page 65 - Chauchard: Central Command of the Nervous Machine (French)"@en ;
+    dc:description "P. Chauchard: Central Command of the Nervous Machine - French; program-like regulation center, waking/sleep, chronaximetry"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Paul Chauchard" ;
+    pc51:paperTitle "La Commande Centrale de la Machine Nerveuse" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "nervous system", "brain", "program", "waking", "sleep", "Lapicque", "chronaximetry", "Descartes" ;
+    pc51:hasTranscription <original-fr-p-065.md> .
+
+pc51:page-066 a pc51:PageImage ;
+    pc51:pageNumber 66 ;
+    dc:title "Page 66 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-066.md> .
+
+pc51:page-067 a pc51:PageImage ;
+    pc51:pageNumber 67 ;
+    dc:title "Page 67 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-067.md> .
+
+pc51:page-068 a pc51:PageImage ;
+    pc51:pageNumber 68 ;
+    dc:title "Page 68 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-068.md> .
+
+pc51:page-069 a pc51:PageImage ;
+    pc51:pageNumber 69 ;
+    dc:title "Page 69 - Wiener: Computing Machine and Form (Gestalt) - French page 1"@en ;
+    dc:description "N. Wiener: The Computing Machine and Form (Gestalt) - French translation; digital vs analog, brain/machine comparison"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Norbert Wiener" ;
+    pc51:paperTitle "The Computing Machine and Form (Gestalt)" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "Gestalt", "cybernetics", "digital", "analog", "brain" ;
+    pc51:hasTranscription <original-fr-p-069.md> .
+
+pc51:page-070 a pc51:PageImage ;
+    pc51:pageNumber 70 ;
+    dc:title "Page 70 - Wiener: Gestalt (French) page 2"@en ;
+    dc:description "N. Wiener: Continuation - machine understanding, consciousness, digital vs analog, neurons"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Norbert Wiener" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "machine understanding", "consciousness", "neurons", "all-or-none" ;
+    pc51:hasTranscription <original-fr-p-070.md> .
+
+pc51:page-071 a pc51:PageImage ;
+    pc51:pageNumber 71 ;
+    dc:title "Page 71 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-071.md> .
+
+pc51:page-072 a pc51:PageImage ;
+    pc51:pageNumber 72 ;
+    dc:title "Page 72 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-072.md> .
+
+pc51:page-073 a pc51:PageImage ;
+    pc51:pageNumber 73 ;
+    dc:title "Page 73 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-074 a pc51:PageImage ;
+    pc51:pageNumber 74 ;
+    dc:title "Page 74 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-075 a pc51:PageImage ;
+    pc51:pageNumber 75 ;
+    dc:title "Page 75 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-076 a pc51:PageImage ;
+    pc51:pageNumber 76 ;
+    dc:title "Page 76 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-077 a pc51:PageImage ;
+    pc51:pageNumber 77 ;
+    dc:title "Page 77 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-078 a pc51:PageImage ;
+    pc51:pageNumber 78 ;
+    dc:title "Page 78 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-079 a pc51:PageImage ;
+    pc51:pageNumber 79 ;
+    dc:title "Page 79 - Technical Paper"@en ;
+    dc:description "Technical paper continuation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-080 a pc51:PageImage ;
+    pc51:pageNumber 80 ;
+    dc:title "Page 80 - Technical Paper"@en ;
+    dc:description "Technical paper continuation; transition to English abstracts"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "fr" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+# -----------------------------------------------------------------------------
+# Pages 81-128: English Abstracts and Papers
+# -----------------------------------------------------------------------------
+
+pc51:page-081 a pc51:PageImage ;
+    pc51:pageNumber 81 ;
+    dc:title "Page 81 - Booth: Magnetic Automatic Calculating Machine (English)"@en ;
+    dc:description "A.D. Booth: A Magnetic Automatic Calculating Machine - English original; SEC 250 valves, APEXC 275 valves, magnetic drum storage"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "A.D. Booth" ;
+    pc51:paperTitle "A Magnetic Automatic Calculating Machine" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "Birkbeck College", "SEC", "APEXC", "magnetic drum", "vacuum tubes" ;
+    pc51:isTranslationOf pc51:page-020 ;
+    pc51:hasTranscription <original-fr-p-081.md> .
+
+pc51:page-082 a pc51:PageImage ;
+    pc51:pageNumber 82 ;
+    dc:title "Page 82 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-082.md> .
+
+pc51:page-083 a pc51:PageImage ;
+    pc51:pageNumber 83 ;
+    dc:title "Page 83 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-083.md> .
+
+pc51:page-084 a pc51:PageImage ;
+    pc51:pageNumber 84 ;
+    dc:title "Page 84 - Cannon: NBS Computers (English) page 1"@en ;
+    dc:description "E.W. Cannon: Development of Electronic Digital Computers at NBS - English; SEAC, SWAC, Air Force program"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "abstract" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    pc51:paperTitle "Development of Electronic Digital Computers at the National Bureau of Standards" ;
+    foaf:depicts "paper abstract" ;
+    foaf:topic "NBS", "SEAC", "SWAC", "Air Force", "electronic computers" ;
+    pc51:hasTranscription <original-fr-p-084.md> .
+
+pc51:page-085 a pc51:PageImage ;
+    pc51:pageNumber 85 ;
+    dc:title "Page 85 - Cannon: NBS Computers (English) page 2"@en ;
+    dc:description "E.W. Cannon: Continuation - binary vs decimal, memory types, SEAC/SWAC operational experience"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "E.W. Cannon" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "binary", "magnetic drum", "acoustic delay", "electrostatic storage" ;
+    pc51:hasTranscription <original-fr-p-085.md> .
+
+pc51:page-086 a pc51:PageImage ;
+    pc51:pageNumber 86 ;
+    dc:title "Page 86 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-086.md> .
+
+pc51:page-087 a pc51:PageImage ;
+    pc51:pageNumber 87 ;
+    dc:title "Page 87 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-087.md> .
+
+pc51:page-088 a pc51:PageImage ;
+    pc51:pageNumber 88 ;
+    dc:title "Page 88 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-088.md> .
+
+pc51:page-089 a pc51:PageImage ;
+    pc51:pageNumber 89 ;
+    dc:title "Page 89 - Williams: Manchester University Computer Research (English)"@en ;
+    dc:description "F.C. Williams: Summary of Computer Research at Manchester University - Williams tube, CRT storage, Ferranti"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "F.C. Williams" ;
+    pc51:paperTitle "Summary of Computer Research at Manchester University" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "Manchester", "Williams tube", "CRT storage", "Ferranti" ;
+    pc51:hasTranscription <original-fr-p-089.md> .
+
+pc51:page-090 a pc51:PageImage ;
+    pc51:pageNumber 90 ;
+    dc:title "Page 90 - Williams: Manchester Computer (English) page 2"@en ;
+    dc:description "F.C. Williams: Continuation - magnetic drum auxiliary storage, paper tape, Ferranti machine specs"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-1" ;
+    pc51:author "F.C. Williams" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "magnetic drum", "paper tape", "multiplier", "160000 digits" ;
+    pc51:hasTranscription <original-fr-p-090.md> .
+
+pc51:page-091 a pc51:PageImage ;
+    pc51:pageNumber 91 ;
+    dc:title "Page 91 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-091.md> .
+
+pc51:page-092 a pc51:PageImage ;
+    pc51:pageNumber 92 ;
+    dc:title "Page 92 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-092.md> .
+
+pc51:page-093 a pc51:PageImage ;
+    pc51:pageNumber 93 ;
+    dc:title "Page 93 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-093.md> .
+
+pc51:page-094 a pc51:PageImage ;
+    pc51:pageNumber 94 ;
+    dc:title "Page 94 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-094.md> .
+
+pc51:page-095 a pc51:PageImage ;
+    pc51:pageNumber 95 ;
+    dc:title "Page 95 - van den Dungen: Wave Equation Integration (English)"@en ;
+    dc:description "F.H. van den Dungen: Numerical Integration of the Waves Equation - English; Cauchy data, characteristic cone"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "F.H. van den Dungen" ;
+    pc51:paperTitle "The Numerical Integration of the Waves Equation" ;
+    foaf:depicts "mathematical paper" ;
+    foaf:topic "wave equation", "numerical integration", "Cauchy", "partial differential equations" ;
+    pc51:isTranslationOf pc51:page-035 ;
+    pc51:hasTranscription <original-fr-p-095.md> .
+
+pc51:page-096 a pc51:PageImage ;
+    pc51:pageNumber 96 ;
+    dc:title "Page 96 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-096.md> .
+
+pc51:page-097 a pc51:PageImage ;
+    pc51:pageNumber 97 ;
+    dc:title "Page 97 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-097.md> .
+
+pc51:page-098 a pc51:PageImage ;
+    pc51:pageNumber 98 ;
+    dc:title "Page 98 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-098.md> .
+
+pc51:page-099 a pc51:PageImage ;
+    pc51:pageNumber 99 ;
+    dc:title "Page 99 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-099.md> .
+
+pc51:page-100 a pc51:PageImage ;
+    pc51:pageNumber 100 ;
+    dc:title "Page 100 - van Wijngaarden: Rounding-Off Errors (English)"@en ;
+    dc:description "A. van Wijngaarden: Rounding-Off Errors in Systematic Calculations - English; statistical vs deterministic treatment"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "A. van Wijngaarden" ;
+    pc51:paperTitle "Rounding-Off Errors in Systematic Calculations" ;
+    foaf:depicts "mathematical paper" ;
+    foaf:topic "rounding errors", "numerical analysis", "differential equations", "interpolation" ;
+    pc51:isTranslationOf pc51:page-040 ;
+    pc51:hasTranscription <original-fr-p-100.md> .
+
+pc51:page-101 a pc51:PageImage ;
+    pc51:pageNumber 101 ;
+    dc:title "Page 101 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-101.md> .
+
+pc51:page-102 a pc51:PageImage ;
+    pc51:pageNumber 102 ;
+    dc:title "Page 102 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-102.md> .
+
+pc51:page-103 a pc51:PageImage ;
+    pc51:pageNumber 103 ;
+    dc:title "Page 103 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-103.md> .
+
+pc51:page-104 a pc51:PageImage ;
+    pc51:pageNumber 104 ;
+    dc:title "Page 104 - Kjellberg: BARK Computer (English) page 1"@en ;
+    dc:description "G. Kjellberg: Some Problems Treated with the BARK - Swedish relay computer, cosine table"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "G. Kjellberg" ;
+    pc51:paperTitle "Some Problems Treated with the BARK" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "BARK", "Swedish computer", "relay", "C. Palm" ;
+    pc51:hasTranscription <original-fr-p-104.md> .
+
+pc51:page-105 a pc51:PageImage ;
+    pc51:pageNumber 105 ;
+    dc:title "Page 105 - Kjellberg: BARK Computer (English) page 2"@en ;
+    dc:description "G. Kjellberg: BARK continuation - relay pyramids, selectors, 840 relays, C. Palm design, February 1950 operation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-2" ;
+    pc51:author "G. Kjellberg" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "relay pyramids", "selectors", "Swedish telephone equipment" ;
+    pc51:hasTranscription <original-fr-p-105.md> .
+
+pc51:page-106 a pc51:PageImage ;
+    pc51:pageNumber 106 ;
+    dc:title "Page 106 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-106.md> .
+
+pc51:page-107 a pc51:PageImage ;
+    pc51:pageNumber 107 ;
+    dc:title "Page 107 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-107.md> .
+
+pc51:page-108 a pc51:PageImage ;
+    pc51:pageNumber 108 ;
+    dc:title "Page 108 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-108.md> .
+
+pc51:page-109 a pc51:PageImage ;
+    pc51:pageNumber 109 ;
+    dc:title "Page 109 - Gastaud: Computing Machines and Nervous System (English) page 1"@en ;
+    dc:description "H. Gastaud: Large Machines and the Physiology of the Nervous System - English; P. Bailey quote"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "H. Gastaud" ;
+    pc51:paperTitle "Large Machines and the Physiology of the Nervous System" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "nervous system", "brain", "computing machines", "P. Bailey" ;
+    pc51:isTranslationOf pc51:page-049 .
+
+pc51:page-110 a pc51:PageImage ;
+    pc51:pageNumber 110 ;
+    dc:title "Page 110 - Gastaud: Nervous System (English) page 2"@en ;
+    dc:description "H. Gastaud: English continuation - McCulloch, Walter, Montreal experiments, 'Can machines think?' conclusion"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "H. Gastaud" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "McCulloch", "Walter", "thalamus", "Williams James", "machine thought" ;
+    pc51:hasTranscription <original-fr-p-110.md> .
+
+pc51:page-111 a pc51:PageImage ;
+    pc51:pageNumber 111 ;
+    dc:title "Page 111 - Torres Quevedo Machines (English)"@en ;
+    dc:description "G. Torres Quevedo: Leonardo Torres Quevedo's apparatus - English version"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "G. Torres Quevedo" ;
+    pc51:paperTitle "Presentation of Leonardo Torres Quevedo's Apparatus" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "Torres Quevedo", "chess automaton", "Telekine", "equation solver" ;
+    pc51:isTranslationOf pc51:page-051 .
+
+pc51:page-112 a pc51:PageImage ;
+    pc51:pageNumber 112 ;
+    dc:title "Page 112 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" .
+
+pc51:page-113 a pc51:PageImage ;
+    pc51:pageNumber 113 ;
+    dc:title "Page 113 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-113.md> .
+
+pc51:page-114 a pc51:PageImage ;
+    pc51:pageNumber 114 ;
+    dc:title "Page 114 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-114.md> .
+
+pc51:page-115 a pc51:PageImage ;
+    pc51:pageNumber 115 ;
+    dc:title "Page 115 - Torres Quevedo: Endless-Fuze (English)"@en ;
+    dc:description "G. Torres Quevedo: Continuation - endless-fuze, logarithmic drums, Gauss additive logarithms"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "G. Torres Quevedo" ;
+    foaf:depicts "technical paper" ;
+    foaf:topic "logarithmic machines", "analog computing", "Gauss", "endless-fuze" ;
+    pc51:isTranslationOf pc51:page-055 ;
+    pc51:hasTranscription <original-fr-p-115.md> .
+
+pc51:page-116 a pc51:PageImage ;
+    pc51:pageNumber 116 ;
+    dc:title "Page 116 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-116.md> .
+
+pc51:page-117 a pc51:PageImage ;
+    pc51:pageNumber 117 ;
+    dc:title "Page 117 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-117.md> .
+
+pc51:page-118 a pc51:PageImage ;
+    pc51:pageNumber 118 ;
+    dc:title "Page 118 - Grey Walter: Artificial Animals (English) page 1"@en ;
+    dc:description "W. Grey Walter: Presentation of Artificial Animals - electromechanical tortoises, scanning, learning"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "W. Grey Walter" ;
+    pc51:paperTitle "Presentation of Artificial Animals" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "artificial animals", "tortoises", "cybernetics", "learning machines" ;
+    pc51:hasTranscription <original-fr-p-118.md> .
+
+pc51:page-119 a pc51:PageImage ;
+    pc51:pageNumber 119 ;
+    dc:title "Page 119 - Grey Walter: Artificial Animals (English) page 2"@en ;
+    dc:description "W. Grey Walter: Continuation - seven basic operations, scanning, selection, amplification"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "W. Grey Walter" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "scanning", "selection", "amplification", "integration", "threshold" ;
+    pc51:hasTranscription <original-fr-p-119.md> .
+
+pc51:page-120 a pc51:PageImage ;
+    pc51:pageNumber 120 ;
+    dc:title "Page 120 - Grey Walter: Artificial Animals (English) page 3"@en ;
+    dc:description "W. Grey Walter: Continuation - learning circuits, conditioned reflex, neuroses, memory and recall"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "W. Grey Walter" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "conditioned reflex", "neuroses", "learning", "memory", "recall" ;
+    pc51:hasTranscription <original-fr-p-120.md> .
+
+pc51:page-121 a pc51:PageImage ;
+    pc51:pageNumber 121 ;
+    dc:title "Page 121 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-121.md> .
+
+pc51:page-122 a pc51:PageImage ;
+    pc51:pageNumber 122 ;
+    dc:title "Page 122 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-122.md> .
+
+pc51:page-123 a pc51:PageImage ;
+    pc51:pageNumber 123 ;
+    dc:title "Page 123 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-123.md> .
+
+pc51:page-124 a pc51:PageImage ;
+    pc51:pageNumber 124 ;
+    dc:title "Page 124 - Technical Paper (English)"@en ;
+    dc:description "Technical paper in English"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    foaf:depicts "technical paper" ;
+    pc51:hasTranscription <original-fr-p-124.md> .
+
+pc51:page-125 a pc51:PageImage ;
+    pc51:pageNumber 125 ;
+    dc:title "Page 125 - Chauchard: Command of the Nervous Machine (English)"@en ;
+    dc:description "P. Chauchard: The Command of the Nervous Machine - English; program-like regulation, waking/sleep, Descartes, mind-body"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Paul Chauchard" ;
+    pc51:paperTitle "The Command of the Nervous Machine" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "nervous system", "brain", "program", "waking", "sleep", "Lapicque", "Descartes", "psychophysiology" ;
+    pc51:isTranslationOf pc51:page-065 ;
+    pc51:hasTranscription <original-fr-p-125.md> .
+
+pc51:page-126 a pc51:PageImage ;
+    pc51:pageNumber 126 ;
+    dc:title "Page 126 - Couffignal: Brain-Machine Analogies (English) page 1"@en ;
+    dc:description "L. Couffignal: New Analogies Between Computing Machines and Brain Structures - English; synaptic flip-flops, Pascal's rule"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Louis Couffignal" ;
+    pc51:paperTitle "Some New Analogies Between Computing Machines Structures and Brain Structures" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "brain", "computing machines", "synapse", "transistor", "memory", "conscience", "sub-conscious" ;
+    pc51:hasTranscription <original-fr-p-126.md> .
+
+pc51:page-127 a pc51:PageImage ;
+    pc51:pageNumber 127 ;
+    dc:title "Page 127 - Couffignal: Brain-Machine Analogies (English) page 2"@en ;
+    dc:description "L. Couffignal: Continuation - alpha rhythm, memorization, logic as brain working-method, intelligence augmentation"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "paper" ;
+    pc51:sessionSection "section-3" ;
+    pc51:author "Louis Couffignal" ;
+    foaf:depicts "scientific paper" ;
+    foaf:topic "alpha rhythm", "memorization", "logic", "intelligence augmentation", "Belin-Milleron" ;
+    pc51:hasTranscription <original-fr-p-127.md> .
+
+pc51:page-128 a pc51:PageImage ;
+    pc51:pageNumber 128 ;
+    dc:title "Page 128 - Back Cover with Library Barcode"@en ;
+    dc:description "Back cover/end page with Computer History Museum barcode sticker and handwritten label 'Les Machines a Calculer 1951 Paris'"@en ;
+    dc:date "1951-01-08/1951-01-13" ;
+    dc:publisher "Institut Blaise Pascal, CNRS" ;
+    dc:language "en" ;
+    dc:format "image/jpeg" ;
+    dc:source pc51:SourcePDF ;
+    pc51:contentType "administrative" ;
+    foaf:depicts "back cover", "library barcode", "Computer History Museum" ;
+    pc51:hasTranscription <original-fr-p-128.md> .
+
+# =============================================================================
+# Key Figures mentioned in the proceedings
+# =============================================================================
+
+pc51:person-aiken a foaf:Person ;
+    foaf:name "Howard H. Aiken" ;
+    foaf:title "Professor" ;
+    schema:affiliation "Harvard University" ;
+    foaf:topic "Harvard Mark computers" .
+
+pc51:person-booth a foaf:Person ;
+    foaf:name "Andrew D. Booth" ;
+    schema:affiliation "Birkbeck College, University of London" ;
+    foaf:topic "SEC", "APEXC", "magnetic storage" .
+
+pc51:person-cannon a foaf:Person ;
+    foaf:name "Edward W. Cannon" ;
+    schema:affiliation "National Bureau of Standards" ;
+    foaf:topic "SEAC", "SWAC" .
+
+pc51:person-colebrook a foaf:Person ;
+    foaf:name "F.M. Colebrook" ;
+    schema:affiliation "National Physical Laboratory" ;
+    foaf:topic "ACE computer" .
+
+pc51:person-williams a foaf:Person ;
+    foaf:name "Frederic C. Williams" ;
+    schema:affiliation "Manchester University" ;
+    foaf:topic "Williams tube", "CRT storage" .
+
+pc51:person-couffignal a foaf:Person ;
+    foaf:name "Louis Couffignal" ;
+    schema:affiliation "Institut Blaise Pascal" ;
+    foaf:topic "French computing", "brain-machine analogies" .
+
+pc51:person-wiener a foaf:Person ;
+    foaf:name "Norbert Wiener" ;
+    foaf:topic "cybernetics", "Gestalt" .
+
+pc51:person-grey-walter a foaf:Person ;
+    foaf:name "W. Grey Walter" ;
+    foaf:topic "artificial animals", "tortoises", "cybernetics" .
+
+pc51:person-ashby a foaf:Person ;
+    foaf:name "W. Ross Ashby" ;
+    foaf:title "Doctor" ;
+    schema:affiliation "Barnwood House, Gloucester" ;
+    foaf:topic "homeostatic machines" .
+
+pc51:person-mcculloch a foaf:Person ;
+    foaf:name "Warren S. McCulloch" ;
+    foaf:topic "neural networks", "logical calculus" .
+
+pc51:person-de-broglie a foaf:Person ;
+    foaf:name "Louis de Broglie" ;
+    foaf:title "Secretary Perpetual of the Academy of Sciences" ;
+    schema:affiliation "Academie des Sciences" ;
+    foaf:topic "physics", "conference president" .
+
+pc51:person-torres-quevedo a foaf:Person ;
+    foaf:name "Gonzalo Torres Quevedo" ;
+    foaf:topic "Torres Quevedo machines", "chess automaton" .
+
+pc51:person-van-wijngaarden a foaf:Person ;
+    foaf:name "Adriaan van Wijngaarden" ;
+    foaf:title "Doctor" ;
+    schema:affiliation "Mathematisch Centrum, Amsterdam" ;
+    foaf:topic "numerical analysis", "rounding errors" .
+
+pc51:person-chauchard a foaf:Person ;
+    foaf:name "Paul Chauchard" ;
+    foaf:title "Doctor" ;
+    foaf:topic "nervous system", "psychophysiology" .
+
+pc51:person-gastaud a foaf:Person ;
+    foaf:name "Henri Gastaud" ;
+    foaf:topic "nervous system physiology" .
+
+# =============================================================================
+# End of RDF Index
+# =============================================================================
