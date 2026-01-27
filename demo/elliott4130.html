@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -80,19 +79,31 @@
         .config-section { margin-bottom: 16px; }
         .config-section h3 { font-size: 12px; color: #f80; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
 
-        .test-list { display: flex; flex-direction: column; gap: 2px; }
+        .test-list { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; }
         .test-item { display: flex; align-items: center; gap: 8px; padding: 4px; background: #1a1a1a; border: 1px solid #222; }
         .test-name { flex: 1; font-size: 11px; }
         .test-status { font-size: 10px; width: 50px; text-align: center; }
         .test-status.pass { color: #0f0; }
         .test-status.fail { color: #f00; }
         .test-status.wait { color: #666; }
+        .test-category { font-size: 11px; color: #f80; padding: 6px 4px 2px 4px; margin-top: 8px; border-bottom: 1px solid #333; }
+        .test-cat-stats { font-size: 10px; }
 
         .debug-opts { display: flex; flex-wrap: wrap; gap: 8px; }
         .debug-opt { display: flex; align-items: center; gap: 4px; font-size: 11px; }
         .debug-opt input { accent-color: #0f0; }
 
-        .log-area { background: #000; border: 1px solid #222; height: 150px; overflow-y: auto; padding: 4px; font-size: 10px; color: #888; white-space: pre-wrap; }
+        .log-area { background: #000; border: 1px solid #222; height: 200px; overflow-y: auto; padding: 4px; font-size: 10px; color: #888; white-space: pre-wrap; font-family: monospace; }
+
+        /* Debug tab */
+        .debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; padding: 8px; overflow: hidden; }
+        .debug-col { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        .debug-panel { background: #1a1a1a; border: 1px solid #333; padding: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .debug-panel.tall { flex: 1; }
+        .debug-output { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; padding: 4px; font-size: 10px; color: #0f0; white-space: pre-wrap; font-family: monospace; min-height: 100px; }
+        .debug-input { width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 11px; padding: 4px; margin-top: 4px; }
+        .debug-input:focus { outline: none; border-color: #0f0; }
+        .debug-btn-row { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #111; }
@@ -102,6 +113,7 @@
             .main-grid { grid-template-columns: 1fr; }
             .right-col { flex-direction: row; flex-wrap: wrap; }
             .right-col .panel { flex: 1; min-width: 140px; }
+            .debug-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -109,7 +121,8 @@
 <div class="app">
     <div class="tabs">
         <div class="tab active" data-tab="main">Emulator</div>
-        <div class="tab" data-tab="config">Config & QA</div>
+        <div class="tab" data-tab="tests">Tests</div>
+        <div class="tab" data-tab="debug">Debug</div>
     </div>
 
     <!-- Main Tab -->
@@ -180,8 +193,8 @@
         </div>
     </div>
 
-    <!-- Config Tab -->
-    <div class="tab-content" id="tab-config">
+    <!-- Tests Tab -->
+    <div class="tab-content" id="tab-tests">
         <div class="config-content">
             <div class="config-section">
                 <h3>QA Test Suite (E6X3 Validation)</h3>
@@ -190,21 +203,6 @@
                     <span id="testSummary" style="margin-left:12px;font-size:11px"></span>
                 </div>
                 <div class="test-list" id="testList"></div>
-            </div>
-
-            <div class="config-section">
-                <h3>Debug Options</h3>
-                <div class="debug-opts">
-                    <label class="debug-opt"><input type="checkbox" id="dbgTrace"> Trace execution</label>
-                    <label class="debug-opt"><input type="checkbox" id="dbgBreak"> Break on error</label>
-                    <label class="debug-opt"><input type="checkbox" id="dbgVerbose"> Verbose disasm</label>
-                </div>
-            </div>
-
-            <div class="config-section">
-                <h3>Execution Log</h3>
-                <div class="log-area" id="logArea"></div>
-                <button class="btn" id="clearLog" style="margin-top:4px">Clear Log</button>
             </div>
 
             <div class="config-section">
@@ -219,457 +217,101 @@
             </div>
         </div>
     </div>
+
+    <!-- Debug Tab -->
+    <div class="tab-content" id="tab-debug">
+        <div class="debug-grid">
+            <div class="debug-col">
+                <div class="debug-panel">
+                    <div class="panel-title">Debug Options</div>
+                    <div class="debug-opts">
+                        <label class="debug-opt"><input type="checkbox" id="dbgTrace"> Trace execution</label>
+                        <label class="debug-opt"><input type="checkbox" id="dbgBreak"> Break on error</label>
+                        <label class="debug-opt"><input type="checkbox" id="dbgVerbose"> Verbose disasm</label>
+                    </div>
+                </div>
+                <div class="debug-panel tall">
+                    <div class="panel-title">Execution Log</div>
+                    <div class="log-area" id="logArea"></div>
+                    <div class="debug-btn-row">
+                        <button class="btn" id="clearLog">Clear</button>
+                        <button class="btn" id="exportLog">Export</button>
+                    </div>
+                </div>
+            </div>
+            <div class="debug-col">
+                <div class="debug-panel tall">
+                    <div class="panel-title">Debug Console</div>
+                    <div class="debug-output" id="consoleOutput">Type 'help' for available commands.
+</div>
+                    <input type="text" class="debug-input" id="debugConsole" placeholder="Enter command...">
+                    <div class="debug-btn-row">
+                        <button class="btn" onclick="runDebugCmd('state')">State</button>
+                        <button class="btn" onclick="runDebugCmd('context')">Context</button>
+                        <button class="btn" onclick="runDebugCmd('trace 10')">Trace</button>
+                        <button class="btn" onclick="runDebugCmd('diag')">Diag</button>
+                        <button class="btn" onclick="runDebugCmd('perf')">Perf</button>
+                        <button class="btn" onclick="runDebugCmd('freq')">Freq</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Load modules -->
+<script src="elliott4130-core.js"></script>
+<script src="elliott4130-asm.js"></script>
+<script src="elliott4130-tests.js"></script>
+<script src="elliott4130-debug.js"></script>
+<script src="elliott4130-ui.js"></script>
+
 <script>
-// Elliott 4130 Emulator - E6X2/E6X3 specification
-
-class E4130 {
-    constructor() { this.reset(); }
-
-    reset() {
-        this.M = 0; this.R = 0; this.S = 0; this.K = 0; this.C = 0;
-        this.mem = new Int32Array(65536);
-        this.halted = true;
-        this.iCount = 0;
-    }
-
-    MASK24 = 0xFFFFFF; MASK17 = 0x1FFFF; MASK12 = 0xFFF; SIGN = 0x800000;
-    F_NEG = 32; F_ST = 16; F_NZ = 8; F_CA = 4; F_OF = 2;
-
-    sx(v) { return (v & this.SIGN) ? (v | ~this.MASK24) : v; }
-
-    setC(r) {
-        const v = r & this.MASK24;
-        this.C = 0;
-        if (v & this.SIGN) this.C |= this.F_NEG;
-        if (v) this.C |= this.F_NZ;
-        const b23 = (v >> 22) & 1, b24 = (v >> 23) & 1;
-        if (b23 !== b24 || !v) this.C |= this.F_ST;
-        if (r > 0x7FFFFF || r < -0x800000) this.C |= this.F_OF;
-    }
-
-    rd(a) { return this.mem[a & 0xFFFF] & this.MASK24; }
-    wr(a, v) { this.mem[a & 0xFFFF] = v & this.MASK24; }
-
-    getOp(y, n) {
-        switch(y) {
-            case 0: return n;
-            case 1: return this.rd(n);
-            case 2: return this.rd((n + this.R) & 0x7FFF);
-            case 3: return this.rd(this.rd(n) & 0x7FFF);
-        }
-        return n;
-    }
-
-    getAddr(y, n) {
-        switch(y) {
-            case 0: return n;
-            case 1: return n;
-            case 2: return (n + this.R) & 0x7FFF;
-            case 3: return this.rd(n) & 0x7FFF;
-        }
-        return n;
-    }
-
-    step() {
-        if (this.halted) return false;
-        const wa = this.S >> 1;
-        const w = this.rd(wa);
-        const f = (w >> 18) & 0x3F;
-
-        if (f >= 0o40) {
-            const y = (w >> 16) & 3, z = (w >> 15) & 1, n = w & 0x7FFF;
-            this.S = (this.S + 2) & this.MASK17;
-            if (z) this.extracode(f, y, n);
-            else this.execLong(f, y, n);
-        } else {
-            const n = (w >> 12) & 0x3F;
-            this.S = (this.S + 1) & this.MASK17;
-            this.execShort(f, n);
-        }
-        this.iCount++;
-        return true;
-    }
-
-    execShort(f, n) {
-        const op = this.rd(n);
-        switch(f) {
-            case 0o00: this.M = (this.sx(this.M) + this.sx(op)) & this.MASK24; this.setC(this.M); break;
-            case 0o01: this.M = (this.sx(this.M) - this.sx(op)) & this.MASK24; this.setC(this.M); break;
-            case 0o02: this.M = (this.sx(op) - this.sx(this.M)) & this.MASK24; this.setC(this.M); break;
-            case 0o03: this.M = op; this.setC(this.M); break;
-            case 0o04: this.R = op; break;
-            case 0o05: this.S = n & this.MASK17; break;
-            case 0o06: this.M &= op; this.setC(this.M); break;
-            case 0o07: this.M &= ~op & this.MASK24; this.setC(this.M); break;
-            case 0o10: this.R = (this.sx(this.R) + this.sx(op)) & this.MASK24; break;
-            case 0o11: this.R = (this.sx(this.R) - this.sx(op)) & this.MASK24; break;
-            case 0o12: this.R = (this.sx(op) - this.sx(this.R)) & this.MASK24; break;
-            case 0o14: this.K = op & this.MASK12; break;
-            case 0o15: this.shift(n); break;
-            case 0o30: this.wr(n, this.M); break;
-            case 0o31: this.wr(n, this.R); break;
-        }
-    }
-
-    execLong(f, y, n) {
-        const op = this.getOp(y, n);
-        const addr = this.getAddr(y, n);
-
-        switch(f) {
-            case 0o40: this.M = (this.sx(this.M) + this.sx(op)) & this.MASK24; this.setC(this.M); break;
-            case 0o41: this.M = (this.sx(this.M) - this.sx(op)) & this.MASK24; this.setC(this.M); break;
-            case 0o42: this.M = (this.sx(op) - this.sx(this.M)) & this.MASK24; this.setC(this.M); break;
-            case 0o43: this.M = op; this.setC(this.M); break;
-            case 0o44: this.R = op; break;
-            case 0o45: this.S = (y === 0 ? n : op) & this.MASK17; break;
-            case 0o46: this.M &= op; this.setC(this.M); break;
-            case 0o47: this.M &= ~op & this.MASK24; this.setC(this.M); break;
-            case 0o50: this.R = (this.sx(this.R) + this.sx(op)) & this.MASK24; break;
-            case 0o51: this.R = (this.sx(this.R) - this.sx(op)) & this.MASK24; break;
-            case 0o52: this.R = (this.sx(op) - this.sx(this.R)) & this.MASK24; break;
-            case 0o53: this.wr(0, this.S); this.S = (y === 0 ? (this.S + n) : op) & this.MASK17; break;
-            case 0o54: this.K = op & this.MASK12; break;
-            case 0o55: this.setC((this.sx(this.M) - this.sx(op)) & this.MASK24); break;
-            case 0o56: this.S = (this.S + (y === 0 ? n : op)) & this.MASK17; break;
-            case 0o57: this.S = (this.S - (y === 0 ? n : op)) & this.MASK17; break;
-            case 0o60: if (y === 0) { if (this.C & this.F_NEG) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, this.M); break;
-            case 0o61: if (y === 0) { if (!(this.C & this.F_NEG)) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, this.R); break;
-            case 0o62: if (y === 0) { if (!(this.C & this.F_NZ)) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, (-this.sx(op)) & this.MASK24); break;
-            case 0o63: if (y === 0) { if (this.C & this.F_NZ) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, (this.sx(op) - this.sx(this.M)) & this.MASK24); break;
-            case 0o64: if (y === 0) { if (this.C & this.F_ST) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, (this.sx(op) + this.sx(this.M)) & this.MASK24); break;
-            case 0o65: if (y === 0) { if (this.C & this.F_OF) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, 0); break;
-            case 0o66: if (y !== 0) this.wr(addr, (op + 1) & this.MASK24); break;
-            case 0o67: if (y === 0) { this.K = (this.K - 1) & this.MASK12; if (this.K & 0x800) this.S = (this.S + n) & this.MASK17; } else this.wr(addr, (op - 1) & this.MASK24); break;
-            case 0o70: if (y === 0) this.regOp(n); break;
-            case 0o72: if (y !== 0 && op) { const dv = (this.R << 24) | this.M; this.M = Math.floor(dv / this.sx(op)) & this.MASK24; } break;
-            case 0o73: if (y !== 0) { const p = BigInt(this.sx(this.M)) * BigInt(this.sx(op)); this.M = Number(p & 0xFFFFFFn); this.R = Number((p >> 24n) & 0xFFFFFFn); } break;
-            case 0o74: if (y !== 0) { this.M = op; this.wr(this.R, this.M); this.R = (this.R - 1) & this.MASK24; } break;
-            case 0o75: if (y !== 0) { this.wr(addr, this.M); this.M = this.rd(this.R); this.R = (this.R + 1) & this.MASK24; } break;
-            case 0o76: if (y !== 0) { const t = this.M; this.M = op; this.wr(addr, t); } break;
-            case 0o77: if (y !== 0) { const t = this.R; this.R = op; this.wr(addr, t); } break;
-        }
-    }
-
-    shift(n) {
-        const k = this.K & 0x3F;
-        switch(n) {
-            case 0o00: this.R = (this.R << k) & this.MASK24; break;
-            case 0o02: this.R = this.sx(this.R) >> k; this.R &= this.MASK24; break;
-            case 0o04: this.M = (this.M << k) & this.MASK24; break;
-            case 0o06: this.M = this.sx(this.M) >> k; this.M &= this.MASK24; break;
-            case 0o12: this.R = (this.R >>> k) & this.MASK24; break;
-            case 0o16: this.M = (this.M >>> k) & this.MASK24; break;
-        }
-        this.setC(this.M);
-    }
-
-    regOp(n) {
-        switch(n) {
-            case 0o00020: this.R = this.K; break;
-            case 0o00402: this.R = this.M; break;
-            case 0o00404: this.R = this.S; break;
-            case 0o01001: this.M = this.R; this.setC(this.M); break;
-            case 0o01003: this.M |= this.R; this.setC(this.M); break;
-            case 0o01010: this.M = this.C; break;
-            case 0o02001: this.S = this.R & this.MASK17; break;
-            case 0o02002: this.S = this.M & this.MASK17; break;
-            case 0o04002: this.C = this.M & 0x3FFF; break;
-            case 0o10001: this.K = this.R & this.MASK12; break;
-            case 0o10002: this.K = this.M & this.MASK12; break;
-        }
-    }
-
-    extracode(f, y, n) {
-        const op = this.getOp(y, n);
-        switch(f) {
-            case 0o50: this.M = (this.sx(this.M) * this.sx(op)) & this.MASK24; this.setC(this.M); break;
-            case 0o51: if (op) { const m = this.sx(this.M), d = this.sx(op); this.M = Math.floor(m / d) & this.MASK24; this.R = (m % d) & this.MASK24; } break;
-            case 0o77: if (y === 0) this.output(String.fromCharCode(65 + (n % 26))); else this.output(this.M.toString(8).padStart(8, '0') + ' '); break;
-        }
-    }
-
-    output(t) { document.getElementById('tty').textContent += t; }
-}
-
-// Assembler
-class Asm {
-    constructor() {
-        this.ops = {
-            'ADD':{s:0o00,l:0o40},'SUB':{s:0o01,l:0o41},'NADD':{s:0o02,l:0o42},'LD':{s:0o03,l:0o43},
-            'LDR':{s:0o04,l:0o44},'JIR':{s:0o05},'AND':{s:0o06,l:0o46},'ANDN':{s:0o07,l:0o47},
-            'ADDR':{s:0o10,l:0o50},'SUBR':{s:0o11,l:0o51},'NADR':{s:0o12,l:0o52},'LDK':{s:0o14,l:0o54},
-            'ST':{l:0o60,yMin:1},'STR':{l:0o61,yMin:1},
-            'J':{l:0o45,jump:1},'JFL':{l:0o53,jump:1},'JF':{l:0o56,jump:1},'JB':{l:0o57,jump:1},
-            'JN':{l:0o60,jump:1},'JNN':{l:0o61,jump:1},'JZ':{l:0o62,jump:1},'JNZ':{l:0o63,jump:1},
-            'JST':{l:0o64,jump:1},'JOF':{l:0o65,jump:1},'DKJN':{l:0o67,jump:1},
-            'COMP':{l:0o55},'NEGS':{l:0o62,yMin:1},'SUBS':{l:0o63,yMin:1},'ADDS':{l:0o64,yMin:1},
-            'CLS':{l:0o65,yMin:1},'INCS':{l:0o66,yMin:1},'DECS':{l:0o67,yMin:1},
-            'MVE':{l:0o74,yMin:1},'MVB':{l:0o75,yMin:1},'EXC':{l:0o76,yMin:1},'EXCR':{l:0o77,yMin:1},
-            'MULM':{l:0o73,yMin:1},'DIVM':{l:0o72,yMin:1},'MULS':{l:0o50,z:1},'DIV':{l:0o51,z:1},
-            'MTOR':{l:0o70,n:0o00402},'RTOM':{l:0o70,n:0o01001},'KTOR':{l:0o70,n:0o00020},
-            'STOR':{l:0o70,n:0o00404},'RTOS':{l:0o70,n:0o02001},'MTOS':{l:0o70,n:0o02002},
-            'MTOK':{l:0o70,n:0o10002},'RTOK':{l:0o70,n:0o10001},'CTOM':{l:0o70,n:0o01010},
-            'MTOC':{l:0o70,n:0o04002},'MORR':{l:0o70,n:0o01003},
-            'SRL':{s:0o15,n:0o00},'SRR':{s:0o15,n:0o02},'SML':{s:0o15,n:0o04},'SMR':{s:0o15,n:0o06},
-            'SRRL':{s:0o15,n:0o12},'SMRL':{s:0o15,n:0o16}
-        };
-    }
-
-    asm(src) {
-        const labels = {}, out = [];
-        let addr = 0;
-        const lines = src.split('\n').map(l => (l.indexOf(';')>=0?l.slice(0,l.indexOf(';')):l).trim()).filter(l=>l);
-
-        // Pass 1: labels
-        for (const line of lines) {
-            const m = line.match(/^(\d+):|^([A-Za-z_]\w*):/);
-            if (m) { const lbl = m[1]||m[2]; if (m[1]) addr = parseInt(m[1]); labels[lbl] = addr; }
-            const rest = line.replace(/^\d+:|^[A-Za-z_]\w*:/, '').trim();
-            if (rest) addr++;
-        }
-
-        // Pass 2
-        addr = 0;
-        for (const line of lines) {
-            const am = line.match(/^(\d+):/);
-            if (am) addr = parseInt(am[1]);
-            const rest = line.replace(/^\d+:|^[A-Za-z_]\w*:/, '').trim();
-            if (!rest) continue;
-
-            if (rest.startsWith('#')) { out.push({addr, word: parseInt(rest.slice(1)) & 0xFFFFFF}); addr++; continue; }
-            if (rest.startsWith('$')) { out.push({addr, word: parseInt(rest.slice(1), 8) & 0xFFFFFF}); addr++; continue; }
-
-            const parts = rest.split(/\s+/), mnem = parts[0].toUpperCase(), operand = parts.slice(1).join(' ');
-            const info = this.ops[mnem];
-            if (!info) { console.error('Unknown:', mnem); continue; }
-
-            let {value, y} = this.parseOp(operand, labels, !!info.jump);
-            if (info.n !== undefined) { value = info.n; y = 0; }
-
-            const needsLong = !info.s || info.yMin || info.z || value > 63 || y > 0;
-            let word;
-            if (needsLong) {
-                const f = info.l, z = info.z || 0;
-                if (info.yMin && y < info.yMin) y = info.yMin;
-                word = (f << 18) | (y << 16) | (z << 15) | (value & 0x7FFF);
-            } else {
-                word = ((info.s << 6) | ((info.n !== undefined ? info.n : value) & 0x3F)) << 12;
-            }
-            out.push({addr, word});
-            addr++;
-        }
-        return out;
-    }
-
-    parseOp(op, labels, isJump) {
-        if (!op || !op.trim()) return {value: 0, y: 0};
-        op = op.trim();
-        if (op.startsWith('#')) return {value: parseInt(op.slice(1)) || 0, y: 0};
-        if (op.startsWith('@')) return {value: this.resolve(op.slice(1), labels), y: 3};
-        if (op.includes(',R')) return {value: this.resolve(op.split(',')[0], labels), y: 2};
-        // Bare number: Y=0 for jumps (N is target), Y=1 for data ops (N is address to fetch from)
-        return {value: this.resolve(op, labels), y: isJump ? 0 : 1};
-    }
-
-    resolve(s, labels) { s = s.trim(); return labels[s] !== undefined ? labels[s] : (parseInt(s) || 0); }
-}
-
-function disasm(w) {
-    if (!w) return '';
-    const f = (w >> 18) & 0x3F;
-    if (f >= 0o40) {
-        const y = (w >> 16) & 3, z = (w >> 15) & 1, n = w & 0x7FFF;
-        const nm = {0o40:'ADD',0o41:'SUB',0o42:'NADD',0o43:'LD',0o44:'LDR',0o45:'J',0o46:'AND',0o47:'ANDN',
-            0o50:'ADDR',0o51:'SUBR',0o52:'NADR',0o53:'JFL',0o54:'LDK',0o55:'COMP',0o56:'JF',0o57:'JB',
-            0o60:y?'ST':'JN',0o61:y?'STR':'JNN',0o62:y?'NEGS':'JZ',0o63:y?'SUBS':'JNZ',
-            0o64:y?'ADDS':'JST',0o65:y?'CLS':'JOF',0o66:'INCS',0o67:y?'DECS':'DKJN',
-            0o72:'DIVM',0o73:'MULM',0o74:'MVE',0o75:'MVB',0o76:'EXC',0o77:'EXCR'};
-        const yp = ['#','',',R','@'][y];
-        return `${nm[f]||'?'}${z?'*':''} ${yp}${n}`;
-    } else {
-        const n = (w >> 12) & 0x3F;
-        const nm = {0o00:'ADD',0o01:'SUB',0o02:'NADD',0o03:'LD',0o04:'LDR',0o05:'JIR',0o06:'AND',
-            0o07:'ANDN',0o10:'ADDR',0o11:'SUBR',0o12:'NADR',0o14:'LDK',0o15:'SH',0o30:'ST',0o31:'STR'};
-        return `${nm[f]||'?'} ${n}`;
+// Debug console helper
+function runDebugCmd(cmd) {
+    if (ui && ui.debug) {
+        const output = document.getElementById('consoleOutput');
+        const result = ui.debug.executeCommand(cmd);
+        output.textContent += `> ${cmd}\n${result}\n\n`;
+        output.scrollTop = output.scrollHeight;
     }
 }
 
-// QA Test Suite
-const TESTS = [
-    {name:'ADD 5+3=8', code:'LD A\nADD B\nST R\nJ #0\nA: #5\nB: #3\nR: #0', check:c=>c.mem[5]===8},
-    {name:'SUB 10-3=7', code:'LD A\nSUB B\nST R\nJ #0\nA: #10\nB: #3\nR: #0', check:c=>c.mem[5]===7},
-    {name:'NADD Q-M', code:'LD A\nNADD B\nST R\nJ #0\nA: #3\nB: #10\nR: #0', check:c=>c.mem[5]===7},
-    {name:'NEG add -1', code:'LD A\nADD B\nST R\nJ #0\nA: #5\nB: $77777777\nR: #0', check:c=>c.mem[5]===4},
-    {name:'JN flag neg', code:'LD A\nJN OK\nLD Z\nJ #0\nOK: LD ONE\nST R\nJ #0\nA: $77777777\nZ: #0\nONE: #1\nR: #0', check:c=>c.mem[10]===1},
-    {name:'JZ flag zero', code:'LD Z\nJZ OK\nLD Z\nJ #0\nOK: LD ONE\nST R\nJ #0\nZ: #0\nONE: #1\nR: #0', check:c=>c.mem[8]===1},
-    {name:'JNZ flag nz', code:'LD A\nJNZ OK\nLD Z\nJ #0\nOK: LD ONE\nST R\nJ #0\nA: #5\nZ: #0\nONE: #1\nR: #0', check:c=>c.mem[9]===1},
-    {name:'LDR/STR', code:'LDR A\nSTR R\nJ #0\nA: #42\nR: #0', check:c=>c.mem[4]===42},
-    {name:'Literal #', code:'LD A\nADD #5\nST R\nJ #0\nA: #10\nR: #0', check:c=>c.mem[4]===15},
-    {name:'INCS mem++', code:'INCS A\nLD A\nST R\nJ #0\nA: #10\nR: #0', check:c=>c.mem[4]===11},
-    {name:'ADDS Q+=M', code:'LD A\nADDS B\nLD B\nST R\nJ #0\nA: #5\nB: #10\nR: #0', check:c=>c.mem[5]===15},
-    {name:'AND logic', code:'LD A\nAND B\nST R\nJ #0\nA: $17\nB: $70\nR: #0', check:c=>c.mem[5]===8},
-    {name:'MULS 6*7=42', code:'LD A\nMULS B\nST R\nJ #0\nA: #6\nB: #7\nR: #0', check:c=>c.mem[5]===42},
-    {name:'DIV 17/5=3r2', code:'LD A\nDIV B\nST Q\nSTR RR\nJ #0\nA: #17\nB: #5\nQ: #0\nRR: #0', check:c=>c.mem[5]===3&&c.mem[6]===2},
-    {name:'EXC swap', code:'LD A\nEXC B\nST MA\nLD B\nST MB\nJ #0\nA: #5\nB: #10\nMA: #0\nMB: #0', check:c=>c.mem[6]===10&&c.mem[7]===5},
-    {name:'Jump J #n', code:'J X\n#99\nX: LD A\nST R\nJ #0\nA: #42\nR: #0', check:c=>c.mem[6]===42},
-    {name:'DKJN loop', code:'LD Z\nLDK K\nL: ADD ONE\nDKJN L\nST R\nJ #0\nZ: #0\nK: #3\nONE: #1\nR: #0', check:c=>c.mem[9]===3},
-    {name:'COMP pos', code:'LD A\nCOMP B\nJN NO\nLD ONE\nST R\nJ #0\nNO: LD Z\nST R\nJ #0\nA: #5\nB: #3\nONE: #1\nZ: #0\nR: #0', check:c=>c.mem[12]===1},
-];
-
-// Global state
-const cpu = new E4130();
-const asm = new Asm();
-let timer = null, selTape = null;
-
-function update() {
-    document.getElementById('rM').textContent = cpu.M.toString(8).padStart(8,'0');
-    document.getElementById('rR').textContent = cpu.R.toString(8).padStart(8,'0');
-    document.getElementById('rS').textContent = cpu.S.toString(8).padStart(6,'0');
-    document.getElementById('rK').textContent = cpu.K.toString(8).padStart(4,'0');
-    document.getElementById('cN').classList.toggle('on', cpu.C & cpu.F_NEG);
-    document.getElementById('cS').classList.toggle('on', cpu.C & cpu.F_ST);
-    document.getElementById('cZ').classList.toggle('on', cpu.C & cpu.F_NZ);
-    document.getElementById('cC').classList.toggle('on', cpu.C & cpu.F_CA);
-    document.getElementById('cO').classList.toggle('on', cpu.C & cpu.F_OF);
-    document.getElementById('iCnt').textContent = cpu.iCount;
-    document.getElementById('runLed').classList.toggle('on', !cpu.halted);
-    document.getElementById('statTxt').textContent = cpu.halted ? 'Halted' : 'Running';
-
-    const el = document.getElementById('mem'), pc = cpu.S >> 1;
-    let h = '';
-    for (let a = Math.max(0, pc-2); a <= Math.min(65535, pc+12); a++) {
-        const w = cpu.mem[a];
-        h += `<div class="mem-line${a===pc?' current':''}"><span class="mem-addr">${a}</span><span class="mem-hex">${w.toString(8).padStart(8,'0')}</span><span class="mem-asm">${disasm(w)}</span></div>`;
-    }
-    el.innerHTML = h;
-}
-
-function load() {
-    const code = asm.asm(document.getElementById('src').value);
-    cpu.reset();
-    for (const {addr, word} of code) cpu.mem[addr] = word;
-    cpu.halted = false;
-    document.getElementById('tty').textContent = '';
-    update();
-}
-
-function run() {
-    if (cpu.halted) cpu.halted = false;
-    const delay = Math.max(1, 101 - document.getElementById('speed').value);
-    if (timer) clearInterval(timer);
-    timer = setInterval(() => {
-        const w = cpu.mem[cpu.S >> 1], f = (w >> 18) & 0x3F, y = (w >> 16) & 3, n = w & 0x7FFF;
-        if (f === 0o45 && y === 0 && n === cpu.S) { stop(); return; }
-        if (!cpu.step()) stop();
-        update();
-        if (cpu.iCount > 100000) { stop(); cpu.output('\n[Limit]'); }
-    }, delay);
-}
-
-function step() { if (cpu.halted) cpu.halted = false; cpu.step(); update(); }
-function stop() { if (timer) { clearInterval(timer); timer = null; } cpu.halted = true; update(); }
-function reset() { stop(); cpu.reset(); document.getElementById('tty').textContent = ''; update(); }
-
-function loadTapes() {
-    const tapes = JSON.parse(localStorage.getItem('e4130_tapes') || '{}');
-    const el = document.getElementById('tapes');
-    el.innerHTML = '';
-    for (const name of Object.keys(tapes)) {
-        const d = document.createElement('div');
-        d.className = 'tape-item' + (name === selTape ? ' selected' : '');
-        d.textContent = name;
-        d.onclick = () => { selTape = name; document.getElementById('src').value = tapes[name]; loadTapes(); };
-        el.appendChild(d);
-    }
-}
-
-function saveTape() {
-    const name = prompt('Tape name:');
-    if (!name) return;
-    const tapes = JSON.parse(localStorage.getItem('e4130_tapes') || '{}');
-    tapes[name] = document.getElementById('src').value;
-    localStorage.setItem('e4130_tapes', JSON.stringify(tapes));
-    selTape = name; loadTapes();
-}
-
-function delTape() {
-    if (!selTape || !confirm(`Delete "${selTape}"?`)) return;
-    const tapes = JSON.parse(localStorage.getItem('e4130_tapes') || '{}');
-    delete tapes[selTape];
-    localStorage.setItem('e4130_tapes', JSON.stringify(tapes));
-    selTape = null; loadTapes();
-}
-
-// QA Test runner
-function runTest(t) {
-    const tc = new E4130();
-    const code = asm.asm(t.code);
-    for (const {addr, word} of code) tc.mem[addr] = word;
-    tc.halted = false;
-    for (let i = 0; i < 1000 && !tc.halted; i++) {
-        const w = tc.mem[tc.S >> 1], f = (w >> 18) & 0x3F, y = (w >> 16) & 3, n = w & 0x7FFF;
-        if (f === 0o45 && y === 0 && n === tc.S) break;
-        tc.step();
-    }
-    return t.check(tc);
-}
-
-function runAllTests() {
-    let pass = 0, fail = 0;
-    const el = document.getElementById('testList');
-    el.innerHTML = '';
-    for (const t of TESTS) {
-        const ok = runTest(t);
-        if (ok) pass++; else fail++;
-        const d = document.createElement('div');
-        d.className = 'test-item';
-        d.innerHTML = `<span class="test-name">${t.name}</span><span class="test-status ${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</span>`;
-        el.appendChild(d);
-    }
-    document.getElementById('testSummary').textContent = `${pass}/${TESTS.length} passed` + (fail ? ` (${fail} failed)` : '');
-    document.getElementById('testSummary').style.color = fail ? '#f00' : '#0f0';
-}
-
-function initTests() {
-    const el = document.getElementById('testList');
-    el.innerHTML = '';
-    for (const t of TESTS) {
-        const d = document.createElement('div');
-        d.className = 'test-item';
-        d.innerHTML = `<span class="test-name">${t.name}</span><span class="test-status wait">--</span>`;
-        el.appendChild(d);
-    }
-}
-
+// Setup debug console input
 document.addEventListener('DOMContentLoaded', () => {
-    // Tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.onclick = () => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    const consoleInput = document.getElementById('debugConsole');
+    const consoleOutput = document.getElementById('consoleOutput');
+
+    if (consoleInput && consoleOutput) {
+        consoleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && ui && ui.debug) {
+                const cmd = consoleInput.value.trim();
+                if (cmd) {
+                    const result = ui.debug.executeCommand(cmd);
+                    consoleOutput.textContent += `> ${cmd}\n${result}\n\n`;
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    consoleInput.value = '';
+                }
+            }
+        });
+    }
+
+    // Export log button
+    const exportBtn = document.getElementById('exportLog');
+    if (exportBtn) {
+        exportBtn.onclick = () => {
+            if (ui && ui.debug) {
+                const data = ui.debug.exportState();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `e4130-debug-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
         };
-    });
-
-    // Main controls
-    document.getElementById('bLoad').onclick = load;
-    document.getElementById('bRun').onclick = run;
-    document.getElementById('bStep').onclick = step;
-    document.getElementById('bStop').onclick = stop;
-    document.getElementById('bReset').onclick = reset;
-    document.getElementById('bSave').onclick = saveTape;
-    document.getElementById('bDel').onclick = delTape;
-
-    // Config controls
-    document.getElementById('runTests').onclick = runAllTests;
-    document.getElementById('clearLog').onclick = () => { document.getElementById('logArea').textContent = ''; };
-
-    loadTapes();
-    initTests();
-    update();
+    }
 });
 </script>
 
