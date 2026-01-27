@@ -1,0 +1,59 @@
+=== Kanren-RDF Test Suite ===
+Run: 2026-01-27T01-51-28Z
+Node: v22.22.0
+
+--- Core Tests (test-kanren.mjs) ---
+
+Unification Tests:
+  ✓ unify two identical URIs
+  ✓ unify variable with URI
+  ✓ unify two variables
+  ✓ fail to unify different URIs
+  ✓ transitive unification
+
+Kanren Goal Tests:
+  ✓ eq goal succeeds for matching
+  ✓ conj combines two goals
+  ✓ disj produces multiple results
+
+Claim Store Tests:
+  ✓ add and query claims
+  ✓ join query across claims
+
+Bloom Filter Tests:
+  ✓ Bloom filter basic operations
+  ✓ Bloom filter serialization
+      (Bloom filter: 200 checks, 100 skips)
+  ✓ Bloom filter optimization reduces scans
+
+Path Query Tests:
+  ✓ transitive closure / path query
+
+Annotated Datatype Tests:
+  ✓ parse annotated datatype
+  ✓ literal with annotations
+
+=== Core Summary ===
+  Passed: 16/16 (100%)
+
+--- W3C SPARQL Tests (sparql-w3c-tests.mjs) ---
+
+  ✓ dawg-triple-pattern-001: Simple triple pattern (2 results)
+  ✓ dawg-triple-pattern-002: Triple pattern with bound subject (2 results)
+  ✓ dawg-triple-pattern-003: Triple pattern with bound predicate (2 results)
+  ✓ dawg-bgp-join-001: Basic Graph Pattern join (1 result)
+  ✓ dawg-optional-001: OPTIONAL pattern (2 results)
+  ✓ dawg-limit-001: LIMIT modifier (3 results)
+  ✓ dawg-syntax-lit-01: Literal with language tag (2 results)
+  ✓ dawg-foaf-01: FOAF social network query (3 results)
+
+Additional Compliance Tests:
+  ✓ Three-hop transitive join (2 results)
+  ✓ Multi-predicate query on same subject
+
+=== W3C Summary ===
+  Passed: 10/10 (100%)
+
+=== TOTAL ===
+  All Tests: 26/26 (100%)
+  Status: VERIFIED PASSING
