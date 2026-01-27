@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Elliott 4130</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: monospace; background: #111; color: #0f0; font-size: 12px; line-height: 1.3; }
+
+        .app { display: flex; flex-direction: column; height: 100vh; }
+
+        /* Tabs */
+        .tabs { display: flex; background: #1a1a1a; border-bottom: 1px solid #333; }
+        .tab { padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab:hover { background: #222; }
+        .tab.active { border-bottom-color: #0f0; color: #0f0; }
+        .tab-content { display: none; flex: 1; overflow: hidden; }
+        .tab-content.active { display: flex; flex-direction: column; }
+
+        /* Main tab layout */
+        .main-grid { display: grid; grid-template-columns: 1fr 180px; flex: 1; gap: 4px; padding: 4px; overflow: hidden; }
+        .left-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow: hidden; }
+        .right-col { display: flex; flex-direction: column; gap: 4px; }
+
+        .panel { background: #1a1a1a; border: 1px solid #333; padding: 6px; }
+        .panel-title { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+
+        .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+        .reg { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+        .reg-name { color: #888; width: 14px; }
+        .reg-val { background: #000; padding: 2px 4px; flex: 1; border: 1px solid #222; font-size: 10px; }
+
+        .conds { display: flex; flex-wrap: wrap; gap: 6px; }
+        .cond { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #666; }
+        .cond-led { width: 8px; height: 8px; border-radius: 50%; background: #300; border: 1px solid #500; }
+        .cond-led.on { background: #f00; box-shadow: 0 0 4px #f00; }
+
+        .memory-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .memory-view { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; font-size: 11px; }
+        .mem-line { display: flex; gap: 6px; padding: 1px 4px; }
+        .mem-line.current { background: #030; }
+        .mem-addr { color: #f80; width: 40px; }
+        .mem-hex { color: #0f0; width: 65px; }
+        .mem-asm { color: #888; }
+
+        .teleprinter { background: #000; border: 1px solid #222; height: 60px; overflow-y: auto; padding: 4px; font-size: 11px; white-space: pre-wrap; }
+
+        .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 100px; }
+        .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 11px; padding: 4px; resize: none; }
+        .program-input:focus { outline: none; border-color: #0f0; }
+
+        .tape-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; max-height: 40px; overflow-y: auto; }
+        .tape-item { font-size: 9px; padding: 2px 4px; background: #222; border: 1px solid #333; cursor: pointer; }
+        .tape-item:hover { border-color: #0f0; }
+        .tape-item.selected { border-color: #0f0; background: #030; }
+
+        .help { font-size: 9px; color: #555; margin-top: 4px; line-height: 1.4; }
+        .help code { color: #f80; }
+
+        /* Controls bar */
+        .controls { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 4px; background: #1a1a1a; border-top: 1px solid #333; }
+        .btn { font-family: monospace; font-size: 11px; padding: 6px 10px; border: 1px solid #333; background: #222; color: #0f0; cursor: pointer; }
+        .btn:hover { background: #333; }
+        .btn:active { background: #444; }
+        .btn.primary { border-color: #0f0; }
+        .btn.danger { border-color: #f00; color: #f00; }
+
+        .status { margin-left: auto; display: flex; gap: 12px; font-size: 10px; color: #666; }
+        .status span { color: #0f0; }
+        .running-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #300; margin-right: 4px; }
+        .running-dot.on { background: #0f0; animation: blink 0.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        .speed { display: flex; align-items: center; gap: 4px; }
+        .speed input { width: 60px; accent-color: #0f0; }
+
+        /* Config tab */
+        .config-content { flex: 1; padding: 8px; overflow-y: auto; }
+        .config-section { margin-bottom: 16px; }
+        .config-section h3 { font-size: 12px; color: #f80; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+
+        .test-list { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; }
+        .test-item { display: flex; align-items: center; gap: 8px; padding: 4px; background: #1a1a1a; border: 1px solid #222; }
+        .test-name { flex: 1; font-size: 11px; }
+        .test-status { font-size: 10px; width: 50px; text-align: center; }
+        .test-status.pass { color: #0f0; }
+        .test-status.fail { color: #f00; }
+        .test-status.wait { color: #666; }
+        .test-category { font-size: 11px; color: #f80; padding: 6px 4px 2px 4px; margin-top: 8px; border-bottom: 1px solid #333; }
+        .test-cat-stats { font-size: 10px; }
+
+        .debug-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+        .debug-opt { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+        .debug-opt input { accent-color: #0f0; }
+
+        .log-area { background: #000; border: 1px solid #222; height: 200px; overflow-y: auto; padding: 4px; font-size: 10px; color: #888; white-space: pre-wrap; font-family: monospace; }
+
+        /* Debug tab */
+        .debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; padding: 8px; overflow: hidden; }
+        .debug-col { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        .debug-panel { background: #1a1a1a; border: 1px solid #333; padding: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .debug-panel.tall { flex: 1; }
+        .debug-output { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; padding: 4px; font-size: 10px; color: #0f0; white-space: pre-wrap; font-family: monospace; min-height: 100px; }
+        .debug-input { width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 11px; padding: 4px; margin-top: 4px; }
+        .debug-input:focus { outline: none; border-color: #0f0; }
+        .debug-btn-row { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+
+        @media (max-width: 600px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .right-col { flex-direction: row; flex-wrap: wrap; }
+            .right-col .panel { flex: 1; min-width: 140px; }
+            .debug-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="tabs">
+        <div class="tab active" data-tab="main">Emulator</div>
+        <div class="tab" data-tab="tests">Tests</div>
+        <div class="tab" data-tab="debug">Debug</div>
+    </div>
+
+    <!-- Main Tab -->
+    <div class="tab-content active" id="tab-main">
+        <div class="main-grid">
+            <div class="left-col">
+                <div class="panel memory-panel">
+                    <div class="panel-title">Core Store</div>
+                    <div class="memory-view" id="mem"></div>
+                </div>
+                <div class="panel program-panel">
+                    <div class="panel-title">Paper Tape (NEAT)</div>
+                    <textarea class="program-input" id="src" spellcheck="false">; Add two numbers
+  LD    100       ; M := [100]
+  ADD   101       ; M := M + [101]
+  ST    102       ; [102] := M
+  J     #0        ; Jump to addr 0
+
+100:  #5             ; Data: 5
+101:  #3             ; Data: 3
+102:  #0             ; Result</textarea>
+                    <div class="tape-list" id="tapes"></div>
+                    <div class="help">
+                        <code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code><br>
+                        Addr: <code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect <code>n,R</code>=modified
+                    </div>
+                </div>
+            </div>
+            <div class="right-col">
+                <div class="panel">
+                    <div class="panel-title">Registers</div>
+                    <div class="reg-grid">
+                        <div class="reg"><span class="reg-name">M</span><span class="reg-val" id="rM">00000000</span></div>
+                        <div class="reg"><span class="reg-name">R</span><span class="reg-val" id="rR">00000000</span></div>
+                        <div class="reg"><span class="reg-name">S</span><span class="reg-val" id="rS">000000</span></div>
+                        <div class="reg"><span class="reg-name">K</span><span class="reg-val" id="rK">0000</span></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Conditions</div>
+                    <div class="conds">
+                        <div class="cond"><div class="cond-led" id="cN"></div>Neg</div>
+                        <div class="cond"><div class="cond-led" id="cS"></div>St</div>
+                        <div class="cond"><div class="cond-led" id="cZ"></div>Nz</div>
+                        <div class="cond"><div class="cond-led" id="cC"></div>Ca</div>
+                        <div class="cond"><div class="cond-led" id="cO"></div>Of</div>
+                    </div>
+                </div>
+                <div class="panel" style="flex:1">
+                    <div class="panel-title">Teleprinter</div>
+                    <div class="teleprinter" id="tty"></div>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="btn primary" id="bLoad">Load</button>
+            <button class="btn primary" id="bRun">Run</button>
+            <button class="btn" id="bStep">Step</button>
+            <button class="btn danger" id="bStop">Stop</button>
+            <button class="btn" id="bReset">Reset</button>
+            <button class="btn" id="bSave">Save</button>
+            <button class="btn" id="bDel">Del</button>
+            <div class="speed"><input type="range" id="speed" min="1" max="100" value="50"></div>
+            <div class="status">
+                <div><span class="running-dot" id="runLed"></span><span id="statTxt">Ready</span></div>
+                <div>I:<span id="iCnt">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tests Tab -->
+    <div class="tab-content" id="tab-tests">
+        <div class="config-content">
+            <div class="config-section">
+                <h3>QA Test Suite (E6X3 Validation)</h3>
+                <div style="margin-bottom:8px">
+                    <button class="btn primary" id="runTests">Run All Tests</button>
+                    <span id="testSummary" style="margin-left:12px;font-size:11px"></span>
+                </div>
+                <div class="test-list" id="testList"></div>
+            </div>
+
+            <div class="config-section">
+                <h3>About</h3>
+                <div style="font-size:11px;color:#888;line-height:1.6">
+                    Elliott 4130 emulator based on E6X2/E6X3 specifications from<br>
+                    Computer Conservation Society (ourcomputerheritage.org).<br><br>
+                    24-bit word, two's complement. Registers: M (acc), R (reserve),<br>
+                    S (PC, half-word), K (count), C (conditions).<br><br>
+                    Test suite validates against E6X3 documented instruction behavior.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Tab -->
+    <div class="tab-content" id="tab-debug">
+        <div class="debug-grid">
+            <div class="debug-col">
+                <div class="debug-panel">
+                    <div class="panel-title">Debug Options</div>
+                    <div class="debug-opts">
+                        <label class="debug-opt"><input type="checkbox" id="dbgTrace"> Trace execution</label>
+                        <label class="debug-opt"><input type="checkbox" id="dbgBreak"> Break on error</label>
+                        <label class="debug-opt"><input type="checkbox" id="dbgVerbose"> Verbose disasm</label>
+                    </div>
+                </div>
+                <div class="debug-panel tall">
+                    <div class="panel-title">Execution Log</div>
+                    <div class="log-area" id="logArea"></div>
+                    <div class="debug-btn-row">
+                        <button class="btn" id="clearLog">Clear</button>
+                        <button class="btn" id="exportLog">Export</button>
+                    </div>
+                </div>
+            </div>
+            <div class="debug-col">
+                <div class="debug-panel tall">
+                    <div class="panel-title">Debug Console</div>
+                    <div class="debug-output" id="consoleOutput">Type 'help' for available commands.
+</div>
+                    <input type="text" class="debug-input" id="debugConsole" placeholder="Enter command...">
+                    <div class="debug-btn-row">
+                        <button class="btn" onclick="runDebugCmd('state')">State</button>
+                        <button class="btn" onclick="runDebugCmd('context')">Context</button>
+                        <button class="btn" onclick="runDebugCmd('trace 10')">Trace</button>
+                        <button class="btn" onclick="runDebugCmd('diag')">Diag</button>
+                        <button class="btn" onclick="runDebugCmd('perf')">Perf</button>
+                        <button class="btn" onclick="runDebugCmd('freq')">Freq</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load modules -->
+<script src="elliott4130-core.js"></script>
+<script src="elliott4130-asm.js"></script>
+<script src="elliott4130-tests.js"></script>
+<script src="elliott4130-debug.js"></script>
+<script src="elliott4130-ui.js"></script>
+
+<script>
+// Debug console helper
+function runDebugCmd(cmd) {
+    if (ui && ui.debug) {
+        const output = document.getElementById('consoleOutput');
+        const result = ui.debug.executeCommand(cmd);
+        output.textContent += `> ${cmd}\n${result}\n\n`;
+        output.scrollTop = output.scrollHeight;
+    }
+}
+
+// Setup debug console input
+document.addEventListener('DOMContentLoaded', () => {
+    const consoleInput = document.getElementById('debugConsole');
+    const consoleOutput = document.getElementById('consoleOutput');
+
+    if (consoleInput && consoleOutput) {
+        consoleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && ui && ui.debug) {
+                const cmd = consoleInput.value.trim();
+                if (cmd) {
+                    const result = ui.debug.executeCommand(cmd);
+                    consoleOutput.textContent += `> ${cmd}\n${result}\n\n`;
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    consoleInput.value = '';
+                }
+            }
+        });
+    }
+
+    // Export log button
+    const exportBtn = document.getElementById('exportLog');
+    if (exportBtn) {
+        exportBtn.onclick = () => {
+            if (ui && ui.debug) {
+                const data = ui.debug.exportState();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `e4130-debug-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
+    }
+});
+</script>
+
+</body>
+</html>
