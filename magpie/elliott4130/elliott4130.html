@@ -10,69 +10,80 @@
 
         .app { display: flex; flex-direction: column; height: 100vh; }
 
+        /* Compact header with title + inline registers */
+        .header-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-bottom: 1px solid #333; padding: 4px 8px; }
+        .header-title { font-size: 13px; font-weight: bold; color: #0f0; }
+        .header-regs { display: flex; gap: 8px; font-size: 10px; }
+        .header-reg { display: flex; align-items: center; gap: 3px; }
+        .header-reg-name { color: #888; }
+        .header-reg-val { color: #0f0; background: #000; padding: 1px 4px; border: 1px solid #333; min-width: 55px; }
+        .header-conds { display: flex; gap: 4px; }
+        .header-led { width: 6px; height: 6px; border-radius: 50%; background: #300; }
+        .header-led.on { background: #f00; box-shadow: 0 0 3px #f00; }
+
         /* Tabs */
         .tabs { display: flex; background: #1a1a1a; border-bottom: 1px solid #333; }
-        .tab { padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab { padding: 6px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 11px; }
         .tab:hover { background: #222; }
         .tab.active { border-bottom-color: #0f0; color: #0f0; }
         .tab-content { display: none; flex: 1; overflow: hidden; }
         .tab-content.active { display: flex; flex-direction: column; }
 
-        /* Main tab layout */
-        .main-grid { display: grid; grid-template-columns: 1fr 180px; flex: 1; gap: 4px; padding: 4px; overflow: hidden; }
-        .left-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow: hidden; }
-        .right-col { display: flex; flex-direction: column; gap: 4px; }
+        /* Main tab layout - single column on mobile */
+        .main-grid { display: flex; flex-direction: column; flex: 1; gap: 4px; padding: 4px; overflow: hidden; }
 
-        .panel { background: #1a1a1a; border: 1px solid #333; padding: 6px; }
-        .panel-title { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+        .panel { background: #1a1a1a; border: 1px solid #333; padding: 4px 6px; }
+        .panel-title { font-size: 9px; color: #666; text-transform: uppercase; margin-bottom: 2px; }
 
-        .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
-        .reg { display: flex; align-items: center; gap: 4px; font-size: 11px; }
-        .reg-name { color: #888; width: 14px; }
-        .reg-val { background: #000; padding: 2px 4px; flex: 1; border: 1px solid #222; font-size: 10px; }
+        /* Compact register row for expanded view */
+        .reg-row { display: flex; gap: 4px; flex-wrap: wrap; }
+        .reg { display: flex; align-items: center; gap: 3px; font-size: 10px; }
+        .reg-name { color: #888; }
+        .reg-val { background: #000; padding: 1px 3px; border: 1px solid #222; font-size: 9px; min-width: 50px; }
 
         .conds { display: flex; flex-wrap: wrap; gap: 6px; }
-        .cond { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #666; }
-        .cond-led { width: 8px; height: 8px; border-radius: 50%; background: #300; border: 1px solid #500; }
+        .cond { display: flex; align-items: center; gap: 2px; font-size: 9px; color: #666; }
+        .cond-led { width: 7px; height: 7px; border-radius: 50%; background: #300; border: 1px solid #500; }
         .cond-led.on { background: #f00; box-shadow: 0 0 4px #f00; }
 
-        .memory-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .memory-view { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; font-size: 11px; }
-        .mem-line { display: flex; gap: 6px; padding: 1px 4px; }
+        .memory-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 80px; }
+        .memory-view { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; font-size: 10px; }
+        .mem-line { display: flex; gap: 4px; padding: 1px 3px; }
         .mem-line.current { background: #030; }
-        .mem-addr { color: #f80; width: 40px; }
-        .mem-hex { color: #0f0; width: 65px; }
-        .mem-asm { color: #888; }
+        .mem-addr { color: #f80; width: 36px; }
+        .mem-hex { color: #0f0; width: 58px; }
+        .mem-asm { color: #888; font-size: 9px; }
 
-        .teleprinter { background: #000; border: 1px solid #222; height: 60px; overflow-y: auto; padding: 4px; font-size: 11px; white-space: pre-wrap; }
+        .teleprinter { background: #000; border: 1px solid #222; height: 40px; overflow-y: auto; padding: 3px; font-size: 10px; white-space: pre-wrap; }
 
-        .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 100px; }
-        .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 11px; padding: 4px; resize: none; }
+        .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 80px; }
+        .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 10px; padding: 3px; resize: none; }
         .program-input:focus { outline: none; border-color: #0f0; }
 
-        .tape-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; max-height: 40px; overflow-y: auto; }
-        .tape-item { font-size: 9px; padding: 2px 4px; background: #222; border: 1px solid #333; cursor: pointer; }
+        .tape-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; max-height: 32px; overflow-y: auto; }
+        .tape-item { font-size: 8px; padding: 2px 4px; background: #222; border: 1px solid #333; cursor: pointer; }
         .tape-item:hover { border-color: #0f0; }
         .tape-item.selected { border-color: #0f0; background: #030; }
 
-        .help { font-size: 9px; color: #555; margin-top: 4px; line-height: 1.4; }
+        .help { font-size: 8px; color: #555; margin-top: 2px; line-height: 1.3; }
         .help code { color: #f80; }
 
-        /* Controls bar */
-        .controls { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 4px; background: #1a1a1a; border-top: 1px solid #333; }
-        .btn { font-family: monospace; font-size: 11px; padding: 6px 10px; border: 1px solid #333; background: #222; color: #0f0; cursor: pointer; }
+        /* Controls bar - compact */
+        .controls { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; padding: 3px 4px; background: #1a1a1a; border-top: 1px solid #333; }
+        .btn { font-family: monospace; font-size: 10px; padding: 4px 8px; border: 1px solid #333; background: #222; color: #0f0; cursor: pointer; }
         .btn:hover { background: #333; }
         .btn:active { background: #444; }
         .btn.primary { border-color: #0f0; }
         .btn.danger { border-color: #f00; color: #f00; }
+        .btn.lisp { border-color: #f80; color: #f80; }
 
-        .status { margin-left: auto; display: flex; gap: 12px; font-size: 10px; color: #666; }
+        .status { margin-left: auto; display: flex; gap: 8px; font-size: 9px; color: #666; }
         .status span { color: #0f0; }
-        .running-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #300; margin-right: 4px; }
+        .running-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #300; margin-right: 3px; }
         .running-dot.on { background: #0f0; animation: blink 0.5s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
-        .speed { display: flex; align-items: center; gap: 4px; }
-        .speed input { width: 60px; accent-color: #0f0; }
+        .speed { display: flex; align-items: center; gap: 3px; }
+        .speed input { width: 50px; accent-color: #0f0; }
 
         /* Config tab */
         .config-content { flex: 1; padding: 8px; overflow-y: auto; }
@@ -119,6 +130,19 @@
 </head>
 <body>
 <div class="app">
+    <!-- Compact header with title and key registers -->
+    <div class="header-bar">
+        <div class="header-title">Elliott 4130</div>
+        <div class="header-regs">
+            <div class="header-reg"><span class="header-reg-name">M</span><span class="header-reg-val" id="hM">00000000</span></div>
+            <div class="header-reg"><span class="header-reg-name">S</span><span class="header-reg-val" id="hS">0000</span></div>
+            <div class="header-conds">
+                <div class="header-led" id="hN" title="Neg"></div>
+                <div class="header-led" id="hZ" title="NZ"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="tabs">
         <div class="tab active" data-tab="main">Emulator</div>
         <div class="tab" data-tab="tests">Tests</div>
@@ -128,14 +152,31 @@
     <!-- Main Tab -->
     <div class="tab-content active" id="tab-main">
         <div class="main-grid">
-            <div class="left-col">
-                <div class="panel memory-panel">
-                    <div class="panel-title">Core Store</div>
-                    <div class="memory-view" id="mem"></div>
+            <!-- Compact registers + conditions row -->
+            <div class="panel" style="padding:3px 6px;">
+                <div class="reg-row">
+                    <div class="reg"><span class="reg-name">M</span><span class="reg-val" id="rM">00000000</span></div>
+                    <div class="reg"><span class="reg-name">R</span><span class="reg-val" id="rR">00000000</span></div>
+                    <div class="reg"><span class="reg-name">S</span><span class="reg-val" id="rS">0000</span></div>
+                    <div class="reg"><span class="reg-name">K</span><span class="reg-val" id="rK">0000</span></div>
+                    <div class="conds" style="margin-left:auto;">
+                        <div class="cond"><div class="cond-led" id="cN"></div>N</div>
+                        <div class="cond"><div class="cond-led" id="cS"></div>S</div>
+                        <div class="cond"><div class="cond-led" id="cZ"></div>Z</div>
+                        <div class="cond"><div class="cond-led" id="cC"></div>C</div>
+                        <div class="cond"><div class="cond-led" id="cO"></div>O</div>
+                    </div>
                 </div>
-                <div class="panel program-panel">
-                    <div class="panel-title">Paper Tape (NEAT)</div>
-                    <textarea class="program-input" id="src" spellcheck="false">; Add two numbers
+            </div>
+
+            <div class="panel memory-panel">
+                <div class="panel-title">Core Store</div>
+                <div class="memory-view" id="mem"></div>
+            </div>
+
+            <div class="panel program-panel">
+                <div class="panel-title">Paper Tape (NEAT)</div>
+                <textarea class="program-input" id="src" spellcheck="false">; Add two numbers
   LD    100       ; M := [100]
   ADD   101       ; M := M + [101]
   ST    102       ; [102] := M
@@ -144,37 +185,16 @@
 100:  #5             ; Data: 5
 101:  #3             ; Data: 3
 102:  #0             ; Result</textarea>
-                    <div class="tape-list" id="tapes"></div>
-                    <div class="help">
-                        <code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code><br>
-                        Addr: <code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect <code>n,R</code>=modified
-                    </div>
+                <div class="tape-list" id="tapes"></div>
+                <div class="help">
+                    <code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code> &nbsp;
+                    <code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect
                 </div>
             </div>
-            <div class="right-col">
-                <div class="panel">
-                    <div class="panel-title">Registers</div>
-                    <div class="reg-grid">
-                        <div class="reg"><span class="reg-name">M</span><span class="reg-val" id="rM">00000000</span></div>
-                        <div class="reg"><span class="reg-name">R</span><span class="reg-val" id="rR">00000000</span></div>
-                        <div class="reg"><span class="reg-name">S</span><span class="reg-val" id="rS">000000</span></div>
-                        <div class="reg"><span class="reg-name">K</span><span class="reg-val" id="rK">0000</span></div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-title">Conditions</div>
-                    <div class="conds">
-                        <div class="cond"><div class="cond-led" id="cN"></div>Neg</div>
-                        <div class="cond"><div class="cond-led" id="cS"></div>St</div>
-                        <div class="cond"><div class="cond-led" id="cZ"></div>Nz</div>
-                        <div class="cond"><div class="cond-led" id="cC"></div>Ca</div>
-                        <div class="cond"><div class="cond-led" id="cO"></div>Of</div>
-                    </div>
-                </div>
-                <div class="panel" style="flex:1">
-                    <div class="panel-title">Teleprinter</div>
-                    <div class="teleprinter" id="tty"></div>
-                </div>
+
+            <div class="panel" style="padding:3px 6px;">
+                <div class="panel-title">Teleprinter</div>
+                <div class="teleprinter" id="tty"></div>
             </div>
         </div>
         <div class="controls">
@@ -183,8 +203,7 @@
             <button class="btn" id="bStep">Step</button>
             <button class="btn danger" id="bStop">Stop</button>
             <button class="btn" id="bReset">Reset</button>
-            <button class="btn" id="bSave">Save</button>
-            <button class="btn" id="bDel">Del</button>
+            <button class="btn lisp" id="bLisp">Lisp</button>
             <div class="speed"><input type="range" id="speed" min="1" max="100" value="50"></div>
             <div class="status">
                 <div><span class="running-dot" id="runLed"></span><span id="statTxt">Ready</span></div>
@@ -250,8 +269,7 @@
                         <button class="btn" onclick="runDebugCmd('context')">Context</button>
                         <button class="btn" onclick="runDebugCmd('trace 10')">Trace</button>
                         <button class="btn" onclick="runDebugCmd('diag')">Diag</button>
-                        <button class="btn" onclick="runDebugCmd('perf')">Perf</button>
-                        <button class="btn" onclick="runDebugCmd('freq')">Freq</button>
+                        <button class="btn" id="copyLogs">Copy Logs</button>
                     </div>
                 </div>
             </div>
@@ -277,6 +295,68 @@ function runDebugCmd(cmd) {
     }
 }
 
+// Lisp demo program for Elliott 4130
+const LISP_DEMO = `; McCarthy 1960 LISP - Cons Cell Demo
+; Elliott 4130 24-bit word: 2x 12-bit pointers per cons cell
+; Memory layout: low 4096 words = heap, atoms in high memory
+
+; === CONSTANTS ===
+  LD    #0          ; NIL = 0
+  ST    1000        ; Store NIL at 1000
+
+; === BUILD LIST (A B C) ===
+; Cons cell format: [CAR:12bits | CDR:12bits]
+
+; First create atoms A=4001, B=4002, C=4003 (in atom table)
+; Then build: (cons 'A (cons 'B (cons 'C NIL)))
+
+; Cell 3: (C . NIL) at addr 103
+  LD    #4003       ; CAR = atom C (shifted left 12)
+  MULS  #4096       ; Shift left 12 bits
+  ADD   #0          ; CDR = NIL
+  ST    103
+
+; Cell 2: (B . cell3) at addr 102
+  LD    #4002       ; CAR = atom B
+  MULS  #4096
+  ADD   #103        ; CDR = addr of cell 3
+  ST    102
+
+; Cell 1: (A . cell2) at addr 101 - this is our list!
+  LD    #4001       ; CAR = atom A
+  MULS  #4096
+  ADD   #102        ; CDR = addr of cell 2
+  ST    101
+
+; === CAR OPERATION ===
+; car(x) = x >> 12 (extract high 12 bits)
+  LD    101         ; Load list (A B C)
+  DIV   #4096       ; Shift right 12 = CAR
+  ST    200         ; Result: 4001 (atom A)
+
+; === CDR OPERATION ===
+; cdr(x) = x & 0xFFF (extract low 12 bits)
+  LD    101         ; Load list
+  ; For proper CDR we need AND mask - using subtraction trick
+  DIV   #4096       ; Get CAR in low bits
+  MULS  #4096       ; Shift back (clears low 12)
+  ST    201         ; Temp: original with low bits zeroed
+  LD    101
+  SUB   201         ; Original - (original with low zeroed) = low 12 bits
+  ST    202         ; Result: 102 (addr of (B C))
+
+; === VERIFY ===
+  LD    200         ; Should be 4001 (atom A)
+  LD    202         ; Should be 102 (cdr pointer)
+
+  J     #0          ; Loop
+
+; === DATA AREA ===
+1000: #0            ; NIL
+200:  #0            ; CAR result
+201:  #0            ; Temp
+202:  #0            ; CDR result`;
+
 // Setup debug console input
 document.addEventListener('DOMContentLoaded', () => {
     const consoleInput = document.getElementById('debugConsole');
@@ -296,6 +376,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Copy logs button
+    const copyLogsBtn = document.getElementById('copyLogs');
+    if (copyLogsBtn) {
+        copyLogsBtn.onclick = () => {
+            const logArea = document.getElementById('logArea');
+            const consoleOut = document.getElementById('consoleOutput');
+            const logs = `=== EXECUTION LOG ===\n${logArea?.textContent || ''}\n\n=== DEBUG CONSOLE ===\n${consoleOut?.textContent || ''}`;
+            navigator.clipboard.writeText(logs).then(() => {
+                copyLogsBtn.textContent = 'Copied!';
+                setTimeout(() => copyLogsBtn.textContent = 'Copy Logs', 1500);
+            });
+        };
+    }
+
     // Export log button
     const exportBtn = document.getElementById('exportLog');
     if (exportBtn) {
@@ -309,6 +403,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.download = `e4130-debug-${Date.now()}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
+            }
+        };
+    }
+
+    // Lisp demo button
+    const lispBtn = document.getElementById('bLisp');
+    if (lispBtn) {
+        lispBtn.onclick = () => {
+            const srcArea = document.getElementById('src');
+            if (srcArea) {
+                srcArea.value = LISP_DEMO;
             }
         };
     }
