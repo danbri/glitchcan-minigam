@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanren-RDF v2</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #e8e8e8;
+      min-height: 100vh;
+      padding: 1.5rem;
+      font-size: 14px;
+    }
+
+    h1 { font-size: 1.4rem; font-weight: 400; color: #fff; }
+    .subtitle { color: #666; font-size: 0.8rem; margin-bottom: 1.5rem; }
+
+    .container { max-width: 1300px; margin: 0 auto; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 260px;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 1000px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #141418;
+      border: 1px solid #2a2a30;
+      border-radius: 6px;
+      padding: 0.9rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .panel-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      background: #2a2a30;
+      padding: 0.12rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.6rem;
+      color: #aaa;
+    }
+    .badge.algebra { background: #2a3a4a; color: #8cf; }
+    .badge.stream { background: #3a2a4a; color: #c8f; }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: #0a0a0f;
+      border: 1px solid #2a2a30;
+      border-radius: 4px;
+      color: #e8e8e8;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 0.72rem;
+      padding: 0.5rem;
+      line-height: 1.45;
+    }
+
+    textarea { height: 110px; resize: vertical; }
+    textarea:focus, input:focus { outline: none; border-color: #4a9eff; }
+
+    .claims-list { max-height: 280px; overflow-y: auto; }
+
+    .claim-item {
+      background: #0a0a0f;
+      border: 1px solid #2a2a30;
+      border-radius: 4px;
+      padding: 0.45rem;
+      margin-bottom: 0.35rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      font-size: 0.7rem;
+    }
+
+    .claim-item:hover { border-color: #4a9eff; }
+    .claim-item.selected { border-color: #fa8; background: #1a1510; }
+
+    .claim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .claim-id { font-family: monospace; font-size: 0.65rem; color: #fa8; }
+    .claim-meta { font-size: 0.58rem; color: #666; }
+
+    .claim-triples {
+      font-family: monospace;
+      font-size: 0.62rem;
+      color: #aaa;
+      line-height: 1.35;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #4a9eff;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 0.68rem;
+      padding: 0.4rem 0.7rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #3a8eef; }
+    button.secondary { background: #2a2a30; }
+    button.secondary:hover { background: #3a3a40; }
+    button.active { background: #4a9eff !important; }
+
+    .result-item {
+      background: #0a0a0f;
+      border: 1px solid #2a2a30;
+      border-radius: 4px;
+      padding: 0.45rem;
+      margin-bottom: 0.35rem;
+      font-family: monospace;
+      font-size: 0.68rem;
+      line-height: 1.4;
+    }
+
+    .var-name { color: #f0a; }
+    .uri { color: #4a9eff; }
+    .literal { color: #6c6; }
+    .bnode { color: #fa8; }
+    .datatype { color: #8cf; }
+    .empty { color: #666; font-style: italic; }
+
+    .algebra-node {
+      background: #0a0a0f;
+      border: 1px solid #2a2a30;
+      border-radius: 4px;
+      padding: 0.4rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.65rem;
+    }
+
+    .algebra-node .op { color: #8cf; font-weight: bold; }
+    .algebra-node .ref { color: #fa8; }
+
+    .expr-builder {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.4rem;
+    }
+
+    .expr-builder button { padding: 0.25rem 0.45rem; font-size: 0.6rem; }
+
+    .query-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.35rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .query-row.labeled label {
+      font-size: 0.6rem;
+      color: #666;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .dt-output {
+      background: #1a2a3a;
+      border: 1px solid #2a4a6a;
+      border-radius: 3px;
+      padding: 0.4rem;
+      margin-top: 0.4rem;
+      font-family: monospace;
+      font-size: 0.65rem;
+    }
+
+    .help { font-size: 0.6rem; color: #555; margin-top: 0.3rem; }
+
+    /* Delete button for claims */
+    .claim-delete {
+      background: transparent;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 0.1rem 0.3rem;
+      font-size: 0.7rem;
+      border-radius: 3px;
+      margin-left: 0.3rem;
+    }
+    .claim-delete:hover { background: #3a2020; color: #f88; }
+
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #2a4a2a;
+      border: 1px solid #4a6a4a;
+      color: #8f8;
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #4a2a2a; border-color: #6a4a4a; color: #f88; }
+
+    /* Stats panel */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.3rem;
+      margin-top: 0.5rem;
+    }
+    .stat-item {
+      background: #0a0a0f;
+      border: 1px solid #2a2a30;
+      border-radius: 3px;
+      padding: 0.3rem;
+      text-align: center;
+    }
+    .stat-value { font-size: 1rem; color: #4a9eff; font-weight: 500; }
+    .stat-label { font-size: 0.55rem; color: #666; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kanren-RDF v2</h1>
+    <p class="subtitle">Stream-based logic programming &middot; Datatype annotations &middot; Graph algebra</p>
+
+    <div class="main-grid">
+      <!-- LEFT COLUMN -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">Prefixes</div>
+          <textarea id="prefixes" style="height:90px;">ex: http://example.org/
+foaf: http://xmlns.com/foaf/0.1/
+rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+prov: http://www.w3.org/ns/prov#
+xsd: http://www.w3.org/2001/XMLSchema#
+claim: http://example.org/claims/
+agent: http://example.org/agents/</textarea>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">New claim</div>
+          <textarea id="new-claim" placeholder="ex:alice foaf:knows ex:bob .
+ex:alice foaf:name &quot;Alice&quot; ."></textarea>
+          <div class="query-row" style="margin-top:0.4rem;">
+            <input type="text" id="claim-agent" value="agent:dan" placeholder="agent">
+            <input type="text" id="claim-conf" value="0.9" placeholder="conf">
+            <input type="text" id="claim-derived" value="" placeholder="derived">
+          </div>
+          <div class="buttons">
+            <button id="add-claim">Add claim</button>
+            <button id="clear-claims" class="secondary">Clear all</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Claims <span class="badge" id="claim-count">0</span></div>
+          <div class="claims-list" id="claims-list">
+            <span class="empty">No claims</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER COLUMN -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">
+            Query
+            <span class="badge stream">kanren streams</span>
+          </div>
+
+          <div style="margin-bottom:0.5rem;">
+            <div class="buttons" style="margin:0 0 0.5rem 0;">
+              <button class="secondary query-mode active" data-mode="single">Single</button>
+              <button class="secondary query-mode" data-mode="join">Join (AND)</button>
+              <button class="secondary query-mode" data-mode="path">Path</button>
+            </div>
+          </div>
+
+          <div id="query-single">
+            <div class="query-row">
+              <input type="text" id="qs" value="?x" placeholder="?subject">
+              <input type="text" id="qp" value="foaf:knows" placeholder="?predicate">
+              <input type="text" id="qo" value="?y" placeholder="?object">
+            </div>
+          </div>
+
+          <div id="query-join" style="display:none;">
+            <div style="font-size:0.6rem;color:#888;margin-bottom:0.2rem;">Pattern 1:</div>
+            <div class="query-row">
+              <input type="text" id="qj1s" value="?x" placeholder="?s1">
+              <input type="text" id="qj1p" value="foaf:knows" placeholder="?p1">
+              <input type="text" id="qj1o" value="?y" placeholder="?o1">
+            </div>
+            <div style="font-size:0.6rem;color:#888;margin:0.3rem 0 0.2rem;">AND Pattern 2:</div>
+            <div class="query-row">
+              <input type="text" id="qj2s" value="?y" placeholder="?s2">
+              <input type="text" id="qj2p" value="foaf:knows" placeholder="?p2">
+              <input type="text" id="qj2o" value="?z" placeholder="?o2">
+            </div>
+            <div class="help">Shared variables (like ?y) create joins</div>
+          </div>
+
+          <div id="query-path" style="display:none;">
+            <div style="font-size:0.6rem;color:#888;margin-bottom:0.2rem;">Find paths via predicate:</div>
+            <div class="query-row">
+              <input type="text" id="qps" value="ex:alice" placeholder="start">
+              <input type="text" id="qpp" value="foaf:knows" placeholder="predicate">
+              <input type="text" id="qpd" value="3" placeholder="max depth">
+            </div>
+            <div class="help">Finds all nodes reachable from start via predicate (transitive closure)</div>
+          </div>
+
+          <div class="buttons">
+            <button id="run-query">Run</button>
+            <button id="clear-results" class="secondary">Clear</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Results <span class="badge" id="result-count">0</span></div>
+          <div id="results" style="max-height:220px;overflow-y:auto;">
+            <span class="empty">Run a query</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Annotated datatype literals</div>
+          <div class="help" style="margin-bottom:0.4rem;">
+            Format: <code>"value"^^&lt;baseType|ctx:ref|sig:hash&gt;</code>
+          </div>
+          <div class="query-row">
+            <input type="text" id="dt-val" value="B" placeholder="value">
+            <input type="text" id="dt-base" value="xsd:string" placeholder="base type">
+            <input type="text" id="dt-ctx" value="chunk:dl01" placeholder="context">
+          </div>
+          <div class="buttons">
+            <button id="make-dt" class="secondary">Generate</button>
+          </div>
+          <div id="dt-output"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div>
+        <div class="panel">
+          <div class="panel-title">Statistics</div>
+          <div class="stats">
+            <div class="stat-item">
+              <div class="stat-value" id="stat-claims">0</div>
+              <div class="stat-label">Claims</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-triples">0</div>
+              <div class="stat-label">Triples</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-agents">0</div>
+              <div class="stat-label">Agents</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Graph algebra <span class="badge algebra">compositor</span></div>
+          <div class="expr-builder">
+            <button class="secondary op-btn active" data-op="+">&#8746;</button>
+            <button class="secondary op-btn" data-op="-">&minus;</button>
+            <button class="secondary op-btn" data-op="&cap;">&cap;</button>
+          </div>
+          <div class="query-row">
+            <input type="text" id="alg-left" placeholder="claim:c1">
+            <input type="text" id="alg-right" placeholder="claim:c2">
+          </div>
+          <div class="buttons">
+            <button id="compose" class="secondary">Compose</button>
+            <button id="evaluate-composite" class="secondary">Evaluate</button>
+          </div>
+          <div id="alg-result"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Composites</div>
+          <div id="composites" style="max-height:120px;overflow-y:auto;">
+            <span class="empty">None</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Export</div>
+          <div style="display:grid;gap:0.3rem;">
+            <button id="exp-trig" class="secondary" style="width:100%;">TriG</button>
+            <button id="exp-nq" class="secondary" style="width:100%;">N-Quads</button>
+            <button id="exp-star" class="secondary" style="width:100%;">RDF-star</button>
+            <button id="exp-12" class="secondary" style="width:100%;">RDF 1.2</button>
+            <button id="exp-json" class="secondary" style="width:100%;">JSON-LD</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Import</div>
+          <div style="display:grid;gap:0.3rem;">
+            <button id="import-turtle" class="secondary" style="width:100%;">Paste Turtle</button>
+            <button id="load-sample" class="secondary" style="width:100%;">Load Sample Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// CORE DATA MODEL
+// ============================================
+
+class Var {
+  constructor(name) {
+    this.name = name;
+    this.id = Symbol(name);
+  }
+  toString() { return '?' + this.name; }
+}
+
+class BNode {
+  constructor(label, scope) {
+    this.label = label;
+    this.scope = scope;
+    this.id = Symbol(`${scope}:${label}`);
+  }
+  toString() { return `_:${this.label}`; }
+}
+
+class URI {
+  constructor(value) { this.value = value; }
+  toString() { return `<${this.value}>`; }
+}
+
+// Literal with annotation support in datatype URI
+class Literal {
+  constructor(value, datatype = null, lang = null, annotations = {}) {
+    this.value = value;
+    this.datatype = datatype;
+    this.lang = lang;
+    this.annotations = annotations;
+  }
+
+  static parseAnnotatedDT(dt) {
+    if (!dt || !dt.includes('|')) return { base: dt, annotations: {} };
+    const [base, ...rest] = dt.split('|');
+    const annotations = {};
+    for (const part of rest) {
+      const idx = part.indexOf(':');
+      if (idx > 0) annotations[part.slice(0, idx)] = part.slice(idx + 1);
+    }
+    return { base, annotations };
+  }
+
+  toAnnotatedDT() {
+    let dt = this.datatype || 'xsd:string';
+    for (const [k, v] of Object.entries(this.annotations)) {
+      dt += `|${k}:${v}`;
+    }
+    return dt;
+  }
+
+  toString() {
+    let out = `"${this.value}"`;
+    if (this.lang) return out + `@${this.lang}`;
+    if (this.datatype || Object.keys(this.annotations).length) {
+      return out + `^^<${this.toAnnotatedDT()}>`;
+    }
+    return out;
+  }
+}
+
+class Triple {
+  constructor(s, p, o) { this.s = s; this.p = p; this.o = o; }
+}
+
+class Claim {
+  constructor(id, triples, meta = {}) {
+    this.id = id;
+    this.triples = triples;
+    this.agent = meta.agent || null;
+    this.time = meta.time || new Date().toISOString();
+    this.derivedFrom = meta.derivedFrom || [];
+    this.confidence = meta.confidence ?? 1.0;
+  }
+}
+
+// ============================================
+// KANREN CORE (Stream-based, from Reviewer 2)
+// ============================================
+
+class Substitution {
+  constructor(map = new Map()) {
+    this.map = map;
+    this.lastClaim = null;
+    this.path = []; // For path queries
+  }
+
+  extend(v, val) {
+    const m = new Map(this.map);
+    m.set(v.id, val);
+    const s = new Substitution(m);
+    s.lastClaim = this.lastClaim;
+    s.path = [...this.path];
+    return s;
+  }
+
+  walk(val) {
+    while (val instanceof Var && this.map.has(val.id)) {
+      val = this.map.get(val.id);
+    }
+    return val;
+  }
+
+  clone() {
+    const s = new Substitution(new Map(this.map));
+    s.lastClaim = this.lastClaim;
+    s.path = [...this.path];
+    return s;
+  }
+}
+
+function termEq(a, b) {
+  if (a instanceof URI && b instanceof URI) return a.value === b.value;
+  if (a instanceof Literal && b instanceof Literal) {
+    return a.value === b.value && a.datatype === b.datatype && a.lang === b.lang;
+  }
+  if (a instanceof BNode && b instanceof BNode) {
+    return a.scope === b.scope && a.label === b.label;
+  }
+  return a === b;
+}
+
+function unify(u, v, sub) {
+  u = sub.walk(u);
+  v = sub.walk(v);
+  if (u instanceof Var && v instanceof Var && u.id === v.id) return sub;
+  if (u instanceof Var) return sub.extend(u, v);
+  if (v instanceof Var) return sub.extend(v, u);
+  if (termEq(u, v)) return sub;
+  return null;
+}
+
+// Stream combinators
+function* bind(stream, goal) {
+  for (const sub of stream) yield* goal(sub);
+}
+
+function conj(g1, g2) {
+  return sub => bind(g1(sub), g2);
+}
+
+function disj(g1, g2) {
+  return function* (sub) {
+    yield* g1(sub);
+    yield* g2(sub);
+  };
+}
+
+function eq(u, v) {
+  return function* (sub) {
+    const s = unify(u, v, sub);
+    if (s) yield s;
+  };
+}
+
+function runGoal(goal) {
+  return goal(new Substitution());
+}
+
+// ============================================
+// CLAIM STORE
+// ============================================
+
+class ClaimStore {
+  constructor() {
+    this.claims = new Map();
+    this.counter = 0;
+    this.composites = new Map();
+  }
+
+  addClaim(triples, meta = {}) {
+    const id = `claim:c${++this.counter}`;
+    const claim = new Claim(id, triples, meta);
+    this.claims.set(id, claim);
+    return claim;
+  }
+
+  removeClaim(id) {
+    return this.claims.delete(id);
+  }
+
+  clear() {
+    this.claims.clear();
+    this.composites.clear();
+    this.counter = 0;
+  }
+
+  *allTriples(filter = {}) {
+    for (const claim of this.claims.values()) {
+      if (filter.minConf && claim.confidence < filter.minConf) continue;
+      if (filter.claimIds && !filter.claimIds.includes(claim.id)) continue;
+      for (const triple of claim.triples) {
+        yield { triple, claim };
+      }
+    }
+  }
+
+  getStats() {
+    let tripleCount = 0;
+    const agents = new Set();
+    for (const claim of this.claims.values()) {
+      tripleCount += claim.triples.length;
+      if (claim.agent) agents.add(claim.agent);
+    }
+    return {
+      claims: this.claims.size,
+      triples: tripleCount,
+      agents: agents.size
+    };
+  }
+
+  // Kanren goal: unify (s, p, o) against all triples
+  tripleo(s, p, o, filter = {}) {
+    const store = this;
+    return function* (sub) {
+      const ss = sub.walk(s);
+      const pp = sub.walk(p);
+      const oo = sub.walk(o);
+
+      for (const { triple, claim } of store.allTriples(filter)) {
+        let s1 = unify(ss, triple.s, sub);
+        if (!s1) continue;
+        s1 = unify(pp, triple.p, s1);
+        if (!s1) continue;
+        s1 = unify(oo, triple.o, s1);
+        if (s1) {
+          s1.lastClaim = claim;
+          yield s1;
+        }
+      }
+    };
+  }
+
+  // Path query: find all nodes reachable via a predicate (transitive closure)
+  pathQuery(start, predicate, maxDepth = 5) {
+    const results = [];
+    const visited = new Set();
+    const queue = [{ node: start, depth: 0, path: [start] }];
+
+    while (queue.length > 0) {
+      const { node, depth, path } = queue.shift();
+      const nodeKey = node instanceof URI ? node.value : String(node);
+
+      if (visited.has(nodeKey)) continue;
+      visited.add(nodeKey);
+
+      if (depth > 0) {
+        results.push({ node, depth, path: [...path] });
+      }
+
+      if (depth >= maxDepth) continue;
+
+      // Find all outgoing edges
+      for (const { triple } of this.allTriples()) {
+        if (termEq(triple.s, node) && termEq(triple.p, predicate)) {
+          queue.push({
+            node: triple.o,
+            depth: depth + 1,
+            path: [...path, triple.o]
+          });
+        }
+      }
+    }
+
+    return results;
+  }
+
+  composeGraphs(op, left, right) {
+    const id = `composite:${left.replace('claim:', '')}${op}${right.replace('claim:', '')}`;
+    this.composites.set(id, { op, left, right });
+    return id;
+  }
+
+  // Evaluate a composite to get its triples
+  evaluateComposite(id) {
+    const composite = this.composites.get(id);
+    if (!composite) return null;
+
+    const leftClaim = this.claims.get(composite.left);
+    const rightClaim = this.claims.get(composite.right);
+
+    if (!leftClaim || !rightClaim) return null;
+
+    const leftTriples = new Set(leftClaim.triples.map(t =>
+      `${termToTrig(t.s)} ${termToTrig(t.p)} ${termToTrig(t.o)}`
+    ));
+    const rightTriples = new Set(rightClaim.triples.map(t =>
+      `${termToTrig(t.s)} ${termToTrig(t.p)} ${termToTrig(t.o)}`
+    ));
+
+    let resultSet;
+    switch (composite.op) {
+      case '+': // Union
+        resultSet = new Set([...leftTriples, ...rightTriples]);
+        break;
+      case '-': // Difference
+        resultSet = new Set([...leftTriples].filter(t => !rightTriples.has(t)));
+        break;
+      case '∩': // Intersection
+        resultSet = new Set([...leftTriples].filter(t => rightTriples.has(t)));
+        break;
+      default:
+        return null;
+    }
+
+    return [...resultSet];
+  }
+}
+
+// ============================================
+// PARSER
+// ============================================
+
+let prefixes = {};
+
+function parsePrefixes(text) {
+  const r = {};
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const m = t.match(/^(\w+):\s*(.+)$/);
+    if (m) r[m[1]] = m[2].trim();
+  }
+  return r;
+}
+
+function expand(term) {
+  if (!term) return null;
+  term = term.trim();
+
+  if (term.startsWith('"')) {
+    const m = term.match(/^"([^"]*)"(?:@(\w+)|\^\^<?([^>]+)>?)?$/);
+    if (m) {
+      const { base, annotations } = Literal.parseAnnotatedDT(m[3]);
+      const expBase = base ? (expand(base)?.value || base) : null;
+      return new Literal(m[1], expBase, m[2] || null, annotations);
+    }
+    return new Literal(term.slice(1, -1));
+  }
+
+  if (term.startsWith('<') && term.endsWith('>')) return new URI(term.slice(1, -1));
+  if (term.startsWith('_:')) return term;
+  if (term.startsWith('?')) return new Var(term.slice(1));
+  if (term === 'a') return new URI('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+
+  const m = term.match(/^(\w+):(.*)$/);
+  if (m && prefixes[m[1]]) return new URI(prefixes[m[1]] + m[2]);
+
+  return new URI(term);
+}
+
+function parseTripleParts(line) {
+  const parts = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"' && (i === 0 || line[i-1] !== '\\')) { inQ = !inQ; cur += ch; }
+    else if (ch === ' ' && !inQ) { if (cur.trim()) { parts.push(cur.trim()); cur = ''; } }
+    else cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts.length >= 3 ? [parts[0], parts[1], parts.slice(2).join(' ')] : null;
+}
+
+function parseTriples(text, scope = null) {
+  const triples = [];
+  const bnodes = {};
+  const bn = label => { if (!bnodes[label]) bnodes[label] = new BNode(label, scope); return bnodes[label]; };
+
+  for (const line of text.split('\n')) {
+    let t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const ci = t.indexOf('#');
+    if (ci > 0) t = t.slice(0, ci).trim();
+    if (t.endsWith('.')) t = t.slice(0, -1).trim();
+
+    const parts = parseTripleParts(t);
+    if (parts) {
+      let [s, p, o] = parts.map(expand);
+      if (typeof s === 'string' && s.startsWith('_:')) s = bn(s.slice(2));
+      if (typeof p === 'string' && p.startsWith('_:')) p = bn(p.slice(2));
+      if (typeof o === 'string' && o.startsWith('_:')) o = bn(o.slice(2));
+      if (s && p && o) triples.push(new Triple(s, p, o));
+    }
+  }
+  return triples;
+}
+
+function shorten(term) {
+  if (!term) return '';
+  const v = term instanceof URI ? term.value :
+            term instanceof Literal ? term.toString() :
+            term instanceof BNode ? `_:${term.label}` :
+            term instanceof Var ? `?${term.name}` : String(term);
+  for (const [pfx, ns] of Object.entries(prefixes)) {
+    if (v.startsWith && v.startsWith(ns)) return pfx + ':' + v.slice(ns.length);
+  }
+  return v;
+}
+
+// ============================================
+// SERIALIZERS
+// ============================================
+
+function termToTrig(t) {
+  if (t instanceof URI) {
+    for (const [p, ns] of Object.entries(prefixes)) {
+      if (t.value.startsWith(ns)) return p + ':' + t.value.slice(ns.length);
+    }
+    return `<${t.value}>`;
+  }
+  if (t instanceof Literal) return t.toString();
+  if (t instanceof BNode) return `_:${t.label}`;
+  return `"${t}"`;
+}
+
+function toTrig() {
+  let out = '# TriG\n\n';
+  for (const [p, ns] of Object.entries(prefixes)) out += `@prefix ${p}: <${ns}> .\n`;
+  out += '\n';
+  for (const c of store.claims.values()) {
+    out += `<${prefixes['claim'] || ''}${c.id.replace('claim:', '')}> {\n`;
+    for (const t of c.triples) out += `  ${termToTrig(t.s)} ${termToTrig(t.p)} ${termToTrig(t.o)} .\n`;
+    out += '}\n\n';
+  }
+  return out;
+}
+
+function toNQuads() {
+  let out = '# N-Quads\n';
+  for (const c of store.claims.values()) {
+    const g = `<${prefixes['claim'] || ''}${c.id.replace('claim:', '')}>`;
+    for (const t of c.triples) {
+      out += `${termToTrig(t.s)} ${termToTrig(t.p)} ${termToTrig(t.o)} ${g} .\n`;
+    }
+  }
+  return out;
+}
+
+function toRDFStar() {
+  let out = '# RDF-star\n\n';
+  for (const [p, ns] of Object.entries(prefixes)) out += `@prefix ${p}: <${ns}> .\n`;
+  out += '\n';
+  for (const c of store.claims.values()) {
+    for (const t of c.triples) {
+      const s = termToTrig(t.s), p = termToTrig(t.p), o = termToTrig(t.o);
+      out += `${s} ${p} ${o} .\n`;
+      out += `<<${s} ${p} ${o}>> prov:wasAttributedTo <${c.agent}> .\n`;
+      if (c.confidence < 1.0) {
+        out += `<<${s} ${p} ${o}>> ex:confidence "${c.confidence}"^^xsd:decimal .\n`;
+      }
+    }
+    out += '\n';
+  }
+  return out;
+}
+
+function toRDF12() {
+  let out = '# RDF 1.2 Annotations\n\n';
+  for (const [p, ns] of Object.entries(prefixes)) out += `@prefix ${p}: <${ns}> .\n`;
+  out += '\n';
+  for (const c of store.claims.values()) {
+    for (const t of c.triples) {
+      out += `${termToTrig(t.s)} ${termToTrig(t.p)} ${termToTrig(t.o)} {|\n`;
+      out += `  prov:wasAttributedTo <${c.agent}> ;\n`;
+      out += `  prov:generatedAtTime "${c.time}"^^xsd:dateTime\n`;
+      out += `|} .\n`;
+    }
+    out += '\n';
+  }
+  return out;
+}
+
+function toJSONLD() {
+  const context = { ...prefixes };
+  context['@vocab'] = prefixes['ex'] || 'http://example.org/';
+
+  const graphs = [];
+  for (const c of store.claims.values()) {
+    const graph = {
+      '@id': c.id,
+      '@graph': []
+    };
+
+    // Group triples by subject
+    const bySubject = new Map();
+    for (const t of c.triples) {
+      const sKey = termToTrig(t.s);
+      if (!bySubject.has(sKey)) bySubject.set(sKey, { '@id': sKey });
+      const node = bySubject.get(sKey);
+      const pKey = shorten(t.p);
+      const oVal = t.o instanceof Literal ? t.o.value : termToTrig(t.o);
+      if (!node[pKey]) node[pKey] = oVal;
+      else if (Array.isArray(node[pKey])) node[pKey].push(oVal);
+      else node[pKey] = [node[pKey], oVal];
+    }
+
+    graph['@graph'] = [...bySubject.values()];
+    graphs.push(graph);
+  }
+
+  return JSON.stringify({ '@context': context, '@graph': graphs }, null, 2);
+}
+
+function showExport(fn, title) {
+  const content = fn();
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:999;';
+  modal.innerHTML = `
+    <div style="background:#141418;border:1px solid #2a2a30;border-radius:8px;padding:1.2rem;max-width:700px;width:90%;max-height:80vh;display:flex;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.8rem;">
+        <span style="color:#fff;">${title}</span>
+        <button onclick="this.closest('div[style*=fixed]').remove()" class="secondary">Close</button>
+      </div>
+      <textarea readonly style="flex:1;min-height:250px;font-size:0.7rem;">${escapeHtml(content)}</textarea>
+      <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value);showToast('Copied to clipboard')" style="margin-top:0.8rem;">Copy</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ============================================
+// TOAST NOTIFICATIONS
+// ============================================
+
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ============================================
+// UI
+// ============================================
+
+const store = new ClaimStore();
+let queryMode = 'single';
+let algebraOp = '+';
+
+function updateStats() {
+  const stats = store.getStats();
+  document.getElementById('stat-claims').textContent = stats.claims;
+  document.getElementById('stat-triples').textContent = stats.triples;
+  document.getElementById('stat-agents').textContent = stats.agents;
+}
+
+function renderClaims() {
+  const el = document.getElementById('claims-list');
+  document.getElementById('claim-count').textContent = store.claims.size;
+  updateStats();
+
+  if (store.claims.size === 0) {
+    el.innerHTML = '<span class="empty">No claims</span>';
+    return;
+  }
+
+  el.innerHTML = [...store.claims.values()].map(c => `
+    <div class="claim-item" data-id="${c.id}">
+      <div class="claim-header">
+        <span class="claim-id">${shorten(c.id)}</span>
+        <span>
+          <span class="claim-meta">${c.confidence.toFixed(1)} &middot; ${shorten(c.agent)}</span>
+          <button class="claim-delete" data-id="${c.id}" title="Delete claim">&times;</button>
+        </span>
+      </div>
+      <div class="claim-triples">${c.triples.slice(0,3).map(t =>
+        `${shorten(t.s)} ${shorten(t.p)} ${shorten(t.o)}`
+      ).join('<br>')}${c.triples.length > 3 ? '<br>...' : ''}</div>
+    </div>
+  `).join('');
+
+  // Add delete handlers
+  el.querySelectorAll('.claim-delete').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if (store.removeClaim(id)) {
+        showToast('Claim deleted');
+        renderClaims();
+      }
+    };
+  });
+
+  // Add click-to-select handlers
+  el.querySelectorAll('.claim-item').forEach(item => {
+    item.onclick = () => {
+      el.querySelectorAll('.claim-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      // Fill algebra inputs
+      document.getElementById('alg-left').value = item.dataset.id;
+    };
+  });
+}
+
+function renderComposites() {
+  const el = document.getElementById('composites');
+  if (store.composites.size === 0) {
+    el.innerHTML = '<span class="empty">None</span>';
+    return;
+  }
+  el.innerHTML = [...store.composites.entries()].map(([id, c]) => `
+    <div class="algebra-node" data-id="${id}">
+      <span class="ref">${c.left}</span>
+      <span class="op">${c.op}</span>
+      <span class="ref">${c.right}</span>
+    </div>
+  `).join('');
+}
+
+function runQuery() {
+  prefixes = parsePrefixes(document.getElementById('prefixes').value);
+
+  if (queryMode === 'path') {
+    runPathQuery();
+    return;
+  }
+
+  const vars = {};
+  const v = name => { if (!vars[name]) vars[name] = new Var(name); return vars[name]; };
+  const parse = txt => {
+    txt = txt.trim();
+    if (!txt) return null;
+    if (txt.startsWith('?')) return v(txt.slice(1));
+    return expand(txt);
+  };
+
+  let goal;
+  if (queryMode === 'single') {
+    goal = store.tripleo(
+      parse(document.getElementById('qs').value),
+      parse(document.getElementById('qp').value),
+      parse(document.getElementById('qo').value)
+    );
+  } else {
+    goal = conj(
+      store.tripleo(
+        parse(document.getElementById('qj1s').value),
+        parse(document.getElementById('qj1p').value),
+        parse(document.getElementById('qj1o').value)
+      ),
+      store.tripleo(
+        parse(document.getElementById('qj2s').value),
+        parse(document.getElementById('qj2p').value),
+        parse(document.getElementById('qj2o').value)
+      )
+    );
+  }
+
+  const results = [];
+  const seen = new Set();
+  let count = 0;
+
+  for (const sub of runGoal(goal)) {
+    const key = Object.keys(vars).map(n => `${n}=${shorten(sub.walk(vars[n]))}`).join('|');
+    if (!seen.has(key)) {
+      seen.add(key);
+      results.push(sub);
+    }
+    if (++count > 100) break;
+  }
+
+  const el = document.getElementById('results');
+  document.getElementById('result-count').textContent = results.length;
+
+  if (results.length === 0) {
+    el.innerHTML = '<span class="empty">No results</span>';
+    return;
+  }
+
+  const varNames = Object.keys(vars);
+  el.innerHTML = results.map(sub => {
+    const bindings = varNames.map(n => {
+      const val = sub.walk(vars[n]);
+      const cls = val instanceof Var ? 'var-name' :
+                  val instanceof Literal ? 'literal' :
+                  val instanceof BNode ? 'bnode' : 'uri';
+      return `<span class="var-name">?${n}</span>=<span class="${cls}">${shorten(val)}</span>`;
+    }).join('  ');
+    const claim = sub.lastClaim ?
+      ` <span style="color:#555;font-size:0.6rem;">@ ${shorten(sub.lastClaim.id)}</span>` : '';
+    return `<div class="result-item">${bindings}${claim}</div>`;
+  }).join('');
+}
+
+function runPathQuery() {
+  const start = expand(document.getElementById('qps').value.trim());
+  const predicate = expand(document.getElementById('qpp').value.trim());
+  const maxDepth = parseInt(document.getElementById('qpd').value) || 3;
+
+  if (!start || !predicate) {
+    showToast('Need start node and predicate', true);
+    return;
+  }
+
+  const results = store.pathQuery(start, predicate, maxDepth);
+  const el = document.getElementById('results');
+  document.getElementById('result-count').textContent = results.length;
+
+  if (results.length === 0) {
+    el.innerHTML = '<span class="empty">No paths found</span>';
+    return;
+  }
+
+  el.innerHTML = results.map(r => {
+    const pathStr = r.path.map(n => `<span class="uri">${shorten(n)}</span>`).join(' &rarr; ');
+    return `<div class="result-item">
+      <span class="literal">depth ${r.depth}</span>: ${pathStr}
+    </div>`;
+  }).join('');
+}
+
+function addClaim() {
+  prefixes = parsePrefixes(document.getElementById('prefixes').value);
+  const text = document.getElementById('new-claim').value;
+  const id = `claim:c${store.counter + 1}`;
+  const triples = parseTriples(text, id);
+
+  if (triples.length === 0) {
+    showToast('No valid triples found', true);
+    return;
+  }
+
+  const agent = expand(document.getElementById('claim-agent').value)?.value;
+  const confidence = parseFloat(document.getElementById('claim-conf').value) || 1.0;
+  const derived = document.getElementById('claim-derived').value.trim();
+
+  store.addClaim(triples, {
+    agent,
+    confidence,
+    derivedFrom: derived ? [derived] : []
+  });
+
+  document.getElementById('new-claim').value = '';
+  showToast(`Added claim with ${triples.length} triple${triples.length > 1 ? 's' : ''}`);
+  renderClaims();
+}
+
+function makeDT() {
+  const val = document.getElementById('dt-val').value;
+  const base = document.getElementById('dt-base').value.trim() || 'xsd:string';
+  const ctx = document.getElementById('dt-ctx').value.trim();
+
+  let dt = base;
+  if (ctx) dt += `|ctx:${ctx}`;
+
+  document.getElementById('dt-output').innerHTML = `
+    <div class="dt-output">
+      <code>"${escapeHtml(val)}"^^&lt;${escapeHtml(dt)}&gt;</code>
+    </div>`;
+}
+
+function compose() {
+  const left = document.getElementById('alg-left').value.trim();
+  const right = document.getElementById('alg-right').value.trim();
+
+  if (!left || !right) {
+    showToast('Need both graphs', true);
+    return;
+  }
+
+  const id = store.composeGraphs(algebraOp, left, right);
+  document.getElementById('alg-result').innerHTML = `
+    <div class="algebra-node">&rarr; <code style="color:#8cf;font-size:0.6rem;">${id}</code></div>`;
+  showToast('Composite created');
+  renderComposites();
+}
+
+function evaluateComposite() {
+  const compositeId = [...store.composites.keys()][0]; // Get first composite for now
+  if (!compositeId) {
+    showToast('No composite to evaluate', true);
+    return;
+  }
+
+  const result = store.evaluateComposite(compositeId);
+  if (!result) {
+    showToast('Could not evaluate composite', true);
+    return;
+  }
+
+  const el = document.getElementById('results');
+  document.getElementById('result-count').textContent = result.length;
+
+  if (result.length === 0) {
+    el.innerHTML = '<span class="empty">Empty result set</span>';
+    return;
+  }
+
+  el.innerHTML = result.map(t => `<div class="result-item">${escapeHtml(t)}</div>`).join('');
+}
+
+function showImportModal() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:999;';
+  modal.innerHTML = `
+    <div style="background:#141418;border:1px solid #2a2a30;border-radius:8px;padding:1.2rem;max-width:700px;width:90%;max-height:80vh;display:flex;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.8rem;">
+        <span style="color:#fff;">Import Turtle</span>
+        <button onclick="this.closest('div[style*=fixed]').remove()" class="secondary">Close</button>
+      </div>
+      <textarea id="import-text" style="flex:1;min-height:250px;font-size:0.7rem;" placeholder="Paste Turtle/N-Triples here..."></textarea>
+      <div style="margin-top:0.8rem;display:flex;gap:0.4rem;">
+        <input type="text" id="import-agent" value="agent:import" placeholder="Agent" style="flex:1;">
+        <button onclick="doImport()" style="flex:1;">Import as Claim</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+}
+
+function doImport() {
+  const text = document.getElementById('import-text').value;
+  const agent = expand(document.getElementById('import-agent').value)?.value;
+
+  prefixes = parsePrefixes(document.getElementById('prefixes').value);
+  const id = `claim:c${store.counter + 1}`;
+  const triples = parseTriples(text, id);
+
+  if (triples.length === 0) {
+    showToast('No valid triples found', true);
+    return;
+  }
+
+  store.addClaim(triples, { agent, confidence: 1.0 });
+  document.querySelector('div[style*=fixed]').remove();
+  showToast(`Imported ${triples.length} triples`);
+  renderClaims();
+}
+
+function loadSampleData() {
+  // Clear existing and add rich sample data
+  store.clear();
+
+  // Social network
+  store.addClaim(parseTriples(`
+    ex:alice foaf:knows ex:bob .
+    ex:alice foaf:name "Alice" .
+    ex:alice a foaf:Person .
+    ex:alice foaf:age "30"^^xsd:integer .
+  `, 'claim:c1'), {
+    agent: 'http://example.org/agents/dan',
+    confidence: 0.95
+  });
+
+  store.addClaim(parseTriples(`
+    ex:bob foaf:knows ex:charlie .
+    ex:bob foaf:knows ex:diana .
+    ex:bob foaf:name "Bob" .
+    ex:bob a foaf:Person .
+  `, 'claim:c2'), {
+    agent: 'http://example.org/agents/dan',
+    confidence: 0.85,
+    derivedFrom: ['claim:c1']
+  });
+
+  store.addClaim(parseTriples(`
+    ex:charlie foaf:knows ex:diana .
+    ex:charlie foaf:knows ex:eve .
+    ex:charlie foaf:name "Charlie" .
+  `, 'claim:c3'), {
+    agent: 'http://example.org/agents/bot',
+    confidence: 0.6,
+    derivedFrom: ['claim:c2']
+  });
+
+  store.addClaim(parseTriples(`
+    ex:diana foaf:knows ex:eve .
+    ex:diana foaf:name "Diana" .
+    ex:diana foaf:interest ex:music .
+  `, 'claim:c4'), {
+    agent: 'http://example.org/agents/crawler',
+    confidence: 0.75
+  });
+
+  // Annotated datatype example
+  store.addClaim(parseTriples(`
+    ex:dan ex:licenseClass "B"^^<xsd:string|ctx:dvla-chunk|issued:1989> .
+    ex:dan foaf:name "Dan" .
+    ex:dan a foaf:Person .
+  `, 'claim:c5'), {
+    agent: 'http://example.org/agents/dvla',
+    confidence: 1.0
+  });
+
+  showToast('Loaded sample data');
+  renderClaims();
+  renderComposites();
+}
+
+// ============================================
+// EVENT HANDLERS
+// ============================================
+
+document.querySelectorAll('.query-mode').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.query-mode').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    queryMode = btn.dataset.mode;
+    document.getElementById('query-single').style.display = queryMode === 'single' ? 'block' : 'none';
+    document.getElementById('query-join').style.display = queryMode === 'join' ? 'block' : 'none';
+    document.getElementById('query-path').style.display = queryMode === 'path' ? 'block' : 'none';
+  };
+});
+
+document.querySelectorAll('.op-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    algebraOp = btn.dataset.op;
+  };
+});
+
+document.getElementById('run-query').onclick = runQuery;
+document.getElementById('clear-results').onclick = () => {
+  document.getElementById('results').innerHTML = '<span class="empty">Run a query</span>';
+  document.getElementById('result-count').textContent = '0';
+};
+document.getElementById('add-claim').onclick = addClaim;
+document.getElementById('clear-claims').onclick = () => {
+  if (confirm('Clear all claims?')) {
+    store.clear();
+    showToast('All claims cleared');
+    renderClaims();
+    renderComposites();
+  }
+};
+document.getElementById('make-dt').onclick = makeDT;
+document.getElementById('compose').onclick = compose;
+document.getElementById('evaluate-composite').onclick = evaluateComposite;
+
+document.getElementById('exp-trig').onclick = () => showExport(toTrig, 'TriG');
+document.getElementById('exp-nq').onclick = () => showExport(toNQuads, 'N-Quads');
+document.getElementById('exp-star').onclick = () => showExport(toRDFStar, 'RDF-star');
+document.getElementById('exp-12').onclick = () => showExport(toRDF12, 'RDF 1.2');
+document.getElementById('exp-json').onclick = () => showExport(toJSONLD, 'JSON-LD');
+
+document.getElementById('import-turtle').onclick = showImportModal;
+document.getElementById('load-sample').onclick = loadSampleData;
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runQuery();
+    }
+  }
+});
+
+// ============================================
+// INIT
+// ============================================
+
+prefixes = parsePrefixes(document.getElementById('prefixes').value);
+
+// Load sample data on init
+loadSampleData();
+</script>
+
+</body>
+</html>
