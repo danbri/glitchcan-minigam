@@ -555,41 +555,41 @@
         let activeFilter = null;
         const totalPages = 128;
 
-        // Concept data with page references
+        // Concept data with page references - VERIFIED via grep against actual content
         const concepts = [
-            { fr: "machines a calculer", en: "calculating machines", pages: [1,2,3,4,5,6,7,8,17,18,19,20,33,34,35,36,37,38,39,40,65,66,67,68,81,82,83,84,97,98,99,100,113,114,115,116] },
-            { fr: "la pensee humaine", en: "human thought", pages: [1,2,5,6,7,8,49,50,51,52,53,54,55,56,105,106,107,108,109,110,111,112] },
-            { fr: "cybernetique", en: "cybernetics", pages: [5,6,7,8,49,50,51,52,105,106,107,108] },
-            { fr: "memoire", en: "memory", pages: [17,18,19,20,33,34,35,36,65,66,67,68,81,82,83,84,97,98] },
-            { fr: "tubes", en: "vacuum tubes", pages: [17,18,19,20,33,34,35,36,81,82,83,84] },
-            { fr: "cerveau", en: "brain", pages: [5,6,7,8,49,50,51,52,53,54,55,56,105,106,107,108,109,110,111,112] },
-            { fr: "servo-mecanismes", en: "servo-mechanisms", pages: [37,38,39,40,41,42,43,44] },
-            { fr: "tambour magnetique", en: "magnetic drum", pages: [17,18,33,34,35,36,81,82,83,84] },
-            { fr: "integration", en: "integration", pages: [21,22,23,24,25,26,27,28,97,98,99,100] },
-            { fr: "equations differentielles", en: "differential equations", pages: [21,22,23,24,25,26,27,28,97,98,99,100,101,102,103,104] },
-            { fr: "machine analogique", en: "analog machine", pages: [3,4,37,38,39,40,41,42,43,44] },
-            { fr: "machine arithmetique", en: "arithmetic machine", pages: [3,17,18,19,20,33,34,35,36] },
-            { fr: "erreurs d'arrondi", en: "rounding-off errors", pages: [100,101,102,103,104] },
-            { fr: "codage", en: "encoding", pages: [17,18,19,20,65,66,67,68,69,70] },
-            { fr: "retroaction", en: "feedback", pages: [37,38,39,40,49,50,51,52] },
+            { fr: "machines a calculer", en: "calculating machines", pages: [1,3,4,5,6,7,10,12,13,14,15,17,18,19,20,21,23,24,25,29,30,32,33,34,36,37,38,40,42,43,45,46,47,48,49,50,51,52,53,54,56,61,63,64,65,66,67,68,69,70,73,79,80,81,84,85,86,87,89,90,92,93,94,98,102,104,106,107,108,109,110,111,112,113,115,121,123,124,125,126,127,128] },
+            { fr: "la pensee humaine", en: "human thought", pages: [1,6,10,19,34,48,65,67,68,70,76,78,80,94,108,112,116,121,123,125,127,128] },
+            { fr: "cybernetique", en: "cybernetics", pages: [5,10,17,56,57,59,61,62,63,68,72,79,111,116,117,121,122,127] },
+            { fr: "memoire", en: "memory", pages: [17,20,21,22,25,26,28,29,30,32,42,44,51,52,54,60,64,66,71,72,73,74,81,85,86,90,92,104,112,114,120,126] },
+            { fr: "tubes", en: "vacuum tubes", pages: [20,25,26,44,59,81,104,119] },
+            { fr: "cerveau", en: "brain", pages: [48,49,50,56,57,58,60,61,63,65,66,67,68,69,70,72,73,74,76,78,79,108,109,110,116,117,118,120,121,123,125,126,127] },
+            { fr: "servo-mecanismes", en: "servo-mechanisms", pages: [5,54,58,59,114,118,119] },
+            { fr: "tambour magnetique", en: "magnetic drum", pages: [20,25,28,29,30,55,81,85,88,89,90,115] },
+            { fr: "integration", en: "integration", pages: [1,4,22,27,35,36,37,38,40,83,95,96,97,98,100] },
+            { fr: "equations differentielles", en: "differential equations", pages: [3,4,5,21,22,33,35,37,38,40,41,47,52,53,79,82,83,92,93,95,97,98,100,101,106,107,112,113] },
+            { fr: "machine analogique", en: "analog machine", pages: [3,5,21,23,27,31,32,33,46,47,49,52,55,60,61,65,66,67,70,75,79,87,91,92,93,106,109,113,115,120,121,125,126,127] },
+            { fr: "machine arithmetique", en: "arithmetic machine", pages: [3,4,5,21,23,24,26,29,32,42,44,46,47,52,53,55,66,67,69,73,82,88,89,92,100,102,104,105,112,113,115,126] },
+            { fr: "erreurs d'arrondi", en: "rounding-off errors", pages: [4,22,25,39,40,41,49,56,57,65,68,72,73,83,99,100,101,109,114,122] },
+            { fr: "codage", en: "encoding", pages: [4,9,22,25,28,29,61,63,73,74,82,83,85,88,89,121,123,128] },
+            { fr: "retroaction", en: "feedback", pages: [5,56,57,58,62,68,72,116,117,118,122,125] },
             // People
-            { fr: "Aiken", en: "Aiken", pages: [1,3,10,11,12,13,14,15,16,81] },
-            { fr: "de Broglie", en: "de Broglie", pages: [1,2,3,4,5,6,7,8] },
-            { fr: "Booth", en: "Booth", pages: [1,3,10,81,82,83,84] },
-            { fr: "Couffignal", en: "Couffignal", pages: [3,4,5,6,7,8,9,10,17,18,19,20] },
-            { fr: "Turing", en: "Turing", pages: [49,50,51,52,105,106,107,108] },
-            { fr: "McCulloch", en: "McCulloch", pages: [49,50,51,52,105,106,107,108] },
-            { fr: "Wiener", en: "Wiener", pages: [5,6,7,8,49,50,51,52] },
-            { fr: "Williams", en: "Williams", pages: [3,10,33,34,35,36] },
-            { fr: "van Wijngaarden", en: "van Wijngaarden", pages: [100,101,102,103,104] },
+            { fr: "Aiken", en: "Aiken", pages: [1,10,21,82] },
+            { fr: "de Broglie", en: "de Broglie", pages: [1,11] },
+            { fr: "Booth", en: "Booth", pages: [1,11,20,81] },
+            { fr: "Couffignal", en: "Couffignal", pages: [3,5,7,12,42,66,67,102,126,127] },
+            { fr: "Turing", en: "Turing", pages: [4,13,16,17,23,24,26,52,84,86,124] },
+            { fr: "McCulloch", en: "McCulloch", pages: [5,14,50,61,68,69,70,71,72,73,74,75,76,77,78,79,121] },
+            { fr: "Wiener", en: "Wiener", pages: [5,17,61,68,73,121] },
+            { fr: "Williams", en: "Williams", pages: [3,17,25,29,32,89,90,92,110] },
+            { fr: "van Wijngaarden", en: "van Wijngaarden", pages: [4,17,40,41,100,101] },
             // Institutions
-            { fr: "C.N.R.S.", en: "CNRS", pages: [1,2,10,11,12,13,14,15,16] },
-            { fr: "Institut Blaise Pascal", en: "Institut Blaise Pascal", pages: [1,2,3,4,5,6,7,8,9,10] },
-            { fr: "Harvard", en: "Harvard", pages: [1,3,10,81] },
-            { fr: "Manchester", en: "Manchester", pages: [3,10,33,34,35,36] },
-            { fr: "N.P.L.", en: "NPL", pages: [1,3,10] },
-            { fr: "Birkbeck", en: "Birkbeck", pages: [10,81,82,83,84] },
-            { fr: "Zurich", en: "Zurich", pages: [1,3,10] }
+            { fr: "C.N.R.S.", en: "CNRS", pages: [1,6,7,10,19,32,34,48,58,70,72,77,78,80,94,108,118,125,128] },
+            { fr: "Institut Blaise Pascal", en: "Institut Blaise Pascal", pages: [1,3,6,7,8,10,11,12,13,14,15,16,17,19,34,42,48,80,94,102,108,126,128] },
+            { fr: "Harvard", en: "Harvard", pages: [10] },
+            { fr: "Manchester", en: "Manchester", pages: [3,10,11,13,14,16,17,18,29,30,32,89,90] },
+            { fr: "N.P.L.", en: "NPL", pages: [8,12,15,26,42,55,102,123] },
+            { fr: "Birkbeck", en: "Birkbeck", pages: [11,20,81] },
+            { fr: "Zurich", en: "Zurich", pages: [1,17,21,22,82,83] }
         ];
 
         // Titles in both languages

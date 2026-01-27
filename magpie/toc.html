@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magpie - Table of Contents</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { border-bottom: 2px solid #8b4513; padding-bottom: 0.5rem; }
+        h2 { color: #5a4d3a; margin-top: 2rem; }
+        ul { list-style-type: disc; }
+        ul ul { list-style-type: circle; }
+        ul ul ul { list-style-type: square; }
+        a { color: #8b4513; }
+        a:hover { text-decoration: none; }
+        .desc { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Magpie - Research Materials</h1>
+    <p class="desc">Unified AI research session: Paris conference, FOAF/RDF, Elliott 4130 emulator, Lisp implementations</p>
+
+    <h2>Contents</h2>
+    <ul>
+        <li><strong>elliott4130/</strong> - Elliott 4130 Lisp project
+            <ul>
+                <li><a href="elliott4130/README.md">README.md</a> - Project overview</li>
+                <li><strong>docs/</strong> - CCS reference manuals
+                    <ul>
+                        <li><a href="elliott4130/docs/ccs-e6x1.pdf">ccs-e6x1.pdf</a></li>
+                        <li><a href="elliott4130/docs/ccs-e6x2.pdf">ccs-e6x2.pdf</a></li>
+                        <li><a href="elliott4130/docs/ccs-e6x3.pdf">ccs-e6x3.pdf</a></li>
+                        <li><a href="elliott4130/docs/ccs-e6x4.pdf">ccs-e6x4.pdf</a></li>
+                        <li><a href="elliott4130/docs/ccs-e6x5.pdf">ccs-e6x5.pdf</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li><strong>foafng/</strong> - FOAF/RDF/Kanren logic programming
+            <ul>
+                <li><a href="foafng/README.md">README.md</a> - System overview</li>
+                <li><a href="foafng/kanren-rdf.html">kanren-rdf.html</a> - Interactive RDF workbench</li>
+                <li><a href="foafng/sparql-w3c-tests.mjs">sparql-w3c-tests.mjs</a> - SPARQL test subset (~10 tests)</li>
+                <li><a href="foafng/test-kanren.mjs">test-kanren.mjs</a> - Kanren unit tests</li>
+                <li><a href="foafng/PRD.md">PRD.md</a> - Product requirements</li>
+            </ul>
+        </li>
+        <li><strong>lisp/</strong> - JavaScript Lisp implementations
+            <ul>
+                <li><a href="lisp/lisp.mjs">lisp.mjs</a> - Full Lisp interpreter</li>
+                <li><a href="lisp/microlisp.mjs">microlisp.mjs</a> - Lighter variant</li>
+                <li><a href="lisp/test-lisp.mjs">test-lisp.mjs</a> - Test suite</li>
+            </ul>
+        </li>
+        <li><strong>mccarthy1960/</strong> - McCarthy 1960 paper materials
+            <ul>
+                <li><a href="mccarthy1960/test-cases.lisp">test-cases.lisp</a> - Test cases from original paper</li>
+            </ul>
+        </li>
+        <li><strong>parisconf/</strong> - 1951 Paris conference digitization
+            <ul>
+                <li><a href="parisconf/index.html">index.html</a> - Interactive reader webapp</li>
+                <li><a href="parisconf/README.md">README.md</a> - Project notes</li>
+                <li><a href="parisconf/concepts-en.md">concepts-en.md</a> - English concept index</li>
+                <li><a href="parisconf/concepts-fr.md">concepts-fr.md</a> - French concept index</li>
+                <li><a href="parisconf/translation-skill.md">translation-skill.md</a> - Translation guidelines</li>
+                <li><a href="parisconf/photos.ttl">photos.ttl</a> - RDF metadata</li>
+                <li><span class="desc">128 page images + French transcriptions + English translations</span></li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Related Files (Outside magpie/)</h2>
+    <ul>
+        <li><a href="../demo/elliott4130.html">demo/elliott4130.html</a> - Elliott 4130 emulator webapp</li>
+    </ul>
+</body>
+</html>
