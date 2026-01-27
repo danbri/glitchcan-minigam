@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les Machines a Calculer et la Pensee Humaine - Paris 1951</title>
+    <style>
+        :root {
+            --bg-primary: #faf8f5;
+            --bg-secondary: #fff;
+            --text-primary: #2c2416;
+            --text-secondary: #5a4d3a;
+            --accent: #8b4513;
+            --accent-light: #d4a574;
+            --border: #d4c4a8;
+            --tag-bg: #f0e6d3;
+            --tag-hover: #e6d9c3;
+            --shadow: rgba(44, 36, 22, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--accent) 0%, #6b3410 100%);
+            color: #fff;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: normal;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        /* Controls bar */
+        .controls {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .lang-toggle {
+            display: flex;
+            background: var(--tag-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .lang-toggle button {
+            padding: 0.4rem 1rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .lang-toggle button.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-controls button {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .nav-controls button:hover {
+            background: var(--tag-bg);
+        }
+
+        .nav-controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-input {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .page-input input {
+            width: 3.5rem;
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .page-input span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-toggle button {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .view-toggle button.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* Main layout */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Tag cloud section */
+        .tag-cloud-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .tag-cloud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tag-cloud-header h2 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: var(--text-secondary);
+        }
+
+        .tag-cloud-header .toggle-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+        }
+
+        .tag-cloud-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .tag-cloud.hidden {
+            display: none;
+        }
+
+        .concept-tag {
+            display: inline-flex;
+            align-items: center;
+            background: var(--tag-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .concept-tag:hover {
+            background: var(--tag-hover);
+            border-color: var(--accent-light);
+        }
+
+        .concept-tag.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .concept-tag .divider {
+            color: var(--accent-light);
+            margin: 0 0.4rem;
+        }
+
+        .concept-tag.active .divider {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .concept-tag .fr {
+            font-style: italic;
+        }
+
+        .concept-tag .page-count {
+            margin-left: 0.4rem;
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .clear-filter {
+            background: transparent;
+            border: 1px dashed var(--border);
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Content area */
+        .content-area {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .content-area.side-by-side {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .content-area.single {
+            grid-template-columns: 1fr;
+        }
+
+        @media (max-width: 900px) {
+            .content-area.side-by-side {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .content-panel {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--tag-bg);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header .lang-label {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .panel-content {
+            padding: 1.5rem;
+        }
+
+        .panel-content h1, .panel-content h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .panel-content p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        .panel-content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+
+        /* Page image */
+        .page-image {
+            max-width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px var(--shadow);
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .page-image:hover {
+            transform: scale(1.01);
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: 2rem;
+            cursor: pointer;
+        }
+
+        .image-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95vh;
+            object-fit: contain;
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .error {
+            text-align: center;
+            padding: 2rem;
+            color: #a44;
+            background: #fdd;
+            border-radius: 4px;
+        }
+
+        /* Notes styling */
+        .notes {
+            background: var(--tag-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .notes strong {
+            color: var(--accent);
+        }
+
+        /* Metadata */
+        .metadata {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .metadata span {
+            margin-right: 1rem;
+        }
+
+        /* Matched pages list */
+        .matched-pages {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--accent-light);
+        }
+
+        .matched-pages h3 {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .matched-pages .page-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .matched-pages .page-link {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: var(--tag-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .matched-pages .page-link:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+
+        footer a {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="main-title">Les Machines a Calculer et la Pensee Humaine</h1>
+        <div class="subtitle" id="main-subtitle">Colloque International - Paris, 8-13 Janvier 1951</div>
+    </header>
+
+    <div class="controls">
+        <div class="lang-toggle">
+            <button id="btn-fr" class="active" onclick="setLanguage('fr')">FR</button>
+            <button id="btn-en" onclick="setLanguage('en')">EN</button>
+        </div>
+
+        <div class="nav-controls">
+            <button onclick="prevPage()" id="btn-prev" title="Previous page">&larr;</button>
+            <div class="page-input">
+                <input type="number" id="page-num" min="1" max="128" value="1" onchange="goToPage(this.value)">
+                <span>/ 128</span>
+            </div>
+            <button onclick="nextPage()" id="btn-next" title="Next page">&rarr;</button>
+        </div>
+
+        <div class="view-toggle">
+            <button id="view-text" class="active" onclick="setView('text')" title="Text only">Text</button>
+            <button id="view-image" onclick="setView('image')" title="Image only">Image</button>
+            <button id="view-both" onclick="setView('both')" title="Side by side">Both</button>
+        </div>
+    </div>
+
+    <main>
+        <!-- Tag Cloud -->
+        <section class="tag-cloud-section">
+            <div class="tag-cloud-header" onclick="toggleTagCloud()">
+                <h2 id="concepts-title">Concepts cles / Key Concepts</h2>
+                <span class="toggle-icon">&#9662;</span>
+            </div>
+            <div class="tag-cloud" id="tag-cloud">
+                <!-- Tags will be populated by JS -->
+            </div>
+        </section>
+
+        <!-- Matched pages (shown when filtering) -->
+        <div class="matched-pages" id="matched-pages" style="display:none;">
+            <h3 id="filter-title">Pages mentionnant ce concept:</h3>
+            <div class="page-list" id="page-list"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="content-area single" id="content-area">
+            <div class="content-panel" id="text-panel">
+                <div class="panel-header">
+                    <span class="lang-label" id="text-lang-label">FRANCAIS</span>
+                    <span id="page-indicator">Page 1</span>
+                </div>
+                <div class="panel-content" id="text-content">
+                    <div class="loading">Chargement...</div>
+                </div>
+            </div>
+            <div class="content-panel" id="image-panel" style="display:none;">
+                <div class="panel-header">
+                    <span class="lang-label">ORIGINAL SCAN</span>
+                </div>
+                <div class="panel-content">
+                    <img src="" alt="Original page scan" class="page-image" id="page-image" onclick="openImageModal()">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image modal -->
+    <div class="image-modal" id="image-modal" onclick="closeImageModal()">
+        <img src="" alt="Full size scan" id="modal-image">
+    </div>
+
+    <footer>
+        <p>Colloque International organise par le <strong>Centre National de la Recherche Scientifique (C.N.R.S.)</strong></p>
+        <p>Institut Blaise Pascal, Paris - Janvier 1951</p>
+        <p style="margin-top: 1rem;">
+            <a href="concepts-fr.md">Index Francais</a> |
+            <a href="concepts-en.md">English Index</a> |
+            <a href="translation-skill.md">Notes de traduction</a>
+        </p>
+    </footer>
+
+    <script>
+        // State
+        let currentPage = 1;
+        let currentLang = 'fr';
+        let currentView = 'text';
+        let activeFilter = null;
+        const totalPages = 128;
+
+        // Concept data with page references
+        const concepts = [
+            { fr: "machines a calculer", en: "calculating machines", pages: [1,2,3,4,5,6,7,8,17,18,19,20,33,34,35,36,37,38,39,40,65,66,67,68,81,82,83,84,97,98,99,100,113,114,115,116] },
+            { fr: "la pensee humaine", en: "human thought", pages: [1,2,5,6,7,8,49,50,51,52,53,54,55,56,105,106,107,108,109,110,111,112] },
+            { fr: "cybernetique", en: "cybernetics", pages: [5,6,7,8,49,50,51,52,105,106,107,108] },
+            { fr: "memoire", en: "memory", pages: [17,18,19,20,33,34,35,36,65,66,67,68,81,82,83,84,97,98] },
+            { fr: "tubes", en: "vacuum tubes", pages: [17,18,19,20,33,34,35,36,81,82,83,84] },
+            { fr: "cerveau", en: "brain", pages: [5,6,7,8,49,50,51,52,53,54,55,56,105,106,107,108,109,110,111,112] },
+            { fr: "servo-mecanismes", en: "servo-mechanisms", pages: [37,38,39,40,41,42,43,44] },
+            { fr: "tambour magnetique", en: "magnetic drum", pages: [17,18,33,34,35,36,81,82,83,84] },
+            { fr: "integration", en: "integration", pages: [21,22,23,24,25,26,27,28,97,98,99,100] },
+            { fr: "equations differentielles", en: "differential equations", pages: [21,22,23,24,25,26,27,28,97,98,99,100,101,102,103,104] },
+            { fr: "machine analogique", en: "analog machine", pages: [3,4,37,38,39,40,41,42,43,44] },
+            { fr: "machine arithmetique", en: "arithmetic machine", pages: [3,17,18,19,20,33,34,35,36] },
+            { fr: "erreurs d'arrondi", en: "rounding-off errors", pages: [100,101,102,103,104] },
+            { fr: "codage", en: "encoding", pages: [17,18,19,20,65,66,67,68,69,70] },
+            { fr: "retroaction", en: "feedback", pages: [37,38,39,40,49,50,51,52] },
+            // People
+            { fr: "Aiken", en: "Aiken", pages: [1,3,10,11,12,13,14,15,16,81] },
+            { fr: "de Broglie", en: "de Broglie", pages: [1,2,3,4,5,6,7,8] },
+            { fr: "Booth", en: "Booth", pages: [1,3,10,81,82,83,84] },
+            { fr: "Couffignal", en: "Couffignal", pages: [3,4,5,6,7,8,9,10,17,18,19,20] },
+            { fr: "Turing", en: "Turing", pages: [49,50,51,52,105,106,107,108] },
+            { fr: "McCulloch", en: "McCulloch", pages: [49,50,51,52,105,106,107,108] },
+            { fr: "Wiener", en: "Wiener", pages: [5,6,7,8,49,50,51,52] },
+            { fr: "Williams", en: "Williams", pages: [3,10,33,34,35,36] },
+            { fr: "van Wijngaarden", en: "van Wijngaarden", pages: [100,101,102,103,104] },
+            // Institutions
+            { fr: "C.N.R.S.", en: "CNRS", pages: [1,2,10,11,12,13,14,15,16] },
+            { fr: "Institut Blaise Pascal", en: "Institut Blaise Pascal", pages: [1,2,3,4,5,6,7,8,9,10] },
+            { fr: "Harvard", en: "Harvard", pages: [1,3,10,81] },
+            { fr: "Manchester", en: "Manchester", pages: [3,10,33,34,35,36] },
+            { fr: "N.P.L.", en: "NPL", pages: [1,3,10] },
+            { fr: "Birkbeck", en: "Birkbeck", pages: [10,81,82,83,84] },
+            { fr: "Zurich", en: "Zurich", pages: [1,3,10] }
+        ];
+
+        // Titles in both languages
+        const titles = {
+            fr: {
+                main: "Les Machines a Calculer et la Pensee Humaine",
+                subtitle: "Colloque International - Paris, 8-13 Janvier 1951",
+                concepts: "Concepts cles",
+                textLabel: "FRANCAIS",
+                filterTitle: "Pages mentionnant ce concept:",
+                loading: "Chargement...",
+                notFound: "Traduction non disponible pour cette page.",
+                pageOf: "Page"
+            },
+            en: {
+                main: "Calculating Machines and Human Thought",
+                subtitle: "International Colloquium - Paris, January 8-13, 1951",
+                concepts: "Key Concepts",
+                textLabel: "ENGLISH",
+                filterTitle: "Pages mentioning this concept:",
+                loading: "Loading...",
+                notFound: "Translation not available for this page.",
+                pageOf: "Page"
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTagCloud();
+            loadPage(1);
+
+            // Handle URL hash for direct page links
+            if (window.location.hash) {
+                const page = parseInt(window.location.hash.slice(1));
+                if (page >= 1 && page <= totalPages) {
+                    goToPage(page);
+                }
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') prevPage();
+            if (e.key === 'ArrowRight') nextPage();
+        });
+
+        function renderTagCloud() {
+            const cloud = document.getElementById('tag-cloud');
+            cloud.innerHTML = concepts.map((c, i) => `
+                <span class="concept-tag" onclick="filterByConcept(${i})" data-index="${i}">
+                    <span class="fr">${c.fr}</span>
+                    <span class="divider">|</span>
+                    <span class="en">${c.en}</span>
+                    <span class="page-count">(${c.pages.length})</span>
+                </span>
+            `).join('') + `
+                <span class="concept-tag clear-filter" onclick="clearFilter()" id="clear-filter" style="display:none;">
+                    &times; Effacer le filtre / Clear filter
+                </span>
+            `;
+        }
+
+        function toggleTagCloud() {
+            const header = document.querySelector('.tag-cloud-header');
+            const cloud = document.getElementById('tag-cloud');
+            header.classList.toggle('collapsed');
+            cloud.classList.toggle('hidden');
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.getElementById('btn-fr').classList.toggle('active', lang === 'fr');
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+
+            // Update UI text
+            const t = titles[lang];
+            document.getElementById('main-title').textContent = t.main;
+            document.getElementById('main-subtitle').textContent = t.subtitle;
+            document.getElementById('concepts-title').textContent = t.concepts;
+            document.getElementById('text-lang-label').textContent = t.textLabel;
+            document.getElementById('filter-title').textContent = t.filterTitle;
+
+            loadPage(currentPage);
+        }
+
+        function setView(view) {
+            currentView = view;
+            const area = document.getElementById('content-area');
+            const textPanel = document.getElementById('text-panel');
+            const imagePanel = document.getElementById('image-panel');
+
+            document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+
+            if (view === 'text') {
+                area.className = 'content-area single';
+                textPanel.style.display = 'block';
+                imagePanel.style.display = 'none';
+            } else if (view === 'image') {
+                area.className = 'content-area single';
+                textPanel.style.display = 'none';
+                imagePanel.style.display = 'block';
+            } else {
+                area.className = 'content-area side-by-side';
+                textPanel.style.display = 'block';
+                imagePanel.style.display = 'block';
+            }
+        }
+
+        function goToPage(num) {
+            const page = parseInt(num);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadPage(page);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) goToPage(currentPage - 1);
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) goToPage(currentPage + 1);
+        }
+
+        async function loadPage(pageNum) {
+            const padded = String(pageNum).padStart(3, '0');
+            const t = titles[currentLang];
+
+            // Update page number display
+            document.getElementById('page-num').value = pageNum;
+            document.getElementById('page-indicator').textContent = `${t.pageOf} ${pageNum}`;
+            document.getElementById('btn-prev').disabled = pageNum <= 1;
+            document.getElementById('btn-next').disabled = pageNum >= totalPages;
+
+            // Update URL hash
+            window.location.hash = pageNum;
+
+            // Load text content
+            const textContent = document.getElementById('text-content');
+            textContent.innerHTML = `<div class="loading">${t.loading}</div>`;
+
+            try {
+                const filename = currentLang === 'fr'
+                    ? `original-fr-p-${padded}.md`
+                    : `translated-en-p-${padded}.md`;
+
+                const response = await fetch(filename);
+                if (response.ok) {
+                    const markdown = await response.text();
+                    textContent.innerHTML = renderMarkdown(markdown);
+                } else {
+                    // Try fallback to French if English not available
+                    if (currentLang === 'en') {
+                        const fallback = await fetch(`original-fr-p-${padded}.md`);
+                        if (fallback.ok) {
+                            const markdown = await fallback.text();
+                            textContent.innerHTML = `<div class="notes"><strong>Note:</strong> ${t.notFound}</div>` + renderMarkdown(markdown);
+                        } else {
+                            textContent.innerHTML = `<div class="error">${t.notFound}</div>`;
+                        }
+                    } else {
+                        textContent.innerHTML = `<div class="error">${t.notFound}</div>`;
+                    }
+                }
+            } catch (err) {
+                textContent.innerHTML = `<div class="error">Error loading page: ${err.message}</div>`;
+            }
+
+            // Load image
+            const imageUrl = `original-fr-p-${padded}.jpg`;
+            document.getElementById('page-image').src = imageUrl;
+            document.getElementById('modal-image').src = imageUrl;
+        }
+
+        function renderMarkdown(md) {
+            // Simple markdown renderer
+            return md
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^---$/gm, '<hr>')
+                .replace(/^\[(.+?)\]$/gm, '<p class="notes">$1</p>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(.+)$/gm, (m) => {
+                    if (m.startsWith('<')) return m;
+                    return m;
+                });
+        }
+
+        function filterByConcept(index) {
+            const concept = concepts[index];
+            activeFilter = index;
+
+            // Update tag styling
+            document.querySelectorAll('.concept-tag').forEach((tag, i) => {
+                tag.classList.toggle('active', i === index);
+            });
+            document.getElementById('clear-filter').style.display = 'inline-flex';
+
+            // Show matched pages
+            const matchedDiv = document.getElementById('matched-pages');
+            const pageList = document.getElementById('page-list');
+            matchedDiv.style.display = 'block';
+
+            pageList.innerHTML = concept.pages.map(p =>
+                `<span class="page-link" onclick="goToPage(${p})">${p}</span>`
+            ).join('');
+
+            // Go to first matched page
+            if (concept.pages.length > 0) {
+                goToPage(concept.pages[0]);
+            }
+        }
+
+        function clearFilter() {
+            activeFilter = null;
+            document.querySelectorAll('.concept-tag').forEach(tag => {
+                tag.classList.remove('active');
+            });
+            document.getElementById('clear-filter').style.display = 'none';
+            document.getElementById('matched-pages').style.display = 'none';
+        }
+
+        function openImageModal() {
+            document.getElementById('image-modal').classList.add('active');
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
