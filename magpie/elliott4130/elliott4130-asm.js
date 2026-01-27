@@ -38,20 +38,20 @@ class Asm {
             'ST':   { l: 0o60, yMin: 1 },
             'STR':  { l: 0o61, yMin: 1 },
 
-            // Jumps
+            // Jumps (absolute addressing)
             'J':    { l: 0o45, jump: 1 },
-            'JFL':  { l: 0o53, jump: 1 },
-            'JF':   { l: 0o56, jump: 1 },
-            'JB':   { l: 0o57, jump: 1 },
+            'JFL':  { l: 0o53, jump: 1, relative: 1 },
+            'JF':   { l: 0o56, jump: 1, relative: 1 },
+            'JB':   { l: 0o57, jump: 1, relative: 1 },
 
-            // Conditional jumps
-            'JN':   { l: 0o60, jump: 1 },  // Jump if negative
-            'JNN':  { l: 0o61, jump: 1 },  // Jump if not negative
-            'JZ':   { l: 0o62, jump: 1 },  // Jump if zero
-            'JNZ':  { l: 0o63, jump: 1 },  // Jump if not zero
-            'JST':  { l: 0o64, jump: 1 },  // Jump if standard
-            'JOF':  { l: 0o65, jump: 1 },  // Jump if overflow
-            'DKJN': { l: 0o67, jump: 1 },  // Decrement K, jump if negative
+            // Conditional jumps (relative addressing per E6X3 manual)
+            'JN':   { l: 0o60, jump: 1, relative: 1 },  // Jump if negative
+            'JNN':  { l: 0o61, jump: 1, relative: 1 },  // Jump if not negative
+            'JZ':   { l: 0o62, jump: 1, relative: 1 },  // Jump if zero
+            'JNZ':  { l: 0o63, jump: 1, relative: 1 },  // Jump if not zero
+            'JST':  { l: 0o64, jump: 1, relative: 1 },  // Jump if standard
+            'JOF':  { l: 0o65, jump: 1, relative: 1 },  // Jump if overflow
+            'DKJN': { l: 0o67, jump: 1, relative: 1 },  // Decrement K, jump if negative
 
             // Compare
             'COMP': { l: 0o55 },
@@ -205,8 +205,18 @@ class Asm {
                 y = 0;
             }
 
+            // For relative jumps, convert absolute target to offset from next instruction
+            // Offset = target - (current + 1) because S advances before jump executes
+            if (info.relative && y === 0) {
+                value = value - (addr + 1);
+                if (value < 0) value = value & 0x7FFF;  // Handle negative offsets
+            }
+
             // Determine if long form is needed
-            const needsLong = !info.s || info.yMin || info.z || value > 63 || y > 0;
+            // Short form can't do literal mode (y=0) - short form always reads from memory
+            // Need long form for: no short form, requires y>0, z flag, large value, or literal mode with non-jump
+            const isLiteral = operand && operand.trim().startsWith('#');
+            const needsLong = !info.s || info.yMin || info.z || value > 63 || y > 0 || (y === 0 && isLiteral && !info.jump);
 
             let word;
             if (needsLong) {

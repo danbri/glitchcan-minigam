@@ -70,6 +70,13 @@ class E4130 {
     }
 
     /**
+     * Sign-extend a 15-bit value to JavaScript signed integer
+     */
+    sx15(n) {
+        return (n & 0x4000) ? (n | ~0x7FFF) : n;
+    }
+
+    /**
      * Read memory at address
      */
     rd(a) {
@@ -150,9 +157,9 @@ class E4130 {
                 this.execLong(f, y, n);
             }
         } else {
-            // Short instruction (12-bit)
+            // Short instruction (12-bit) - each instruction occupies a full word
             const n = (w >> 12) & 0x3F;
-            this.S = (this.S + 1) & this.MASK17;
+            this.S = (this.S + 2) & this.MASK17;
             this.execShort(f, n);
         }
 
@@ -255,8 +262,8 @@ class E4130 {
             case 0o44: // LDR
                 this.R = op;
                 break;
-            case 0o45: // J - Jump
-                this.S = (y === 0 ? n : op) & this.MASK17;
+            case 0o45: // J - Jump (n is word address, S is byte address)
+                this.S = ((y === 0 ? n : op) * 2) & this.MASK17;
                 break;
             case 0o46: // AND
                 this.M &= op;
@@ -275,9 +282,9 @@ class E4130 {
             case 0o52: // NADR
                 this.R = (this.sx(op) - this.sx(this.R)) & this.MASK24;
                 break;
-            case 0o53: // JFL - Jump and link
+            case 0o53: // JFL - Jump and link (relative)
                 this.wr(0, this.S);
-                this.S = (y === 0 ? (this.S + n) : op) & this.MASK17;
+                this.S = (y === 0 ? (this.S + this.sx15(n) * 2) : op * 2) & this.MASK17;
                 break;
             case 0o54: // LDK
                 this.K = op & this.MASK12;
@@ -285,50 +292,50 @@ class E4130 {
             case 0o55: // COMP - Compare (set flags only)
                 this.setC((this.sx(this.M) - this.sx(op)) & this.MASK24);
                 break;
-            case 0o56: // JF - Jump forward
-                this.S = (this.S + (y === 0 ? n : op)) & this.MASK17;
+            case 0o56: // JF - Jump forward (relative)
+                this.S = (this.S + (y === 0 ? this.sx15(n) * 2 : op * 2)) & this.MASK17;
                 break;
-            case 0o57: // JB - Jump backward
-                this.S = (this.S - (y === 0 ? n : op)) & this.MASK17;
+            case 0o57: // JB - Jump backward (relative)
+                this.S = (this.S - (y === 0 ? this.sx15(n) * 2 : op * 2)) & this.MASK17;
                 break;
             case 0o60: // JN (y=0) or ST (y>0)
                 if (y === 0) {
-                    if (this.C & this.F_NEG) this.S = (this.S + n) & this.MASK17;
+                    if (this.C & this.F_NEG) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, this.M);
                 }
                 break;
             case 0o61: // JNN (y=0) or STR (y>0)
                 if (y === 0) {
-                    if (!(this.C & this.F_NEG)) this.S = (this.S + n) & this.MASK17;
+                    if (!(this.C & this.F_NEG)) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, this.R);
                 }
                 break;
             case 0o62: // JZ (y=0) or NEGS (y>0)
                 if (y === 0) {
-                    if (!(this.C & this.F_NZ)) this.S = (this.S + n) & this.MASK17;
+                    if (!(this.C & this.F_NZ)) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, (-this.sx(op)) & this.MASK24);
                 }
                 break;
             case 0o63: // JNZ (y=0) or SUBS (y>0)
                 if (y === 0) {
-                    if (this.C & this.F_NZ) this.S = (this.S + n) & this.MASK17;
+                    if (this.C & this.F_NZ) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, (this.sx(op) - this.sx(this.M)) & this.MASK24);
                 }
                 break;
             case 0o64: // JST (y=0) or ADDS (y>0)
                 if (y === 0) {
-                    if (this.C & this.F_ST) this.S = (this.S + n) & this.MASK17;
+                    if (this.C & this.F_ST) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, (this.sx(op) + this.sx(this.M)) & this.MASK24);
                 }
                 break;
             case 0o65: // JOF (y=0) or CLS (y>0)
                 if (y === 0) {
-                    if (this.C & this.F_OF) this.S = (this.S + n) & this.MASK17;
+                    if (this.C & this.F_OF) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, 0);
                 }
@@ -336,10 +343,11 @@ class E4130 {
             case 0o66: // INCS - Increment store
                 if (y !== 0) this.wr(addr, (op + 1) & this.MASK24);
                 break;
-            case 0o67: // DKJN (y=0) or DECS (y>0)
+            case 0o67: // DKJN (y=0) or DECS (y>0) - Decrement K, Jump if Negative
                 if (y === 0) {
                     this.K = (this.K - 1) & this.MASK12;
-                    if (this.K & 0x800) this.S = (this.S + n) & this.MASK17;
+                    // Per E6X3 manual: if k12 = 1 (negative) then jump
+                    if (this.K & 0x800) this.S = (this.S + this.sx15(n) * 2) & this.MASK17;
                 } else {
                     this.wr(addr, (op - 1) & this.MASK24);
                 }

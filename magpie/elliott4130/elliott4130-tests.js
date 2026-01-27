@@ -218,7 +218,7 @@ const E4130Tests = {
             A: #1
             B: #1
             R: #0
-        `, cpu => cpu.mem[5] === 2);
+        `, cpu => cpu.mem[6] === 2);
 
         this.runTest('ADD 5+3=8', `
             LD A
@@ -228,7 +228,7 @@ const E4130Tests = {
             A: #5
             B: #3
             R: #0
-        `, cpu => cpu.mem[5] === 8);
+        `, cpu => cpu.mem[6] === 8);
 
         this.runTest('ADD 0+0=0', `
             LD A
@@ -238,7 +238,7 @@ const E4130Tests = {
             A: #0
             B: #0
             R: #0
-        `, cpu => cpu.mem[5] === 0);
+        `, cpu => cpu.mem[6] === 0);
 
         this.runTest('ADD with literal #n', `
             LD A
@@ -247,7 +247,7 @@ const E4130Tests = {
             J #0
             A: #5
             R: #0
-        `, cpu => cpu.mem[4] === 15);
+        `, cpu => cpu.mem[5] === 15);
 
         this.runTest('ADD negative numbers', `
             LD A
@@ -257,7 +257,7 @@ const E4130Tests = {
             A: $77777777
             B: $77777777
             R: #0
-        `, cpu => cpu.mem[5] === (0xFFFFFE & 0xFFFFFF));
+        `, cpu => cpu.mem[6] === (0xFFFFFE & 0xFFFFFF));
 
         this.runTest('ADD pos + neg = pos', `
             LD A
@@ -267,7 +267,7 @@ const E4130Tests = {
             A: #10
             B: $77777777
             R: #0
-        `, cpu => cpu.mem[5] === 9);
+        `, cpu => cpu.mem[6] === 9);
 
         // SUB - Subtraction
         this.runTest('SUB 5-3=2', `
@@ -278,7 +278,7 @@ const E4130Tests = {
             A: #5
             B: #3
             R: #0
-        `, cpu => cpu.mem[5] === 2);
+        `, cpu => cpu.mem[6] === 2);
 
         this.runTest('SUB 10-3=7', `
             LD A
@@ -288,7 +288,7 @@ const E4130Tests = {
             A: #10
             B: #3
             R: #0
-        `, cpu => cpu.mem[5] === 7);
+        `, cpu => cpu.mem[6] === 7);
 
         this.runTest('SUB 3-5=-2', `
             LD A
@@ -298,7 +298,7 @@ const E4130Tests = {
             A: #3
             B: #5
             R: #0
-        `, cpu => cpu.sx(cpu.mem[5]) === -2);
+        `, cpu => cpu.sx(cpu.mem[6]) === -2);
 
         this.runTest('SUB 0-1=-1', `
             LD A
@@ -308,7 +308,7 @@ const E4130Tests = {
             A: #0
             B: #1
             R: #0
-        `, cpu => cpu.sx(cpu.mem[5]) === -1);
+        `, cpu => cpu.sx(cpu.mem[6]) === -1);
 
         // NADD - Negative add (operand - M)
         this.runTest('NADD 10-3=7', `
@@ -319,7 +319,7 @@ const E4130Tests = {
             A: #3
             B: #10
             R: #0
-        `, cpu => cpu.mem[5] === 7);
+        `, cpu => cpu.mem[6] === 7);
 
         // LDR - Load to R
         this.runTest('LDR loads to R', `
@@ -339,7 +339,7 @@ const E4130Tests = {
             A: #10
             B: #5
             R: #0
-        `, cpu => cpu.mem[5] === 15);
+        `, cpu => cpu.mem[6] === 15);
 
         this.runTest('SUBR R-[n]', `
             LDR A
@@ -349,7 +349,7 @@ const E4130Tests = {
             A: #10
             B: #3
             R: #0
-        `, cpu => cpu.mem[5] === 7);
+        `, cpu => cpu.mem[6] === 7);
     },
 
     // =========================================================================
@@ -536,7 +536,7 @@ const E4130Tests = {
             BAD: #0
             GOOD: #1
             RES: #0
-        `, cpu => cpu.mem[10] === 1);
+        `, cpu => cpu.mem[9] === 1);
 
         // JN - Jump if negative
         this.runTest('JN taken when negative', `
@@ -618,31 +618,35 @@ const E4130Tests = {
         `, cpu => cpu.mem[11] === 1);
 
         // DKJN - Decrement K and jump if negative
+        // DKJN: Decrement K, Jump if Negative (forward to exit)
+        // Proper loop: DKJN at start to exit when K < 0, JF at end to continue
         this.runTest('DKJN loop 3 iterations', `
             LD ZERO
             LDK CNT
-            LOOP: ADD ONE
-            DKJN LOOP
-            ST RES
+            LOOP: DKJN DONE
+            ADD ONE
+            JF LOOP
+            DONE: ST RES
             J #0
             ZERO: #0
             CNT: #3
             ONE: #1
             RES: #0
-        `, cpu => cpu.mem[9] === 3);
+        `, cpu => cpu.mem[10] === 3);
 
         this.runTest('DKJN loop 5 iterations', `
             LD ZERO
             LDK CNT
-            LOOP: ADD ONE
-            DKJN LOOP
-            ST RES
+            LOOP: DKJN DONE
+            ADD ONE
+            JF LOOP
+            DONE: ST RES
             J #0
             ZERO: #0
             CNT: #5
             ONE: #1
             RES: #0
-        `, cpu => cpu.mem[9] === 5);
+        `, cpu => cpu.mem[10] === 5);
     },
 
     // =========================================================================
@@ -659,7 +663,7 @@ const E4130Tests = {
             A: $77
             B: $17
             RES: #0
-        `, cpu => cpu.mem[5] === 0o17);
+        `, cpu => cpu.mem[6] === 0o17);
 
         this.runTest('AND all bits', `
             LD A
@@ -669,7 +673,7 @@ const E4130Tests = {
             A: $77777777
             B: $77777777
             RES: #0
-        `, cpu => cpu.mem[5] === 0xFFFFFF);
+        `, cpu => cpu.mem[6] === 0xFFFFFF);
 
         this.runTest('AND clear all', `
             LD A
@@ -679,7 +683,7 @@ const E4130Tests = {
             A: $77777777
             B: #0
             RES: #99
-        `, cpu => cpu.mem[5] === 0);
+        `, cpu => cpu.mem[6] === 0);
 
         this.runTest('ANDN complement mask', `
             LD A
@@ -689,7 +693,7 @@ const E4130Tests = {
             A: $77
             B: $70
             RES: #0
-        `, cpu => cpu.mem[5] === 0o07);
+        `, cpu => cpu.mem[6] === 0o07);
     },
 
     // =========================================================================
@@ -707,7 +711,7 @@ const E4130Tests = {
             VAL: #1
             CNT: #1
             RES: #0
-        `, cpu => cpu.mem[5] === 2);
+        `, cpu => cpu.mem[7] === 2);
 
         this.runTest('SML shift M left by 4', `
             LD VAL
@@ -718,7 +722,7 @@ const E4130Tests = {
             VAL: #1
             CNT: #4
             RES: #0
-        `, cpu => cpu.mem[5] === 16);
+        `, cpu => cpu.mem[7] === 16);
 
         this.runTest('SMR shift M right by 1', `
             LD VAL
@@ -729,7 +733,7 @@ const E4130Tests = {
             VAL: #16
             CNT: #1
             RES: #0
-        `, cpu => cpu.mem[5] === 8);
+        `, cpu => cpu.mem[7] === 8);
 
         this.runTest('SMR sign extends', `
             LD VAL
@@ -740,7 +744,7 @@ const E4130Tests = {
             VAL: $77777777
             CNT: #4
             RES: #0
-        `, cpu => cpu.sx(cpu.mem[5]) === -1);
+        `, cpu => cpu.sx(cpu.mem[7]) === -1);
 
         this.runTest('SMRL logical shift right', `
             LD VAL
@@ -751,7 +755,7 @@ const E4130Tests = {
             VAL: $77777777
             CNT: #4
             RES: #0
-        `, cpu => cpu.mem[5] === 0x0FFFFF);
+        `, cpu => cpu.mem[7] === 0x0FFFFF);
 
         this.runTest('SRL shift R left', `
             LDR VAL
@@ -762,7 +766,7 @@ const E4130Tests = {
             VAL: #3
             CNT: #2
             RES: #0
-        `, cpu => cpu.mem[5] === 12);
+        `, cpu => cpu.mem[7] === 12);
     },
 
     // =========================================================================
@@ -812,45 +816,51 @@ const E4130Tests = {
     testMemoryOps() {
         this.currentCategory = '9. Memory Operations';
 
+        // Memory-modifying tests use HALT at addr 0 and start execution at addr 1
+        // to avoid infinite increment/decrement loops
         this.runTest('INCS increment memory', `
+            HALT: J HALT
             INCS A
             LD A
             ST RES
-            J #0
+            J HALT
             A: #10
             RES: #0
-        `, cpu => cpu.mem[4] === 11);
+        `, cpu => cpu.mem[6] === 11, { setup: cpu => { cpu.S = 2; } });
 
         this.runTest('DECS decrement memory', `
+            HALT: J HALT
             DECS A
             LD A
             ST RES
-            J #0
+            J HALT
             A: #10
             RES: #0
-        `, cpu => cpu.mem[4] === 9);
+        `, cpu => cpu.mem[6] === 9, { setup: cpu => { cpu.S = 2; } });
 
         this.runTest('ADDS add to memory', `
+            HALT: J HALT
             LD VAL
             ADDS A
             LD A
             ST RES
-            J #0
+            J HALT
             VAL: #5
             A: #10
             RES: #0
-        `, cpu => cpu.mem[5] === 15);
+        `, cpu => cpu.mem[8] === 15, { setup: cpu => { cpu.S = 2; } });
 
         this.runTest('SUBS subtract from memory', `
+            HALT: J HALT
             LD VAL
             SUBS A
             LD A
             ST RES
-            J #0
+            J HALT
             VAL: #3
             A: #10
             RES: #0
-        `, cpu => cpu.mem[5] === 7);
+        `, cpu => cpu.mem[8] === 7, { setup: cpu => { cpu.S = 2; } });
 
         this.runTest('CLS clear memory', `
             CLS A
@@ -862,26 +872,28 @@ const E4130Tests = {
         `, cpu => cpu.mem[4] === 0);
 
         this.runTest('NEGS negate memory', `
+            HALT: J HALT
             NEGS A
             LD A
             ST RES
-            J #0
+            J HALT
             A: #5
             RES: #0
-        `, cpu => cpu.sx(cpu.mem[4]) === -5);
+        `, cpu => cpu.sx(cpu.mem[6]) === -5, { setup: cpu => { cpu.S = 2; } });
 
         this.runTest('EXC exchange M with memory', `
+            HALT: J HALT
             LD MVAL
             EXC A
             ST OLDM
             LD A
             ST NEWA
-            J #0
+            J HALT
             MVAL: #42
             A: #99
             OLDM: #0
             NEWA: #0
-        `, cpu => cpu.mem[6] === 99 && cpu.mem[7] === 42);
+        `, cpu => cpu.mem[8] === 42 && cpu.mem[9] === 99, { setup: cpu => { cpu.S = 2; } });
     },
 
     // =========================================================================
@@ -898,7 +910,7 @@ const E4130Tests = {
             A: #6
             B: #7
             RES: #0
-        `, cpu => cpu.mem[5] === 42);
+        `, cpu => cpu.mem[6] === 42);
 
         this.runTest('MULS 10*10=100', `
             LD A
@@ -908,7 +920,7 @@ const E4130Tests = {
             A: #10
             B: #10
             RES: #0
-        `, cpu => cpu.mem[5] === 100);
+        `, cpu => cpu.mem[6] === 100);
 
         this.runTest('MULS negative result', `
             LD A
@@ -918,7 +930,7 @@ const E4130Tests = {
             A: #5
             B: $77777777
             RES: #0
-        `, cpu => cpu.sx(cpu.mem[5]) === -5);
+        `, cpu => cpu.sx(cpu.mem[6]) === -5);
 
         this.runTest('DIV 17/5=3 rem 2', `
             LD A
@@ -930,7 +942,7 @@ const E4130Tests = {
             B: #5
             Q: #0
             REM: #0
-        `, cpu => cpu.mem[5] === 3 && cpu.mem[6] === 2);
+        `, cpu => cpu.mem[7] === 3 && cpu.mem[8] === 2);
 
         this.runTest('DIV 100/10=10 rem 0', `
             LD A
@@ -942,7 +954,7 @@ const E4130Tests = {
             B: #10
             Q: #0
             REM: #0
-        `, cpu => cpu.mem[5] === 10 && cpu.mem[6] === 0);
+        `, cpu => cpu.mem[7] === 10 && cpu.mem[8] === 0);
 
         this.runTest('DIV 7/3=2 rem 1', `
             LD A
@@ -954,7 +966,7 @@ const E4130Tests = {
             B: #3
             Q: #0
             REM: #0
-        `, cpu => cpu.mem[5] === 2 && cpu.mem[6] === 1);
+        `, cpu => cpu.mem[7] === 2 && cpu.mem[8] === 1);
     },
 
     // =========================================================================
@@ -963,82 +975,93 @@ const E4130Tests = {
     testIntegration() {
         this.currentCategory = '11. Integration Tests';
 
-        // Sum 1 to 10
+        // Sum 1 to 10 - DKJN exits forward when K < 0
+        // Use HALT at address 0 to properly terminate
         this.runTest('Sum 1 to 10 = 55', `
+            HALT: J HALT
             LD ZERO
             LDK CNT
-            LOOP: ADD ONE
+            LOOP: DKJN DONE
+            ADD ONE
             ADDS SUM
-            DKJN LOOP
-            LD SUM
+            JF LOOP
+            DONE: LD SUM
             ST RES
-            J #0
+            J HALT
             ZERO: #0
             CNT: #10
             ONE: #1
             SUM: #0
             RES: #0
-        `, cpu => cpu.mem[10] === 55);
+        `, cpu => cpu.mem[14] === 55, { setup: cpu => { cpu.S = 2; } });
 
-        // Factorial 5
+        // Factorial 5 - DKJN exits forward when K < 0
         this.runTest('Factorial 5 = 120', `
+            HALT: J HALT
             LD ONE
             ST RES
             LDK N
-            LOOP: LD RES
+            LOOP: DKJN DONE
+            LD RES
             MULS CTR
             ST RES
             DECS CTR
-            DKJN LOOP
-            J #0
+            JF LOOP
+            DONE: J HALT
             ONE: #1
-            N: #4
+            N: #5
             CTR: #5
             RES: #0
-        `, cpu => cpu.mem[9] === 120);
+        `, cpu => cpu.mem[14] === 120, { setup: cpu => { cpu.S = 2; } });
 
-        // Fibonacci sequence (8th number)
+        // Fibonacci sequence (8th number) - DKJN exits forward when K < 0
         this.runTest('Fibonacci 8 = 21', `
+            HALT: J HALT
             LD ONE
             ST A
             ST B
             LDK CNT
-            LOOP: LD A
+            LOOP: DKJN DONE
+            LD A
             ADD B
             EXC A
             EXC B
-            DKJN LOOP
-            LD A
+            JF LOOP
+            DONE: LD A
             ST RES
-            J #0
+            J HALT
             ONE: #1
             CNT: #6
             A: #0
             B: #0
             RES: #0
-        `, cpu => cpu.mem[10] === 21);
+        `, cpu => cpu.mem[18] === 21, { setup: cpu => { cpu.S = 2; } });
 
-        // Memory copy using modified addressing
+        // Memory copy using modified addressing - DKJN exits forward when K < 0
+        // Use hard-coded addresses since ,R mode adds R to the address field, not to memory contents
         this.runTest('Memory copy with R index', `
+            HALT: J HALT
             LDR ZERO
             LDK CNT
-            LOOP: LD SRC,R
+            LOOP: DKJN DONE
+            LD SRC,R
             ST DST,R
             ADDR ONE
-            DKJN LOOP
-            LD 20
+            JF LOOP
+            DONE: LD DST
             ST RES
-            J #0
+            J HALT
             ZERO: #0
             ONE: #1
             CNT: #3
-            10: #111
-            11: #222
-            12: #333
-            SRC: #10
-            DST: #20
             RES: #0
-        `, cpu => cpu.mem[20] === 111 && cpu.mem[21] === 222 && cpu.mem[22] === 333);
+            SRC: #111
+            SRCB: #222
+            SRCC: #333
+            DST: #0
+            DSTB: #0
+            DSTC: #0
+        `, cpu => cpu.mem[18] === 111 && cpu.mem[19] === 222 && cpu.mem[20] === 333, { setup: cpu => { cpu.S = 2; } });
     },
 
     // =========================================================================
