@@ -205,7 +205,14 @@
             <button class="btn" id="bStep">Step</button>
             <button class="btn danger" id="bStop">Stop</button>
             <button class="btn" id="bReset">Reset</button>
-            <button class="btn lisp" id="bLisp">Lisp</button>
+            <button class="btn lisp" id="bLisp">Lisp ▾</button>
+            <select id="lispSelect" class="btn lisp" style="max-width:120px;font-size:8px;">
+                <option value="basic">Basic: CAR/CDR/CONS</option>
+                <option value="eval">EVAL/APPLY</option>
+                <option value="lambda">LAMBDA</option>
+                <option value="recurse">Recursion: FACTORIAL</option>
+                <option value="gc">GC: 3-bit Leak</option>
+            </select>
             <div class="speed"><input type="range" id="speed" min="1" max="100" value="50"></div>
             <div class="status">
                 <div><span class="running-dot" id="runLed"></span><span id="statTxt">Ready</span></div>
@@ -297,26 +304,27 @@ function runDebugCmd(cmd) {
     }
 }
 
-// Lisp demo: McCarthy 1960 primitives for Elliott 4130
+// LISP Demos for Elliott 4130
 // Cell format: [CAR:12bits | CDR:12bits] in 24-bit word
-// Atoms: 3073=A, 3074=B, 3075=C, 4095=NIL
-const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
+// Atoms: A=3072, B=3073, C=3074, NIL=4095, T=4094, LAMBDA=3081
+const LISP_DEMOS = {
+    basic: `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
 ; Cells at 1000+, results at 100-109
 
 ; Build (C . NIL) at 1000
-  LD    #3075          ; C = 3075
+  LD    #3074          ; C = 3074
   MULS  #4096          ; CAR << 12
   ADD   #4095          ; CDR = NIL
   ST    1000
 
 ; Build (B . 1000) at 1001
-  LD    #3074          ; B
+  LD    #3073          ; B
   MULS  #4096
   ADD   #1000
   ST    1001
 
 ; Build (A . 1001) at 1002 = (A B C)
-  LD    #3073          ; A
+  LD    #3072          ; A
   MULS  #4096
   ADD   #1001
   ST    1002
@@ -324,7 +332,7 @@ const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
 ; CAR[(A B C)] -> 100
   LD    1002
   DIV   #4096
-  ST    100            ; Expect: 3073
+  ST    100            ; Expect: 3072 (A)
 
 ; CDR[(A B C)] -> 101
   LD    1002
@@ -336,44 +344,281 @@ const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
   SUB   104
   ST    101            ; Expect: 1001
 
-; CADR[(A B C)] -> 102
-  LD    1001
-  DIV   #4096
-  ST    102            ; Expect: 3074
-
-; CONS[X, (A B C)] at 1003
-  LD    #3076          ; X
-  MULS  #4096
-  ADD   #1002
-  ST    1003
-  LD    1003
-  DIV   #4096
-  ST    105            ; Expect: 3076
-
-; ATOM?(A): A >= 3072
+; ATOM?(A): A >= 3072 -> T (4094)
   LD    100
   SUB   #3072
-  ST    106            ; Expect: 1 (true)
+  JN    NOT_ATOM
+  LD    #4094          ; T
+  J     DONE_ATOM
+NOT_ATOM:
+  LD    #4095          ; NIL
+DONE_ATOM:
+  ST    102            ; Expect: 4094 (T)
 
-; NULL?(NIL): NIL == 4095
-  LD    #4095
-  SUB   #4095
-  ST    107            ; Expect: 0 (true)
+  J     HALT
+HALT: J HALT
 
-; EQ?(A,A)
-  LD    #3073
-  SUB   #3073
-  ST    108            ; Expect: 0 (true)
-
-; EQ?(A,B)
-  LD    #3073
-  SUB   #3074
-  ST    109            ; Expect: -1 (false)
-
-  J     #0
-
-; Results 100-109
 100: #0
+101: #0
+102: #0
+103: #0
+104: #0`,
+
+    eval: `; McCarthy's EVAL - (QUOTE A) -> A
+; EVAL recognizes QUOTE and returns the argument
+; This is the heart of LISP interpretation
+
+; Build (QUOTE A) = (3082 . ptr_to_A)
+; First: (A . NIL) at 1000
+  LD    #3072          ; A
+  MULS  #4096
+  ADD   #4095          ; NIL
+  ST    1000           ; cell 1000 = (A . NIL)
+
+; Now: (QUOTE . 1000) at 1001
+  LD    #3082          ; QUOTE = 3082
+  MULS  #4096
+  ADD   #1000
+  ST    1001           ; cell 1001 = (QUOTE A)
+
+; EVAL: check if CAR = QUOTE
+  LD    1001
+  DIV   #4096          ; CAR
+  ST    500            ; save CAR
+  SUB   #3082          ; compare to QUOTE
+  JNZ   NOT_QUOTE
+
+; It's QUOTE: return CADR
+  LD    1001
+  ST    501
+  DIV   #4096
+  MULS  #4096
+  ST    502
+  LD    501
+  SUB   502            ; CDR = 1000
+  ST    503
+  LD    503
+  LDR   503
+  LD    0,R            ; get (A . NIL)
+  DIV   #4096          ; CAR = A
+  ST    100            ; Result: 3072 (A)
+  J     HALT
+
+NOT_QUOTE:
+  LD    #0
+  ST    100            ; Would handle other cases
+
+HALT: J HALT
+100: #0
+500: #0
+501: #0
+502: #0
+503: #0`,
+
+    lambda: `; LAMBDA Application: ((LAMBDA (X) X) 42) -> 42
+; The identity function applied to 42
+
+; Environment entry (X . 42) at 1000
+  LD    #3100          ; X = 3100
+  MULS  #4096
+  ADD   #42            ; value 42 (as atom)
+  ST    1000
+
+; EVAL variable lookup: find X in environment
+; X = 3100, env has (X . 42)
+
+; Check: is arg an atom >= 3072?
+  LD    #3100          ; X
+  SUB   #3072
+  JN    NOT_VAR
+
+; It's a variable - lookup in env
+; Compare X with CAR of env entry
+  LD    1000
+  DIV   #4096          ; CAR = X
+  SUB   #3100          ; compare to X
+  JNZ   NOT_FOUND
+
+; Found! Return the value (CDR)
+  LD    1000
+  ST    501
+  DIV   #4096
+  MULS  #4096
+  ST    502
+  LD    501
+  SUB   502            ; CDR = 42
+  ST    100            ; Result: 42
+  J     HALT
+
+NOT_VAR:
+NOT_FOUND:
+  LD    #0
+  ST    100
+
+HALT: J HALT
+100: #0
+501: #0
+502: #0`,
+
+    recurse: `; Recursive FACTORIAL(5) = 120
+; Using call stack at 2000+
+; FACTORIAL(n) = if n<=1 then 1 else n*FACTORIAL(n-1)
+
+; Stack pointer at 700
+  LD    #2000
+  ST    700            ; SP = 2000
+
+; Call FACTORIAL(5)
+  LD    #5
+  ST    500            ; arg n = 5
+  J     FACT
+
+FACT:
+; Check base case: n <= 1
+  LD    500
+  SUB   #1
+  JN    BASE           ; n < 1
+  JZ    BASE           ; n = 1
+
+; Recursive case: push n, call FACT(n-1)
+; Push n to stack
+  LD    700
+  ST    701            ; save SP
+  LDR   701
+  LD    500
+  ST    0,R            ; stack[SP] = n
+  LD    700
+  ADD   #1
+  ST    700            ; SP++
+
+; n = n - 1
+  LD    500
+  SUB   #1
+  ST    500
+  J     FACT           ; recurse
+
+BASE:
+; Return 1 (or start unwinding with n)
+  LD    #1
+  ST    501            ; result = 1
+
+UNWIND:
+; Check if stack empty
+  LD    700
+  SUB   #2000
+  JZ    DONE           ; stack empty
+
+; Pop n from stack
+  LD    700
+  SUB   #1
+  ST    700            ; SP--
+  LDR   700
+  LD    0,R            ; n = stack[SP]
+  ST    502
+
+; result = n * result
+  LD    502
+  MULS  501
+  ST    501
+
+  J     UNWIND
+
+DONE:
+  LD    501
+  ST    100            ; Result: 120
+
+  J     HALT
+HALT: J HALT
+
+100: #0
+500: #0
+501: #0
+502: #0
+700: #0
+701: #0`,
+
+    gc: `; 3-bit Reference Counting Memory Leak Demo
+; Elliott 4130 LISP used only 3 bits for refcount (max 7)
+; When count hits 7, it "sticks" - causing memory leaks
+
+; Cell at 1000, REFCNT at 800
+
+; Allocate cell with refcount = 1
+  LD    #3072          ; A
+  MULS  #4096
+  ADD   #3073          ; B
+  ST    1000           ; cell = (A . B)
+  LD    #1
+  ST    800            ; refcount = 1
+
+; Share 10 times (should be 11, but max is 7)
+  LD    #10
+  ST    710            ; counter
+
+SHARE:
+  LD    710
+  JZ    SHARE_DONE
+
+  ; Increment with 3-bit cap
+  LD    800
+  ADD   #1
+  SUB   #7
+  JN    NOT_SAT
+  LD    #7             ; SATURATED!
+  J     STORE_RC
+NOT_SAT:
+  ADD   #7
+STORE_RC:
+  ST    800
+
+  ; Track history
+  LD    #110
+  SUB   710
+  ST    711
+  LD    800
+  LDR   711
+  ST    0,R
+
+  LD    710
+  SUB   #1
+  ST    710
+  J     SHARE
+
+SHARE_DONE:
+; Now unshare all 11 - watch the leak!
+  LD    #11
+  ST    710
+
+UNSHARE:
+  LD    710
+  JZ    DONE
+
+  LD    800
+  SUB   #1
+  JN    ZERO
+  J     STORE_DEC
+ZERO:
+  LD    #0
+STORE_DEC:
+  ST    800
+
+  LD    710
+  SUB   #1
+  ST    710
+  J     UNSHARE
+
+DONE:
+; Result: refcount hit 0 after 7 decrements
+; But we had 11 references - 4 are now DANGLING!
+; With "sticky 7", it would stay at 7 = LEAK
+  LD    800
+  ST    100            ; Final refcount
+
+  J     HALT
+HALT: J HALT
+
+100: #0    ; Final refcount (0 = freed too early!)
+; 101-110: refcount history during SHARE
 101: #0
 102: #0
 103: #0
@@ -382,7 +627,12 @@ const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
 106: #0
 107: #0
 108: #0
-109: #0`;
+109: #0
+110: #0
+710: #0
+711: #0
+800: #0`
+};
 
 // Setup debug console input
 document.addEventListener('DOMContentLoaded', () => {
@@ -434,15 +684,23 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Lisp demo button
+    // Lisp demo button + dropdown
     const lispBtn = document.getElementById('bLisp');
+    const lispSelect = document.getElementById('lispSelect');
+    const srcArea = document.getElementById('src');
+
+    function loadLispDemo() {
+        if (srcArea && lispSelect) {
+            const demo = LISP_DEMOS[lispSelect.value] || LISP_DEMOS.basic;
+            srcArea.value = demo;
+        }
+    }
+
     if (lispBtn) {
-        lispBtn.onclick = () => {
-            const srcArea = document.getElementById('src');
-            if (srcArea) {
-                srcArea.value = LISP_DEMO;
-            }
-        };
+        lispBtn.onclick = loadLispDemo;
+    }
+    if (lispSelect) {
+        lispSelect.onchange = loadLispDemo;
     }
 });
 </script>
