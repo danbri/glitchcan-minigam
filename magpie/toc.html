@@ -32,27 +32,29 @@
 
     <h2>Contents</h2>
     <ul>
-        <li><strong>elliott4130/</strong> - Elliott 4130 Emulator & Lisp <span class="status status-wip">32/78 tests</span>
+        <li><strong>elliott4130/</strong> - Elliott 4130 Emulator & LISP 1.5 <span class="status status-ok">133/133 tests</span>
             <ul>
                 <li><a href="elliott4130/elliott4130.html">elliott4130.html</a> - Emulator webapp (mobile-friendly)</li>
                 <li><a href="elliott4130/README.md">README.md</a> - Project overview & test analysis</li>
                 <li><strong>Emulator Core:</strong>
                     <ul>
-                        <li>elliott4130-core.js - CPU emulation</li>
+                        <li>elliott4130-core.js - CPU emulation (24-bit)</li>
                         <li>elliott4130-asm.js - NEAT assembler</li>
-                        <li>elliott4130-tests.js - 78 validation tests</li>
+                        <li>elliott4130-tests.js - 133 validation tests</li>
                         <li>elliott4130-debug.js - Debug interface</li>
                         <li>elliott4130-ui.js - UI/visualization</li>
                     </ul>
                 </li>
-                <li><strong>Lisp Implementation:</strong>
+                <li><strong>LISP 1.5 in Assembly:</strong>
                     <ul>
-                        <li><a href="elliott4130/lisp.mjs">lisp.mjs</a> - JavaScript Lisp interpreter</li>
-                        <li><a href="elliott4130/microlisp.mjs">microlisp.mjs</a> - Lightweight variant</li>
-                        <li><a href="elliott4130/test-lisp.mjs">test-lisp.mjs</a> - Test suite</li>
-                        <li><a href="elliott4130/test-cases.lisp">test-cases.lisp</a> - McCarthy 1960 paper tests</li>
+                        <li>CAR, CDR, CONS, ATOM, EQ, NULL</li>
+                        <li>McCarthy's EVAL/APPLY</li>
+                        <li>Recursion with call stack</li>
+                        <li>Higher-order functions (MAP1, APPLY)</li>
+                        <li>3-bit reference counting GC (with leak demo)</li>
                     </ul>
                 </li>
+                <li><a href="elliott4130/demo-memory-leak.mjs">demo-memory-leak.mjs</a> - GC memory leak demo</li>
                 <li><strong>docs/</strong> - CCS reference manuals (ccs-e6x1-5.pdf)</li>
             </ul>
         </li>
