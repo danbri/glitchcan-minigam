@@ -126,6 +126,26 @@
             .right-col .panel { flex: 1; min-width: 140px; }
             .debug-grid { grid-template-columns: 1fr; }
         }
+
+        /* LISP tab styles */
+        .lisp-tab { color: #f80 !important; }
+        .lisp-tab.active { border-bottom-color: #f80 !important; }
+
+        .lisp-grid { display: flex; flex-direction: column; flex: 1; gap: 1px; padding: 2px; overflow: hidden; }
+        .lisp-row { display: flex; gap: 1px; flex: 1; min-height: 0; }
+        .lisp-panel { background: #1a1a1a; border: 1px solid #333; padding: 2px; display: flex; flex-direction: column; overflow: hidden; }
+        .lisp-panel.half { flex: 1; }
+        .lisp-panel-title { font-size: 7px; color: #f80; text-transform: uppercase; padding: 1px 2px; background: #221100; margin: -2px -2px 2px -2px; }
+        .lisp-input { flex: 1; width: 100%; background: #000; border: 1px solid #432; color: #f80; font-family: monospace; font-size: 10px; padding: 2px; resize: none; line-height: 1.2; }
+        .lisp-input:focus { outline: none; border-color: #f80; }
+        .lisp-output { flex: 1; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 8px; padding: 2px; overflow: auto; white-space: pre; line-height: 1.2; }
+        .lisp-output.cells { color: #8cf; }
+        .lisp-output.asm { color: #0f0; }
+        .lisp-output.result { color: #ff0; font-size: 11px; }
+        .lisp-controls { display: flex; gap: 2px; padding: 2px; background: #1a1a1a; border-top: 1px solid #333; align-items: center; flex-wrap: wrap; }
+        .lisp-arrow { color: #f80; font-size: 10px; padding: 0 4px; }
+        .lisp-example { font-size: 7px; color: #666; cursor: pointer; padding: 1px 3px; border: 1px solid #333; }
+        .lisp-example:hover { border-color: #f80; color: #f80; }
     </style>
 </head>
 <body>
@@ -146,7 +166,8 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" data-tab="main">Emulator</div>
+        <div class="tab active" data-tab="main">ASM</div>
+        <div class="tab lisp-tab" data-tab="lisp">LISP</div>
         <div class="tab" data-tab="tests">Tests</div>
         <div class="tab" data-tab="debug">Debug</div>
     </div>
@@ -177,13 +198,7 @@
             </div>
 
             <div class="panel program-panel">
-                <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span id="inputModeLabel">Paper Tape (NEAT)</span>
-                    <label style="font-size:8px;display:flex;align-items:center;gap:3px;">
-                        <input type="checkbox" id="lispMode" style="accent-color:#f80;">
-                        <span style="color:#f80;">S-expr</span>
-                    </label>
-                </div>
+                <div class="panel-title">Paper Tape (NEAT Assembler)</div>
                 <textarea class="program-input" id="src" spellcheck="false">; Add two numbers
   LD    100       ; M := [100]
   ADD   101       ; M := M + [101]
@@ -211,19 +226,61 @@
             <button class="btn" id="bStep">Step</button>
             <button class="btn danger" id="bStop">Stop</button>
             <button class="btn" id="bReset">Reset</button>
-            <button class="btn lisp" id="bLisp">Lisp ▾</button>
-            <select id="lispSelect" class="btn lisp" style="max-width:120px;font-size:8px;">
-                <option value="basic">Basic: CAR/CDR/CONS</option>
-                <option value="eval">EVAL/APPLY</option>
+            <select id="lispSelect" class="btn lisp" style="max-width:100px;font-size:8px;" title="Load LISP demo">
+                <option value="">Demos</option>
+                <option value="basic">CAR/CDR</option>
+                <option value="eval">EVAL</option>
                 <option value="lambda">LAMBDA</option>
-                <option value="recurse">Recursion: FACTORIAL</option>
-                <option value="gc">GC: 3-bit Leak</option>
+                <option value="recurse">FACTORIAL</option>
+                <option value="gc">GC Leak</option>
             </select>
             <div class="speed"><input type="range" id="speed" min="1" max="100" value="50"></div>
             <div class="status">
                 <div><span class="running-dot" id="runLed"></span><span id="statTxt">Ready</span></div>
                 <div>I:<span id="iCnt">0</span></div>
             </div>
+        </div>
+    </div>
+
+    <!-- LISP Tab -->
+    <div class="tab-content" id="tab-lisp">
+        <div class="lisp-grid">
+            <!-- Row 1: S-expr input + Cells view -->
+            <div class="lisp-row">
+                <div class="lisp-panel half">
+                    <div class="lisp-panel-title">1. S-Expression</div>
+                    <textarea class="lisp-input" id="lispSrc" spellcheck="false">(CAR (QUOTE (A B C)))</textarea>
+                </div>
+                <div class="lisp-panel half">
+                    <div class="lisp-panel-title">2. Cells (1000+)</div>
+                    <div class="lisp-output cells" id="lispCells">Parse to see cell layout...</div>
+                </div>
+            </div>
+            <!-- Row 2: Generated ASM + Result -->
+            <div class="lisp-row">
+                <div class="lisp-panel half">
+                    <div class="lisp-panel-title">3. Generated 4130 ASM</div>
+                    <div class="lisp-output asm" id="lispAsm">Compile to see assembly...</div>
+                </div>
+                <div class="lisp-panel half">
+                    <div class="lisp-panel-title">4. Result (mem[100])</div>
+                    <div class="lisp-output result" id="lispResult">Run to see result...</div>
+                </div>
+            </div>
+        </div>
+        <div class="lisp-controls">
+            <button class="btn lisp" id="lispParse">Parse</button>
+            <span class="lisp-arrow">→</span>
+            <button class="btn lisp" id="lispCompile">Compile</button>
+            <span class="lisp-arrow">→</span>
+            <button class="btn primary" id="lispRun">Run</button>
+            <span style="margin-left:auto;font-size:7px;color:#666;">Examples:</span>
+            <span class="lisp-example" data-expr="(QUOTE A)">'A</span>
+            <span class="lisp-example" data-expr="(CAR (QUOTE (A B C)))">CAR</span>
+            <span class="lisp-example" data-expr="(CDR (QUOTE (A B)))">CDR</span>
+            <span class="lisp-example" data-expr="(PLUS 3 4)">PLUS</span>
+            <span class="lisp-example" data-expr="(TIMES 6 7)">TIMES</span>
+            <span class="lisp-example" data-expr="(ATOM (QUOTE A))">ATOM</span>
         </div>
     </div>
 
@@ -691,108 +748,130 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Lisp demo button + dropdown
-    const lispBtn = document.getElementById('bLisp');
+    // LISP demo dropdown (loads pre-built ASM demos)
     const lispSelect = document.getElementById('lispSelect');
     const srcArea = document.getElementById('src');
 
-    function loadLispDemo() {
-        if (srcArea && lispSelect) {
-            const demo = LISP_DEMOS[lispSelect.value] || LISP_DEMOS.basic;
-            srcArea.value = demo;
-        }
-    }
-
-    if (lispBtn) {
-        lispBtn.onclick = loadLispDemo;
-    }
     if (lispSelect) {
-        lispSelect.onchange = loadLispDemo;
-    }
-
-    // S-expression mode toggle
-    const lispModeChk = document.getElementById('lispMode');
-    const inputModeLabel = document.getElementById('inputModeLabel');
-    const helpText = document.getElementById('helpText');
-
-    const LISP_EXAMPLES = `; LISP S-expression mode
-; Type expressions and click Load to compile
-
-(QUOTE A)
-
-; Try these:
-; (CAR (QUOTE (A B C)))
-; (PLUS 3 4)
-; (TIMES 6 7)
-; (ATOM (QUOTE A))`;
-
-    const ASM_HELP = '<code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code> &nbsp;<code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect';
-    const LISP_HELP = '<code>(QUOTE x)</code> <code>(CAR x)</code> <code>(CDR x)</code> <code>(PLUS a b)</code> <code>(TIMES a b)</code> <code>(ATOM x)</code>';
-
-    if (lispModeChk) {
-        lispModeChk.onchange = () => {
-            if (lispModeChk.checked) {
-                inputModeLabel.textContent = 'LISP S-expression';
-                inputModeLabel.style.color = '#f80';
-                helpText.innerHTML = LISP_HELP;
-                srcArea.value = LISP_EXAMPLES;
-                srcArea.style.borderColor = '#f80';
-            } else {
-                inputModeLabel.textContent = 'Paper Tape (NEAT)';
-                inputModeLabel.style.color = '';
-                helpText.innerHTML = ASM_HELP;
-                srcArea.style.borderColor = '';
+        lispSelect.onchange = () => {
+            if (srcArea && lispSelect.value && LISP_DEMOS[lispSelect.value]) {
+                srcArea.value = LISP_DEMOS[lispSelect.value];
+                lispSelect.value = '';  // Reset to "Demos"
             }
         };
     }
 
-    // Hook into Load button to handle LISP mode
-    const origLoad = document.getElementById('bLoad');
-    if (origLoad && window.LispREPL) {
-        const origOnclick = origLoad.onclick;
-        origLoad.onclick = () => {
-            if (lispModeChk && lispModeChk.checked) {
-                // Compile S-expression to assembly
-                const src = srcArea.value;
-                // Find the first non-comment S-expression
-                const lines = src.split('\n');
-                let expr = '';
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed && !trimmed.startsWith(';')) {
-                        expr = trimmed;
-                        break;
-                    }
-                }
-                if (expr) {
-                    const result = LispREPL.compile(expr);
-                    if (result.success) {
-                        // Switch to ASM mode temporarily to load
-                        const wasLispMode = lispModeChk.checked;
-                        lispModeChk.checked = false;
-                        srcArea.value = result.asm;
-                        // Now call original load
-                        if (origOnclick) origOnclick();
-                        else if (ui && ui.load) ui.load();
-                        // Show what we compiled
-                        const tty = document.getElementById('tty');
-                        if (tty) {
-                            tty.textContent = `Compiled: ${expr}\n`;
-                        }
-                        // Restore LISP mode display but keep generated ASM visible
-                        inputModeLabel.textContent = 'Generated ASM';
-                        inputModeLabel.style.color = '#0f0';
-                    } else {
-                        alert('LISP Error: ' + result.error);
-                    }
-                }
-            } else {
-                // Normal ASM load
-                if (origOnclick) origOnclick();
-                else if (ui && ui.load) ui.load();
+    // === LISP Tab Handlers ===
+    const lispSrcEl = document.getElementById('lispSrc');
+    const lispCellsEl = document.getElementById('lispCells');
+    const lispAsmEl = document.getElementById('lispAsm');
+    const lispResultEl = document.getElementById('lispResult');
+    let lastParsedAst = null;
+    let lastCells = null;
+    let lastAsm = null;
+
+    // Parse button - show cells
+    document.getElementById('lispParse')?.addEventListener('click', () => {
+        if (!window.LispREPL || !lispSrcEl) return;
+        try {
+            const expr = lispSrcEl.value.trim();
+            const tokens = LispREPL.tokenize(expr);
+            const ast = LispREPL.parse(tokens);
+            lastParsedAst = ast;
+            const { addr, cells } = LispREPL.buildCells(ast);
+            lastCells = cells;
+
+            // Show cells
+            let cellText = `Root: ${addr}\n\n`;
+            cellText += `Atom Table:\n`;
+            cellText += `  NIL=4095  T=4094\n`;
+            cellText += `  A=3072 B=3073 C=3074\n`;
+            cellText += `  QUOTE=3082 CAR=3084\n\n`;
+            cellText += `Cells:\n`;
+            for (const c of cells) {
+                const carName = Object.entries(LispREPL.atoms).find(([k,v]) => v === c.car)?.[0] || c.car;
+                const cdrName = c.cdr === 4095 ? 'NIL' : c.cdr;
+                cellText += `  ${c.addr}: (${carName} . ${cdrName})\n`;
+                cellText += `       = ${c.car}*4096 + ${c.cdr}\n`;
+                cellText += `       = ${c.car * 4096 + c.cdr}\n`;
             }
-        };
-    }
+            lispCellsEl.textContent = cellText;
+        } catch (e) {
+            lispCellsEl.textContent = `Error: ${e.message}`;
+        }
+    });
+
+    // Compile button - generate ASM
+    document.getElementById('lispCompile')?.addEventListener('click', () => {
+        if (!window.LispREPL || !lispSrcEl) return;
+        try {
+            const expr = lispSrcEl.value.trim();
+            const result = LispREPL.compile(expr);
+            if (result.success) {
+                lastAsm = result.asm;
+                lispAsmEl.textContent = result.asm;
+            } else {
+                lispAsmEl.textContent = `Error: ${result.error}`;
+            }
+        } catch (e) {
+            lispAsmEl.textContent = `Error: ${e.message}`;
+        }
+    });
+
+    // Run button - execute and show result
+    document.getElementById('lispRun')?.addEventListener('click', () => {
+        if (!window.LispREPL || !lispSrcEl || !window.Asm || !window.E4130) return;
+        try {
+            const expr = lispSrcEl.value.trim();
+            const result = LispREPL.compile(expr);
+            if (!result.success) {
+                lispResultEl.textContent = `Compile Error: ${result.error}`;
+                return;
+            }
+            lastAsm = result.asm;
+            lispAsmEl.textContent = result.asm;
+
+            // Assemble and run
+            const asm = new Asm();
+            const program = asm.asm(result.asm);
+            const cpu = new E4130();
+            for (const { addr, word } of program) {
+                cpu.mem[addr] = word;
+            }
+            cpu.halted = false;
+
+            // Execute
+            for (let i = 0; i < 5000 && !cpu.halted; i++) {
+                const w = cpu.mem[cpu.S >> 1];
+                const f = (w >> 18) & 0x3F;
+                if (f === 0o60 && (cpu.S >> 1) === ((w >> 1) & 0x7FFF)) break;
+                cpu.step();
+            }
+
+            // Show result with interpretation
+            const val = cpu.mem[100];
+            let meaning = '';
+            if (val === 4095) meaning = ' = NIL';
+            else if (val === 4094) meaning = ' = T';
+            else if (val >= 3072 && val < 3200) {
+                const name = Object.entries(LispREPL.atoms).find(([k,v]) => v === val)?.[0];
+                if (name) meaning = ` = ${name}`;
+            }
+            lispResultEl.textContent = `mem[100] = ${val}${meaning}\n\nInput: ${expr}`;
+        } catch (e) {
+            lispResultEl.textContent = `Error: ${e.message}`;
+        }
+    });
+
+    // Example buttons
+    document.querySelectorAll('.lisp-example').forEach(el => {
+        el.addEventListener('click', () => {
+            const expr = el.dataset.expr;
+            if (lispSrcEl && expr) {
+                lispSrcEl.value = expr;
+            }
+        });
+    });
 });
 </script>
 
