@@ -3695,6 +3695,229 @@ const E4130Tests = {
             521: #0
             522: #0
         `, cpu => cpu.mem[501] === 3072);  // A
+
+        // APPLY PLUS: (+ 3 4) -> 7
+        // Extend primitives: PLUS=3090, TIMES=3091
+        this.runTest('APPLY: (PLUS 3 4) -> 7', `
+            ; args = (3 4)
+            LD    #4
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (4 . NIL)
+
+            LD    #3
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; args = (3 4)
+
+            ; Get first arg
+            LD    1001
+            DIV   #4096
+            ST    510           ; 3
+
+            ; Get second arg (CADR)
+            LD    1001
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522           ; cdr
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    511           ; 4
+
+            ; ADD them
+            LD    510
+            ADD   511
+            ST    501           ; 7
+
+            J     HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+            511: #0
+            520: #0
+            521: #0
+            522: #0
+        `, cpu => cpu.mem[501] === 7);
+
+        // APPLY TIMES: (* 6 7) -> 42
+        this.runTest('APPLY: (TIMES 6 7) -> 42', `
+            ; args = (6 7)
+            LD    #7
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (7 . NIL)
+
+            LD    #6
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; args = (6 7)
+
+            ; Get first arg
+            LD    1001
+            DIV   #4096
+            ST    510           ; 6
+
+            ; Get CADR
+            LD    1001
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    511           ; 7
+
+            ; MULTIPLY
+            LD    510
+            MULS  511
+            ST    501           ; 42
+
+            J     HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+            511: #0
+            520: #0
+            521: #0
+            522: #0
+        `, cpu => cpu.mem[501] === 42);
+
+        // SUM-OF-SQUARES: recursive function
+        // (sum-of-squares '(2 3 4)) = 4 + 9 + 16 = 29
+        this.runTest('RECURSIVE: sum-of-squares (2 3 4) = 29', `
+            ; Build list (2 3 4)
+            LD    #4
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (4 . NIL)
+
+            LD    #3
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (3 . (4))
+
+            LD    #2
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; lst = (2 3 4)
+
+            ; Stack at 2000, SP at 500
+            LD    #2000
+            ST    500           ; SP
+
+            ; Call sum-of-squares(1002)
+            LD    #1002
+            ST    600           ; arg = ptr to list
+
+            ; ===============================
+            ; sum-of-squares:
+            ; if null[lst] return 0
+            ; else car[lst]^2 + sum-of-squares(cdr[lst])
+            ; ===============================
+
+            SOS_ENTRY:
+            ; Check if lst is NIL
+            LD    600
+            SUB   #4095
+            JZ    SOS_RETURN_ZERO
+
+            ; Get CAR (element)
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    610           ; elem
+
+            ; Get CDR (rest)
+            LDR   600
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    611           ; rest
+
+            ; Push current elem and return addr
+            LDR   500
+            LD    610
+            ST    0,R           ; push elem
+            LD    500
+            ADD   #1
+            ST    500
+
+            ; Set up recursive call
+            LD    611
+            ST    600           ; arg = rest
+
+            ; Check if rest is NIL (base case)
+            LD    600
+            SUB   #4095
+            JZ    SOS_BASE_UNWIND
+
+            ; Recurse
+            J     SOS_ENTRY
+
+            SOS_BASE_UNWIND:
+            ; rest was NIL, start unwinding
+            LD    #0
+            ST    620           ; accumulator = 0
+            J     SOS_UNWIND
+
+            SOS_RETURN_ZERO:
+            ; lst was NIL
+            LD    #0
+            ST    501
+            J     DONE
+
+            SOS_UNWIND:
+            ; Pop elem, square it, add to accumulator
+            LD    500
+            SUB   #2000
+            JZ    SOS_FINISH    ; stack empty
+
+            LD    500
+            SUB   #1
+            ST    500
+            LDR   500
+            LD    0,R           ; pop elem
+            ST    630
+
+            ; Square it
+            LD    630
+            MULS  630
+            ADD   620
+            ST    620           ; acc += elem^2
+
+            J     SOS_UNWIND
+
+            SOS_FINISH:
+            LD    620
+            ST    501           ; result
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            600: #0
+            610: #0
+            611: #0
+            620: #0
+            630: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[501] === 29);  // 4 + 9 + 16 = 29
     },
 
     // =========================================================================
