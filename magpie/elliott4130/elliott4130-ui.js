@@ -155,6 +155,12 @@ class E4130UI {
         setEl('rS', this.cpu.S.toString(8).padStart(6, '0'));
         setEl('rK', this.cpu.K.toString(8).padStart(4, '0'));
 
+        // Header registers (compact display)
+        setEl('hM', this.cpu.M.toString(8).padStart(8, '0'));
+        setEl('hR', this.cpu.R.toString(8).padStart(8, '0'));
+        setEl('hS', this.cpu.S.toString(8).padStart(4, '0'));
+        setEl('hK', this.cpu.K.toString(8).padStart(4, '0'));
+
         // Condition flags
         const setFlag = (id, on) => {
             const el = document.getElementById(id);
@@ -166,6 +172,10 @@ class E4130UI {
         setFlag('cZ', this.cpu.C & this.cpu.F_NZ);
         setFlag('cC', this.cpu.C & this.cpu.F_CA);
         setFlag('cO', this.cpu.C & this.cpu.F_OF);
+
+        // Header condition LEDs
+        setFlag('hN', this.cpu.C & this.cpu.F_NEG);
+        setFlag('hZ', this.cpu.C & this.cpu.F_NZ);
 
         // Status
         setEl('iCnt', this.cpu.iCount);
