@@ -11,44 +11,26 @@ Browser-based emulator for the Elliott 4130 computer with Lisp implementation ta
 - **Registers:** M (accumulator), R (reserve), S (program counter), K (count), C (conditions)
 - **Reference counting GC** - like Pat Hayes' 1967 implementation
 
-## Test Suite Status: 32/78 passing (41%)
+## Test Suite Status: 133/133 passing ✅
 
-### Failing Test Categories (Requiring Investigation)
+All tests passing including:
+- Basic arithmetic (ADD, SUB, MULS, DIV)
+- Condition flags (NEG, NZ, Z, CA, OF)
+- Addressing modes (literal, direct, indirect)
+- Conditional jumps (JN, JNN, JZ, JNZ, DKJN)
+- LISP primitives (CAR, CDR, CONS, ATOM, EQ, NULL)
+- McCarthy's EVAL/APPLY
+- Recursive functions with call stack
+- Higher-order functions (MAP1, APPLY)
+- 3-bit reference counting GC
 
-| Category | Pass/Total | Key Failures |
-|----------|-----------|--------------|
-| Basic Arithmetic | 5/17 | ADD operations, literal mode |
-| Condition Flags | 4/7 | NEG flag, NZ flag setting |
-| Addressing Modes | 3/4 | Literal mode `#n` |
-| Jumps/Branches | 1/8 | JN, JNN, JZ, JNZ, DKJN |
+### Test Specification
 
-### Root Cause Analysis Plan
-
-1. **Literal Mode (`#n`)** - Test shows `ADD #10` failing
-   - Check assembler output for literal addressing encoding
-   - Verify y-field encoding (y=0 for literal?)
-   - Trace instruction decoding in `elliott4130-core.js`
-
-2. **ADD Instruction** - `ADD 1+1=2` fails despite `ADD 0+0=0` passing
-   - Check operand fetch vs literal fetch
-   - Verify accumulator update logic
-   - Compare against E6X3 specification
-
-3. **Condition Flags** - NEG and NZ not setting correctly
-   - Review flag update logic after arithmetic ops
-   - Check bit 23 detection for negative
-   - Verify NZ flag semantics (set when non-zero?)
-
-4. **Conditional Jumps** - Most fail due to flag issues
-   - These likely cascade from condition flag bugs
-   - Fix flags first, then re-test jumps
-
-### Debug Approach
-
-1. Use "Copy Logs" button to capture test run state
-2. Enable "Trace execution" in Debug tab
-3. Single-step through failing tests
-4. Compare against E6X3 manual behavior
+See `tests/lisp-integrity-tests.md` for the comprehensive test specification covering:
+- McCarthy 1960 paper test cases
+- IBM 704 cons cell layout (historical reference)
+- Elliott 4130 specific edge cases (12-bit pointers, 3-bit refcounts)
+- Validation checklist for LISP implementations on quirky hardware
 
 ## Files
 
@@ -61,10 +43,15 @@ Browser-based emulator for the Elliott 4130 computer with Lisp implementation ta
 - `elliott4130-ui.js` - UI/visualization (521 lines)
 
 ### Lisp Implementation
+- `lisp-repl.js` - S-expression parser & 4130 assembly generator (browser)
 - `lisp.mjs` - JavaScript Lisp interpreter (340 lines)
 - `microlisp.mjs` - Lightweight variant (458 lines)
 - `test-lisp.mjs` - Test suite (143 lines)
 - `test-cases.lisp` - McCarthy 1960 paper tests (131 lines)
+- `demo-memory-leak.mjs` - 3-bit reference counting GC demonstration
+
+### Test Specification
+- `tests/lisp-integrity-tests.md` - McCarthy 1960 tests, IBM 704/Elliott 4130 edge cases
 
 ### Reference Documentation
 CCS Elliott reference manuals in `docs/`:
