@@ -1537,6 +1537,283 @@ const E4130Tests = {
             HALT: J HALT
             100: #0
         `, cpu => cpu.mem[100] === 5);  // 5 < 7, so result = 5
+
+        // Test: Environment lookup - binding a variable
+        // ENV format: ((name . value) . rest)
+        // ASSOC(name, env) finds value for name
+        this.runTest('Lisp: ASSOC finds variable in environment', `
+            ; Build environment: ((A . 42))
+            ; A = 3072, 42 is just a value
+
+            ; First build the pair (A . 42)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #42           ; value
+            ST    1000          ; Cell 1000 = (A . 42)
+
+            ; Build env: ((A . 42) . NIL)
+            LD    #1000         ; ptr to (A . 42)
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1001          ; Cell 1001 = env
+
+            ; ASSOC(A, env):
+            ; Loop through env, compare CAR of each pair with target
+
+            ; Get first pair from env
+            LD    1001          ; env cell
+            DIV   #4096         ; CAR = first pair (1000)
+            ST    700           ; pair ptr
+
+            ; Get key from pair (CAR of pair)
+            LDR   700
+            LD    0,R           ; Load pair cell
+            DIV   #4096         ; CAR = key
+            ST    701           ; key = A (3072)
+
+            ; Compare with target
+            LD    701
+            SUB   #3072         ; key - target
+            JNZ   NOT_FOUND     ; If not equal, key not found
+
+            ; Found! Get value (CDR of pair)
+            LDR   700
+            LD    0,R           ; Load pair cell
+            ST    702
+            DIV   #4096
+            MULS  #4096
+            ST    703
+            LD    702
+            SUB   703
+            ST    100           ; Result = value (42)
+            J     DONE
+
+            NOT_FOUND: LD #4095 ; NIL
+            ST    100
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            700: #0
+            701: #0
+            702: #0
+            703: #0
+        `, cpu => cpu.mem[100] === 42);
+
+        // Test: Simple function representation
+        // (LAMBDA (X) X) represented as (LAMBDA . ((X) . X))
+        // LAMBDA = 3081, X = 3100
+        this.runTest('Lisp: LAMBDA cell structure', `
+            ; Build (LAMBDA (X) X)
+            ; LAMBDA = 3081, X = 3100
+
+            ; Build param list (X) = (X . NIL)
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000          ; Cell 1000 = (X)
+
+            ; Build body X (just the atom)
+            ; Body is just X (atom 3100)
+
+            ; Build ((X) . X) = params . body
+            LD    #1000         ; ptr to (X)
+            MULS  #4096
+            ADD   #3100         ; body X
+            ST    1001          ; Cell 1001 = ((X) . X)
+
+            ; Build (LAMBDA . ((X) . X))
+            LD    #3081         ; LAMBDA
+            MULS  #4096
+            ADD   #1001         ; ptr to ((X) . X)
+            ST    1002          ; Cell 1002 = (LAMBDA (X) X)
+
+            ; Verify structure: CAR of cell 1002 = LAMBDA (3081)
+            LD    1002
+            DIV   #4096
+            ST    100           ; Should be 3081
+
+            ; CDR of cell 1002 = ptr to params/body
+            LD    1002
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    101           ; Should be 1001
+
+            ; CAR of cell 1001 = params = 1000
+            LD    1001
+            DIV   #4096
+            ST    102           ; Should be 1000
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            101: #0
+            102: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[100] === 3081 && cpu.mem[101] === 1001 && cpu.mem[102] === 1000);
+
+        // Test: Apply identity function ((LAMBDA (X) X) A) -> A
+        // This is the core of function application:
+        // 1. Get function (LAMBDA (X) X)
+        // 2. Get argument A
+        // 3. Bind X to A in environment
+        // 4. Evaluate body X in that environment
+        this.runTest('Lisp: Apply identity function', `
+            ; Build and apply ((LAMBDA (X) X) A)
+            ; Expected result: A (3072)
+
+            ; Build (X) param list
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000          ; (X)
+
+            ; Build ((X) . X) params/body
+            LD    #1000
+            MULS  #4096
+            ADD   #3100         ; body X
+            ST    1001          ; ((X) . X)
+
+            ; Build (LAMBDA . ((X) . X))
+            LD    #3081         ; LAMBDA
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; fn = (LAMBDA (X) X)
+
+            ; Argument is A (3072)
+            ; Build environment: ((X . A))
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #3072         ; A
+            ST    1003          ; (X . A)
+
+            ; Build env list
+            LD    #1003
+            MULS  #4096
+            ADD   #4095
+            ST    1004          ; env = ((X . A))
+
+            ; Now evaluate body X in env
+            ; Body = X (atom 3100)
+            ; Look up X in env
+
+            ; Get first binding from env
+            LD    1004          ; env
+            DIV   #4096         ; CAR = first binding (1003)
+            ST    700           ; binding ptr
+
+            ; Get key from binding
+            LDR   700
+            LD    0,R
+            DIV   #4096
+            ST    701           ; key = X (3100)
+
+            ; Compare with body (X = 3100)
+            LD    701
+            SUB   #3100         ; key - X
+            JNZ   NOT_FOUND     ; Not found (shouldn't happen)
+
+            ; Found! Get value (CDR of binding)
+            LDR   700
+            LD    0,R
+            ST    702
+            DIV   #4096
+            MULS  #4096
+            ST    703
+            LD    702
+            SUB   703
+            ST    100           ; Result = A (3072)
+            J     DONE
+
+            NOT_FOUND: LD #4095
+            ST    100
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            700: #0
+            701: #0
+            702: #0
+            703: #0
+        `, cpu => cpu.mem[100] === 3072);  // Result = A
+
+        // Test: Apply function with arithmetic ((LAMBDA (X) (CAR X)) (QUOTE (A B)))
+        // Shows that function bodies can be complex expressions
+        // We simplify: just test binding works with list value
+        this.runTest('Lisp: Function binding with list argument', `
+            ; Apply function that returns its argument unchanged
+            ; Build (A B) first
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000          ; (B)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (A B)
+
+            ; Bind X to (A B) in environment
+            ; Build (X . 1001) where 1001 is ptr to (A B)
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #1001         ; ptr to (A B)
+            ST    1002          ; (X . (A B))
+
+            ; Build env
+            LD    #1002
+            MULS  #4096
+            ADD   #4095
+            ST    1003          ; env = ((X . (A B)))
+
+            ; Look up X, should get 1001 (ptr to (A B))
+            LD    1003
+            DIV   #4096         ; first binding
+            ST    700
+
+            LDR   700
+            LD    0,R
+            DIV   #4096
+            ST    701           ; key = X
+
+            LD    701
+            SUB   #3100
+            JNZ   ERROR
+
+            ; Get value
+            LDR   700
+            LD    0,R
+            ST    702
+            DIV   #4096
+            MULS  #4096
+            ST    703
+            LD    702
+            SUB   703
+            ST    100           ; Should be 1001 (ptr to (A B))
+
+            ; Now verify we can CAR this to get A
+            LDR   100
+            LD    0,R
+            DIV   #4096
+            ST    101           ; CAR of (A B) = A
+
+            J     DONE
+            ERROR: LD #4095
+            ST    100
+            LD    #4095
+            ST    101
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            101: #0
+            700: #0
+            701: #0
+            702: #0
+            703: #0
+        `, cpu => cpu.mem[100] === 1001 && cpu.mem[101] === 3072);  // Ptr to list, and CAR = A
     },
 
     // =========================================================================
