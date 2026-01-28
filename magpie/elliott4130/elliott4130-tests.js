@@ -4103,6 +4103,236 @@ const E4130Tests = {
             812: #0
         `, cpu => cpu.mem[503] === 3 && cpu.mem[504] === 83);
         // VALUES starts with 3, SUMSQ = 83
+
+        // =====================================================================
+        // HIGHER-ORDER FUNCTIONS: MAP with APPLY
+        // =====================================================================
+        // (SETQ ACC 1)
+        // (LABEL STEP (LAMBDA (X) (SETQ ACC (* ACC X)) ACC))
+        // (LABEL MAP1 (LAMBDA (F L) (COND ((NULL L) NIL)
+        //                                 (T (CONS (APPLY F (LIST (CAR L)))
+        //                                          (MAP1 F (CDR L)))))))
+        // (SETQ DATA '(2 3 4))
+        // (SETQ RESULTS (MAP1 'STEP DATA))
+        // (LIST RESULTS ACC)
+        // => ((2 6 24) 24)
+
+        this.runTest('LISP 1.5: MAP1 with APPLY - higher-order functions', `
+            ; Global ACC at 800
+            LD    #1
+            ST    800           ; ACC = 1
+
+            ; Build DATA = (2 3 4)
+            LD    #4
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (4 . NIL)
+
+            LD    #3
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (3 4)
+
+            LD    #2
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; DATA = (2 3 4)
+
+            ; === MAP1(STEP, DATA) ===
+            ; Iterative implementation of MAP with mutation
+            ; For each element X in DATA:
+            ;   ACC = ACC * X
+            ;   collect ACC into result list
+
+            ; Result building at 1100+
+            LD    #1100
+            ST    810           ; FREE
+
+            LD    #4095
+            ST    811           ; result = NIL (build in reverse)
+
+            LD    #1002
+            ST    812           ; lst = DATA
+
+            MAP_LOOP:
+            ; Check if lst is NIL
+            LD    812
+            SUB   #4095
+            JZ    MAP_REVERSE
+
+            ; Get CAR (element X)
+            LDR   812
+            LD    0,R
+            DIV   #4096
+            ST    820           ; X
+
+            ; === APPLY STEP to X ===
+            ; STEP: ACC = ACC * X, return ACC
+            LD    800
+            MULS  820
+            ST    800           ; ACC = ACC * X
+
+            ; Result of STEP is ACC
+            LD    800
+            ST    821           ; step_result
+
+            ; CONS(step_result, result)
+            LD    821
+            MULS  #4096
+            ADD   811
+            LDR   810
+            ST    0,R           ; store cell
+
+            LD    810
+            ST    811           ; result = new cell
+            LD    810
+            ADD   #1
+            ST    810           ; FREE++
+
+            ; CDR of lst
+            LDR   812
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    812           ; lst = CDR(lst)
+
+            J     MAP_LOOP
+
+            MAP_REVERSE:
+            ; result is (24 6 2), need to reverse to (2 6 24)
+            LD    #4095
+            ST    813           ; final = NIL
+
+            REV_LOOP:
+            LD    811
+            SUB   #4095
+            JZ    REV_DONE
+
+            ; CAR of result
+            LDR   811
+            LD    0,R
+            DIV   #4096
+            ST    830
+
+            ; CDR of result
+            LDR   811
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    811
+
+            ; CONS(car, final)
+            LD    830
+            MULS  #4096
+            ADD   813
+            LDR   810
+            ST    0,R
+
+            LD    810
+            ST    813
+            LD    810
+            ADD   #1
+            ST    810
+
+            J     REV_LOOP
+
+            REV_DONE:
+            ; final = RESULTS = (2 6 24)
+            LD    813
+            ST    814           ; RESULTS ptr
+
+            ; === Build (RESULTS ACC) ===
+            ; Cell: (ACC . NIL)
+            LD    800
+            MULS  #4096
+            ADD   #4095
+            ST    1200          ; (24 . NIL)
+
+            ; Cell: (RESULTS . 1200)
+            LD    814
+            MULS  #4096
+            ADD   #1200
+            ST    1201          ; ((2 6 24) 24)
+
+            ; === Verify ===
+            ; CAR of result = RESULTS ptr
+            LD    1201
+            DIV   #4096
+            ST    501           ; ptr to RESULTS
+
+            ; First element of RESULTS = 2
+            LDR   501
+            LD    0,R
+            DIV   #4096
+            ST    502           ; 2
+
+            ; Second element (CAR of CDR)
+            LDR   501
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    840           ; CDR
+
+            LDR   840
+            LD    0,R
+            DIV   #4096
+            ST    503           ; 6
+
+            ; Third element
+            LDR   840
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    841
+
+            LDR   841
+            LD    0,R
+            DIV   #4096
+            ST    504           ; 24
+
+            ; ACC = 24
+            LD    800
+            ST    505
+
+            J     HALT
+            HALT: J HALT
+            501: #0
+            502: #0
+            503: #0
+            504: #0
+            505: #0
+            700: #0
+            701: #0
+            800: #0
+            810: #0
+            811: #0
+            812: #0
+            813: #0
+            814: #0
+            820: #0
+            821: #0
+            830: #0
+            840: #0
+            841: #0
+        `, cpu => cpu.mem[502] === 2 && cpu.mem[503] === 6 &&
+                  cpu.mem[504] === 24 && cpu.mem[505] === 24);
+        // RESULTS = (2 6 24), ACC = 24
     },
 
     // =========================================================================
