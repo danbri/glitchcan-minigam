@@ -1814,6 +1814,411 @@ const E4130Tests = {
             702: #0
             703: #0
         `, cpu => cpu.mem[100] === 1001 && cpu.mem[101] === 3072);  // Ptr to list, and CAR = A
+
+        // =====================================================================
+        // RECURSIVE FUNCTIONS - The heart of Lisp!
+        // =====================================================================
+
+        // Test: Call stack mechanism for recursion
+        // Stack at 2000+, SP at 500
+        this.runTest('Lisp: Call stack push/pop', `
+            ; Initialize stack pointer
+            LD    #2000
+            ST    500           ; SP = 2000
+
+            ; Push value 42 onto stack
+            LD    500           ; Get SP
+            ST    700           ; Save for store
+            LDR   700
+            LD    #42
+            ST    0,R           ; mem[SP] = 42
+            LD    500
+            ADD   #1
+            ST    500           ; SP++
+
+            ; Push value 99 onto stack
+            LD    500
+            ST    700
+            LDR   700
+            LD    #99
+            ST    0,R           ; mem[SP] = 99
+            LD    500
+            ADD   #1
+            ST    500           ; SP++
+
+            ; Pop value (should be 99)
+            LD    500
+            SUB   #1
+            ST    500           ; SP--
+            LDR   500
+            LD    0,R
+            ST    100           ; popped = 99
+
+            ; Pop again (should be 42)
+            LD    500
+            SUB   #1
+            ST    500           ; SP--
+            LDR   500
+            LD    0,R
+            ST    101           ; popped = 42
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            101: #0
+            500: #0
+            700: #0
+        `, cpu => cpu.mem[100] === 99 && cpu.mem[101] === 42);
+
+        // Test: Recursive LENGTH function
+        // length(NIL) = 0
+        // length((A . rest)) = 1 + length(rest)
+        this.runTest('Lisp: Recursive LENGTH of empty list', `
+            ; LENGTH(NIL) = 0
+            ; Input: NIL (4095)
+
+            LD    #4095         ; NIL
+            ST    600           ; arg
+
+            ; Check if NULL
+            SUB   #4095
+            JNZ   NOT_NIL
+
+            ; NULL case: return 0
+            LD    #0
+            ST    100
+            J     DONE
+
+            NOT_NIL:
+            ; Would recurse here, but NIL case always hits
+            LD    #999         ; Error marker
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+        `, cpu => cpu.mem[100] === 0);  // LENGTH(NIL) = 0
+
+        // Test: Full recursive LENGTH with iteration (tail-call optimization)
+        this.runTest('Lisp: Recursive LENGTH of (A B C) = 3', `
+            ; Build (A B C)
+            LD    #3074         ; C
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (C)
+
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (B C)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; (A B C)
+
+            ; Call LENGTH(1002)
+            LD    #1002
+            ST    600           ; arg
+
+            ; LENGTH via tail recursion -> iteration
+            LD    #0
+            ST    610           ; count = 0
+
+            LENGTH_LOOP:
+            ; Check if arg is NIL
+            LD    600
+            SUB   #4095
+            JZ    LENGTH_DONE
+
+            ; Check if arg is atom (error case)
+            LD    600
+            SUB   #3072
+            JNN   LENGTH_DONE   ; Atoms have no length
+
+            ; Not NIL, not atom: it's a cons cell
+            ; count++
+            LD    610
+            ADD   #1
+            ST    610
+
+            ; arg = CDR(arg)
+            LDR   600
+            LD    0,R           ; Load cell
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    600           ; arg = CDR
+
+            J     LENGTH_LOOP
+
+            LENGTH_DONE:
+            LD    610
+            ST    100           ; Result
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            610: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[100] === 3);  // LENGTH((A B C)) = 3
+
+        // Test: McCarthy's FF (find first atom) - true recursion
+        // ff(x) = atom(x) ? x : ff(car(x))
+        this.runTest('Lisp: Recursive FF finds first atom', `
+            ; Build ((A B) C) - nested list
+            ; FF should find A
+
+            ; Build (B)
+            LD    #3073
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (B)
+
+            ; Build (A B)
+            LD    #3072
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (A B)
+
+            ; Build (C)
+            LD    #3074
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; (C)
+
+            ; Build ((A B) . (C))
+            LD    #1001         ; ptr to (A B)
+            MULS  #4096
+            ADD   #1002         ; ptr to (C)
+            ST    1003          ; ((A B) C)
+
+            ; FF(1003) should return A (3072)
+            LD    #1003
+            ST    600           ; x = ((A B) C)
+
+            FF_LOOP:
+            ; atom?(x): x >= 3072
+            LD    600
+            SUB   #3072
+            JNN   FF_DONE       ; If atom, we're done
+
+            ; Not atom, x = CAR(x)
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    600           ; x = CAR(x)
+            J     FF_LOOP
+
+            FF_DONE:
+            LD    600
+            ST    100           ; Result = first atom
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+        `, cpu => cpu.mem[100] === 3072);  // FF(((A B) C)) = A
+
+        // Test: True recursive FACTORIAL with call stack
+        // fact(0) = 1
+        // fact(n) = n * fact(n-1)
+        this.runTest('Lisp: Recursive FACTORIAL(5) = 120', `
+            ; Stack at 2000+, SP at 500
+            LD    #2000
+            ST    500           ; SP = 2000
+
+            ; FACTORIAL(5)
+            LD    #5
+            ST    600           ; n = 5
+
+            ; Recursive factorial using explicit stack
+            ; Push frames: (n, return_addr)
+
+            FACT_START:
+            ; Base case: n == 0
+            LD    600
+            JZ    FACT_BASE
+
+            ; Recursive case: push n, compute fact(n-1)
+            ; Push current n onto stack
+            LD    500
+            ST    700
+            LDR   700
+            LD    600
+            ST    0,R           ; stack[SP] = n
+            LD    500
+            ADD   #1
+            ST    500           ; SP++
+
+            ; n = n - 1
+            LD    600
+            SUB   #1
+            ST    600
+
+            J     FACT_START
+
+            FACT_BASE:
+            ; Base case reached, result = 1
+            LD    #1
+            ST    610           ; result = 1
+
+            FACT_UNWIND:
+            ; Check if stack empty (SP == 2000)
+            LD    500
+            SUB   #2000
+            JZ    FACT_DONE
+
+            ; Pop n from stack
+            LD    500
+            SUB   #1
+            ST    500           ; SP--
+            LDR   500
+            LD    0,R
+            ST    600           ; n = popped value
+
+            ; result = n * result
+            LD    600
+            MULS  610
+            ST    610           ; result = n * result
+
+            J     FACT_UNWIND
+
+            FACT_DONE:
+            LD    610
+            ST    100           ; Final result
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            500: #0
+            600: #0
+            610: #0
+            700: #0
+        `, cpu => cpu.mem[100] === 120);  // 5! = 120
+
+        // Test: Recursive REVERSE list
+        // reverse(NIL) = NIL
+        // reverse((a . x)) = append(reverse(x), (a))
+        this.runTest('Lisp: Recursive REVERSE (A B C) = (C B A)', `
+            ; Build (A B C)
+            LD    #3074         ; C
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (C)
+
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (B C)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; (A B C)
+
+            ; REVERSE via iteration (accumulator pattern)
+            ; result = NIL
+            ; while x != NIL:
+            ;   result = CONS(CAR(x), result)
+            ;   x = CDR(x)
+
+            LD    #1002
+            ST    600           ; x = (A B C)
+
+            LD    #4095
+            ST    610           ; result = NIL
+
+            LD    #1100
+            ST    620           ; FREE = 1100
+
+            REV_LOOP:
+            ; Check if x is NIL
+            LD    600
+            SUB   #4095
+            JZ    REV_DONE
+
+            ; Get CAR(x)
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    630           ; car = CAR(x)
+
+            ; Get CDR(x)
+            LDR   600
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    600           ; x = CDR(x)
+
+            ; CONS(car, result) at FREE
+            LD    630
+            MULS  #4096
+            ADD   610
+            LDR   620
+            ST    0,R           ; mem[FREE] = (car . result)
+
+            ; result = FREE
+            LD    620
+            ST    610
+
+            ; FREE++
+            LD    620
+            ADD   #1
+            ST    620
+
+            J     REV_LOOP
+
+            REV_DONE:
+            ; result points to reversed list
+            ; Verify: CAR should be C (3074)
+            LD    610
+            ST    100           ; Result ptr
+
+            LDR   100
+            LD    0,R
+            DIV   #4096
+            ST    101           ; First element = C
+
+            ; Get second element
+            LDR   100
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    640           ; CDR of result
+
+            LDR   640
+            LD    0,R
+            DIV   #4096
+            ST    102           ; Second element = B
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            101: #0
+            102: #0
+            600: #0
+            610: #0
+            620: #0
+            630: #0
+            640: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[101] === 3074 && cpu.mem[102] === 3073);  // C, B (reversed)
     },
 
     // =========================================================================
