@@ -4333,6 +4333,337 @@ const E4130Tests = {
         `, cpu => cpu.mem[502] === 2 && cpu.mem[503] === 6 &&
                   cpu.mem[504] === 24 && cpu.mem[505] === 24);
         // RESULTS = (2 6 24), ACC = 24
+
+        // =====================================================================
+        // REFERENCE COUNTING GC - Historical 3-bit Implementation
+        // =====================================================================
+        // The original Elliott 4130 LISP used reference counting with only
+        // 3 bits for the count (max 7). When count hit 7, it stayed there
+        // ("sticky"), causing memory leaks for heavily-shared structures.
+
+        // Full reference counting cycle: alloc, share, unshare, free
+        // Simplified: single cell at 1000, refcount at 800, freelist at 700
+        this.runTest('GC: Reference counting full cycle', `
+            ; SIMPLIFIED TEST: Direct manipulation, no loop
+            ; Cell at 1000, REFCNT at 800, FREELIST at 700
+
+            ; Step 1: Setup - cell starts on freelist
+            LD    #4095         ; NIL
+            ST    1000          ; cell.CDR = NIL (end of list)
+            LD    #1000
+            ST    700           ; FREELIST = 1000
+            LD    #0
+            ST    800           ; REFCNT[0] = 0
+
+            ; Step 2: ALLOC - pop cell from freelist
+            LD    700           ; get FREELIST (= 1000)
+            ST    710           ; save allocated cell ptr
+            LD    1000          ; get cell.CDR (= NIL)
+            ST    700           ; FREELIST = NIL (empty)
+
+            ; Step 3: Set refcount = 1
+            LD    #1
+            ST    800           ; REFCNT = 1
+
+            ; Step 4: Store (A . B) in cell
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #3073         ; B
+            ST    1000          ; cell = (A . B)
+
+            ; Step 5: SHARE - another reference, refcount -> 2
+            LD    800
+            ADD   #1
+            ST    800           ; REFCNT = 2
+
+            ; Step 6: UNSHARE - remove one reference, refcount -> 1
+            LD    800
+            SUB   #1
+            ST    800           ; REFCNT = 1
+
+            ; Step 7: FREE - last reference gone, refcount -> 0
+            LD    800
+            SUB   #1
+            ST    800           ; REFCNT = 0
+
+            ; Step 8: Return to freelist (if refcount = 0)
+            LD    800
+            JNZ   SKIP_FREE     ; only free if count = 0
+            LD    700           ; old FREELIST (= NIL)
+            ST    1000          ; cell.CDR = old FREELIST
+            LD    #1000
+            ST    700           ; FREELIST = 1000
+            SKIP_FREE:
+
+            ; Results: FREELIST should be 1000, REFCNT should be 0
+            LD    700
+            ST    500           ; Store FREELIST for verification
+            LD    800
+            ST    501           ; Store REFCNT for verification
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+        `, cpu => cpu.mem[500] === 1000 && cpu.mem[501] === 0);
+
+        // Demonstrate the 3-bit memory leak problem
+        this.runTest('GC: 3-bit overflow causes memory leak', `
+            ; Create a cell, share it 10 times (refcount should be 11)
+            ; But 3-bit limit means it saturates at 7
+            ; When all 10 references removed, refcount = 7-10 would be negative
+            ; So we never free the cell = MEMORY LEAK
+
+            ; Allocate cell at 1000
+            LD    #3072
+            MULS  #4096
+            ADD   #3073
+            ST    1000          ; cell = (A . B)
+
+            ; REFCNT at 800
+            LD    #1
+            ST    800           ; refcount = 1
+
+            ; Simulate 10 additional references (total 11)
+            LD    #10
+            ST    710           ; loop counter
+
+            SHARE_LOOP:
+            LD    710
+            JZ    SHARE_DONE
+
+            ; Increment refcount with 3-bit saturation
+            LD    800
+            ADD   #1
+            SUB   #7
+            JN    NOT_SAT
+            LD    #7
+            J     STORE_SAT
+            NOT_SAT:
+            ADD   #7
+            STORE_SAT:
+            ST    800
+
+            LD    710
+            SUB   #1
+            ST    710
+            J     SHARE_LOOP
+
+            SHARE_DONE:
+            ; refcount should be 7 (saturated)
+            LD    800
+            ST    500           ; = 7
+
+            ; Now remove all 11 references
+            LD    #11
+            ST    710
+
+            UNSHARE_LOOP:
+            LD    710
+            JZ    UNSHARE_DONE
+
+            ; Decrement refcount
+            LD    800
+            SUB   #1
+            ; But if we were at 7 (sticky), we go to 6, not 0
+            ; This is the bug! We can never free this cell
+            ST    800
+
+            LD    710
+            SUB   #1
+            ST    710
+            J     UNSHARE_LOOP
+
+            UNSHARE_DONE:
+            ; refcount should be 7 - 11 = -4, but since we started
+            ; at saturated 7, after 11 decrements we get 7-11 = -4
+            ; In practice with unsigned: wraps or stays positive
+            ; Historical impl: cell is NEVER freed = LEAK
+
+            LD    800
+            ST    501           ; Final refcount (not 0!)
+
+            ; Check if leaked (refcount != 0 means leaked)
+            LD    800
+            JZ    NOT_LEAKED
+            LD    #1            ; LEAKED = true
+            ST    502
+            J     DONE
+            NOT_LEAKED:
+            LD    #0
+            ST    502
+            DONE:
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            710: #0
+            800: #0
+        `, cpu => cpu.mem[500] === 7 && cpu.mem[502] === 1);
+        // refcount saturated at 7, cell leaked
+
+        // Alternative: Mark-and-sweep GC (no reference counting)
+        this.runTest('GC: Mark-and-sweep alternative', `
+            ; Mark-sweep doesn't have the 3-bit problem
+            ; Phase 1: Mark all cells reachable from roots
+            ; Phase 2: Sweep - free all unmarked cells
+
+            ; Memory layout:
+            ; HEAP: 1000-1009 (10 cells for simplicity)
+            ; MARKS: 900-909 (1 = reachable, 0 = garbage)
+            ; ROOT: single root pointer at 700
+
+            ; Build a small structure:
+            ; ROOT -> cell 1002 -> cell 1001 -> cell 1000 -> NIL
+            ; Cell 1003-1009 are garbage (not reachable)
+
+            ; Cell 1000: (A . NIL)
+            LD    #3072
+            MULS  #4096
+            ADD   #4095
+            ST    1000
+
+            ; Cell 1001: (B . 1000)
+            LD    #3073
+            MULS  #4096
+            ADD   #1000
+            ST    1001
+
+            ; Cell 1002: (C . 1001) - ROOT points here
+            LD    #3074
+            MULS  #4096
+            ADD   #1001
+            ST    1002
+
+            ; Garbage cells 1003-1009 (just random data)
+            LD    #9999
+            ST    1003
+            ST    1004
+            ST    1005
+
+            ; ROOT = 1002
+            LD    #1002
+            ST    700
+
+            ; Clear all marks
+            LD    #0
+            ST    900
+            ST    901
+            ST    902
+            ST    903
+            ST    904
+            ST    905
+
+            ; === MARK PHASE ===
+            ; Start from ROOT, mark all reachable
+            LD    700           ; ROOT = 1002
+            ST    710           ; current
+
+            MARK_LOOP:
+            LD    710
+            SUB   #4095         ; is it NIL?
+            JZ    MARK_DONE
+            LD    710
+            SUB   #1000         ; is it < 1000? (atom)
+            JN    MARK_DONE
+
+            ; Mark this cell
+            LD    710
+            SUB   #1000
+            ADD   #900
+            ST    711           ; mark address
+            LD    #1
+            LDR   711
+            ST    0,R           ; MARKS[cell-1000] = 1
+
+            ; Follow CDR
+            LDR   710
+            LD    0,R
+            ST    720
+            DIV   #4096
+            MULS  #4096
+            ST    721
+            LD    720
+            SUB   721
+            ST    710           ; current = CDR
+
+            J     MARK_LOOP
+
+            MARK_DONE:
+            ; Verify marks: 1000, 1001, 1002 should be marked
+            ; 1003, 1004, 1005 should NOT be marked
+
+            LD    900
+            ST    500           ; mark[1000] = 1
+            LD    901
+            ST    501           ; mark[1001] = 1
+            LD    902
+            ST    502           ; mark[1002] = 1
+            LD    903
+            ST    503           ; mark[1003] = 0 (garbage)
+            LD    904
+            ST    504           ; mark[1004] = 0 (garbage)
+            LD    905
+            ST    505           ; mark[1005] = 0 (garbage)
+
+            ; === SWEEP PHASE ===
+            ; Count how many cells would be freed
+            LD    #0
+            ST    730           ; freed count
+
+            LD    #1000
+            ST    710           ; cell ptr
+
+            SWEEP_LOOP:
+            LD    710
+            SUB   #1006
+            JNN   SWEEP_DONE
+
+            ; Check mark
+            LD    710
+            SUB   #1000
+            ADD   #900
+            ST    711
+            LDR   711
+            LD    0,R
+            JNZ   NOT_GARBAGE
+
+            ; Unmarked = garbage, would free it
+            LD    730
+            ADD   #1
+            ST    730
+
+            NOT_GARBAGE:
+            LD    710
+            ADD   #1
+            ST    710
+            J     SWEEP_LOOP
+
+            SWEEP_DONE:
+            LD    730
+            ST    506           ; cells freed = 3 (1003, 1004, 1005)
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            503: #0
+            504: #0
+            505: #0
+            506: #0
+            700: #0
+            710: #0
+            711: #0
+            720: #0
+            721: #0
+            730: #0
+        `, cpu => cpu.mem[500] === 1 && cpu.mem[501] === 1 &&
+                  cpu.mem[502] === 1 && cpu.mem[503] === 0 &&
+                  cpu.mem[506] === 3);
+        // Reachable cells marked, 3 garbage cells identified
     },
 
     // =========================================================================
