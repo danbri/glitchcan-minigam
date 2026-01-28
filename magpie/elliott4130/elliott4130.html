@@ -840,24 +840,63 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             cpu.halted = false;
 
-            // Execute
+            // Execute - detect HALT (J to self, opcode 0o45 = 37)
             for (let i = 0; i < 5000 && !cpu.halted; i++) {
-                const w = cpu.mem[cpu.S >> 1];
+                const pc = cpu.S >> 1;
+                const w = cpu.mem[pc];
                 const f = (w >> 18) & 0x3F;
-                if (f === 0o60 && (cpu.S >> 1) === ((w >> 1) & 0x7FFF)) break;
+                const n = w & 0x7FFF;  // Jump target
+                if (f === 0o45 && pc === n) break;  // J to self = HALT
                 cpu.step();
             }
 
             // Show result with interpretation
             const val = cpu.mem[100];
             let meaning = '';
+            let listStr = '';
+
+            // Helper to get atom name
+            const atomName = (code) => {
+                if (code === 4095) return 'NIL';
+                if (code === 4094) return 'T';
+                if (code >= 0 && code < 1000) return String(code);
+                for (const [name, v] of Object.entries(LispREPL.atoms)) {
+                    if (v === code) return name;
+                }
+                return null;
+            };
+
+            // Helper to read list from memory
+            const readList = (addr, depth = 0) => {
+                if (depth > 10) return '...';
+                if (addr === 4095) return 'NIL';
+                if (addr < 1000 || addr >= 2000) {
+                    const name = atomName(addr);
+                    return name || String(addr);
+                }
+                const cell = cpu.mem[addr];
+                const car = Math.floor(cell / 4096);
+                const cdr = cell - (car * 4096);
+                const carStr = car >= 1000 && car < 2000 ? readList(car, depth + 1) : (atomName(car) || String(car));
+                if (cdr === 4095) return '(' + carStr + ')';
+                if (cdr >= 1000 && cdr < 2000) return '(' + carStr + ' ' + readList(cdr, depth + 1).replace(/^\(/, '').replace(/\)$/, '') + ')';
+                return '(' + carStr + ' . ' + (atomName(cdr) || String(cdr)) + ')';
+            };
+
             if (val === 4095) meaning = ' = NIL';
             else if (val === 4094) meaning = ' = T';
-            else if (val >= 3072 && val < 3200) {
-                const name = Object.entries(LispREPL.atoms).find(([k,v]) => v === val)?.[0];
-                if (name) meaning = ` = ${name}`;
+            else if (val >= 1000 && val < 2000) {
+                meaning = ' = list';
+                listStr = '\\n' + readList(val);
             }
-            lispResultEl.textContent = `mem[100] = ${val}${meaning}\n\nInput: ${expr}`;
+            else if (val >= 3072 && val < 3200) {
+                const name = atomName(val);
+                if (name) meaning = ' = ' + name;
+            }
+            else if (val >= 0 && val < 1000) {
+                meaning = ' (number)';
+            }
+            lispResultEl.textContent = `mem[100] = ${val}${meaning}${listStr}\n\nInput: ${expr}`;
         } catch (e) {
             lispResultEl.textContent = `Error: ${e.message}`;
         }
