@@ -42,8 +42,17 @@ See `tests/lisp-integrity-tests.md` for the comprehensive test specification cov
 - `elliott4130-debug.js` - Debug interface (527 lines)
 - `elliott4130-ui.js` - UI/visualization (521 lines)
 
-### Lisp Implementation
-- `lisp-repl.js` - S-expression parser & 4130 assembly generator (browser)
+### Lisp Implementation (NEAT 4100 Assembly)
+- `lisp-eval.asm` - McCarthy EVAL in pure 4130 assembly (~300 lines)
+  - Handles QUOTE, COND, CAR, CDR, CONS, ATOM, EQ
+  - Self-contained, runs directly on emulator
+- `lisp-interpreter.asm` - Full EVAL/APPLY interpreter (~1000 lines)
+  - Complete McCarthy evaluator with environment, recursion
+  - Uses return address stack (4130 has no CALL/RET)
+  - Demonstrates EVLIS, EVCON, ASSOC, PAIRLIS in assembly
+
+### Lisp Tools (JavaScript)
+- `lisp-repl.js` - S-expression compiler to 4130 assembly (browser REPL)
 - `lisp.mjs` - JavaScript Lisp interpreter (340 lines)
 - `microlisp.mjs` - Lightweight variant (458 lines)
 - `test-lisp.mjs` - Test suite (143 lines)
