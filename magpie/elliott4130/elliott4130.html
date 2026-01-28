@@ -297,67 +297,92 @@ function runDebugCmd(cmd) {
     }
 }
 
-// Lisp demo program for Elliott 4130
-const LISP_DEMO = `; McCarthy 1960 LISP - Cons Cell Demo
-; Elliott 4130 24-bit word: 2x 12-bit pointers per cons cell
-; Memory layout: low 4096 words = heap, atoms in high memory
+// Lisp demo: McCarthy 1960 primitives for Elliott 4130
+// Cell format: [CAR:12bits | CDR:12bits] in 24-bit word
+// Atoms: 3073=A, 3074=B, 3075=C, 4095=NIL
+const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
+; Cells at 1000+, results at 100-109
 
-; === CONSTANTS ===
-  LD    #0          ; NIL = 0
-  ST    1000        ; Store NIL at 1000
+; Build (C . NIL) at 1000
+  LD    #3075          ; C = 3075
+  MULS  #4096          ; CAR << 12
+  ADD   #4095          ; CDR = NIL
+  ST    1000
 
-; === BUILD LIST (A B C) ===
-; Cons cell format: [CAR:12bits | CDR:12bits]
+; Build (B . 1000) at 1001
+  LD    #3074          ; B
+  MULS  #4096
+  ADD   #1000
+  ST    1001
 
-; First create atoms A=4001, B=4002, C=4003 (in atom table)
-; Then build: (cons 'A (cons 'B (cons 'C NIL)))
+; Build (A . 1001) at 1002 = (A B C)
+  LD    #3073          ; A
+  MULS  #4096
+  ADD   #1001
+  ST    1002
 
-; Cell 3: (C . NIL) at addr 103
-  LD    #4003       ; CAR = atom C (shifted left 12)
-  MULS  #4096       ; Shift left 12 bits
-  ADD   #0          ; CDR = NIL
+; CAR[(A B C)] -> 100
+  LD    1002
+  DIV   #4096
+  ST    100            ; Expect: 3073
+
+; CDR[(A B C)] -> 101
+  LD    1002
   ST    103
-
-; Cell 2: (B . cell3) at addr 102
-  LD    #4002       ; CAR = atom B
+  DIV   #4096
   MULS  #4096
-  ADD   #103        ; CDR = addr of cell 3
-  ST    102
+  ST    104
+  LD    103
+  SUB   104
+  ST    101            ; Expect: 1001
 
-; Cell 1: (A . cell2) at addr 101 - this is our list!
-  LD    #4001       ; CAR = atom A
+; CADR[(A B C)] -> 102
+  LD    1001
+  DIV   #4096
+  ST    102            ; Expect: 3074
+
+; CONS[X, (A B C)] at 1003
+  LD    #3076          ; X
   MULS  #4096
-  ADD   #102        ; CDR = addr of cell 2
-  ST    101
+  ADD   #1002
+  ST    1003
+  LD    1003
+  DIV   #4096
+  ST    105            ; Expect: 3076
 
-; === CAR OPERATION ===
-; car(x) = x >> 12 (extract high 12 bits)
-  LD    101         ; Load list (A B C)
-  DIV   #4096       ; Shift right 12 = CAR
-  ST    200         ; Result: 4001 (atom A)
+; ATOM?(A): A >= 3072
+  LD    100
+  SUB   #3072
+  ST    106            ; Expect: 1 (true)
 
-; === CDR OPERATION ===
-; cdr(x) = x & 0xFFF (extract low 12 bits)
-  LD    101         ; Load list
-  ; For proper CDR we need AND mask - using subtraction trick
-  DIV   #4096       ; Get CAR in low bits
-  MULS  #4096       ; Shift back (clears low 12)
-  ST    201         ; Temp: original with low bits zeroed
-  LD    101
-  SUB   201         ; Original - (original with low zeroed) = low 12 bits
-  ST    202         ; Result: 102 (addr of (B C))
+; NULL?(NIL): NIL == 4095
+  LD    #4095
+  SUB   #4095
+  ST    107            ; Expect: 0 (true)
 
-; === VERIFY ===
-  LD    200         ; Should be 4001 (atom A)
-  LD    202         ; Should be 102 (cdr pointer)
+; EQ?(A,A)
+  LD    #3073
+  SUB   #3073
+  ST    108            ; Expect: 0 (true)
 
-  J     #0          ; Loop
+; EQ?(A,B)
+  LD    #3073
+  SUB   #3074
+  ST    109            ; Expect: -1 (false)
 
-; === DATA AREA ===
-1000: #0            ; NIL
-200:  #0            ; CAR result
-201:  #0            ; Temp
-202:  #0            ; CDR result`;
+  J     #0
+
+; Results 100-109
+100: #0
+101: #0
+102: #0
+103: #0
+104: #0
+105: #0
+106: #0
+107: #0
+108: #0
+109: #0`;
 
 // Setup debug console input
 document.addEventListener('DOMContentLoaded', () => {
