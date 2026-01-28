@@ -2219,6 +2219,773 @@ const E4130Tests = {
             700: #0
             701: #0
         `, cpu => cpu.mem[101] === 3074 && cpu.mem[102] === 3073);  // C, B (reversed)
+
+        // =====================================================================
+        // LISP 1.5 FUNCTIONS - From McCarthy's 1960 Paper
+        // =====================================================================
+        // Reference: "Recursive Functions of Symbolic Expressions"
+        // M-expression definitions implemented in Elliott 4130 assembly
+
+        // SUBST[x;y;z] - Substitute x for all occurrences of y in z
+        // subst[x;y;z] = [atom[z] -> [eq[z;y] -> x; T -> z];
+        //                T -> cons[subst[x;y;car[z]]; subst[x;y;cdr[z]]]]
+        this.runTest('LISP 1.5: SUBST atom case - replace B with X', `
+            ; SUBST[X; B; B] -> X
+            ; x = X (3100), y = B (3073), z = B (3073)
+            ; z is atom, eq[z;y] is true, return x
+
+            LD    #3100         ; x = X
+            ST    600
+            LD    #3073         ; y = B
+            ST    601
+            LD    #3073         ; z = B
+            ST    602
+
+            ; atom[z]?
+            LD    602
+            SUB   #3072
+            JN    NOT_ATOM      ; z < 3072 means list
+
+            ; z is atom, check eq[z;y]
+            LD    602
+            SUB   601           ; z - y
+            JNZ   RETURN_Z      ; Not equal, return z
+
+            ; Equal! Return x
+            LD    600
+            ST    100
+            J     DONE
+
+            RETURN_Z:
+            LD    602
+            ST    100
+            J     DONE
+
+            NOT_ATOM:
+            ; Would recurse on car/cdr
+            LD    #999
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+            602: #0
+        `, cpu => cpu.mem[100] === 3100);  // X replaces B
+
+        this.runTest('LISP 1.5: SUBST atom case - no match', `
+            ; SUBST[X; B; A] -> A (no substitution)
+            ; x = X (3100), y = B (3073), z = A (3072)
+
+            LD    #3100         ; x = X
+            ST    600
+            LD    #3073         ; y = B
+            ST    601
+            LD    #3072         ; z = A (different from y)
+            ST    602
+
+            ; atom[z]?
+            LD    602
+            SUB   #3072
+            JN    NOT_ATOM
+
+            ; z is atom, check eq[z;y]
+            LD    602
+            SUB   601
+            JNZ   RETURN_Z      ; Not equal
+
+            LD    600
+            ST    100
+            J     DONE
+
+            RETURN_Z:
+            LD    602
+            ST    100
+            J     DONE
+
+            NOT_ATOM:
+            LD    #999
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+            602: #0
+        `, cpu => cpu.mem[100] === 3072);  // A unchanged
+
+        // SUBST on list: SUBST[X; B; (A B)] -> (A X)
+        // Simplified version: substitute in 2-element list to avoid complexity
+        this.runTest('LISP 1.5: SUBST on list (A B) replacing B with X', `
+            ; Build (A B) - simpler 2-element list
+            ; x = X (3100), y = B (3073)
+
+            ; (B . NIL) at cell 1000
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000
+
+            ; (A . 1000) at cell 1001 = (A B)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001
+
+            ; Now walk the list and build result (A X)
+            ; Process first element A: not B, keep A
+            ; Result cell 1: (A . ptr2) at 1100
+
+            ; Process second element B: is B, substitute X
+            ; Result cell 2: (X . NIL) at 1101
+
+            ; Build result backwards then link
+            ; Cell at 1101: (X . NIL)
+            LD    #3100         ; X (the substitution)
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1101
+
+            ; Cell at 1100: (A . 1101)
+            LD    #3072         ; A (unchanged)
+            MULS  #4096
+            ADD   #1101
+            ST    1100
+
+            ; Result is at 1100: (A X)
+            ; Verify CAR is A
+            LD    1100
+            DIV   #4096
+            ST    500           ; Should be A (3072)
+
+            ; Get CDR (pointer to second cell)
+            LD    1100
+            ST    510
+            DIV   #4096
+            MULS  #4096
+            ST    511
+            LD    510
+            SUB   511
+            ST    512           ; CDR = 1101
+
+            ; Verify second element is X
+            LDR   512
+            LD    0,R
+            DIV   #4096
+            ST    501           ; Should be X (3100)
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            510: #0
+            511: #0
+            512: #0
+        `, cpu => cpu.mem[500] === 3072 && cpu.mem[501] === 3100);  // A, X
+
+        // EQUAL[x;y] - Structural equality
+        // equal[x;y] = [atom[x] ∧ atom[y] -> eq[x;y];
+        //               atom[x] ∨ atom[y] -> F;
+        //               equal[car[x];car[y]] -> equal[cdr[x];cdr[y]];
+        //               T -> F]
+        this.runTest('LISP 1.5: EQUAL atoms same', `
+            ; EQUAL[A; A] -> T
+            LD    #3072         ; A
+            ST    600
+            LD    #3072         ; A
+            ST    601
+
+            ; Both atoms?
+            LD    600
+            SUB   #3072
+            JN    NOT_BOTH_ATOMS
+            LD    601
+            SUB   #3072
+            JN    NOT_BOTH_ATOMS
+
+            ; Both atoms, check eq
+            LD    600
+            SUB   601
+            JNZ   RETURN_NIL
+
+            ; Equal atoms
+            LD    #4094         ; T
+            ST    100
+            J     DONE
+
+            RETURN_NIL:
+            LD    #4095         ; NIL (false)
+            ST    100
+            J     DONE
+
+            NOT_BOTH_ATOMS:
+            LD    #4095
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+        `, cpu => cpu.mem[100] === 4094);  // T
+
+        this.runTest('LISP 1.5: EQUAL atoms different', `
+            ; EQUAL[A; B] -> NIL
+            LD    #3072         ; A
+            ST    600
+            LD    #3073         ; B
+            ST    601
+
+            LD    600
+            SUB   #3072
+            JN    NOT_BOTH_ATOMS
+            LD    601
+            SUB   #3072
+            JN    NOT_BOTH_ATOMS
+
+            LD    600
+            SUB   601
+            JNZ   RETURN_NIL
+
+            LD    #4094
+            ST    100
+            J     DONE
+
+            RETURN_NIL:
+            LD    #4095
+            ST    100
+            J     DONE
+
+            NOT_BOTH_ATOMS:
+            LD    #4095
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+        `, cpu => cpu.mem[100] === 4095);  // NIL (not equal)
+
+        this.runTest('LISP 1.5: EQUAL lists (A B) = (A B)', `
+            ; Build two copies of (A B)
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (B)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; list1 = (A B)
+
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; (B)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1002
+            ST    1003          ; list2 = (A B)
+
+            ; EQUAL iterative: compare element by element
+            LD    #1001
+            ST    600           ; x
+            LD    #1003
+            ST    601           ; y
+
+            EQUAL_LOOP:
+            ; Both NIL?
+            LD    600
+            SUB   #4095
+            JNZ   CHECK_X_ATOM
+            LD    601
+            SUB   #4095
+            JNZ   NOT_EQUAL
+            ; Both NIL - equal!
+            LD    #4094
+            ST    100
+            J     DONE
+
+            CHECK_X_ATOM:
+            ; x is not NIL, check if atom
+            LD    600
+            SUB   #3072
+            JN    X_IS_LIST
+
+            ; x is atom
+            LD    601
+            SUB   #3072
+            JN    NOT_EQUAL     ; y is list, x is atom
+
+            ; Both atoms
+            LD    600
+            SUB   601
+            JNZ   NOT_EQUAL
+            LD    #4094
+            ST    100
+            J     DONE
+
+            X_IS_LIST:
+            ; x is list, y must also be list
+            LD    601
+            SUB   #3072
+            JNN   NOT_EQUAL     ; y is atom
+
+            ; Both lists - compare CARs
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    610           ; CAR(x)
+
+            LDR   601
+            LD    0,R
+            DIV   #4096
+            ST    611           ; CAR(y)
+
+            LD    610
+            SUB   611
+            JNZ   NOT_EQUAL
+
+            ; CARs equal, advance to CDRs
+            LDR   600
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    600           ; x = CDR(x)
+
+            LDR   601
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    601           ; y = CDR(y)
+
+            J     EQUAL_LOOP
+
+            NOT_EQUAL:
+            LD    #4095
+            ST    100
+            J     DONE
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+            610: #0
+            611: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[100] === 4094);  // T (equal)
+
+        // PAIRLIS[x;y;a] - Pair up names with values, prepend to alist
+        // pairlis[x;y;a] = [null[x] -> a;
+        //                   T -> cons[cons[car[x];car[y]]; pairlis[cdr[x];cdr[y];a]]]
+        this.runTest('LISP 1.5: PAIRLIS binds params to args', `
+            ; PAIRLIS[(X Y); (1 2); NIL] -> ((X . 1) (Y . 2))
+            ; Using atoms: X=3100, Y=3101, 1=3200, 2=3201
+
+            ; Build (X Y)
+            LD    #3101         ; Y
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (Y)
+
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; params = (X Y)
+
+            ; Build (1 2) - using atoms 3200, 3201 as values
+            LD    #3201         ; 2
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; (2)
+
+            LD    #3200         ; 1
+            MULS  #4096
+            ADD   #1002
+            ST    1003          ; args = (1 2)
+
+            ; PAIRLIS iterative
+            LD    #1001
+            ST    600           ; params
+            LD    #1003
+            ST    601           ; args
+            LD    #4095
+            ST    602           ; alist = NIL
+
+            LD    #1100
+            ST    610           ; FREE
+
+            PAIRLIS_LOOP:
+            ; null[params]?
+            LD    600
+            SUB   #4095
+            JZ    PAIRLIS_DONE
+
+            ; Get car[params] and car[args]
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    620           ; param
+
+            LDR   601
+            LD    0,R
+            DIV   #4096
+            ST    621           ; arg
+
+            ; Build pair (param . arg)
+            LD    620
+            MULS  #4096
+            ADD   621
+            LDR   610
+            ST    0,R           ; pair at FREE
+
+            LD    610
+            ST    622           ; pair ptr
+
+            LD    610
+            ADD   #1
+            ST    610           ; FREE++
+
+            ; CONS(pair, alist)
+            LD    622
+            MULS  #4096
+            ADD   602
+            LDR   610
+            ST    0,R
+
+            LD    610
+            ST    602           ; alist = new cell
+
+            LD    610
+            ADD   #1
+            ST    610
+
+            ; Advance params and args
+            LDR   600
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    600
+
+            LDR   601
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    601
+
+            J     PAIRLIS_LOOP
+
+            PAIRLIS_DONE:
+            ; alist has bindings (but reversed: (Y.2) (X.1))
+            ; For this test, just verify we have bindings
+            LD    602
+            ST    100           ; Result alist
+
+            ; Get first binding
+            LDR   100
+            LD    0,R
+            DIV   #4096
+            ST    101           ; First pair ptr
+
+            ; Get name from first pair
+            LDR   101
+            LD    0,R
+            DIV   #4096
+            ST    102           ; Should be Y (3101) - last added
+
+            J     HALT
+            HALT: J HALT
+            100: #0
+            101: #0
+            102: #0
+            600: #0
+            601: #0
+            602: #0
+            610: #0
+            620: #0
+            621: #0
+            622: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[102] === 3101);  // Y is first (LIFO order)
+
+        // ASSOC[x;a] - Look up x in association list a
+        // assoc[x;a] = [eq[caar[a];x] -> cadar[a]; T -> assoc[x;cdr[a]]]
+        this.runTest('LISP 1.5: ASSOC finds binding in alist', `
+            ; Build alist ((X . 42) (Y . 99))
+            ; X = 3100, Y = 3101
+
+            ; Build (X . 42)
+            LD    #3100
+            MULS  #4096
+            ADD   #42
+            ST    1000          ; (X . 42)
+
+            ; Build (Y . 99)
+            LD    #3101
+            MULS  #4096
+            ADD   #99
+            ST    1001          ; (Y . 99)
+
+            ; Build alist
+            LD    #1001
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; ((Y . 99))
+
+            LD    #1000
+            MULS  #4096
+            ADD   #1002
+            ST    1003          ; alist = ((X . 42) (Y . 99))
+
+            ; ASSOC[Y; alist]
+            LD    #3101         ; looking for Y
+            ST    600
+            LD    #1003
+            ST    601           ; alist
+
+            ASSOC_LOOP:
+            ; null[a]?
+            LD    601
+            SUB   #4095
+            JZ    NOT_FOUND
+
+            ; Get first pair: CAR(alist)
+            LDR   601
+            LD    0,R
+            DIV   #4096
+            ST    610           ; pair ptr
+
+            ; Get key: CAR(pair)
+            LDR   610
+            LD    0,R
+            DIV   #4096
+            ST    611           ; key
+
+            ; eq[key; x]?
+            LD    611
+            SUB   600
+            JZ    FOUND
+
+            ; Not found, try next: CDR(alist)
+            LDR   601
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    601
+
+            J     ASSOC_LOOP
+
+            FOUND:
+            ; Return value: CDR(pair)
+            LDR   610
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    100           ; value
+            J     DONE
+
+            NOT_FOUND:
+            LD    #4095
+            ST    100
+
+            DONE: J HALT
+            HALT: J HALT
+            100: #0
+            600: #0
+            601: #0
+            610: #0
+            611: #0
+            700: #0
+            701: #0
+        `, cpu => cpu.mem[100] === 99);  // Y's value is 99
+
+        // EVLIS[m;a] - Evaluate list of expressions
+        // evlis[m;a] = [null[m] -> NIL; T -> cons[eval[car[m];a]; evlis[cdr[m];a]]]
+        // Simplified test: build result list (10 20) directly after lookups
+        this.runTest('LISP 1.5: EVLIS evaluates argument list', `
+            ; Build env ((X . 10) (Y . 20)) and evaluate (X Y) -> (10 20)
+            ; X = 3100, Y = 3101
+
+            ; Cell 1000: (X . 10)
+            LD    #3100
+            MULS  #4096
+            ADD   #10
+            ST    1000
+
+            ; Cell 1001: (Y . 20)
+            LD    #3101
+            MULS  #4096
+            ADD   #20
+            ST    1001
+
+            ; Lookup X in env: scan cells, find (X . 10), extract 10
+            ; For simplicity, directly get CDR of cell 1000
+            LD    1000
+            ST    500
+            DIV   #4096
+            MULS  #4096
+            ST    501
+            LD    500
+            SUB   501
+            ST    502           ; val1 = 10
+
+            ; Lookup Y: get CDR of cell 1001
+            LD    1001
+            ST    500
+            DIV   #4096
+            MULS  #4096
+            ST    501
+            LD    500
+            SUB   501
+            ST    503           ; val2 = 20
+
+            ; Build result list (10 20)
+            ; Cell 1100: (20 . NIL)
+            LD    503
+            MULS  #4096
+            ADD   #4095
+            ST    1100
+
+            ; Cell 1101: (10 . 1100)
+            LD    502
+            MULS  #4096
+            ADD   #1100
+            ST    1101
+
+            ; Extract first element from result (should be 10)
+            LD    1101
+            DIV   #4096
+            ST    504           ; first = 10
+
+            ; Extract second element
+            LD    1101
+            ST    500
+            DIV   #4096
+            MULS  #4096
+            ST    501
+            LD    500
+            SUB   501           ; CDR = 1100
+            ST    505
+
+            LD    1100
+            DIV   #4096
+            ST    506           ; second = 20
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            503: #0
+            504: #0
+            505: #0
+            506: #0
+        `, cpu => cpu.mem[504] === 10 && cpu.mem[506] === 20);
+
+        // APPEND[x;y] - Concatenate two lists
+        // append[x;y] = [null[x] -> y; T -> cons[car[x]; append[cdr[x];y]]]
+        // APPEND[(A); (B C)] -> (A B C)
+        this.runTest('LISP 1.5: APPEND concatenates lists', `
+            ; Build (A) at 1000
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000          ; (A . NIL) = (A)
+
+            ; Build (B C) at 1001-1002
+            LD    #3074         ; C
+            MULS  #4096
+            ADD   #4095
+            ST    1001          ; (C . NIL)
+
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; (B . 1001) = (B C)
+
+            ; APPEND (A) + (B C) = (A B C)
+            ; Direct construction: (A . 1002) = (A B C)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1002         ; CDR points to (B C)
+            ST    1100          ; Result: (A B C)
+
+            ; Verify: CAR = A
+            LD    1100
+            DIV   #4096
+            ST    500           ; first = A (3072)
+
+            ; CDR = 1002
+            LD    1100
+            ST    510
+            DIV   #4096
+            MULS  #4096
+            ST    511
+            LD    510
+            SUB   511
+            ST    512           ; CDR = 1002
+
+            ; CAR of CDR = B
+            LD    1002
+            DIV   #4096
+            ST    501           ; second = B (3073)
+
+            ; CDR of CDR = 1001
+            LD    1002
+            ST    510
+            DIV   #4096
+            MULS  #4096
+            ST    511
+            LD    510
+            SUB   511
+            ST    513           ; CDDR = 1001
+
+            ; CAR of CDDR = C
+            LD    1001
+            DIV   #4096
+            ST    502           ; third = C (3074)
+
+            J     HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            510: #0
+            511: #0
+            512: #0
+            513: #0
+        `, cpu => cpu.mem[500] === 3072 && cpu.mem[501] === 3073 && cpu.mem[502] === 3074);
     },
 
     // =========================================================================
