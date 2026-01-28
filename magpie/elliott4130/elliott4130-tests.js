@@ -2986,6 +2986,715 @@ const E4130Tests = {
             512: #0
             513: #0
         `, cpu => cpu.mem[500] === 3072 && cpu.mem[501] === 3073 && cpu.mem[502] === 3074);
+
+        // =====================================================================
+        // EVAL/APPLY - McCarthy's Metacircular Evaluator
+        // =====================================================================
+        // Atom encodings:
+        // QUOTE=3082, COND=3083, LAMBDA=3081
+        // CAR=3084, CDR=3085, CONS=3086, ATOM=3087, EQ=3088, NULL=3089
+
+        // EVAL (QUOTE A) -> A
+        // eval[e;a] = [atom[e] -> assoc[e;a];
+        //              atom[car[e]] -> [eq[car[e];QUOTE] -> cadr[e]; ...]]
+        this.runTest('EVAL: (QUOTE A) returns A', `
+            ; Build (QUOTE A)
+            ; Cell 1000: (A . NIL)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #4095         ; NIL
+            ST    1000
+
+            ; Cell 1001: (QUOTE . 1000)
+            LD    #3082         ; QUOTE
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; expr = (QUOTE A)
+
+            ; EVAL: check if atom
+            LD    1001
+            SUB   #3072
+            JNN   IS_ATOM       ; >= 3072 means atom
+
+            ; Not atom, get CAR
+            LD    1001
+            DIV   #4096
+            ST    500           ; car = QUOTE (3082)
+
+            ; Check if CAR is atom
+            LD    500
+            SUB   #3072
+            JN    NOT_SPECIAL   ; car < 3072, not atom
+
+            ; CAR is atom, check if QUOTE
+            LD    500
+            SUB   #3082         ; QUOTE
+            JNZ   NOT_QUOTE
+
+            ; It's QUOTE! Return CADR
+            ; CDR of expr
+            LD    1001
+            ST    510
+            DIV   #4096
+            MULS  #4096
+            ST    511
+            LD    510
+            SUB   511
+            ST    512           ; cdr = 1000
+
+            ; CAR of CDR = CADR
+            LDR   512
+            LD    0,R
+            DIV   #4096
+            ST    501           ; result = A (3072)
+            J     DONE
+
+            IS_ATOM:
+            ; Would do assoc lookup
+            LD    #999
+            ST    501
+            J     DONE
+
+            NOT_QUOTE:
+            NOT_SPECIAL:
+            LD    #888
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            510: #0
+            511: #0
+            512: #0
+        `, cpu => cpu.mem[501] === 3072);  // A
+
+        // EVAL variable lookup: EVAL[X; ((X . 42))] -> 42
+        this.runTest('EVAL: variable lookup X -> 42', `
+            ; Build environment ((X . 42))
+            ; Cell 1000: (X . 42)
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #42
+            ST    1000
+
+            ; Cell 1001: (1000 . NIL) - list containing the pair
+            LD    #1000
+            MULS  #4096
+            ADD   #4095
+            ST    1001          ; env = ((X . 42))
+
+            ; expr = X (atom)
+            LD    #3100
+            ST    500           ; expr = X
+
+            ; EVAL: check if atom
+            LD    500
+            SUB   #3072
+            JN    NOT_ATOM      ; < 3072 means list
+
+            ; Is atom, do ASSOC[X; env]
+            LD    #1001
+            ST    510           ; a = env
+
+            ASSOC_LOOP:
+            LD    510
+            SUB   #4095
+            JZ    NOT_FOUND
+
+            ; Get CAR of a (the pair)
+            LDR   510
+            LD    0,R
+            DIV   #4096
+            ST    520           ; pair ptr
+
+            ; Get CAR of pair (the key)
+            LDR   520
+            LD    0,R
+            DIV   #4096
+            ST    521           ; key
+
+            ; Check if key == X
+            LD    521
+            SUB   500
+            JZ    FOUND
+
+            ; CDR of a
+            LDR   510
+            LD    0,R
+            ST    530
+            DIV   #4096
+            MULS  #4096
+            ST    531
+            LD    530
+            SUB   531
+            ST    510
+            J     ASSOC_LOOP
+
+            FOUND:
+            ; Get CDR of pair (the value)
+            LDR   520
+            LD    0,R
+            ST    530
+            DIV   #4096
+            MULS  #4096
+            ST    531
+            LD    530
+            SUB   531
+            ST    501           ; result = 42
+            J     DONE
+
+            NOT_FOUND:
+            LD    #999
+            ST    501
+            J     DONE
+
+            NOT_ATOM:
+            LD    #888
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            510: #0
+            520: #0
+            521: #0
+            530: #0
+            531: #0
+        `, cpu => cpu.mem[501] === 42);
+
+        // APPLY CAR to ((A B)) -> A
+        // apply[fn;args;a] = [atom[fn] -> [eq[fn;CAR] -> caar[args]; ...]]
+        this.runTest('APPLY: (CAR (QUOTE (A B))) -> A', `
+            ; Build (A B)
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (B . NIL)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (A B)
+
+            ; args = ((A B)) - list containing the list
+            LD    #1001
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; args = ((A B))
+
+            ; fn = CAR (3084)
+            LD    #3084
+            ST    500
+
+            ; APPLY: check if fn is atom
+            LD    500
+            SUB   #3072
+            JN    NOT_ATOM_FN
+
+            ; fn is atom, check which primitive
+            LD    500
+            SUB   #3084         ; CAR
+            JNZ   NOT_CAR
+
+            ; It's CAR! Return CAAR of args
+            ; CAR of args
+            LD    1002
+            DIV   #4096
+            ST    510           ; first arg = 1001 (the list (A B))
+
+            ; CAR of first arg
+            LDR   510
+            LD    0,R
+            DIV   #4096
+            ST    501           ; result = A (3072)
+            J     DONE
+
+            NOT_CAR:
+            LD    #777
+            ST    501
+            J     DONE
+
+            NOT_ATOM_FN:
+            LD    #888
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            510: #0
+        `, cpu => cpu.mem[501] === 3072);  // A
+
+        // APPLY CDR to ((A B)) -> (B)
+        this.runTest('APPLY: (CDR (QUOTE (A B))) -> (B)', `
+            ; Build (A B)
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (B . NIL) = (B)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; (A B)
+
+            ; args = ((A B))
+            LD    #1001
+            MULS  #4096
+            ADD   #4095
+            ST    1002
+
+            ; fn = CDR (3085)
+            LD    #3085
+            ST    500
+
+            ; APPLY CDR
+            LD    500
+            SUB   #3085
+            JNZ   NOT_CDR
+
+            ; CAR of args = the list
+            LD    1002
+            DIV   #4096
+            ST    510           ; 1001
+
+            ; CDR of that list
+            LDR   510
+            LD    0,R
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    501           ; result = 1000 (pointer to (B))
+
+            ; Verify CAR of result is B
+            LD    1000
+            DIV   #4096
+            ST    502           ; should be B (3073)
+            J     DONE
+
+            NOT_CDR:
+            LD    #777
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            510: #0
+            520: #0
+            521: #0
+        `, cpu => cpu.mem[501] === 1000 && cpu.mem[502] === 3073);
+
+        // APPLY CONS: (CONS A (B)) -> (A B)
+        this.runTest('APPLY: (CONS (QUOTE A) (QUOTE (B))) -> (A B)', `
+            ; Build (B)
+            LD    #3073         ; B
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (B)
+
+            ; args = (A (B)) - two arguments
+            ; Cell 1001: ((B) . NIL)
+            LD    #1000
+            MULS  #4096
+            ADD   #4095
+            ST    1001
+
+            ; Cell 1002: (A . 1001)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; args = (A (B))
+
+            ; fn = CONS (3086)
+            ; APPLY CONS: cons[car[args]; cadr[args]]
+
+            ; CAR of args = A
+            LD    1002
+            DIV   #4096
+            ST    510           ; first = A (3072)
+
+            ; CADR of args = (B)
+            LD    1002
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522           ; cdr = 1001
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    511           ; second = 1000 (ptr to (B))
+
+            ; CONS them: A * 4096 + 1000
+            LD    510
+            MULS  #4096
+            ADD   511
+            ST    1100          ; result cell
+
+            ; Verify CAR = A, CDR = 1000
+            LD    1100
+            DIV   #4096
+            ST    501           ; A (3072)
+
+            LD    1100
+            ST    530
+            DIV   #4096
+            MULS  #4096
+            ST    531
+            LD    530
+            SUB   531
+            ST    502           ; 1000
+
+            J     HALT
+            HALT: J HALT
+            501: #0
+            502: #0
+            510: #0
+            511: #0
+            520: #0
+            521: #0
+            522: #0
+            530: #0
+            531: #0
+        `, cpu => cpu.mem[501] === 3072 && cpu.mem[502] === 1000);
+
+        // APPLY ATOM: (ATOM (QUOTE A)) -> T
+        this.runTest('APPLY: (ATOM (QUOTE A)) -> T', `
+            ; args = (A) - single argument
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; args = (A)
+
+            ; fn = ATOM (3087)
+            ; Check if CAR of args is atom
+
+            LD    1000
+            DIV   #4096
+            ST    510           ; arg = A (3072)
+
+            ; Is it an atom? (>= 3072)
+            LD    510
+            SUB   #3072
+            JN    IS_LIST
+
+            ; It's an atom, return T
+            LD    #4094         ; T
+            ST    501
+            J     DONE
+
+            IS_LIST:
+            LD    #4095         ; NIL
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+        `, cpu => cpu.mem[501] === 4094);  // T
+
+        // APPLY EQ: (EQ (QUOTE A) (QUOTE A)) -> T
+        this.runTest('APPLY: (EQ (QUOTE A) (QUOTE A)) -> T', `
+            ; args = (A A)
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #4095
+            ST    1000          ; (A . NIL)
+
+            LD    #3072         ; A
+            MULS  #4096
+            ADD   #1000
+            ST    1001          ; args = (A A)
+
+            ; Get first arg
+            LD    1001
+            DIV   #4096
+            ST    510           ; A
+
+            ; Get second arg (CADR)
+            LD    1001
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522           ; cdr
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    511           ; A
+
+            ; Compare
+            LD    510
+            SUB   511
+            JNZ   NOT_EQ
+
+            LD    #4094         ; T
+            ST    501
+            J     DONE
+
+            NOT_EQ:
+            LD    #4095         ; NIL
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+            511: #0
+            520: #0
+            521: #0
+            522: #0
+        `, cpu => cpu.mem[501] === 4094);  // T
+
+        // APPLY LAMBDA: ((LAMBDA (X) X) 42) -> 42
+        // apply[fn;args;a] = [eq[car[fn];LAMBDA] ->
+        //                     eval[caddr[fn]; pairlis[cadr[fn];args;a]]]
+        this.runTest('APPLY: ((LAMBDA (X) X) 42) -> 42', `
+            ; Build (LAMBDA (X) X)
+            ; We need: (LAMBDA . ((X) . (X . NIL)))
+
+            ; Cell 1000: (X . NIL) - the body, just X
+            LD    #3100         ; X
+            MULS  #4096
+            ADD   #4095
+            ST    1000
+
+            ; Cell 1001: (X . NIL) - param list (X)
+            LD    #3100
+            MULS  #4096
+            ADD   #4095
+            ST    1001
+
+            ; Cell 1002: ((X) . (X)) = (1001 . 1000)
+            LD    #1001
+            MULS  #4096
+            ADD   #1000
+            ST    1002
+
+            ; Cell 1003: (LAMBDA . 1002)
+            LD    #3081         ; LAMBDA
+            MULS  #4096
+            ADD   #1002
+            ST    1003          ; fn = (LAMBDA (X) X)
+
+            ; args = (42)
+            LD    #42
+            MULS  #4096
+            ADD   #4095
+            ST    1004          ; args = (42)
+
+            ; APPLY LAMBDA:
+            ; 1. Get params = CADR of fn = (X)
+            ; 2. Get body = CADDR of fn = X
+            ; 3. Build env with PAIRLIS
+            ; 4. EVAL body in new env
+
+            ; CADR of fn (params)
+            LD    1003
+            ST    510
+            DIV   #4096
+            MULS  #4096
+            ST    511
+            LD    510
+            SUB   511           ; cdr of fn = 1002
+            ST    512
+
+            LDR   512
+            LD    0,R
+            DIV   #4096
+            ST    513           ; cadr = 1001 (params)
+
+            ; CADDR of fn (body)
+            LDR   512
+            LD    0,R
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522           ; cddr = 1000
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    523           ; caddr = X (3100) - the body
+
+            ; PAIRLIS: bind X to 42
+            ; CAR of params = X
+            LDR   513
+            LD    0,R
+            DIV   #4096
+            ST    530           ; X (3100)
+
+            ; CAR of args = 42
+            LD    1004
+            DIV   #4096
+            ST    531           ; 42
+
+            ; Build (X . 42)
+            LD    530
+            MULS  #4096
+            ADD   531
+            ST    1100          ; binding
+
+            ; Build env = ((X . 42))
+            LD    #1100
+            MULS  #4096
+            ADD   #4095
+            ST    1101          ; env
+
+            ; EVAL body (X) in env
+            ; body = X (atom), so ASSOC[X; env]
+            LD    523           ; body = X
+            ST    540
+
+            ; ASSOC: find X in env
+            LD    #1101
+            ST    550
+
+            ; CAR of env = 1100 (the pair)
+            LDR   550
+            LD    0,R
+            DIV   #4096
+            ST    551           ; pair = 1100
+
+            ; CAR of pair = key
+            LDR   551
+            LD    0,R
+            DIV   #4096
+            ST    552           ; key = X
+
+            ; key == body?
+            LD    552
+            SUB   540
+            JNZ   ASSOC_FAIL
+
+            ; Found! CDR of pair = value
+            LDR   551
+            LD    0,R
+            ST    560
+            DIV   #4096
+            MULS  #4096
+            ST    561
+            LD    560
+            SUB   561
+            ST    501           ; result = 42
+
+            J     DONE
+
+            ASSOC_FAIL:
+            LD    #999
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+            511: #0
+            512: #0
+            513: #0
+            520: #0
+            521: #0
+            522: #0
+            523: #0
+            530: #0
+            531: #0
+            540: #0
+            550: #0
+            551: #0
+            552: #0
+            560: #0
+            561: #0
+        `, cpu => cpu.mem[501] === 42);
+
+        // EVCON: evaluate conditional
+        // ((T A)) -> A (first clause is true)
+        this.runTest('EVCON: ((T A)) evaluates to A', `
+            ; Build ((T A))
+            ; T = 4094, A = 3072
+
+            ; Cell 1000: (A . NIL)
+            LD    #3072
+            MULS  #4096
+            ADD   #4095
+            ST    1000
+
+            ; Cell 1001: (T . 1000) = (T A)
+            LD    #4094         ; T
+            MULS  #4096
+            ADD   #1000
+            ST    1001
+
+            ; Cell 1002: ((T A) . NIL)
+            LD    #1001
+            MULS  #4096
+            ADD   #4095
+            ST    1002          ; clauses
+
+            ; EVCON: for each clause, eval CAR
+            ; if true, eval CADR and return
+
+            ; Get first clause
+            LD    1002
+            DIV   #4096
+            ST    510           ; clause = 1001
+
+            ; CAR of clause = condition
+            LDR   510
+            LD    0,R
+            DIV   #4096
+            ST    511           ; cond = T (4094)
+
+            ; Eval condition (T is self-evaluating)
+            ; T != NIL, so it's true
+            LD    511
+            SUB   #4095         ; NIL
+            JZ    NEXT_CLAUSE
+
+            ; True! Eval CADR of clause
+            LDR   510
+            LD    0,R
+            ST    520
+            DIV   #4096
+            MULS  #4096
+            ST    521
+            LD    520
+            SUB   521
+            ST    522           ; cdr of clause = 1000
+
+            LDR   522
+            LD    0,R
+            DIV   #4096
+            ST    501           ; cadr = A (3072)
+            J     DONE
+
+            NEXT_CLAUSE:
+            LD    #999
+            ST    501
+
+            DONE: J HALT
+            HALT: J HALT
+            501: #0
+            510: #0
+            511: #0
+            520: #0
+            521: #0
+            522: #0
+        `, cpu => cpu.mem[501] === 3072);  // A
     },
 
     // =========================================================================
