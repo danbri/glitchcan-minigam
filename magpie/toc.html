@@ -21,6 +21,9 @@
         a { color: #8b4513; }
         a:hover { text-decoration: none; }
         .desc { color: #666; font-size: 0.9em; }
+        .status { display: inline-block; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.8em; }
+        .status-wip { background: #fff3cd; color: #856404; }
+        .status-ok { background: #d4edda; color: #155724; }
     </style>
 </head>
 <body>
@@ -29,18 +32,28 @@
 
     <h2>Contents</h2>
     <ul>
-        <li><strong>elliott4130/</strong> - Elliott 4130 Lisp project
+        <li><strong>elliott4130/</strong> - Elliott 4130 Emulator & Lisp <span class="status status-wip">32/78 tests</span>
             <ul>
-                <li><a href="elliott4130/README.md">README.md</a> - Project overview</li>
-                <li><strong>docs/</strong> - CCS reference manuals
+                <li><a href="elliott4130/elliott4130.html">elliott4130.html</a> - Emulator webapp (mobile-friendly)</li>
+                <li><a href="elliott4130/README.md">README.md</a> - Project overview & test analysis</li>
+                <li><strong>Emulator Core:</strong>
                     <ul>
-                        <li><a href="elliott4130/docs/ccs-e6x1.pdf">ccs-e6x1.pdf</a></li>
-                        <li><a href="elliott4130/docs/ccs-e6x2.pdf">ccs-e6x2.pdf</a></li>
-                        <li><a href="elliott4130/docs/ccs-e6x3.pdf">ccs-e6x3.pdf</a></li>
-                        <li><a href="elliott4130/docs/ccs-e6x4.pdf">ccs-e6x4.pdf</a></li>
-                        <li><a href="elliott4130/docs/ccs-e6x5.pdf">ccs-e6x5.pdf</a></li>
+                        <li>elliott4130-core.js - CPU emulation</li>
+                        <li>elliott4130-asm.js - NEAT assembler</li>
+                        <li>elliott4130-tests.js - 78 validation tests</li>
+                        <li>elliott4130-debug.js - Debug interface</li>
+                        <li>elliott4130-ui.js - UI/visualization</li>
                     </ul>
                 </li>
+                <li><strong>Lisp Implementation:</strong>
+                    <ul>
+                        <li><a href="elliott4130/lisp.mjs">lisp.mjs</a> - JavaScript Lisp interpreter</li>
+                        <li><a href="elliott4130/microlisp.mjs">microlisp.mjs</a> - Lightweight variant</li>
+                        <li><a href="elliott4130/test-lisp.mjs">test-lisp.mjs</a> - Test suite</li>
+                        <li><a href="elliott4130/test-cases.lisp">test-cases.lisp</a> - McCarthy 1960 paper tests</li>
+                    </ul>
+                </li>
+                <li><strong>docs/</strong> - CCS reference manuals (ccs-e6x1-5.pdf)</li>
             </ul>
         </li>
         <li><strong>foafng/</strong> - FOAF/RDF/Kanren logic programming
@@ -52,19 +65,7 @@
                 <li><a href="foafng/PRD.md">PRD.md</a> - Product requirements</li>
             </ul>
         </li>
-        <li><strong>lisp/</strong> - JavaScript Lisp implementations
-            <ul>
-                <li><a href="lisp/lisp.mjs">lisp.mjs</a> - Full Lisp interpreter</li>
-                <li><a href="lisp/microlisp.mjs">microlisp.mjs</a> - Lighter variant</li>
-                <li><a href="lisp/test-lisp.mjs">test-lisp.mjs</a> - Test suite</li>
-            </ul>
-        </li>
-        <li><strong>mccarthy1960/</strong> - McCarthy 1960 paper materials
-            <ul>
-                <li><a href="mccarthy1960/test-cases.lisp">test-cases.lisp</a> - Test cases from original paper</li>
-            </ul>
-        </li>
-        <li><strong>parisconf/</strong> - 1951 Paris conference digitization
+        <li><strong>parisconf/</strong> - 1951 Paris conference digitization <span class="status status-ok">128 pages</span>
             <ul>
                 <li><a href="parisconf/index.html">index.html</a> - Interactive reader webapp</li>
                 <li><a href="parisconf/README.md">README.md</a> - Project notes</li>
@@ -75,11 +76,6 @@
                 <li><span class="desc">128 page images + French transcriptions + English translations</span></li>
             </ul>
         </li>
-    </ul>
-
-    <h2>Related Files (Outside magpie/)</h2>
-    <ul>
-        <li><a href="../demo/elliott4130.html">demo/elliott4130.html</a> - Elliott 4130 emulator webapp</li>
     </ul>
 </body>
 </html>
