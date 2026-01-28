@@ -11,53 +11,53 @@
         .app { display: flex; flex-direction: column; height: 100vh; }
 
         /* Compact header with title + inline registers */
-        .header-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-bottom: 1px solid #333; padding: 4px 8px; }
-        .header-title { font-size: 13px; font-weight: bold; color: #0f0; }
-        .header-regs { display: flex; gap: 8px; font-size: 10px; }
-        .header-reg { display: flex; align-items: center; gap: 3px; }
+        .header-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-bottom: 1px solid #333; padding: 2px 6px; }
+        .header-title { font-size: 11px; font-weight: bold; color: #0f0; }
+        .header-regs { display: flex; gap: 6px; font-size: 9px; }
+        .header-reg { display: flex; align-items: center; gap: 2px; }
         .header-reg-name { color: #888; }
-        .header-reg-val { color: #0f0; background: #000; padding: 1px 4px; border: 1px solid #333; min-width: 55px; }
-        .header-conds { display: flex; gap: 4px; }
-        .header-led { width: 6px; height: 6px; border-radius: 50%; background: #300; }
-        .header-led.on { background: #f00; box-shadow: 0 0 3px #f00; }
+        .header-reg-val { color: #0f0; background: #000; padding: 0 3px; border: 1px solid #333; min-width: 50px; font-size: 9px; }
+        .header-conds { display: flex; gap: 3px; }
+        .header-led { width: 5px; height: 5px; border-radius: 50%; background: #300; }
+        .header-led.on { background: #f00; box-shadow: 0 0 2px #f00; }
 
         /* Tabs */
         .tabs { display: flex; background: #1a1a1a; border-bottom: 1px solid #333; }
-        .tab { padding: 6px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 11px; }
+        .tab { padding: 4px 10px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 10px; }
         .tab:hover { background: #222; }
         .tab.active { border-bottom-color: #0f0; color: #0f0; }
         .tab-content { display: none; flex: 1; overflow: hidden; }
         .tab-content.active { display: flex; flex-direction: column; }
 
         /* Main tab layout - single column on mobile */
-        .main-grid { display: flex; flex-direction: column; flex: 1; gap: 4px; padding: 4px; overflow: hidden; }
+        .main-grid { display: flex; flex-direction: column; flex: 1; gap: 2px; padding: 2px; overflow: hidden; }
 
-        .panel { background: #1a1a1a; border: 1px solid #333; padding: 4px 6px; }
-        .panel-title { font-size: 9px; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+        .panel { background: #1a1a1a; border: 1px solid #333; padding: 2px 4px; }
+        .panel-title { font-size: 8px; color: #666; text-transform: uppercase; margin-bottom: 1px; }
 
         /* Compact register row for expanded view */
-        .reg-row { display: flex; gap: 4px; flex-wrap: wrap; }
-        .reg { display: flex; align-items: center; gap: 3px; font-size: 10px; }
-        .reg-name { color: #888; }
-        .reg-val { background: #000; padding: 1px 3px; border: 1px solid #222; font-size: 9px; min-width: 50px; }
+        .reg-row { display: flex; gap: 3px; flex-wrap: wrap; }
+        .reg { display: flex; align-items: center; gap: 2px; font-size: 9px; }
+        .reg-name { color: #888; font-size: 8px; }
+        .reg-val { background: #000; padding: 0 2px; border: 1px solid #222; font-size: 8px; min-width: 45px; }
 
-        .conds { display: flex; flex-wrap: wrap; gap: 6px; }
-        .cond { display: flex; align-items: center; gap: 2px; font-size: 9px; color: #666; }
-        .cond-led { width: 7px; height: 7px; border-radius: 50%; background: #300; border: 1px solid #500; }
-        .cond-led.on { background: #f00; box-shadow: 0 0 4px #f00; }
+        .conds { display: flex; flex-wrap: wrap; gap: 4px; }
+        .cond { display: flex; align-items: center; gap: 1px; font-size: 8px; color: #666; }
+        .cond-led { width: 6px; height: 6px; border-radius: 50%; background: #300; border: 1px solid #500; }
+        .cond-led.on { background: #f00; box-shadow: 0 0 3px #f00; }
 
-        .memory-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 80px; }
-        .memory-view { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; font-size: 10px; }
-        .mem-line { display: flex; gap: 4px; padding: 1px 3px; }
+        .memory-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 60px; }
+        .memory-view { flex: 1; background: #000; border: 1px solid #222; overflow-y: auto; font-size: 9px; }
+        .mem-line { display: flex; gap: 3px; padding: 0 2px; line-height: 1.2; }
         .mem-line.current { background: #030; }
-        .mem-addr { color: #f80; width: 36px; }
-        .mem-hex { color: #0f0; width: 58px; }
-        .mem-asm { color: #888; font-size: 9px; }
+        .mem-addr { color: #f80; width: 32px; }
+        .mem-hex { color: #0f0; width: 54px; }
+        .mem-asm { color: #888; font-size: 8px; }
 
-        .teleprinter { background: #000; border: 1px solid #222; height: 40px; overflow-y: auto; padding: 3px; font-size: 10px; white-space: pre-wrap; }
+        .teleprinter { background: #000; border: 1px solid #222; height: 28px; overflow-y: auto; padding: 2px; font-size: 9px; white-space: pre-wrap; }
 
-        .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 80px; }
-        .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 10px; padding: 3px; resize: none; }
+        .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 60px; }
+        .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 9px; padding: 2px; resize: none; line-height: 1.2; }
         .program-input:focus { outline: none; border-color: #0f0; }
 
         .tape-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; max-height: 32px; overflow-y: auto; }
@@ -69,15 +69,15 @@
         .help code { color: #f80; }
 
         /* Controls bar - compact */
-        .controls { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; padding: 3px 4px; background: #1a1a1a; border-top: 1px solid #333; }
-        .btn { font-family: monospace; font-size: 10px; padding: 4px 8px; border: 1px solid #333; background: #222; color: #0f0; cursor: pointer; }
+        .controls { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; padding: 2px 3px; background: #1a1a1a; border-top: 1px solid #333; }
+        .btn { font-family: monospace; font-size: 9px; padding: 3px 6px; border: 1px solid #333; background: #222; color: #0f0; cursor: pointer; }
         .btn:hover { background: #333; }
         .btn:active { background: #444; }
         .btn.primary { border-color: #0f0; }
         .btn.danger { border-color: #f00; color: #f00; }
         .btn.lisp { border-color: #f80; color: #f80; }
 
-        .status { margin-left: auto; display: flex; gap: 8px; font-size: 9px; color: #666; }
+        .status { margin-left: auto; display: flex; gap: 6px; font-size: 8px; color: #666; }
         .status span { color: #0f0; }
         .running-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #300; margin-right: 3px; }
         .running-dot.on { background: #0f0; animation: blink 0.5s infinite; }
@@ -132,10 +132,12 @@
 <div class="app">
     <!-- Compact header with title and key registers -->
     <div class="header-bar">
-        <div class="header-title">Elliott 4130</div>
+        <div class="header-title">E4130</div>
         <div class="header-regs">
             <div class="header-reg"><span class="header-reg-name">M</span><span class="header-reg-val" id="hM">00000000</span></div>
+            <div class="header-reg"><span class="header-reg-name">R</span><span class="header-reg-val" id="hR">00000000</span></div>
             <div class="header-reg"><span class="header-reg-name">S</span><span class="header-reg-val" id="hS">0000</span></div>
+            <div class="header-reg"><span class="header-reg-name">K</span><span class="header-reg-val" id="hK">0000</span></div>
             <div class="header-conds">
                 <div class="header-led" id="hN" title="Neg"></div>
                 <div class="header-led" id="hZ" title="NZ"></div>
@@ -295,67 +297,92 @@ function runDebugCmd(cmd) {
     }
 }
 
-// Lisp demo program for Elliott 4130
-const LISP_DEMO = `; McCarthy 1960 LISP - Cons Cell Demo
-; Elliott 4130 24-bit word: 2x 12-bit pointers per cons cell
-; Memory layout: low 4096 words = heap, atoms in high memory
+// Lisp demo: McCarthy 1960 primitives for Elliott 4130
+// Cell format: [CAR:12bits | CDR:12bits] in 24-bit word
+// Atoms: 3073=A, 3074=B, 3075=C, 4095=NIL
+const LISP_DEMO = `; McCarthy LISP - Cons/Car/Cdr/Atom?/Eq?
+; Cells at 1000+, results at 100-109
 
-; === CONSTANTS ===
-  LD    #0          ; NIL = 0
-  ST    1000        ; Store NIL at 1000
+; Build (C . NIL) at 1000
+  LD    #3075          ; C = 3075
+  MULS  #4096          ; CAR << 12
+  ADD   #4095          ; CDR = NIL
+  ST    1000
 
-; === BUILD LIST (A B C) ===
-; Cons cell format: [CAR:12bits | CDR:12bits]
+; Build (B . 1000) at 1001
+  LD    #3074          ; B
+  MULS  #4096
+  ADD   #1000
+  ST    1001
 
-; First create atoms A=4001, B=4002, C=4003 (in atom table)
-; Then build: (cons 'A (cons 'B (cons 'C NIL)))
+; Build (A . 1001) at 1002 = (A B C)
+  LD    #3073          ; A
+  MULS  #4096
+  ADD   #1001
+  ST    1002
 
-; Cell 3: (C . NIL) at addr 103
-  LD    #4003       ; CAR = atom C (shifted left 12)
-  MULS  #4096       ; Shift left 12 bits
-  ADD   #0          ; CDR = NIL
+; CAR[(A B C)] -> 100
+  LD    1002
+  DIV   #4096
+  ST    100            ; Expect: 3073
+
+; CDR[(A B C)] -> 101
+  LD    1002
   ST    103
-
-; Cell 2: (B . cell3) at addr 102
-  LD    #4002       ; CAR = atom B
+  DIV   #4096
   MULS  #4096
-  ADD   #103        ; CDR = addr of cell 3
-  ST    102
+  ST    104
+  LD    103
+  SUB   104
+  ST    101            ; Expect: 1001
 
-; Cell 1: (A . cell2) at addr 101 - this is our list!
-  LD    #4001       ; CAR = atom A
+; CADR[(A B C)] -> 102
+  LD    1001
+  DIV   #4096
+  ST    102            ; Expect: 3074
+
+; CONS[X, (A B C)] at 1003
+  LD    #3076          ; X
   MULS  #4096
-  ADD   #102        ; CDR = addr of cell 2
-  ST    101
+  ADD   #1002
+  ST    1003
+  LD    1003
+  DIV   #4096
+  ST    105            ; Expect: 3076
 
-; === CAR OPERATION ===
-; car(x) = x >> 12 (extract high 12 bits)
-  LD    101         ; Load list (A B C)
-  DIV   #4096       ; Shift right 12 = CAR
-  ST    200         ; Result: 4001 (atom A)
+; ATOM?(A): A >= 3072
+  LD    100
+  SUB   #3072
+  ST    106            ; Expect: 1 (true)
 
-; === CDR OPERATION ===
-; cdr(x) = x & 0xFFF (extract low 12 bits)
-  LD    101         ; Load list
-  ; For proper CDR we need AND mask - using subtraction trick
-  DIV   #4096       ; Get CAR in low bits
-  MULS  #4096       ; Shift back (clears low 12)
-  ST    201         ; Temp: original with low bits zeroed
-  LD    101
-  SUB   201         ; Original - (original with low zeroed) = low 12 bits
-  ST    202         ; Result: 102 (addr of (B C))
+; NULL?(NIL): NIL == 4095
+  LD    #4095
+  SUB   #4095
+  ST    107            ; Expect: 0 (true)
 
-; === VERIFY ===
-  LD    200         ; Should be 4001 (atom A)
-  LD    202         ; Should be 102 (cdr pointer)
+; EQ?(A,A)
+  LD    #3073
+  SUB   #3073
+  ST    108            ; Expect: 0 (true)
 
-  J     #0          ; Loop
+; EQ?(A,B)
+  LD    #3073
+  SUB   #3074
+  ST    109            ; Expect: -1 (false)
 
-; === DATA AREA ===
-1000: #0            ; NIL
-200:  #0            ; CAR result
-201:  #0            ; Temp
-202:  #0            ; CDR result`;
+  J     #0
+
+; Results 100-109
+100: #0
+101: #0
+102: #0
+103: #0
+104: #0
+105: #0
+106: #0
+107: #0
+108: #0
+109: #0`;
 
 // Setup debug console input
 document.addEventListener('DOMContentLoaded', () => {
