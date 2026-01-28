@@ -213,10 +213,11 @@ const testMethods = [
     'testJumps',
     'testLogic',
     'testShifts',
-    'testRegisterOps',
+    'testRegisterTransfers',
     'testMemoryOps',
     'testMulDiv',
-    'testIntegration'
+    'testIntegration',
+    'testLisp'
 ];
 
 for (const method of testMethods) {

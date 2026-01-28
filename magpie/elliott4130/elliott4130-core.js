@@ -484,12 +484,13 @@ class E4130 {
                 this.M = (this.sx(this.M) * this.sx(op)) & this.MASK24;
                 this.setC(this.M);
                 break;
-            case 0o51: // DIV - Single-length divide
+            case 0o51: // DIV - Single-length divide (unsigned for bit manipulation)
                 if (op) {
-                    const m = this.sx(this.M);
-                    const d = this.sx(op);
-                    this.M = Math.floor(m / d) & this.MASK24;
+                    // Use unsigned division - M and op are 24-bit unsigned values
+                    const m = this.M & this.MASK24;
+                    const d = op & this.MASK24;
                     this.R = (m % d) & this.MASK24;
+                    this.M = Math.floor(m / d) & this.MASK24;
                 }
                 break;
             case 0o77: // Output
