@@ -3918,6 +3918,191 @@ const E4130Tests = {
             700: #0
             701: #0
         `, cpu => cpu.mem[501] === 29);  // 4 + 9 + 16 = 29
+
+        // =====================================================================
+        // FULL LISP 1.5 PROGRAM - Global state + recursion
+        // =====================================================================
+        // (SETQ N 1)
+        // (LABEL NEXT (LAMBDA () (SETQ N (+ N 2)) N))
+        // (SETQ VALUES (CONS (NEXT) (CONS (NEXT) (CONS (NEXT) NIL))))
+        // (LIST VALUES (SUMSQ VALUES))
+        // => ((3 5 7) 83)
+
+        this.runTest('LISP 1.5 PROGRAM: counter + sum-of-squares', `
+            ; Global N at address 800
+            LD    #1
+            ST    800           ; N = 1
+
+            ; === NEXT: increment N by 2, return N ===
+            ; Call 1: N = 1 + 2 = 3
+            LD    800
+            ADD   #2
+            ST    800
+            ST    810           ; val1 = 3
+
+            ; Call 2: N = 3 + 2 = 5
+            LD    800
+            ADD   #2
+            ST    800
+            ST    811           ; val2 = 5
+
+            ; Call 3: N = 5 + 2 = 7
+            LD    800
+            ADD   #2
+            ST    800
+            ST    812           ; val3 = 7
+
+            ; === Build VALUES = (3 5 7) ===
+            ; Cell 1000: (7 . NIL)
+            LD    812
+            MULS  #4096
+            ADD   #4095
+            ST    1000
+
+            ; Cell 1001: (5 . 1000)
+            LD    811
+            MULS  #4096
+            ADD   #1000
+            ST    1001
+
+            ; Cell 1002: (3 . 1001) = VALUES
+            LD    810
+            MULS  #4096
+            ADD   #1001
+            ST    1002          ; VALUES = (3 5 7)
+
+            ; === SUMSQ on (3 5 7) ===
+            ; Stack at 2000
+            LD    #2000
+            ST    500
+
+            LD    #1002
+            ST    600           ; lst = VALUES
+
+            SQ_ENTRY:
+            LD    600
+            SUB   #4095
+            JZ    SQ_ZERO
+
+            ; Get CAR
+            LDR   600
+            LD    0,R
+            DIV   #4096
+            ST    610
+
+            ; Get CDR
+            LDR   600
+            LD    0,R
+            ST    700
+            DIV   #4096
+            MULS  #4096
+            ST    701
+            LD    700
+            SUB   701
+            ST    611
+
+            ; Push elem
+            LDR   500
+            LD    610
+            ST    0,R
+            LD    500
+            ADD   #1
+            ST    500
+
+            ; Recurse on CDR
+            LD    611
+            ST    600
+
+            LD    600
+            SUB   #4095
+            JZ    SQ_UNWIND_START
+
+            J     SQ_ENTRY
+
+            SQ_UNWIND_START:
+            LD    #0
+            ST    620           ; acc = 0
+            J     SQ_UNWIND
+
+            SQ_ZERO:
+            LD    #0
+            ST    501
+            J     DONE
+
+            SQ_UNWIND:
+            LD    500
+            SUB   #2000
+            JZ    SQ_DONE
+
+            LD    500
+            SUB   #1
+            ST    500
+            LDR   500
+            LD    0,R
+            ST    630
+
+            ; Square and add
+            LD    630
+            MULS  630
+            ADD   620
+            ST    620
+
+            J     SQ_UNWIND
+
+            SQ_DONE:
+            ; acc = 83 (9 + 25 + 49)
+            LD    620
+            ST    501           ; SUMSQ result
+
+            ; === Build result (VALUES SUMSQ) ===
+            ; Cell 1100: (83 . NIL)
+            LD    501
+            MULS  #4096
+            ADD   #4095
+            ST    1100
+
+            ; Cell 1101: (VALUES . 1100) = ((3 5 7) 83)
+            LD    #1002
+            MULS  #4096
+            ADD   #1100
+            ST    1101          ; Final result
+
+            ; Verify VALUES list
+            ; CAR = 1002 (ptr to VALUES)
+            LD    1101
+            DIV   #4096
+            ST    502           ; 1002
+
+            ; CAR of VALUES = 3
+            LD    1002
+            DIV   #4096
+            ST    503           ; 3
+
+            ; SUMSQ = 83
+            LD    1100
+            DIV   #4096
+            ST    504           ; 83
+
+            DONE: J HALT
+            HALT: J HALT
+            500: #0
+            501: #0
+            502: #0
+            503: #0
+            504: #0
+            600: #0
+            610: #0
+            611: #0
+            620: #0
+            630: #0
+            700: #0
+            701: #0
+            800: #0
+            810: #0
+            811: #0
+            812: #0
+        `, cpu => cpu.mem[503] === 3 && cpu.mem[504] === 83);
+        // VALUES starts with 3, SUMSQ = 83
     },
 
     // =========================================================================
