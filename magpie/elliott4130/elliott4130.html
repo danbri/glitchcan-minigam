@@ -177,7 +177,13 @@
             </div>
 
             <div class="panel program-panel">
-                <div class="panel-title">Paper Tape (NEAT)</div>
+                <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span id="inputModeLabel">Paper Tape (NEAT)</span>
+                    <label style="font-size:8px;display:flex;align-items:center;gap:3px;">
+                        <input type="checkbox" id="lispMode" style="accent-color:#f80;">
+                        <span style="color:#f80;">S-expr</span>
+                    </label>
+                </div>
                 <textarea class="program-input" id="src" spellcheck="false">; Add two numbers
   LD    100       ; M := [100]
   ADD   101       ; M := M + [101]
@@ -188,7 +194,7 @@
 101:  #3             ; Data: 3
 102:  #0             ; Result</textarea>
                 <div class="tape-list" id="tapes"></div>
-                <div class="help">
+                <div class="help" id="helpText">
                     <code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code> &nbsp;
                     <code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect
                 </div>
@@ -292,6 +298,7 @@
 <script src="elliott4130-tests.js"></script>
 <script src="elliott4130-debug.js"></script>
 <script src="elliott4130-ui.js"></script>
+<script src="lisp-repl.js"></script>
 
 <script>
 // Debug console helper
@@ -701,6 +708,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (lispSelect) {
         lispSelect.onchange = loadLispDemo;
+    }
+
+    // S-expression mode toggle
+    const lispModeChk = document.getElementById('lispMode');
+    const inputModeLabel = document.getElementById('inputModeLabel');
+    const helpText = document.getElementById('helpText');
+
+    const LISP_EXAMPLES = `; LISP S-expression mode
+; Type expressions and click Load to compile
+
+(QUOTE A)
+
+; Try these:
+; (CAR (QUOTE (A B C)))
+; (PLUS 3 4)
+; (TIMES 6 7)
+; (ATOM (QUOTE A))`;
+
+    const ASM_HELP = '<code>LD ADD SUB ST J JN JZ JNZ COMP MULS DIV</code> &nbsp;<code>100</code>=direct <code>#5</code>=literal <code>@n</code>=indirect';
+    const LISP_HELP = '<code>(QUOTE x)</code> <code>(CAR x)</code> <code>(CDR x)</code> <code>(PLUS a b)</code> <code>(TIMES a b)</code> <code>(ATOM x)</code>';
+
+    if (lispModeChk) {
+        lispModeChk.onchange = () => {
+            if (lispModeChk.checked) {
+                inputModeLabel.textContent = 'LISP S-expression';
+                inputModeLabel.style.color = '#f80';
+                helpText.innerHTML = LISP_HELP;
+                srcArea.value = LISP_EXAMPLES;
+                srcArea.style.borderColor = '#f80';
+            } else {
+                inputModeLabel.textContent = 'Paper Tape (NEAT)';
+                inputModeLabel.style.color = '';
+                helpText.innerHTML = ASM_HELP;
+                srcArea.style.borderColor = '';
+            }
+        };
+    }
+
+    // Hook into Load button to handle LISP mode
+    const origLoad = document.getElementById('bLoad');
+    if (origLoad && window.LispREPL) {
+        const origOnclick = origLoad.onclick;
+        origLoad.onclick = () => {
+            if (lispModeChk && lispModeChk.checked) {
+                // Compile S-expression to assembly
+                const src = srcArea.value;
+                // Find the first non-comment S-expression
+                const lines = src.split('\n');
+                let expr = '';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed && !trimmed.startsWith(';')) {
+                        expr = trimmed;
+                        break;
+                    }
+                }
+                if (expr) {
+                    const result = LispREPL.compile(expr);
+                    if (result.success) {
+                        // Switch to ASM mode temporarily to load
+                        const wasLispMode = lispModeChk.checked;
+                        lispModeChk.checked = false;
+                        srcArea.value = result.asm;
+                        // Now call original load
+                        if (origOnclick) origOnclick();
+                        else if (ui && ui.load) ui.load();
+                        // Show what we compiled
+                        const tty = document.getElementById('tty');
+                        if (tty) {
+                            tty.textContent = `Compiled: ${expr}\n`;
+                        }
+                        // Restore LISP mode display but keep generated ASM visible
+                        inputModeLabel.textContent = 'Generated ASM';
+                        inputModeLabel.style.color = '#0f0';
+                    } else {
+                        alert('LISP Error: ' + result.error);
+                    }
+                }
+            } else {
+                // Normal ASM load
+                if (origOnclick) origOnclick();
+                else if (ui && ui.load) ui.load();
+            }
+        };
     }
 });
 </script>
