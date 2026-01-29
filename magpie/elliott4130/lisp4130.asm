@@ -1,376 +1,495 @@
-; =============================================================================
-; LISP 4130 - McCarthy Lisp for Elliott 4130
-; =============================================================================
-; A working Lisp interpreter demonstrating:
-;   - Cons cell representation
-;   - CAR/CDR/CONS/ATOM?/EQ?/NULL? primitives
-;   - QUOTE special form
-;   - EVAL for simple expressions
+; ============================================================================
+; LISP for Elliott 4130 - Native Assembly Interpreter
+; ============================================================================
+; Uses proper 4130 subroutine linkage (JFL/JIR).
 ;
-; Memory: Heap at 1000+, results at 600+
+; Memory Map:
+;   0        : Subroutine link (4130 convention - JFL stores here)
+;   10-99    : Interpreter variables
+;   100      : Final result
+;   1000+    : Cons cell heap
+;
 ; Cell format: [CAR:12bits | CDR:12bits] in 24-bit word
-; Atoms: 3072+ (A=3072, B=3073, C=3074, ...)
-; NIL = 4095, T = 4094
-; =============================================================================
+;
+; Atoms (>= 3000 are atoms, < 3000 are cell addresses):
+;   0-2999   : Cell addresses (heap)
+;   3000-3999: Symbols (A=3000, B=3001, ...)
+;   4000     : QUOTE
+;   4001     : CAR
+;   4002     : CDR
+;   4003     : CONS
+;   4004     : ATOM
+;   4005     : EQ
+;   4006     : COND
+;   4007     : LAMBDA
+;   4094     : T
+;   4095     : NIL
+; ============================================================================
 
-; === PROGRAM START ===
-        J     MAIN
+; === Test: Evaluate (CAR (QUOTE (A B))) ===
+; Expected result: 3000 (symbol A)
 
-; === CONSTANTS ===
-600: #4095        ; NIL
-601: #4094        ; T
-602: #3072        ; QUOTE symbol
-603: #3076        ; CAR symbol
-604: #3077        ; CDR symbol
+START:
+    ; Initialize heap
+    LD    #1000
+    ST    HEAP
 
-; === VARIABLES ===
-610: #1000        ; FREE - next free cell
-611: #0           ; EXPR - expression to evaluate
-612: #0           ; RESULT
-613: #0           ; TEMP1
-614: #0           ; TEMP2
-615: #0           ; TEMP3
-616: #0           ; TEMP4
-617: #0           ; ARG_VAL - evaluated argument
+    ; Build test expression: (CAR (QUOTE (A B)))
 
-; === MAIN PROGRAM ===
-MAIN:
-; We will:
-; 1. Build the list (A B C)
-; 2. Build (QUOTE (A B C))
-; 3. Build (CAR (QUOTE (A B C)))
-; 4. Evaluate it -> should get atom A (3072)
+    ; cell 1000 = (B . NIL) = (3001 . 4095)
+    LD    #3001           ; B
+    MULS  #4096
+    ADD   #4095           ; NIL
+    ST    1000
 
-; --------------------------------------------------------
-; Step 1: Build (A B C) using inline CONS operations
-; --------------------------------------------------------
+    ; cell 1001 = (A . 1000) = (A B)
+    LD    #3000           ; A
+    MULS  #4096
+    ADD   #1000
+    ST    1001
 
-; CONS(C, NIL) -> cell at 1000
-; C = 3074, NIL = 4095
-        LD    #3074           ; C
-        MULS  #4096           ; CAR << 12
-        ADD   #4095           ; CDR = NIL
-        ST    1000            ; Cell 1000 = (C . NIL)
+    ; cell 1002 = (1001 . NIL) - arg list for QUOTE
+    LD    #1001
+    MULS  #4096
+    ADD   #4095
+    ST    1002
 
-; CONS(B, 1000) -> cell at 1001
-; B = 3073
-        LD    #3073           ; B
-        MULS  #4096
-        ADD   #1000           ; CDR = cell 1000
-        ST    1001            ; Cell 1001 = (B . (C))
+    ; cell 1003 = (QUOTE . 1002) = (QUOTE (A B))
+    LD    #4000           ; QUOTE
+    MULS  #4096
+    ADD   #1002
+    ST    1003
 
-; CONS(A, 1001) -> cell at 1002
-; A = 3072
-        LD    #3072           ; A
-        MULS  #4096
-        ADD   #1001           ; CDR = cell 1001
-        ST    1002            ; Cell 1002 = (A B C)
+    ; cell 1004 = (1003 . NIL) - arg list for CAR
+    LD    #1003
+    MULS  #4096
+    ADD   #4095
+    ST    1004
 
-; Save (A B C) pointer
-        LD    #1002
-        ST    613             ; TEMP1 = ptr to (A B C)
+    ; cell 1005 = (CAR . 1004) = (CAR (QUOTE (A B)))
+    LD    #4001           ; CAR
+    MULS  #4096
+    ADD   #1004
+    ST    1005
 
-; --------------------------------------------------------
-; Step 2: Build (QUOTE (A B C))
-; Structure: (QUOTE . ((A B C) . NIL))
-; --------------------------------------------------------
+    ; Update heap pointer
+    LD    #1006
+    ST    HEAP
 
-; CONS((A B C), NIL) -> cell at 1003
-        LD    #1002           ; ptr to (A B C)
-        MULS  #4096
-        ADD   #4095           ; CDR = NIL
-        ST    1003            ; Cell 1003 = ((A B C))
+    ; Call EVAL(1005)
+    LD    #1005
+    ST    EXPR
+    JFL   EVAL
 
-; CONS(QUOTE, 1003) -> cell at 1004
-        LD    #3072           ; QUOTE symbol (reusing A's code for simplicity)
-        MULS  #4096
-        ADD   #1003
-        ST    1004            ; Cell 1004 = (QUOTE (A B C))
+    ; Store result
+    LD    RESULT
+    ST    100
 
-; For a real implementation, QUOTE would be a distinct symbol
-; Let's use 3080 for QUOTE to distinguish from A
-        LD    #3080           ; QUOTE = 3080
-        ST    602             ; Update QUOTE constant
-        LD    #3080
-        MULS  #4096
-        ADD   #1003
-        ST    1004            ; Cell 1004 = (QUOTE (A B C)) with proper QUOTE
+    ; Also print it (result - 3000 = letter index)
+    ; A=0, B=1, etc.
+    LD    RESULT
+    SUB   #3000
+    ST    PRINT_N
+    ; TR extracode: display nth letter
+    ; The assembler should encode this properly
 
-; --------------------------------------------------------
-; Step 3: Build (CAR (QUOTE (A B C)))
-; Structure: (CAR . ((QUOTE (A B C)) . NIL))
-; --------------------------------------------------------
+HALT:
+    J     HALT
 
-; CONS((QUOTE (A B C)), NIL) -> cell at 1005
-        LD    #1004           ; ptr to (QUOTE (A B C))
-        MULS  #4096
-        ADD   #4095           ; CDR = NIL
-        ST    1005            ; Cell 1005 = ((QUOTE (A B C)))
+; ============================================================================
+; EVAL - Evaluate expression
+; Input:  EXPR = expression
+; Output: RESULT
+; Clobbers: EV_*
+; ============================================================================
+EVAL:
+    ; Save link (JFL put it at 0, we save to our variable)
+    LD    0
+    ST    EV_LINK
 
-; CONS(CAR, 1005) -> cell at 1006
-; CAR symbol = 3076
-        LD    #3076
-        MULS  #4096
-        ADD   #1005
-        ST    1006            ; Cell 1006 = (CAR (QUOTE (A B C)))
+    ; Is EXPR an atom? (>= 3000)
+    LD    EXPR
+    SUB   #3000
+    JNN   EV_ATOM         ; It's an atom
 
-; Save expression to evaluate
-        LD    #1006
-        ST    611             ; EXPR = (CAR (QUOTE (A B C)))
+    ; EXPR is a cell - get CAR
+    LD    EXPR
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EV_FN           ; Function/special form
 
-; --------------------------------------------------------
-; Step 4: EVALUATE (CAR (QUOTE (A B C)))
-; --------------------------------------------------------
-; EVAL dispatch:
-;   - If NIL, return NIL
-;   - If atom, return atom (self-evaluating for now)
-;   - If list, check operator and dispatch
+    ; Check for QUOTE (4000)
+    LD    EV_FN
+    SUB   #4000
+    JZ    EV_QUOTE
 
-EVAL_START:
-        LD    611             ; Load EXPR
-        ST    613             ; TEMP1 = expr
+    ; Check for COND (4006)
+    LD    EV_FN
+    SUB   #4006
+    JZ    EV_COND
 
-        ; Check if NIL
-        SUB   #4095
-        JZ    RET_NIL
+    ; Get args (cdr of expr)
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    EV_ARGS
 
-        ; Check if atom (>= 3072)
-        LD    613
-        SUB   #3072
-        JNN   RET_SELF        ; Atoms self-evaluate
+    ; Check primitives
+    LD    EV_FN
+    SUB   #4001           ; CAR
+    JZ    P_CAR
 
-        ; It's a list - get CAR (operator)
-        LD    613             ; expr address
-        LDR   613
-        LD    0,R             ; Load cell
-        DIV   #4096           ; CAR = operator
-        ST    614             ; TEMP2 = operator
+    LD    EV_FN
+    SUB   #4002           ; CDR
+    JZ    P_CDR
 
-        ; Get CDR (arguments list)
-        LDR   613
-        LD    0,R
-        ST    615             ; Save cell
-        DIV   #4096
-        MULS  #4096
-        ST    616
-        LD    615
-        SUB   616
-        ST    615             ; TEMP3 = args list
+    LD    EV_FN
+    SUB   #4003           ; CONS
+    JZ    P_CONS
 
-        ; Check if operator is QUOTE (3080)
-        LD    614
-        SUB   #3080
-        JZ    DO_QUOTE
+    LD    EV_FN
+    SUB   #4004           ; ATOM
+    JZ    P_ATOM
 
-        ; Check if operator is CAR (3076)
-        LD    614
-        SUB   #3076
-        JZ    DO_CAR
+    LD    EV_FN
+    SUB   #4005           ; EQ
+    JZ    P_EQ
 
-        ; Check if operator is CDR (3077)
-        LD    614
-        SUB   #3077
-        JZ    DO_CDR
+    ; Unknown function - return NIL
+    LD    #4095
+    ST    RESULT
+    J     EV_RET
 
-        ; Unknown operator - return NIL
-        J     RET_NIL
+EV_ATOM:
+    ; Atoms self-evaluate
+    LD    EXPR
+    ST    RESULT
+    J     EV_RET
 
-; --------------------------------------------------------
-; QUOTE: Return first argument unevaluated
-; --------------------------------------------------------
-DO_QUOTE:
-        ; args in TEMP3 (615), get CAR of args
-        LD    615
-        LDR   615
-        LD    0,R
-        DIV   #4096           ; CAR of args = quoted value
-        ST    612             ; RESULT = quoted value
-        J     DONE
+EV_QUOTE:
+    ; (QUOTE x) -> cadr(expr)
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR            ; cdr(expr)
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR            ; car(cdr(expr))
+    J     EV_RET
 
-; --------------------------------------------------------
-; CAR: Evaluate argument, then take CAR
-; --------------------------------------------------------
-DO_CAR:
-        ; args in TEMP3 (615), get first arg
-        LD    615
-        LDR   615
-        LD    0,R
-        DIV   #4096           ; CAR of args = argument expr
-        ST    616             ; TEMP4 = argument to CAR
+EV_COND:
+    ; (COND clauses...) -> evcon
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    EV_CLAUSES
 
-        ; Need to evaluate the argument
-        ; Check if it's a list (could be (QUOTE ...))
-        LD    616
-        SUB   #3072
-        JNN   CAR_OF_ATOM     ; If atom, can't take CAR
+EV_COND_LOOP:
+    ; Done if clauses = NIL
+    LD    EV_CLAUSES
+    SUB   #4095
+    JZ    EV_COND_NIL
 
-        ; It's a list - check if (QUOTE ...)
-        LD    616
-        LDR   616
-        LD    0,R
-        DIV   #4096           ; CAR of arg = operator
-        ST    617             ; Save operator
+    ; Get first clause
+    LD    EV_CLAUSES
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EV_CLAUSE       ; (test result)
 
-        ; Check if QUOTE
-        SUB   #3080
-        JNZ   CAR_ERROR       ; Not QUOTE, can't handle yet
+    ; Save clauses for later
+    LD    EV_CLAUSES
+    ST    EV_SAVE
 
-        ; It's (QUOTE value) - extract the value
-        ; CDR of arg is (value)
-        LDR   616
-        LD    0,R
-        ST    613
-        DIV   #4096
-        MULS  #4096
-        ST    614
-        LD    613
-        SUB   614             ; CDR of (QUOTE value) = (value)
-        ST    613             ; (value)
+    ; Eval car(clause) = test
+    LD    EV_CLAUSE
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
 
-        ; CAR of (value) = value
-        LDR   613
-        LD    0,R
-        DIV   #4096           ; The actual value (should be ptr to list)
-        ST    617             ; ARG_VAL = evaluated argument
+    ; Restore clauses
+    LD    EV_SAVE
+    ST    EV_CLAUSES
 
-        ; Now take CAR of the evaluated value
-        LD    617
-        SUB   #3072
-        JNN   CAR_OF_ATOM     ; If atom, error
+    ; If result != NIL, return cadr(clause)
+    LD    RESULT
+    SUB   #4095
+    JZ    EV_COND_NEXT
 
-        ; It's a list, take its CAR
-        LDR   617
-        LD    0,R
-        DIV   #4096           ; CAR of the list
-        ST    612             ; RESULT
-        J     DONE
+    ; Test passed - return cadr(clause)
+    LD    EV_CLAUSES
+    ST    ARG
+    JFL   PCAR            ; Get clause again
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR            ; cdr(clause)
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR            ; car(cdr(clause))
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    J     EV_RET
 
-CAR_OF_ATOM:
-        LD    #4095           ; Error: CAR of atom = NIL
-        ST    612
-        J     DONE
+EV_COND_NEXT:
+    LD    EV_CLAUSES
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    EV_CLAUSES
+    J     EV_COND_LOOP
 
-CAR_ERROR:
-        LD    #4095           ; Error = NIL
-        ST    612
-        J     DONE
+EV_COND_NIL:
+    LD    #4095
+    ST    RESULT
+    J     EV_RET
 
-; --------------------------------------------------------
-; CDR: Evaluate argument, then take CDR
-; --------------------------------------------------------
-DO_CDR:
-        ; Similar to CAR but extract low 12 bits
-        LD    615
-        LDR   615
-        LD    0,R
-        DIV   #4096           ; First arg
-        ST    616
+; --- Primitives ---
 
-        ; Check if (QUOTE ...)
-        LD    616
-        SUB   #3072
-        JNN   CDR_OF_ATOM
+P_CAR:
+    ; (CAR x) - eval arg, then car
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR            ; Get first arg
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE
+    JFL   EVAL            ; Eval it
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR            ; car(result)
+    J     EV_RET
 
-        ; Get operator of arg
-        LDR   616
-        LD    0,R
-        DIV   #4096
-        SUB   #3080
-        JNZ   CDR_ERROR
+P_CDR:
+    ; (CDR x) - eval arg, then cdr
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    J     EV_RET
 
-        ; Extract quoted value
-        LDR   616
-        LD    0,R
-        ST    613
-        DIV   #4096
-        MULS  #4096
-        ST    614
-        LD    613
-        SUB   614
-        ST    613
+P_CONS:
+    ; (CONS a b) - eval both, cons
+    ; First arg
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE
+    JFL   EVAL
+    LD    RESULT
+    ST    CONS_A
 
-        LDR   613
-        LD    0,R
-        DIV   #4096
-        ST    617             ; Evaluated arg
+    ; Second arg
+    LD    EV_SAVE
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    CONS_D
 
-        ; Take CDR of it
-        LD    617
-        SUB   #3072
-        JNN   CDR_OF_ATOM
+    JFL   PCONS
+    J     EV_RET
 
-        LDR   617
-        LD    0,R
-        ST    613
-        DIV   #4096
-        MULS  #4096
-        ST    614
-        LD    613
-        SUB   614             ; CDR
-        ST    612
-        J     DONE
+P_ATOM:
+    ; (ATOM x) - eval, return T if atom
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
 
-CDR_OF_ATOM:
-        LD    #4095
-        ST    612
-        J     DONE
+    LD    RESULT
+    SUB   #3000
+    JN    P_ATOM_NO
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+P_ATOM_NO:
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
 
-CDR_ERROR:
-        LD    #4095
-        ST    612
-        J     DONE
+P_EQ:
+    ; (EQ a b) - eval both, compare
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE
+    JFL   EVAL
+    LD    RESULT
+    ST    EQ_A
 
-; --------------------------------------------------------
-; Return handlers
-; --------------------------------------------------------
-RET_NIL:
-        LD    #4095
-        ST    612
-        J     DONE
+    LD    EV_SAVE
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
 
-RET_SELF:
-        LD    613
-        ST    612
-        J     DONE
+    LD    RESULT
+    SUB   EQ_A
+    JNZ   P_EQ_NO
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+P_EQ_NO:
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
 
-; --------------------------------------------------------
-; DONE - Store results for inspection
-; --------------------------------------------------------
-DONE:
-        ; Result is in 612
-        LD    612
-        ST    620             ; Copy result to 620
+EV_RET:
+    LD    EV_LINK
+    ST    0
+    JI    0               ; Indirect jump via address 0
 
-        ; Also store intermediate values for debugging
-        LD    1000
-        ST    621             ; Cell 1000: (C . NIL)
-        LD    1001
-        ST    622             ; Cell 1001: (B C)
-        LD    1002
-        ST    623             ; Cell 1002: (A B C)
-        LD    1004
-        ST    624             ; Cell 1004: (QUOTE (A B C))
-        LD    1006
-        ST    625             ; Cell 1006: (CAR (QUOTE (A B C)))
+; ============================================================================
+; PCAR - Primitive CAR
+; Input:  ARG = cell
+; Output: RESULT = car(cell)
+; ============================================================================
+PCAR:
+    LD    0
+    ST    PCAR_LINK
 
-        J     HALT
+    LD    ARG
+    SUB   #3000
+    JNN   PCAR_ATOM       ; Atom - return as-is
 
-HALT:   J     HALT
+    ; Load cell, extract upper 12 bits
+    LDR   ARG
+    LD    0,R
+    DIV   #4096
+    ST    RESULT
+    J     PCAR_RET
 
-; --------------------------------------------------------
-; EXPECTED RESULTS (at addresses 620-625):
-; 620: 3072 (atom A - the result of (CAR (QUOTE (A B C))))
-; 621: (C.NIL) = 3074*4096 + 4095 = 12591103 (octal 60037777)
-; 622: (B.1000) = 3073*4096 + 1000 = 12587000
-; 623: (A.1001) = 3072*4096 + 1001 = 12583929
-; 624: (QUOTE.(args))
-; 625: (CAR.(args))
-; --------------------------------------------------------
+PCAR_ATOM:
+    LD    ARG
+    ST    RESULT
 
-; Data area
-620: #0
-621: #0
-622: #0
-623: #0
-624: #0
-625: #0
+PCAR_RET:
+    LD    PCAR_LINK
+    ST    0
+    JI    0               ; Indirect jump via address 0
+
+; ============================================================================
+; PCDR - Primitive CDR
+; Input:  ARG = cell
+; Output: RESULT = cdr(cell)
+; ============================================================================
+PCDR:
+    LD    0
+    ST    PCDR_LINK
+
+    LD    ARG
+    SUB   #3000
+    JNN   PCDR_ATOM
+
+    ; Load cell, extract lower 12 bits
+    LDR   ARG
+    LD    0,R
+    ST    T1
+    DIV   #4096
+    MULS  #4096
+    ST    T2
+    LD    T1
+    SUB   T2
+    ST    RESULT
+    J     PCDR_RET
+
+PCDR_ATOM:
+    LD    #4095           ; CDR of atom = NIL
+    ST    RESULT
+
+PCDR_RET:
+    LD    PCDR_LINK
+    ST    0
+    JI    0               ; Indirect jump via address 0
+
+; ============================================================================
+; PCONS - Primitive CONS
+; Input:  CONS_A, CONS_D
+; Output: RESULT = new cell address
+; ============================================================================
+PCONS:
+    LD    0
+    ST    PCONS_LINK
+
+    LD    HEAP
+    ST    RESULT
+
+    LD    CONS_A
+    MULS  #4096
+    ADD   CONS_D
+    LDR   RESULT
+    ST    0,R
+
+    LD    HEAP
+    ADD   #1
+    ST    HEAP
+
+    LD    PCONS_LINK
+    ST    0
+    JI    0               ; Indirect jump via address 0
+
+; ============================================================================
+; Data
+; ============================================================================
+
+; Subroutine links
+EV_LINK:    #0
+PCAR_LINK:  #0
+PCDR_LINK:  #0
+PCONS_LINK: #0
+
+; EVAL state
+EXPR:       #0
+RESULT:     #0
+EV_FN:      #0
+EV_ARGS:    #0
+EV_CLAUSES: #0
+EV_CLAUSE:  #0
+EV_SAVE:    #0
+
+; Primitive args
+ARG:        #0
+CONS_A:     #0
+CONS_D:     #0
+EQ_A:       #0
+
+; Temporaries
+T1:         #0
+T2:         #0
+
+; Heap
+HEAP:       #0
+
+; Print
+PRINT_N:    #0
+
+; Output
+100:        #0

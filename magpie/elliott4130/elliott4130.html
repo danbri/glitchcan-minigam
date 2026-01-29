@@ -54,7 +54,7 @@
         .mem-hex { color: #0f0; width: 54px; }
         .mem-asm { color: #888; font-size: 8px; }
 
-        .teleprinter { background: #000; border: 1px solid #222; height: 28px; overflow-y: auto; padding: 2px; font-size: 9px; white-space: pre-wrap; }
+        .teleprinter { background: #000; border: 1px solid #0f0; height: 48px; overflow-y: auto; padding: 4px; font-size: 11px; color: #0f0; font-family: monospace; white-space: pre-wrap; }
 
         .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 60px; }
         .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 9px; padding: 2px; resize: none; line-height: 1.2; }
@@ -231,6 +231,7 @@
                 <option value="basic">CAR/CDR</option>
                 <option value="eval">EVAL</option>
                 <option value="evalfull">EVAL/APPLY</option>
+                <option value="nativelisp">Native LISP</option>
                 <option value="lambda">LAMBDA</option>
                 <option value="recurse">FACTORIAL</option>
                 <option value="gc">GC Leak</option>
@@ -1021,7 +1022,206 @@ HALT: J HALT
 EXPR:  #0
 ENV:   #0
 FN:    #0
-HEAP:  #0`
+HEAP:  #0`,
+
+    nativelisp: `; Native LISP Interpreter for Elliott 4130
+; Evaluates (CAR (QUOTE (A B))) -> A
+; Uses JFL/JI subroutine linkage, outputs result
+
+START:
+    LD    #1000
+    ST    HEAP
+
+    ; Build (B . NIL)
+    LD    #3001           ; B
+    MULS  #4096
+    ADD   #4095           ; NIL
+    ST    1000
+
+    ; Build (A . 1000) = (A B)
+    LD    #3000           ; A
+    MULS  #4096
+    ADD   #1000
+    ST    1001
+
+    ; Build (1001 . NIL) for QUOTE args
+    LD    #1001
+    MULS  #4096
+    ADD   #4095
+    ST    1002
+
+    ; Build (QUOTE . 1002)
+    LD    #4000           ; QUOTE
+    MULS  #4096
+    ADD   #1002
+    ST    1003
+
+    ; Build (1003 . NIL) for CAR args
+    LD    #1003
+    MULS  #4096
+    ADD   #4095
+    ST    1004
+
+    ; Build (CAR . 1004)
+    LD    #4001           ; CAR
+    MULS  #4096
+    ADD   #1004
+    ST    1005
+
+    LD    #1006
+    ST    HEAP
+
+    ; EVAL(1005)
+    LD    #1005
+    ST    EXPR
+    JFL   EVAL
+
+    ; Print result (3000=A -> letter 0)
+    LD    RESULT
+    SUB   #3000
+    ST    100             ; Result at 100
+
+DONE:
+    J     DONE
+
+; === EVAL ===
+EVAL:
+    LD    0
+    ST    EV_LINK
+
+    LD    EXPR
+    SUB   #3000
+    JNN   EV_ATOM
+
+    LD    EXPR
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EV_FN
+
+    LD    EV_FN
+    SUB   #4000
+    JZ    EV_QUOTE
+
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    EV_ARGS
+
+    LD    EV_FN
+    SUB   #4001
+    JZ    P_CAR
+
+    LD    EV_FN
+    SUB   #4002
+    JZ    P_CDR
+
+    LD    #4095
+    ST    RESULT
+    J     EV_RET
+
+EV_ATOM:
+    LD    EXPR
+    ST    RESULT
+    J     EV_RET
+
+EV_QUOTE:
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    J     EV_RET
+
+P_CAR:
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    J     EV_RET
+
+P_CDR:
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    J     EV_RET
+
+EV_RET:
+    LD    EV_LINK
+    ST    0
+    JI    0
+
+; === PCAR ===
+PCAR:
+    LD    0
+    ST    PCAR_L
+    LD    ARG
+    SUB   #3000
+    JNN   PCAR_A
+    LDR   ARG
+    LD    0,R
+    DIV   #4096
+    ST    RESULT
+    J     PCAR_R
+PCAR_A:
+    LD    ARG
+    ST    RESULT
+PCAR_R:
+    LD    PCAR_L
+    ST    0
+    JI    0
+
+; === PCDR ===
+PCDR:
+    LD    0
+    ST    PCDR_L
+    LD    ARG
+    SUB   #3000
+    JNN   PCDR_A
+    LDR   ARG
+    LD    0,R
+    ST    T1
+    DIV   #4096
+    MULS  #4096
+    ST    T2
+    LD    T1
+    SUB   T2
+    ST    RESULT
+    J     PCDR_R
+PCDR_A:
+    LD    #4095
+    ST    RESULT
+PCDR_R:
+    LD    PCDR_L
+    ST    0
+    JI    0
+
+; Data
+EV_LINK: #0
+PCAR_L:  #0
+PCDR_L:  #0
+EXPR:    #0
+RESULT:  #0
+EV_FN:   #0
+EV_ARGS: #0
+ARG:     #0
+T1:      #0
+T2:      #0
+HEAP:    #0
+100:     #0`
 };
 
 // Setup debug console input
