@@ -31,10 +31,14 @@ class E4130 {
     F_CA  = 0x100000;  // c21 - Carry-out
     F_OF  = 0x080000;  // c20 - Arithmetic overflow
 
-    // Interrupt levels
-    INT_HESITATION = 0;  // Hardware hesitation (highest)
-    INT_NORMAL = 1;      // Normal interrupt
-    INT_ATTENTION = 2;   // Attention interrupt
+    // Interrupt levels - Per E6X4: Hesitation (highest) > Attention (middle) > Normal (lowest)
+    INT_HESITATION = 0;  // Hardware hesitation (highest priority)
+    INT_ATTENTION = 1;   // Attention interrupt (middle priority)
+    INT_NORMAL = 2;      // Normal interrupt (lowest priority)
+
+    // Protected Mode constants - Per E6X4
+    MODE_EXECUTIVE = 0;  // Executive Mode - full memory access
+    MODE_PROTECTED = 1;  // Protected Mode - restricted to Base+Range
 
     reset() {
         this.M = 0;      // Main accumulator
@@ -47,6 +51,12 @@ class E4130 {
         this.halted = true;
         this.iCount = 0;
         this.breakpoints = new Set();
+
+        // Protected Mode registers - Per E6X4
+        // Base and Range are 10-bit registers giving permitted memory region
+        this.baseReg = 0;        // Base address (10-bit, addresses 1024-word blocks)
+        this.rangeReg = 0;       // Range (10-bit, number of 1024-word blocks permitted)
+        this.executiveMode = true;  // Start in Executive Mode (full access)
 
         // I/O system
         this.inputBuffer = [];      // Keyboard input queue
@@ -105,9 +115,33 @@ class E4130 {
     }
 
     /**
+     * Check if address is within Protected Mode bounds
+     * Per E6X4: Base and Range are 10-bit, addressing 1024-word blocks
+     * Permitted region: [baseReg * 1024, (baseReg + rangeReg) * 1024)
+     */
+    checkProtection(a) {
+        if (this.executiveMode) return true;  // Executive Mode has full access
+
+        const addr = a & 0xFFFF;
+        const baseAddr = this.baseReg * 1024;
+        const limitAddr = (this.baseReg + this.rangeReg) * 1024;
+
+        if (addr >= baseAddr && addr < limitAddr) {
+            return true;
+        }
+
+        // Protection violation - raise interrupt and return false
+        this.raiseInterrupt(this.INT_ATTENTION, 1);  // Memory protection violation
+        return false;
+    }
+
+    /**
      * Read memory at address
      */
     rd(a) {
+        if (!this.checkProtection(a)) {
+            return 0;  // Protection violation returns 0
+        }
         return this.mem[a & 0xFFFF] & this.MASK24;
     }
 
@@ -115,6 +149,9 @@ class E4130 {
      * Write memory at address
      */
     wr(a, v) {
+        if (!this.checkProtection(a)) {
+            return;  // Protection violation - write ignored
+        }
         this.mem[a & 0xFFFF] = v & this.MASK24;
     }
 
@@ -383,10 +420,18 @@ class E4130 {
             case 0o70: // Register operations
                 if (y === 0) this.regOp(n);
                 break;
-            case 0o72: // DIVM - Double-length divide
+            case 0o72: // DIVM - Double-length divide: m' = (r,m)/Q; r' = remainder
                 if (y !== 0 && op) {
-                    const dv = (this.R << 24) | this.M;
-                    this.M = Math.floor(dv / this.sx(op)) & this.MASK24;
+                    // Per E6X3: Treat (R,M) as 48-bit dividend, op as 24-bit divisor
+                    // Use BigInt for 48-bit precision
+                    const dividend = (BigInt(this.R) << 24n) | BigInt(this.M);
+                    const divisor = BigInt(this.sx(op));
+                    if (divisor !== 0n) {
+                        const quotient = dividend / divisor;
+                        const remainder = dividend % divisor;
+                        this.M = Number(quotient & 0xFFFFFFn);
+                        this.R = Number(remainder & 0xFFFFFFn);  // Per E6X3: r' = remainder
+                    }
                 }
                 break;
             case 0o73: // MULM - Double-length multiply
@@ -429,6 +474,7 @@ class E4130 {
 
     /**
      * Execute shift operation
+     * Per E6X3 manual: Full complement of 16 shift instructions
      */
     shift(n) {
         const k = this.K & 0x3F;  // Shift count from K register
@@ -437,22 +483,122 @@ class E4130 {
             case 0o00: // SRL - Shift R left
                 this.R = (this.R << k) & this.MASK24;
                 break;
+            case 0o01: // SRLA - Shift R left circularly
+                if (k > 0) {
+                    const kmod = k % 24;
+                    this.R = ((this.R << kmod) | (this.R >>> (24 - kmod))) & this.MASK24;
+                }
+                break;
             case 0o02: // SRR - Shift R right arithmetic
                 this.R = this.sx(this.R) >> k;
                 this.R &= this.MASK24;
                 break;
+            case 0o03: // SRLC - Shift R by k characters left (k*6 bits)
+                if (k > 0) {
+                    const bits = (k * 6) % 24;
+                    this.R = ((this.R << bits) | (this.R >>> (24 - bits))) & this.MASK24;
+                }
+                break;
             case 0o04: // SML - Shift M left
                 this.M = (this.M << k) & this.MASK24;
+                break;
+            case 0o05: // SMLA - Shift M left circularly
+                if (k > 0) {
+                    const kmod = k % 24;
+                    this.M = ((this.M << kmod) | (this.M >>> (24 - kmod))) & this.MASK24;
+                }
                 break;
             case 0o06: // SMR - Shift M right arithmetic
                 this.M = this.sx(this.M) >> k;
                 this.M &= this.MASK24;
+                break;
+            case 0o07: // SMLC - Shift M by k characters left (k*6 bits)
+                if (k > 0) {
+                    const bits = (k * 6) % 24;
+                    this.M = ((this.M << bits) | (this.M >>> (24 - bits))) & this.MASK24;
+                }
                 break;
             case 0o12: // SRRL - Shift R right logical
                 this.R = (this.R >>> k) & this.MASK24;
                 break;
             case 0o16: // SMRL - Shift M right logical
                 this.M = (this.M >>> k) & this.MASK24;
+                break;
+            case 0o20: // SRST - Shift R until standardized (critical for FP normalization)
+                // Shift left until bits 22 and 23 differ, counting shifts in K
+                {
+                    let count = 0;
+                    while (count < 24 && this.R !== 0) {
+                        const b22 = (this.R >> 22) & 1;
+                        const b23 = (this.R >> 23) & 1;
+                        if (b22 !== b23) break;  // Standardized
+                        this.R = (this.R << 1) & this.MASK24;
+                        count++;
+                    }
+                    this.K = count & this.MASK12;
+                }
+                break;
+            case 0o24: // SMST - Shift M until standardized (critical for FP normalization)
+                // Shift left until bits 22 and 23 differ, counting shifts in K
+                {
+                    let count = 0;
+                    while (count < 24 && this.M !== 0) {
+                        const b22 = (this.M >> 22) & 1;
+                        const b23 = (this.M >> 23) & 1;
+                        if (b22 !== b23) break;  // Standardized
+                        this.M = (this.M << 1) & this.MASK24;
+                        count++;
+                    }
+                    this.K = count & this.MASK12;
+                }
+                break;
+            case 0o40: // SBL - Shift both M and R left (48-bit shift)
+                {
+                    // Treat (R,M) as 48-bit register, shift left
+                    const dbl = (BigInt(this.R) << 24n) | BigInt(this.M);
+                    const shifted = (dbl << BigInt(k)) & 0xFFFFFFFFFFFFn;
+                    this.R = Number((shifted >> 24n) & 0xFFFFFFn);
+                    this.M = Number(shifted & 0xFFFFFFn);
+                }
+                break;
+            case 0o42: // SBR - Shift both M and R right arithmetic (48-bit)
+                {
+                    // Treat (R,M) as 48-bit signed, shift right arithmetic
+                    let dbl = (BigInt(this.R) << 24n) | BigInt(this.M);
+                    // Sign extend if bit 47 is set
+                    if (this.R & this.SIGN) {
+                        dbl = dbl | (~0xFFFFFFFFFFFFn);
+                    }
+                    const shifted = dbl >> BigInt(k);
+                    this.R = Number((shifted >> 24n) & 0xFFFFFFn);
+                    this.M = Number(shifted & 0xFFFFFFn);
+                }
+                break;
+            case 0o52: // SBRL - Shift both M and R right logical (48-bit)
+                {
+                    const dbl = (BigInt(this.R) << 24n) | BigInt(this.M);
+                    const shifted = dbl >> BigInt(k);
+                    this.R = Number((shifted >> 24n) & 0xFFFFFFn);
+                    this.M = Number(shifted & 0xFFFFFFn);
+                }
+                break;
+            case 0o62: // SBST - Shift both until standardized (48-bit normalization)
+                {
+                    let count = 0;
+                    while (count < 48) {
+                        // Check if bits 46 and 47 of combined (R,M) differ
+                        const b46 = (this.R >> 22) & 1;
+                        const b47 = (this.R >> 23) & 1;
+                        if (b46 !== b47) break;  // Standardized
+                        if (this.R === 0 && this.M === 0) break;  // Zero is standardized
+                        // Shift (R,M) left by 1
+                        const mTop = (this.M >> 23) & 1;
+                        this.R = ((this.R << 1) | mTop) & this.MASK24;
+                        this.M = (this.M << 1) & this.MASK24;
+                        count++;
+                    }
+                    this.K = count & this.MASK12;
+                }
                 break;
         }
         this.setC(this.M);
@@ -566,11 +712,16 @@ class E4130 {
 
             // Character packing instructions
             case 0o70: // GET - Unpack character from Q
+                // Per E6X3: Q' = Q(bcda); m' = m(abc)Q(a)
+                // Q is 4 6-bit characters: a(23-18), b(17-12), c(11-6), d(5-0)
                 if (y === 1 || y === 3) {
-                    // Q' = Q rotated left 6 bits, M gets top 6 bits
-                    const char = (this.Q >> 18) & this.MASK6;
-                    this.Q = ((this.Q << 6) | char) & this.MASK24;
-                    this.M = char;
+                    // Save Q's top character (a) before rotation
+                    const qCharA = (this.Q >> 18) & this.MASK6;
+                    // Rotate Q left by 6 bits: bcda
+                    this.Q = ((this.Q << 6) | qCharA) & this.MASK24;
+                    // M' = m(abc)Q(a): top 3 chars of M (18 bits) + Q's original top char
+                    const mTop3 = (this.M >> 6) & 0x3FFFF;  // Characters a, b, c of M (18 bits)
+                    this.M = ((mTop3 << 6) | qCharA) & this.MASK24;
                 } else if (y === 0) {
                     // Special register operations
                     this.regOpExtra(n);
@@ -578,10 +729,19 @@ class E4130 {
                 break;
 
             case 0o71: // PUT - Pack character into Q
+                // Per E6X3: Q' = Q(bcdm); m' = m(abcQ(a))
+                // Shift Q left by 6 bits, insert M's bottom character
+                // M gets rotated left, with Q's old top char inserted at bottom
                 if (y === 1 || y === 3) {
-                    // Q' = Q shifted left 6 bits, M low 6 bits inserted
-                    const char = this.M & this.MASK6;
-                    this.Q = ((this.Q << 6) | char) & this.MASK24;
+                    // Save Q's top character (a) before shift
+                    const qCharA = (this.Q >> 18) & this.MASK6;
+                    // Save M's bottom character
+                    const mCharD = this.M & this.MASK6;
+                    // Q' = Q shifted left 6 bits, M's bottom char inserted
+                    this.Q = ((this.Q << 6) | mCharD) & this.MASK24;
+                    // M' = M rotated left 6 bits, Q's old top char at bottom
+                    const mTop = (this.M >> 18) & this.MASK6;
+                    this.M = ((this.M << 6) | qCharA) & this.MASK24;
                 }
                 break;
 
@@ -638,6 +798,33 @@ class E4130 {
                 break;
             case 0o41000: // ATOM - Attention word to M
                 this.M = this.attentionWord;
+                break;
+            // Protected Mode instructions - Per E6X4
+            case 0o01000: // EXEN - Enter Executive Mode
+                // Only permitted from Executive Mode or interrupt handlers
+                if (this.executiveMode) {
+                    this.executiveMode = true;
+                }
+                break;
+            case 0o02000: // PMEN - Enter Protected Mode
+                // Sets Protected Mode with current Base and Range registers
+                this.executiveMode = false;
+                break;
+            case 0o04000: // LDBR - Load Base Register from M
+                if (this.executiveMode) {
+                    this.baseReg = this.M & 0x3FF;  // 10-bit
+                }
+                break;
+            case 0o10000: // LDRR - Load Range Register from M
+                if (this.executiveMode) {
+                    this.rangeReg = this.M & 0x3FF;  // 10-bit
+                }
+                break;
+            case 0o00400: // BRTM - Base Register to M
+                this.M = this.baseReg;
+                break;
+            case 0o00401: // RRTM - Range Register to M
+                this.M = this.rangeReg;
                 break;
         }
     }
