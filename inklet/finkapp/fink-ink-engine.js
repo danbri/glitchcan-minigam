@@ -67,13 +67,22 @@ window.FinkInkEngine = {
 
             if (!inkSuccess) {
                 FinkUtils.debugLog('INK compilation failed');
-                FinkUI.showStatus('INK compilation failed. Check story syntax.');
+                // BUG-007 FIX: Show recovery option for compilation failures
+                // Get the previous URL from breadcrumb if available
+                const prevUrl = window.FinkBreadcrumb && FinkBreadcrumb.finkStack.length > 1
+                    ? FinkBreadcrumb.finkStack[FinkBreadcrumb.finkStack.length - 2]?.url
+                    : null;
+                this.showLoadErrorWithRecovery('INK compilation failed. Story syntax may be invalid.', prevUrl);
                 return;
             }
 
         } catch (error) {
             FinkUtils.debugLog('FATAL error processing FINK: ' + error.message);
-            FinkUI.showStatus('Fatal Error: ' + error.message);
+            // BUG-007 FIX: Show recovery option for fatal errors
+            const prevUrl = window.FinkBreadcrumb && FinkBreadcrumb.finkStack.length > 1
+                ? FinkBreadcrumb.finkStack[FinkBreadcrumb.finkStack.length - 2]?.url
+                : null;
+            this.showLoadErrorWithRecovery('Fatal Error: ' + error.message, prevUrl);
             console.error('FINK processing error:', error);
         }
     },
@@ -486,11 +495,17 @@ window.FinkInkEngine = {
         }
 
         FinkUtils.debugLog('Loading external FINK file: ' + this.lastSeenFinkTag);
-        FinkUI.showStatus('Loading ' + this.lastSeenFinkTag + '...', true);
 
         const baseUrl = FinkPlayer.currentStoryUrl || window.location.href;
         const resolvedUrl = new URL(this.lastSeenFinkTag, baseUrl).href;
         FinkUtils.debugLog('Resolved URL: ' + resolvedUrl);
+
+        // BUG-007 FIX: Clear old content IMMEDIATELY before loading new FINK
+        // Previously, old content (e.g., TOC's "Bag End" text) remained visible during
+        // the 500ms delay and after any load failures, causing confusing partial states.
+        FinkUI.clearStory();
+        FinkUI.clearChoices();
+        FinkUI.showStatus('Loading ' + this.lastSeenFinkTag.split('/').pop() + '...', true);
 
         if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', this.lastSeenFinkTag);
 
@@ -502,6 +517,9 @@ window.FinkInkEngine = {
             FinkUtils.debugLog('Clearing URL hash before FINK load to prevent navigation loop');
             history.replaceState(null, '', window.location.pathname + window.location.search);
         }
+
+        // Store previous FINK URL for recovery option
+        const previousFinkUrl = FinkPlayer.currentStoryUrl;
 
         // 500ms delay before loading (matches working hamfink2026 timing)
         // NOTE: This delay was added to match hamfink2026 behavior during initial port.
@@ -535,10 +553,58 @@ window.FinkInkEngine = {
             })
             .catch(error => {
                 FinkUtils.debugLog('Error loading external FINK: ' + error.message);
-                FinkUI.showStatus('Error loading external story: ' + error.message);
+                // BUG-007 FIX: Show clear error with recovery option
+                this.showLoadErrorWithRecovery(error.message, previousFinkUrl);
                 if (window.swimEvent) swimEvent('net', '❌', 'Load Failed', error.message);
             });
         }, 500);
+    },
+
+    // Show load error with option to return to previous FINK
+    showLoadErrorWithRecovery(errorMessage, previousFinkUrl) {
+        FinkUI.hideStatus();
+
+        // BUG-007 FIX: Pop the failed level from breadcrumb to fix flat hierarchy display
+        if (window.FinkBreadcrumb) {
+            FinkBreadcrumb.popCurrentLevel();
+        }
+
+        // Create error message element
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-chunk visible';
+        errorDiv.style.color = 'var(--zx-red, #f43f5e)';
+        errorDiv.innerHTML = `<strong>Failed to load story:</strong> ${errorMessage}`;
+
+        const storyOutput = document.getElementById('story-output');
+        if (storyOutput) {
+            storyOutput.appendChild(errorDiv);
+        }
+
+        // Create recovery buttons
+        FinkUI.clearChoices();
+        const choicesContainer = document.getElementById('choices');
+        if (choicesContainer && previousFinkUrl) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'choice-btn';
+            backBtn.textContent = '← Return to previous story';
+            backBtn.addEventListener('click', () => {
+                FinkPlayer.loadFinkStory(previousFinkUrl);
+            });
+            choicesContainer.appendChild(backBtn);
+            setTimeout(() => backBtn.classList.add('ready'), 100);
+        }
+
+        // Always offer home button
+        if (choicesContainer) {
+            const homeBtn = document.createElement('button');
+            homeBtn.className = 'choice-btn';
+            homeBtn.textContent = '🏠 Return to main menu';
+            homeBtn.addEventListener('click', () => {
+                FinkPlayer.returnToMainMenu();
+            });
+            choicesContainer.appendChild(homeBtn);
+            setTimeout(() => homeBtn.classList.add('ready'), 200);
+        }
     },
 
     // Extract story-level tags from compiled INK Story

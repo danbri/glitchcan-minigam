@@ -4,23 +4,40 @@
 
 ### BUG-007: Breadcrumb nav shows flat knots, story loading fails (Bagend, Diamond Ch2)
 **Severity:** P0 - Critical
-**File:** `inklet/demos/hamfink2026.html`, breadcrumb/navigation system
+**File:** `inklet/finkapp/fink-ink-engine.js`, `inklet/finkapp/fink-breadcrumb.js`
 **Reported:** 2026-01-20
-**Status:** OPEN
-**Merged to main:** PR #585
+**Status:** FIXED
+**Fixed:** 2026-01-29
 
 **Symptoms:**
 1. **Nav bar panel shows all knots as if part of "toc"** - should be nested bullet points showing path within a given FINK, and transitions between FINKs
 2. **Bagend loading fails** - glitch canary image continues from TOC, then green box with blank line then "Bag End", nothing more
 3. **Diamond Ch2 fails on entry** - green box containing "You step through the portal into a realm of pure crystalline energy…" and nothing more
 
-**Context:** Recent commits attempted to fix FINK loading and breadcrumb hierarchy:
-- `a20abed` revert: Restore absolute FINK paths in toc.fink.js
-- `f780011` fix: FINK loading and breadcrumb hierarchy
-- `2444f82` feat: Interactive INK-based recovery for failed deep links
-- `d606e20` fix: Improve FINK breadcrumb navigation and deep linking
+**Root cause found:**
+When a FINK tag was detected, the code displayed partial content (e.g., "Bag End" text from TOC's `hobbit_selected` knot) BEFORE starting the external load. Then:
+1. A 500ms delay occurred before attempting the external load
+2. If the external FINK failed to load or compile, the old partial content remained visible
+3. The breadcrumb stack had an entry for the failed FINK but with no knots recorded
+4. Users saw a confusing mix of old TOC content + error state, with no way to recover
 
-**Root cause:** TBD - needs investigation
+**Fix applied (3 parts):**
+
+1. **Clear old content immediately when FINK tag detected** (`fink-ink-engine.js:494-499`):
+   - Call `FinkUI.clearStory()` and `FinkUI.clearChoices()` BEFORE the 500ms delay
+   - Show loading indicator so user sees clean transition state
+   - Old content no longer visible during load or after failure
+
+2. **Add error recovery UI** (`fink-ink-engine.js:563-608`):
+   - New `showLoadErrorWithRecovery()` method shows clear error message
+   - Provides "← Return to previous story" button using stored previousFinkUrl
+   - Provides "🏠 Return to main menu" button as fallback
+   - User is never stuck in broken state
+
+3. **Pop failed level from breadcrumb** (`fink-breadcrumb.js:182-193`):
+   - New `popCurrentLevel()` method removes failed FINK from stack
+   - Called in `showLoadErrorWithRecovery()` when load fails
+   - Breadcrumb hierarchy stays accurate (no empty failed levels)
 
 ---
 
