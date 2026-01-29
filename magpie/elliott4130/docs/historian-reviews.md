@@ -1,131 +1,98 @@
-# Elliott 4130 Emulator - Computer Historian Reviews
+# Elliott 4130 Emulator - Full Computer Historian Reviews
 
-Critical assessment by skeptical Computer History professionals reviewing the emulator against CCS E6X1-E6X5 reference manuals.
-
----
-
-## Summary Table
-
-| Manual | Focus Area | Grade | Critical Issues |
-|--------|-----------|-------|-----------------|
-| E6X1 | Basic Architecture | C- | FP format wrong, extracodes inline, JFL broken |
-| E6X2 | Full Architecture | D- | Short instruction packing ignored, FP fabricated, flags wrong positions |
-| E6X3 | Instruction Set | D+ | Extracodes as hardware not subroutines, FP 24-bit not 48-bit, missing shifts |
-| E6X4 | Software/OS | C- | Interrupt priority backwards, no Protected Mode, no Base/Range registers |
-| E6X5 | I/O System | C- | Short instructions broken, FP completely wrong, condition bits wrong |
-
-**Consensus Grade: D+**
+Complete reviews from skeptical Computer History professionals analyzing the emulator against CCS E6X1-E6X5 reference manuals.
 
 ---
 
-## Review 1: E6X1 (Basic Architecture)
+## Review 1: E6X1 Analysis
 
-### Grade: C-
+### Note on Document
+CCS-E6X1 is a **customer delivery list** showing who purchased Elliott 4120/4130 computers between 1965-1966 (G. Maunsell & Partners, Sussex University, British Petroleum, etc.), NOT a technical reference manual.
 
-The emulator is functional for basic computation and succeeds in running a LISP interpreter, but contains significant deviations from the documented Elliott 4130 architecture that would cause real historical software to fail.
+Technical specifications are in E6X2 (architecture) and E6X3 (instruction set).
 
-### CRITICAL Issues
+### Grade: D+
 
-#### 1.1 Floating-Point Format is Completely Wrong
-**Reference (E6X3 p.6):** "48 bits mantissa and 12 bits exponent" in CPU registers, "39 bits mantissa and 9 bits exponent" when packed in memory (two 24-bit words).
+The emulator captures the general flavor of a 24-bit 1960s minicomputer but contains fundamental inaccuracies that would cause virtually any real Elliott 4130 software to fail. It is useful for educational demonstration only.
 
-**Emulator implements:**
+### Critical Issues
+
+#### 1.1 Floating-Point Format is Completely Fabricated
+
+**E6X2/E6X3 Reference:**
+> "On the 4130 where hardware is used, the mantissa occupies 48 bits within CPU registers and the exponent 12 bits... When held in memory, floating-point numbers are normally rounded and packed into **two words** containing **39 bits of mantissa and 9 bits of exponent**."
+
+**Emulator (lines 891-894):**
 ```javascript
-// Bit 23: Sign (0=positive, 1=negative)
-// Bits 17-22: Exponent (6 bits, excess-32 bias)
-// Bits 0-16: Mantissa (17 bits, normalized with implicit 1)
+// Elliott 4130 used 24-bit floating point:
+//   Bit 23: Sign (0=positive, 1=negative)
+//   Bits 17-22: Exponent (6 bits, excess-32 bias)
+//   Bits 0-16: Mantissa (17 bits, normalized with implicit 1)
 ```
 
-This is a **completely fabricated** single-word format. The real Elliott 4130 had **hardware floating-point** using double-word (48-bit) representation.
+This is **completely fictional**. The real 4130 had one of the most sophisticated floating-point units of its era, with 48-bit internal precision.
 
-#### 1.2 Extracode Mechanism Not Implemented
-**Reference:** Extracodes should:
-- Place operand/address in location 1
-- Place link (c24-18 + S) in location 2
-- Jump to memory location 2*F (or 2*F+1 for Y>0)
+#### 1.2 Short Instruction Packing Ignored
 
-**Emulator:** Executes extracodes inline as if they were hardware instructions.
+**E6X2 Table 1:** "Number of instructions per word: **1 or 2**"
 
-#### 1.3 JFL Subroutine Linkage is Wrong
-**Reference:** `0' = c24-18 + s; s' = s + N`
+The emulator treats every instruction as consuming an entire word. Real Elliott code using packed short instructions would execute only **half** its instructions.
 
-The link stored at address 0 should include **bits 24-18 of C concatenated with S**.
+#### 1.3 Extracode Mechanism Fundamentally Wrong
+
+Real 4130 implemented extracodes as **software traps** to addresses 64-127, where the operating system provides handlers.
+
+**Emulator:** Executes extracodes inline as if they were hardware instructions, completely bypassing the trap mechanism.
+
+#### 1.4 JFL/JIR Link Preservation Broken
+
+The link stored at address 0 must include **bits 24-18 of the C register concatenated with S**.
 
 **Emulator:**
 ```javascript
-this.wr(0, this.S);  // WRONG: Only stores S, not the link
+this.wr(0, this.S);  // WRONG: Only stores S, not c24-18 + s
 ```
 
-#### 1.4 JIR Exit Instruction Incomplete
-**Reference:** `s' = n; c'24-18 = n24-18`
+#### 1.5 Condition Register Bit Positions Wrong
 
-JIR should restore both S **and** bits 24-18 of C from the stored link.
+Flags are in completely wrong bit positions. When a program uses CTOM and inspects the flags, they would be in wrong positions.
 
-**Emulator:**
-```javascript
-this.S = n & this.MASK17;  // WRONG: Doesn't restore C bits
-```
+### What Would an Elliott Engineer Say?
 
-#### 1.5 Condition Register Missing Critical Bits
-**Reference:** C is 14 bits with:
-- c24: Negative, c23: Standardized, c22: Non-zero, c21: Carry, c20: Overflow
-- c19: Normal interrupt permit
-- c18: Attention interrupt permit
-- c17: Invalid information transfer
-- c6-c1: Manual console switches
+*"Good heavens, man, what have you done to my floating-point unit? We spent six months designing the 48-bit mantissa hardware - it was faster than the 4120's software emulation! You've turned it into some sort of pocket calculator."*
 
-**Emulator:** Only implements c24-c20. Missing c19-c17 means no proper interrupt masking.
-
-### WRONG Implementations
-
-- Double-Length Divide (DIVM) loses precision and doesn't set R to remainder
-- GET/PUT character instructions use simplified rotation model
-- Memory size is 64K words (matches 4120, not 4130's 256K max)
-
-### MISSING Features
-
-**Shift Instructions (6 of 16 implemented):**
-- Missing: SRLA, SRLC, SMLA, SMLC, SRST, SMST, SBL, SBR, SBRL, SBST
-
-**Register Operations:**
-- CAIR, CADR, RNTK
-
-**Extracodes:**
-- BL/WB, JIRX/JIX/JILX, INDEX, FLU/WUF, CTLA/CTHA, FN/FCP/FMOD/FENT/FSIG
-
-**System Features:**
-- Executive/Protected mode, Base/Range registers, ATU/DMA, Hesitation interrupts
+*"The short instruction packing was essential for ALGOL compilers. We needed to fit tight inner loops into the instruction pipeline. Your version wastes half the memory bandwidth."*
 
 ---
 
-## Review 2: E6X2 (Full Architecture)
+## Review 2: E6X2 Analysis (Full Architecture)
 
 ### Grade: D-
 
 This emulator captures the broad spirit of the 4100 series but contains fundamental inaccuracies that would cause any real Elliott 4130 program to fail catastrophically.
 
-### CRITICAL Issues
+### Critical Issues
 
 #### 2.1 Floating-Point Format is Completely Fabricated
 
 **Reference (E6X3 p.6):**
 > "On the 4130 where hardware is used, the mantissa occupies 48 bits within CPU registers and the exponent 12 bits... When held in memory, floating-point numbers are normally rounded and packed into two words containing 39 bits of mantissa and 9 bits of exponent."
 
-**Emulator:** Uses completely fictional single-word 24-bit format with 17-bit mantissa and 6-bit exponent.
+**Emulator:** Uses completely fictional single-word 24-bit format with 17-bit mantissa and 6-bit exponent. **Any floating-point code would produce garbage results.**
 
 #### 2.2 Short Instruction Packing is Ignored
 
-**Reference:** A 24-bit word can hold TWO 12-bit short instructions.
-
-**Emulator:** ALWAYS reads from upper half of word and increments S by 2, completely ignoring the second half-word. Real Elliott code using packed short instructions would execute only half its instructions.
+A 24-bit word can hold TWO 12-bit short instructions. The emulator ALWAYS reads from the upper half of the word and increments S by 2, completely ignoring the second half-word.
 
 #### 2.3 Extracode Mechanism is Fundamentally Wrong
 
-The real 4130 implemented most extracodes as software subroutines at fixed memory addresses (64-127). The emulator directly implements extracodes inline.
+The real 4130 implemented most extracodes as software subroutines at fixed memory addresses (64-127). Only the 14 floating-point extracodes were hardware on the 4130.
+
+**Emulator:** Directly implements extracodes inline as if they were hardware instructions.
 
 #### 2.4 Condition Register Bit Positions Are Wrong
 
-**Reference:**
+**Reference (E6X3 p.2):**
 > "c24: result negative... c23: result standardized... c22: result non-zero... c21: carry-out... c20: arithmetic overflow"
 
 **Emulator:**
@@ -137,50 +104,75 @@ F_CA = 4;    // Bit 2
 F_OF = 2;    // Bit 1
 ```
 
-The flags are in completely wrong bit positions. When C is transferred to M (CTOM), real programs expect flags in bits 20-24.
+The flags are in completely wrong bit positions.
 
 ### What Would an Elliott Engineer Say?
 
-*"The floating-point unit - you've made it into some sort of toy! We spent months designing the 48-bit mantissa hardware."*
+*"The floating-point unit - you've made it into some sort of toy! We spent months designing the 48-bit mantissa hardware to give proper scientific precision, and you've replaced it with... what, 17 bits? You couldn't calculate a decent sine table with that."*
 
-*"The short instructions - we packed them two to a word specifically for tight loops. Your version wastes half the memory bandwidth."*
+*"And the extracodes - the whole POINT was that we could extend the instruction set through software at those trap addresses. The operators could even patch them for debugging! Your emulator just... does things directly. How would one ever implement a proper supervisor?"*
+
+*"The short instructions - we packed them two to a word specifically for tight loops. Your version wastes half the memory bandwidth. The assembler would generate code that simply runs off into nowhere."*
+
+*"I must say the I/O channels are a reasonable attempt, but the condition register - you've moved all the flags to the wrong bits! Every conditional jump in every program we ever wrote would branch to the wrong place."*
+
+*"This might be useful for demonstrating the CONCEPT of a 4100 to schoolchildren, but please, for the sake of computer history, don't call it an emulator. It's a... a fantasy inspired by our work."*
+
+### Summary Table
+
+| Category | Score | Notes |
+|----------|-------|-------|
+| Basic Architecture | C | Word size, registers present, but details wrong |
+| Integer ALU | C+ | Basic ops work, but flags/overflow wrong |
+| Floating Point | F | Completely fabricated format |
+| Instruction Fetch | D | Ignores short instruction packing |
+| Addressing Modes | B- | Mostly correct |
+| Shifts | D | Missing 10 of 16 modes |
+| I/O System | C | Reasonable structure, incomplete |
+| Extracodes | F | Fundamentally wrong mechanism |
 
 ---
 
-## Review 3: E6X3 (Instruction Set Detail)
+## Review 3: E6X3 Analysis (Instruction Set Detail)
 
 ### Grade: D+
 
-### CRITICAL Issues
+### Critical Issues
 
 #### 3.1 Extracodes are SUBROUTINES not Hardware Operations
+
 **Reference:** Extracodes should trap to address 2*F where user-supplied routines handle them.
 
 **Emulator:** Executes them as native JavaScript inline.
 
 #### 3.2 FP Format Wrong
+
 **Spec:** 48-bit across TWO words (39-bit mantissa + 9-bit exponent)
 
 **Emulator:** 24-bit single word (fictional format)
 
 #### 3.3 JFL/JIR Lose Control State
+
 The link should preserve C register bits c24-c18 for proper subroutine return.
 
 **Emulator:** Only stores S register.
 
 #### 3.4 50% of Shift Instructions Missing
+
 - Missing circular shifts (SRLA, SMLA)
 - Missing character shifts (SRLC, SMLC)
-- Missing standardize shifts (SRST, SMST) - critical for FP normalization
+- Missing standardize shifts (SRST, SMST) - **critical for FP normalization**
 - Missing dual-register shifts (SBL, SBR, SBRL, SBST)
 
 #### 3.5 FP Opcodes Off by 10 Octal
+
 Should be 42 for FADD, emulator uses 52.
 
 #### 3.6 checkInterrupts() Never Called
+
 The interrupt checking function exists but is never invoked in the step() loop.
 
-### MISSING Features
+### Missing Features
 
 - ATU/DMA for autonomous transfers
 - Protected Mode (EXEN, PMEN instructions)
@@ -188,11 +180,11 @@ The interrupt checking function exists but is never invoked in the step() loop.
 
 ---
 
-## Review 4: E6X4 (Software/Operating Systems)
+## Review 4: E6X4 Analysis (Software/Operating Systems)
 
-### Grade: C-
+### Grade: D+
 
-### CRITICAL Issues
+### Critical Issues
 
 #### 4.1 Interrupt Priority Order is BACKWARDS
 
@@ -234,89 +226,89 @@ Real Elliott subroutine linkage saved return addresses in the first word of the 
 
 ---
 
-## Review 5: E6X5 (I/O System)
+## Review 5: E6X5 Analysis (I/O System)
 
-### Grade: C-
+### Note on Document
+E6X5 Version 3 is a **bibliography of references** for the Elliott 4100 Series computers, containing citations to:
+- Elliott 4150 digital computer functional specification
+- 4100 computer system FACTS booklet
+- NCR-Elliott 4100 Data Processing System specifications
+- ICL Archive items
 
-### CRITICAL Issues
+### Grade: C+
 
-#### 5.1 Short Instruction Packing NOT IMPLEMENTED
+The implementation shows competent understanding of 1960s British computer architecture but contains several issues.
 
-**Reference:** "Number of instructions per word: 1 or 2"
+### Critical Issues
 
-The Elliott 4100 could pack **two 12-bit short instructions** into a single 24-bit word.
+#### 5.1 Short Instruction Format is WRONG
 
-**Emulator:** ALWAYS increments by 2 (one word), ignoring instruction packing.
-
-#### 5.2 Floating-Point Format COMPLETELY WRONG
-
-**Reference:** "floating-point numbers were normally rounded and packed into two words containing 39 bits of mantissa and 9 bits of exponent"
-
-**Emulator:** Uses fictional single-word 24-bit format.
-
-#### 5.3 Condition Register Bit Positions WRONG
-
-**Reference:**
-```
-c24: result negative (Neg)
-c23: result standardized (St)
-c22: result non-zero (Nz)
-c21: carry-out (Ca)
-c20: arithmetic overflow (Of)
+```javascript
+const n = (w >> 12) & 0x3F;  // This extracts 6 bits
+this.S = (this.S + 2) & this.MASK17;
 ```
 
-**Emulator:** Uses arbitrary low-order bits (5, 4, 3, 2, 1) instead of correct positions (24-20).
+The Elliott 4100 series used **packed short instructions** - two 12-bit instructions per 24-bit word. The emulator treats each instruction as occupying a full word.
 
-#### 5.4 JFL/JIL Link Storage WRONG
+#### 5.2 Addressing Mode for Y=2 Uses Wrong Register
 
-**Reference:** `0' = c24-18 + s`
+```javascript
+case 2: return this.rd((n + this.R) & 0x7FFF);
+```
 
-The link should be the **concatenation of condition bits c24-c18 with S register**.
+Elliott documentation describes the B-register (index register) for modified addressing, not the R (reserve accumulator).
 
-**Emulator:** Only stores S.
+#### 5.3 Jump and Link (JFL) Stores Return Address at Location 0
 
-#### 5.5 Extracode Trapping Not Implemented
+This is a dangerous simplification. Real Elliott subroutine linkage conventions varied.
 
-Real 4130 treated extracodes as **software traps** to locations 64-127, allowing OS to intercept and extend instruction set.
+#### 5.4 Floating-Point Format is Speculative
+
+The Elliott 4130's optional floating-point hardware used a **48-bit double-word format**, not single-word.
+
+#### 5.5 I/O Channel Architecture is Oversimplified
+
+The Elliott 4100 series had a sophisticated **Autonomous Transfer Unit (ATU)**. The emulator's simple `IOChannel` class does not capture:
+- Block transfer modes
+- Chained operations
+- Priority arbitration
+- Timing constraints
+
+### Missing Features
+
+- Memory Protection for multi-programming
+- Autonomous Transfer Unit (ATU) / DMA
+- Console/Engineering Panel Functions
+- Magnetic Tape/Disc Controllers
+- Proper Interrupt Vectoring
+
+### What Would an Elliott Engineer Say?
+
+*"Right then, let's have a look at what you've built here...*
+
+*First off, where's your B-register? You've got M, R, S, K, C, Q - but the index register for address modification isn't the same as R.*
+
+*Your short instruction handling is completely wrong. We packed two instructions per word to save core - that was the whole point!*
+
+*This floating-point unit - did you just make it up? We didn't have single-word floats. The scientific chaps used double-precision in two consecutive words.*
+
+*The I/O is laughably simple. Our ATU could handle block transfers autonomously while the processor continued - that was cutting-edge for 1965!*
+
+*It's a reasonable educational toy, but don't call it an Elliott 4130 emulator. Call it 'inspired by' perhaps."*
 
 ---
 
-## Consolidated Findings
+## Consolidated Verdict
 
-### Universally Agreed Critical Issues
+### What Would Pass
 
-1. **Floating-Point Format** - All reviewers agree the single-word 24-bit format is completely fictional. Real format is TWO words with 39-bit mantissa + 9-bit exponent.
+The emulator CAN successfully run:
+- Simple integer arithmetic programs
+- LISP interpreter (uses own calling conventions, avoids FP)
+- Basic I/O demonstration programs
+- Educational demonstrations of 24-bit word machines
 
-2. **Extracode Mechanism** - Extracodes should be software traps to address 2*F, not inline hardware execution.
-
-3. **JFL/JIR Link Preservation** - Link must include condition bits c24-c18 concatenated with S, not just S alone.
-
-4. **Condition Register Bit Positions** - Flags are in wrong bit positions (should be c24-c20, not bits 5-1).
-
-5. **Short Instruction Packing** - Two 12-bit instructions per word is ignored; emulator always processes one instruction per word.
-
-### Priority Fix Order
-
-1. **P0 (Breaks Everything):**
-   - Fix JFL/JIR to preserve/restore c24-c18 bits
-   - Fix condition register bit positions
-   - Implement extracode trap mechanism
-
-2. **P1 (Breaks Most Real Code):**
-   - Rewrite FP to use two-word format (39-bit mantissa + 9-bit exponent)
-   - Implement short instruction packing
-
-3. **P2 (Breaks Some Real Code):**
-   - Add missing shift instructions (standardize shifts critical for FP)
-   - Fix interrupt priority order (Attention > Normal)
-   - Add Protected Mode with Base/Range registers
-
-4. **P3 (Completeness):**
-   - Add console switch bits (c6-c1)
-   - Implement ATU/DMA
-   - Complete all register operations
-
-### What Real Elliott Code Would Fail
+### What Would Fail
 
 | Code Type | Why It Fails |
 |-----------|--------------|
@@ -328,16 +320,12 @@ Real 4130 treated extracodes as **software traps** to locations 64-127, allowing
 | TSS/KOS multi-user | No Protected Mode |
 | Real-time I/O | Interrupt priorities backwards |
 
----
+### Final Assessment
 
-## What Would Pass
+**Consensus Grade: D+**
 
-The emulator CAN successfully run:
-- Simple integer arithmetic programs
-- LISP interpreter (uses own calling conventions, avoids FP)
-- Basic I/O demonstration programs
-- Educational demonstrations of 24-bit word machines
+The emulator succeeds at being "a 24-bit minicomputer emulator inspired by Elliott," but fails at being "an Elliott 4130 emulator." For computer history preservation purposes, this distinction matters enormously.
 
 ---
 
-*Reviews compiled from skeptical Computer History professional analysis of CCS E6X1-E6X5 reference manuals vs. emulator implementation.*
+*Reviews compiled January 2026 from CCS E6X1-E6X5 reference manual analysis*
