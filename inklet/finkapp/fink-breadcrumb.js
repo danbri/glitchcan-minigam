@@ -179,19 +179,6 @@ window.FinkBreadcrumb = {
         this.render();
     },
 
-    // BUG-007 FIX: Pop the current level (used when FINK load fails)
-    // This removes the empty/failed level so breadcrumb doesn't show broken hierarchy
-    popCurrentLevel() {
-        if (this.finkStack.length > 0) {
-            const popped = this.finkStack.pop();
-            FinkUtils.debugLog('Breadcrumb: Popped failed level: ' + this.formatUrl(popped.url));
-            FinkUtils.debugLog('Breadcrumb: Stack is now: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
-            this.render();
-            return popped;
-        }
-        return null;
-    },
-
     // Navigate back to a previous FINK level in the hierarchy
     // levelIndex is the index in the finkStack (0 = root, 1 = first child, etc.)
     async navigateBackToFink(levelIndex) {
