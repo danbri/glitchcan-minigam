@@ -4,23 +4,28 @@
 
 ### BUG-007: Breadcrumb nav shows flat knots, story loading fails (Bagend, Diamond Ch2)
 **Severity:** P0 - Critical
-**File:** `inklet/demos/hamfink2026.html`, breadcrumb/navigation system
+**File:** `inklet/finkapp/fink-ink-engine.js`, `inklet/finkapp/fink-breadcrumb.js`
 **Reported:** 2026-01-20
-**Status:** OPEN
-**Merged to main:** PR #585
+**Status:** OPEN (Root cause identified, fix pending)
 
 **Symptoms:**
 1. **Nav bar panel shows all knots as if part of "toc"** - should be nested bullet points showing path within a given FINK, and transitions between FINKs
 2. **Bagend loading fails** - glitch canary image continues from TOC, then green box with blank line then "Bag End", nothing more
 3. **Diamond Ch2 fails on entry** - green box containing "You step through the portal into a realm of pure crystalline energy…" and nothing more
 
-**Context:** Recent commits attempted to fix FINK loading and breadcrumb hierarchy:
-- `a20abed` revert: Restore absolute FINK paths in toc.fink.js
-- `f780011` fix: FINK loading and breadcrumb hierarchy
-- `2444f82` feat: Interactive INK-based recovery for failed deep links
-- `d606e20` fix: Improve FINK breadcrumb navigation and deep linking
+**Root cause identified (2026-01-29):**
+When a FINK tag is detected, the code displays partial content (e.g., "Bag End" text from TOC's `hobbit_selected` knot) BEFORE starting the external load. Then:
+1. A 500ms delay occurs before attempting the external load
+2. If the external FINK fails to load or compile, the old partial content remains visible
+3. The breadcrumb stack has an entry for the failed FINK but with no knots recorded
+4. Users see a confusing mix of old TOC content + error state, with no way to recover
 
-**Root cause:** TBD - needs investigation
+**Proposed fix (3 parts):**
+1. Clear old content immediately when FINK tag detected (before 500ms delay)
+2. Add error recovery UI with "Return to previous story" and "Home" buttons
+3. Add `popCurrentLevel()` method to breadcrumb to remove failed FINK level
+
+**Files to modify:** `fink-ink-engine.js` (handleExternalFinkLoading, compileAndRunStory), `fink-breadcrumb.js`
 
 ---
 
