@@ -54,7 +54,14 @@
         .mem-hex { color: #0f0; width: 54px; }
         .mem-asm { color: #888; font-size: 8px; }
 
-        .teleprinter { background: #000; border: 1px solid #222; height: 28px; overflow-y: auto; padding: 2px; font-size: 9px; white-space: pre-wrap; }
+        .teleprinter { background: #000; border: 1px solid #0f0; height: 48px; overflow-y: auto; padding: 4px; font-size: 11px; color: #0f0; font-family: monospace; white-space: pre-wrap; }
+        .tty-container { display: flex; flex-direction: column; gap: 2px; }
+        .tty-input { background: #000; border: 1px solid #555; color: #ff0; font-family: monospace; font-size: 11px; padding: 2px 4px; width: 100%; }
+        .tty-input:focus { border-color: #ff0; outline: none; }
+        .tty-input.waiting { border-color: #f80; animation: pulse-border 1s infinite; }
+        @keyframes pulse-border { 50% { border-color: #f00; } }
+        .tty-status { font-size: 8px; color: #666; display: flex; justify-content: space-between; }
+        .tty-status.waiting { color: #f80; }
 
         .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 60px; }
         .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 9px; padding: 2px; resize: none; line-height: 1.2; }
@@ -217,7 +224,14 @@
 
             <div class="panel" style="padding:3px 6px;">
                 <div class="panel-title">Teleprinter</div>
-                <div class="teleprinter" id="tty"></div>
+                <div class="tty-container">
+                    <div class="teleprinter" id="tty"></div>
+                    <input type="text" class="tty-input" id="ttyInput" placeholder="Type here when input needed..." autocomplete="off">
+                    <div class="tty-status" id="ttyStatus">
+                        <span>Q: <span id="qReg">000000</span></span>
+                        <span id="inputStatus">Ready</span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="controls">
@@ -230,6 +244,8 @@
                 <option value="">Demos</option>
                 <option value="basic">CAR/CDR</option>
                 <option value="eval">EVAL</option>
+                <option value="evalfull">EVAL/APPLY</option>
+                <option value="nativelisp">Native LISP</option>
                 <option value="lambda">LAMBDA</option>
                 <option value="recurse">FACTORIAL</option>
                 <option value="gc">GC Leak</option>
@@ -695,7 +711,531 @@ HALT: J HALT
 110: #0
 710: #0
 711: #0
-800: #0`
+800: #0`,
+
+    evalfull: `; ============================================================================
+; McCarthy EVAL for Elliott 4130
+; Complete evaluator in NEAT 4100 assembly
+; Test: EVAL (QUOTE A) -> A (3072)
+; ============================================================================
+
+START:
+    ; Initialize heap pointer
+    LD    #1000
+    ST    HEAP
+
+    ; Build (A . NIL) at cell 1000
+    ; Cell value = A * 4096 + NIL = 3072 * 4096 + 4095
+    LD    #3072           ; A
+    MULS  #4096
+    ADD   #4095           ; NIL
+    ST    1000            ; Store cell at addr 1000
+
+    ; Build (QUOTE . 1000) at cell 1001 = (QUOTE A)
+    LD    #3082           ; QUOTE
+    MULS  #4096
+    ADD   #1000           ; pointer to (A . NIL)
+    ST    1001
+
+    ; Evaluate (QUOTE A)
+    LD    #1001           ; expr = address of (QUOTE A)
+    ST    EXPR
+    LD    #4095           ; env = NIL (empty)
+    ST    ENV
+
+; --- EVAL ---
+; Is EXPR an atom (>= 3072)?
+    LD    EXPR
+    SUB   #3072
+    JN    EVAL_LIST       ; EXPR < 3072, so it's a cell address
+
+; EXPR is an atom - self-evaluate
+    LD    EXPR
+    SUB   #4094           ; T?
+    JZ    EVAL_SELF
+    LD    EXPR
+    SUB   #4095           ; NIL?
+    JZ    EVAL_SELF
+    J     EVAL_SELF       ; Return symbol as-is
+
+EVAL_SELF:
+    LD    EXPR
+    ST    100             ; Result
+    J     HALT
+
+EVAL_LIST:
+    ; Get CAR of expr to check for special forms
+    LD    EXPR
+    ST    200
+    LDR   200
+    LD    0,R             ; load cell from memory
+    DIV   #4096           ; extract CAR
+    ST    FN              ; FN = car(expr)
+
+    ; Is FN = QUOTE (3082)?
+    LD    FN
+    SUB   #3082
+    JZ    DO_QUOTE
+
+    ; Is FN = CAR (3100)?
+    LD    FN
+    SUB   #3100
+    JZ    DO_CAR_PRIM
+
+    ; Is FN = CDR (3101)?
+    LD    FN
+    SUB   #3101
+    JZ    DO_CDR_PRIM
+
+    ; Is FN = CONS (3102)?
+    LD    FN
+    SUB   #3102
+    JZ    DO_CONS_PRIM
+
+    ; Is FN = ATOM (3103)?
+    LD    FN
+    SUB   #3103
+    JZ    DO_ATOM_PRIM
+
+    ; Is FN = EQ (3104)?
+    LD    FN
+    SUB   #3104
+    JZ    DO_EQ_PRIM
+
+    ; Unknown - return NIL
+    LD    #4095
+    ST    100
+    J     HALT
+
+; QUOTE: (QUOTE x) -> x = cadr(expr)
+DO_QUOTE:
+    ; Get CDR of expr
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R             ; cell value
+    ST    201
+    DIV   #4096           ; CAR
+    MULS  #4096
+    ST    202
+    LD    201
+    SUB   202             ; CDR = pointer to (A . NIL)
+    ST    203
+
+    ; Get CAR of that (the quoted value)
+    LD    203
+    LDR   203
+    LD    0,R             ; load (A . NIL)
+    DIV   #4096           ; CAR = A = 3072
+    ST    100             ; Result!
+    J     HALT
+
+; CAR: (CAR x) -> car(x)
+DO_CAR_PRIM:
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R
+    ST    220
+    DIV   #4096
+    MULS  #4096
+    ST    221
+    LD    220
+    SUB   221             ; CDR = args
+    ST    222
+
+    LD    222
+    LDR   222
+    LD    0,R
+    DIV   #4096           ; first arg
+    ST    223
+
+    LD    223
+    SUB   #3072
+    JN    CAR_CELL
+    LD    #4095           ; atom - can't CAR
+    ST    100
+    J     HALT
+CAR_CELL:
+    LD    223
+    ADD   #3072
+    LDR   223
+    LD    0,R
+    DIV   #4096
+    ST    100
+    J     HALT
+
+; CDR: (CDR x) -> cdr(x)
+DO_CDR_PRIM:
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R
+    ST    230
+    DIV   #4096
+    MULS  #4096
+    ST    231
+    LD    230
+    SUB   231
+    ST    232
+
+    LD    232
+    LDR   232
+    LD    0,R
+    DIV   #4096
+    ST    233
+
+    LD    233
+    SUB   #3072
+    JN    CDR_CELL
+    LD    #4095
+    ST    100
+    J     HALT
+CDR_CELL:
+    LD    233
+    ADD   #3072
+    LDR   233
+    LD    0,R
+    ST    234
+    DIV   #4096
+    MULS  #4096
+    ST    235
+    LD    234
+    SUB   235
+    ST    100
+    J     HALT
+
+; CONS: (CONS a b) -> (a . b)
+DO_CONS_PRIM:
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R
+    ST    240
+    DIV   #4096
+    MULS  #4096
+    ST    241
+    LD    240
+    SUB   241
+    ST    242             ; args
+
+    LD    242
+    LDR   242
+    LD    0,R
+    DIV   #4096
+    ST    243             ; a
+
+    LD    242
+    LDR   242
+    LD    0,R
+    ST    244
+    DIV   #4096
+    MULS  #4096
+    ST    245
+    LD    244
+    SUB   245
+    ST    246
+
+    LD    246
+    LDR   246
+    LD    0,R
+    DIV   #4096
+    ST    247             ; b
+
+    ; Allocate cell
+    LD    HEAP
+    ST    248
+    LD    243
+    MULS  #4096
+    ADD   247
+    LDR   248
+    ST    0,R
+    LD    HEAP
+    ADD   #1
+    ST    HEAP
+    LD    248
+    ST    100
+    J     HALT
+
+; ATOM: (ATOM x) -> T/NIL
+DO_ATOM_PRIM:
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R
+    ST    250
+    DIV   #4096
+    MULS  #4096
+    ST    251
+    LD    250
+    SUB   251
+    ST    252
+
+    LD    252
+    LDR   252
+    LD    0,R
+    DIV   #4096
+    ST    253
+
+    LD    253
+    SUB   #3072
+    JN    ATOM_NO
+    LD    #4094           ; T
+    ST    100
+    J     HALT
+ATOM_NO:
+    LD    #4095           ; NIL
+    ST    100
+    J     HALT
+
+; EQ: (EQ a b) -> T/NIL
+DO_EQ_PRIM:
+    LD    EXPR
+    LDR   EXPR
+    LD    0,R
+    ST    260
+    DIV   #4096
+    MULS  #4096
+    ST    261
+    LD    260
+    SUB   261
+    ST    262
+
+    LD    262
+    LDR   262
+    LD    0,R
+    DIV   #4096
+    ST    263             ; a
+
+    LD    262
+    LDR   262
+    LD    0,R
+    ST    264
+    DIV   #4096
+    MULS  #4096
+    ST    265
+    LD    264
+    SUB   265
+    ST    266
+
+    LD    266
+    LDR   266
+    LD    0,R
+    DIV   #4096
+    ST    267             ; b
+
+    LD    263
+    SUB   267
+    JNZ   EQ_NO
+    LD    #4094           ; T
+    ST    100
+    J     HALT
+EQ_NO:
+    LD    #4095           ; NIL
+    ST    100
+    J     HALT
+
+HALT: J HALT
+
+; Data
+EXPR:  #0
+ENV:   #0
+FN:    #0
+HEAP:  #0`,
+
+    nativelisp: `; Native LISP Interpreter for Elliott 4130
+; Evaluates (CAR (QUOTE (A B))) -> A
+; Uses JFL/JI subroutine linkage, outputs result
+
+START:
+    LD    #1000
+    ST    HEAP
+
+    ; Build (B . NIL)
+    LD    #3001           ; B
+    MULS  #4096
+    ADD   #4095           ; NIL
+    ST    1000
+
+    ; Build (A . 1000) = (A B)
+    LD    #3000           ; A
+    MULS  #4096
+    ADD   #1000
+    ST    1001
+
+    ; Build (1001 . NIL) for QUOTE args
+    LD    #1001
+    MULS  #4096
+    ADD   #4095
+    ST    1002
+
+    ; Build (QUOTE . 1002)
+    LD    #4000           ; QUOTE
+    MULS  #4096
+    ADD   #1002
+    ST    1003
+
+    ; Build (1003 . NIL) for CAR args
+    LD    #1003
+    MULS  #4096
+    ADD   #4095
+    ST    1004
+
+    ; Build (CAR . 1004)
+    LD    #4001           ; CAR
+    MULS  #4096
+    ADD   #1004
+    ST    1005
+
+    LD    #1006
+    ST    HEAP
+
+    ; EVAL(1005)
+    LD    #1005
+    ST    EXPR
+    JFL   EVAL
+
+    ; Print result (3000=A -> letter 0)
+    LD    RESULT
+    SUB   #3000
+    ST    100             ; Result at 100
+
+DONE:
+    J     DONE
+
+; === EVAL ===
+EVAL:
+    LD    0
+    ST    EV_LINK
+
+    LD    EXPR
+    SUB   #3000
+    JNN   EV_ATOM
+
+    LD    EXPR
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EV_FN
+
+    LD    EV_FN
+    SUB   #4000
+    JZ    EV_QUOTE
+
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    EV_ARGS
+
+    LD    EV_FN
+    SUB   #4001
+    JZ    P_CAR
+
+    LD    EV_FN
+    SUB   #4002
+    JZ    P_CDR
+
+    LD    #4095
+    ST    RESULT
+    J     EV_RET
+
+EV_ATOM:
+    LD    EXPR
+    ST    RESULT
+    J     EV_RET
+
+EV_QUOTE:
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    J     EV_RET
+
+P_CAR:
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    J     EV_RET
+
+P_CDR:
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    J     EV_RET
+
+EV_RET:
+    LD    EV_LINK
+    ST    0
+    JI    0
+
+; === PCAR ===
+PCAR:
+    LD    0
+    ST    PCAR_L
+    LD    ARG
+    SUB   #3000
+    JNN   PCAR_A
+    LDR   ARG
+    LD    0,R
+    DIV   #4096
+    ST    RESULT
+    J     PCAR_R
+PCAR_A:
+    LD    ARG
+    ST    RESULT
+PCAR_R:
+    LD    PCAR_L
+    ST    0
+    JI    0
+
+; === PCDR ===
+PCDR:
+    LD    0
+    ST    PCDR_L
+    LD    ARG
+    SUB   #3000
+    JNN   PCDR_A
+    LDR   ARG
+    LD    0,R
+    ST    T1
+    DIV   #4096
+    MULS  #4096
+    ST    T2
+    LD    T1
+    SUB   T2
+    ST    RESULT
+    J     PCDR_R
+PCDR_A:
+    LD    #4095
+    ST    RESULT
+PCDR_R:
+    LD    PCDR_L
+    ST    0
+    JI    0
+
+; Data
+EV_LINK: #0
+PCAR_L:  #0
+PCDR_L:  #0
+EXPR:    #0
+RESULT:  #0
+EV_FN:   #0
+EV_ARGS: #0
+ARG:     #0
+T1:      #0
+T2:      #0
+HEAP:    #0
+100:     #0`
 };
 
 // Setup debug console input

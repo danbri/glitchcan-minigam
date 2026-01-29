@@ -26,10 +26,14 @@ class E4130UI {
     init() {
         // Create core components
         this.cpu = new E4130({
-            outputHandler: (text) => this.appendOutput(text)
+            outputHandler: (text) => this.appendOutput(text),
+            inputHandler: () => this.requestInput()
         });
         this.asm = new Asm();
         this.debug = new E4130Debug(this.cpu, this.asm);
+
+        // Setup keyboard input
+        this.setupKeyboardInput();
 
         // Setup debug logging
         this.debug.onLog = (entry) => this.appendLog(entry);
@@ -186,6 +190,9 @@ class E4130UI {
 
         // Memory view
         this.updateMemoryView();
+
+        // Input status and Q register
+        this.updateInputStatus();
     }
 
     /**
@@ -328,7 +335,10 @@ class E4130UI {
      */
     appendOutput(text) {
         const el = document.getElementById('tty');
-        if (el) el.textContent += text;
+        if (el) {
+            el.textContent += text;
+            el.scrollTop = el.scrollHeight;
+        }
     }
 
     /**
@@ -337,6 +347,77 @@ class E4130UI {
     clearOutput() {
         const el = document.getElementById('tty');
         if (el) el.textContent = '';
+    }
+
+    /**
+     * Setup keyboard input handling
+     */
+    setupKeyboardInput() {
+        const inputEl = document.getElementById('ttyInput');
+        if (!inputEl) return;
+
+        inputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // Send entire line plus newline
+                const text = inputEl.value + '\n';
+                this.cpu.stringInput(text);
+                this.appendOutput(text);  // Echo input
+                inputEl.value = '';
+                this.updateInputStatus();
+            }
+        });
+
+        inputEl.addEventListener('keydown', (e) => {
+            // Handle special keys
+            if (e.key === 'Escape') {
+                // Clear input buffer
+                this.cpu.inputBuffer = [];
+                inputEl.value = '';
+                this.updateInputStatus();
+            }
+        });
+    }
+
+    /**
+     * Request input from user
+     */
+    requestInput() {
+        const inputEl = document.getElementById('ttyInput');
+        const statusEl = document.getElementById('inputStatus');
+        const containerEl = document.getElementById('ttyStatus');
+
+        if (inputEl) {
+            inputEl.classList.add('waiting');
+            inputEl.focus();
+        }
+        if (statusEl) statusEl.textContent = 'WAITING FOR INPUT';
+        if (containerEl) containerEl.classList.add('waiting');
+    }
+
+    /**
+     * Update input status display
+     */
+    updateInputStatus() {
+        const inputEl = document.getElementById('ttyInput');
+        const statusEl = document.getElementById('inputStatus');
+        const containerEl = document.getElementById('ttyStatus');
+        const qEl = document.getElementById('qReg');
+
+        if (this.cpu.waitingForInput) {
+            if (inputEl) inputEl.classList.add('waiting');
+            if (statusEl) statusEl.textContent = 'WAITING FOR INPUT';
+            if (containerEl) containerEl.classList.add('waiting');
+        } else {
+            if (inputEl) inputEl.classList.remove('waiting');
+            if (statusEl) statusEl.textContent = this.cpu.inputBuffer.length > 0 ?
+                `Buffer: ${this.cpu.inputBuffer.length}` : 'Ready';
+            if (containerEl) containerEl.classList.remove('waiting');
+        }
+
+        // Update Q register display
+        if (qEl && this.cpu.Q !== undefined) {
+            qEl.textContent = this.cpu.Q.toString(8).padStart(8, '0');
+        }
     }
 
     /**
