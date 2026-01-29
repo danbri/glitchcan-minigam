@@ -106,6 +106,45 @@ class Asm {
 
             // Indirect jump (for subroutine returns)
             'JI':   { l: 0o45, yMin: 1, jump: 1 },  // Jump indirect via address
+
+            // Character packing (extracode)
+            'GET':  { l: 0o70, z: 1, yMin: 1 },  // Unpack char from Q to M
+            'PUT':  { l: 0o71, z: 1, yMin: 1 },  // Pack char from M to Q
+
+            // I/O channel instructions (extracode)
+            'IDPR': { l: 0o74, z: 1 },          // Input data packed repetitive
+            'ODPR': { l: 0o74, z: 1, yMin: 1 }, // Output data packed repetitive
+            'IDUR': { l: 0o74, z: 1, yMin: 2 }, // Input data unpacked repetitive
+            'ODUR': { l: 0o74, z: 1, yMin: 3 }, // Output data unpacked repetitive
+
+            'ISPR': { l: 0o75, z: 1 },          // Input status packed
+            'OCPR': { l: 0o75, z: 1, yMin: 1 }, // Output control packed
+            'ISUR': { l: 0o75, z: 1, yMin: 2 }, // Input status unpacked
+            'OCUR': { l: 0o75, z: 1, yMin: 3 }, // Output control unpacked
+
+            'IDUM': { l: 0o76, z: 1, yMin: 2 }, // Input data unpacked single to M
+            'ODUM': { l: 0o76, z: 1, yMin: 3 }, // Output data unpacked single from M
+            'ISUM': { l: 0o77, z: 1, yMin: 2 }, // Input status single to M
+            'OCUM': { l: 0o77, z: 1, yMin: 3 }, // Output control single from M
+
+            // Interrupt handling (extracode)
+            'ITOM': { l: 0o70, z: 1, n: 0o21000 }, // Interrupt word to M
+            'ATOM': { l: 0o70, z: 1, n: 0o41000 }, // Attention word to M
+
+            // Floating-point instructions (extracode)
+            // Elliott 4130 had optional hardware FP unit
+            'FADD': { l: 0o52, z: 1 },     // Floating add
+            'FSUB': { l: 0o53, z: 1 },     // Floating subtract
+            'FMUL': { l: 0o54, z: 1 },     // Floating multiply
+            'FDIV': { l: 0o55, z: 1 },     // Floating divide
+            'FLD':  { l: 0o56, z: 1 },     // Floating load
+            'FST':  { l: 0o57, z: 1 },     // Floating store
+            'FNEG': { l: 0o60, z: 1 },     // Floating negate
+            'FABS': { l: 0o61, z: 1 },     // Floating absolute
+            'FIX':  { l: 0o62, z: 1 },     // Convert float to integer
+            'FLT':  { l: 0o63, z: 1 },     // Convert integer to float
+            'FCMP': { l: 0o64, z: 1 },     // Floating compare
+            'FSQRT':{ l: 0o65, z: 1 },     // Floating square root
         };
 
         this.errors = [];

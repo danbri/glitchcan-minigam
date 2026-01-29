@@ -55,6 +55,13 @@
         .mem-asm { color: #888; font-size: 8px; }
 
         .teleprinter { background: #000; border: 1px solid #0f0; height: 48px; overflow-y: auto; padding: 4px; font-size: 11px; color: #0f0; font-family: monospace; white-space: pre-wrap; }
+        .tty-container { display: flex; flex-direction: column; gap: 2px; }
+        .tty-input { background: #000; border: 1px solid #555; color: #ff0; font-family: monospace; font-size: 11px; padding: 2px 4px; width: 100%; }
+        .tty-input:focus { border-color: #ff0; outline: none; }
+        .tty-input.waiting { border-color: #f80; animation: pulse-border 1s infinite; }
+        @keyframes pulse-border { 50% { border-color: #f00; } }
+        .tty-status { font-size: 8px; color: #666; display: flex; justify-content: space-between; }
+        .tty-status.waiting { color: #f80; }
 
         .program-panel { flex: 1; display: flex; flex-direction: column; min-height: 60px; }
         .program-input { flex: 1; width: 100%; background: #000; border: 1px solid #222; color: #0f0; font-family: monospace; font-size: 9px; padding: 2px; resize: none; line-height: 1.2; }
@@ -217,7 +224,14 @@
 
             <div class="panel" style="padding:3px 6px;">
                 <div class="panel-title">Teleprinter</div>
-                <div class="teleprinter" id="tty"></div>
+                <div class="tty-container">
+                    <div class="teleprinter" id="tty"></div>
+                    <input type="text" class="tty-input" id="ttyInput" placeholder="Type here when input needed..." autocomplete="off">
+                    <div class="tty-status" id="ttyStatus">
+                        <span>Q: <span id="qReg">000000</span></span>
+                        <span id="inputStatus">Ready</span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="controls">
