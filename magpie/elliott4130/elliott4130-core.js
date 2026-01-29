@@ -23,12 +23,13 @@ class E4130 {
     MASK6 = 0x3F;        // 6-bit mask for characters
     SIGN = 0x800000;     // Sign bit position
 
-    // Condition flags
-    F_NEG = 32;  // Negative
-    F_ST = 16;   // Standard (sign bits equal or zero)
-    F_NZ = 8;    // Non-zero
-    F_CA = 4;    // Carry
-    F_OF = 2;    // Overflow
+    // Condition flags - Per E6X3: c24-c20 are bits 23-19 (0-indexed)
+    // Elliott numbering: bit 24 is MSB (0x800000), bit 1 is LSB (0x000001)
+    F_NEG = 0x800000;  // c24 - Negative (result sign bit)
+    F_ST  = 0x400000;  // c23 - Standardized (bits 22,23 equal or zero)
+    F_NZ  = 0x200000;  // c22 - Non-zero
+    F_CA  = 0x100000;  // c21 - Carry-out
+    F_OF  = 0x080000;  // c20 - Arithmetic overflow
 
     // Interrupt levels
     INT_HESITATION = 0;  // Hardware hesitation (highest)
