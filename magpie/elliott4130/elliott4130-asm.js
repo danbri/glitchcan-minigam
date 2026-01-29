@@ -101,6 +101,11 @@ class Asm {
 
             // Output (extracode)
             'OUT':  { l: 0o77, z: 1 },
+            'TR':   { l: 0o77, z: 1 },       // Display nth letter (y=0, n=letter)
+            'CH':   { l: 0o77, z: 1, yMin: 1 }, // Display M in octal (y>=1)
+
+            // Indirect jump (for subroutine returns)
+            'JI':   { l: 0o45, yMin: 1, jump: 1 },  // Jump indirect via address
         };
 
         this.errors = [];
