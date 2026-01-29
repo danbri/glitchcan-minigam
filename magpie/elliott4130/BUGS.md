@@ -125,38 +125,22 @@ this.S = n & this.MASK17;
 
 ---
 
-### BUG-005: Condition Register Bit Positions Wrong
+### ~~BUG-005: Condition Register Bit Positions Wrong~~ ✅ FIXED
 
-**Reference (E6X3 p.2):**
-```
-c24: result negative (Neg)
-c23: result standardized (St)
-c22: result non-zero (Nz)
-c21: carry-out (Ca)
-c20: arithmetic overflow (Of)
-```
+**Status:** Fixed in commit c2b2a3f (2026-01-29)
 
-**Current Implementation (lines 27-31):**
+**What was wrong:** Flag constants were completely made up (bits 5-1 instead of c24-c20).
+
+**Fix applied:**
 ```javascript
-F_NEG = 32;  // Bit 5 (should be bit 24)
-F_ST = 16;   // Bit 4 (should be bit 23)
-F_NZ = 8;    // Bit 3 (should be bit 22)
-F_CA = 4;    // Bit 2 (should be bit 21)
-F_OF = 2;    // Bit 1 (should be bit 20)
+F_NEG = 0x800000;  // c24 - Negative (MSB)
+F_ST  = 0x400000;  // c23 - Standardized
+F_NZ  = 0x200000;  // c22 - Non-zero
+F_CA  = 0x100000;  // c21 - Carry-out
+F_OF  = 0x080000;  // c20 - Overflow
 ```
 
-**Problem:** Flags are in completely wrong positions.
-
-**Impact:** CTOM/MTOC transfers corrupt flags. All conditional jumps fail.
-
-**Fix Required:**
-```javascript
-F_NEG = 0x800000;  // Bit 24
-F_ST  = 0x400000;  // Bit 23
-F_NZ  = 0x200000;  // Bit 22
-F_CA  = 0x100000;  // Bit 21
-F_OF  = 0x080000;  // Bit 20
-```
+**Tests:** 12 tests in `tests/test-condition-flags.js` verify correct positions.
 
 ---
 
