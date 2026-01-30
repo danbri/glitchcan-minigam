@@ -219,6 +219,15 @@ class E4130 {
             // Lower half: bits 11-0
             f = (w >> 6) & 0x3F;
             n = w & 0x3F;
+
+            // Skip empty/padding lower halves (assembler leaves lower half as padding marker)
+            // The marker 0o0577 (or 0) indicates "skip this half, advance to next word"
+            const lowerHalf = w & 0xFFF;
+            if (lowerHalf === 0 || lowerHalf === 0o0577) {
+                // Advance S to next word (even address)
+                this.S = ((this.S + 1) & this.MASK17) & ~1;
+                return true;  // Successfully skipped padding
+            }
         }
 
         // Trace if handler registered
@@ -736,12 +745,30 @@ class E4130 {
      * inline. This is configurable via hardwareFPEnabled flag.
      */
     extracode(f, y, n) {
-        // Check if this is a hardware-accelerated extracode (4130 FP unit)
-        // F=0o52-0o65 are FP instructions that the 4130 executed in hardware
-        // These can optionally execute inline OR trap (configurable)
+        // Check if this is a hardware-accelerated extracode (4130)
+        // F=0o50-0o51: Single-length multiply/divide (hardware on 4130)
+        // F=0o52-0o65: FP instructions (hardware on 4130)
+        const isMulDiv = (f === 0o50 || f === 0o51);
         const isHardwareFP = (f >= 0o52 && f <= 0o65);
 
-        if (isHardwareFP && this.hardwareFPEnabled) {
+        if (isMulDiv && this.hardwareFPEnabled) {
+            // Execute single-length multiply/divide inline
+            const op = this.getOp(y, n);
+            if (f === 0o50) {
+                // MULS - Single-length multiply: M := M * operand (24-bit result)
+                const result = this.sx(this.M) * this.sx(op);
+                this.M = result & this.MASK24;
+                this.setC(this.M);
+            } else {
+                // DIV - Single-length divide: M := M / operand, R := remainder
+                if (op !== 0) {
+                    const dividend = this.sx(this.M);
+                    const divisor = this.sx(op);
+                    this.M = Math.trunc(dividend / divisor) & this.MASK24;
+                    this.R = (dividend % divisor) & this.MASK24;
+                }
+            }
+        } else if (isHardwareFP && this.hardwareFPEnabled) {
             // Execute FP inline (4130 hardware FP mode)
             this.execHardwareFP(f, y, n);
         } else {
