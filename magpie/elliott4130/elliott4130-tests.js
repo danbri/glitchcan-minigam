@@ -1116,13 +1116,15 @@ const E4130Tests = {
 
             ; Load expr cell
             LD    1006
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    700         ; operator = 3076 (CAR)
 
             ; Get args (CDR of expr)
             LD    1006
             ST    701
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    702
             LD    701
@@ -1131,14 +1133,16 @@ const E4130Tests = {
 
             ; Get first arg (CAR of args)
             LD    1005
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    704         ; first arg = 1004 (QUOTE expr)
 
             ; Eval first arg: it's (QUOTE (A B C))
             ; CDR of QUOTE expr is args-of-quote
             LD    1004
             ST    705
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    706
             LD    705
@@ -1147,12 +1151,14 @@ const E4130Tests = {
 
             ; CAR of args-of-quote is the quoted value
             LD    1003
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    708         ; quoted value = 1002 = (A B C)
 
             ; Now take CAR of (A B C)
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    620         ; RESULT = 3072 = atom A
 
             J     HALT
@@ -1189,7 +1195,8 @@ const E4130Tests = {
             ADD   #3073
             ST    101           ; cell = (3072 . 3073)
             LD    101
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    100           ; CAR
             J     #0
             100: #0
@@ -1204,7 +1211,8 @@ const E4130Tests = {
             ST    100           ; cell = (3072 . 3073)
             ; CDR = cell - (CAR << 12)
             LD    100
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    101           ; CAR << 12
             LD    100
@@ -1423,14 +1431,16 @@ const E4130Tests = {
             ; First element (CAR of 1002) -> A
             LDR   600
             LD    0,R           ; Load cell at ptr
-            DIV   #4096         ; CAR
+            LDK   #12
+            SMRL
             ST    610           ; first = A
 
             ; Advance: CDR
             LDR   600
             LD    0,R
             ST    601
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    602
             LD    601
@@ -1440,14 +1450,16 @@ const E4130Tests = {
             ; Second element (CAR of 1001) -> B
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    611           ; second = B
 
             ; Advance: CDR
             LDR   600
             LD    0,R
             ST    601
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    602
             LD    601
@@ -1457,7 +1469,8 @@ const E4130Tests = {
             ; Third element (CAR of 1000) -> C
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    612           ; third = C
 
             J     HALT
@@ -1562,13 +1575,15 @@ const E4130Tests = {
 
             ; Get first pair from env
             LD    1001          ; env cell
-            DIV   #4096         ; CAR = first pair (1000)
+            LDK   #12
+            SMRL
             ST    700           ; pair ptr
 
             ; Get key from pair (CAR of pair)
             LDR   700
             LD    0,R           ; Load pair cell
-            DIV   #4096         ; CAR = key
+            LDK   #12
+            SMRL
             ST    701           ; key = A (3072)
 
             ; Compare with target
@@ -1580,7 +1595,8 @@ const E4130Tests = {
             LDR   700
             LD    0,R           ; Load pair cell
             ST    702
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    703
             LD    702
@@ -1629,13 +1645,15 @@ const E4130Tests = {
 
             ; Verify structure: CAR of cell 1002 = LAMBDA (3081)
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    100           ; Should be 3081
 
             ; CDR of cell 1002 = ptr to params/body
             LD    1002
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -1644,7 +1662,8 @@ const E4130Tests = {
 
             ; CAR of cell 1001 = params = 1000
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    102           ; Should be 1000
 
             J     HALT
@@ -1703,13 +1722,15 @@ const E4130Tests = {
 
             ; Get first binding from env
             LD    1004          ; env
-            DIV   #4096         ; CAR = first binding (1003)
+            LDK   #12
+            SMRL
             ST    700           ; binding ptr
 
             ; Get key from binding
             LDR   700
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    701           ; key = X (3100)
 
             ; Compare with body (X = 3100)
@@ -1721,7 +1742,8 @@ const E4130Tests = {
             LDR   700
             LD    0,R
             ST    702
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    703
             LD    702
@@ -1771,12 +1793,14 @@ const E4130Tests = {
 
             ; Look up X, should get 1001 (ptr to (A B))
             LD    1003
-            DIV   #4096         ; first binding
+            LDK   #12
+            SMRL
             ST    700
 
             LDR   700
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    701           ; key = X
 
             LD    701
@@ -1787,7 +1811,8 @@ const E4130Tests = {
             LDR   700
             LD    0,R
             ST    702
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    703
             LD    702
@@ -1797,7 +1822,8 @@ const E4130Tests = {
             ; Now verify we can CAR this to get A
             LDR   100
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    101           ; CAR of (A B) = A
 
             J     DONE
@@ -1947,7 +1973,8 @@ const E4130Tests = {
             LDR   600
             LD    0,R           ; Load cell
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2012,7 +2039,8 @@ const E4130Tests = {
             ; Not atom, x = CAR(x)
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    600           ; x = CAR(x)
             J     FF_LOOP
 
@@ -2147,14 +2175,16 @@ const E4130Tests = {
             ; Get CAR(x)
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    630           ; car = CAR(x)
 
             ; Get CDR(x)
             LDR   600
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2187,14 +2217,16 @@ const E4130Tests = {
 
             LDR   100
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    101           ; First element = C
 
             ; Get second element
             LDR   100
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2203,7 +2235,8 @@ const E4130Tests = {
 
             LDR   640
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    102           ; Second element = B
 
             J     HALT
@@ -2357,13 +2390,15 @@ const E4130Tests = {
             ; Result is at 1100: (A X)
             ; Verify CAR is A
             LD    1100
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    500           ; Should be A (3072)
 
             ; Get CDR (pointer to second cell)
             LD    1100
             ST    510
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    511
             LD    510
@@ -2373,7 +2408,8 @@ const E4130Tests = {
             ; Verify second element is X
             LDR   512
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; Should be X (3100)
 
             J     HALT
@@ -2538,12 +2574,14 @@ const E4130Tests = {
             ; Both lists - compare CARs
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    610           ; CAR(x)
 
             LDR   601
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    611           ; CAR(y)
 
             LD    610
@@ -2554,7 +2592,8 @@ const E4130Tests = {
             LDR   600
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2564,7 +2603,8 @@ const E4130Tests = {
             LDR   601
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2638,12 +2678,14 @@ const E4130Tests = {
             ; Get car[params] and car[args]
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    620           ; param
 
             LDR   601
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    621           ; arg
 
             ; Build pair (param . arg)
@@ -2678,7 +2720,8 @@ const E4130Tests = {
             LDR   600
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2688,7 +2731,8 @@ const E4130Tests = {
             LDR   601
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2706,13 +2750,15 @@ const E4130Tests = {
             ; Get first binding
             LDR   100
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    101           ; First pair ptr
 
             ; Get name from first pair
             LDR   101
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    102           ; Should be Y (3101) - last added
 
             J     HALT
@@ -2775,13 +2821,15 @@ const E4130Tests = {
             ; Get first pair: CAR(alist)
             LDR   601
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    610           ; pair ptr
 
             ; Get key: CAR(pair)
             LDR   610
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    611           ; key
 
             ; eq[key; x]?
@@ -2793,7 +2841,8 @@ const E4130Tests = {
             LDR   601
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2807,7 +2856,8 @@ const E4130Tests = {
             LDR   610
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -2853,7 +2903,8 @@ const E4130Tests = {
             ; For simplicity, directly get CDR of cell 1000
             LD    1000
             ST    500
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    501
             LD    500
@@ -2863,7 +2914,8 @@ const E4130Tests = {
             ; Lookup Y: get CDR of cell 1001
             LD    1001
             ST    500
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    501
             LD    500
@@ -2885,13 +2937,15 @@ const E4130Tests = {
 
             ; Extract first element from result (should be 10)
             LD    1101
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    504           ; first = 10
 
             ; Extract second element
             LD    1101
             ST    500
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    501
             LD    500
@@ -2899,7 +2953,8 @@ const E4130Tests = {
             ST    505
 
             LD    1100
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    506           ; second = 20
 
             J     HALT
@@ -2943,13 +2998,15 @@ const E4130Tests = {
 
             ; Verify: CAR = A
             LD    1100
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    500           ; first = A (3072)
 
             ; CDR = 1002
             LD    1100
             ST    510
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    511
             LD    510
@@ -2958,13 +3015,15 @@ const E4130Tests = {
 
             ; CAR of CDR = B
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; second = B (3073)
 
             ; CDR of CDR = 1001
             LD    1002
             ST    510
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    511
             LD    510
@@ -2973,7 +3032,8 @@ const E4130Tests = {
 
             ; CAR of CDDR = C
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    502           ; third = C (3074)
 
             J     HALT
@@ -3018,7 +3078,8 @@ const E4130Tests = {
 
             ; Not atom, get CAR
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    500           ; car = QUOTE (3082)
 
             ; Check if CAR is atom
@@ -3035,7 +3096,8 @@ const E4130Tests = {
             ; CDR of expr
             LD    1001
             ST    510
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    511
             LD    510
@@ -3045,7 +3107,8 @@ const E4130Tests = {
             ; CAR of CDR = CADR
             LDR   512
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; result = A (3072)
             J     DONE
 
@@ -3105,13 +3168,15 @@ const E4130Tests = {
             ; Get CAR of a (the pair)
             LDR   510
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    520           ; pair ptr
 
             ; Get CAR of pair (the key)
             LDR   520
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    521           ; key
 
             ; Check if key == X
@@ -3123,7 +3188,8 @@ const E4130Tests = {
             LDR   510
             LD    0,R
             ST    530
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    531
             LD    530
@@ -3136,7 +3202,8 @@ const E4130Tests = {
             LDR   520
             LD    0,R
             ST    530
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    531
             LD    530
@@ -3201,13 +3268,15 @@ const E4130Tests = {
             ; It's CAR! Return CAAR of args
             ; CAR of args
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; first arg = 1001 (the list (A B))
 
             ; CAR of first arg
             LDR   510
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; result = A (3072)
             J     DONE
 
@@ -3257,14 +3326,16 @@ const E4130Tests = {
 
             ; CAR of args = the list
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; 1001
 
             ; CDR of that list
             LDR   510
             LD    0,R
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3273,7 +3344,8 @@ const E4130Tests = {
 
             ; Verify CAR of result is B
             LD    1000
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    502           ; should be B (3073)
             J     DONE
 
@@ -3317,13 +3389,15 @@ const E4130Tests = {
 
             ; CAR of args = A
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; first = A (3072)
 
             ; CADR of args = (B)
             LD    1002
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3332,7 +3406,8 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    511           ; second = 1000 (ptr to (B))
 
             ; CONS them: A * 4096 + 1000
@@ -3343,12 +3418,14 @@ const E4130Tests = {
 
             ; Verify CAR = A, CDR = 1000
             LD    1100
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; A (3072)
 
             LD    1100
             ST    530
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    531
             LD    530
@@ -3380,7 +3457,8 @@ const E4130Tests = {
             ; Check if CAR of args is atom
 
             LD    1000
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; arg = A (3072)
 
             ; Is it an atom? (>= 3072)
@@ -3418,13 +3496,15 @@ const E4130Tests = {
 
             ; Get first arg
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; A
 
             ; Get second arg (CADR)
             LD    1001
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3433,7 +3513,8 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    511           ; A
 
             ; Compare
@@ -3505,7 +3586,8 @@ const E4130Tests = {
             ; CADR of fn (params)
             LD    1003
             ST    510
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    511
             LD    510
@@ -3514,14 +3596,16 @@ const E4130Tests = {
 
             LDR   512
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    513           ; cadr = 1001 (params)
 
             ; CADDR of fn (body)
             LDR   512
             LD    0,R
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3530,19 +3614,22 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    523           ; caddr = X (3100) - the body
 
             ; PAIRLIS: bind X to 42
             ; CAR of params = X
             LDR   513
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    530           ; X (3100)
 
             ; CAR of args = 42
             LD    1004
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    531           ; 42
 
             ; Build (X . 42)
@@ -3569,13 +3656,15 @@ const E4130Tests = {
             ; CAR of env = 1100 (the pair)
             LDR   550
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    551           ; pair = 1100
 
             ; CAR of pair = key
             LDR   551
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    552           ; key = X
 
             ; key == body?
@@ -3587,7 +3676,8 @@ const E4130Tests = {
             LDR   551
             LD    0,R
             ST    560
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    561
             LD    560
@@ -3650,13 +3740,15 @@ const E4130Tests = {
 
             ; Get first clause
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; clause = 1001
 
             ; CAR of clause = condition
             LDR   510
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    511           ; cond = T (4094)
 
             ; Eval condition (T is self-evaluating)
@@ -3669,7 +3761,8 @@ const E4130Tests = {
             LDR   510
             LD    0,R
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3678,7 +3771,8 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; cadr = A (3072)
             J     DONE
 
@@ -3712,13 +3806,15 @@ const E4130Tests = {
 
             ; Get first arg
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; 3
 
             ; Get second arg (CADR)
             LD    1001
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3727,7 +3823,8 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    511           ; 4
 
             ; ADD them
@@ -3760,13 +3857,15 @@ const E4130Tests = {
 
             ; Get first arg
             LD    1001
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    510           ; 6
 
             ; Get CADR
             LD    1001
             ST    520
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    521
             LD    520
@@ -3775,7 +3874,8 @@ const E4130Tests = {
 
             LDR   522
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    511           ; 7
 
             ; MULTIPLY
@@ -3835,14 +3935,16 @@ const E4130Tests = {
             ; Get CAR (element)
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    610           ; elem
 
             ; Get CDR (rest)
             LDR   600
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -3987,14 +4089,16 @@ const E4130Tests = {
             ; Get CAR
             LDR   600
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    610
 
             ; Get CDR
             LDR   600
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -4070,17 +4174,20 @@ const E4130Tests = {
             ; Verify VALUES list
             ; CAR = 1002 (ptr to VALUES)
             LD    1101
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    502           ; 1002
 
             ; CAR of VALUES = 3
             LD    1002
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    503           ; 3
 
             ; SUMSQ = 83
             LD    1100
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    504           ; 83
 
             DONE: J HALT
@@ -4163,7 +4270,8 @@ const E4130Tests = {
             ; Get CAR (element X)
             LDR   812
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    820           ; X
 
             ; === APPLY STEP to X ===
@@ -4193,7 +4301,8 @@ const E4130Tests = {
             LDR   812
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -4215,14 +4324,16 @@ const E4130Tests = {
             ; CAR of result
             LDR   811
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    830
 
             ; CDR of result
             LDR   811
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -4265,20 +4376,23 @@ const E4130Tests = {
             ; === Verify ===
             ; CAR of result = RESULTS ptr
             LD    1201
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    501           ; ptr to RESULTS
 
             ; First element of RESULTS = 2
             LDR   501
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    502           ; 2
 
             ; Second element (CAR of CDR)
             LDR   501
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -4287,14 +4401,16 @@ const E4130Tests = {
 
             LDR   840
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    503           ; 6
 
             ; Third element
             LDR   840
             LD    0,R
             ST    700
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    701
             LD    700
@@ -4303,7 +4419,8 @@ const E4130Tests = {
 
             LDR   841
             LD    0,R
-            DIV   #4096
+            LDK   #12
+            SMRL
             ST    504           ; 24
 
             ; ACC = 24
@@ -4582,7 +4699,8 @@ const E4130Tests = {
             LDR   710
             LD    0,R
             ST    720
-            DIV   #4096
+            LDK   #12
+            SMRL
             MULS  #4096
             ST    721
             LD    720
