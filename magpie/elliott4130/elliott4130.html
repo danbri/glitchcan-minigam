@@ -243,7 +243,7 @@
             </div>
 
             <div class="panel" style="padding:3px 6px;">
-                <div class="panel-title">Teleprinter</div>
+                <div class="panel-title">Teleprinter (Console)</div>
                 <div class="tty-container">
                     <div class="teleprinter" id="tty"></div>
                     <input type="text" class="tty-input" id="ttyInput" placeholder="Type here when input needed..." autocomplete="off">
@@ -252,6 +252,34 @@
                         <span id="inputStatus">Ready</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Paper Tape I/O Panel -->
+            <div class="panel" style="padding:3px 6px;">
+                <div class="panel-title">📼 Paper Tape I/O (Channels 1-2)</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:120px;">
+                        <div style="font-size:7px; color:#666; margin-bottom:2px;">Reader (Ch.1)</div>
+                        <div class="tape-io-box" id="tapeReaderStatus" style="font-size:8px; background:#000; border:1px solid #333; padding:2px 4px; min-height:20px;">
+                            No tape loaded
+                        </div>
+                        <div style="display:flex; gap:2px; margin-top:2px;">
+                            <button class="btn" id="loadTapeFile" style="font-size:7px; padding:2px 4px;">Load</button>
+                            <button class="btn" id="rewindTape" style="font-size:7px; padding:2px 4px;">⏪</button>
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:120px;">
+                        <div style="font-size:7px; color:#666; margin-bottom:2px;">Punch (Ch.2)</div>
+                        <div class="tape-io-box" id="tapePunchStatus" style="font-size:8px; background:#000; border:1px solid #333; padding:2px 4px; min-height:20px; color:#0f0;">
+                            0 bytes punched
+                        </div>
+                        <div style="display:flex; gap:2px; margin-top:2px;">
+                            <button class="btn" id="savePunch" style="font-size:7px; padding:2px 4px;">Save</button>
+                            <button class="btn" id="clearPunch" style="font-size:7px; padding:2px 4px;">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="tapeFileInput" style="display:none;" accept=".bin,.txt,.tap">
             </div>
         </div>
         <div class="controls">
@@ -278,24 +306,29 @@
         </div>
     </div>
 
-    <!-- LISP Tab -->
+    <!-- LISP Tab - Educational Demo -->
     <div class="tab-content" id="tab-lisp">
+        <div class="lisp-notice" style="font-size:9px; color:#f80; background:#221100; padding:4px 8px; border-bottom:1px solid #432;">
+            <strong>🎓 Educational Demo:</strong> This shows how McCarthy's LISP (1960) could run on Elliott hardware.
+            The 4130 itself had no LISP - this compiles S-expressions to NEAT assembly for the emulator.
+            <a href="https://en.wikipedia.org/wiki/Lisp_(programming_language)" target="_blank" style="color:#fa0;">[History]</a>
+        </div>
         <div class="lisp-grid">
             <!-- Row 1: S-expr input + Cells view -->
             <div class="lisp-row">
                 <div class="lisp-panel half">
-                    <div class="lisp-panel-title">1. S-Expression</div>
+                    <div class="lisp-panel-title">1. S-Expression (Your Input)</div>
                     <textarea class="lisp-input" id="lispSrc" spellcheck="false">(CAR (QUOTE (A B C)))</textarea>
                 </div>
                 <div class="lisp-panel half">
-                    <div class="lisp-panel-title">2. Cells (1000+)</div>
+                    <div class="lisp-panel-title">2. Cells (Memory 1000+)</div>
                     <div class="lisp-output cells" id="lispCells">Parse to see cell layout...</div>
                 </div>
             </div>
             <!-- Row 2: Generated ASM + Result -->
             <div class="lisp-row">
                 <div class="lisp-panel half">
-                    <div class="lisp-panel-title">3. Generated 4130 ASM</div>
+                    <div class="lisp-panel-title">3. Generated 4130 Assembly</div>
                     <div class="lisp-output asm" id="lispAsm">Compile to see assembly...</div>
                 </div>
                 <div class="lisp-panel half">
@@ -309,8 +342,8 @@
             <span class="lisp-arrow">→</span>
             <button class="btn lisp" id="lispCompile">Compile</button>
             <span class="lisp-arrow">→</span>
-            <button class="btn primary" id="lispRun">Run</button>
-            <span style="margin-left:auto;font-size:7px;color:#666;">Examples:</span>
+            <button class="btn primary" id="lispRun">Run on 4130</button>
+            <span style="margin-left:auto;font-size:7px;color:#666;">Try:</span>
             <span class="lisp-example" data-expr="(QUOTE A)">'A</span>
             <span class="lisp-example" data-expr="(CAR (QUOTE (A B C)))">CAR</span>
             <span class="lisp-example" data-expr="(CDR (QUOTE (A B)))">CDR</span>

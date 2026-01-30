@@ -98,6 +98,9 @@ class E4130UI {
         const clearLogBtn = document.getElementById('clearLog');
         if (clearLogBtn) clearLogBtn.onclick = () => this.clearLog();
 
+        // Paper Tape I/O controls
+        this.setupTapeIO();
+
         // Debug options
         this.setupDebugOptions();
     }
@@ -121,6 +124,98 @@ class E4130UI {
                     this.debug.info(`${setting} = ${el.checked}`);
                 };
             }
+        }
+    }
+
+    /**
+     * Setup Paper Tape I/O controls
+     */
+    setupTapeIO() {
+        // Load tape button
+        const loadBtn = document.getElementById('loadTapeFile');
+        const fileInput = document.getElementById('tapeFileInput');
+        if (loadBtn && fileInput) {
+            loadBtn.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const data = new Uint8Array(ev.target.result);
+                        this.cpu.loadTape(data);
+                        this.updateTapeStatus();
+                        this.debug.info(`Loaded tape: ${file.name} (${data.length} bytes)`);
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            };
+        }
+
+        // Rewind tape button
+        const rewindBtn = document.getElementById('rewindTape');
+        if (rewindBtn) {
+            rewindBtn.onclick = () => {
+                if (this.cpu.tapeReader) {
+                    this.cpu.tapeReader.position = 0;
+                    this.updateTapeStatus();
+                    this.debug.info('Tape rewound');
+                }
+            };
+        }
+
+        // Save punch output
+        const saveBtn = document.getElementById('savePunch');
+        if (saveBtn) {
+            saveBtn.onclick = () => {
+                const data = this.cpu.getTapePunch();
+                if (data.length === 0) {
+                    this.debug.warn('No punch data to save');
+                    return;
+                }
+                const blob = new Blob([data], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `punch-${Date.now()}.bin`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.debug.info(`Saved ${data.length} bytes of punch data`);
+            };
+        }
+
+        // Clear punch
+        const clearBtn = document.getElementById('clearPunch');
+        if (clearBtn) {
+            clearBtn.onclick = () => {
+                this.cpu.tapePunch = [];
+                this.updateTapeStatus();
+                this.debug.info('Punch cleared');
+            };
+        }
+    }
+
+    /**
+     * Update tape I/O status display
+     */
+    updateTapeStatus() {
+        const readerEl = document.getElementById('tapeReaderStatus');
+        const punchEl = document.getElementById('tapePunchStatus');
+
+        if (readerEl) {
+            if (this.cpu.tapeReader && this.cpu.tapeReader.data) {
+                const pos = this.cpu.tapeReader.position;
+                const len = this.cpu.tapeReader.data.length;
+                readerEl.textContent = `${pos}/${len} bytes`;
+                readerEl.style.color = pos >= len ? '#f80' : '#0f0';
+            } else {
+                readerEl.textContent = 'No tape loaded';
+                readerEl.style.color = '#666';
+            }
+        }
+
+        if (punchEl) {
+            const len = this.cpu.tapePunch ? this.cpu.tapePunch.length : 0;
+            punchEl.textContent = `${len} bytes punched`;
         }
     }
 
@@ -214,6 +309,9 @@ class E4130UI {
 
         // Input status and Q register
         this.updateInputStatus();
+
+        // Paper tape status
+        this.updateTapeStatus();
     }
 
     /**
