@@ -1033,6 +1033,7 @@ class E4130 {
 
     /**
      * Check and handle pending interrupts
+     * Per E6X4: Interrupt handlers must run in Executive Mode with full memory access
      */
     checkInterrupts() {
         if (!this.interruptEnabled || this.pendingInterrupts.length === 0) {
@@ -1043,8 +1044,25 @@ class E4130 {
         this.pendingInterrupts.sort((a, b) => a.level - b.level);
         const int = this.pendingInterrupts.shift();
 
+        // Save current execution context before interrupt (per E6X4)
+        const savedMode = this.executiveMode;
+        const savedBase = this.baseReg;
+        const savedRange = this.rangeReg;
+
         // Save return address at location 0
         this.wr(0, this.S);
+
+        // Save execution context at locations 3-5 for RTI restoration
+        // Location 3: Mode flag (0 = Executive, 1 = Protected)
+        // Location 4: Base register
+        // Location 5: Range register
+        this.mem[3] = savedMode ? 0 : 1;  // Store inverse: 0 if was Executive
+        this.mem[4] = savedBase;
+        this.mem[5] = savedRange;
+
+        // Per E6X4: Switch to Executive Mode for interrupt handler
+        // This gives the OS handler full memory access to service the interrupt
+        this.executiveMode = true;
 
         // Jump to interrupt vector
         this.S = int.vector * 2;
