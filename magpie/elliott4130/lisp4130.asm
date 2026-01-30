@@ -28,8 +28,21 @@
 ;   4009     : DEFUN
 ;   4010     : NULL
 ;   4011     : LIST
+;   4012     : PLUS (or +)
+;   4013     : MINUS (or -)
+;   4014     : TIMES (or *)
+;   4015     : QUOTIENT (or //)
+;   4016     : REMAINDER
+;   4017     : LESSP
+;   4018     : GREATERP
+;   4019     : ZEROP
+;   4020     : NUMBERP
 ;   4094     : T
 ;   4095     : NIL
+;
+; Numbers: 5000-7999 represent integers 0-2999
+;   To get value: atom - 5000
+;   To make number atom: value + 5000
 ; ============================================================================
 
 ; === REPL: Read-Eval-Print Loop ===
@@ -137,10 +150,68 @@ PR_SYMBOL:
     J     PR_RET
 
 PR_NUM:
-    ; Print as octal number
+    ; Check if it's a LISP number (5000-7999)
+    LD    PR_EXPR
+    SUB   #5000
+    JN    PR_OCTAL        ; < 5000, print as octal
+    SUB   #3000
+    JNN   PR_OCTAL        ; >= 8000, print as octal
+    ; It's a number - print decimal value
+    LD    PR_EXPR
+    SUB   #5000
+    ST    PR_N
+    ; Simple decimal print (handles 0-999)
+    ; Hundreds
+    LD    PR_N
+    DIV   #100
+    JZ    PR_TENS
+    ADD   #48             ; '0'
+    ODUM  0
+    ; Update PR_N to remainder
+    LD    PR_N
+    DIV   #100
+    MULS  #100
+    ST    PR_T
+    LD    PR_N
+    SUB   PR_T
+    ST    PR_N
+PR_TENS:
+    ; Tens
+    LD    PR_N
+    DIV   #10
+    ST    PR_T
+    LD    PR_N
+    SUB   #10
+    JN    PR_ONES_ONLY    ; < 10, skip tens
+    LD    PR_T
+    ADD   #48
+    ODUM  0
+    ; Update PR_N
+    LD    PR_T
+    MULS  #10
+    ST    PR_T
+    LD    PR_N
+    SUB   PR_T
+    ST    PR_N
+    J     PR_UNITS
+PR_ONES_ONLY:
+    ; If we printed hundreds, print 0 for tens
+    ; (simplified: just print units)
+PR_UNITS:
+    LD    PR_N
+    ADD   #48
+    ODUM  0
+    J     PR_RET
+
+PR_OCTAL:
+    ; Print as octal for non-numbers
     LD    PR_EXPR
     CH    0
     J     PR_RET
+
+; Print temporaries
+PR_N:         #0
+PR_T:         #0
 
 PR_LIST:
     ; Print list: (a b c ...)
@@ -345,6 +416,42 @@ EV_LIST:
     LD    EV_FN
     SUB   #4011           ; LIST
     JZ    P_LIST
+
+    LD    EV_FN
+    SUB   #4012           ; PLUS
+    JZ    P_PLUS
+
+    LD    EV_FN
+    SUB   #4013           ; MINUS
+    JZ    P_MINUS
+
+    LD    EV_FN
+    SUB   #4014           ; TIMES
+    JZ    P_TIMES
+
+    LD    EV_FN
+    SUB   #4015           ; QUOTIENT
+    JZ    P_QUOTIENT
+
+    LD    EV_FN
+    SUB   #4016           ; REMAINDER
+    JZ    P_REMAINDER
+
+    LD    EV_FN
+    SUB   #4017           ; LESSP
+    JZ    P_LESSP
+
+    LD    EV_FN
+    SUB   #4018           ; GREATERP
+    JZ    P_GREATERP
+
+    LD    EV_FN
+    SUB   #4019           ; ZEROP
+    JZ    P_ZEROP
+
+    LD    EV_FN
+    SUB   #4020           ; NUMBERP
+    JZ    P_NUMBERP
 
     ; Unknown atom function - return NIL
     LD    #4095
@@ -640,6 +747,297 @@ P_LIST:
     ST    EVLIS_IN
     JFL   EVLIS
     J     EV_RET
+
+; ============================================================================
+; Arithmetic Primitives - Numbers are atoms 5000-7999 (value = atom - 5000)
+; ============================================================================
+
+P_PLUS:
+    ; (PLUS a b) or (+ a b) - add two numbers
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000           ; Extract numeric value
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000           ; Extract numeric value
+
+    ADD   ARITH_A         ; a + b
+    ADD   #5000           ; Convert back to number atom
+    ST    RESULT
+    J     EV_RET
+
+P_MINUS:
+    ; (MINUS a b) or (- a b) - subtract: a - b
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_B
+
+    LD    ARITH_A
+    SUB   ARITH_B         ; a - b
+    ADD   #5000
+    ST    RESULT
+    J     EV_RET
+
+P_TIMES:
+    ; (TIMES a b) or (* a b) - multiply
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+
+    MULS  ARITH_A         ; a * b
+    ADD   #5000
+    ST    RESULT
+    J     EV_RET
+
+P_QUOTIENT:
+    ; (QUOTIENT a b) or (// a b) - integer division
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_B
+
+    LD    ARITH_A
+    DIV   ARITH_B         ; a / b (integer)
+    ADD   #5000
+    ST    RESULT
+    J     EV_RET
+
+P_REMAINDER:
+    ; (REMAINDER a b) - remainder after division
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_B
+
+    ; remainder = a - (a/b)*b
+    LD    ARITH_A
+    DIV   ARITH_B
+    MULS  ARITH_B
+    ST    ARITH_C
+    LD    ARITH_A
+    SUB   ARITH_C
+    ADD   #5000
+    ST    RESULT
+    J     EV_RET
+
+P_LESSP:
+    ; (LESSP a b) - T if a < b, NIL otherwise
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_B
+
+    LD    ARITH_A
+    SUB   ARITH_B         ; a - b
+    JN    LESSP_TRUE      ; If negative, a < b
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
+LESSP_TRUE:
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+
+P_GREATERP:
+    ; (GREATERP a b) - T if a > b
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    LD    EV_ARGS
+    ST    EV_SAVE1
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_A
+
+    LD    EV_SAVE1
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    ST    ARITH_B
+
+    LD    ARITH_B
+    SUB   ARITH_A         ; b - a
+    JN    GREATERP_TRUE   ; If negative, a > b
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
+GREATERP_TRUE:
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+
+P_ZEROP:
+    ; (ZEROP n) - T if n = 0
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000           ; 0 is represented as 5000
+    JNZ   ZEROP_FALSE
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+ZEROP_FALSE:
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
+
+P_NUMBERP:
+    ; (NUMBERP x) - T if x is a number (5000-7999)
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    SUB   #5000
+    JN    NUMBERP_FALSE   ; < 5000, not a number
+    SUB   #3000           ; Check if < 8000
+    JNN   NUMBERP_FALSE   ; >= 8000, not a number
+    LD    #4094           ; T
+    ST    RESULT
+    J     EV_RET
+NUMBERP_FALSE:
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     EV_RET
+
+; Arithmetic temporaries
+ARITH_A:      #0
+ARITH_B:      #0
+ARITH_C:      #0
 
 EV_RET:
     LD    EV_LINK
@@ -1017,6 +1415,16 @@ RD_ATOM_PUSH:
     LD    RD_CH
     ST    RD_PUSHBACK
 RD_ATOM_END:
+    ; Check if first char is a digit (0-9, ASCII 48-57)
+    LD    RD_ABUF
+    SUB   #48             ; '0'
+    JN    RD_NOT_NUMBER
+    SUB   #10
+    JNN   RD_NOT_NUMBER
+    ; It's a number - parse it
+    J     RD_PARSE_NUM
+
+RD_NOT_NUMBER:
     ; Convert first char to atom code
     ; A-Z -> 3000-3025
     LD    RD_ABUF
@@ -1028,6 +1436,55 @@ RD_ATOM_END:
     LD    RD_ABUF
     SUB   #65
     ADD   #3000
+    ST    RESULT
+    J     RD_RET
+
+RD_PARSE_NUM:
+    ; Parse multi-digit number from RD_ABUF + continue reading
+    ; Number = 5000 + value
+    LD    RD_ABUF
+    SUB   #48             ; First digit value
+    ST    RD_NUM
+
+RD_NUM_LOOP:
+    ; Check if there's a pushed-back char that's a digit
+    LD    RD_PUSHBACK
+    JZ    RD_NUM_READ
+    ; Use pushback
+    LD    RD_PUSHBACK
+    ST    RD_CH
+    LD    #0
+    ST    RD_PUSHBACK
+    J     RD_NUM_CHECK
+
+RD_NUM_READ:
+    JFL   RDCHAR
+
+RD_NUM_CHECK:
+    ; Is it a digit?
+    LD    RD_CH
+    SUB   #48
+    JN    RD_NUM_DONE     ; Not a digit
+    SUB   #10
+    JNN   RD_NUM_DONE     ; Not a digit
+
+    ; It's a digit: num = num * 10 + digit
+    LD    RD_NUM
+    MULS  #10
+    ST    RD_NUM
+    LD    RD_CH
+    SUB   #48
+    ADD   RD_NUM
+    ST    RD_NUM
+    J     RD_NUM_LOOP
+
+RD_NUM_DONE:
+    ; Push back the non-digit char
+    LD    RD_CH
+    ST    RD_PUSHBACK
+    ; Return number atom
+    LD    RD_NUM
+    ADD   #5000
     ST    RESULT
     J     RD_RET
 
@@ -1098,6 +1555,7 @@ RD_LIST_END:  #0
 RD_ELEM:      #0
 RD_ALEN:      #0
 RD_ABUF:      #0
+RD_NUM:       #0
 RDCH_LINK:    #0
 
 ; ============================================================================
