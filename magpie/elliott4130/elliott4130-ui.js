@@ -165,21 +165,42 @@ class E4130UI {
         setEl('hS', this.cpu.S.toString(8).padStart(4, '0'));
         setEl('hK', this.cpu.K.toString(8).padStart(4, '0'));
 
-        // Condition flags
+        // Condition flags (c24-c20: Neg St Nz Ca Of)
         const setFlag = (id, on) => {
             const el = document.getElementById(id);
             if (el) el.classList.toggle('on', on);
         };
 
-        setFlag('cN', this.cpu.C & this.cpu.F_NEG);
-        setFlag('cS', this.cpu.C & this.cpu.F_ST);
-        setFlag('cZ', this.cpu.C & this.cpu.F_NZ);
-        setFlag('cC', this.cpu.C & this.cpu.F_CA);
-        setFlag('cO', this.cpu.C & this.cpu.F_OF);
+        setFlag('cN', this.cpu.C & this.cpu.F_NEG);    // c24
+        setFlag('cSt', this.cpu.C & this.cpu.F_ST);    // c23
+        setFlag('cZ', this.cpu.C & this.cpu.F_NZ);     // c22
+        setFlag('cCa', this.cpu.C & this.cpu.F_CA);    // c21
+        setFlag('cO', this.cpu.C & this.cpu.F_OF);     // c20
 
-        // Header condition LEDs
+        // Header condition LEDs (all 5 flags)
         setFlag('hN', this.cpu.C & this.cpu.F_NEG);
+        setFlag('hSt', this.cpu.C & this.cpu.F_ST);
         setFlag('hZ', this.cpu.C & this.cpu.F_NZ);
+        setFlag('hCa', this.cpu.C & this.cpu.F_CA);
+        setFlag('hOf', this.cpu.C & this.cpu.F_OF);
+
+        // Protected Mode registers (Base, Range, RTC)
+        setEl('rBase', this.cpu.baseReg.toString(8).padStart(3, '0'));
+        setEl('rRange', this.cpu.rangeReg.toString(8).padStart(3, '0'));
+        setEl('rRTC', this.cpu.rtcCounter.toString());
+
+        // Mode indicator (Executive/Protected)
+        const modeEl = document.getElementById('rMode');
+        const hModeEl = document.getElementById('hMode');
+        if (modeEl) {
+            modeEl.textContent = this.cpu.executiveMode ? 'EXEC' : 'PROT';
+            modeEl.classList.toggle('exec', this.cpu.executiveMode);
+            modeEl.classList.toggle('prot', !this.cpu.executiveMode);
+        }
+        if (hModeEl) {
+            hModeEl.textContent = this.cpu.executiveMode ? 'EXEC' : 'PROT';
+            hModeEl.classList.toggle('prot', !this.cpu.executiveMode);
+        }
 
         // Status
         setEl('iCnt', this.cpu.iCount);

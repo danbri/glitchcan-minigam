@@ -20,6 +20,13 @@
         .header-conds { display: flex; gap: 3px; }
         .header-led { width: 5px; height: 5px; border-radius: 50%; background: #300; }
         .header-led.on { background: #f00; box-shadow: 0 0 2px #f00; }
+        .header-mode { font-size: 8px; padding: 1px 4px; border: 1px solid #0f0; color: #0f0; margin-left: 4px; }
+        .header-mode.prot { border-color: #f80; color: #f80; background: #220800; }
+        .mode-indicator { display: flex; align-items: center; gap: 3px; font-size: 8px; }
+        .mode-label { color: #666; }
+        .mode-val { padding: 1px 4px; border: 1px solid #0f0; color: #0f0; font-weight: bold; }
+        .mode-val.exec { border-color: #0f0; color: #0f0; }
+        .mode-val.prot { border-color: #f80; color: #f80; background: #220800; }
 
         /* Tabs */
         .tabs { display: flex; background: #1a1a1a; border-bottom: 1px solid #333; }
@@ -165,10 +172,14 @@
             <div class="header-reg"><span class="header-reg-name">R</span><span class="header-reg-val" id="hR">00000000</span></div>
             <div class="header-reg"><span class="header-reg-name">S</span><span class="header-reg-val" id="hS">0000</span></div>
             <div class="header-reg"><span class="header-reg-name">K</span><span class="header-reg-val" id="hK">0000</span></div>
-            <div class="header-conds">
-                <div class="header-led" id="hN" title="Neg"></div>
-                <div class="header-led" id="hZ" title="NZ"></div>
+            <div class="header-conds" title="c24-c20: Neg St Nz Ca Of">
+                <div class="header-led" id="hN" title="c24 Neg"></div>
+                <div class="header-led" id="hSt" title="c23 St"></div>
+                <div class="header-led" id="hZ" title="c22 Nz"></div>
+                <div class="header-led" id="hCa" title="c21 Ca"></div>
+                <div class="header-led" id="hOf" title="c20 Of"></div>
             </div>
+            <div class="header-mode" id="hMode" title="Executive/Protected Mode">EXEC</div>
         </div>
     </div>
 
@@ -189,12 +200,21 @@
                     <div class="reg"><span class="reg-name">R</span><span class="reg-val" id="rR">00000000</span></div>
                     <div class="reg"><span class="reg-name">S</span><span class="reg-val" id="rS">0000</span></div>
                     <div class="reg"><span class="reg-name">K</span><span class="reg-val" id="rK">0000</span></div>
-                    <div class="conds" style="margin-left:auto;">
+                    <div class="conds" style="margin-left:auto;" title="c24-c20: Neg St Nz Ca Of">
                         <div class="cond"><div class="cond-led" id="cN"></div>N</div>
-                        <div class="cond"><div class="cond-led" id="cS"></div>S</div>
-                        <div class="cond"><div class="cond-led" id="cZ"></div>Z</div>
-                        <div class="cond"><div class="cond-led" id="cC"></div>C</div>
-                        <div class="cond"><div class="cond-led" id="cO"></div>O</div>
+                        <div class="cond"><div class="cond-led" id="cSt"></div>St</div>
+                        <div class="cond"><div class="cond-led" id="cZ"></div>Nz</div>
+                        <div class="cond"><div class="cond-led" id="cCa"></div>Ca</div>
+                        <div class="cond"><div class="cond-led" id="cO"></div>Of</div>
+                    </div>
+                </div>
+                <div class="reg-row" style="margin-top:2px; border-top:1px solid #333; padding-top:2px;">
+                    <div class="reg"><span class="reg-name">Base</span><span class="reg-val" id="rBase" style="min-width:30px;">000</span></div>
+                    <div class="reg"><span class="reg-name">Range</span><span class="reg-val" id="rRange" style="min-width:30px;">000</span></div>
+                    <div class="reg"><span class="reg-name">RTC</span><span class="reg-val" id="rRTC" style="min-width:30px;">0</span></div>
+                    <div class="mode-indicator" id="modeInd" style="margin-left:auto;">
+                        <span class="mode-label">Mode:</span>
+                        <span class="mode-val exec" id="rMode">EXEC</span>
                     </div>
                 </div>
             </div>
