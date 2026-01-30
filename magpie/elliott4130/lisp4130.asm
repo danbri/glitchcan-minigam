@@ -1228,10 +1228,11 @@ PCAR:
     SUB   #3000
     JNN   PCAR_ATOM
 
-    ; Load cell, extract upper 12 bits
+    ; Load cell, extract upper 12 bits (CAR)
     LDR   ARG
     LD    0,R
-    DIV   #4096
+    LDK   #12
+    SMRL
     ST    RESULT
     J     PCAR_RET
 
@@ -1255,11 +1256,12 @@ PCDR:
     SUB   #3000
     JNN   PCDR_ATOM
 
-    ; Load cell, extract lower 12 bits
+    ; Load cell, extract lower 12 bits (CDR)
     LDR   ARG
     LD    0,R
     ST    T1
-    DIV   #4096
+    LDK   #12
+    SMRL
     MULS  #4096
     ST    T2
     LD    T1
