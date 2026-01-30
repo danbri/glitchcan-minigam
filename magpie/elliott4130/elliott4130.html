@@ -296,6 +296,7 @@
             <button class="btn" id="bReset">Reset</button>
             <select id="lispSelect" class="btn lisp" style="max-width:100px;font-size:8px;" title="Load LISP demo">
                 <option value="">Demos</option>
+                <option value="lispsystem">📼 LISP System</option>
                 <option value="basic">CAR/CDR</option>
                 <option value="eval">EVAL</option>
                 <option value="evalfull">EVAL/APPLY</option>
@@ -1352,10 +1353,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (lispSelect) {
         lispSelect.onchange = () => {
-            if (srcArea && lispSelect.value && LISP_DEMOS[lispSelect.value]) {
-                srcArea.value = LISP_DEMOS[lispSelect.value];
-                lispSelect.value = '';  // Reset to "Demos"
+            const val = lispSelect.value;
+            if (!val) return;
+
+            // Special case: load full LISP system from file
+            if (val === 'lispsystem') {
+                fetch('lisp4130.asm')
+                    .then(r => r.ok ? r.text() : Promise.reject('File not found'))
+                    .then(text => {
+                        if (srcArea) srcArea.value = text;
+                    })
+                    .catch(e => console.error('Failed to load lisp4130.asm:', e));
+            } else if (srcArea && LISP_DEMOS[val]) {
+                srcArea.value = LISP_DEMOS[val];
             }
+            lispSelect.value = '';  // Reset to "Demos"
         };
     }
 
