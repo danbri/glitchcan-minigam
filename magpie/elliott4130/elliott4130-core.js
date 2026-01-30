@@ -188,13 +188,30 @@ class E4130 {
     /**
      * Execute one instruction
      * Returns true if execution should continue
+     *
+     * The Elliott 4130 packs TWO 12-bit short instructions in one 24-bit word.
+     * The S register is a half-word address. S bit 0 indicates which half:
+     *   S bit 0 = 0: Upper half (bits 23-12)
+     *   S bit 0 = 1: Lower half (bits 11-0)
      */
     step() {
         if (this.halted) return false;
 
-        const wa = this.S >> 1;  // Word address
-        const w = this.rd(wa);   // Fetch instruction
-        const f = (w >> 18) & 0x3F;  // Function code
+        const wa = this.S >> 1;        // Word address
+        const halfWord = this.S & 1;   // 0=upper, 1=lower
+        const w = this.rd(wa);         // Fetch instruction word
+
+        // Extract function code and operand based on which half-word
+        let f, n;
+        if (halfWord === 0) {
+            // Upper half: bits 23-12
+            f = (w >> 18) & 0x3F;
+            n = (w >> 12) & 0x3F;
+        } else {
+            // Lower half: bits 11-0
+            f = (w >> 6) & 0x3F;
+            n = w & 0x3F;
+        }
 
         // Trace if handler registered
         if (this.traceHandler) {
@@ -210,21 +227,21 @@ class E4130 {
         }
 
         if (f >= 0o40) {
-            // Long instruction (24-bit)
+            // Long instruction (24-bit) - must be at upper half (halfWord==0)
+            // Uses full 24-bit word
             const y = (w >> 16) & 3;   // Addressing mode
             const z = (w >> 15) & 1;   // Extra-code flag
-            const n = w & 0x7FFF;      // Address/operand
-            this.S = (this.S + 2) & this.MASK17;
+            const addr = w & 0x7FFF;   // Address/operand
+            this.S = (this.S + 2) & this.MASK17;  // Advance by full word
 
             if (z) {
-                this.extracode(f, y, n);
+                this.extracode(f, y, addr);
             } else {
-                this.execLong(f, y, n);
+                this.execLong(f, y, addr);
             }
         } else {
-            // Short instruction (12-bit) - each instruction occupies a full word
-            const n = (w >> 12) & 0x3F;
-            this.S = (this.S + 2) & this.MASK17;
+            // Short instruction (12-bit) - advance by half-word only
+            this.S = (this.S + 1) & this.MASK17;
             this.execShort(f, n);
         }
 
