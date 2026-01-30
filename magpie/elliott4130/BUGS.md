@@ -2,9 +2,9 @@
 
 Critical assessment by skeptical Computer History professionals reviewing against CCS E6X1-E6X5 reference manuals.
 
-## Consensus Grade: D+
+## Consensus Grade: C+ (upgraded from D+ after Jan 2026 fixes)
 
-The emulator captures the *spirit* of a 1960s 24-bit minicomputer but contains fundamental inaccuracies that would cause any real Elliott 4130 program to fail.
+The emulator has undergone significant improvements. Most P0/P1 bugs are now fixed. Remaining critical issue is BUG-001 (FP format) and BUG-003 (extracode traps).
 
 ---
 
@@ -48,27 +48,16 @@ These issues would cause ANY real Elliott 4130 program to fail.
 
 ---
 
-### BUG-002: Short Instruction Packing Not Implemented
+### ~~BUG-002: Short Instruction Packing Not Implemented~~ ✅ FIXED
 
-**Reference (E6X2):**
-> "Number of instructions per word: **1 or 2**"
+**Status:** Fixed in commit c278fd4 (2026-01-30)
 
-A 24-bit word can hold TWO 12-bit short instructions. The S register addresses half-words.
+**What was wrong:** Always extracted from upper half, always advanced S by 2.
 
-**Current Implementation (line 187-190):**
-```javascript
-const n = (w >> 12) & 0x3F;
-this.S = (this.S + 2) & this.MASK17;  // ALWAYS advances by full word
-```
-
-**Problem:** Emulator treats every instruction as consuming an entire word and only extracts from the upper half.
-
-**Impact:** Code using packed short instructions executes only HALF its instructions.
-
-**Fix Required:**
-- Track which half of word is being executed
-- S increments by 1 for short instructions, 2 for long
-- Extract from upper or lower half based on S bit 0
+**Fix applied:**
+- S bit 0 now determines upper (0) or lower (1) half extraction
+- Short instructions advance S by 1, long instructions by 2
+- Full half-word addressing per E6X2 specification
 
 ---
 
@@ -95,33 +84,16 @@ Executes extracodes inline as JavaScript functions.
 
 ---
 
-### BUG-004: JFL/JIR Link Doesn't Preserve Condition State
+### ~~BUG-004: JFL/JIR Link Doesn't Preserve Condition State~~ ✅ FIXED
 
-**Reference (E6X3 p.3):**
-> JFL: `0' = c24-18 + s; s' = s + N`
-> JIR: `s' = n; c'24-18 = n24-18`
+**Status:** Fixed in commit 8d66f96 (2026-01-30)
 
-The link must be **c24-c18 concatenated with S** (7 bits + 17 bits = 24 bits).
+**What was wrong:** JFL only stored S, JIR only restored S.
 
-**Current Implementation (line 313):**
-```javascript
-this.wr(0, this.S);  // WRONG: Only stores S
-```
-
-**Problem:** Nested subroutines lose interrupt masks and condition state.
-
-**Impact:** Any program with nested procedure calls corrupts machine state.
-
-**Fix Required:**
-```javascript
-// JFL: Store link = (C & 0x7F0000) | (S & 0x1FFFF)
-const link = ((this.C & 0x7F) << 17) | (this.S & this.MASK17);
-this.wr(0, link);
-
-// JIR: Restore both
-this.C = (this.C & ~0x7F) | ((n >> 17) & 0x7F);
-this.S = n & this.MASK17;
-```
+**Fix applied:**
+- JFL: Link word now contains C[24:18] concatenated with S (7 bits + 17 bits)
+- JIR: Restores both C[24:18] and S from link word
+- Nested subroutines now preserve condition state correctly
 
 ---
 
@@ -237,8 +209,16 @@ Autonomous Transfer Unit for block transfers not implemented.
 ### BUG-015: Console Switch Bits Missing
 C register should have c6-c1 for manual console switches.
 
-### BUG-016: checkInterrupts() Never Called
-Interrupt checking function exists but never invoked in step() loop.
+### ~~BUG-016: checkInterrupts() Never Called~~ ✅ FIXED
+
+**Status:** Fixed in commits c5e68ec + 07e5b61 (2026-01-30)
+
+**What was wrong:** checkInterrupts() existed but was never called.
+
+**Fix applied:**
+- Added checkInterrupts() call at end of step() loop
+- Interrupt handlers now enter Executive Mode automatically
+- Context saved to locations 3-5 for future RTI implementation
 
 ---
 

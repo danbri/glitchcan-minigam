@@ -188,13 +188,30 @@ class E4130 {
     /**
      * Execute one instruction
      * Returns true if execution should continue
+     *
+     * The Elliott 4130 packs TWO 12-bit short instructions in one 24-bit word.
+     * The S register is a half-word address. S bit 0 indicates which half:
+     *   S bit 0 = 0: Upper half (bits 23-12)
+     *   S bit 0 = 1: Lower half (bits 11-0)
      */
     step() {
         if (this.halted) return false;
 
-        const wa = this.S >> 1;  // Word address
-        const w = this.rd(wa);   // Fetch instruction
-        const f = (w >> 18) & 0x3F;  // Function code
+        const wa = this.S >> 1;        // Word address
+        const halfWord = this.S & 1;   // 0=upper, 1=lower
+        const w = this.rd(wa);         // Fetch instruction word
+
+        // Extract function code and operand based on which half-word
+        let f, n;
+        if (halfWord === 0) {
+            // Upper half: bits 23-12
+            f = (w >> 18) & 0x3F;
+            n = (w >> 12) & 0x3F;
+        } else {
+            // Lower half: bits 11-0
+            f = (w >> 6) & 0x3F;
+            n = w & 0x3F;
+        }
 
         // Trace if handler registered
         if (this.traceHandler) {
@@ -210,25 +227,28 @@ class E4130 {
         }
 
         if (f >= 0o40) {
-            // Long instruction (24-bit)
+            // Long instruction (24-bit) - must be at upper half (halfWord==0)
+            // Uses full 24-bit word
             const y = (w >> 16) & 3;   // Addressing mode
             const z = (w >> 15) & 1;   // Extra-code flag
-            const n = w & 0x7FFF;      // Address/operand
-            this.S = (this.S + 2) & this.MASK17;
+            const addr = w & 0x7FFF;   // Address/operand
+            this.S = (this.S + 2) & this.MASK17;  // Advance by full word
 
             if (z) {
-                this.extracode(f, y, n);
+                this.extracode(f, y, addr);
             } else {
-                this.execLong(f, y, n);
+                this.execLong(f, y, addr);
             }
         } else {
-            // Short instruction (12-bit) - each instruction occupies a full word
-            const n = (w >> 12) & 0x3F;
-            this.S = (this.S + 2) & this.MASK17;
+            // Short instruction (12-bit) - advance by half-word only
+            this.S = (this.S + 1) & this.MASK17;
             this.execShort(f, n);
         }
 
         this.iCount++;
+
+        // Process any pending interrupts
+        this.checkInterrupts();
 
         // Check breakpoints
         if (this.breakpoints.has(this.S >> 1)) {
@@ -265,9 +285,13 @@ class E4130 {
             case 0o04: // LDR - R := [n]
                 this.R = op;
                 break;
-            case 0o05: // JIR - Jump indirect via register
-                this.S = n & this.MASK17;
+            case 0o05: { // JIR - Jump indirect return (return from subroutine)
+                // Per E6X3: link word = c24-18 + S, restore both C bits and S from link
+                const link = this.rd(n);
+                this.C = (this.C & 0x1FFFF) | (link & 0xFE0000);  // Restore c24-18
+                this.S = link & this.MASK17;
                 break;
+            }
             case 0o06: // AND - M := M & [n]
                 this.M &= op;
                 this.setC(this.M);
@@ -347,10 +371,13 @@ class E4130 {
             case 0o52: // NADR
                 this.R = (this.sx(op) - this.sx(this.R)) & this.MASK24;
                 break;
-            case 0o53: // JFL - Jump and link (relative)
-                this.wr(0, this.S);
+            case 0o53: { // JFL - Jump and link (relative)
+                // Per E6X3: link word = c24-18 + S (upper 7 bits of C concatenated with 17-bit S)
+                const link = ((this.C >> 17) & 0x7F) << 17 | (this.S & this.MASK17);
+                this.wr(0, link);
                 this.S = (y === 0 ? (this.S + this.sx15(n) * 2) : op * 2) & this.MASK17;
                 break;
+            }
             case 0o54: // LDK
                 this.K = op & this.MASK12;
                 break;
@@ -1030,6 +1057,7 @@ class E4130 {
 
     /**
      * Check and handle pending interrupts
+     * Per E6X4: Interrupt handlers must run in Executive Mode with full memory access
      */
     checkInterrupts() {
         if (!this.interruptEnabled || this.pendingInterrupts.length === 0) {
@@ -1040,8 +1068,25 @@ class E4130 {
         this.pendingInterrupts.sort((a, b) => a.level - b.level);
         const int = this.pendingInterrupts.shift();
 
+        // Save current execution context before interrupt (per E6X4)
+        const savedMode = this.executiveMode;
+        const savedBase = this.baseReg;
+        const savedRange = this.rangeReg;
+
         // Save return address at location 0
         this.wr(0, this.S);
+
+        // Save execution context at locations 3-5 for RTI restoration
+        // Location 3: Mode flag (0 = Executive, 1 = Protected)
+        // Location 4: Base register
+        // Location 5: Range register
+        this.mem[3] = savedMode ? 0 : 1;  // Store inverse: 0 if was Executive
+        this.mem[4] = savedBase;
+        this.mem[5] = savedRange;
+
+        // Per E6X4: Switch to Executive Mode for interrupt handler
+        // This gives the OS handler full memory access to service the interrupt
+        this.executiveMode = true;
 
         // Jump to interrupt vector
         this.S = int.vector * 2;
