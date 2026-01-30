@@ -1027,9 +1027,10 @@ RD_RET:
     JI    0
 
 ; ============================================================================
-; RDCHAR - Read one character from paper tape (Channel 1)
-; Output: RD_CH = character read (or 0 if EOF)
+; RDCHAR - Read one 6-bit character from paper tape (Channel 1)
+; Output: RD_CH = 6-bit character read (or 0 if EOF)
 ; Uses IDUM instruction: F=76, Y=0, N=0o20001
+; Note: Elliott 4130 uses 6-bit characters ("6-bit bytes"), not 8-bit octets
 ; ============================================================================
 RDCHAR:
     LD    0
@@ -1044,10 +1045,10 @@ RDCHAR:
     J     RDCH_RET
 
 RDCH_TAPE:
-    ; Read one byte from paper tape reader (Channel 1) using IDUM instruction
+    ; Read one 6-bit character from paper tape reader (Channel 1)
     ; IDUM 1 reads from channel 1, result goes to M register
     ; Historically authentic: this is how Elliott 4130 read paper tape
-    IDUM  1             ; Read byte from tape reader to M
+    IDUM  1             ; Read 6-bit char from tape reader to M
     ST    RD_CH         ; Store result
 
 RDCH_RET:
