@@ -227,12 +227,32 @@ Expected: Control word sent to channel 01
 
 ## Implementation Notes for Emulator
 
-### Minimum Viable I/O
-1. **TR/CH extracodes** - Console output (already implemented)
-2. **IDUM/ODUM** - Single word I/O for simple programs
-3. **ITOM/ATOM** - Interrupt inspection
+### Current Implementation Status (January 2026)
 
-### Phase 2: Channel System
+#### ✅ Implemented
+1. **TR/CH extracodes** - Console output working
+2. **IDUM/ODUM** - Single word I/O working with 6-bit masking
+3. **ISUM/OCUM** - Status/control single word transfers
+4. **ITOM/ATOM** - Interrupt/attention word inspection
+5. **Paper tape reader** - Channel 1, loads from `.lisp` tape files
+6. **Paper tape punch** - Channel 2, output buffer
+7. **6-bit character handling** - Input/output masked to 0x3F
+
+#### Assembler Support
+I/O instruction encoding fixed (January 2026):
+- `IDUM n` - F=76, Y=0, Z=0, N bits 14-12=2, bits 5-0=channel
+- `ODUM n` - F=76, Y=0, Z=0, N bits 14-12=3, bits 5-0=channel
+- `ISUM n` - F=77, Y=0, Z=0, N bits 14-12=2, bits 5-0=channel
+- `OCUM n` - F=77, Y=0, Z=0, N bits 14-12=3, bits 5-0=channel
+
+#### 6-Bit Character Notes
+Elliott 4130 uses 6-bit characters ("6-bit bytes"), not 8-bit octets:
+- 4 characters pack into one 24-bit word
+- Tape reader masks input to 6 bits (`& 0x3F`)
+- On-disk tape format (ASCII `.lisp` files) is a development placeholder
+- Historical 4130 tapes used 6-bit encoding
+
+### Phase 2: Channel System (Future)
 ```javascript
 class IOChannel {
   constructor(id) {

@@ -265,30 +265,10 @@ Emulator policy: Use original fetched word (don't re-fetch)
 
 ---
 
-## 7. Emulator Implementation Status
+## 7. Discrepancies to Verify
 
-### Implemented (elliott4130-core.js)
-- [x] 24-bit word, two's complement
-- [x] All 5 registers (M, R, S, K, C)
-- [x] S half-word addressing
-- [x] Short/long instruction decode
-- [x] Condition flags (NEG, ST, NZ, CA, OF)
-- [x] Hardware FP (4130 mode)
-- [x] Two-word FP format (39-bit mantissa, 9-bit exponent)
-- [x] Character I/O (6-bit)
-- [x] Interrupt system (Normal, Attention, Hesitation)
-- [x] Protected mode (Base/Range registers)
-
-### Not Implemented / Partial
-- [ ] C register should be 14 bits (currently uses upper 5 bits only)
-- [ ] DPA (87-bit mantissa double-length FP)
-- [ ] CPA (Complex FP accumulator)
-- [ ] Type 4280 Graphical Display
-- [ ] Disc controller (10 surfaces, 100 tracks, 16 sectors)
-- [ ] Split long instruction across two words
-
-### Discrepancies to Verify
-1. **C register bits:** E6X2 says 14-bit with bits 16-7 unallocated. Emulator uses bits 23-19 (Elliott 24-20). Need E6X3 for exact condition flag positions.
+Based on E6X2/E6X3 analysis:
+1. **C register bits:** E6X2 says 14-bit with bits 16-7 unallocated. Need E6X3 for exact condition flag positions.
 2. **Long instruction spanning:** Emulator assumes long instructions start at even S. Need to verify handling of odd-S long instruction start.
 
 ---
@@ -1185,10 +1165,10 @@ Expected: Control word sent to channel 01
 
 ---
 
-## Implementation Notes for Emulator
+## Emulator Requirements (from E6X5 Analysis)
 
 ### Minimum Viable I/O
-1. **TR/CH extracodes** - Console output (already implemented)
+1. **TR/CH extracodes** - Console output
 2. **IDUM/ODUM** - Single word I/O for simple programs
 3. **ITOM/ATOM** - Interrupt inspection
 

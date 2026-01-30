@@ -32,8 +32,9 @@
 ;   4095     : NIL
 ; ============================================================================
 
-; === Test: Evaluate ((LAMBDA (X) (CAR X)) (QUOTE (A B))) ===
-; Expected: 3000 (symbol A)
+; === REPL: Read-Eval-Print Loop ===
+; Reads S-expressions from paper tape (Channel 1), evaluates, prints results
+; Load a LISP tape into the tape reader before running
 
 START:
     ; Initialize heap and environment
@@ -46,136 +47,166 @@ START:
     LD    #200
     ST    SP
 
-    ; === Build test expression ===
-    ; ((LAMBDA (X) (CAR X)) (QUOTE (A B)))
+    ; Print startup banner: "LISP"
+    TR    12             ; L
+    TR    9              ; I
+    TR    19             ; S
+    TR    16             ; P
+    TR    0              ; newline
 
-    ; cell 1000 = (B . NIL)
-    LD    #3001           ; B
-    MULS  #4096
-    ADD   #4095           ; NIL
-    ST    1000
+; === REPL Loop ===
+REPL:
+    ; Print prompt: "> "
+    ; (Skip prompt for batch tape processing)
 
-    ; cell 1001 = (A . 1000) = list (A B)
-    LD    #3000           ; A
-    MULS  #4096
-    ADD   #1000
-    ST    1001
+    ; Read S-expression from tape
+    JFL   READ
 
-    ; cell 1002 = (1001 . NIL) = args for QUOTE
-    LD    #1001
-    MULS  #4096
-    ADD   #4095
-    ST    1002
+    ; Check for EOF (RESULT = 0 means tape empty)
+    LD    RD_CH
+    JZ    REPL_DONE      ; EOF - stop
 
-    ; cell 1003 = (QUOTE . 1002) = (QUOTE (A B))
-    LD    #4000           ; QUOTE
-    MULS  #4096
-    ADD   #1002
-    ST    1003
-
-    ; cell 1004 = (1003 . NIL) = arg list for lambda call
-    LD    #1003
-    MULS  #4096
-    ADD   #4095
-    ST    1004
-
-    ; --- Build (LAMBDA (X) (CAR X)) ---
-
-    ; cell 1005 = (X . NIL) = param list
-    LD    #3023           ; X = 3023 (24th letter)
-    MULS  #4096
-    ADD   #4095
-    ST    1005
-
-    ; cell 1006 = (X . NIL) = arg to CAR
-    LD    #3023           ; X
-    MULS  #4096
-    ADD   #4095
-    ST    1006
-
-    ; cell 1007 = (CAR . 1006) = (CAR X)
-    LD    #4001           ; CAR
-    MULS  #4096
-    ADD   #1006
-    ST    1007
-
-    ; cell 1008 = (1007 . NIL) = body wrapped
-    LD    #1007
-    MULS  #4096
-    ADD   #4095
-    ST    1008
-
-    ; cell 1009 = (1005 . 1008) = (params . body)
-    LD    #1005
-    MULS  #4096
-    ADD   #1008
-    ST    1009
-
-    ; cell 1010 = (LAMBDA . 1009) = (LAMBDA (X) (CAR X))
-    LD    #4007           ; LAMBDA
-    MULS  #4096
-    ADD   #1009
-    ST    1010
-
-    ; cell 1011 = (1010 . 1004) = ((LAMBDA ...) (QUOTE (A B)))
-    LD    #1010
-    MULS  #4096
-    ADD   #1004
-    ST    1011
-
-    ; Update heap
-    LD    #1012
-    ST    HEAP
-
-    ; === Evaluate the expression ===
-    LD    #1011
+    ; Evaluate expression
+    LD    RESULT
     ST    EXPR
     JFL   EVAL
 
-    ; Store result
-    LD    RESULT
-    ST    100
+    ; Print result
+    JFL   PRINT
 
-    ; Print result as letter (A=0, B=1, etc.)
+    ; Loop for next expression
+    J     REPL
+
+REPL_DONE:
+    ; Print "END"
+    TR    5              ; E
+    TR    14             ; N
+    TR    4              ; D
+    TR    0              ; newline
+    J     HALT
+
+HALT:
+    J     HALT
+
+; ============================================================================
+; PRINT - Print S-expression to console
+; Input: RESULT = expression to print
+; ============================================================================
+PRINT:
+    LD    0
+    ST    PR_LINK
+
     LD    RESULT
+    ST    PR_EXPR
+
+    ; Is it an atom? (>= 3000)
+    LD    PR_EXPR
     SUB   #3000
-    JN    PRINT_NUM       ; If negative, print as number
-    SUB   #26
-    JNN   PRINT_NUM       ; If >= 26, print as number
+    JN    PR_LIST
 
-    ; Print as letter
-    LD    RESULT
-    SUB   #3000
-    ADD   #1             ; TR uses 1-based (A=1)
-    TR    0              ; Output letter
-
-    J     DONE
-
-PRINT_NUM:
-    ; Print NIL or T
-    LD    RESULT
+    ; --- Print atom ---
+    ; Check for NIL
+    LD    PR_EXPR
     SUB   #4095
-    JNZ   PRINT_T
-    ; Print NIL as "NIL"
+    JNZ   PR_NOT_NIL
     TR    14             ; N
     TR    9              ; I
     TR    12             ; L
-    J     DONE
+    J     PR_RET
 
-PRINT_T:
-    LD    RESULT
+PR_NOT_NIL:
+    ; Check for T
+    LD    PR_EXPR
     SUB   #4094
-    JNZ   PRINT_HEX
+    JNZ   PR_SYMBOL
     TR    20             ; T
-    J     DONE
+    J     PR_RET
 
-PRINT_HEX:
-    ; Print as octal
-    LD    RESULT
+PR_SYMBOL:
+    ; Print A-Z (3000-3025)
+    LD    PR_EXPR
+    SUB   #3000
+    JN    PR_NUM
+    SUB   #26
+    JNN   PR_NUM
+    ; It's a letter
+    LD    PR_EXPR
+    SUB   #3000
+    ADD   #1             ; TR uses 1-based (A=1)
+    TR    0
+    J     PR_RET
+
+PR_NUM:
+    ; Print as octal number
+    LD    PR_EXPR
     CH    0
+    J     PR_RET
 
-DONE:
-    J     DONE
+PR_LIST:
+    ; Print list: (a b c ...)
+    ; Output '(' - load char to M, then ODUM outputs M to channel
+    LD    #40            ; '('
+    ODUM  0              ; Output M to console (channel 0)
+
+PR_LIST_LOOP:
+    ; Print car
+    LD    PR_EXPR
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    PR_SAVE
+    JFL   PRINT          ; Recursive print
+
+    ; Get cdr
+    LD    PR_EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    PR_EXPR
+
+    ; Check if cdr is NIL
+    LD    PR_EXPR
+    SUB   #4095
+    JZ    PR_LIST_END
+
+    ; Check if cdr is a list (< 3000)
+    LD    PR_EXPR
+    SUB   #3000
+    JNN   PR_DOTTED
+
+    ; More list elements - print space and continue
+    LD    #32            ; Space
+    ODUM  0
+    J     PR_LIST_LOOP
+
+PR_DOTTED:
+    ; Dotted pair: print " . x"
+    LD    #32            ; Space
+    ODUM  0
+    LD    #46            ; '.'
+    ODUM  0
+    LD    #32            ; Space
+    ODUM  0
+    LD    PR_EXPR
+    ST    RESULT
+    JFL   PRINT
+
+PR_LIST_END:
+    ; Output ')'
+    LD    #41
+    ODUM  0
+    ; Newline after top-level print
+    TR    0
+
+PR_RET:
+    LD    PR_LINK
+    ST    0
+    JI    0
+
+; PRINT state
+PR_LINK:      #0
+PR_EXPR:      #0
+PR_SAVE:      #0
 
 ; ============================================================================
 ; EVAL - Evaluate expression in environment

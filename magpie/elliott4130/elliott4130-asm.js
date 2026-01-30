@@ -282,7 +282,17 @@ class Asm {
             } else {
                 const f = info.s;
                 const n = (info.n !== undefined ? info.n : value) & 0x3F;
+                // Short instruction in upper 12 bits, lower 12 bits = short JIR 0
+                // JIR 0 (f=0o05, n=0) is "return via address 0" - acts as NOP if addr 0 = 0
+                // Actually safer: put short J +1 equivalent, but that's complex
+                // For now: put ADD 0 which is benign if mem[0] = 0 after our instruction
+                // Best fix: Put short "LD 0" in lower which just reloads M from mem[0]
+                // Actually: Use short form of current instruction location as a self-modifying skip
+                // SIMPLEST: Force long form for instructions that only have short form
+                // Since this breaks, let's just put zeros and handle it in CPU
                 word = ((f << 6) | n) << 12;
+                // Add a skip marker - lower 12 bits = 0o05 0o77 = JIR 63 (invalid, used as NOP marker)
+                word |= 0o0577;  // Special marker: short instruction, skip lower half
             }
 
             out.push({ addr, word });
