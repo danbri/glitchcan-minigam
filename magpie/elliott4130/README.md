@@ -79,12 +79,40 @@ This implementation targets 1968 limitations:
 - 24-bit words with 12-bit pointers
 - No stack - uses link storage at address 0
 
-### Moved to junk/
+### Authenticity Guidelines (Do Not Backslide!)
 
-Files that did LISP logic in JavaScript or had broken control flow were moved to `../junk/`:
-- `lisp-repl.js` - JS cross-compiler (LISP logic in JavaScript)
+**NO JavaScript LISP**: All S-expression parsing must happen in the READER subroutine (lisp4130.asm) using machine instructions, not JavaScript shortcuts.
+
+**NO memory buffer I/O shortcuts**: Use actual IDUM/ODUM instructions for tape I/O.
+
+**Authentic workflow**:
+1. Load LISP tape via Paper Tape I/O panel
+2. READER parses S-expressions using IDUM I/O instruction (channel 1)
+3. EVAL evaluates expressions in native 4130 assembly
+4. PRINT outputs results using ODUM I/O instruction (channel 2)
+
+### Deleted (formerly in junk/)
+
+Files that did LISP logic in JavaScript were deleted:
+- `lisp-repl.js` - JS cross-compiler (DELETED - was doing LISP in JavaScript)
+
+Files with broken control flow remain in `../junk/`:
 - `lisp-interpreter.asm` - broken (inline routines end with J HALT)
 - `lisp-eval.asm` - incomplete (single-shot, all paths end at HALT)
+
+## Paper Tape I/O
+
+The emulator implements authentic I/O instructions for paper tape:
+
+- **IDUM 1** - Read byte from paper tape reader to M register
+- **ODUM 2** - Write byte from M register to paper tape punch
+
+### LISP Tapes
+
+Example LISP programs in `tapes/`:
+- `basic-tests.lisp` - Simple S-expressions
+- `advanced-tests.lisp` - Complex nested expressions
+- `meta-circular.lisp` - McCarthy's eval/apply
 
 ## UI Features
 
