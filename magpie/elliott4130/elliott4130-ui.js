@@ -192,6 +192,53 @@ class E4130UI {
                 this.debug.info('Punch cleared');
             };
         }
+
+        // LISP tape select dropdown
+        const lispTapeSelect = document.getElementById('lispTapeSelect');
+        if (lispTapeSelect) {
+            lispTapeSelect.onchange = () => {
+                const tape = lispTapeSelect.value;
+                if (!tape) return;
+                this.loadLispTape(tape);
+                lispTapeSelect.value = '';  // Reset dropdown
+            };
+        }
+    }
+
+    /**
+     * Load a LISP tape from the tapes folder
+     */
+    loadLispTape(tapeName) {
+        const tapeFiles = {
+            'basic': 'tapes/basic-tests.lisp',
+            'advanced': 'tapes/advanced-tests.lisp',
+            'meta': 'tapes/meta-circular.lisp'
+        };
+
+        const url = tapeFiles[tapeName];
+        if (!url) {
+            this.debug.error(`Unknown tape: ${tapeName}`);
+            return;
+        }
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to load ${url}`);
+                return response.text();
+            })
+            .then(text => {
+                // Convert text to bytes (ASCII)
+                const data = new Uint8Array(text.length);
+                for (let i = 0; i < text.length; i++) {
+                    data[i] = text.charCodeAt(i) & 0xFF;
+                }
+                this.cpu.loadTape(data);
+                this.updateTapeStatus();
+                this.debug.info(`Loaded LISP tape: ${tapeName} (${data.length} bytes)`);
+            })
+            .catch(err => {
+                this.debug.error(`Error loading tape: ${err.message}`);
+            });
     }
 
     /**

@@ -263,9 +263,15 @@
                         <div class="tape-io-box" id="tapeReaderStatus" style="font-size:8px; background:#000; border:1px solid #333; padding:2px 4px; min-height:20px;">
                             No tape loaded
                         </div>
-                        <div style="display:flex; gap:2px; margin-top:2px;">
+                        <div style="display:flex; gap:2px; margin-top:2px; flex-wrap:wrap;">
                             <button class="btn" id="loadTapeFile" style="font-size:7px; padding:2px 4px;">Load</button>
                             <button class="btn" id="rewindTape" style="font-size:7px; padding:2px 4px;">⏪</button>
+                            <select id="lispTapeSelect" class="btn lisp" style="font-size:7px; padding:2px 4px;">
+                                <option value="">LISP Tapes</option>
+                                <option value="basic">Basic Tests</option>
+                                <option value="advanced">Advanced</option>
+                                <option value="meta">Meta-Circular</option>
+                            </select>
                         </div>
                     </div>
                     <div style="flex:1; min-width:120px;">
@@ -279,7 +285,7 @@
                         </div>
                     </div>
                 </div>
-                <input type="file" id="tapeFileInput" style="display:none;" accept=".bin,.txt,.tap">
+                <input type="file" id="tapeFileInput" style="display:none;" accept=".bin,.txt,.tap,.lisp">
             </div>
         </div>
         <div class="controls">
