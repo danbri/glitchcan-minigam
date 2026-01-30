@@ -2,9 +2,9 @@
 
 Critical assessment by skeptical Computer History professionals reviewing against CCS E6X1-E6X5 reference manuals.
 
-## Consensus Grade: C+ (upgraded from D+ after Jan 2026 fixes)
+## Consensus Grade: B- (upgraded from D+ after Jan 2026 fixes)
 
-The emulator has undergone significant improvements. Most P0/P1 bugs are now fixed. Remaining critical issue is BUG-001 (FP format) and BUG-003 (extracode traps).
+The emulator has undergone significant improvements. All P0/P1 bugs fixed except BUG-001 (FP format - major rewrite needed). Integer programs, OS development, and interrupt-driven code now work correctly.
 
 ---
 
@@ -61,26 +61,20 @@ These issues would cause ANY real Elliott 4130 program to fail.
 
 ---
 
-### BUG-003: Extracode Mechanism Fundamentally Wrong
+### ~~BUG-003: Extracode Mechanism Fundamentally Wrong~~ ✅ FIXED
 
-**Reference (E6X3 p.6):**
-> "Action for literal address mode (Y = 0):
-> (a) place N in memory location 1;
-> (b) place the link (c24-18 + S) in memory location 2;
-> (c) jump to a memory location given by **twice the value of the F-bits**"
+**Status:** Fixed in commit bd68c06 (2026-01-30)
 
-**Current Implementation (line 506-628):**
-Executes extracodes inline as JavaScript functions.
+**What was wrong:** All extracodes executed inline - no OS interception possible.
 
-**Problem:** Extracodes should be SOFTWARE TRAPS to addresses 64-127, where OS provides handlers. The 4120 relied on this for software FP emulation.
-
-**Impact:** Operating systems, debuggers, and system extensions cannot intercept extracodes.
-
-**Fix Required:**
-- Store N at location 1
-- Store link (c24-18 + S) at location 2
+**Fix applied per E6X3:**
+- Store N at memory location 1
+- Store link (c24-18 + S) at memory location 2
 - Jump to address 2*F (or 2*F+1 for Y>0)
-- Only implement hardware extracodes inline for 4130-specific FP
+- Hardware FP (0o52-0o65) configurable via `hardwareFPEnabled` flag
+- I/O extracodes now trap for OS mediation
+
+**Tests:** 7 tests in `tests/test-extracode-traps.js`
 
 ---
 
