@@ -702,15 +702,48 @@ test('MTOS: Masks to 17 bits', () => {
 });
 
 // MTOC (0o04002) - M to C
-test('MTOC: M to C transfer', () => {
+test('MTOC: M to C transfer with sparse bit mask', () => {
     const cpu = createCPU();
     cpu.M = 0x123456;
     cpu.C = 0;
 
     cpu.regOp(0o04002);  // MTOC
 
-    // MTOC masks to 14 bits per implementation
-    assertEqual(cpu.C, 0x123456 & 0x3FFF, 'C should contain M value (14-bit masked)');
+    // Per E6X3: C register is 14 bits NON-CONTIGUOUS
+    // c24-c17 (JS bits 23-16) + c6-c1 (JS bits 5-0)
+    // c16-c7 (JS bits 15-6) are unallocated and forced to zero
+    // Mask: 0xFF003F
+    assertEqual(cpu.C, 0x123456 & 0xFF003F, 'C should contain M value (sparse 14-bit masked)');
+});
+
+test('MTOC: Preserves upper condition bits (c24-c17)', () => {
+    const cpu = createCPU();
+    cpu.M = 0xFF0000;  // All upper bits set
+    cpu.C = 0;
+
+    cpu.regOp(0o04002);  // MTOC
+
+    assertEqual(cpu.C, 0xFF0000, 'Upper bits (c24-c17) should be preserved');
+});
+
+test('MTOC: Preserves lower console switch bits (c6-c1)', () => {
+    const cpu = createCPU();
+    cpu.M = 0x00003F;  // All lower bits set
+    cpu.C = 0;
+
+    cpu.regOp(0o04002);  // MTOC
+
+    assertEqual(cpu.C, 0x00003F, 'Lower bits (c6-c1) should be preserved');
+});
+
+test('MTOC: Clears unallocated middle bits (c16-c7)', () => {
+    const cpu = createCPU();
+    cpu.M = 0x00FFC0;  // Middle bits set (bits 15-6)
+    cpu.C = 0xFFFFFF;  // Pre-set to all 1s
+
+    cpu.regOp(0o04002);  // MTOC
+
+    assertEqual(cpu.C, 0x000000, 'Middle bits should be cleared to zero');
 });
 
 // RTOK (0o10001) - R to K

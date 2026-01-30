@@ -671,7 +671,11 @@ class E4130 {
                 this.S = this.M & this.MASK17;
                 break;
             case 0o04002: // MTOC - M to C
-                this.C = this.M & 0x3FFF;
+                // Per E6X3: C register is 14 bits, but NON-CONTIGUOUS
+                // c24-c17 (JS bits 23-16) = condition flags + interrupt permits
+                // c6-c1 (JS bits 5-0) = manual console switches
+                // c16-c7 (JS bits 15-6) = unallocated, forced to zero
+                this.C = this.M & 0xFF003F;
                 break;
             case 0o10001: // RTOK - R to K
                 this.K = this.R & this.MASK12;
@@ -790,10 +794,9 @@ class E4130 {
                 break;
             // Protected Mode instructions - Per E6X4
             case 0o01000: // EXEN - Enter Executive Mode
-                // Only permitted from Executive Mode or interrupt handlers
-                if (this.executiveMode) {
-                    this.executiveMode = true;
-                }
+                // Per E6X4: EXEN always enters Executive Mode, regardless of current mode
+                // This allows Protected Mode programs to make supervisor calls
+                this.executiveMode = true;
                 break;
             case 0o02000: // PMEN - Enter Protected Mode
                 // Sets Protected Mode with current Base and Range registers
@@ -1057,16 +1060,37 @@ class E4130 {
     }
 
     /**
+     * Advance real-time clock by one tick (for unit testing)
+     * Per E6X4: When alarm expires in Protected Mode, program is terminated
+     * and execution returns to Executive Mode
+     *
+     * @returns {boolean} true if alarm fired
+     */
+    advanceRTC() {
+        this.rtcCounter++;
+        if (this.rtcDelay > 0 && this.rtcCounter >= this.rtcDelay) {
+            // Raise RTC/alarm interrupt
+            this.raiseInterrupt(this.INT_NORMAL, 0);
+
+            // Per E6X4: Alarm Clock terminates Protected Mode program
+            // "When Alarm Clock expires: Protected Mode program terminated"
+            if (!this.executiveMode) {
+                this.executiveMode = true;
+            }
+
+            this.rtcCounter = 0;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Start real-time clock
      */
     startRTC(intervalMs = 1000) {
         if (this.rtcInterval) clearInterval(this.rtcInterval);
         this.rtcInterval = setInterval(() => {
-            this.rtcCounter++;
-            if (this.rtcDelay > 0 && this.rtcCounter >= this.rtcDelay) {
-                this.raiseInterrupt(this.INT_NORMAL, 0);  // RTC interrupt vector 0
-                this.rtcCounter = 0;
-            }
+            this.advanceRTC();
         }, intervalMs);
     }
 

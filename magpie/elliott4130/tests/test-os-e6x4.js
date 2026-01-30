@@ -75,7 +75,7 @@ function createCPU() {
 
 console.log('\n=== TC-E6X4-02: EXEN Instruction ===\n');
 
-test('EXEN: Transitions from Protected Mode to Executive Mode [TODO - not implemented]', () => {
+test('EXEN: Transitions from Protected Mode to Executive Mode', () => {
     const cpu = createCPU();
     cpu.executiveMode = false;  // Start in Protected Mode
     cpu.baseReg = 10;
@@ -83,17 +83,8 @@ test('EXEN: Transitions from Protected Mode to Executive Mode [TODO - not implem
 
     cpu.regOpExtra(0o01000);  // EXEN
 
-    // TODO: Current implementation only allows EXEN from Executive Mode
     // Per E6X4: EXEN should transition from Protected to Executive Mode
-    // This is needed for user programs to make supervisor calls
-    //
-    // Current emulator behavior: EXEN is a no-op when in Protected Mode
-    // Expected E6X4 behavior: EXEN should enter Executive Mode
-    //
-    // This test documents the spec requirement - currently skipped as unimplemented
-    if (cpu.executiveMode === false) {
-        skip('EXEN from Protected Mode not implemented - emulator requires Executive Mode');
-    }
+    // This allows user programs to make supervisor calls
     assertEqual(cpu.executiveMode, true, 'EXEN should enter Executive Mode from Protected');
 });
 
@@ -108,11 +99,9 @@ test('EXEN: From Protected Mode bypasses subsequent protection checks', () => {
 
     cpu.regOpExtra(0o01000);  // EXEN
 
-    // After EXEN, should have full access (if EXEN works from Protected Mode)
-    // TODO: This test documents expected behavior - currently EXEN is no-op from Protected Mode
-    if (cpu.executiveMode) {
-        assertEqual(cpu.checkProtection(0), true, 'Address 0 allowed after EXEN');
-    }
+    // After EXEN, should have full access
+    assertEqual(cpu.executiveMode, true, 'Should be in Executive Mode');
+    assertEqual(cpu.checkProtection(0), true, 'Address 0 allowed after EXEN');
 });
 
 test('EXEN: Stays in Executive Mode when already Executive (trivial case)', () => {
@@ -206,16 +195,34 @@ test('PMEN full setup: Set Base, Range, then enter Protected Mode', () => {
 
 console.log('\n=== TC-E6X4-04: Real-Time Clock ===\n');
 
-test('RTC: advanceRTC method should exist for testability', () => {
+test('RTC: advanceRTC method exists for testability', () => {
     const cpu = createCPU();
 
-    // TODO: The emulator uses real setInterval for RTC, not a testable advanceRTC method
-    // This documents the expected interface for unit testing
-    if (typeof cpu.advanceRTC === 'function') {
-        assertTrue(true, 'advanceRTC method exists');
-    } else {
-        skip('advanceRTC method not implemented - RTC uses real setInterval');
-    }
+    // advanceRTC provides deterministic control for unit testing
+    assertTrue(typeof cpu.advanceRTC === 'function', 'advanceRTC method exists');
+});
+
+test('RTC: advanceRTC increments counter', () => {
+    const cpu = createCPU();
+    cpu.rtcCounter = 0;
+    cpu.rtcDelay = 10;  // Set alarm far away
+
+    cpu.advanceRTC();
+
+    assertEqual(cpu.rtcCounter, 1, 'Counter should increment by 1');
+});
+
+test('RTC: advanceRTC fires alarm when counter reaches delay', () => {
+    const cpu = createCPU();
+    cpu.rtcCounter = 2;
+    cpu.rtcDelay = 3;  // Alarm at 3
+    cpu.pendingInterrupts = [];
+
+    const fired = cpu.advanceRTC();
+
+    assertTrue(fired, 'advanceRTC should return true when alarm fires');
+    assertEqual(cpu.pendingInterrupts.length, 1, 'Should have raised interrupt');
+    assertEqual(cpu.rtcCounter, 0, 'Counter should reset after alarm');
 });
 
 test('RTC: Counter increments with rtcEnabled', () => {
@@ -272,27 +279,28 @@ test('Alarm Clock: rtcDelay field exists for alarm configuration', () => {
     assertEqual(typeof cpu.rtcDelay, 'number', 'rtcDelay should be a number');
 });
 
-test('Alarm Clock: Termination expected after N seconds in Protected Mode', () => {
+test('Alarm Clock: Terminates Protected Mode after N ticks', () => {
     const cpu = createCPU();
-    cpu.executiveMode = false;
+    cpu.executiveMode = false;  // Start in Protected Mode
     cpu.baseReg = 10;
     cpu.rangeReg = 5;
-    cpu.rtcDelay = 3;  // Alarm set for 3 "seconds"
+    cpu.rtcDelay = 3;  // Alarm set for 3 ticks
     cpu.rtcCounter = 0;
+    cpu.pendingInterrupts = [];
 
-    // TODO: Current implementation raises INT_NORMAL but doesn't force Executive Mode
     // Per E6X4: Alarm Clock should terminate Protected Mode program and return to Executive
+    assertEqual(cpu.executiveMode, false, 'Should start in Protected Mode');
 
-    // Simulate alarm expiration
-    cpu.rtcCounter = cpu.rtcDelay;
+    // Advance RTC until alarm fires
+    cpu.advanceRTC();  // counter = 1
+    assertEqual(cpu.executiveMode, false, 'Still in Protected Mode at tick 1');
 
-    // This test documents expected behavior:
-    // When alarm expires in Protected Mode, the OS should be notified
-    // and Protected Mode should be terminated
+    cpu.advanceRTC();  // counter = 2
+    assertEqual(cpu.executiveMode, false, 'Still in Protected Mode at tick 2');
 
-    // Current implementation only raises an interrupt, doesn't force mode change
-    // Expected: cpu.executiveMode should become true after alarm handling
-    skip('Alarm Clock Protected Mode termination not fully implemented');
+    cpu.advanceRTC();  // counter = 3 = delay, alarm fires!
+    assertEqual(cpu.executiveMode, true, 'Alarm should terminate Protected Mode');
+    assertEqual(cpu.pendingInterrupts.length, 1, 'Alarm should raise interrupt');
 });
 
 test('Alarm Clock: Interrupt raised when alarm expires', () => {
