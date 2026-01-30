@@ -230,6 +230,9 @@ class E4130 {
 
         this.iCount++;
 
+        // Process any pending interrupts
+        this.checkInterrupts();
+
         // Check breakpoints
         if (this.breakpoints.has(this.S >> 1)) {
             this.halted = true;
