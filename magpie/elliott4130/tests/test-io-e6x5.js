@@ -237,11 +237,18 @@ test('channelRead from channel 0 uses inputBuffer', () => {
     assertEqual(cpu.inputBuffer.length, 0, 'Input buffer should be consumed');
 });
 
-test('channelRead from non-zero channel uses channel buffer', () => {
+test('channelRead from channel 1 (tape reader) reads from tape', () => {
     const cpu = createCPU();
-    cpu.channels[1].buffer.push(0x55);
+    cpu.loadTape([0x55, 0x66]);  // Load tape data
     const data = cpu.channelRead(1);
-    assertEqual(data, 0x55, 'Should read 0x55 from channel 1');
+    assertEqual(data, 0x55, 'Should read 0x55 from tape');
+});
+
+test('channelRead from non-tape channel uses channel buffer', () => {
+    const cpu = createCPU();
+    cpu.channels[3].buffer.push(0x77);  // Use channel 3, not 1 (tape)
+    const data = cpu.channelRead(3);
+    assertEqual(data, 0x77, 'Should read 0x77 from channel 3');
 });
 
 test('channelWrite to channel 0 calls output handler', () => {
@@ -257,12 +264,20 @@ test('channelWrite to channel 0 calls output handler', () => {
     assertEqual(outputChars[0], 'A', 'Output should be A');
 });
 
-test('channelWrite to non-zero channel adds to buffer', () => {
+test('channelWrite to channel 2 (tape punch) adds to tapePunch', () => {
     const cpu = createCPU();
-    cpu.channels[2].buffer = [];
+    cpu.tapePunch = [];  // Clear punch buffer
     cpu.channelWrite(2, 0x77);
-    assertEqual(cpu.channels[2].buffer.length, 1, 'Channel 2 buffer should have 1 byte');
-    assertEqual(cpu.channels[2].buffer[0], 0x77, 'Buffer should contain 0x77');
+    assertEqual(cpu.tapePunch.length, 1, 'Tape punch should have 1 byte');
+    assertEqual(cpu.tapePunch[0], 0x77, 'Tape punch should contain 0x77');
+});
+
+test('channelWrite to non-tape channel adds to buffer', () => {
+    const cpu = createCPU();
+    cpu.channels[3].buffer = [];  // Use channel 3, not 2 (tape punch)
+    cpu.channelWrite(3, 0x88);
+    assertEqual(cpu.channels[3].buffer.length, 1, 'Channel 3 buffer should have 1 byte');
+    assertEqual(cpu.channels[3].buffer[0], 0x88, 'Buffer should contain 0x88');
 });
 
 // ============================================================
@@ -436,6 +451,132 @@ test('keyboardInput clears waitingForInput flag', () => {
     cpu.keyboardInput('X');
 
     assertEqual(cpu.waitingForInput, false, 'Should clear waitingForInput');
+});
+
+// ============================================================
+// DIRECT I/O INSTRUCTION EXECUTION (Z=0)
+// Per E6X3: F=76/77 with Y=0, Z=0 execute directly (not trap)
+// ============================================================
+
+console.log('\n--- Direct I/O Instruction Execution (Z=0) ---\n');
+
+test('IDUM from channel 1 (tape reader) reads byte to M', () => {
+    const cpu = createCPU();
+    // Load tape with test data
+    cpu.loadTape([0x42, 0x43, 0x44]);  // B, C, D
+
+    // IDUM: F=76, Y=0, Z=0, N=0o20001 (input from channel 1)
+    // Long instruction format: F(6)|Y(2)|Z(1)|N(15)
+    const idum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o20001;
+    cpu.mem[100] = idum;
+    cpu.S = 200;  // Half-word address for word 100
+
+    cpu.step();
+
+    assertEqual(cpu.M, 0x42, 'M should contain 0x42 from tape');
+});
+
+test('IDUM reads sequential bytes from tape', () => {
+    const cpu = createCPU();
+    cpu.loadTape([0xAA, 0xBB, 0xCC]);
+
+    const idum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o20001;
+    cpu.mem[100] = idum;
+    cpu.mem[101] = idum;
+    cpu.mem[102] = idum;
+
+    cpu.S = 200;
+    cpu.step();
+    assertEqual(cpu.M, 0xAA, 'First read should be 0xAA');
+
+    cpu.S = 202;
+    cpu.step();
+    assertEqual(cpu.M, 0xBB, 'Second read should be 0xBB');
+
+    cpu.S = 204;
+    cpu.step();
+    assertEqual(cpu.M, 0xCC, 'Third read should be 0xCC');
+});
+
+test('ODUM to channel 2 (tape punch) writes M to punch', () => {
+    const cpu = createCPU();
+    cpu.M = 0x55;
+
+    // ODUM: F=76, Y=0, Z=0, N=0o30002 (output to channel 2)
+    const odum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o30002;
+    cpu.mem[100] = odum;
+    cpu.S = 200;
+
+    cpu.step();
+
+    assertEqual(cpu.tapePunch.length, 1, 'Should have 1 punched byte');
+    assertEqual(cpu.tapePunch[0], 0x55, 'Punched byte should be 0x55');
+});
+
+test('ODUM writes multiple bytes to punch sequentially', () => {
+    const cpu = createCPU();
+    const odum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o30002;
+    cpu.mem[100] = odum;
+    cpu.mem[101] = odum;
+
+    cpu.M = 0x11;
+    cpu.S = 200;
+    cpu.step();
+
+    cpu.M = 0x22;
+    cpu.S = 202;
+    cpu.step();
+
+    assertEqual(cpu.tapePunch.length, 2, 'Should have 2 punched bytes');
+    assertEqual(cpu.tapePunch[0], 0x11, 'First byte should be 0x11');
+    assertEqual(cpu.tapePunch[1], 0x22, 'Second byte should be 0x22');
+});
+
+test('ISUM reads channel status to M', () => {
+    const cpu = createCPU();
+    cpu.channels[1].status = 0x07;  // Some status bits set
+
+    // ISUM: F=77, Y=0, Z=0, N=0o20001 (input status from channel 1)
+    const isum = (0o77 << 18) | (0 << 16) | (0 << 15) | 0o20001;
+    cpu.mem[100] = isum;
+    cpu.S = 200;
+
+    cpu.step();
+
+    assertEqual(cpu.M, 0x07, 'M should contain channel 1 status');
+});
+
+test('OCUM writes M to channel control', () => {
+    const cpu = createCPU();
+    cpu.M = 0xFF;
+
+    // OCUM: F=77, Y=0, Z=0, N=0o30002 (output control to channel 2)
+    const ocum = (0o77 << 18) | (0 << 16) | (0 << 15) | 0o30002;
+    cpu.mem[100] = ocum;
+    cpu.S = 200;
+
+    cpu.step();
+
+    assertEqual(cpu.channels[2].control, 0xFF, 'Channel 2 control should be 0xFF');
+});
+
+test('Tape reader status shows EOF when tape exhausted', () => {
+    const cpu = createCPU();
+    cpu.loadTape([0x01]);  // Single byte
+
+    // Read the only byte
+    const idum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o20001;
+    cpu.mem[100] = idum;
+    cpu.S = 200;
+    cpu.step();
+
+    // Try to read past end
+    cpu.S = 200;
+    cpu.step();
+
+    // Check EOF status
+    const status = cpu.getTapeReaderStatus();
+    assertTrue(status.atEnd, 'Tape should be at end');
 });
 
 // ============================================================

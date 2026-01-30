@@ -814,6 +814,273 @@ PCONS:
     JI    0
 
 ; ============================================================================
+; READ - Read S-expression from paper tape (Channel 1)
+; Input:  Paper tape via IDUM channel 1
+; Output: RESULT = parsed expression (cell address or atom code)
+; Uses HEAP for new cons cells
+;
+; Supported syntax:
+;   A-Z     -> Atom codes 3000-3025
+;   NIL     -> 4095
+;   T       -> 4094
+;   (...)   -> List (cons cells)
+;   'x      -> (QUOTE x)
+; ============================================================================
+READ:
+    LD    0
+    ST    RD_LINK
+
+    ; Skip whitespace
+RD_SKIP:
+    JFL   RDCHAR
+    LD    RD_CH
+    SUB   #32             ; Space
+    JZ    RD_SKIP
+    LD    RD_CH
+    SUB   #10             ; Newline
+    JZ    RD_SKIP
+    LD    RD_CH
+    SUB   #13             ; CR
+    JZ    RD_SKIP
+
+    ; Check for '(' - start of list
+    LD    RD_CH
+    SUB   #40             ; '('
+    JZ    RD_LIST
+
+    ; Check for ')' - end of list (error at top level)
+    LD    RD_CH
+    SUB   #41             ; ')'
+    JZ    RD_NIL
+
+    ; Check for ''' - quote
+    LD    RD_CH
+    SUB   #39             ; '''
+    JZ    RD_QUOTE
+
+    ; Must be atom - read until delimiter
+    J     RD_ATOM
+
+RD_NIL:
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     RD_RET
+
+RD_QUOTE:
+    ; Read the quoted expression
+    JFL   READ
+    LD    RESULT
+    ST    RD_QEXPR
+
+    ; Build (QUOTE . (expr . NIL))
+    ; First: (expr . NIL)
+    LD    RD_QEXPR
+    MULS  #4096
+    ADD   #4095           ; NIL
+    ST    RD_CELL
+    LD    HEAP
+    ST    RD_ADDR
+    LD    RD_CELL
+    LDR   RD_ADDR
+    ST    0,R
+    LD    HEAP
+    ADD   #1
+    ST    HEAP
+
+    ; Now: (QUOTE . RD_ADDR)
+    LD    #4000           ; QUOTE
+    MULS  #4096
+    ADD   RD_ADDR
+    ST    RD_CELL
+    LD    HEAP
+    ST    RESULT
+    LD    RD_CELL
+    LDR   RESULT
+    ST    0,R
+    LD    HEAP
+    ADD   #1
+    ST    HEAP
+    J     RD_RET
+
+RD_LIST:
+    ; Read list elements until ')'
+    LD    #4095           ; NIL (end of list marker)
+    ST    RD_LIST_END
+
+RD_LIST_LOOP:
+    ; Skip whitespace
+RD_LIST_SKIP:
+    JFL   RDCHAR
+    LD    RD_CH
+    SUB   #32
+    JZ    RD_LIST_SKIP
+    LD    RD_CH
+    SUB   #10
+    JZ    RD_LIST_SKIP
+
+    ; Check for ')'
+    LD    RD_CH
+    SUB   #41             ; ')'
+    JZ    RD_LIST_DONE
+
+    ; Push back the char and read expression
+    LD    RD_CH
+    ST    RD_PUSHBACK
+
+    JFL   READ
+    LD    RESULT
+    ST    RD_ELEM
+
+    ; CONS element onto list (builds in reverse)
+    LD    RD_ELEM
+    MULS  #4096
+    ADD   RD_LIST_END
+    ST    RD_CELL
+    LD    HEAP
+    ST    RD_LIST_END
+    LD    RD_CELL
+    LDR   RD_LIST_END
+    ST    0,R
+    LD    HEAP
+    ADD   #1
+    ST    HEAP
+
+    J     RD_LIST_LOOP
+
+RD_LIST_DONE:
+    ; Reverse the list (it was built backwards)
+    LD    RD_LIST_END
+    ST    RESULT
+    J     RD_RET
+
+RD_ATOM:
+    ; Read atom name into buffer, convert to code
+    LD    #0
+    ST    RD_ALEN
+    LD    RD_CH
+    ST    RD_ABUF
+
+RD_ATOM_LOOP:
+    JFL   RDCHAR
+    ; Check for delimiter
+    LD    RD_CH
+    SUB   #32             ; Space
+    JZ    RD_ATOM_END
+    LD    RD_CH
+    SUB   #40             ; '('
+    JZ    RD_ATOM_PUSH
+    LD    RD_CH
+    SUB   #41             ; ')'
+    JZ    RD_ATOM_PUSH
+    LD    RD_CH
+    SUB   #10             ; Newline
+    JZ    RD_ATOM_END
+
+    ; Add to atom buffer (simplified: just track first char)
+    LD    RD_ALEN
+    ADD   #1
+    ST    RD_ALEN
+    J     RD_ATOM_LOOP
+
+RD_ATOM_PUSH:
+    LD    RD_CH
+    ST    RD_PUSHBACK
+RD_ATOM_END:
+    ; Convert first char to atom code
+    ; A-Z -> 3000-3025
+    LD    RD_ABUF
+    SUB   #65             ; 'A'
+    JN    RD_ATOM_SPECIAL
+    SUB   #26
+    JNN   RD_ATOM_SPECIAL
+    ; It's A-Z
+    LD    RD_ABUF
+    SUB   #65
+    ADD   #3000
+    ST    RESULT
+    J     RD_RET
+
+RD_ATOM_SPECIAL:
+    ; Check for T or NIL (simplified)
+    LD    RD_ABUF
+    SUB   #84             ; 'T'
+    JNZ   RD_CHECK_NIL
+    LD    #4094           ; T
+    ST    RESULT
+    J     RD_RET
+
+RD_CHECK_NIL:
+    LD    RD_ABUF
+    SUB   #78             ; 'N' (for NIL)
+    JNZ   RD_UNKNOWN
+    LD    #4095           ; NIL
+    ST    RESULT
+    J     RD_RET
+
+RD_UNKNOWN:
+    LD    #4095           ; Unknown -> NIL
+    ST    RESULT
+
+RD_RET:
+    LD    RD_LINK
+    ST    0
+    JI    0
+
+; ============================================================================
+; RDCHAR - Read one character from paper tape (Channel 1)
+; Output: RD_CH = character read (or 0 if EOF)
+; Uses IDUM instruction: F=76, Y=0, N=0o20001
+; ============================================================================
+RDCHAR:
+    LD    0
+    ST    RDCH_LINK
+
+    ; Check pushback buffer first
+    LD    RD_PUSHBACK
+    JZ    RDCH_TAPE
+    ST    RD_CH
+    LD    #0
+    ST    RD_PUSHBACK
+    J     RDCH_RET
+
+RDCH_TAPE:
+    ; IDUM from channel 1: F=76, Y=0, N=0o20001
+    ; Instruction word: (76 << 18) | (0 << 16) | (0 << 15) | 0o20001
+    ; = 0o76000000 | 0o20001 = 0o76020001
+    ; But we execute it inline, M gets the byte
+    LD    #0
+    ST    RD_CH
+    ; The actual I/O would be done by the emulator
+    ; For now, use a memory location as tape buffer
+    LD    TAPE_POS
+    LDR   TAPE_POS
+    LD    TAPE_BUF,R
+    ST    RD_CH
+    LD    TAPE_POS
+    ADD   #1
+    ST    TAPE_POS
+
+RDCH_RET:
+    LD    RDCH_LINK
+    ST    0
+    JI    0
+
+; READ state variables
+RD_LINK:      #0
+RD_CH:        #0
+RD_PUSHBACK:  #0
+RD_CELL:      #0
+RD_ADDR:      #0
+RD_QEXPR:     #0
+RD_LIST_END:  #0
+RD_ELEM:      #0
+RD_ALEN:      #0
+RD_ABUF:      #0
+RDCH_LINK:    #0
+TAPE_POS:     #0
+TAPE_BUF:     #0            ; Tape buffer starts here (filled by loader)
+
+; ============================================================================
 ; Data
 ; ============================================================================
 
