@@ -376,6 +376,10 @@ EV_LIST:
     SUB   #4007           ; LAMBDA
     JZ    EV_LAMBDA
 
+    LD    EV_FN
+    SUB   #4008           ; LABEL
+    JZ    EV_LABEL
+
     ; Get args
     LD    EXPR
     ST    ARG
@@ -529,6 +533,60 @@ EV_LAMBDA:
     LD    EXPR
     ST    RESULT
     J     EV_RET
+
+EV_LABEL:
+    ; (LABEL name fn) - bind name to fn in environment, return fn
+    ; This enables recursive functions: name is visible inside fn's body
+    ; Get name: cadr(expr)
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    LBL_NAME
+
+    ; Get fn: caddr(expr) - the lambda expression
+    LD    EXPR
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    LBL_FN
+
+    ; Build binding (name . fn)
+    LD    LBL_NAME
+    ST    CONS_A
+    LD    LBL_FN
+    ST    CONS_D
+    JFL   PCONS
+    LD    RESULT
+    ST    LBL_PAIR
+
+    ; Extend environment: ((name . fn) . env)
+    LD    LBL_PAIR
+    ST    CONS_A
+    LD    ENV
+    ST    CONS_D
+    JFL   PCONS
+    LD    RESULT
+    ST    ENV             ; Update global ENV
+
+    ; Return the fn (now with name bound in env)
+    LD    LBL_FN
+    ST    RESULT
+    J     EV_RET
+
+; LABEL temporaries
+LBL_NAME:     #0
+LBL_FN:       #0
+LBL_PAIR:     #0
 
 EV_QUOTE:
     ; (QUOTE x) -> cadr(expr)
