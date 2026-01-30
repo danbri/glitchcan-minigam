@@ -490,15 +490,48 @@ class E4130 {
                     this.R = (this.R + 1) & this.MASK24;
                 }
                 break;
-            case 0o76: // EXC - Exchange M with memory
-                if (y !== 0) {
+            case 0o76: // EXC (y>0) or IDUM/ODUM (y=0) - I/O data single
+                if (y === 0) {
+                    // Per E6X3: F=76, Y=0, N encodes operation and channel
+                    // N = 0o2xxnn = IDUM (input data unpacked single to M)
+                    // N = 0o3xxnn = ODUM (output data unpacked single from M)
+                    // N is 15-bit: bits 14-12 = operation type, bits 5-0 = channel
+                    const opType = (n >> 12) & 0o7;  // Operation type from bits 14-12
+                    const channel = n & 0o77;        // Channel number from bits 5-0
+                    if (opType === 0o2) {
+                        // IDUM - Input data unpacked single to M
+                        this.M = this.channelRead(channel) & this.MASK24;
+                    } else if (opType === 0o3) {
+                        // ODUM - Output data unpacked single from M
+                        this.channelWrite(channel, this.M);
+                    }
+                } else {
+                    // EXC - Exchange M with memory
                     const t = this.M;
                     this.M = op;
                     this.wr(addr, t);
                 }
                 break;
-            case 0o77: // EXCR - Exchange R with memory
-                if (y !== 0) {
+            case 0o77: // EXCR (y>0) or ISUM/OCUM (y=0) - I/O status/control single
+                if (y === 0) {
+                    // Per E6X3: F=77, Y=0, N encodes operation and channel
+                    // N = 0o2xxnn = ISUM (input status unpacked single to M)
+                    // N = 0o3xxnn = OCUM (output control unpacked single from M)
+                    // N is 15-bit: bits 14-12 = operation type, bits 5-0 = channel
+                    const opType = (n >> 12) & 0o7;  // Operation type from bits 14-12
+                    const channel = n & 0o77;        // Channel number from bits 5-0
+                    const ch = this.channels[channel];
+                    if (ch) {
+                        if (opType === 0o2) {
+                            // ISUM - Input status to M
+                            this.M = ch.status & this.MASK24;
+                        } else if (opType === 0o3) {
+                            // OCUM - Output control from M
+                            ch.control = this.M;
+                        }
+                    }
+                } else {
+                    // EXCR - Exchange R with memory
                     const t = this.R;
                     this.R = op;
                     this.wr(addr, t);
@@ -870,12 +903,13 @@ class E4130 {
 
     /**
      * Read from I/O channel
+     * Per E6X5: Channel 00=console, 01=tape reader, 02=tape punch
      */
     channelRead(channel) {
         const ch = this.channels[channel];
         if (!ch) return 0;
 
-        // Channel 0 is typically console/keyboard
+        // Channel 0 is console/keyboard
         if (channel === 0) {
             if (this.inputBuffer.length > 0) {
                 return this.inputBuffer.shift();
@@ -885,21 +919,43 @@ class E4130 {
             return 0;
         }
 
+        // Channel 1 is paper tape reader
+        if (channel === 1) {
+            if (this.tapeReader && this.tapeReader.position < this.tapeReader.data.length) {
+                const byte = this.tapeReader.data[this.tapeReader.position++];
+                ch.status |= ch.READY;
+                return byte;
+            } else {
+                // End of tape
+                ch.status |= ch.EOF;
+                ch.status &= ~ch.READY;
+                return 0;
+            }
+        }
+
         return ch.read();
     }
 
     /**
      * Write to I/O channel
+     * Per E6X5: Channel 00=console, 01=tape reader, 02=tape punch
      */
     channelWrite(channel, data) {
         const ch = this.channels[channel];
         if (!ch) return;
 
-        // Channel 0 is typically console output
+        // Channel 0 is console output
         if (channel === 0) {
             // Convert to character and output
             const char = data & this.MASK6;
             this.output(this.sixBitToAscii(char));
+            return;
+        }
+
+        // Channel 2 is paper tape punch
+        if (channel === 2) {
+            this.tapePunch.push(data & 0xFF);
+            ch.status |= ch.READY;
             return;
         }
 
@@ -1006,6 +1062,42 @@ class E4130 {
      */
     getTapePunch() {
         return new Uint8Array(this.tapePunch);
+    }
+
+    /**
+     * Get tape reader status for UI
+     */
+    getTapeReaderStatus() {
+        if (!this.tapeReader) {
+            return { loaded: false, position: 0, length: 0 };
+        }
+        return {
+            loaded: true,
+            position: this.tapeReader.position,
+            length: this.tapeReader.data.length,
+            atEnd: this.tapeReader.position >= this.tapeReader.data.length
+        };
+    }
+
+    /**
+     * Rewind tape reader to beginning
+     */
+    rewindTape() {
+        if (this.tapeReader) {
+            this.tapeReader.position = 0;
+            const ch = this.channels[1];
+            if (ch) {
+                ch.status &= ~ch.EOF;
+                ch.status |= ch.READY;
+            }
+        }
+    }
+
+    /**
+     * Clear tape punch output
+     */
+    clearTapePunch() {
+        this.tapePunch = [];
     }
 
     /**
