@@ -122,10 +122,11 @@ class Asm {
             'ISUR': { l: 0o75, z: 1, yMin: 2 }, // Input status unpacked
             'OCUR': { l: 0o75, z: 1, yMin: 3 }, // Output control unpacked
 
-            'IDUM': { l: 0o76, z: 1, yMin: 2 }, // Input data unpacked single to M
-            'ODUM': { l: 0o76, z: 1, yMin: 3 }, // Output data unpacked single from M
-            'ISUM': { l: 0o77, z: 1, yMin: 2 }, // Input status single to M
-            'OCUM': { l: 0o77, z: 1, yMin: 3 }, // Output control single from M
+            // I/O single instructions: Y=0, Z=0, N bits 14-12 = opType, bits 5-0 = channel
+            'IDUM': { l: 0o76, ioType: 2 }, // Input data unpacked single to M
+            'ODUM': { l: 0o76, ioType: 3 }, // Output data unpacked single from M
+            'ISUM': { l: 0o77, ioType: 2 }, // Input status single to M
+            'OCUM': { l: 0o77, ioType: 3 }, // Output control single from M
 
             // Interrupt handling (extracode)
             'ITOM': { l: 0o70, z: 1, n: 0o21000 }, // Interrupt word to M
@@ -258,9 +259,9 @@ class Asm {
 
             // Determine if long form is needed
             // Short form can't do literal mode (y=0) - short form always reads from memory
-            // Need long form for: no short form, requires y>0, z flag, large value, or literal mode with non-jump
+            // Need long form for: no short form, requires y>0, z flag, ioType, large value, or literal mode with non-jump
             const isLiteral = operand && operand.trim().startsWith('#');
-            const needsLong = !info.s || info.yMin || info.z || value > 63 || y > 0 || (y === 0 && isLiteral && !info.jump);
+            const needsLong = !info.s || info.yMin || info.z || info.ioType !== undefined || value > 63 || y > 0 || (y === 0 && isLiteral && !info.jump);
 
             let word;
             if (needsLong) {
@@ -270,7 +271,14 @@ class Asm {
                 // Ensure minimum Y value
                 if (info.yMin && y < info.yMin) y = info.yMin;
 
-                word = (f << 18) | (y << 16) | (z << 15) | (value & 0x7FFF);
+                // I/O single instructions: Y=0, Z=0, N = (ioType << 12) | channel
+                if (info.ioType !== undefined) {
+                    const channel = value & 0o77;
+                    const n = (info.ioType << 12) | channel;
+                    word = (f << 18) | (0 << 16) | (0 << 15) | n;
+                } else {
+                    word = (f << 18) | (y << 16) | (z << 15) | (value & 0x7FFF);
+                }
             } else {
                 const f = info.s;
                 const n = (info.n !== undefined ? info.n : value) & 0x3F;

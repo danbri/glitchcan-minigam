@@ -1044,21 +1044,11 @@ RDCHAR:
     J     RDCH_RET
 
 RDCH_TAPE:
-    ; IDUM from channel 1: F=76, Y=0, N=0o20001
-    ; Instruction word: (76 << 18) | (0 << 16) | (0 << 15) | 0o20001
-    ; = 0o76000000 | 0o20001 = 0o76020001
-    ; But we execute it inline, M gets the byte
-    LD    #0
-    ST    RD_CH
-    ; The actual I/O would be done by the emulator
-    ; For now, use a memory location as tape buffer
-    LD    TAPE_POS
-    LDR   TAPE_POS
-    LD    TAPE_BUF,R
-    ST    RD_CH
-    LD    TAPE_POS
-    ADD   #1
-    ST    TAPE_POS
+    ; Read one byte from paper tape reader (Channel 1) using IDUM instruction
+    ; IDUM 1 reads from channel 1, result goes to M register
+    ; Historically authentic: this is how Elliott 4130 read paper tape
+    IDUM  1             ; Read byte from tape reader to M
+    ST    RD_CH         ; Store result
 
 RDCH_RET:
     LD    RDCH_LINK
@@ -1077,8 +1067,6 @@ RD_ELEM:      #0
 RD_ALEN:      #0
 RD_ABUF:      #0
 RDCH_LINK:    #0
-TAPE_POS:     #0
-TAPE_BUF:     #0            ; Tape buffer starts here (filled by loader)
 
 ; ============================================================================
 ; Data

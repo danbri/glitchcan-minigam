@@ -430,7 +430,6 @@
 <script src="elliott4130-tests.js"></script>
 <script src="elliott4130-debug.js"></script>
 <script src="elliott4130-ui.js"></script>
-<script src="lisp-repl.js"></script>
 
 <script>
 // Debug console helper
@@ -1361,144 +1360,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === LISP Tab Handlers ===
+    // Note: JavaScript cross-compiler removed for historical authenticity.
+    // Use Paper Tape I/O panel to load LISP programs via authentic I/O instructions.
     const lispSrcEl = document.getElementById('lispSrc');
     const lispCellsEl = document.getElementById('lispCells');
     const lispAsmEl = document.getElementById('lispAsm');
     const lispResultEl = document.getElementById('lispResult');
-    let lastParsedAst = null;
-    let lastCells = null;
-    let lastAsm = null;
 
-    // Parse button - show cells
+    const deprecatedMsg = `JavaScript cross-compiler removed for historical authenticity.
+
+Use the Paper Tape I/O panel instead:
+1. Select a LISP tape (basic, advanced, or meta-circular)
+2. Click "Load Tape" to load S-expressions into tape reader
+3. Load lisp4130.asm which contains READER subroutine
+4. The READER parses S-expressions using IDUM I/O instruction
+5. Execute to see results via PRINT using ODUM instruction
+
+This workflow matches how LISP programs were actually
+loaded on Elliott 4130 systems in the 1960s.`;
+
+    // Parse button - deprecated
     document.getElementById('lispParse')?.addEventListener('click', () => {
-        if (!window.LispREPL || !lispSrcEl) return;
-        try {
-            const expr = lispSrcEl.value.trim();
-            const tokens = LispREPL.tokenize(expr);
-            const ast = LispREPL.parse(tokens);
-            lastParsedAst = ast;
-            const { addr, cells } = LispREPL.buildCells(ast);
-            lastCells = cells;
-
-            // Show cells
-            let cellText = `Root: ${addr}\n\n`;
-            cellText += `Atom Table:\n`;
-            cellText += `  NIL=4095  T=4094\n`;
-            cellText += `  A=3072 B=3073 C=3074\n`;
-            cellText += `  QUOTE=3082 CAR=3084\n\n`;
-            cellText += `Cells:\n`;
-            for (const c of cells) {
-                const carName = Object.entries(LispREPL.atoms).find(([k,v]) => v === c.car)?.[0] || c.car;
-                const cdrName = c.cdr === 4095 ? 'NIL' : c.cdr;
-                cellText += `  ${c.addr}: (${carName} . ${cdrName})\n`;
-                cellText += `       = ${c.car}*4096 + ${c.cdr}\n`;
-                cellText += `       = ${c.car * 4096 + c.cdr}\n`;
-            }
-            lispCellsEl.textContent = cellText;
-        } catch (e) {
-            lispCellsEl.textContent = `Error: ${e.message}`;
-        }
+        if (lispCellsEl) lispCellsEl.textContent = deprecatedMsg;
     });
 
-    // Compile button - generate ASM
+    // Compile button - deprecated
     document.getElementById('lispCompile')?.addEventListener('click', () => {
-        if (!window.LispREPL || !lispSrcEl) return;
-        try {
-            const expr = lispSrcEl.value.trim();
-            const result = LispREPL.compile(expr);
-            if (result.success) {
-                lastAsm = result.asm;
-                lispAsmEl.textContent = result.asm;
-            } else {
-                lispAsmEl.textContent = `Error: ${result.error}`;
-            }
-        } catch (e) {
-            lispAsmEl.textContent = `Error: ${e.message}`;
-        }
+        if (lispAsmEl) lispAsmEl.textContent = deprecatedMsg;
     });
 
-    // Run button - execute and show result
+    // Run button - deprecated
     document.getElementById('lispRun')?.addEventListener('click', () => {
-        if (!window.LispREPL || !lispSrcEl || !window.Asm || !window.E4130) return;
-        try {
-            const expr = lispSrcEl.value.trim();
-            const result = LispREPL.compile(expr);
-            if (!result.success) {
-                lispResultEl.textContent = `Compile Error: ${result.error}`;
-                return;
-            }
-            lastAsm = result.asm;
-            lispAsmEl.textContent = result.asm;
-
-            // Assemble and run
-            const asm = new Asm();
-            const program = asm.asm(result.asm);
-            const cpu = new E4130();
-            for (const { addr, word } of program) {
-                cpu.mem[addr] = word;
-            }
-            cpu.halted = false;
-
-            // Execute - detect HALT (J to self, opcode 0o45 = 37)
-            for (let i = 0; i < 5000 && !cpu.halted; i++) {
-                const pc = cpu.S >> 1;
-                const w = cpu.mem[pc];
-                const f = (w >> 18) & 0x3F;
-                const n = w & 0x7FFF;  // Jump target
-                if (f === 0o45 && pc === n) break;  // J to self = HALT
-                cpu.step();
-            }
-
-            // Show result with interpretation
-            const val = cpu.mem[100];
-            let meaning = '';
-            let listStr = '';
-
-            // Helper to get atom name
-            const atomName = (code) => {
-                if (code === 4095) return 'NIL';
-                if (code === 4094) return 'T';
-                if (code >= 0 && code < 1000) return String(code);
-                for (const [name, v] of Object.entries(LispREPL.atoms)) {
-                    if (v === code) return name;
-                }
-                return null;
-            };
-
-            // Helper to read list from memory
-            const readList = (addr, depth = 0) => {
-                if (depth > 10) return '...';
-                if (addr === 4095) return 'NIL';
-                if (addr < 1000 || addr >= 2000) {
-                    const name = atomName(addr);
-                    return name || String(addr);
-                }
-                const cell = cpu.mem[addr];
-                const car = Math.floor(cell / 4096);
-                const cdr = cell - (car * 4096);
-                const carStr = car >= 1000 && car < 2000 ? readList(car, depth + 1) : (atomName(car) || String(car));
-                if (cdr === 4095) return '(' + carStr + ')';
-                if (cdr >= 1000 && cdr < 2000) return '(' + carStr + ' ' + readList(cdr, depth + 1).replace(/^\(/, '').replace(/\)$/, '') + ')';
-                return '(' + carStr + ' . ' + (atomName(cdr) || String(cdr)) + ')';
-            };
-
-            if (val === 4095) meaning = ' = NIL';
-            else if (val === 4094) meaning = ' = T';
-            else if (val >= 1000 && val < 2000) {
-                meaning = ' = list';
-                listStr = '\\n' + readList(val);
-            }
-            else if (val >= 3072 && val < 3200) {
-                const name = atomName(val);
-                if (name) meaning = ' = ' + name;
-            }
-            else if (val >= 0 && val < 1000) {
-                meaning = ' (number)';
-            }
-            lispResultEl.textContent = `mem[100] = ${val}${meaning}${listStr}\n\nInput: ${expr}`;
-        } catch (e) {
-            lispResultEl.textContent = `Error: ${e.message}`;
-        }
+        if (lispResultEl) lispResultEl.textContent = deprecatedMsg;
     });
 
     // Example buttons
