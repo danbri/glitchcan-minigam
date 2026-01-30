@@ -76,6 +76,9 @@ class E4130 {
         // Real-time clock
         this.rtcCounter = 0;
         this.rtcDelay = 0;
+
+        // Hardware FP mode - 4130 has hardware FP, 4120 would trap to software
+        this.hardwareFPEnabled = true;
     }
 
     /**
@@ -676,27 +679,56 @@ class E4130 {
 
     /**
      * Execute extra-code (Z=1) instruction
+     *
+     * Per E6X3: Extracodes are SOFTWARE TRAPS, not inline execution.
+     * The trap sequence is:
+     *   (a) Place N in memory location 1
+     *   (b) Place link (c24-18 + S) in memory location 2
+     *   (c) Jump to 2*F (or 2*F+1 for Y>0)
+     *
+     * This allows the OS to intercept and handle operations.
+     * The 4120 used this for software FP emulation.
+     * The 4130 used it for supervisor calls.
+     *
+     * Exception: The 4130 had HARDWARE FP (F=0o52-0o65) which could execute
+     * inline. This is configurable via hardwareFPEnabled flag.
      */
     extracode(f, y, n) {
+        // Check if this is a hardware-accelerated extracode (4130 FP unit)
+        // F=0o52-0o65 are FP instructions that the 4130 executed in hardware
+        // These can optionally execute inline OR trap (configurable)
+        const isHardwareFP = (f >= 0o52 && f <= 0o65);
+
+        if (isHardwareFP && this.hardwareFPEnabled) {
+            // Execute FP inline (4130 hardware FP mode)
+            this.execHardwareFP(f, y, n);
+        } else {
+            // Per E6X3: Software trap for all other extracodes
+            // (a) Place N in memory location 1
+            // Direct write to mem[], bypassing checkProtection() - locations 1-2 are fixed OS locations
+            this.mem[1] = n & this.MASK24;
+
+            // (b) Place link (c24-18 + S) in memory location 2
+            // Link word format: upper 7 bits of C (bits 23-17) + 17-bit S
+            const link = ((this.C >> 17) & 0x7F) << 17 | (this.S & this.MASK17);
+            this.mem[2] = link;
+
+            // (c) Jump to 2*F (or 2*F+1 for Y>0)
+            // S is a half-word address, so multiply by 2
+            const trapAddr = (f * 2) + (y > 0 ? 1 : 0);
+            this.S = (trapAddr * 2) & this.MASK17;
+        }
+    }
+
+    /**
+     * Execute hardware FP instruction inline (4130 mode)
+     * These instructions execute in hardware on the 4130, but would trap
+     * to software FP emulation on the 4120.
+     */
+    execHardwareFP(f, y, n) {
         const op = this.getOp(y, n);
-        const channel = n & 0x0F;  // Channel number for I/O instructions
 
         switch (f) {
-            case 0o50: // MULS - Single-length multiply
-                this.M = (this.sx(this.M) * this.sx(op)) & this.MASK24;
-                this.setC(this.M);
-                break;
-
-            case 0o51: // DIV - Single-length divide (unsigned for bit manipulation)
-                if (op) {
-                    const m = this.M & this.MASK24;
-                    const d = op & this.MASK24;
-                    this.R = (m % d) & this.MASK24;
-                    this.M = Math.floor(m / d) & this.MASK24;
-                }
-                break;
-
-            // Floating-point instructions (optional hardware FP unit)
             case 0o52: // FADD - Floating add
                 this.fpAdd(op);
                 break;
@@ -715,11 +747,8 @@ class E4130 {
             case 0o57: // FST - Floating store
                 this.fpStore(y, n);
                 break;
-            case 0o60: // FNEG - Floating negate (extracode)
-                if (y === 0) {
-                    // Could be JN conditional - check z flag was set
-                    this.fpNeg();
-                }
+            case 0o60: // FNEG - Floating negate
+                this.fpNeg();
                 break;
             case 0o61: // FABS - Floating absolute
                 this.fpAbs();
@@ -735,82 +764,6 @@ class E4130 {
                 break;
             case 0o65: // FSQRT - Floating square root
                 this.fpSqrt();
-                break;
-
-            // Character packing instructions
-            case 0o70: // GET - Unpack character from Q
-                // Per E6X3: Q' = Q(bcda); m' = m(abc)Q(a)
-                // Q is 4 6-bit characters: a(23-18), b(17-12), c(11-6), d(5-0)
-                if (y === 1 || y === 3) {
-                    // Save Q's top character (a) before rotation
-                    const qCharA = (this.Q >> 18) & this.MASK6;
-                    // Rotate Q left by 6 bits: bcda
-                    this.Q = ((this.Q << 6) | qCharA) & this.MASK24;
-                    // M' = m(abc)Q(a): top 3 chars of M (18 bits) + Q's original top char
-                    const mTop3 = (this.M >> 6) & 0x3FFFF;  // Characters a, b, c of M (18 bits)
-                    this.M = ((mTop3 << 6) | qCharA) & this.MASK24;
-                } else if (y === 0) {
-                    // Special register operations
-                    this.regOpExtra(n);
-                }
-                break;
-
-            case 0o71: // PUT - Pack character into Q
-                // Per E6X3: Q' = Q(bcdm); m' = m(abcQ(a))
-                // Shift Q left by 6 bits, insert M's bottom character
-                // M gets rotated left, with Q's old top char inserted at bottom
-                if (y === 1 || y === 3) {
-                    // Save Q's top character (a) before shift
-                    const qCharA = (this.Q >> 18) & this.MASK6;
-                    // Save M's bottom character
-                    const mCharD = this.M & this.MASK6;
-                    // Q' = Q shifted left 6 bits, M's bottom char inserted
-                    this.Q = ((this.Q << 6) | mCharD) & this.MASK24;
-                    // M' = M rotated left 6 bits, Q's old top char at bottom
-                    const mTop = (this.M >> 18) & this.MASK6;
-                    this.M = ((this.M << 6) | qCharA) & this.MASK24;
-                }
-                break;
-
-            // I/O Channel instructions
-            case 0o74: // Data transfer
-                this.ioDataTransfer(y, channel);
-                break;
-
-            case 0o75: // Status/Control
-                this.ioStatusControl(y, channel);
-                break;
-
-            case 0o76: // Single word input
-                if (y === 2) {
-                    // IDUM - Input data unpacked single to M
-                    this.M = this.channelRead(channel) & this.MASK24;
-                } else if (y === 3) {
-                    // ODUM - Output data unpacked single from M
-                    this.channelWrite(channel, this.M);
-                }
-                break;
-
-            case 0o77: // Output / Single word status
-                if (y === 0) {
-                    // TR - Display letter (n = letter number, 1-based)
-                    if (n >= 1 && n <= 26) {
-                        this.output(String.fromCharCode(64 + n));
-                    } else {
-                        this.output(String.fromCharCode(65 + (n % 26)));
-                    }
-                } else if (y === 1) {
-                    // CH - Display M in octal
-                    this.output(this.M.toString(8).padStart(8, '0') + ' ');
-                } else if (y === 2) {
-                    // ISUM - Input status single to M
-                    this.M = this.channels[channel]?.status || 0;
-                } else if (y === 3) {
-                    // OCUM - Output control single from M
-                    if (this.channels[channel]) {
-                        this.channels[channel].control = this.M;
-                    }
-                }
                 break;
         }
     }
