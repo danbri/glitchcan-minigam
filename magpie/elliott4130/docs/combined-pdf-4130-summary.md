@@ -265,36 +265,10 @@ Emulator policy: Use original fetched word (don't re-fetch)
 
 ---
 
-## 7. Emulator Implementation Status
+## 7. Discrepancies to Verify
 
-### Implemented (elliott4130-core.js) - Updated January 2026
-- [x] 24-bit word, two's complement
-- [x] All 5 registers (M, R, S, K, C)
-- [x] S half-word addressing
-- [x] Short/long instruction decode
-- [x] Short instruction half-word packing (with padding marker 0o0577)
-- [x] Condition flags (NEG, ST, NZ, CA, OF)
-- [x] Hardware FP (4130 mode)
-- [x] Two-word FP format (39-bit mantissa, 9-bit exponent)
-- [x] Character I/O (6-bit) with proper masking
-- [x] Interrupt system (Normal, Attention, Hesitation)
-- [x] Protected mode (Base/Range registers)
-- [x] I/O instructions: IDUM, ODUM, ISUM, OCUM (January 2026)
-- [x] Paper tape reader (channel 1) with 6-bit character support
-- [x] Paper tape punch (channel 2)
-- [x] MULS extracode (F=0o50) - inline execution on 4130
-
-### Not Implemented / Partial
-- [ ] C register should be 14 bits (currently uses upper 5 bits only)
-- [ ] DPA (87-bit mantissa double-length FP)
-- [ ] CPA (Complex FP accumulator)
-- [ ] Type 4280 Graphical Display
-- [ ] Disc controller (10 surfaces, 100 tracks, 16 sectors)
-- [ ] Split long instruction across two words
-- [ ] DIV extracode (F=0o51) - store instructions have addressing issues
-
-### Discrepancies to Verify
-1. **C register bits:** E6X2 says 14-bit with bits 16-7 unallocated. Emulator uses bits 23-19 (Elliott 24-20). Need E6X3 for exact condition flag positions.
+Based on E6X2/E6X3 analysis:
+1. **C register bits:** E6X2 says 14-bit with bits 16-7 unallocated. Need E6X3 for exact condition flag positions.
 2. **Long instruction spanning:** Emulator assumes long instructions start at even S. Need to verify handling of odd-S long instruction start.
 
 ---
@@ -1191,31 +1165,14 @@ Expected: Control word sent to channel 01
 
 ---
 
-## Implementation Notes for Emulator
+## Emulator Requirements (from E6X5 Analysis)
 
-### Current Implementation Status (January 2026)
+### Minimum Viable I/O
+1. **TR/CH extracodes** - Console output
+2. **IDUM/ODUM** - Single word I/O for simple programs
+3. **ITOM/ATOM** - Interrupt inspection
 
-#### ✅ Implemented
-1. **TR/CH extracodes** - Console output working
-2. **IDUM/ODUM** - Single word I/O working with 6-bit masking
-3. **ISUM/OCUM** - Status/control single word transfers
-4. **ITOM/ATOM** - Interrupt/attention word inspection
-5. **Paper tape reader** - Channel 1, loads from `.lisp` tape files
-6. **Paper tape punch** - Channel 2, output buffer
-7. **6-bit character handling** - Input/output masked to 0x3F
-
-#### Assembler Support
-I/O instruction encoding (January 2026):
-- `IDUM n` - F=76, Y=0, Z=0, N bits 14-12=2, bits 5-0=channel
-- `ODUM n` - F=76, Y=0, Z=0, N bits 14-12=3, bits 5-0=channel
-
-#### 6-Bit Character Notes
-Elliott 4130 uses 6-bit characters ("6-bit bytes"), not 8-bit octets:
-- 4 characters pack into one 24-bit word
-- Tape reader masks input to 6 bits (`& 0x3F`)
-- On-disk tape format (ASCII `.lisp` files) is a development placeholder
-
-### Phase 2: Channel System (Future)
+### Phase 2: Channel System
 ```javascript
 class IOChannel {
   constructor(id) {

@@ -2,19 +2,27 @@
 
 Based on analysis of CCS E6X1-E6X5 reference manuals.
 
-## Current Implementation Status
+## Current Implementation Status (Updated January 2026)
 
-### Implemented
+### ✅ Implemented
 - **TR extracode** (F=77, y=0): Display letter (A + n%26)
 - **CH extracode** (F=77, y>0): Display M register in octal
 - **Output handler callback**: `cpu.outputHandler` for teleprinter simulation
+- **IDUM** (F=76, N=200nn): Read 6-bit character from channel to M
+- **ODUM** (F=76, N=300nn): Write 6-bit character from M to channel
+- **ISUM** (F=77, N=200nn): Read status word to M
+- **OCUM** (F=77, N=300nn): Write control word from M
+- **Paper tape reader** (channel 1): Loads `.lisp` tape files
+- **Paper tape punch** (channel 2): Output buffer
+- **6-bit character masking**: Input/output masked to 0x3F
 
 ### Not Yet Implemented
-- Paper tape reader/punch
-- Keyboard input
+- Keyboard input (blocking read)
 - Vector display (Type 4280)
-- I/O channel system
-- Interrupts
+- Repetitive I/O (IDPR, ODPR, IDUR, ODUR)
+- Full channel status/control (ISPR, OCPR, ISUR, OCUR)
+- ATU/DMA autonomous transfers
+- Real-time clock interrupt
 
 ---
 
