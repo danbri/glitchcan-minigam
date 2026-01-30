@@ -104,8 +104,19 @@ Files with broken control flow remain in `../junk/`:
 
 The emulator implements authentic I/O instructions for paper tape:
 
-- **IDUM 1** - Read byte from paper tape reader to M register
-- **ODUM 2** - Write byte from M register to paper tape punch
+- **IDUM 1** - Read 6-bit character from paper tape reader to M register
+- **ODUM 2** - Write 6-bit character from M register to paper tape punch
+
+### 6-Bit Characters ("6-Bit Bytes")
+
+The Elliott 4130 uses **6-bit characters**, not modern 8-bit octets:
+- 4 characters pack into one 24-bit word
+- Character set: space, A-Z, 0-9, punctuation (64 values)
+- Modern readers: think "6-bit byte" when you see "byte" in historical docs
+
+The on-disk tape format (currently ASCII `.lisp` files) is a placeholder.
+The emulator masks input to 6 bits at the I/O layer, so disk format
+can be changed later without affecting the core emulation.
 
 ### LISP Tapes
 

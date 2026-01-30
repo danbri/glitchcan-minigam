@@ -919,12 +919,12 @@ class E4130 {
             return 0;
         }
 
-        // Channel 1 is paper tape reader
+        // Channel 1 is paper tape reader (6-bit characters)
         if (channel === 1) {
             if (this.tapeReader && this.tapeReader.position < this.tapeReader.data.length) {
-                const byte = this.tapeReader.data[this.tapeReader.position++];
+                const char6 = this.tapeReader.data[this.tapeReader.position++] & 0x3F;
                 ch.status |= ch.READY;
-                return byte;
+                return char6;
             } else {
                 // End of tape
                 ch.status |= ch.EOF;
@@ -1051,10 +1051,11 @@ class E4130 {
     }
 
     /**
-     * Punch to paper tape
+     * Punch 6-bit character to paper tape
+     * Elliott 4130 uses 6-bit characters ("6-bit bytes"), not 8-bit octets.
      */
-    tapePunchByte(byte) {
-        this.tapePunch.push(byte & 0xFF);
+    tapePunch6bit(char6) {
+        this.tapePunch.push(char6 & 0x3F);
     }
 
     /**

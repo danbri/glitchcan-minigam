@@ -237,11 +237,11 @@ test('channelRead from channel 0 uses inputBuffer', () => {
     assertEqual(cpu.inputBuffer.length, 0, 'Input buffer should be consumed');
 });
 
-test('channelRead from channel 1 (tape reader) reads from tape', () => {
+test('channelRead from channel 1 (tape reader) reads 6-bit chars from tape', () => {
     const cpu = createCPU();
-    cpu.loadTape([0x55, 0x66]);  // Load tape data
+    cpu.loadTape([0x15, 0x26]);  // Load 6-bit tape data (21, 38)
     const data = cpu.channelRead(1);
-    assertEqual(data, 0x55, 'Should read 0x55 from tape');
+    assertEqual(data, 0x15, 'Should read 0x15 from tape (6-bit)');
 });
 
 test('channelRead from non-tape channel uses channel buffer', () => {
@@ -460,10 +460,10 @@ test('keyboardInput clears waitingForInput flag', () => {
 
 console.log('\n--- Direct I/O Instruction Execution (Z=0) ---\n');
 
-test('IDUM from channel 1 (tape reader) reads byte to M', () => {
+test('IDUM from channel 1 (tape reader) reads 6-bit char to M', () => {
     const cpu = createCPU();
-    // Load tape with test data
-    cpu.loadTape([0x42, 0x43, 0x44]);  // B, C, D
+    // Load tape with 6-bit character codes (Elliott encoding: 1=A, 2=B, 3=C)
+    cpu.loadTape([0x01, 0x02, 0x03]);  // A, B, C in Elliott 6-bit
 
     // IDUM: F=76, Y=0, Z=0, N=0o20001 (input from channel 1)
     // Long instruction format: F(6)|Y(2)|Z(1)|N(15)
@@ -473,12 +473,13 @@ test('IDUM from channel 1 (tape reader) reads byte to M', () => {
 
     cpu.step();
 
-    assertEqual(cpu.M, 0x42, 'M should contain 0x42 from tape');
+    assertEqual(cpu.M, 0x01, 'M should contain 0x01 (A) from tape');
 });
 
-test('IDUM reads sequential bytes from tape', () => {
+test('IDUM reads sequential 6-bit chars from tape', () => {
     const cpu = createCPU();
-    cpu.loadTape([0xAA, 0xBB, 0xCC]);
+    // Use values that fit in 6 bits (0-63)
+    cpu.loadTape([0x1A, 0x2B, 0x3C]);  // 26, 43, 60 - all valid 6-bit
 
     const idum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o20001;
     cpu.mem[100] = idum;
@@ -487,15 +488,28 @@ test('IDUM reads sequential bytes from tape', () => {
 
     cpu.S = 200;
     cpu.step();
-    assertEqual(cpu.M, 0xAA, 'First read should be 0xAA');
+    assertEqual(cpu.M, 0x1A, 'First read should be 0x1A');
 
     cpu.S = 202;
     cpu.step();
-    assertEqual(cpu.M, 0xBB, 'Second read should be 0xBB');
+    assertEqual(cpu.M, 0x2B, 'Second read should be 0x2B');
 
     cpu.S = 204;
     cpu.step();
-    assertEqual(cpu.M, 0xCC, 'Third read should be 0xCC');
+    assertEqual(cpu.M, 0x3C, 'Third read should be 0x3C');
+});
+
+test('IDUM masks tape input to 6 bits', () => {
+    const cpu = createCPU();
+    // Load tape with 8-bit values that exceed 6 bits
+    cpu.loadTape([0xFF, 0x80, 0x7F]);  // Should become 0x3F, 0x00, 0x3F
+
+    const idum = (0o76 << 18) | (0 << 16) | (0 << 15) | 0o20001;
+    cpu.mem[100] = idum;
+
+    cpu.S = 200;
+    cpu.step();
+    assertEqual(cpu.M, 0x3F, '0xFF should mask to 0x3F (6-bit max)');
 });
 
 test('ODUM to channel 2 (tape punch) writes M to punch', () => {
@@ -612,25 +626,34 @@ test('tapeRead returns -1 at end of tape', () => {
     assertEqual(cpu.tapeRead(), -1, 'Should return -1 at EOF');
 });
 
-test('tapePunchByte adds to punch buffer', () => {
+test('tapePunch6bit adds 6-bit characters to punch buffer', () => {
     const cpu = createCPU();
-    cpu.tapePunchByte(0x12);
-    cpu.tapePunchByte(0x34);
+    cpu.tapePunch6bit(0x12);  // 18 decimal, fits in 6 bits
+    cpu.tapePunch6bit(0x34);  // 52 decimal, fits in 6 bits
 
-    assertEqual(cpu.tapePunch.length, 2, 'Should have 2 punched bytes');
-    assertEqual(cpu.tapePunch[0], 0x12, 'First byte should be 0x12');
-    assertEqual(cpu.tapePunch[1], 0x34, 'Second byte should be 0x34');
+    assertEqual(cpu.tapePunch.length, 2, 'Should have 2 punched chars');
+    assertEqual(cpu.tapePunch[0], 0x12, 'First char should be 0x12');
+    assertEqual(cpu.tapePunch[1], 0x34, 'Second char should be 0x34');
+});
+
+test('tapePunch6bit masks to 6 bits', () => {
+    const cpu = createCPU();
+    cpu.tapePunch6bit(0xAB);  // 0xAB & 0x3F = 0x2B (43)
+    cpu.tapePunch6bit(0xCD);  // 0xCD & 0x3F = 0x0D (13)
+
+    assertEqual(cpu.tapePunch[0], 0x2B, 'Should mask 0xAB to 0x2B (6-bit)');
+    assertEqual(cpu.tapePunch[1], 0x0D, 'Should mask 0xCD to 0x0D (6-bit)');
 });
 
 test('getTapePunch returns Uint8Array of punched data', () => {
     const cpu = createCPU();
-    cpu.tapePunchByte(0xAB);
-    cpu.tapePunchByte(0xCD);
+    cpu.tapePunch6bit(0x2B);
+    cpu.tapePunch6bit(0x0D);
 
     const data = cpu.getTapePunch();
     assertTrue(data instanceof Uint8Array, 'Should return Uint8Array');
-    assertEqual(data.length, 2, 'Should have 2 bytes');
-    assertEqual(data[0], 0xAB, 'First byte should be 0xAB');
+    assertEqual(data.length, 2, 'Should have 2 chars');
+    assertEqual(data[0], 0x2B, 'First char should be 0x2B');
 });
 
 // ============================================================
