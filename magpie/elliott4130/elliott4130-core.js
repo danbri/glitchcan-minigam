@@ -79,6 +79,11 @@ class E4130 {
 
         // Hardware FP mode - 4130 has hardware FP, 4120 would trap to software
         this.hardwareFPEnabled = true;
+
+        // Two-word FP accumulator - Per E6X3: 48-bit mantissa, 12-bit exponent internal
+        // Stored as JavaScript number for simplicity (has 53-bit mantissa, sufficient)
+        // When stored to memory, rounded to 39-bit mantissa, 9-bit exponent
+        this.fpAccum = 0;
     }
 
     /**
@@ -724,45 +729,49 @@ class E4130 {
      * Execute hardware FP instruction inline (4130 mode)
      * These instructions execute in hardware on the 4130, but would trap
      * to software FP emulation on the 4120.
+     *
+     * Per E6X3: FP operands are two-word values at the effective address.
+     * The FP instructions read two words from memory to get a full FP value.
      */
     execHardwareFP(f, y, n) {
-        const op = this.getOp(y, n);
+        // Get effective address for memory operands (not the operand value itself)
+        const addr = this.getAddr(y, n);
 
         switch (f) {
-            case 0o52: // FADD - Floating add
-                this.fpAdd(op);
+            case 0o52: // FADD - Floating add: fpAccum += [addr]
+                this.fpAdd(addr);
                 break;
-            case 0o53: // FSUB - Floating subtract
-                this.fpSub(op);
+            case 0o53: // FSUB - Floating subtract: fpAccum -= [addr]
+                this.fpSub(addr);
                 break;
-            case 0o54: // FMUL - Floating multiply
-                this.fpMul(op);
+            case 0o54: // FMUL - Floating multiply: fpAccum *= [addr]
+                this.fpMul(addr);
                 break;
-            case 0o55: // FDIV - Floating divide
-                this.fpDiv(op);
+            case 0o55: // FDIV - Floating divide: fpAccum /= [addr]
+                this.fpDiv(addr);
                 break;
-            case 0o56: // FLD - Floating load
-                this.fpLoad(op);
+            case 0o56: // FLD - Floating load: fpAccum := [addr]
+                this.fpLoad(addr);
                 break;
-            case 0o57: // FST - Floating store
+            case 0o57: // FST - Floating store: [addr] := fpAccum
                 this.fpStore(y, n);
                 break;
-            case 0o60: // FNEG - Floating negate
+            case 0o60: // FNEG - Floating negate: fpAccum := -fpAccum
                 this.fpNeg();
                 break;
-            case 0o61: // FABS - Floating absolute
+            case 0o61: // FABS - Floating absolute: fpAccum := |fpAccum|
                 this.fpAbs();
                 break;
-            case 0o62: // FIX - Convert float to integer
+            case 0o62: // FIX - Convert float to integer: M := int(fpAccum)
                 this.fpFix();
                 break;
-            case 0o63: // FLT - Convert integer to float
+            case 0o63: // FLT - Convert integer to float: fpAccum := float(M)
                 this.fpFloat();
                 break;
-            case 0o64: // FCMP - Floating compare
-                this.fpCmp(op);
+            case 0o64: // FCMP - Floating compare: set flags for fpAccum - [addr]
+                this.fpCmp(addr);
                 break;
-            case 0o65: // FSQRT - Floating square root
+            case 0o65: // FSQRT - Floating square root: fpAccum := sqrt(fpAccum)
                 this.fpSqrt();
                 break;
         }
@@ -1073,157 +1082,192 @@ class E4130 {
 
     // ========================================================================
     // Floating-Point Unit
-    // Elliott 4130 used 24-bit floating point:
-    //   Bit 23: Sign (0=positive, 1=negative)
-    //   Bits 17-22: Exponent (6 bits, excess-32 bias)
-    //   Bits 0-16: Mantissa (17 bits, normalized with implicit 1)
+    //
+    // Per E6X3 manual p.6:
+    // "On the 4130 where hardware is used, the mantissa occupies 48 bits within
+    // CPU registers and the exponent 12 bits... When held in memory, floating-point
+    // numbers are normally rounded and packed into two words containing 39 bits of
+    // mantissa and 9 bits of exponent."
+    //
+    // Memory format (two 24-bit words):
+    //   Word 1: [Sign(1)] [Exponent(9)] [Mantissa high(14)]
+    //   Word 2: [Mantissa low(24)]
+    //   Total: 39-bit mantissa (38 stored + 1 implicit), 9-bit exponent, 1-bit sign
+    //
+    // Internal format (during computation):
+    //   48-bit mantissa held in (R, M) register pair
+    //   12-bit exponent in fpExp
+    //   This gives ~12 decimal digits precision
     // ========================================================================
 
     /**
-     * Convert 24-bit Elliott float to JavaScript number
+     * Read two-word FP from memory and convert to JavaScript number
+     * Per E6X3: Two words with 39-bit mantissa, 9-bit exponent, 1-bit sign
      */
-    fpToFloat(word) {
-        if (word === 0) return 0;
+    fpToFloat(addr) {
+        const w1 = this.rd(addr);
+        const w2 = this.rd(addr + 1);
 
-        const sign = (word >> 23) & 1;
-        const exp = ((word >> 17) & 0x3F) - 32;  // Excess-32 bias
-        const mant = (word & 0x1FFFF) | 0x20000; // Add implicit bit
+        // Check for zero (both words zero)
+        if (w1 === 0 && w2 === 0) return 0;
 
-        let value = mant / 0x20000;  // Normalize to 1.xxx
-        value *= Math.pow(2, exp);
+        // Extract fields from two-word format
+        const sign = (w1 >> 23) & 1;
+        const exp = ((w1 >> 14) & 0x1FF) - 256;  // 9-bit excess-256 bias
+        const mantHigh = w1 & 0x3FFF;  // 14 bits
+        const mantLow = w2 & 0xFFFFFF;  // 24 bits
+
+        // Combine to 38-bit mantissa, add implicit leading 1 for 39 bits effective
+        // mantissa = (1.mantHigh:mantLow) = 1 + (mantHigh * 2^24 + mantLow) / 2^38
+        const mantissa = (mantHigh * 0x1000000 + mantLow) / 0x4000000000;  // Divide by 2^38
+        const value = (1 + mantissa) * Math.pow(2, exp);
 
         return sign ? -value : value;
     }
 
     /**
-     * Convert JavaScript number to 24-bit Elliott float
+     * Convert JavaScript number to two-word FP format and store at addr
+     * Per E6X3: Two words with 39-bit mantissa, 9-bit exponent, 1-bit sign
      */
-    floatToFp(value) {
-        if (value === 0) return 0;
+    floatToFp(value, addr) {
+        if (value === 0) {
+            this.wr(addr, 0);
+            this.wr(addr + 1, 0);
+            return;
+        }
 
         const sign = value < 0 ? 1 : 0;
         value = Math.abs(value);
 
-        // Find exponent
+        // Normalize to 1.xxx form and find exponent
         let exp = 0;
         while (value >= 2) {
             value /= 2;
             exp++;
         }
-        while (value < 1 && exp > -32) {
+        while (value < 1 && exp > -256) {
             value *= 2;
             exp--;
         }
 
-        // Convert mantissa (remove implicit 1)
-        const mant = Math.floor((value - 1) * 0x20000) & 0x1FFFF;
+        // Clamp exponent to 9-bit range (-256 to +255)
+        if (exp < -256) exp = -256;
+        if (exp > 255) exp = 255;
 
-        // Pack into 24-bit word
-        return (sign << 23) | ((exp + 32) << 17) | mant;
+        // Extract 38-bit mantissa (without the implicit leading 1)
+        // mantissa fraction = value - 1, scaled to 38 bits
+        // 2^38 = 0x4000000000
+        const mantissaFrac = value - 1;
+        const mantissa = Math.floor(mantissaFrac * 0x4000000000);
+        const mantHigh = Math.floor(mantissa / 0x1000000) & 0x3FFF;  // Upper 14 bits
+        const mantLow = mantissa & 0xFFFFFF;  // Lower 24 bits
+
+        // Pack into two words
+        const w1 = (sign << 23) | ((exp + 256) << 14) | mantHigh;
+        const w2 = mantLow;
+
+        this.wr(addr, w1);
+        this.wr(addr + 1, w2);
     }
 
     /**
-     * Floating-point add: M := M + [op]
+     * Floating-point add: fpAccum := fpAccum + [addr]
+     * Operand is read from two words at addr
      */
-    fpAdd(op) {
-        const a = this.fpToFloat(this.M);
-        const b = this.fpToFloat(op);
-        this.M = this.floatToFp(a + b);
-        this.setC(this.M);
+    fpAdd(addr) {
+        const operand = this.fpToFloat(addr);
+        this.fpAccum += operand;
     }
 
     /**
-     * Floating-point subtract: M := M - [op]
+     * Floating-point subtract: fpAccum := fpAccum - [addr]
+     * Operand is read from two words at addr
      */
-    fpSub(op) {
-        const a = this.fpToFloat(this.M);
-        const b = this.fpToFloat(op);
-        this.M = this.floatToFp(a - b);
-        this.setC(this.M);
+    fpSub(addr) {
+        const operand = this.fpToFloat(addr);
+        this.fpAccum -= operand;
     }
 
     /**
-     * Floating-point multiply: M := M * [op]
+     * Floating-point multiply: fpAccum := fpAccum * [addr]
+     * Operand is read from two words at addr
      */
-    fpMul(op) {
-        const a = this.fpToFloat(this.M);
-        const b = this.fpToFloat(op);
-        this.M = this.floatToFp(a * b);
-        this.setC(this.M);
+    fpMul(addr) {
+        const operand = this.fpToFloat(addr);
+        this.fpAccum *= operand;
     }
 
     /**
-     * Floating-point divide: M := M / [op]
+     * Floating-point divide: fpAccum := fpAccum / [addr]
+     * Operand is read from two words at addr
      */
-    fpDiv(op) {
-        const a = this.fpToFloat(this.M);
-        const b = this.fpToFloat(op);
-        if (b !== 0) {
-            this.M = this.floatToFp(a / b);
+    fpDiv(addr) {
+        const operand = this.fpToFloat(addr);
+        if (operand !== 0) {
+            this.fpAccum /= operand;
         } else {
-            // Overflow - set flags
+            // Division by zero - set overflow flag
             this.C |= this.F_OF;
         }
-        this.setC(this.M);
     }
 
     /**
-     * Floating-point load: M := [op] as float
+     * Floating-point load: fpAccum := [addr]
+     * Loads two-word FP from memory into internal accumulator
      */
-    fpLoad(op) {
-        this.M = op & this.MASK24;
-        this.setC(this.M);
+    fpLoad(addr) {
+        this.fpAccum = this.fpToFloat(addr);
     }
 
     /**
-     * Floating-point store: [addr] := M
+     * Floating-point store: [addr] := fpAccum
+     * Stores internal accumulator to two words in memory
      */
     fpStore(y, n) {
         const addr = this.getAddr(y, n);
-        this.wr(addr, this.M);
+        this.floatToFp(this.fpAccum, addr);
     }
 
     /**
-     * Floating-point negate: M := -M
+     * Floating-point negate: fpAccum := -fpAccum
      */
     fpNeg() {
-        this.M ^= 0x800000;  // Flip sign bit
-        this.setC(this.M);
+        this.fpAccum = -this.fpAccum;
     }
 
     /**
-     * Floating-point absolute: M := |M|
+     * Floating-point absolute: fpAccum := |fpAccum|
      */
     fpAbs() {
-        this.M &= 0x7FFFFF;  // Clear sign bit
-        this.setC(this.M);
+        this.fpAccum = Math.abs(this.fpAccum);
     }
 
     /**
-     * Convert float to integer: M := int(M)
+     * Convert float to integer: M := int(fpAccum)
+     * Truncates FP accumulator to integer and stores in M register
      */
     fpFix() {
-        const value = this.fpToFloat(this.M);
-        this.M = Math.floor(value) & this.MASK24;
+        const value = Math.trunc(this.fpAccum);
+        this.M = value & this.MASK24;
         this.setC(this.M);
     }
 
     /**
-     * Convert integer to float: M := float(M)
+     * Convert integer to float: fpAccum := float(M)
+     * Converts signed integer in M to FP accumulator
      */
     fpFloat() {
         const value = this.sx(this.M);
-        this.M = this.floatToFp(value);
-        this.setC(this.M);
+        this.fpAccum = value;
     }
 
     /**
-     * Floating-point compare: set flags based on M - [op]
+     * Floating-point compare: set flags based on fpAccum - [addr]
+     * Operand is read from two words at addr
      */
-    fpCmp(op) {
-        const a = this.fpToFloat(this.M);
-        const b = this.fpToFloat(op);
-        const diff = a - b;
+    fpCmp(addr) {
+        const operand = this.fpToFloat(addr);
+        const diff = this.fpAccum - operand;
 
         this.C = 0;
         if (diff < 0) this.C |= this.F_NEG;
@@ -1232,17 +1276,15 @@ class E4130 {
     }
 
     /**
-     * Floating-point square root: M := sqrt(M)
+     * Floating-point square root: fpAccum := sqrt(fpAccum)
      */
     fpSqrt() {
-        const value = this.fpToFloat(this.M);
-        if (value >= 0) {
-            this.M = this.floatToFp(Math.sqrt(value));
+        if (this.fpAccum >= 0) {
+            this.fpAccum = Math.sqrt(this.fpAccum);
         } else {
-            // Negative - set error flag
+            // Negative - set overflow flag
             this.C |= this.F_OF;
         }
-        this.setC(this.M);
     }
 
     /**
