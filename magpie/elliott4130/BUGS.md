@@ -146,74 +146,70 @@ F_OF  = 0x080000;  // c20 - Overflow
 
 ## P1: HIGH PRIORITY BUGS (Breaks Most Real Code)
 
-### BUG-006: Interrupt Priority Order is Backwards
+### ~~BUG-006: Interrupt Priority Order is Backwards~~ ✅ FIXED
 
-**Reference (E6X4):**
-> "three levels of program priority, the highest being called the **Interrupt level**, the intermediate one being called the **Attention level** and the lowest level being that of **normal computation**"
+**Status:** Fixed in commit (2026-01-29)
 
-**Current Implementation:**
+**What was wrong:** INT_NORMAL and INT_ATTENTION were swapped.
+
+**Fix applied:**
 ```javascript
-INT_HESITATION = 0;  // OK (highest)
-INT_NORMAL = 1;      // WRONG: should be lowest
-INT_ATTENTION = 2;   // WRONG: should be middle
+INT_HESITATION = 0;  // Hardware hesitation (highest priority)
+INT_ATTENTION = 1;   // Attention interrupt (middle priority)
+INT_NORMAL = 2;      // Normal interrupt (lowest priority)
 ```
 
-**Impact:** TSS and multi-user systems hang immediately.
+---
+
+### ~~BUG-007: Missing 10 of 16 Shift Instructions~~ ✅ FIXED
+
+**Status:** Fixed in commit (2026-01-29)
+
+**What was wrong:** Only 6 of 16 shift instructions were implemented.
+
+**Fix applied:** Added all 10 missing shift instructions:
+- SRLA (01), SRLC (03), SMLA (05), SMLC (07) - circular/character shifts
+- SRST (20), SMST (24) - shift until standardized (critical for FP)
+- SBL (40), SBR (42), SBRL (52), SBST (62) - 48-bit double shifts
 
 ---
 
-### BUG-007: Missing 10 of 16 Shift Instructions
+### ~~BUG-008: No Protected Mode Architecture~~ ✅ FIXED
 
-**Missing:**
-| N (octal) | Mnemonic | Description |
-|-----------|----------|-------------|
-| 01 | SRLA | Shift R left circularly |
-| 03 | SRLC | Shift R by k characters left |
-| 05 | SMLA | Shift M left circularly |
-| 07 | SMLC | Shift M by k characters left |
-| 20 | SRST | Shift R until standardized |
-| 24 | SMST | Shift M until standardized |
-| 40 | SBL | Shift both M and R left |
-| 42 | SBR | Shift both M and R right |
-| 52 | SBRL | Shift both logically right |
-| 62 | SBST | Shift both until standardized |
+**Status:** Fixed in commit (2026-01-29)
 
-**Impact:** SRST/SMST are CRITICAL for floating-point normalization.
+**What was wrong:** No memory protection support.
+
+**Fix applied:**
+- Added 10-bit Base and Range registers
+- Added `checkProtection()` for memory access validation
+- Added EXEN (enter Executive Mode), PMEN (enter Protected Mode)
+- Added LDBR, LDRR (load Base/Range), BRTM, RRTM (read Base/Range)
+- Memory violations raise attention interrupt
 
 ---
 
-### BUG-008: No Protected Mode Architecture
+### ~~BUG-009: DIVM Doesn't Set Remainder in R~~ ✅ FIXED
 
-**Reference (E6X4):**
-> "Within Protected Mode, core store was to be allocated to a user program via two **10-bit registers** that gave the **Base address** and the **Range** of permitted memory."
+**Status:** Fixed in commit (2026-01-29)
 
-**Missing:**
-- Base register (10-bit)
-- Range register (10-bit)
-- EXEN instruction (enter Executive Mode)
-- PMEN instruction (enter Protected Mode)
-- Memory protection checking
+**What was wrong:** DIVM only set quotient in M, ignored remainder.
 
-**Impact:** KOS (Kent On-line System) and multi-user BASIC cannot run.
+**Fix applied:** Per E6X3 `m' = (r,m)/Q; r' = remainder`:
+- Uses BigInt for 48-bit dividend precision
+- Sets M to quotient, R to remainder
 
 ---
 
-### BUG-009: DIVM Doesn't Set Remainder in R
+### ~~BUG-010: GET/PUT Character Instructions Oversimplified~~ ✅ FIXED
 
-**Reference:** `m' = (r,m)/Q; r' = remainder`
+**Status:** Fixed in commit (2026-01-29)
 
-**Current Implementation:** Only sets M, R unchanged.
+**What was wrong:** GET only rotated Q, didn't update M correctly.
 
----
-
-### BUG-010: GET/PUT Character Instructions Oversimplified
-
-**Reference (E6X3):**
-> GET: `Q' = Q(bcda); m' = m(abc)Q(a)`
-
-Should rotate Q AND modify M to contain first three M characters plus first Q character.
-
-**Current:** Simplified rotation only.
+**Fix applied:** Per E6X3 `Q' = Q(bcda); m' = m(abc)Q(a)`:
+- GET: Rotates Q left 6 bits, M gets top 3 M chars + original Q top char
+- PUT: Shifts Q left with M bottom char, M rotates with Q top char
 
 ---
 
