@@ -268,9 +268,13 @@ class E4130 {
             case 0o04: // LDR - R := [n]
                 this.R = op;
                 break;
-            case 0o05: // JIR - Jump indirect via register
-                this.S = n & this.MASK17;
+            case 0o05: { // JIR - Jump indirect return (return from subroutine)
+                // Per E6X3: link word = c24-18 + S, restore both C bits and S from link
+                const link = this.rd(n);
+                this.C = (this.C & 0x1FFFF) | (link & 0xFE0000);  // Restore c24-18
+                this.S = link & this.MASK17;
                 break;
+            }
             case 0o06: // AND - M := M & [n]
                 this.M &= op;
                 this.setC(this.M);
@@ -350,10 +354,13 @@ class E4130 {
             case 0o52: // NADR
                 this.R = (this.sx(op) - this.sx(this.R)) & this.MASK24;
                 break;
-            case 0o53: // JFL - Jump and link (relative)
-                this.wr(0, this.S);
+            case 0o53: { // JFL - Jump and link (relative)
+                // Per E6X3: link word = c24-18 + S (upper 7 bits of C concatenated with 17-bit S)
+                const link = ((this.C >> 17) & 0x7F) << 17 | (this.S & this.MASK17);
+                this.wr(0, link);
                 this.S = (y === 0 ? (this.S + this.sx15(n) * 2) : op * 2) & this.MASK17;
                 break;
+            }
             case 0o54: // LDK
                 this.K = op & this.MASK12;
                 break;
