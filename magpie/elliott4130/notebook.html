@@ -63,6 +63,7 @@
         .cell.running { border-left-color: var(--obs-blue); }
         .cell.error { border-left-color: #cf222e; }
         .cell.fresh { border-left-color: var(--obs-green); }
+        .cell.dirty { border-left-color: var(--obs-purple); }
 
         /* Cell name badge */
         .cell-name {
@@ -288,13 +289,15 @@ class Notebook {
             name,
             deps: deps || [],
             fn,
-            type: options.type || 'code',
+            type: options.type || 'code',  // 'code', 'md', 'viewof'
             hidden: options.hidden || false,
+            editable: options.editable !== false,  // true by default for code
             el: null,
             outputEl: null,
             editorEl: null,
             stale: true,
-            error: null
+            error: null,
+            dirty: false  // for viewof cells: edited but not saved
         };
 
         this.cells.set(name, cell);
@@ -390,6 +393,12 @@ class Notebook {
             this.values.set(cell.name, result);
             cell.stale = false;
 
+            // For viewof cells, populate the textarea with the value
+            if (cell.type === 'viewof' && cell.editorEl) {
+                cell.editorEl.value = result;
+                cell.editorEl.rows = Math.min(20, Math.max(8, result.split('\n').length));
+            }
+
             // Render output
             this.renderOutput(cell, result);
 
@@ -415,12 +424,54 @@ class Notebook {
             return;
         }
 
-        // Code cell
+        // Cell name header
         const nameSpan = document.createElement('div');
         nameSpan.className = 'cell-name';
         nameSpan.innerHTML = `${cell.name}${cell.deps.length ? `<span class="cell-deps">← ${cell.deps.join(', ')}</span>` : ''}`;
         div.appendChild(nameSpan);
 
+        // Viewof cell: shows the value as editable text, only saves on Shift+Enter
+        if (cell.type === 'viewof') {
+            const editor = document.createElement('div');
+            editor.className = 'cell-editor';
+
+            const textarea = document.createElement('textarea');
+            textarea.rows = 10;
+            textarea.spellcheck = false;
+            textarea.placeholder = 'Loading...';
+
+            // Mark dirty on edit (but don't propagate)
+            textarea.addEventListener('input', () => {
+                cell.dirty = true;
+                this.updateCellUI(cell);
+            });
+
+            // Save on Shift+Enter
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    this.saveViewof(cell.name, textarea.value);
+                }
+            });
+
+            const runBtn = document.createElement('button');
+            runBtn.className = 'cell-run';
+            runBtn.title = 'Save (Shift+Enter)';
+            runBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>';
+            runBtn.onclick = () => this.saveViewof(cell.name, textarea.value);
+
+            editor.appendChild(textarea);
+            editor.appendChild(runBtn);
+            div.appendChild(editor);
+
+            cell.el = div;
+            cell.editorEl = textarea;
+
+            this.container.appendChild(div);
+            return;
+        }
+
+        // Regular code cell
         const editor = document.createElement('div');
         editor.className = 'cell-editor';
 
@@ -456,6 +507,24 @@ class Notebook {
         cell.outputEl = output;
 
         this.container.appendChild(div);
+    }
+
+    // Save a viewof cell's value (called on Shift+Enter)
+    saveViewof(name, value) {
+        const cell = this.cells.get(name);
+        if (!cell) return;
+
+        cell.dirty = false;
+        this.values.set(name, value);
+        cell.stale = false;
+        this.updateCellUI(cell);
+
+        // Invalidate dependents
+        for (const [depName, depCell] of this.cells) {
+            if (depCell.deps.includes(name)) {
+                this.invalidate(depName);
+            }
+        }
     }
 
     // Convert function to displayable source
@@ -506,10 +575,12 @@ class Notebook {
     updateCellUI(cell) {
         if (!cell.el) return;
 
-        cell.el.classList.remove('stale', 'running', 'error', 'fresh');
+        cell.el.classList.remove('stale', 'running', 'error', 'fresh', 'dirty');
 
         if (cell.error) {
             cell.el.classList.add('error');
+        } else if (cell.dirty) {
+            cell.el.classList.add('dirty');
         } else if (this.running.has(cell.name)) {
             cell.el.classList.add('running');
         } else if (cell.stale) {
@@ -707,7 +778,7 @@ nb.define('section_load', [], () => `
     <p>Assemble and load <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
 `, { type: 'md' });
 
-// --- LISP Source ---
+// --- LISP Source (viewof: edit text, Shift+Enter to save & recompile) ---
 nb.define('lispSource', [], async () => {
     try {
         const resp = await fetch('lisp4130.asm');
@@ -716,7 +787,7 @@ nb.define('lispSource', [], async () => {
     } catch {
         return MINI_LISP_SRC;
     }
-});
+}, { type: 'viewof' });
 
 // --- Assembled Program ---
 nb.define('program', ['asm', 'lispSource'], (asm, src) => {
