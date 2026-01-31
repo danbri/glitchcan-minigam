@@ -127,6 +127,18 @@
             color: var(--obs-gray);
             margin-top: 4px;
         }
+        .cell-run-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            border-radius: 4px;
+            background: var(--obs-green);
+            color: white;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .cell-run-btn:active { transform: scale(0.96); }
 
         /* Viewof input widget (like Observable Inputs.textarea) */
         .viewof-wrapper {
@@ -479,7 +491,7 @@ class Notebook {
             return;
         }
 
-        // Cell header with toggle triangle
+        // Cell header with toggle triangle and run button
         const header = document.createElement('div');
         header.className = 'cell-header';
 
@@ -492,8 +504,22 @@ class Notebook {
         nameSpan.className = 'cell-name';
         nameSpan.textContent = cell.name;
 
+        // Run button (mobile-friendly, always visible)
+        const runBtn = document.createElement('button');
+        runBtn.className = 'cell-run-btn';
+        runBtn.textContent = '▶ Run';
+        runBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (cell.codeEl) {
+                this.updateCellCode(cell.name, cell.codeEl.value);
+            } else {
+                this.invalidate(cell.name);
+            }
+        };
+
         header.appendChild(toggle);
         header.appendChild(nameSpan);
+        header.appendChild(runBtn);
         div.appendChild(header);
 
         // Collapsible code editor (hidden by default)
@@ -833,40 +859,54 @@ START:      LD      #3002
 DONE:       J       DONE
 `;
 
-// Shared state for I/O
-let outputBuffer = '';
-let tapeData = [];
-let tapePos = 0;
-
 // --- Introduction ---
 nb.define('intro', [], () => `
-    <p>This notebook demonstrates the Elliott 4130 emulator running a native LISP 1.5 interpreter
-    written entirely in NEAT assembly language. Each cell below is reactive — edit the code and
-    press <code>Shift+Enter</code> to re-run.</p>
+    <p>This notebook demonstrates the Elliott 4130 emulator running a native LISP 1.5 interpreter.
+    Cells reference each other reactively. Tap <strong>▶ Run</strong> to re-execute any cell.</p>
 `, { type: 'md' });
 
-// --- Section: Initialize ---
-nb.define('section_init', [], () => `<h2>Initialize Emulator</h2>`, { type: 'md' });
+// --- Section: Core Components ---
+nb.define('section_init', [], () => `<h2>Core Components</h2>`, { type: 'md' });
 
-// --- CPU ---
-nb.define('cpu', [], () => {
-    const cpu = new E4130();
-    cpu.hardwareFPEnabled = true;
-    return cpu;
+// --- Assembler (stateless, reusable) ---
+nb.define('asm', [], () => new Asm());
+
+// --- Tape Encoder: converts text → tape data ---
+nb.define('tapeEncoder', [], () => {
+    return {
+        // Encode text to Elliott tape format (7-bit ASCII + EOF)
+        encode(text) {
+            const data = [];
+            for (const ch of text) {
+                data.push(ch.charCodeAt(0) & 0x7F);
+            }
+            // EOF marker: 0 (LISP checks JZ for EOF, not 0xFF)
+            data.push(0);
+            return data;
+        },
+        _display: () => 'TapeEncoder { encode(text) → Uint8Array }'
+    };
 });
 
-// --- Assembler ---
-nb.define('asm', [], () => {
-    return new Asm();
+// --- CPU Factory: creates fresh E4130 instances ---
+nb.define('cpuFactory', [], () => {
+    return {
+        create() {
+            const cpu = new E4130();
+            cpu.hardwareFPEnabled = true;
+            return cpu;
+        },
+        _display: () => 'CPUFactory { create() → E4130 }'
+    };
 });
 
 // --- Section: Load LISP ---
 nb.define('section_load', [], () => `
-    <h2>Load LISP Interpreter</h2>
-    <p>Assemble and load <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
+    <h2>LISP Interpreter</h2>
+    <p>Assemble <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
 `, { type: 'md' });
 
-// --- LISP Source (viewof: edit text, Shift+Enter to save & recompile) ---
+// --- LISP Source (viewof: edit and save to recompile) ---
 nb.define('lispSource', [], async () => {
     try {
         const resp = await fetch('lisp4130.asm');
@@ -887,191 +927,162 @@ nb.define('program', ['asm', 'lispSource'], (asm, src) => {
     };
 });
 
-// --- Load into CPU ---
-nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
-    // Reset CPU state
-    cpu.reset();
-    cpu.halted = false;  // Ensure halted is cleared
+// --- Emulator: combines CPU + program + I/O ---
+nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, encoder) => {
+    const cpu = factory.create();
 
+    // Load program into memory
     for (const { addr, word } of prog.words) {
         cpu.mem[addr] = word;
     }
 
+    // State
+    let tapeData = [];
+    let tapePos = 0;
+    let output = '';
+    let cycles = 0;
+
     // Setup I/O channels
     cpu.channels[1] = {
-        read: () => tapePos < tapeData.length ? tapeData[tapePos++] : 0xFF,
+        read: () => tapePos < tapeData.length ? tapeData[tapePos++] : 0,  // 0 = EOF
         status: () => tapePos < tapeData.length ? 1 : 0
     };
     cpu.channels[2] = {
-        write: (v) => {
-            outputBuffer += String.fromCharCode(v & 0x7F);
-            nb.set('output', outputBuffer);
-        },
+        write: (v) => { output += String.fromCharCode(v & 0x7F); },
         status: () => 1
     };
 
-    // Debug: show first few words
-    const firstWords = [];
-    for (let i = 0; i < 5; i++) {
-        firstWords.push(`[${i}]: 0x${(cpu.mem[i] >>> 0).toString(16).padStart(6, '0')}`);
-    }
+    const emu = {
+        cpu,
 
-    return {
-        status: 'ready',
-        words: prog.length,
-        _display: () => `Loaded ${prog.length} words. S=${cpu.S}, halted=${cpu.halted}. First: ${firstWords.join(', ')}`
+        // Load LISP expressions onto tape
+        loadTape(text) {
+            tapeData = encoder.encode(text);
+            tapePos = 0;
+            return tapeData.length - 1;  // -1 for EOF marker
+        },
+
+        // Reset CPU and reload program
+        reset() {
+            cpu.reset();
+            cpu.halted = false;
+            for (const { addr, word } of prog.words) {
+                cpu.mem[addr] = word;
+            }
+            tapePos = 0;
+            output = '';
+            cycles = 0;
+        },
+
+        // Run N cycles, returns { halted, reason, cycles }
+        step(n = 1000) {
+            for (let i = 0; i < n; i++) {
+                const prevS = cpu.S;
+                cpu.step();
+                cycles++;
+                if (cpu.halted) {
+                    return { halted: true, reason: 'cpu.halted', cycles };
+                }
+                if (cpu.S === prevS) {
+                    return { halted: true, reason: `loop at S=${cpu.S}`, cycles };
+                }
+            }
+            return { halted: false, cycles };
+        },
+
+        // Getters
+        get output() { return output; },
+        get cycles() { return cycles; },
+        get tapePos() { return tapePos; },
+        get tapeLength() { return tapeData.length; },
+
+        _display: () => `Emulator { cpu: E4130, program: ${prog.length} words, tape: ${tapeData.length} bytes }`
     };
+
+    return emu;
 });
 
-// --- Section: CPU State ---
-nb.define('section_state', [], () => `<h2>CPU State</h2>`, { type: 'md' });
+// --- Section: Run LISP ---
+nb.define('section_run', [], () => `<h2>Run LISP</h2>`, { type: 'md' });
 
-// --- Registers display ---
-nb.define('registers', ['cpu', 'cycles'], (cpu, cycles) => {
-    const fmt = (v, w) => '0x' + (v >>> 0).toString(16).padStart(w, '0').toUpperCase();
-    return {
-        _display: () => `
-            <table class="reg-table">
-                <thead><tr><th>Reg</th><th>Value</th><th>Hex</th></tr></thead>
-                <tbody>
-                    <tr><td><span class="reg-name">M</span></td><td class="reg-val">${cpu.M}</td><td>${fmt(cpu.M, 6)}</td></tr>
-                    <tr><td><span class="reg-name">R</span></td><td class="reg-val">${cpu.R}</td><td>${fmt(cpu.R, 6)}</td></tr>
-                    <tr><td><span class="reg-name">S</span></td><td class="reg-val">${cpu.S}</td><td>${fmt(cpu.S, 5)}</td></tr>
-                    <tr><td><span class="reg-name">K</span></td><td class="reg-val">${cpu.K}</td><td>${fmt(cpu.K, 3)}</td></tr>
-                    <tr><td><span class="reg-name">cyc</span></td><td class="reg-val">${(cycles || 0).toLocaleString()}</td><td>—</td></tr>
-                </tbody>
-            </table>
-        `
-    };
-});
-
-// --- Cycles counter (mutable) ---
-nb.define('cycles', [], () => 0);
-
-// --- Section: Input ---
-nb.define('section_input', [], () => `
-    <h2>LISP Input</h2>
-    <p>Enter LISP expressions to evaluate. These are loaded onto the paper tape reader.</p>
-`, { type: 'md' });
-
-// --- Input expressions ---
+// --- LISP Input (editable) ---
 nb.define('lispInput', [], () => {
     return `(CAR (QUOTE (A B C)))
 (CDR (QUOTE (X Y Z)))
-(CONS (QUOTE A) (QUOTE (B C)))
-(ATOM (QUOTE X))
-(EQ (QUOTE A) (QUOTE A))`;
-});
+(CONS (QUOTE A) (QUOTE (B C)))`;
+}, { type: 'viewof' });
 
-// --- Control buttons ---
-nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
+// --- Control Panel ---
+nb.define('controls', ['emulator', 'lispInput'], (emu) => {
     const container = document.createElement('div');
-
-    const inputArea = document.createElement('textarea');
-    inputArea.value = nb.get('lispInput') || '';
-    inputArea.style.cssText = 'width:100%;min-height:120px;font-family:var(--font-mono);font-size:14px;padding:12px;border:1px solid var(--obs-border);border-radius:6px;margin-bottom:8px;';
-    inputArea.onchange = () => nb.set('lispInput', inputArea.value);
 
     const btnGroup = document.createElement('div');
     btnGroup.className = 'btn-group';
+    btnGroup.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;';
 
     const loadBtn = document.createElement('button');
     loadBtn.className = 'btn btn-primary';
+    loadBtn.style.cssText = 'min-height:52px;font-size:16px;padding:12px 20px;';
     loadBtn.textContent = '📼 Load Tape';
     loadBtn.onclick = () => {
-        const input = inputArea.value;
-        tapeData = [];
-        for (const ch of input) {
-            tapeData.push(ch.charCodeAt(0) & 0x7F);  // 7-bit ASCII, not 6-bit
-        }
-        tapeData.push(0xFF);
-        tapePos = 0;
-        outputBuffer = '';
-        nb.set('output', '');
-        nb.set('tapeStatus', `Loaded ${tapeData.length - 1} chars`);
+        const input = nb.get('lispInput') || '';
+        const chars = emu.loadTape(input);
+        nb.set('status', `Loaded ${chars} chars onto tape`);
     };
 
     const runBtn = document.createElement('button');
     runBtn.className = 'btn';
+    runBtn.style.cssText = 'min-height:52px;font-size:16px;padding:12px 20px;';
     runBtn.textContent = '▶ Run';
     runBtn.onclick = async () => {
         runBtn.disabled = true;
         runBtn.textContent = 'Running...';
 
-        let cycles = 0;
-        const max = 1000000;  // 1M cycles
-        let haltReason = '';
+        const max = 1000000;
+        let total = 0;
 
         const tick = () => {
-            for (let i = 0; i < 1000 && cycles < max; i++) {
-                const prevS = cpu.S;
-                cpu.step();
-                cycles++;
-                if (cpu.halted) {
-                    haltReason = `cpu.halted=true at S=${cpu.S}`;
-                    finish('Halted');
-                    return;
-                }
-                if (cpu.S === prevS) {
-                    haltReason = `S unchanged at ${cpu.S} (infinite loop)`;
-                    finish('Halted');
-                    return;
-                }
-            }
-            nb.set('cycles', cycles);
-            if (cycles < max) {
+            const result = emu.step(1000);
+            total = result.cycles;
+            nb.set('output', emu.output);
+            nb.set('status', `Cycles: ${total.toLocaleString()}`);
+
+            if (result.halted) {
+                finish(`Halted: ${result.reason}`);
+            } else if (total < max) {
                 requestAnimationFrame(tick);
             } else {
-                haltReason = 'reached max cycles';
-                finish('Max cycles');
+                finish('Max cycles reached');
             }
         };
 
-        const finish = (reason) => {
+        const finish = (msg) => {
             runBtn.disabled = false;
             runBtn.textContent = '▶ Run';
-            nb.set('cycles', cycles);
-            nb.set('tapeStatus', `${reason} after ${cycles.toLocaleString()} cycles. ${haltReason}`);
+            nb.set('status', `${msg} after ${total.toLocaleString()} cycles`);
         };
 
         tick();
     };
 
-    const stepBtn = document.createElement('button');
-    stepBtn.className = 'btn';
-    stepBtn.textContent = 'Step';
-    stepBtn.onclick = () => {
-        for (let i = 0; i < 100; i++) {
-            const prevS = cpu.S;
-            cpu.step();
-            if (cpu.halted || cpu.S === prevS) break;
-        }
-        nb.set('cycles', (nb.get('cycles') || 0) + 100);
-    };
-
     const resetBtn = document.createElement('button');
     resetBtn.className = 'btn';
-    resetBtn.textContent = 'Reset';
+    resetBtn.style.cssText = 'min-height:52px;font-size:16px;padding:12px 20px;';
+    resetBtn.textContent = '↺ Reset';
     resetBtn.onclick = () => {
-        cpu.reset();
-        for (const { addr, word } of prog.words) {
-            cpu.mem[addr] = word;
-        }
-        outputBuffer = '';
-        tapePos = 0;
-        nb.set('cycles', 0);
+        emu.reset();
         nb.set('output', '');
-        nb.set('tapeStatus', 'Reset');
+        nb.set('status', 'Reset');
     };
 
-    btnGroup.append(loadBtn, runBtn, stepBtn, resetBtn);
-    container.append(inputArea, btnGroup);
+    btnGroup.append(loadBtn, runBtn, resetBtn);
+    container.append(btnGroup);
 
     return { _display: () => container };
 });
 
-// --- Tape status ---
-nb.define('tapeStatus', [], () => 'Ready');
+// --- Status ---
+nb.define('status', [], () => 'Ready');
 
 // --- Section: Output ---
 nb.define('section_output', [], () => `<h2>Teleprinter Output</h2>`, { type: 'md' });
@@ -1085,19 +1096,46 @@ nb.define('teleprinter', ['output'], (output) => {
     };
 });
 
+// --- Section: CPU State ---
+nb.define('section_state', [], () => `<h2>CPU State</h2>`, { type: 'md' });
+
+// --- Registers display ---
+nb.define('registers', ['emulator', 'status'], (emu) => {
+    const cpu = emu.cpu;
+    const fmt = (v, w) => '0x' + (v >>> 0).toString(16).padStart(w, '0').toUpperCase();
+    return {
+        _display: () => `
+            <table class="reg-table">
+                <thead><tr><th>Reg</th><th>Value</th><th>Hex</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="reg-name">M</span></td><td class="reg-val">${cpu.M}</td><td>${fmt(cpu.M, 6)}</td></tr>
+                    <tr><td><span class="reg-name">R</span></td><td class="reg-val">${cpu.R}</td><td>${fmt(cpu.R, 6)}</td></tr>
+                    <tr><td><span class="reg-name">S</span></td><td class="reg-val">${cpu.S}</td><td>${fmt(cpu.S, 5)}</td></tr>
+                    <tr><td><span class="reg-name">K</span></td><td class="reg-val">${cpu.K}</td><td>${fmt(cpu.K, 3)}</td></tr>
+                    <tr><td><span class="reg-name">cyc</span></td><td class="reg-val">${emu.cycles.toLocaleString()}</td><td>—</td></tr>
+                    <tr><td><span class="reg-name">tape</span></td><td class="reg-val">${emu.tapePos}/${emu.tapeLength}</td><td>—</td></tr>
+                </tbody>
+            </table>
+        `
+    };
+});
+
 // --- Footer info ---
 nb.define('section_api', [], () => `
-    <h2>API Reference</h2>
-    <p>The <code>cpu</code> cell exposes the full E4130 emulator. Key methods:</p>
+    <h2>Cell Dependencies</h2>
+    <p>Each cell returns a value that other cells can reference:</p>
     <ul style="margin:8px 0 0 24px;color:#57606a;">
-        <li><code>cpu.step()</code> — Execute one instruction</li>
-        <li><code>cpu.mem[addr]</code> — Access 24-bit memory</li>
-        <li><code>cpu.M, cpu.R, cpu.S, cpu.K</code> — Registers</li>
+        <li><code>tapeEncoder</code> → <code>{ encode(text) }</code> — Text to tape format</li>
+        <li><code>cpuFactory</code> → <code>{ create() }</code> — Fresh E4130 instances</li>
+        <li><code>program</code> → <code>{ words, length }</code> — Assembled machine code</li>
+        <li><code>emulator</code> → <code>{ loadTape, reset, step, cpu, output }</code> — Composed runtime</li>
     </ul>
-    <p style="margin-top:12px;">The <code>asm</code> cell provides the NEAT assembler:</p>
-    <ul style="margin:8px 0 0 24px;color:#57606a;">
-        <li><code>asm.asm(source)</code> — Assemble to [{addr, word}, ...]</li>
-    </ul>
+    <p style="margin-top:12px;">The <code>emulator</code> cell composes the others:</p>
+    <pre style="margin:8px 0;padding:12px;background:#f6f8fa;border-radius:6px;font-size:12px;overflow-x:auto;">emulator = (cpuFactory, program, tapeEncoder) => {
+  cpu = cpuFactory.create()
+  loadTape = text => tapeEncoder.encode(text)
+  return { cpu, loadTape, reset, step, output }
+}</pre>
 `, { type: 'md' });
 
 </script>
