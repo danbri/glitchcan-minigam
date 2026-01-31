@@ -797,6 +797,7 @@ nb.define('program', ['asm', 'lispSource'], (asm, src) => {
 nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
     // Reset CPU state
     cpu.reset();
+    cpu.halted = false;  // Ensure halted is cleared
 
     for (const { addr, word } of prog.words) {
         cpu.mem[addr] = word;
@@ -824,7 +825,7 @@ nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
     return {
         status: 'ready',
         words: prog.length,
-        _display: () => `Loaded ${prog.length} words. First: ${firstWords.join(', ')}`
+        _display: () => `Loaded ${prog.length} words. S=${cpu.S}, halted=${cpu.halted}. First: ${firstWords.join(', ')}`
     };
 });
 
