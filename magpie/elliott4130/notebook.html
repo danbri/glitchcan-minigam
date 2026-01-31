@@ -931,7 +931,10 @@ nb.define('program', ['asm', 'lispSource'], (asm, src) => {
 nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, encoder) => {
     const cpu = factory.create();
 
-    // Load program into memory
+    // Initialize CPU (reset() wipes memory and sets halted=true)
+    cpu.halted = false;
+
+    // Load program into memory (AFTER setting halted=false, since reset() clears mem)
     for (const { addr, word } of prog.words) {
         cpu.mem[addr] = word;
     }
