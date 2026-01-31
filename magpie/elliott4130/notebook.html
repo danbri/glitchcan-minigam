@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#ffffff">
     <title>Elliott 4130 LISP — Observable Notebook</title>
     <style>
@@ -12,25 +11,18 @@
             --obs-blue: #3b5fc0;
             --obs-purple: #7b6fde;
             --obs-green: #2da44e;
+            --obs-orange: #d97706;
             --obs-gray: #6e7781;
             --obs-light: #f6f8fa;
             --obs-border: #d0d7de;
-            --obs-code-bg: #f6f8fa;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
-            --safe-left: env(safe-area-inset-left);
-            --safe-right: env(safe-area-inset-right);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        html {
-            /* Prevent iOS zoom on input focus */
-            font-size: 16px;
-            -webkit-text-size-adjust: 100%;
-        }
+        html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
         body {
             font-family: var(--font-sans);
@@ -38,134 +30,101 @@
             line-height: 1.6;
             color: #24292f;
             background: white;
-            /* iOS safe areas */
             padding-top: var(--safe-top);
             padding-bottom: var(--safe-bottom);
-            padding-left: var(--safe-left);
-            padding-right: var(--safe-right);
-            /* Smooth scrolling */
             -webkit-overflow-scrolling: touch;
         }
 
-        /* Observable-style header */
-        .notebook-header {
-            border-bottom: 1px solid var(--obs-border);
-            padding: 20px 0;
-            margin-bottom: 24px;
-        }
-        .notebook-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        .notebook-header .author {
-            color: var(--obs-gray);
-            font-size: 14px;
-        }
-        .notebook-header .author a {
-            color: var(--obs-blue);
-            text-decoration: none;
-        }
-
-        /* Container - mobile first */
         .container {
             max-width: 840px;
             margin: 0 auto;
             padding: 0 16px;
         }
 
-        /* Observable-style cells - simplified for mobile */
+        /* Header */
+        .notebook-header {
+            border-bottom: 1px solid var(--obs-border);
+            padding: 20px 0;
+            margin-bottom: 24px;
+        }
+        .notebook-header h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+        .notebook-header .author { color: var(--obs-gray); font-size: 14px; }
+        .notebook-header a { color: var(--obs-blue); text-decoration: none; }
+
+        /* Cells */
         .cell {
             position: relative;
-            margin-bottom: 20px;
-            padding-left: 12px;
+            margin-bottom: 16px;
             border-left: 3px solid transparent;
+            padding-left: 12px;
+            transition: border-color 0.15s;
         }
+        .cell.stale { border-left-color: var(--obs-orange); }
+        .cell.running { border-left-color: var(--obs-blue); }
+        .cell.error { border-left-color: #cf222e; }
+        .cell.fresh { border-left-color: var(--obs-green); }
+        .cell.dirty { border-left-color: var(--obs-purple); }
 
-        .cell.active {
-            border-left-color: var(--obs-blue);
-        }
-
-        /* Cell play button - always visible on mobile for touch */
-        .cell-run {
-            position: absolute;
-            left: -8px;
-            top: 4px;
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            color: var(--obs-blue);
-            /* Touch-friendly: always visible on mobile */
-            opacity: 0.6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .cell-run:active { opacity: 1; transform: scale(0.95); }
-        .cell-run svg { width: 18px; height: 18px; }
-
-        /* Desktop: hide until hover */
-        @media (hover: hover) {
-            .cell-run { opacity: 0; }
-            .cell:hover .cell-run { opacity: 1; }
-            .cell::before {
-                content: '';
-                position: absolute;
-                left: -3px;
-                top: 0;
-                bottom: 0;
-                width: 3px;
-                background: transparent;
-                transition: background 0.15s;
-            }
-            .cell:hover::before { background: var(--obs-border); }
-            .cell.active::before { background: var(--obs-blue); }
-            .cell { border-left: none; padding-left: 28px; }
-        }
-
-        /* Markdown/prose cells */
-        .cell-prose {
-            color: #24292f;
-        }
-        .cell-prose h2 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            padding-top: 16px;
-            border-top: 1px solid var(--obs-border);
-        }
-        .cell-prose p {
-            margin-bottom: 12px;
-            color: #57606a;
-        }
-
-        /* Code cells */
-        .cell-code {
+        /* Cell name badge */
+        .cell-name {
             font-family: var(--font-mono);
-            font-size: 13px;
-            background: var(--obs-code-bg);
+            font-size: 12px;
+            color: var(--obs-purple);
+            margin-bottom: 4px;
+        }
+        .cell-name::before { content: ''; }
+        .cell-deps {
+            font-size: 11px;
+            color: var(--obs-gray);
+            margin-left: 8px;
+        }
+
+        /* Code editor */
+        .cell-editor {
+            position: relative;
+            background: var(--obs-light);
             border: 1px solid var(--obs-border);
             border-radius: 6px;
             overflow: hidden;
         }
-
-        .cell-code pre {
-            margin: 0;
+        .cell-editor textarea {
+            width: 100%;
+            min-height: 60px;
             padding: 12px 16px;
-            overflow-x: auto;
-            white-space: pre;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            border: none;
+            background: transparent;
+            resize: vertical;
+            outline: none;
+        }
+        .cell-editor textarea:focus {
+            background: white;
         }
 
-        .cell-code .keyword { color: #cf222e; }
-        .cell-code .string { color: #0a3069; }
-        .cell-code .number { color: #0550ae; }
-        .cell-code .comment { color: #6e7781; }
-        .cell-code .function { color: #8250df; }
+        /* Run button */
+        .cell-run {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--obs-blue);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.15s;
+        }
+        .cell-run:hover { opacity: 1; }
+        .cell-run svg { width: 12px; height: 12px; }
 
-        /* Output cells */
+        /* Output */
         .cell-output {
             margin-top: 8px;
             padding: 12px 16px;
@@ -174,145 +133,46 @@
             border-radius: 6px;
             font-family: var(--font-mono);
             font-size: 13px;
+            overflow-x: auto;
         }
-
-        .cell-output.success {
-            border-color: var(--obs-green);
-            background: #f0fff4;
-        }
-
-        .cell-output.error {
-            border-color: #cf222e;
+        .cell-output.error-output {
             background: #fff5f5;
+            border-color: #cf222e;
+            color: #cf222e;
         }
+        .cell-output:empty { display: none; }
 
-        /* Inspector-style output */
-        .inspector {
+        /* Inspector formatting */
+        .insp-obj { color: #24292f; }
+        .insp-key { color: var(--obs-purple); }
+        .insp-str { color: #0a3069; }
+        .insp-num { color: #0550ae; }
+        .insp-bool { color: #cf222e; }
+        .insp-null { color: var(--obs-gray); }
+        .insp-fn { color: #8250df; font-style: italic; }
+
+        /* Markdown cells */
+        .cell-md {
+            padding: 8px 0;
+        }
+        .cell-md h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 16px 0 8px;
+            padding-top: 16px;
+            border-top: 1px solid var(--obs-border);
+        }
+        .cell-md h2:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+        .cell-md p { color: #57606a; margin-bottom: 8px; }
+        .cell-md code {
             font-family: var(--font-mono);
-            font-size: 13px;
-        }
-        .inspector-key { color: var(--obs-purple); }
-        .inspector-value { color: #24292f; }
-        .inspector-type { color: var(--obs-gray); font-size: 11px; }
-
-        /* Interactive inputs */
-        .cell-input {
-            margin-top: 8px;
-        }
-
-        .cell-input textarea {
-            width: 100%;
-            font-family: var(--font-mono);
-            font-size: 13px;
-            padding: 12px 16px;
-            border: 1px solid var(--obs-border);
-            border-radius: 6px;
-            resize: vertical;
-            min-height: 120px;
-            background: white;
-        }
-        .cell-input textarea:focus {
-            outline: none;
-            border-color: var(--obs-blue);
-            box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
-        }
-
-        /* Buttons - touch-friendly minimum 44px tap target */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 12px 16px;
-            min-height: 44px;
-            font-size: 15px;
-            font-weight: 500;
-            border-radius: 8px;
-            border: 1px solid var(--obs-border);
             background: var(--obs-light);
-            color: #24292f;
-            cursor: pointer;
-            transition: all 0.15s;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-        .btn:active {
-            transform: scale(0.97);
-            background: #e8e8e8;
-        }
-        .btn-primary {
-            background: var(--obs-blue);
-            border-color: var(--obs-blue);
-            color: white;
-        }
-        .btn-primary:active {
-            background: #2c4a9e;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            pointer-events: none;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        /* Desktop: smaller buttons */
-        @media (hover: hover) {
-            .btn {
-                padding: 8px 14px;
-                min-height: 36px;
-                font-size: 13px;
-            }
-            .btn:hover {
-                background: #f3f4f6;
-                border-color: #c9d1d9;
-            }
-            .btn-primary:hover {
-                background: #2c4a9e;
-            }
-        }
-
-        /* Register display - mobile cards / desktop table */
-        .registers-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: var(--font-mono);
-            font-size: 14px;
-            margin-top: 8px;
-        }
-        .registers-table th {
-            text-align: left;
-            font-weight: 500;
-            color: var(--obs-gray);
-            padding: 10px 8px;
-            border-bottom: 1px solid var(--obs-border);
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .registers-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid var(--obs-border);
-        }
-        .registers-table tr:last-child td {
-            border-bottom: none;
-        }
-        .reg-name { color: var(--obs-purple); font-weight: 600; }
-        .reg-value { font-weight: 600; font-size: 15px; }
-        .reg-hex { color: var(--obs-gray); font-size: 12px; }
-
-        /* Mobile: hide description column, compact layout */
-        @media (max-width: 600px) {
-            .registers-table .hide-mobile { display: none; }
-            .registers-table td, .registers-table th { padding: 8px 6px; }
-            .reg-value { font-size: 14px; }
-        }
-
-        /* Teleprinter - terminal style */
+        /* Teleprinter */
         .teleprinter {
             font-family: var(--font-mono);
             font-size: 15px;
@@ -320,70 +180,56 @@
             color: #58a6ff;
             padding: 16px;
             border-radius: 8px;
-            min-height: 100px;
+            min-height: 80px;
             white-space: pre-wrap;
             word-break: break-all;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .teleprinter .cursor {
-            background: #58a6ff;
-            color: #0d1117;
-            animation: blink 1s step-end infinite;
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
         }
 
-        /* Log */
-        .log {
+        /* Registers table */
+        .reg-table {
+            width: 100%;
+            border-collapse: collapse;
             font-family: var(--font-mono);
-            font-size: 13px;
+            font-size: 14px;
+        }
+        .reg-table th {
+            text-align: left;
+            font-weight: 500;
             color: var(--obs-gray);
-            max-height: 200px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            padding: 8px;
+            border-bottom: 1px solid var(--obs-border);
+            font-size: 11px;
+            text-transform: uppercase;
         }
-        .log-entry {
-            padding: 6px 0;
-            border-bottom: 1px solid var(--obs-light);
-        }
-        .log-entry:last-child { border-bottom: none; }
-        .log-time { color: #8b949e; font-size: 11px; }
-        .log-msg { color: #24292f; }
+        .reg-table td { padding: 8px; border-bottom: 1px solid var(--obs-border); }
+        .reg-name { color: var(--obs-purple); font-weight: 600; }
+        .reg-val { font-weight: 600; }
 
-        /* Viewof style label */
-        .viewof {
-            font-size: 12px;
-            color: var(--obs-gray);
-            margin-bottom: 4px;
-        }
-        .viewof code {
-            font-family: var(--font-mono);
-            background: var(--obs-light);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        /* Status badge */
-        .status {
+        /* Buttons */
+        .btn {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            font-size: 12px;
+            gap: 6px;
+            padding: 10px 16px;
+            min-height: 44px;
+            font-size: 14px;
             font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid var(--obs-border);
+            background: var(--obs-light);
+            color: #24292f;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        .status-ok .status-dot { background: var(--obs-green); }
-        .status-running .status-dot { background: #f59e0b; animation: pulse 1s infinite; }
-        .status-error .status-dot { background: #cf222e; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .btn:active { background: #e8e8e8; }
+        .btn-primary { background: var(--obs-blue); border-color: var(--obs-blue); color: white; }
+        .btn:disabled { opacity: 0.5; pointer-events: none; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+        @media (hover: hover) {
+            .btn { padding: 8px 14px; min-height: 36px; }
+            .btn:hover { background: #f3f4f6; }
+            .btn-primary:hover { background: #2c4a9e; }
         }
 
         /* Footer */
@@ -394,12 +240,15 @@
             color: var(--obs-gray);
             font-size: 13px;
         }
+
+        /* Dependency graph styles */
+        .dep-stale { color: var(--obs-orange); }
+        .dep-error { color: #cf222e; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- Header -->
     <header class="notebook-header">
         <h1>Elliott 4130 LISP</h1>
         <div class="author">
@@ -408,146 +257,8 @@
         </div>
     </header>
 
-    <!-- Cell: Introduction -->
-    <div class="cell">
-        <div class="cell-prose">
-            <p>This notebook demonstrates the Elliott 4130 emulator running a native LISP 1.5 interpreter written entirely in NEAT assembly language. The emulator faithfully recreates the 24-bit architecture, including paper tape I/O.</p>
-        </div>
-    </div>
+    <div id="notebook"></div>
 
-    <!-- Cell: Initialize -->
-    <div class="cell" id="cell-init">
-        <button class="cell-run" onclick="init()" title="Run cell">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
-        </button>
-        <div class="cell-prose">
-            <h2>Initialize Emulator</h2>
-        </div>
-        <div class="cell-code">
-            <pre><span class="keyword">const</span> cpu = <span class="keyword">new</span> <span class="function">E4130</span>()
-cpu.hardwareFPEnabled = <span class="keyword">true</span>
-<span class="keyword">const</span> asm = <span class="keyword">new</span> <span class="function">Asm</span>()</pre>
-        </div>
-        <div class="cell-output" id="init-output">
-            <span class="status status-running"><span class="status-dot"></span> Waiting...</span>
-        </div>
-    </div>
-
-    <!-- Cell: Load LISP -->
-    <div class="cell" id="cell-load">
-        <button class="cell-run" onclick="loadLisp()" title="Run cell">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
-        </button>
-        <div class="cell-prose">
-            <h2>Load LISP Interpreter</h2>
-            <p>Assemble and load <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
-        </div>
-        <div class="cell-output" id="load-output">
-            <span class="status status-running"><span class="status-dot"></span> Waiting for initialization...</span>
-        </div>
-    </div>
-
-    <!-- Cell: Registers -->
-    <div class="cell">
-        <div class="cell-prose">
-            <h2>CPU State</h2>
-        </div>
-        <div class="viewof">viewof <code>registers</code></div>
-        <table class="registers-table">
-            <thead>
-                <tr>
-                    <th>Reg</th>
-                    <th>Value</th>
-                    <th>Hex</th>
-                    <th class="hide-mobile">Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><span class="reg-name">M</span></td>
-                    <td class="reg-value" id="regM">0</td>
-                    <td class="reg-hex" id="regMHex">0x000000</td>
-                    <td class="hide-mobile">Accumulator</td>
-                </tr>
-                <tr>
-                    <td><span class="reg-name">R</span></td>
-                    <td class="reg-value" id="regR">0</td>
-                    <td class="reg-hex" id="regRHex">0x000000</td>
-                    <td class="hide-mobile">Reserve</td>
-                </tr>
-                <tr>
-                    <td><span class="reg-name">S</span></td>
-                    <td class="reg-value" id="regS">0</td>
-                    <td class="reg-hex" id="regSHex">0x00000</td>
-                    <td class="hide-mobile">Program counter</td>
-                </tr>
-                <tr>
-                    <td><span class="reg-name">K</span></td>
-                    <td class="reg-value" id="regK">0</td>
-                    <td class="reg-hex" id="regKHex">0x000</td>
-                    <td class="hide-mobile">Count</td>
-                </tr>
-                <tr>
-                    <td><span class="reg-name">cyc</span></td>
-                    <td class="reg-value" id="regI">0</td>
-                    <td class="reg-hex">—</td>
-                    <td class="hide-mobile">Instructions</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Cell: Input -->
-    <div class="cell">
-        <div class="cell-prose">
-            <h2>LISP Input</h2>
-            <p>Enter LISP expressions to evaluate. These are loaded onto the paper tape reader.</p>
-        </div>
-        <div class="viewof">viewof <code>lispInput</code></div>
-        <div class="cell-input">
-            <textarea id="lispInput">(CAR (QUOTE (A B C)))
-(CDR (QUOTE (X Y Z)))
-(CONS (QUOTE A) (QUOTE (B C)))
-(ATOM (QUOTE X))
-(EQ (QUOTE A) (QUOTE A))</textarea>
-        </div>
-        <div class="btn-group">
-            <button class="btn btn-primary" id="loadTapeBtn" onclick="loadTape()">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Zm.72-5.22a.75.75 0 0 0 1.06 1.06l2.72-2.72v6.19a.75.75 0 0 0 1.5 0V7.12l2.72 2.72a.75.75 0 1 0 1.06-1.06l-4-4a.75.75 0 0 0-1.06 0l-4 4Z"/></svg>
-                Load Tape
-            </button>
-            <button class="btn" id="runBtn" onclick="run()" disabled>
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
-                Run
-            </button>
-            <button class="btn" id="stepBtn" onclick="step()" disabled>Step</button>
-            <button class="btn" id="resetBtn" onclick="reset()">Reset</button>
-        </div>
-        <div class="cell-output" id="tape-status" style="margin-top: 12px;">
-            Enter LISP expressions, then click "Load Tape"
-        </div>
-    </div>
-
-    <!-- Cell: Output -->
-    <div class="cell">
-        <div class="cell-prose">
-            <h2>Teleprinter Output</h2>
-        </div>
-        <div class="viewof">viewof <code>output</code></div>
-        <div class="teleprinter" id="teleprinter"><span class="cursor"> </span></div>
-    </div>
-
-    <!-- Cell: Log -->
-    <div class="cell">
-        <div class="cell-prose">
-            <h2>Execution Log</h2>
-        </div>
-        <div class="log" id="executionLog">
-            <div class="log-entry"><span class="log-time">—</span> <span class="log-msg">Waiting for execution...</span></div>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <footer class="notebook-footer">
         Elliott 4130 Emulator — Based on CCS E6X Reference Manuals (1965) —
         <a href="elliott4130.html">Full Emulator UI</a>
@@ -560,292 +271,725 @@ cpu.hardwareFPEnabled = <span class="keyword">true</span>
 
 <script>
 // ============================================================================
-// Elliott 4130 LISP Notebook
+// Reactive Notebook Runtime (Observable-style)
 // ============================================================================
 
-let cpu, asm, lispProgram;
-let outputBuffer = '';
-let isRunning = false;
+class Notebook {
+    constructor(container) {
+        this.container = container;
+        this.cells = new Map();      // name -> Cell
+        this.values = new Map();     // name -> current value
+        this.order = [];             // cell names in definition order
+        this.running = new Set();    // cells currently executing
+    }
 
-// Mini LISP for demo when full interpreter unavailable
-const MINI_LISP = `
+    // Define a cell
+    define(name, deps, fn, options = {}) {
+        const cell = {
+            name,
+            deps: deps || [],
+            fn,
+            type: options.type || 'code',  // 'code', 'md', 'viewof'
+            hidden: options.hidden || false,
+            editable: options.editable !== false,  // true by default for code
+            el: null,
+            outputEl: null,
+            editorEl: null,
+            stale: true,
+            error: null,
+            dirty: false  // for viewof cells: edited but not saved
+        };
+
+        this.cells.set(name, cell);
+        this.order.push(name);
+
+        if (!cell.hidden) {
+            this.renderCell(cell);
+        }
+
+        // Queue initial evaluation
+        this.invalidate(name);
+        return this;
+    }
+
+    // Mark a cell and its dependents as stale
+    invalidate(name) {
+        const cell = this.cells.get(name);
+        if (!cell) return;
+
+        cell.stale = true;
+        this.updateCellUI(cell);
+
+        // Find and invalidate dependents
+        for (const [depName, depCell] of this.cells) {
+            if (depCell.deps.includes(name)) {
+                this.invalidate(depName);
+            }
+        }
+
+        // Schedule evaluation
+        this.scheduleEval();
+    }
+
+    // Schedule evaluation of stale cells
+    scheduleEval() {
+        if (this._evalScheduled) return;
+        this._evalScheduled = true;
+        queueMicrotask(() => {
+            this._evalScheduled = false;
+            this.evalStale();
+        });
+    }
+
+    // Evaluate all stale cells in dependency order
+    async evalStale() {
+        const ready = [];
+
+        for (const name of this.order) {
+            const cell = this.cells.get(name);
+            if (!cell.stale) continue;
+
+            // Check if all deps are ready
+            const depsReady = cell.deps.every(dep => {
+                const depCell = this.cells.get(dep);
+                return depCell && !depCell.stale && !depCell.error;
+            });
+
+            if (depsReady) {
+                ready.push(cell);
+            }
+        }
+
+        for (const cell of ready) {
+            await this.evalCell(cell);
+        }
+
+        // Check if more cells became ready
+        const stillStale = [...this.cells.values()].some(c => c.stale && !c.error);
+        if (stillStale) {
+            this.scheduleEval();
+        }
+    }
+
+    // Evaluate a single cell
+    async evalCell(cell) {
+        if (!cell.stale) return;
+
+        this.running.add(cell.name);
+        cell.error = null;
+        this.updateCellUI(cell);
+
+        try {
+            // Gather dependency values
+            const args = cell.deps.map(dep => this.values.get(dep));
+
+            // Execute
+            let result = cell.fn(...args);
+            if (result instanceof Promise) {
+                result = await result;
+            }
+
+            // Store result
+            this.values.set(cell.name, result);
+            cell.stale = false;
+
+            // For viewof cells, populate the textarea with the value
+            if (cell.type === 'viewof' && cell.editorEl) {
+                cell.editorEl.value = result;
+                cell.editorEl.rows = Math.min(20, Math.max(8, result.split('\n').length));
+            }
+
+            // Render output
+            this.renderOutput(cell, result);
+
+        } catch (e) {
+            cell.error = e;
+            this.renderError(cell, e);
+        }
+
+        this.running.delete(cell.name);
+        this.updateCellUI(cell);
+    }
+
+    // Render a cell's DOM
+    renderCell(cell) {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.dataset.name = cell.name;
+
+        if (cell.type === 'md') {
+            div.innerHTML = `<div class="cell-md">${cell.fn()}</div>`;
+            cell.el = div;
+            this.container.appendChild(div);
+            return;
+        }
+
+        // Cell name header
+        const nameSpan = document.createElement('div');
+        nameSpan.className = 'cell-name';
+        nameSpan.innerHTML = `${cell.name}${cell.deps.length ? `<span class="cell-deps">← ${cell.deps.join(', ')}</span>` : ''}`;
+        div.appendChild(nameSpan);
+
+        // Viewof cell: shows the value as editable text, only saves on Shift+Enter
+        if (cell.type === 'viewof') {
+            const editor = document.createElement('div');
+            editor.className = 'cell-editor';
+
+            const textarea = document.createElement('textarea');
+            textarea.rows = 10;
+            textarea.spellcheck = false;
+            textarea.placeholder = 'Loading...';
+
+            // Mark dirty on edit (but don't propagate)
+            textarea.addEventListener('input', () => {
+                cell.dirty = true;
+                this.updateCellUI(cell);
+            });
+
+            // Save on Shift+Enter
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    this.saveViewof(cell.name, textarea.value);
+                }
+            });
+
+            const runBtn = document.createElement('button');
+            runBtn.className = 'cell-run';
+            runBtn.title = 'Save (Shift+Enter)';
+            runBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>';
+            runBtn.onclick = () => this.saveViewof(cell.name, textarea.value);
+
+            editor.appendChild(textarea);
+            editor.appendChild(runBtn);
+            div.appendChild(editor);
+
+            cell.el = div;
+            cell.editorEl = textarea;
+
+            this.container.appendChild(div);
+            return;
+        }
+
+        // Regular code cell
+        const editor = document.createElement('div');
+        editor.className = 'cell-editor';
+
+        const textarea = document.createElement('textarea');
+        textarea.value = this.fnToSource(cell.fn);
+        textarea.rows = Math.max(2, textarea.value.split('\n').length);
+        textarea.spellcheck = false;
+
+        // Re-run on Shift+Enter
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                this.updateCellCode(cell.name, textarea.value);
+            }
+        });
+
+        const runBtn = document.createElement('button');
+        runBtn.className = 'cell-run';
+        runBtn.title = 'Run (Shift+Enter)';
+        runBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>';
+        runBtn.onclick = () => this.updateCellCode(cell.name, textarea.value);
+
+        editor.appendChild(textarea);
+        editor.appendChild(runBtn);
+        div.appendChild(editor);
+
+        const output = document.createElement('div');
+        output.className = 'cell-output';
+        div.appendChild(output);
+
+        cell.el = div;
+        cell.editorEl = textarea;
+        cell.outputEl = output;
+
+        this.container.appendChild(div);
+    }
+
+    // Save a viewof cell's value (called on Shift+Enter)
+    saveViewof(name, value) {
+        const cell = this.cells.get(name);
+        if (!cell) return;
+
+        cell.dirty = false;
+        this.values.set(name, value);
+        cell.stale = false;
+        this.updateCellUI(cell);
+
+        // Invalidate dependents
+        for (const [depName, depCell] of this.cells) {
+            if (depCell.deps.includes(name)) {
+                this.invalidate(depName);
+            }
+        }
+    }
+
+    // Convert function to displayable source
+    fnToSource(fn) {
+        let src = fn.toString();
+        // Extract body from arrow function or regular function
+        if (src.startsWith('(') || src.startsWith('function')) {
+            const match = src.match(/(?:=>|{)\s*([\s\S]*?)\s*}?\s*$/);
+            if (match) {
+                src = match[1].trim();
+                // Remove trailing }
+                if (src.endsWith('}')) src = src.slice(0, -1).trim();
+            }
+        }
+        // Clean up return statements for simple expressions
+        if (src.startsWith('return ')) {
+            src = src.slice(7);
+        }
+        return src;
+    }
+
+    // Update cell code from editor
+    updateCellCode(name, source) {
+        const cell = this.cells.get(name);
+        if (!cell) return;
+
+        try {
+            // Create new function from source
+            const argNames = cell.deps.join(', ');
+            const fn = new Function(argNames, `return (${source})`);
+            cell.fn = fn;
+            this.invalidate(name);
+        } catch (e) {
+            // Try as statements
+            try {
+                const argNames = cell.deps.join(', ');
+                const fn = new Function(argNames, source);
+                cell.fn = fn;
+                this.invalidate(name);
+            } catch (e2) {
+                cell.error = e2;
+                this.renderError(cell, e2);
+            }
+        }
+    }
+
+    // Update cell visual state
+    updateCellUI(cell) {
+        if (!cell.el) return;
+
+        cell.el.classList.remove('stale', 'running', 'error', 'fresh', 'dirty');
+
+        if (cell.error) {
+            cell.el.classList.add('error');
+        } else if (cell.dirty) {
+            cell.el.classList.add('dirty');
+        } else if (this.running.has(cell.name)) {
+            cell.el.classList.add('running');
+        } else if (cell.stale) {
+            cell.el.classList.add('stale');
+        } else {
+            cell.el.classList.add('fresh');
+        }
+    }
+
+    // Render output value
+    renderOutput(cell, value) {
+        if (!cell.outputEl) return;
+
+        if (value === undefined) {
+            cell.outputEl.innerHTML = '';
+            return;
+        }
+
+        // Check for custom display
+        if (value && typeof value._display === 'function') {
+            cell.outputEl.innerHTML = '';
+            const content = value._display();
+            if (typeof content === 'string') {
+                cell.outputEl.innerHTML = content;
+            } else if (content instanceof Node) {
+                cell.outputEl.appendChild(content);
+            }
+            return;
+        }
+
+        cell.outputEl.classList.remove('error-output');
+        cell.outputEl.innerHTML = this.inspect(value);
+    }
+
+    // Render error
+    renderError(cell, error) {
+        if (!cell.outputEl) return;
+        cell.outputEl.classList.add('error-output');
+        cell.outputEl.textContent = `Error: ${error.message}`;
+    }
+
+    // Format value for display
+    inspect(value, depth = 0) {
+        if (depth > 3) return '<span class="insp-null">...</span>';
+
+        if (value === null) return '<span class="insp-null">null</span>';
+        if (value === undefined) return '<span class="insp-null">undefined</span>';
+
+        const type = typeof value;
+
+        if (type === 'string') {
+            return `<span class="insp-str">"${this.escapeHtml(value)}"</span>`;
+        }
+        if (type === 'number') {
+            return `<span class="insp-num">${value}</span>`;
+        }
+        if (type === 'boolean') {
+            return `<span class="insp-bool">${value}</span>`;
+        }
+        if (type === 'function') {
+            return `<span class="insp-fn">ƒ ${value.name || 'anonymous'}</span>`;
+        }
+
+        if (Array.isArray(value)) {
+            if (value.length === 0) return '[]';
+            if (value.length > 10) {
+                return `Array(${value.length})`;
+            }
+            const items = value.map(v => this.inspect(v, depth + 1)).join(', ');
+            return `[${items}]`;
+        }
+
+        if (value instanceof Int32Array || value instanceof Uint8Array) {
+            return `${value.constructor.name}(${value.length})`;
+        }
+
+        if (type === 'object') {
+            const name = value.constructor?.name;
+            if (name && name !== 'Object') {
+                // Custom object - show type and key properties
+                const keys = Object.keys(value).slice(0, 5);
+                if (keys.length === 0) return `<span class="insp-obj">${name} {}</span>`;
+                const props = keys.map(k =>
+                    `<span class="insp-key">${k}</span>: ${this.inspect(value[k], depth + 1)}`
+                ).join(', ');
+                return `<span class="insp-obj">${name}</span> { ${props}${Object.keys(value).length > 5 ? ', ...' : ''} }`;
+            }
+
+            const keys = Object.keys(value);
+            if (keys.length === 0) return '{}';
+            const props = keys.slice(0, 8).map(k =>
+                `<span class="insp-key">${k}</span>: ${this.inspect(value[k], depth + 1)}`
+            ).join(', ');
+            return `{ ${props}${keys.length > 8 ? ', ...' : ''} }`;
+        }
+
+        return String(value);
+    }
+
+    escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Helper to get a value
+    get(name) {
+        return this.values.get(name);
+    }
+
+    // Helper to set a value (triggers dependents)
+    set(name, value) {
+        this.values.set(name, value);
+        const cell = this.cells.get(name);
+        if (cell) {
+            cell.stale = false;
+            this.renderOutput(cell, value);
+        }
+        // Invalidate dependents
+        for (const [depName, depCell] of this.cells) {
+            if (depCell.deps.includes(name)) {
+                this.invalidate(depName);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Elliott 4130 Notebook Definition
+// ============================================================================
+
+const nb = new Notebook(document.getElementById('notebook'));
+
+// Mini LISP demo program (used when full interpreter unavailable)
+const MINI_LISP_SRC = `
             J       START
 HEAP:       #1000
 RESULT:     #0
 T1:         #0
 T2:         #0
 
-START:      ; Build (A B C) list
-            ; (C . NIL) at 1000
-            LD      #3002
+START:      LD      #3002
             MULS    #4096
             ADD     #4095
             ST      1000
-
-            ; (B . 1000) at 1001
             LD      #3001
             MULS    #4096
             ADD     #1000
             ST      1001
-
-            ; (A . 1001) at 1002
             LD      #3000
             MULS    #4096
             ADD     #1001
             ST      1002
-
-            ; CAR of list = A
             LD      1002
             LDK     #12
             SMRL
             ST      RESULT
-
-            ; Output 'A'
             LD      RESULT
             SUB     #3000
             ADD     #65
             ODUM    #2
-
-            ; Output newline
             LD      #10
             ODUM    #2
-
 DONE:       J       DONE
 `;
 
-// ============================================================================
-// Initialize
-// ============================================================================
-
-function init() {
-    document.getElementById('cell-init').classList.add('active');
-
-    try {
-        cpu = new E4130();
-        cpu.hardwareFPEnabled = true;
-        asm = new Asm();
-
-        document.getElementById('init-output').innerHTML = `
-            <span class="status status-ok"><span class="status-dot"></span> Ready</span>
-            <div class="inspector" style="margin-top: 8px;">
-                <span class="inspector-key">cpu</span>: <span class="inspector-type">E4130</span> { M: 0, R: 0, S: 0, mem: Int32Array(65536) }
-            </div>
-        `;
-        document.getElementById('init-output').classList.add('success');
-
-        loadLisp();
-    } catch (e) {
-        document.getElementById('init-output').innerHTML = `
-            <span class="status status-error"><span class="status-dot"></span> Error</span>
-            <div style="margin-top: 8px; color: #cf222e;">${e.message}</div>
-        `;
-        document.getElementById('init-output').classList.add('error');
-    }
-}
-
-// ============================================================================
-// Load LISP
-// ============================================================================
-
-async function loadLisp() {
-    document.getElementById('cell-load').classList.add('active');
-
-    try {
-        let src;
-        let srcName = 'lisp4130.asm';
-
-        try {
-            const resp = await fetch('lisp4130.asm');
-            if (resp.ok) {
-                src = await resp.text();
-            } else {
-                throw new Error('Not found');
-            }
-        } catch {
-            src = MINI_LISP;
-            srcName = 'mini-lisp (built-in demo)';
-        }
-
-        lispProgram = asm.asm(src);
-
-        for (const { addr, word } of lispProgram) {
-            cpu.mem[addr] = word;
-        }
-
-        setupIO();
-
-        document.getElementById('load-output').innerHTML = `
-            <span class="status status-ok"><span class="status-dot"></span> Loaded</span>
-            <div class="inspector" style="margin-top: 8px;">
-                <span class="inspector-key">source</span>: <span class="inspector-value">"${srcName}"</span><br>
-                <span class="inspector-key">words</span>: <span class="inspector-value">${lispProgram.length}</span><br>
-                <span class="inspector-key">memory</span>: <span class="inspector-value">[0x0000..0x${(lispProgram.length).toString(16).padStart(4, '0')}]</span>
-            </div>
-        `;
-        document.getElementById('load-output').classList.add('success');
-
-        updateRegisters();
-        log('LISP interpreter loaded');
-
-    } catch (e) {
-        document.getElementById('load-output').innerHTML = `
-            <span class="status status-error"><span class="status-dot"></span> Error</span>
-            <div style="margin-top: 8px; color: #cf222e;">${e.message}</div>
-        `;
-    }
-}
-
-// ============================================================================
-// I/O
-// ============================================================================
-
+// Shared state for I/O
+let outputBuffer = '';
 let tapeData = [];
 let tapePos = 0;
 
-function setupIO() {
+// --- Introduction ---
+nb.define('intro', [], () => `
+    <p>This notebook demonstrates the Elliott 4130 emulator running a native LISP 1.5 interpreter
+    written entirely in NEAT assembly language. Each cell below is reactive — edit the code and
+    press <code>Shift+Enter</code> to re-run.</p>
+`, { type: 'md' });
+
+// --- Section: Initialize ---
+nb.define('section_init', [], () => `<h2>Initialize Emulator</h2>`, { type: 'md' });
+
+// --- CPU ---
+nb.define('cpu', [], () => {
+    const cpu = new E4130();
+    cpu.hardwareFPEnabled = true;
+    return cpu;
+});
+
+// --- Assembler ---
+nb.define('asm', [], () => {
+    return new Asm();
+});
+
+// --- Section: Load LISP ---
+nb.define('section_load', [], () => `
+    <h2>Load LISP Interpreter</h2>
+    <p>Assemble and load <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
+`, { type: 'md' });
+
+// --- LISP Source (viewof: edit text, Shift+Enter to save & recompile) ---
+nb.define('lispSource', [], async () => {
+    try {
+        const resp = await fetch('lisp4130.asm');
+        if (!resp.ok) throw new Error('Not found');
+        return await resp.text();
+    } catch {
+        return MINI_LISP_SRC;
+    }
+}, { type: 'viewof' });
+
+// --- Assembled Program ---
+nb.define('program', ['asm', 'lispSource'], (asm, src) => {
+    const prog = asm.asm(src);
+    return {
+        words: prog,
+        length: prog.length,
+        _display: () => `Assembled ${prog.length} words`
+    };
+});
+
+// --- Load into CPU ---
+nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
+    for (const { addr, word } of prog.words) {
+        cpu.mem[addr] = word;
+    }
+
+    // Setup I/O channels
     cpu.channels[1] = {
         read: () => tapePos < tapeData.length ? tapeData[tapePos++] : 0xFF,
         status: () => tapePos < tapeData.length ? 1 : 0
     };
-
     cpu.channels[2] = {
         write: (v) => {
-            const ch = String.fromCharCode(v & 0x7F);
-            outputBuffer += ch;
-            updateTeleprinter();
+            outputBuffer += String.fromCharCode(v & 0x7F);
+            nb.set('output', outputBuffer);
         },
         status: () => 1
     };
-}
 
-function updateTeleprinter() {
-    document.getElementById('teleprinter').innerHTML =
-        outputBuffer.replace(/\n/g, '↵\n') + '<span class="cursor"> </span>';
-}
+    return { status: 'ready', words: prog.length };
+});
 
-// ============================================================================
-// Tape
-// ============================================================================
+// --- Section: CPU State ---
+nb.define('section_state', [], () => `<h2>CPU State</h2>`, { type: 'md' });
 
-function loadTape() {
-    const input = document.getElementById('lispInput').value;
+// --- Registers display ---
+nb.define('registers', ['cpu', 'cycles'], (cpu, cycles) => {
+    const fmt = (v, w) => '0x' + (v >>> 0).toString(16).padStart(w, '0').toUpperCase();
+    return {
+        _display: () => `
+            <table class="reg-table">
+                <thead><tr><th>Reg</th><th>Value</th><th>Hex</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="reg-name">M</span></td><td class="reg-val">${cpu.M}</td><td>${fmt(cpu.M, 6)}</td></tr>
+                    <tr><td><span class="reg-name">R</span></td><td class="reg-val">${cpu.R}</td><td>${fmt(cpu.R, 6)}</td></tr>
+                    <tr><td><span class="reg-name">S</span></td><td class="reg-val">${cpu.S}</td><td>${fmt(cpu.S, 5)}</td></tr>
+                    <tr><td><span class="reg-name">K</span></td><td class="reg-val">${cpu.K}</td><td>${fmt(cpu.K, 3)}</td></tr>
+                    <tr><td><span class="reg-name">cyc</span></td><td class="reg-val">${(cycles || 0).toLocaleString()}</td><td>—</td></tr>
+                </tbody>
+            </table>
+        `
+    };
+});
 
-    tapeData = [];
-    for (const ch of input) {
-        tapeData.push(ch.charCodeAt(0) & 0x3F);
-    }
-    tapeData.push(0xFF);
-    tapePos = 0;
+// --- Cycles counter (mutable) ---
+nb.define('cycles', [], () => 0);
 
-    document.getElementById('tape-status').innerHTML = `
-        <span class="status status-ok"><span class="status-dot"></span> Tape loaded</span>
-        <span style="margin-left: 12px; color: var(--obs-gray);">${tapeData.length - 1} characters</span>
-    `;
+// --- Section: Input ---
+nb.define('section_input', [], () => `
+    <h2>LISP Input</h2>
+    <p>Enter LISP expressions to evaluate. These are loaded onto the paper tape reader.</p>
+`, { type: 'md' });
 
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('stepBtn').disabled = false;
+// --- Input expressions ---
+nb.define('lispInput', [], () => {
+    return `(CAR (QUOTE (A B C)))
+(CDR (QUOTE (X Y Z)))
+(CONS (QUOTE A) (QUOTE (B C)))
+(ATOM (QUOTE X))
+(EQ (QUOTE A) (QUOTE A))`;
+});
 
-    log(`Loaded ${input.split('\\n').length} expressions onto tape`);
-}
+// --- Control buttons ---
+nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
+    const container = document.createElement('div');
 
-// ============================================================================
-// Execution
-// ============================================================================
+    const inputArea = document.createElement('textarea');
+    inputArea.value = nb.get('lispInput') || '';
+    inputArea.style.cssText = 'width:100%;min-height:120px;font-family:var(--font-mono);font-size:14px;padding:12px;border:1px solid var(--obs-border);border-radius:6px;margin-bottom:8px;';
+    inputArea.onchange = () => nb.set('lispInput', inputArea.value);
 
-function run() {
-    if (isRunning) return;
-    isRunning = true;
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'btn-group';
 
-    document.getElementById('runBtn').textContent = 'Running...';
-    document.getElementById('runBtn').disabled = true;
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'btn btn-primary';
+    loadBtn.textContent = '📼 Load Tape';
+    loadBtn.onclick = () => {
+        const input = inputArea.value;
+        tapeData = [];
+        for (const ch of input) {
+            tapeData.push(ch.charCodeAt(0) & 0x3F);
+        }
+        tapeData.push(0xFF);
+        tapePos = 0;
+        outputBuffer = '';
+        nb.set('output', '');
+        nb.set('tapeStatus', `Loaded ${tapeData.length - 1} chars`);
+    };
 
-    log('Execution started');
-    let cycles = 0;
-    const max = 100000;
+    const runBtn = document.createElement('button');
+    runBtn.className = 'btn';
+    runBtn.textContent = '▶ Run';
+    runBtn.onclick = async () => {
+        runBtn.disabled = true;
+        runBtn.textContent = 'Running...';
 
-    function chunk() {
-        for (let i = 0; i < 1000 && cycles < max; i++) {
+        let cycles = 0;
+        const max = 100000;
+
+        const tick = () => {
+            for (let i = 0; i < 1000 && cycles < max; i++) {
+                const prevS = cpu.S;
+                cpu.step();
+                cycles++;
+                if (cpu.halted || cpu.S === prevS) {
+                    finish('Halted');
+                    return;
+                }
+            }
+            nb.set('cycles', cycles);
+            if (cycles < max) {
+                requestAnimationFrame(tick);
+            } else {
+                finish('Max cycles');
+            }
+        };
+
+        const finish = (reason) => {
+            runBtn.disabled = false;
+            runBtn.textContent = '▶ Run';
+            nb.set('cycles', cycles);
+            nb.set('tapeStatus', `${reason} after ${cycles.toLocaleString()} cycles`);
+        };
+
+        tick();
+    };
+
+    const stepBtn = document.createElement('button');
+    stepBtn.className = 'btn';
+    stepBtn.textContent = 'Step';
+    stepBtn.onclick = () => {
+        for (let i = 0; i < 100; i++) {
             const prevS = cpu.S;
             cpu.step();
-            cycles++;
-            if (cpu.halted || cpu.S === prevS) {
-                done('Halted');
-                return;
-            }
+            if (cpu.halted || cpu.S === prevS) break;
         }
-        updateRegisters();
-        if (cycles < max) {
-            requestAnimationFrame(chunk);
-        } else {
-            done('Max cycles');
+        nb.set('cycles', (nb.get('cycles') || 0) + 100);
+    };
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn';
+    resetBtn.textContent = 'Reset';
+    resetBtn.onclick = () => {
+        cpu.reset();
+        for (const { addr, word } of prog.words) {
+            cpu.mem[addr] = word;
         }
-    }
+        outputBuffer = '';
+        tapePos = 0;
+        nb.set('cycles', 0);
+        nb.set('output', '');
+        nb.set('tapeStatus', 'Reset');
+    };
 
-    function done(reason) {
-        isRunning = false;
-        document.getElementById('runBtn').textContent = 'Run';
-        document.getElementById('runBtn').disabled = false;
-        log(`${reason} after ${cycles.toLocaleString()} cycles`);
-        updateRegisters();
-    }
+    btnGroup.append(loadBtn, runBtn, stepBtn, resetBtn);
+    container.append(inputArea, btnGroup);
 
-    chunk();
-}
+    return { _display: () => container };
+});
 
-function step() {
-    for (let i = 0; i < 100; i++) {
-        const prevS = cpu.S;
-        cpu.step();
-        if (cpu.halted || cpu.S === prevS) break;
-    }
-    updateRegisters();
-    log('Stepped 100 cycles');
-}
+// --- Tape status ---
+nb.define('tapeStatus', [], () => 'Ready');
 
-function reset() {
-    cpu.reset();
-    outputBuffer = '';
-    tapePos = 0;
+// --- Section: Output ---
+nb.define('section_output', [], () => `<h2>Teleprinter Output</h2>`, { type: 'md' });
 
-    for (const { addr, word } of lispProgram) {
-        cpu.mem[addr] = word;
-    }
+// --- Output display ---
+nb.define('output', [], () => '');
 
-    updateRegisters();
-    updateTeleprinter();
-    log('CPU reset');
-}
+nb.define('teleprinter', ['output'], (output) => {
+    return {
+        _display: () => `<div class="teleprinter">${output.replace(/\n/g, '↵\n') || '<span style="opacity:0.5">Waiting for output...</span>'}</div>`
+    };
+});
 
-// ============================================================================
-// UI Updates
-// ============================================================================
+// --- Footer info ---
+nb.define('section_api', [], () => `
+    <h2>API Reference</h2>
+    <p>The <code>cpu</code> cell exposes the full E4130 emulator. Key methods:</p>
+    <ul style="margin:8px 0 0 24px;color:#57606a;">
+        <li><code>cpu.step()</code> — Execute one instruction</li>
+        <li><code>cpu.mem[addr]</code> — Access 24-bit memory</li>
+        <li><code>cpu.M, cpu.R, cpu.S, cpu.K</code> — Registers</li>
+    </ul>
+    <p style="margin-top:12px;">The <code>asm</code> cell provides the NEAT assembler:</p>
+    <ul style="margin:8px 0 0 24px;color:#57606a;">
+        <li><code>asm.asm(source)</code> — Assemble to [{addr, word}, ...]</li>
+    </ul>
+`, { type: 'md' });
 
-function updateRegisters() {
-    const fmt = (v, w) => '0x' + v.toString(16).padStart(w, '0').toUpperCase();
-
-    document.getElementById('regM').textContent = cpu.M;
-    document.getElementById('regMHex').textContent = fmt(cpu.M, 6);
-    document.getElementById('regR').textContent = cpu.R;
-    document.getElementById('regRHex').textContent = fmt(cpu.R, 6);
-    document.getElementById('regS').textContent = cpu.S;
-    document.getElementById('regSHex').textContent = fmt(cpu.S, 5);
-    document.getElementById('regK').textContent = cpu.K;
-    document.getElementById('regKHex').textContent = fmt(cpu.K, 3);
-    document.getElementById('regI').textContent = cpu.iCount.toLocaleString();
-}
-
-function log(msg) {
-    const el = document.getElementById('executionLog');
-    const time = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    entry.innerHTML = `<span class="log-time">${time}</span> <span class="log-msg">${msg}</span>`;
-    el.appendChild(entry);
-    el.scrollTop = el.scrollHeight;
-}
-
-// Auto-init
-init();
 </script>
 
 </body>
