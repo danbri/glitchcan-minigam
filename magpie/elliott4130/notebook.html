@@ -905,7 +905,7 @@ nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
         runBtn.textContent = 'Running...';
 
         let cycles = 0;
-        const max = 100000;
+        const max = 1000000;  // 1M cycles
         let haltReason = '';
 
         const tick = () => {
