@@ -888,7 +888,7 @@ nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
         const input = inputArea.value;
         tapeData = [];
         for (const ch of input) {
-            tapeData.push(ch.charCodeAt(0) & 0x3F);
+            tapeData.push(ch.charCodeAt(0) & 0x7F);  // 7-bit ASCII, not 6-bit
         }
         tapeData.push(0xFF);
         tapePos = 0;
