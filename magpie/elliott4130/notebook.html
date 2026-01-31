@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
     <title>Elliott 4130 LISP — Observable Notebook</title>
     <style>
         :root {
@@ -15,28 +18,45 @@
             --obs-code-bg: #f6f8fa;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --safe-left: env(safe-area-inset-left);
+            --safe-right: env(safe-area-inset-right);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html {
+            /* Prevent iOS zoom on input focus */
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+        }
+
         body {
             font-family: var(--font-sans);
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1.6;
             color: #24292f;
             background: white;
+            /* iOS safe areas */
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+            padding-left: var(--safe-left);
+            padding-right: var(--safe-right);
+            /* Smooth scrolling */
+            -webkit-overflow-scrolling: touch;
         }
 
         /* Observable-style header */
         .notebook-header {
             border-bottom: 1px solid var(--obs-border);
-            padding: 24px 0;
-            margin-bottom: 32px;
+            padding: 20px 0;
+            margin-bottom: 24px;
         }
         .notebook-header h1 {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .notebook-header .author {
             color: var(--obs-gray);
@@ -47,57 +67,64 @@
             text-decoration: none;
         }
 
-        /* Container */
+        /* Container - mobile first */
         .container {
             max-width: 840px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 16px;
         }
 
-        /* Observable-style cells */
+        /* Observable-style cells - simplified for mobile */
         .cell {
             position: relative;
-            margin-bottom: 24px;
-            padding-left: 28px;
+            margin-bottom: 20px;
+            padding-left: 12px;
+            border-left: 3px solid transparent;
         }
 
-        .cell::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: transparent;
-            border-radius: 2px;
-            transition: background 0.15s;
+        .cell.active {
+            border-left-color: var(--obs-blue);
         }
 
-        .cell:hover::before {
-            background: var(--obs-border);
-        }
-
-        .cell.active::before {
-            background: var(--obs-blue);
-        }
-
-        /* Cell with play button */
+        /* Cell play button - always visible on mobile for touch */
         .cell-run {
             position: absolute;
-            left: -4px;
+            left: -8px;
             top: 4px;
-            width: 20px;
-            height: 20px;
+            width: 32px;
+            height: 32px;
             border: none;
             background: none;
             cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.15s;
             color: var(--obs-blue);
+            /* Touch-friendly: always visible on mobile */
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
         }
-        .cell:hover .cell-run { opacity: 1; }
-        .cell-run:hover { color: var(--obs-purple); }
-        .cell-run svg { width: 16px; height: 16px; }
+        .cell-run:active { opacity: 1; transform: scale(0.95); }
+        .cell-run svg { width: 18px; height: 18px; }
+
+        /* Desktop: hide until hover */
+        @media (hover: hover) {
+            .cell-run { opacity: 0; }
+            .cell:hover .cell-run { opacity: 1; }
+            .cell::before {
+                content: '';
+                position: absolute;
+                left: -3px;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: transparent;
+                transition: background 0.15s;
+            }
+            .cell:hover::before { background: var(--obs-border); }
+            .cell.active::before { background: var(--obs-blue); }
+            .cell { border-left: none; padding-left: 28px; }
+        }
 
         /* Markdown/prose cells */
         .cell-prose {
@@ -190,84 +217,114 @@
             box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
         }
 
-        /* Buttons */
+        /* Buttons - touch-friendly minimum 44px tap target */
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
-            padding: 5px 12px;
-            font-size: 13px;
+            padding: 12px 16px;
+            min-height: 44px;
+            font-size: 15px;
             font-weight: 500;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid var(--obs-border);
             background: var(--obs-light);
             color: #24292f;
             cursor: pointer;
             transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        .btn:hover {
-            background: #f3f4f6;
-            border-color: #c9d1d9;
+        .btn:active {
+            transform: scale(0.97);
+            background: #e8e8e8;
         }
         .btn-primary {
             background: var(--obs-blue);
             border-color: var(--obs-blue);
             color: white;
         }
-        .btn-primary:hover {
+        .btn-primary:active {
             background: #2c4a9e;
         }
         .btn:disabled {
             opacity: 0.5;
-            cursor: not-allowed;
+            pointer-events: none;
         }
 
         .btn-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-top: 12px;
         }
 
-        /* Register display - Observable table style */
+        /* Desktop: smaller buttons */
+        @media (hover: hover) {
+            .btn {
+                padding: 8px 14px;
+                min-height: 36px;
+                font-size: 13px;
+            }
+            .btn:hover {
+                background: #f3f4f6;
+                border-color: #c9d1d9;
+            }
+            .btn-primary:hover {
+                background: #2c4a9e;
+            }
+        }
+
+        /* Register display - mobile cards / desktop table */
         .registers-table {
             width: 100%;
             border-collapse: collapse;
             font-family: var(--font-mono);
-            font-size: 13px;
+            font-size: 14px;
             margin-top: 8px;
         }
         .registers-table th {
             text-align: left;
             font-weight: 500;
             color: var(--obs-gray);
-            padding: 8px 12px;
+            padding: 10px 8px;
             border-bottom: 1px solid var(--obs-border);
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .registers-table td {
-            padding: 8px 12px;
+            padding: 10px 8px;
             border-bottom: 1px solid var(--obs-border);
         }
         .registers-table tr:last-child td {
             border-bottom: none;
         }
-        .reg-name { color: var(--obs-purple); }
-        .reg-value { font-weight: 600; }
+        .reg-name { color: var(--obs-purple); font-weight: 600; }
+        .reg-value { font-weight: 600; font-size: 15px; }
         .reg-hex { color: var(--obs-gray); font-size: 12px; }
+
+        /* Mobile: hide description column, compact layout */
+        @media (max-width: 600px) {
+            .registers-table .hide-mobile { display: none; }
+            .registers-table td, .registers-table th { padding: 8px 6px; }
+            .reg-value { font-size: 14px; }
+        }
 
         /* Teleprinter - terminal style */
         .teleprinter {
             font-family: var(--font-mono);
-            font-size: 14px;
+            font-size: 15px;
             background: #0d1117;
             color: #58a6ff;
             padding: 16px;
-            border-radius: 6px;
-            min-height: 80px;
+            border-radius: 8px;
+            min-height: 100px;
             white-space: pre-wrap;
             word-break: break-all;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .teleprinter .cursor {
             background: #58a6ff;
@@ -281,17 +338,18 @@
         /* Log */
         .log {
             font-family: var(--font-mono);
-            font-size: 12px;
+            font-size: 13px;
             color: var(--obs-gray);
             max-height: 200px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .log-entry {
-            padding: 4px 0;
+            padding: 6px 0;
             border-bottom: 1px solid var(--obs-light);
         }
         .log-entry:last-child { border-bottom: none; }
-        .log-time { color: #8b949e; }
+        .log-time { color: #8b949e; font-size: 11px; }
         .log-msg { color: #24292f; }
 
         /* Viewof style label */
@@ -398,10 +456,10 @@ cpu.hardwareFPEnabled = <span class="keyword">true</span>
         <table class="registers-table">
             <thead>
                 <tr>
-                    <th>Register</th>
+                    <th>Reg</th>
                     <th>Value</th>
                     <th>Hex</th>
-                    <th>Description</th>
+                    <th class="hide-mobile">Description</th>
                 </tr>
             </thead>
             <tbody>
@@ -409,31 +467,31 @@ cpu.hardwareFPEnabled = <span class="keyword">true</span>
                     <td><span class="reg-name">M</span></td>
                     <td class="reg-value" id="regM">0</td>
                     <td class="reg-hex" id="regMHex">0x000000</td>
-                    <td>Main accumulator</td>
+                    <td class="hide-mobile">Accumulator</td>
                 </tr>
                 <tr>
                     <td><span class="reg-name">R</span></td>
                     <td class="reg-value" id="regR">0</td>
                     <td class="reg-hex" id="regRHex">0x000000</td>
-                    <td>Reserve accumulator</td>
+                    <td class="hide-mobile">Reserve</td>
                 </tr>
                 <tr>
                     <td><span class="reg-name">S</span></td>
                     <td class="reg-value" id="regS">0</td>
                     <td class="reg-hex" id="regSHex">0x00000</td>
-                    <td>Program counter</td>
+                    <td class="hide-mobile">Program counter</td>
                 </tr>
                 <tr>
                     <td><span class="reg-name">K</span></td>
                     <td class="reg-value" id="regK">0</td>
                     <td class="reg-hex" id="regKHex">0x000</td>
-                    <td>Count register</td>
+                    <td class="hide-mobile">Count</td>
                 </tr>
                 <tr>
-                    <td><span class="reg-name">cycles</span></td>
+                    <td><span class="reg-name">cyc</span></td>
                     <td class="reg-value" id="regI">0</td>
                     <td class="reg-hex">—</td>
-                    <td>Instructions executed</td>
+                    <td class="hide-mobile">Instructions</td>
                 </tr>
             </tbody>
         </table>
