@@ -940,16 +940,11 @@ nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, 
     }
 
     // State
-    let tapeData = [];
-    let tapePos = 0;
     let output = '';
     let cycles = 0;
 
-    // Setup I/O channels
-    cpu.channels[1] = {
-        read: () => tapePos < tapeData.length ? tapeData[tapePos++] : 0,  // 0 = EOF
-        status: () => tapePos < tapeData.length ? 1 : 0
-    };
+    // Setup output channel (channel 2 = teleprinter)
+    // Note: Channel 1 (tape reader) uses cpu.loadTape() API - custom handlers are ignored
     cpu.channels[2] = {
         write: (v) => { output += String.fromCharCode(v & 0x7F); },
         status: () => 1
@@ -958,11 +953,11 @@ nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, 
     const emu = {
         cpu,
 
-        // Load LISP expressions onto tape
+        // Load LISP expressions onto tape (uses cpu.loadTape API)
         loadTape(text) {
-            tapeData = encoder.encode(text);
-            tapePos = 0;
-            return tapeData.length - 1;  // -1 for EOF marker
+            const data = encoder.encode(text);
+            cpu.loadTape(data);
+            return data.length - 1;  // -1 for EOF marker
         },
 
         // Reset CPU and reload program
@@ -972,7 +967,7 @@ nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, 
             for (const { addr, word } of prog.words) {
                 cpu.mem[addr] = word;
             }
-            tapePos = 0;
+            cpu.rewindTape();
             output = '';
             cycles = 0;
         },
@@ -996,10 +991,13 @@ nb.define('emulator', ['cpuFactory', 'program', 'tapeEncoder'], (factory, prog, 
         // Getters
         get output() { return output; },
         get cycles() { return cycles; },
-        get tapePos() { return tapePos; },
-        get tapeLength() { return tapeData.length; },
+        get tapePos() { return cpu.getTapeReaderStatus().position; },
+        get tapeLength() { return cpu.getTapeReaderStatus().length; },
 
-        _display: () => `Emulator { cpu: E4130, program: ${prog.length} words, tape: ${tapeData.length} bytes }`
+        _display: () => {
+            const tape = cpu.getTapeReaderStatus();
+            return `Emulator { cpu: E4130, program: ${prog.length} words, tape: ${tape.length} bytes }`;
+        }
     };
 
     return emu;

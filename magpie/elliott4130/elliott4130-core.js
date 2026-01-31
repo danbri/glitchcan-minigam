@@ -946,12 +946,13 @@ class E4130 {
             return 0;
         }
 
-        // Channel 1 is paper tape reader (6-bit characters)
+        // Channel 1 is paper tape reader (7-bit ASCII for LISP compatibility)
+        // Note: Historical Elliott used 6-bit, but LISP interpreter compares against ASCII codes
         if (channel === 1) {
             if (this.tapeReader && this.tapeReader.position < this.tapeReader.data.length) {
-                const char6 = this.tapeReader.data[this.tapeReader.position++] & 0x3F;
+                const char7 = this.tapeReader.data[this.tapeReader.position++] & 0x7F;
                 ch.status |= ch.READY;
-                return char6;
+                return char7;
             } else {
                 // End of tape
                 ch.status |= ch.EOF;
