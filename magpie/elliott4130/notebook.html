@@ -65,18 +65,67 @@
         .cell.fresh { border-left-color: var(--obs-green); }
         .cell.dirty { border-left-color: var(--obs-purple); }
 
-        /* Cell name badge */
+        /* Cell name badge with toggle */
+        .cell-header {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+        .cell-toggle {
+            width: 16px;
+            height: 16px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+            color: var(--obs-gray);
+            transition: transform 0.15s;
+        }
+        .cell-toggle:hover { color: var(--obs-blue); }
+        .cell-toggle.open { transform: rotate(90deg); }
         .cell-name {
             font-family: var(--font-mono);
             font-size: 12px;
             color: var(--obs-purple);
-            margin-bottom: 4px;
+            cursor: pointer;
         }
-        .cell-name::before { content: ''; }
+        .cell-name:hover { text-decoration: underline; }
         .cell-deps {
             font-size: 11px;
             color: var(--obs-gray);
             margin-left: 8px;
+        }
+
+        /* Collapsible code editor */
+        .cell-code {
+            display: none;
+            margin-bottom: 8px;
+        }
+        .cell-code.open {
+            display: block;
+        }
+        .cell-code textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid var(--obs-border);
+            border-radius: 6px;
+            background: white;
+            resize: vertical;
+            outline: none;
+        }
+        .cell-code textarea:focus {
+            border-color: var(--obs-blue);
+            box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
+        }
+        .cell-code-hint {
+            font-size: 11px;
+            color: var(--obs-gray);
+            margin-top: 4px;
         }
 
         /* Viewof input widget (like Observable Inputs.textarea) */
@@ -430,11 +479,55 @@ class Notebook {
             return;
         }
 
-        // Cell name label
-        const nameSpan = document.createElement('div');
+        // Cell header with toggle triangle
+        const header = document.createElement('div');
+        header.className = 'cell-header';
+
+        const toggle = document.createElement('button');
+        toggle.className = 'cell-toggle';
+        toggle.innerHTML = '▶';
+        toggle.title = 'Show/hide code';
+
+        const nameSpan = document.createElement('span');
         nameSpan.className = 'cell-name';
         nameSpan.textContent = cell.name;
-        div.appendChild(nameSpan);
+
+        header.appendChild(toggle);
+        header.appendChild(nameSpan);
+        div.appendChild(header);
+
+        // Collapsible code editor (hidden by default)
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'cell-code';
+
+        const codeArea = document.createElement('textarea');
+        codeArea.value = this.fnToSource(cell.fn);
+        codeArea.rows = Math.max(3, codeArea.value.split('\n').length);
+        codeArea.spellcheck = false;
+
+        // Shift+Enter to run
+        codeArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                this.updateCellCode(cell.name, codeArea.value);
+            }
+        });
+
+        const hint = document.createElement('div');
+        hint.className = 'cell-code-hint';
+        hint.textContent = 'Shift+Enter to run';
+
+        codeDiv.appendChild(codeArea);
+        codeDiv.appendChild(hint);
+        div.appendChild(codeDiv);
+
+        // Toggle click handler
+        const toggleCode = () => {
+            toggle.classList.toggle('open');
+            codeDiv.classList.toggle('open');
+        };
+        toggle.onclick = toggleCode;
+        nameSpan.onclick = toggleCode;
 
         // Viewof cell - widget that emits values (like Observable Inputs)
         if (cell.type === 'viewof') {
@@ -482,18 +575,19 @@ class Notebook {
 
             cell.el = div;
             cell.editorEl = textarea;
+            cell.codeEl = codeArea;
             this.container.appendChild(div);
             return;
         }
 
-        // Regular code cell - OUTPUT ONLY (like Observable)
-        // No source code editor shown - cells auto-run
+        // Regular code cell - output below
         const output = document.createElement('div');
         output.className = 'cell-output';
         div.appendChild(output);
 
         cell.el = div;
         cell.outputEl = output;
+        cell.codeEl = codeArea;
         this.container.appendChild(div);
     }
 
