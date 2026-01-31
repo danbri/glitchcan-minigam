@@ -101,30 +101,34 @@
             border-color: var(--obs-blue);
             box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
         }
-        .viewof-save {
-            align-self: flex-start;
+        .viewof-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .viewof-save, .viewof-reset {
             padding: 8px 16px;
             font-size: 14px;
             font-weight: 500;
-            color: white;
-            background: var(--obs-blue);
             border: none;
             border-radius: 6px;
             cursor: pointer;
         }
-        .viewof-save:hover {
-            background: #2c4a9e;
+        .viewof-save {
+            color: white;
+            background: var(--obs-blue);
         }
-        .viewof-save:active {
+        .viewof-save:hover { background: #2c4a9e; }
+        .viewof-reset {
+            color: #24292f;
+            background: var(--obs-light);
+            border: 1px solid var(--obs-border);
+        }
+        .viewof-reset:hover { background: #e8e8e8; }
+        .viewof-save:active, .viewof-reset:active {
             transform: scale(0.98);
         }
         .cell.dirty .viewof-save {
-            background: var(--obs-purple);
-            animation: pulse-save 1s infinite;
-        }
-        @keyframes pulse-save {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            background: var(--obs-green);
         }
 
         /* Output */
@@ -449,14 +453,31 @@ class Notebook {
                 this.updateCellUI(cell);
             });
 
+            // Button group
+            const btnGroup = document.createElement('div');
+            btnGroup.className = 'viewof-buttons';
+
             // Save button - triggers control flow
             const saveBtn = document.createElement('button');
             saveBtn.className = 'viewof-save';
             saveBtn.textContent = 'Save & Run';
             saveBtn.onclick = () => this.saveViewof(cell.name, textarea.value);
 
+            // Reset button - revert to last saved value
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'viewof-reset';
+            resetBtn.textContent = 'Reset';
+            resetBtn.onclick = () => {
+                textarea.value = this.values.get(cell.name) || '';
+                cell.dirty = false;
+                this.updateCellUI(cell);
+            };
+
+            btnGroup.appendChild(saveBtn);
+            btnGroup.appendChild(resetBtn);
+
             wrapper.appendChild(textarea);
-            wrapper.appendChild(saveBtn);
+            wrapper.appendChild(btnGroup);
             div.appendChild(wrapper);
 
             cell.el = div;
