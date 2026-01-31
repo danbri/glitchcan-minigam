@@ -79,56 +79,28 @@
             margin-left: 8px;
         }
 
-        /* Code editor */
-        .cell-editor {
-            position: relative;
-            background: var(--obs-light);
-            border: 1px solid var(--obs-border);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .cell-editor textarea {
+        /* Viewof input widget (like Observable Inputs.textarea) */
+        .viewof-input {
             width: 100%;
-            min-height: 60px;
             padding: 12px 16px;
             font-family: var(--font-mono);
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.5;
-            border: none;
-            background: transparent;
+            border: 1px solid var(--obs-border);
+            border-radius: 6px;
+            background: white;
             resize: vertical;
             outline: none;
         }
-        .cell-editor textarea:focus {
-            background: white;
+        .viewof-input:focus {
+            border-color: var(--obs-blue);
+            box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
         }
-
-        /* Run button */
-        .cell-run {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 28px;
-            height: 28px;
-            border: none;
-            background: var(--obs-blue);
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.8;
-            transition: opacity 0.15s;
-        }
-        .cell-run:hover { opacity: 1; }
-        .cell-run svg { width: 12px; height: 12px; }
 
         /* Output */
         .cell-output {
-            margin-top: 8px;
             padding: 12px 16px;
-            background: white;
+            background: var(--obs-light);
             border: 1px solid var(--obs-border);
             border-radius: 6px;
             font-family: var(--font-mono);
@@ -140,7 +112,6 @@
             border-color: #cf222e;
             color: #cf222e;
         }
-        .cell-output:empty { display: none; }
 
         /* Inspector formatting */
         .insp-obj { color: #24292f; }
@@ -417,6 +388,7 @@ class Notebook {
         div.className = 'cell';
         div.dataset.name = cell.name;
 
+        // Markdown cell - just render HTML
         if (cell.type === 'md') {
             div.innerHTML = `<div class="cell-md">${cell.fn()}</div>`;
             cell.el = div;
@@ -424,88 +396,46 @@ class Notebook {
             return;
         }
 
-        // Cell name header
+        // Cell name label
         const nameSpan = document.createElement('div');
         nameSpan.className = 'cell-name';
-        nameSpan.innerHTML = `${cell.name}${cell.deps.length ? `<span class="cell-deps">← ${cell.deps.join(', ')}</span>` : ''}`;
+        nameSpan.textContent = cell.name;
         div.appendChild(nameSpan);
 
-        // Viewof cell: shows the value as editable text, only saves on Shift+Enter
+        // Viewof cell - widget that emits values (like Observable Inputs)
         if (cell.type === 'viewof') {
-            const editor = document.createElement('div');
-            editor.className = 'cell-editor';
-
             const textarea = document.createElement('textarea');
-            textarea.rows = 10;
+            textarea.className = 'viewof-input';
+            textarea.rows = 12;
             textarea.spellcheck = false;
             textarea.placeholder = 'Loading...';
 
-            // Mark dirty on edit (but don't propagate)
+            // Emit value on change (debounced) - reactive like Observable
+            let debounceTimer;
             textarea.addEventListener('input', () => {
                 cell.dirty = true;
                 this.updateCellUI(cell);
-            });
-
-            // Save on Shift+Enter
-            textarea.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && e.shiftKey) {
-                    e.preventDefault();
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
                     this.saveViewof(cell.name, textarea.value);
-                }
+                }, 500);  // 500ms debounce for large text
             });
 
-            const runBtn = document.createElement('button');
-            runBtn.className = 'cell-run';
-            runBtn.title = 'Save (Shift+Enter)';
-            runBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>';
-            runBtn.onclick = () => this.saveViewof(cell.name, textarea.value);
-
-            editor.appendChild(textarea);
-            editor.appendChild(runBtn);
-            div.appendChild(editor);
-
+            div.appendChild(textarea);
             cell.el = div;
             cell.editorEl = textarea;
-
             this.container.appendChild(div);
             return;
         }
 
-        // Regular code cell
-        const editor = document.createElement('div');
-        editor.className = 'cell-editor';
-
-        const textarea = document.createElement('textarea');
-        textarea.value = this.fnToSource(cell.fn);
-        textarea.rows = Math.max(2, textarea.value.split('\n').length);
-        textarea.spellcheck = false;
-
-        // Re-run on Shift+Enter
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.shiftKey) {
-                e.preventDefault();
-                this.updateCellCode(cell.name, textarea.value);
-            }
-        });
-
-        const runBtn = document.createElement('button');
-        runBtn.className = 'cell-run';
-        runBtn.title = 'Run (Shift+Enter)';
-        runBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>';
-        runBtn.onclick = () => this.updateCellCode(cell.name, textarea.value);
-
-        editor.appendChild(textarea);
-        editor.appendChild(runBtn);
-        div.appendChild(editor);
-
+        // Regular code cell - OUTPUT ONLY (like Observable)
+        // No source code editor shown - cells auto-run
         const output = document.createElement('div');
         output.className = 'cell-output';
         div.appendChild(output);
 
         cell.el = div;
-        cell.editorEl = textarea;
         cell.outputEl = output;
-
         this.container.appendChild(div);
     }
 
