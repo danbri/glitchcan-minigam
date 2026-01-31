@@ -905,13 +905,20 @@ nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
 
         let cycles = 0;
         const max = 100000;
+        let haltReason = '';
 
         const tick = () => {
             for (let i = 0; i < 1000 && cycles < max; i++) {
                 const prevS = cpu.S;
                 cpu.step();
                 cycles++;
-                if (cpu.halted || cpu.S === prevS) {
+                if (cpu.halted) {
+                    haltReason = `cpu.halted=true at S=${cpu.S}`;
+                    finish('Halted');
+                    return;
+                }
+                if (cpu.S === prevS) {
+                    haltReason = `S unchanged at ${cpu.S} (infinite loop)`;
                     finish('Halted');
                     return;
                 }
@@ -920,6 +927,7 @@ nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
             if (cycles < max) {
                 requestAnimationFrame(tick);
             } else {
+                haltReason = 'reached max cycles';
                 finish('Max cycles');
             }
         };
@@ -928,7 +936,7 @@ nb.define('controls', ['cpu', 'loaded', 'program'], (cpu, loaded, prog) => {
             runBtn.disabled = false;
             runBtn.textContent = '▶ Run';
             nb.set('cycles', cycles);
-            nb.set('tapeStatus', `${reason} after ${cycles.toLocaleString()} cycles`);
+            nb.set('tapeStatus', `${reason} after ${cycles.toLocaleString()} cycles. ${haltReason}`);
         };
 
         tick();
