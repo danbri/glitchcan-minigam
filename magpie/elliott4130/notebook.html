@@ -795,6 +795,9 @@ nb.define('program', ['asm', 'lispSource'], (asm, src) => {
 
 // --- Load into CPU ---
 nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
+    // Reset CPU state
+    cpu.reset();
+
     for (const { addr, word } of prog.words) {
         cpu.mem[addr] = word;
     }
@@ -812,7 +815,17 @@ nb.define('loaded', ['cpu', 'program'], (cpu, prog) => {
         status: () => 1
     };
 
-    return { status: 'ready', words: prog.length };
+    // Debug: show first few words
+    const firstWords = [];
+    for (let i = 0; i < 5; i++) {
+        firstWords.push(`[${i}]: 0x${(cpu.mem[i] >>> 0).toString(16).padStart(6, '0')}`);
+    }
+
+    return {
+        status: 'ready',
+        words: prog.length,
+        _display: () => `Loaded ${prog.length} words. First: ${firstWords.join(', ')}`
+    };
 });
 
 // --- Section: CPU State ---
