@@ -80,6 +80,11 @@
         }
 
         /* Viewof input widget (like Observable Inputs.textarea) */
+        .viewof-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         .viewof-input {
             width: 100%;
             padding: 12px 16px;
@@ -95,6 +100,31 @@
         .viewof-input:focus {
             border-color: var(--obs-blue);
             box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
+        }
+        .viewof-save {
+            align-self: flex-start;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            background: var(--obs-blue);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .viewof-save:hover {
+            background: #2c4a9e;
+        }
+        .viewof-save:active {
+            transform: scale(0.98);
+        }
+        .cell.dirty .viewof-save {
+            background: var(--obs-purple);
+            animation: pulse-save 1s infinite;
+        }
+        @keyframes pulse-save {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         /* Output */
@@ -404,24 +434,31 @@ class Notebook {
 
         // Viewof cell - widget that emits values (like Observable Inputs)
         if (cell.type === 'viewof') {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'viewof-wrapper';
+
             const textarea = document.createElement('textarea');
             textarea.className = 'viewof-input';
             textarea.rows = 12;
             textarea.spellcheck = false;
             textarea.placeholder = 'Loading...';
 
-            // Emit value on change (debounced) - reactive like Observable
-            let debounceTimer;
+            // Mark dirty on edit (no auto-propagate)
             textarea.addEventListener('input', () => {
                 cell.dirty = true;
                 this.updateCellUI(cell);
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    this.saveViewof(cell.name, textarea.value);
-                }, 500);  // 500ms debounce for large text
             });
 
-            div.appendChild(textarea);
+            // Save button - triggers control flow
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'viewof-save';
+            saveBtn.textContent = 'Save & Run';
+            saveBtn.onclick = () => this.saveViewof(cell.name, textarea.value);
+
+            wrapper.appendChild(textarea);
+            wrapper.appendChild(saveBtn);
+            div.appendChild(wrapper);
+
             cell.el = div;
             cell.editorEl = textarea;
             this.container.appendChild(div);
