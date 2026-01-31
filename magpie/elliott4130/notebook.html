@@ -3,629 +3,792 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elliott 4130 LISP Notebook</title>
+    <title>Elliott 4130 LISP — Observable Notebook</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #fafafa;
-            color: #1a1a1a;
+        :root {
+            --obs-blue: #3b5fc0;
+            --obs-purple: #7b6fde;
+            --obs-green: #2da44e;
+            --obs-gray: #6e7781;
+            --obs-light: #f6f8fa;
+            --obs-border: #d0d7de;
+            --obs-code-bg: #f6f8fa;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
         }
-        h1 { font-size: 1.8em; margin-bottom: 0.3em; }
-        h1 span { font-size: 0.5em; color: #666; }
-        .subtitle { color: #666; margin-bottom: 2em; }
 
-        .cell {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: 15px;
+            line-height: 1.6;
+            color: #24292f;
             background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 16px;
+        }
+
+        /* Observable-style header */
+        .notebook-header {
+            border-bottom: 1px solid var(--obs-border);
+            padding: 24px 0;
+            margin-bottom: 32px;
+        }
+        .notebook-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .notebook-header .author {
+            color: var(--obs-gray);
+            font-size: 14px;
+        }
+        .notebook-header .author a {
+            color: var(--obs-blue);
+            text-decoration: none;
+        }
+
+        /* Container */
+        .container {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Observable-style cells */
+        .cell {
+            position: relative;
+            margin-bottom: 24px;
+            padding-left: 28px;
+        }
+
+        .cell::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: transparent;
+            border-radius: 2px;
+            transition: background 0.15s;
+        }
+
+        .cell:hover::before {
+            background: var(--obs-border);
+        }
+
+        .cell.active::before {
+            background: var(--obs-blue);
+        }
+
+        /* Cell with play button */
+        .cell-run {
+            position: absolute;
+            left: -4px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+            color: var(--obs-blue);
+        }
+        .cell:hover .cell-run { opacity: 1; }
+        .cell-run:hover { color: var(--obs-purple); }
+        .cell-run svg { width: 16px; height: 16px; }
+
+        /* Markdown/prose cells */
+        .cell-prose {
+            color: #24292f;
+        }
+        .cell-prose h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-top: 16px;
+            border-top: 1px solid var(--obs-border);
+        }
+        .cell-prose p {
+            margin-bottom: 12px;
+            color: #57606a;
+        }
+
+        /* Code cells */
+        .cell-code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            background: var(--obs-code-bg);
+            border: 1px solid var(--obs-border);
+            border-radius: 6px;
             overflow: hidden;
         }
-        .cell-label {
-            background: #f5f5f5;
-            padding: 8px 12px;
-            font-size: 12px;
-            color: #666;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 500;
-        }
-        .cell-content {
-            padding: 12px;
-        }
-        .cell-code {
-            font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
-            font-size: 13px;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 12px;
+
+        .cell-code pre {
+            margin: 0;
+            padding: 12px 16px;
             overflow-x: auto;
             white-space: pre;
         }
+
+        .cell-code .keyword { color: #cf222e; }
+        .cell-code .string { color: #0a3069; }
+        .cell-code .number { color: #0550ae; }
+        .cell-code .comment { color: #6e7781; }
+        .cell-code .function { color: #8250df; }
+
+        /* Output cells */
         .cell-output {
-            font-family: "SF Mono", Monaco, monospace;
-            font-size: 13px;
-            padding: 12px;
-            background: #f8f8f8;
-            border-top: 1px solid #e0e0e0;
-        }
-        .cell-output.success { border-left: 4px solid #22c55e; }
-        .cell-output.error { border-left: 4px solid #ef4444; background: #fef2f2; }
-        .cell-output.info { border-left: 4px solid #3b82f6; }
-
-        .status {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-        .status.ok { background: #dcfce7; color: #166534; }
-        .status.running { background: #fef3c7; color: #92400e; }
-        .status.error { background: #fee2e2; color: #991b1b; }
-
-        textarea {
-            width: 100%;
-            font-family: "SF Mono", Monaco, monospace;
-            font-size: 13px;
-            padding: 12px;
-            border: 1px solid #d0d0d0;
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 100px;
-        }
-        textarea:focus { outline: 2px solid #3b82f6; border-color: transparent; }
-
-        button {
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 10px 20px;
+            margin-top: 8px;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid var(--obs-border);
             border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            margin-right: 8px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        .cell-output.success {
+            border-color: var(--obs-green);
+            background: #f0fff4;
+        }
+
+        .cell-output.error {
+            border-color: #cf222e;
+            background: #fff5f5;
+        }
+
+        /* Inspector-style output */
+        .inspector {
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+        .inspector-key { color: var(--obs-purple); }
+        .inspector-value { color: #24292f; }
+        .inspector-type { color: var(--obs-gray); font-size: 11px; }
+
+        /* Interactive inputs */
+        .cell-input {
             margin-top: 8px;
         }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #9ca3af; cursor: not-allowed; }
-        button.secondary { background: #6b7280; }
-        button.secondary:hover { background: #4b5563; }
 
-        .registers {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        .cell-input textarea {
+            width: 100%;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 12px 16px;
+            border: 1px solid var(--obs-border);
+            border-radius: 6px;
+            resize: vertical;
+            min-height: 120px;
+            background: white;
+        }
+        .cell-input textarea:focus {
+            outline: none;
+            border-color: var(--obs-blue);
+            box-shadow: 0 0 0 3px rgba(59, 95, 192, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid var(--obs-border);
+            background: var(--obs-light);
+            color: #24292f;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn:hover {
+            background: #f3f4f6;
+            border-color: #c9d1d9;
+        }
+        .btn-primary {
+            background: var(--obs-blue);
+            border-color: var(--obs-blue);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2c4a9e;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
             gap: 8px;
+            margin-top: 12px;
         }
-        .register {
-            background: #f0f0f0;
-            padding: 8px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .register-name { font-size: 11px; color: #666; }
-        .register-value { font-family: monospace; font-size: 14px; font-weight: bold; }
 
-        .tape-output {
-            font-family: monospace;
+        /* Register display - Observable table style */
+        .registers-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .registers-table th {
+            text-align: left;
+            font-weight: 500;
+            color: var(--obs-gray);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--obs-border);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .registers-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--obs-border);
+        }
+        .registers-table tr:last-child td {
+            border-bottom: none;
+        }
+        .reg-name { color: var(--obs-purple); }
+        .reg-value { font-weight: 600; }
+        .reg-hex { color: var(--obs-gray); font-size: 12px; }
+
+        /* Teleprinter - terminal style */
+        .teleprinter {
+            font-family: var(--font-mono);
             font-size: 14px;
-            background: #1a1a1a;
-            color: #22c55e;
-            padding: 12px;
-            border-radius: 4px;
-            min-height: 60px;
+            background: #0d1117;
+            color: #58a6ff;
+            padding: 16px;
+            border-radius: 6px;
+            min-height: 80px;
             white-space: pre-wrap;
             word-break: break-all;
         }
-
-        #executionLog {
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 12px;
+        .teleprinter .cursor {
+            background: #58a6ff;
+            color: #0d1117;
+            animation: blink 1s step-end infinite;
         }
-        .log-entry { padding: 2px 0; border-bottom: 1px solid #eee; }
-        .log-entry.eval { color: #2563eb; }
-        .log-entry.result { color: #16a34a; font-weight: bold; }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* Log */
+        .log {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--obs-gray);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid var(--obs-light);
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-time { color: #8b949e; }
+        .log-msg { color: #24292f; }
+
+        /* Viewof style label */
+        .viewof {
+            font-size: 12px;
+            color: var(--obs-gray);
+            margin-bottom: 4px;
+        }
+        .viewof code {
+            font-family: var(--font-mono);
+            background: var(--obs-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Status badge */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-ok .status-dot { background: var(--obs-green); }
+        .status-running .status-dot { background: #f59e0b; animation: pulse 1s infinite; }
+        .status-error .status-dot { background: #cf222e; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Footer */
+        .notebook-footer {
+            margin-top: 48px;
+            padding: 24px 0;
+            border-top: 1px solid var(--obs-border);
+            color: var(--obs-gray);
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
-    <h1>Elliott 4130 LISP <span>Interactive Notebook</span></h1>
-    <p class="subtitle">A 1965 British minicomputer running McCarthy's LISP 1.5</p>
 
-    <!-- Cell 1: Initialize Emulator -->
+<div class="container">
+    <!-- Header -->
+    <header class="notebook-header">
+        <h1>Elliott 4130 LISP</h1>
+        <div class="author">
+            A 1965 British minicomputer running McCarthy's LISP 1.5 —
+            <a href="https://github.com/danbri/glitchcan-minigam/tree/main/magpie/elliott4130">View source</a>
+        </div>
+    </header>
+
+    <!-- Cell: Introduction -->
     <div class="cell">
-        <div class="cell-label">1. Initialize Emulator</div>
-        <div class="cell-code">cpu = new E4130()
-cpu.hardwareFPEnabled = true
-asm = new Asm()</div>
-        <div class="cell-output" id="initOutput">
-            <span class="status running">Waiting...</span>
+        <div class="cell-prose">
+            <p>This notebook demonstrates the Elliott 4130 emulator running a native LISP 1.5 interpreter written entirely in NEAT assembly language. The emulator faithfully recreates the 24-bit architecture, including paper tape I/O.</p>
         </div>
     </div>
 
-    <!-- Cell 2: Load LISP Interpreter -->
-    <div class="cell">
-        <div class="cell-label">2. Load LISP Interpreter (NEAT Assembly)</div>
-        <div class="cell-content">
-            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                Loading lisp4130.asm — a native LISP 1.5 interpreter in Elliott 4130 assembly
-            </div>
-            <div id="asmStats" style="font-family: monospace; font-size: 12px;"></div>
+    <!-- Cell: Initialize -->
+    <div class="cell" id="cell-init">
+        <button class="cell-run" onclick="init()" title="Run cell">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
+        </button>
+        <div class="cell-prose">
+            <h2>Initialize Emulator</h2>
         </div>
-        <div class="cell-output" id="loadOutput">
-            <span class="status running">Waiting...</span>
+        <div class="cell-code">
+            <pre><span class="keyword">const</span> cpu = <span class="keyword">new</span> <span class="function">E4130</span>()
+cpu.hardwareFPEnabled = <span class="keyword">true</span>
+<span class="keyword">const</span> asm = <span class="keyword">new</span> <span class="function">Asm</span>()</pre>
         </div>
-    </div>
-
-    <!-- Cell 3: CPU State -->
-    <div class="cell">
-        <div class="cell-label">3. CPU Registers</div>
-        <div class="cell-content">
-            <div class="registers" id="registers">
-                <div class="register"><div class="register-name">M (Accumulator)</div><div class="register-value" id="regM">0</div></div>
-                <div class="register"><div class="register-name">R (Reserve)</div><div class="register-value" id="regR">0</div></div>
-                <div class="register"><div class="register-name">S (Program Counter)</div><div class="register-value" id="regS">0</div></div>
-                <div class="register"><div class="register-name">K (Count)</div><div class="register-value" id="regK">0</div></div>
-                <div class="register"><div class="register-name">Instructions</div><div class="register-value" id="regI">0</div></div>
-            </div>
+        <div class="cell-output" id="init-output">
+            <span class="status status-running"><span class="status-dot"></span> Waiting...</span>
         </div>
     </div>
 
-    <!-- Cell 4: LISP Input -->
+    <!-- Cell: Load LISP -->
+    <div class="cell" id="cell-load">
+        <button class="cell-run" onclick="loadLisp()" title="Run cell">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
+        </button>
+        <div class="cell-prose">
+            <h2>Load LISP Interpreter</h2>
+            <p>Assemble and load <code>lisp4130.asm</code> — a native LISP 1.5 interpreter.</p>
+        </div>
+        <div class="cell-output" id="load-output">
+            <span class="status status-running"><span class="status-dot"></span> Waiting for initialization...</span>
+        </div>
+    </div>
+
+    <!-- Cell: Registers -->
     <div class="cell">
-        <div class="cell-label">4. LISP Input (Paper Tape)</div>
-        <div class="cell-content">
-            <textarea id="lispInput" placeholder="Enter LISP expressions...">(CAR (QUOTE (A B C)))
+        <div class="cell-prose">
+            <h2>CPU State</h2>
+        </div>
+        <div class="viewof">viewof <code>registers</code></div>
+        <table class="registers-table">
+            <thead>
+                <tr>
+                    <th>Register</th>
+                    <th>Value</th>
+                    <th>Hex</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="reg-name">M</span></td>
+                    <td class="reg-value" id="regM">0</td>
+                    <td class="reg-hex" id="regMHex">0x000000</td>
+                    <td>Main accumulator</td>
+                </tr>
+                <tr>
+                    <td><span class="reg-name">R</span></td>
+                    <td class="reg-value" id="regR">0</td>
+                    <td class="reg-hex" id="regRHex">0x000000</td>
+                    <td>Reserve accumulator</td>
+                </tr>
+                <tr>
+                    <td><span class="reg-name">S</span></td>
+                    <td class="reg-value" id="regS">0</td>
+                    <td class="reg-hex" id="regSHex">0x00000</td>
+                    <td>Program counter</td>
+                </tr>
+                <tr>
+                    <td><span class="reg-name">K</span></td>
+                    <td class="reg-value" id="regK">0</td>
+                    <td class="reg-hex" id="regKHex">0x000</td>
+                    <td>Count register</td>
+                </tr>
+                <tr>
+                    <td><span class="reg-name">cycles</span></td>
+                    <td class="reg-value" id="regI">0</td>
+                    <td class="reg-hex">—</td>
+                    <td>Instructions executed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Cell: Input -->
+    <div class="cell">
+        <div class="cell-prose">
+            <h2>LISP Input</h2>
+            <p>Enter LISP expressions to evaluate. These are loaded onto the paper tape reader.</p>
+        </div>
+        <div class="viewof">viewof <code>lispInput</code></div>
+        <div class="cell-input">
+            <textarea id="lispInput">(CAR (QUOTE (A B C)))
 (CDR (QUOTE (X Y Z)))
 (CONS (QUOTE A) (QUOTE (B C)))
 (ATOM (QUOTE X))
 (EQ (QUOTE A) (QUOTE A))</textarea>
-            <div style="margin-top: 8px;">
-                <button id="loadTapeBtn">Load Tape</button>
-                <button id="runBtn" class="secondary" disabled>Run LISP</button>
-                <button id="stepBtn" class="secondary" disabled>Step (100 cycles)</button>
-                <button id="resetBtn" class="secondary">Reset</button>
-            </div>
         </div>
-        <div class="cell-output info" id="tapeStatus">
-            Enter LISP expressions above, one per line
+        <div class="btn-group">
+            <button class="btn btn-primary" id="loadTapeBtn" onclick="loadTape()">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Zm.72-5.22a.75.75 0 0 0 1.06 1.06l2.72-2.72v6.19a.75.75 0 0 0 1.5 0V7.12l2.72 2.72a.75.75 0 1 0 1.06-1.06l-4-4a.75.75 0 0 0-1.06 0l-4 4Z"/></svg>
+                Load Tape
+            </button>
+            <button class="btn" id="runBtn" onclick="run()" disabled>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
+                Run
+            </button>
+            <button class="btn" id="stepBtn" onclick="step()" disabled>Step</button>
+            <button class="btn" id="resetBtn" onclick="reset()">Reset</button>
+        </div>
+        <div class="cell-output" id="tape-status" style="margin-top: 12px;">
+            Enter LISP expressions, then click "Load Tape"
         </div>
     </div>
 
-    <!-- Cell 5: Output -->
+    <!-- Cell: Output -->
     <div class="cell">
-        <div class="cell-label">5. Teleprinter Output</div>
-        <div class="cell-content">
-            <div class="tape-output" id="teleprinter">Ready._</div>
+        <div class="cell-prose">
+            <h2>Teleprinter Output</h2>
         </div>
+        <div class="viewof">viewof <code>output</code></div>
+        <div class="teleprinter" id="teleprinter"><span class="cursor"> </span></div>
     </div>
 
-    <!-- Cell 6: Execution Log -->
+    <!-- Cell: Log -->
     <div class="cell">
-        <div class="cell-label">6. Execution Log</div>
-        <div class="cell-content">
-            <div id="executionLog" style="font-family: monospace; font-size: 12px; color: #666;">
-                Waiting for execution...
-            </div>
+        <div class="cell-prose">
+            <h2>Execution Log</h2>
+        </div>
+        <div class="log" id="executionLog">
+            <div class="log-entry"><span class="log-time">—</span> <span class="log-msg">Waiting for execution...</span></div>
         </div>
     </div>
 
-    <!-- Load Elliott 4130 modules -->
-    <script src="elliott4130-core.js"></script>
-    <script src="elliott4130-asm.js"></script>
+    <!-- Footer -->
+    <footer class="notebook-footer">
+        Elliott 4130 Emulator — Based on CCS E6X Reference Manuals (1965) —
+        <a href="elliott4130.html">Full Emulator UI</a>
+    </footer>
+</div>
 
-    <script>
-    // ========================================================================
-    // Elliott 4130 LISP Notebook - Interactive Demo
-    // ========================================================================
+<!-- Load Elliott 4130 modules -->
+<script src="elliott4130-core.js"></script>
+<script src="elliott4130-asm.js"></script>
 
-    let cpu, asm, lispProgram;
-    let outputBuffer = '';
-    let isRunning = false;
+<script>
+// ============================================================================
+// Elliott 4130 LISP Notebook
+// ============================================================================
 
-    // Simple LISP interpreter in assembly (subset for demo)
-    // This is a minimal version that handles basic expressions
-    const MINI_LISP_ASM = `
-; ============================================================================
-; Mini LISP Interpreter for Elliott 4130
-; Demonstrates: QUOTE, CAR, CDR, CONS, ATOM, EQ
-; ============================================================================
+let cpu, asm, lispProgram;
+let outputBuffer = '';
+let isRunning = false;
 
-; Memory map:
-; 0-99:     System/interpreter
-; 100-199:  Variables
-; 200-299:  Stack
-; 300-399:  Print buffer
-; 1000-1999: Heap (cons cells)
-; 3000-3025: Atoms A-Z
-; 4000-4019: Primitives
-; 4094: T
-; 4095: NIL
+// Mini LISP for demo when full interpreter unavailable
+const MINI_LISP = `
+            J       START
+HEAP:       #1000
+RESULT:     #0
+T1:         #0
+T2:         #0
 
-            J       MAIN
-
-; Variables
-HEAP:       #1000           ; Next free heap cell
-EXPR:       #0              ; Current expression
-RESULT:     #0              ; Result of evaluation
-TEMP:       #0
-TEMP2:      #0
-STACKP:     #200            ; Stack pointer
-
-; Constants
-NIL:        #4095
-T_ATOM:     #4094
-QUOTE:      #4000
-CAR_P:      #4001
-CDR_P:      #4002
-CONS_P:     #4003
-ATOM_P:     #4004
-EQ_P:       #4005
-
-; ============================================================================
-; MAIN - Read and evaluate expressions from tape
-; ============================================================================
-MAIN:
-            ; Print ready message
-            LD      #82             ; 'R'
-            ST      300
-            LD      #69             ; 'E'
-            ST      301
-            LD      #65             ; 'A'
-            ST      302
-            LD      #68             ; 'D'
-            ST      303
-            LD      #89             ; 'Y'
-            ST      304
-            LD      #10             ; newline
-            ST      305
-            LD      #300
-            ST      TEMP
-            LD      #6
-            ST      TEMP2
-            J       PRINT_BUF
-
-READ_LOOP:
-            ; Read expression from tape
-            IDUM    #1              ; Read char from tape
-            ST      TEMP
-            LD      TEMP
-            SUB     #255            ; Check for EOF (-1)
-            JZ      DONE
-
-            ; Simple parser: just demonstrate with preset expressions
-            ; In full version, would parse S-expressions
-
-            ; For demo: evaluate (CAR (QUOTE (A B C)))
-            ; Build (A B C) at heap
-            LD      HEAP
-            ST      TEMP            ; Save cell address
-
-            ; Cell for C.NIL
-            LD      #3002           ; C = 3002
+START:      ; Build (A B C) list
+            ; (C . NIL) at 1000
+            LD      #3002
             MULS    #4096
-            ADD     NIL
-            LDR     HEAP
-            ST      0,R
-            LD      HEAP
-            ADD     #1
-            ST      HEAP
+            ADD     #4095
+            ST      1000
 
-            ; Cell for B.prev
-            LD      #3001           ; B
+            ; (B . 1000) at 1001
+            LD      #3001
             MULS    #4096
-            ADD     TEMP
-            LDR     HEAP
-            ST      0,R
-            LD      HEAP
-            ST      TEMP
-            ADD     #1
-            ST      HEAP
+            ADD     #1000
+            ST      1001
 
-            ; Cell for A.prev
-            LD      #3000           ; A
+            ; (A . 1001) at 1002
+            LD      #3000
             MULS    #4096
-            ADD     TEMP
-            LDR     HEAP
-            ST      0,R
-            LD      HEAP
-            ST      RESULT          ; Result = ptr to (A B C)
-            ADD     #1
-            ST      HEAP
+            ADD     #1001
+            ST      1002
 
-            ; Take CAR
-            LDR     RESULT
-            LD      0,R
+            ; CAR of list = A
+            LD      1002
             LDK     #12
-            SMRL                    ; Extract high 12 bits
-            ST      RESULT          ; Result = A (3000)
+            SMRL
+            ST      RESULT
 
-            ; Print result
-            J       PRINT_ATOM
-
-PRINT_ATOM:
-            ; Convert atom number to letter
+            ; Output 'A'
             LD      RESULT
             SUB     #3000
-            ADD     #65             ; 'A'
-            ST      300
-            LD      #10             ; newline
-            ST      301
-            LD      #300
-            ST      TEMP
-            LD      #2
-            ST      TEMP2
-            J       PRINT_BUF
+            ADD     #65
+            ODUM    #2
 
-PRINT_BUF:
-            ; Print TEMP2 chars starting at TEMP
-            LDR     TEMP
-            LD      0,R
-            ODUM    #2              ; Output to teleprinter
-            LD      TEMP
-            ADD     #1
-            ST      TEMP
-            LD      TEMP2
-            SUB     #1
-            ST      TEMP2
-            JNZ     PRINT_BUF
-            J       READ_LOOP
+            ; Output newline
+            LD      #10
+            ODUM    #2
 
-DONE:
-            J       DONE            ; Halt
+DONE:       J       DONE
 `;
 
-    // ========================================================================
-    // Initialize
-    // ========================================================================
+// ============================================================================
+// Initialize
+// ============================================================================
 
-    function init() {
+function init() {
+    document.getElementById('cell-init').classList.add('active');
+
+    try {
+        cpu = new E4130();
+        cpu.hardwareFPEnabled = true;
+        asm = new Asm();
+
+        document.getElementById('init-output').innerHTML = `
+            <span class="status status-ok"><span class="status-dot"></span> Ready</span>
+            <div class="inspector" style="margin-top: 8px;">
+                <span class="inspector-key">cpu</span>: <span class="inspector-type">E4130</span> { M: 0, R: 0, S: 0, mem: Int32Array(65536) }
+            </div>
+        `;
+        document.getElementById('init-output').classList.add('success');
+
+        loadLisp();
+    } catch (e) {
+        document.getElementById('init-output').innerHTML = `
+            <span class="status status-error"><span class="status-dot"></span> Error</span>
+            <div style="margin-top: 8px; color: #cf222e;">${e.message}</div>
+        `;
+        document.getElementById('init-output').classList.add('error');
+    }
+}
+
+// ============================================================================
+// Load LISP
+// ============================================================================
+
+async function loadLisp() {
+    document.getElementById('cell-load').classList.add('active');
+
+    try {
+        let src;
+        let srcName = 'lisp4130.asm';
+
         try {
-            cpu = new E4130();
-            cpu.hardwareFPEnabled = true;
-            asm = new Asm();
-
-            document.getElementById('initOutput').innerHTML =
-                '<span class="status ok">OK</span> Elliott 4130 initialized — 24-bit word, 64K memory';
-
-            loadLispInterpreter();
-        } catch (e) {
-            document.getElementById('initOutput').innerHTML =
-                '<span class="status error">Error</span> ' + e.message;
-        }
-    }
-
-    // ========================================================================
-    // Load LISP Interpreter
-    // ========================================================================
-
-    async function loadLispInterpreter() {
-        try {
-            // Try to load the full LISP interpreter
-            let asmSource;
-            try {
-                const response = await fetch('lisp4130.asm');
-                if (response.ok) {
-                    asmSource = await response.text();
-                    document.getElementById('asmStats').innerHTML =
-                        `Loaded: lisp4130.asm (${asmSource.split('\\n').length} lines)`;
-                } else {
-                    throw new Error('Could not load lisp4130.asm');
-                }
-            } catch (e) {
-                // Fall back to mini LISP
-                asmSource = MINI_LISP_ASM;
-                document.getElementById('asmStats').innerHTML =
-                    'Using: Built-in Mini LISP (demo subset)';
-            }
-
-            // Assemble
-            lispProgram = asm.asm(asmSource);
-
-            // Load into memory
-            for (const { addr, word } of lispProgram) {
-                cpu.mem[addr] = word;
-            }
-
-            // Setup I/O
-            setupIO();
-
-            document.getElementById('loadOutput').innerHTML =
-                `<span class="status ok">OK</span> Assembled ${lispProgram.length} words into memory`;
-
-            document.getElementById('loadTapeBtn').disabled = false;
-
-            updateRegisters();
-        } catch (e) {
-            document.getElementById('loadOutput').innerHTML =
-                '<span class="status error">Error</span> ' + e.message;
-        }
-    }
-
-    // ========================================================================
-    // I/O Setup
-    // ========================================================================
-
-    let tapeData = [];
-    let tapePos = 0;
-
-    function setupIO() {
-        // Paper tape reader (channel 1)
-        cpu.channels[1] = {
-            read: () => {
-                if (tapePos < tapeData.length) {
-                    return tapeData[tapePos++];
-                }
-                return 0xFF; // EOF
-            },
-            status: () => tapePos < tapeData.length ? 1 : 0
-        };
-
-        // Teleprinter (channel 2)
-        cpu.channels[2] = {
-            write: (val) => {
-                const char = String.fromCharCode(val & 0x7F);
-                outputBuffer += char;
-                updateTeleprinter();
-            },
-            status: () => 1 // Always ready
-        };
-    }
-
-    function updateTeleprinter() {
-        const el = document.getElementById('teleprinter');
-        el.textContent = outputBuffer + '_';
-        el.scrollTop = el.scrollHeight;
-    }
-
-    // ========================================================================
-    // Load Tape
-    // ========================================================================
-
-    function loadTape() {
-        const input = document.getElementById('lispInput').value;
-
-        // Convert to paper tape format (ASCII + newlines)
-        tapeData = [];
-        for (const char of input) {
-            tapeData.push(char.charCodeAt(0) & 0x3F); // 6-bit chars
-        }
-        tapeData.push(0xFF); // EOF marker
-        tapePos = 0;
-
-        document.getElementById('tapeStatus').innerHTML =
-            `<span class="status ok">OK</span> Loaded ${tapeData.length - 1} characters onto paper tape`;
-
-        document.getElementById('runBtn').disabled = false;
-        document.getElementById('stepBtn').disabled = false;
-
-        log('Tape loaded: ' + input.split('\\n').length + ' expressions');
-    }
-
-    // ========================================================================
-    // Execution
-    // ========================================================================
-
-    function run() {
-        if (isRunning) return;
-        isRunning = true;
-
-        document.getElementById('runBtn').textContent = 'Running...';
-        document.getElementById('runBtn').disabled = true;
-
-        log('Starting execution...');
-
-        // Run in chunks to keep UI responsive
-        let cycles = 0;
-        const maxCycles = 100000;
-
-        function runChunk() {
-            const chunkSize = 1000;
-
-            for (let i = 0; i < chunkSize && cycles < maxCycles; i++) {
-                if (cpu.halted) {
-                    finish('CPU halted');
-                    return;
-                }
-
-                // Detect infinite loop
-                const prevS = cpu.S;
-                cpu.step();
-                cycles++;
-
-                if (cpu.S === prevS) {
-                    finish('Program completed (halt loop)');
-                    return;
-                }
-            }
-
-            updateRegisters();
-
-            if (cycles >= maxCycles) {
-                finish('Max cycles reached');
+            const resp = await fetch('lisp4130.asm');
+            if (resp.ok) {
+                src = await resp.text();
             } else {
-                requestAnimationFrame(runChunk);
+                throw new Error('Not found');
             }
+        } catch {
+            src = MINI_LISP;
+            srcName = 'mini-lisp (built-in demo)';
         }
 
-        function finish(reason) {
-            isRunning = false;
-            document.getElementById('runBtn').textContent = 'Run LISP';
-            document.getElementById('runBtn').disabled = false;
-            log(reason + ' after ' + cycles + ' cycles');
-            updateRegisters();
-        }
+        lispProgram = asm.asm(src);
 
-        runChunk();
-    }
-
-    function step() {
-        log('Stepping 100 cycles...');
-
-        for (let i = 0; i < 100; i++) {
-            if (cpu.halted) break;
-            const prevS = cpu.S;
-            cpu.step();
-            if (cpu.S === prevS) break;
-        }
-
-        updateRegisters();
-    }
-
-    function reset() {
-        cpu.reset();
-        outputBuffer = '';
-        tapePos = 0;
-
-        // Reload program
         for (const { addr, word } of lispProgram) {
             cpu.mem[addr] = word;
         }
 
+        setupIO();
+
+        document.getElementById('load-output').innerHTML = `
+            <span class="status status-ok"><span class="status-dot"></span> Loaded</span>
+            <div class="inspector" style="margin-top: 8px;">
+                <span class="inspector-key">source</span>: <span class="inspector-value">"${srcName}"</span><br>
+                <span class="inspector-key">words</span>: <span class="inspector-value">${lispProgram.length}</span><br>
+                <span class="inspector-key">memory</span>: <span class="inspector-value">[0x0000..0x${(lispProgram.length).toString(16).padStart(4, '0')}]</span>
+            </div>
+        `;
+        document.getElementById('load-output').classList.add('success');
+
         updateRegisters();
-        updateTeleprinter();
-        log('CPU reset');
+        log('LISP interpreter loaded');
 
-        document.getElementById('tapeStatus').innerHTML =
-            'Enter LISP expressions above, one per line';
+    } catch (e) {
+        document.getElementById('load-output').innerHTML = `
+            <span class="status status-error"><span class="status-dot"></span> Error</span>
+            <div style="margin-top: 8px; color: #cf222e;">${e.message}</div>
+        `;
+    }
+}
+
+// ============================================================================
+// I/O
+// ============================================================================
+
+let tapeData = [];
+let tapePos = 0;
+
+function setupIO() {
+    cpu.channels[1] = {
+        read: () => tapePos < tapeData.length ? tapeData[tapePos++] : 0xFF,
+        status: () => tapePos < tapeData.length ? 1 : 0
+    };
+
+    cpu.channels[2] = {
+        write: (v) => {
+            const ch = String.fromCharCode(v & 0x7F);
+            outputBuffer += ch;
+            updateTeleprinter();
+        },
+        status: () => 1
+    };
+}
+
+function updateTeleprinter() {
+    document.getElementById('teleprinter').innerHTML =
+        outputBuffer.replace(/\n/g, '↵\n') + '<span class="cursor"> </span>';
+}
+
+// ============================================================================
+// Tape
+// ============================================================================
+
+function loadTape() {
+    const input = document.getElementById('lispInput').value;
+
+    tapeData = [];
+    for (const ch of input) {
+        tapeData.push(ch.charCodeAt(0) & 0x3F);
+    }
+    tapeData.push(0xFF);
+    tapePos = 0;
+
+    document.getElementById('tape-status').innerHTML = `
+        <span class="status status-ok"><span class="status-dot"></span> Tape loaded</span>
+        <span style="margin-left: 12px; color: var(--obs-gray);">${tapeData.length - 1} characters</span>
+    `;
+
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('stepBtn').disabled = false;
+
+    log(`Loaded ${input.split('\\n').length} expressions onto tape`);
+}
+
+// ============================================================================
+// Execution
+// ============================================================================
+
+function run() {
+    if (isRunning) return;
+    isRunning = true;
+
+    document.getElementById('runBtn').textContent = 'Running...';
+    document.getElementById('runBtn').disabled = true;
+
+    log('Execution started');
+    let cycles = 0;
+    const max = 100000;
+
+    function chunk() {
+        for (let i = 0; i < 1000 && cycles < max; i++) {
+            const prevS = cpu.S;
+            cpu.step();
+            cycles++;
+            if (cpu.halted || cpu.S === prevS) {
+                done('Halted');
+                return;
+            }
+        }
+        updateRegisters();
+        if (cycles < max) {
+            requestAnimationFrame(chunk);
+        } else {
+            done('Max cycles');
+        }
     }
 
-    // ========================================================================
-    // UI Updates
-    // ========================================================================
-
-    function updateRegisters() {
-        document.getElementById('regM').textContent = cpu.M.toString();
-        document.getElementById('regR').textContent = cpu.R.toString();
-        document.getElementById('regS').textContent = cpu.S.toString();
-        document.getElementById('regK').textContent = cpu.K.toString();
-        document.getElementById('regI').textContent = cpu.iCount.toString();
+    function done(reason) {
+        isRunning = false;
+        document.getElementById('runBtn').textContent = 'Run';
+        document.getElementById('runBtn').disabled = false;
+        log(`${reason} after ${cycles.toLocaleString()} cycles`);
+        updateRegisters();
     }
 
-    function log(msg) {
-        const el = document.getElementById('executionLog');
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
-        el.appendChild(entry);
-        el.scrollTop = el.scrollHeight;
+    chunk();
+}
+
+function step() {
+    for (let i = 0; i < 100; i++) {
+        const prevS = cpu.S;
+        cpu.step();
+        if (cpu.halted || cpu.S === prevS) break;
+    }
+    updateRegisters();
+    log('Stepped 100 cycles');
+}
+
+function reset() {
+    cpu.reset();
+    outputBuffer = '';
+    tapePos = 0;
+
+    for (const { addr, word } of lispProgram) {
+        cpu.mem[addr] = word;
     }
 
-    // ========================================================================
-    // Event Handlers
-    // ========================================================================
+    updateRegisters();
+    updateTeleprinter();
+    log('CPU reset');
+}
 
-    document.getElementById('loadTapeBtn').onclick = loadTape;
-    document.getElementById('runBtn').onclick = run;
-    document.getElementById('stepBtn').onclick = step;
-    document.getElementById('resetBtn').onclick = reset;
+// ============================================================================
+// UI Updates
+// ============================================================================
 
-    // Initialize on load
-    init();
-    </script>
+function updateRegisters() {
+    const fmt = (v, w) => '0x' + v.toString(16).padStart(w, '0').toUpperCase();
+
+    document.getElementById('regM').textContent = cpu.M;
+    document.getElementById('regMHex').textContent = fmt(cpu.M, 6);
+    document.getElementById('regR').textContent = cpu.R;
+    document.getElementById('regRHex').textContent = fmt(cpu.R, 6);
+    document.getElementById('regS').textContent = cpu.S;
+    document.getElementById('regSHex').textContent = fmt(cpu.S, 5);
+    document.getElementById('regK').textContent = cpu.K;
+    document.getElementById('regKHex').textContent = fmt(cpu.K, 3);
+    document.getElementById('regI').textContent = cpu.iCount.toLocaleString();
+}
+
+function log(msg) {
+    const el = document.getElementById('executionLog');
+    const time = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${time}</span> <span class="log-msg">${msg}</span>`;
+    el.appendChild(entry);
+    el.scrollTop = el.scrollHeight;
+}
+
+// Auto-init
+init();
+</script>
+
 </body>
 </html>
