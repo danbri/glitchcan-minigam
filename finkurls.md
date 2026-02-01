@@ -73,13 +73,35 @@ It interprets this as:
 
 ## Verification
 
-Debug log output confirms:
+### Runtime Debug Log
 ```
 Current tags: [FINK: https:, IMAGE: glitchcan-grey-portrait-web.jpg]
 FINK tag detected: https:
 Loading external FINK file: https:
 Resolved URL: https://danbri.github.io/glitchcan-minigam/inklet/toc.fink.js  <- WRONG
 ```
+
+### inkjs Compiler Test (debug-ink-tags2.mjs)
+```
+--- Full URL ---
+Input:  # FINK: https://example.com/story.fink.js
+Output: FINK: https:                                   ← TRUNCATED at //
+
+--- Single slash ---
+Input:  # FINK: /path/to/story.fink.js
+Output: FINK: /path/to/story.fink.js                   ← OK (single slash preserved)
+
+--- Escaped ---
+Input:  # FINK: https:ESCAPED_SLASHexample.com/...
+Output: FINK: https:ESCAPED_SLASHexample.com/...       ← OK (no // present)
+
+--- Direct // test ---
+Input:  # TEST: before//after
+Output: TEST: before                                   ← TRUNCATED at //
+```
+
+### Conclusion
+The inkjs Compiler unconditionally treats `//` as comment start in all contexts, including inside tag values. This is INK language behavior, not a FINK bug.
 
 ## Evidence This Is First Occurrence
 
