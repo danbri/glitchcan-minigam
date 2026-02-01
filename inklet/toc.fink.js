@@ -24,6 +24,7 @@ Enter the Finkiverse. Everything isn't here yet.
 
 Choose your adventure! Each episode is half-finished in a different way.
 
++ [Awakening] -> awakening_selected
 + [Bagend] -> hobbit_selected
 + [Diamond Cave] -> diamond_cave_selected
 + [Hampstead] -> hampstead_selected
@@ -56,6 +57,17 @@ This is where things might be documented, eventually.
 + [Shane Manor Mystery (testing)] -> shane_manor_selected
 + [Shane Manor ENRICHED (WIP)] -> shane_manor_enriched_selected
 + [Experiments] -> experiments_selected
+
+=== awakening_selected ===
+# FINK: https://danbri.github.io/isle_of_glitch/awakening.fink.js
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Isle of Glitch: Awakening
+
+An adventure from the Isle of Glitch.
+
++ [Enter Awakening] -> external_story
 
 === hobbit_selected ===
 # FINK: /glitchcan-minigam/inklet/bagend.fink.js
