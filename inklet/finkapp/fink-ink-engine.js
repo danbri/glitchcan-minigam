@@ -96,9 +96,16 @@ window.FinkInkEngine = {
 
         FinkUtils.debugLog('inkjs library verified, attempting compilation...');
 
+        // Preprocess: Escape URLs in tags to prevent // being treated as INK comments
+        // Replace :// with :FINK_SLASH_SLASH in # TAG: lines (will be unescaped in tag processing)
+        const preprocessedContent = finkContent.replace(
+            /^(#\s*\w+:\s*https?):\/\//gm,
+            '$1:FINK_SLASH_SLASH'
+        );
+
         // Inject private inventory system
-        const privateInk = this.getPrivateInventoryInk(finkContent);
-        const augmentedContent = finkContent + privateInk;
+        const privateInk = this.getPrivateInventoryInk(preprocessedContent);
+        const augmentedContent = preprocessedContent + privateInk;
         FinkUtils.debugLog('Injected private inventory INK (' + privateInk.length + ' chars)');
 
         try {
@@ -307,9 +314,11 @@ window.FinkInkEngine = {
                             if (value) p.classList.add(value);
                             break;
                         case 'FINK':
-                            this.lastSeenFinkTag = value;
+                            // Unescape URLs that were preprocessed to avoid // comment issue
+                            const finkUrl = value.replace(':FINK_SLASH_SLASH', '://');
+                            this.lastSeenFinkTag = finkUrl;
                             shouldLoadExternal = true;
-                            FinkUtils.debugLog('FINK tag detected: ' + value);
+                            FinkUtils.debugLog('FINK tag detected: ' + finkUrl);
                             break;
                         case 'MINIGAME':
                             // Parse: "gridluck mode=cave controls=dpad" or just "chess"
