@@ -211,6 +211,8 @@ Design principles: Phoenix Wright confrontations, Agatha Christie layered secret
 
 Experiments & Prototypes
 
++ [Awakening (Isle of Glitch)] -> awakening_selected
+
 A collection of experimental games, prototypes, and technical demonstrations. These are works-in-progress showcasing different gameplay mechanics and visual styles.
 
 **Games & Interactive Experiments:**
@@ -259,6 +261,17 @@ A collection of experimental games, prototypes, and technical demonstrations. Th
 Most experiments are hosted on CodePen for rapid prototyping and easy sharing. Local experiments are in the GitHub Pages deployment.
 
 + [Return to Help Menu] -> help_menu
+
+=== awakening_selected ===
+# FINK: https://danbri.github.io/isle_of_glitch/awakening.fink.js
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Awakening
+
+An experimental episode from the Isle of Glitch. External FINK story hosted on a separate repository.
+
++ [Enter Awakening] -> external_story
 
 === external_story ===
 Loading external story...
