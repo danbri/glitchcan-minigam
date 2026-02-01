@@ -263,7 +263,7 @@ Most experiments are hosted on CodePen for rapid prototyping and easy sharing. L
 + [Return to Help Menu] -> help_menu
 
 === awakening_selected ===
-# FINK: https://danbri.github.io/isle_of_glitch/awakening.fink.js
+# FINK: https:\/\/danbri.github.io\/isle_of_glitch\/awakening.fink.js
 
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
