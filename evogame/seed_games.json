@@ -1,0 +1,42 @@
+[
+  {
+    "title": "particle rain",
+    "description": "Colored particles drift down like rain. Tap anywhere to create a circular repulsion field that pushes them away. Score increases while no particles touch the bottom edge."
+  },
+  {
+    "title": "color flood",
+    "description": "A grid of 8x8 squares slowly fills with color spreading from the center. Click any square to reset it to black. Try to keep more than half the grid dark."
+  },
+  {
+    "title": "orbit trails",
+    "description": "Two dots orbit a center point leaving fading color trails. Tap to reverse one orbit's direction. Purely aesthetic, no score. The interference patterns are the point."
+  },
+  {
+    "title": "springy snake",
+    "description": "A chain of 20 connected circles follows your mouse or finger with springy physics. The tail whips around with momentum. Passive toy."
+  },
+  {
+    "title": "bubble math",
+    "description": "Bubbles with numbers 1-9 rise slowly from the bottom. Click two bubbles whose numbers sum to 10 to pop them. Bubbles that escape the top cost a life. Three lives."
+  },
+  {
+    "title": "growing tree",
+    "description": "A generative tree grows upward from the bottom center. New branches split every 2 seconds. Click a branch to prune it. The final shape is sculpted by your cuts."
+  },
+  {
+    "title": "gravity wells",
+    "description": "White dots float in zero-g. Click to place a gravity well that attracts nearby dots. Dots that collide merge and grow. Place up to 5 wells."
+  },
+  {
+    "title": "wave machine",
+    "description": "A horizontal line of dots connected by springs. Drag any dot up or down to create a wave that propagates. Multiple waves interfere with each other. Passive physics toy."
+  },
+  {
+    "title": "light chaser",
+    "description": "A small bright dot teleports to a random position every 2 seconds. Tap it before it moves to score. It gets faster. Miss 3 times and it's over."
+  },
+  {
+    "title": "cellular automaton",
+    "description": "A grid runs a Game of Life variant. Tap cells to toggle them alive or dead. The simulation runs continuously. Patterns that persist score points over time."
+  }
+]
