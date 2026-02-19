@@ -11,10 +11,10 @@
     --bg: #0d1017;
     --card: #181d28;
     --border: #262d3d;
-    --text: #ccd0dc;
-    --text-dim: #5c6480;
+    --text: #e0e4ee;
+    --text-dim: #9399b2;
     --accent: #b4e800;
-    --accent-dim: #5a7400;
+    --accent-dim: #7a9f00;
     --success: #00d68f;
     --danger: #ff4070;
     --font-mono: 'DM Mono', monospace;
@@ -87,16 +87,17 @@
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  /* Tab switching: use ID selectors to match specificity */
+  #feed, #lineage { display: none; }
+  #feed.active { display: flex; }
+  #lineage.active { display: block; }
 
   /* ---- FEED ---- */
 
   #feed {
-    max-width: 540px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 16px 12px;
-    display: flex;
     flex-direction: column;
     gap: 12px;
   }
@@ -109,8 +110,8 @@
     transition: all 0.3s;
   }
   .game-card:hover { border-color: #363d55; }
-  .game-card.paused { opacity: 0.7; }
-  .game-card.paused:hover { opacity: 0.9; }
+  .game-card.paused { opacity: 0.85; }
+  .game-card.paused:hover { opacity: 1; }
   .game-card.paused .game-frame { pointer-events: none; }
   .game-card.dead { display: none; }
 
@@ -136,10 +137,6 @@
     color: var(--text-dim);
     font-size: 11px;
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .gen-badge {
@@ -165,11 +162,18 @@
     display: block;
   }
 
+  .game-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
   .paused-overlay {
     display: none;
     position: absolute;
     inset: 0;
-    background: rgba(8, 10, 20, 0.45);
+    background: rgba(8, 10, 20, 0.35);
     align-items: center;
     justify-content: center;
     color: var(--text-dim);
@@ -177,7 +181,7 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  .paused-overlay:hover { background: rgba(8, 10, 20, 0.25); }
+  .paused-overlay:hover { background: rgba(8, 10, 20, 0.15); }
   .game-card.paused .paused-overlay { display: flex; }
 
   .card-footer {
@@ -214,7 +218,7 @@
   /* ---- LINEAGE ---- */
 
   #lineage {
-    max-width: 960px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 24px 16px;
   }
@@ -222,7 +226,7 @@
   .gen-section { margin-bottom: 32px; }
 
   .gen-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--accent-dim);
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -234,41 +238,49 @@
   .gen-cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
   }
 
   .tree-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    width: 210px;
+    width: 340px;
     overflow: hidden;
     transition: all 0.2s;
   }
   .tree-card:hover { border-color: #464d6a; transform: translateY(-2px); }
-  .tree-card.dead { opacity: 0.35; border-left: 2px solid var(--danger); }
+  .tree-card.dead { opacity: 0.4; border-left: 2px solid var(--danger); }
 
   .tree-thumb {
-    width: 210px;
-    height: 160px;
+    width: 100%;
+    height: 200px;
     overflow: hidden;
     background: #080a14;
   }
   .tree-thumb iframe {
-    width: 210px;
-    height: 160px;
+    width: 480px;
+    height: 480px;
     border: none;
     pointer-events: none;
     display: block;
+    transform: scale(0.417);
+    transform-origin: top left;
+  }
+  .tree-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
-  .tree-info { padding: 8px 10px 10px; }
+  .tree-info { padding: 10px 12px 12px; }
 
   .tree-title {
     font-family: var(--font-serif);
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -276,27 +288,41 @@
   .tree-title .gen-badge { font-size: 9px; }
 
   .tree-origin {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--accent-dim);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   .tree-genome {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    font-style: italic;
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+
+  .tree-parents {
     font-size: 10px;
     color: var(--text-dim);
     line-height: 1.4;
+    border-left: 2px solid rgba(180, 232, 0, 0.15);
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+  .tree-parents .parent-label {
+    color: var(--accent-dim);
+    font-weight: 400;
+  }
+  .tree-parents .parent-desc {
+    display: block;
+    margin-top: 2px;
     font-style: italic;
-    border-left: 2px solid var(--border);
-    padding-left: 8px;
-    margin-bottom: 6px;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .tree-fitness {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
   }
   .tree-fitness .alive { color: var(--success); }
@@ -315,6 +341,10 @@
     color: var(--text);
     font-weight: 400;
     margin-bottom: 8px;
+  }
+
+  @media (max-width: 420px) {
+    .tree-card { width: 100%; }
   }
 </style>
 </head>
@@ -335,8 +365,8 @@
   </nav>
 </header>
 
-<div id="feed" class="tab-content active"></div>
-<div id="lineage" class="tab-content"></div>
+<div id="feed" class="active"></div>
+<div id="lineage"></div>
 
 <div id="empty-state">
   <h2>waiting for life</h2>
@@ -349,7 +379,7 @@
 // ============================================================
 
 const DB_NAME = 'alife-games';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'games';
 const MAX_VISIBLE = 10;
 const MAX_RUNNING = 2;
@@ -421,6 +451,80 @@ function escapeAttr(s) {
 }
 
 // ============================================================
+// Thumbnail capture
+// ============================================================
+
+const CAPTURE_SCRIPT = `
+<script>
+(function() {
+  var captured = false;
+  function tryCapture() {
+    if (captured) return;
+    var canvas = document.querySelector('canvas');
+    if (canvas) {
+      try {
+        var data = canvas.toDataURL('image/jpeg', 0.7);
+        if (data && data.length > 100) {
+          parent.postMessage({ type: 'alife-thumbnail', data: data }, '*');
+          captured = true;
+          return;
+        }
+      } catch(e) {}
+    }
+    // fallback: html2canvas-lite via svg foreignObject
+    try {
+      var body = document.body;
+      var w = body.scrollWidth || 480;
+      var h = body.scrollHeight || 480;
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        + '<foreignObject width="100%" height="100%">'
+        + '<div xmlns="http://www.w3.org/1999/xhtml"'
+        + ' style="width:'+w+'px;height:'+h+'px;overflow:hidden">'
+        + body.outerHTML
+        + '</div></foreignObject></svg>';
+      // Can't use foreignObject cross-origin in srcdoc, just send a colored rect
+    } catch(e) {}
+  }
+  // try at multiple intervals to catch animations
+  setTimeout(tryCapture, 800);
+  setTimeout(tryCapture, 2000);
+  setTimeout(tryCapture, 4000);
+})();
+<\/script>`;
+
+// Listen for thumbnail messages from game iframes
+window.addEventListener('message', async (e) => {
+  if (e.data && e.data.type === 'alife-thumbnail' && e.data.data) {
+    // Find which iframe sent this
+    const iframes = document.querySelectorAll('.game-frame');
+    for (const iframe of iframes) {
+      if (iframe.contentWindow === e.source) {
+        const card = iframe.closest('.game-card');
+        if (card) {
+          const id = card.dataset.id;
+          const game = await dbGet(id);
+          if (game && !game.thumbnail) {
+            game.thumbnail = e.data.data;
+            await dbPut(game);
+          }
+        }
+        break;
+      }
+    }
+  }
+});
+
+// Inject capture script into blob
+function blobWithCapture(blob) {
+  if (!blob) return blob;
+  // Insert capture script before </body> or at end
+  if (blob.includes('</body>')) {
+    return blob.replace('</body>', CAPTURE_SCRIPT + '</body>');
+  }
+  return blob + CAPTURE_SCRIPT;
+}
+
+// ============================================================
 // Tabs
 // ============================================================
 
@@ -433,7 +537,8 @@ document.querySelector('.tabs').addEventListener('click', (e) => {
 
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.getElementById('feed').classList.remove('active');
+  document.getElementById('lineage').classList.remove('active');
   document.getElementById(tab).classList.add('active');
 
   if (tab === 'lineage' && treeStale) {
@@ -469,6 +574,16 @@ function renderFeed(games) {
           `<a onclick="scrollToGame('${p}')">${p.slice(0,6)}</a>`).join(' + ')}</span>`
       : `<span class="card-lineage">spontaneous</span>`;
 
+    let frameContent;
+    if (isRunning) {
+      frameContent = `<iframe class="game-frame" sandbox="allow-scripts" srcdoc="${escapeAttr(blobWithCapture(game.blob))}"></iframe>`;
+    } else if (game.thumbnail) {
+      frameContent = `<img class="game-thumbnail" src="${escapeAttr(game.thumbnail)}" alt="${escapeAttr(game.title)}">`;
+    } else {
+      // no thumbnail yet: show the game briefly in a hidden iframe to capture
+      frameContent = `<div style="width:100%;height:100%;display:grid;place-items:center;color:var(--text-dim);font-size:11px">${escapeHtml(game.title)}</div>`;
+    }
+
     card.innerHTML = `
       <div class="card-header">
         <div class="card-meta">
@@ -478,7 +593,7 @@ function renderFeed(games) {
         <div class="gen-badge">g${game.generation}</div>
       </div>
       <div class="game-frame-container">
-        ${isRunning ? `<iframe class="game-frame" sandbox="allow-scripts" srcdoc="${escapeAttr(game.blob)}"></iframe>` : ''}
+        ${frameContent}
         <div class="paused-overlay" onclick="activateGame('${game.id}')">scroll up or tap to play</div>
       </div>
       <div class="card-footer">
@@ -493,7 +608,58 @@ function renderFeed(games) {
   });
 
   updateStats(games);
+
+  // Kick off thumbnail capture for running games that don't have one yet
+  captureRunningThumbnails(visible);
 }
+
+async function captureRunningThumbnails(visible) {
+  // For games that are running (have iframes) and don't have thumbnails yet,
+  // the CAPTURE_SCRIPT injected into their blob will postMessage back.
+  // We also attempt capture for paused games without thumbnails
+  // by briefly loading them in a hidden iframe
+  for (let i = MAX_RUNNING; i < visible.length; i++) {
+    const game = visible[i];
+    if (!game.thumbnail) {
+      attemptBackgroundCapture(game);
+    }
+  }
+}
+
+function attemptBackgroundCapture(game) {
+  const iframe = document.createElement('iframe');
+  iframe.sandbox = 'allow-scripts';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:480px;height:480px;opacity:0;pointer-events:none';
+  iframe.srcdoc = blobWithCapture(game.blob);
+  iframe.dataset.captureId = game.id;
+  document.body.appendChild(iframe);
+
+  // Clean up after 6 seconds
+  setTimeout(() => {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  }, 6000);
+}
+
+// Handle thumbnail from background capture iframes
+window.addEventListener('message', async function bgCapture(e) {
+  if (e.data && e.data.type === 'alife-thumbnail' && e.data.data) {
+    const hiddenFrames = document.querySelectorAll('iframe[data-capture-id]');
+    for (const iframe of hiddenFrames) {
+      if (iframe.contentWindow === e.source) {
+        const id = iframe.dataset.captureId;
+        const game = await dbGet(id);
+        if (game && !game.thumbnail) {
+          game.thumbnail = e.data.data;
+          await dbPut(game);
+          // Refresh to show the new thumbnail
+          await refreshFeed();
+        }
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        break;
+      }
+    }
+  }
+});
 
 function updateStats(games) {
   const alive = games.filter(g => g.status === 'alive');
@@ -561,9 +727,30 @@ function renderTree(games) {
       const netStr = net > 0 ? '+' + net : '' + net;
       const netColor = net > 0 ? 'var(--success)' : net < 0 ? 'var(--danger)' : 'var(--text-dim)';
 
+      // Thumbnail or iframe
+      let thumbHtml;
+      if (game.thumbnail) {
+        thumbHtml = `<img src="${escapeAttr(game.thumbnail)}" alt="${escapeAttr(game.title)}" loading="lazy">`;
+      } else {
+        thumbHtml = `<iframe sandbox="allow-scripts" srcdoc="${escapeAttr(game.blob)}" loading="lazy"></iframe>`;
+      }
+
+      // Parent descriptions for bred games
+      let parentsHtml = '';
+      if (game.parents && game.parents.length === 2) {
+        const p1 = byId[game.parents[0]];
+        const p2 = byId[game.parents[1]];
+        parentsHtml = `<div class="tree-parents">
+          <div><span class="parent-label">${escapeHtml(p1?.title || '?')}:</span>
+          <span class="parent-desc">${escapeHtml(p1?.description || 'unknown')}</span></div>
+          <div style="margin-top:6px"><span class="parent-label">${escapeHtml(p2?.title || '?')}:</span>
+          <span class="parent-desc">${escapeHtml(p2?.description || 'unknown')}</span></div>
+        </div>`;
+      }
+
       card.innerHTML = `
         <div class="tree-thumb">
-          <iframe sandbox="allow-scripts" srcdoc="${escapeAttr(game.blob)}" loading="lazy"></iframe>
+          ${thumbHtml}
         </div>
         <div class="tree-info">
           <div class="tree-title">
@@ -572,9 +759,10 @@ function renderTree(games) {
           </div>
           <div class="tree-origin">${originHtml}</div>
           <div class="tree-genome">${escapeHtml(game.description)}</div>
+          ${parentsHtml}
           <div class="tree-fitness">
             <span style="color:${netColor}">${netStr}</span>
-            \u00b7
+            &middot;
             <span class="${game.status}">${game.status}</span>
           </div>
         </div>
@@ -639,7 +827,8 @@ window.alife = {
       created: new Date().toISOString(),
       votes: { up: 0, down: 0 },
       voted: null,
-      status: 'alive'
+      status: 'alive',
+      thumbnail: null
     };
     await dbPut(game);
     treeStale = true;
