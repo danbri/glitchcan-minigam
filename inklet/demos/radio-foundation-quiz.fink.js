@@ -360,7 +360,7 @@ Good. V = I times R. Voltage equals Current times Resistance. So I = V divided b
 
 MEMORY TRICK: Think of a triangle. V on top, I and R on the bottom. Cover what you want to find — whatever's left is the formula. Cover V, you see I times R. Cover I, you see V over R. Cover R, you see V over I.
 
-Some old hands remember "Virile Indians Ride" or just draw the triangle on scrap paper in the exam. Whatever works. But KNOW this formula cold.
+KNOW this formula cold.
 
 + [Next] -> q12
 
