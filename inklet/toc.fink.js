@@ -280,7 +280,7 @@ An experimental episode from the Isle of Glitch. External FINK story hosted on a
 
 
 === radiocrash_selected ===
-# FINK: https:\/\/danbri.github.io\/inklet\/demos\/radio-foundation-quiz.fink.js
+# FINK: https:\/\/danbri.github.io\/glitchcan-minigam\/inklet\/demos\/radio-foundation-quiz.fink.js
 
 
 + [Enter HAM RADIO Crash Course] -> external_story
