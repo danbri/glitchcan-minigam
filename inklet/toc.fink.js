@@ -279,7 +279,7 @@ An experimental episode from the Isle of Glitch. External FINK story hosted on a
 
 
 
-=== crashradio_selected ===
+=== radiocrash_selected ===
 # FINK: https:\/\/danbri.github.io\/inklet\/demos\/radio-foundation-quiz.fink.js
 
 
