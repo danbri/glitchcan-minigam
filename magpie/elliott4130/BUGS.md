@@ -271,19 +271,3 @@ The emulator CAN successfully execute:
 2. ~~**Then P1**~~ ALL DONE
 3. **Then P2** - for completeness (in progress)
 4. **P3 is optional** - nice to have
-
----
-
-## Historian Quotes
-
-*"Ah, NOW we're talking! The two-word floating-point format with 39-bit mantissa - that's exactly what we shipped to the National Physical Laboratory. Finally someone's reading the manuals!"*
-
-*"The short instruction packing works properly now? Excellent. The ALGOL compiler can generate efficient inner loops again."*
-
-*"Interrupt priorities correct, Protected Mode working, extracodes trapping to OS handlers - this would actually boot our operating system now."*
-
-*"I'd say this emulator could now run most of the production code we delivered to British Petroleum. The only things missing are the exotic I/O devices."*
-
----
-
-*Reviews compiled from CCS E6X1-E6X5 reference manual analysis, January 2026*
